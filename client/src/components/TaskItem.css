@@ -1,0 +1,144 @@
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--surface-color);
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.task-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+}
+
+.task-item.done {
+  opacity: 0.6;
+}
+
+.task-item.done .task-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.task-item-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+/* Custom Checkbox Styles */
+.task-checkbox-container {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  font-size: 22px;
+  user-select: none;
+  /* Sizing and alignment */
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+}
+
+/* Hide the browser's default checkbox */
+.task-checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: transparent;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.task-checkbox-container:hover input ~ .checkmark {
+  border-color: var(--primary-color);
+}
+
+.task-checkbox-container input:checked ~ .checkmark {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.task-checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.task-checkbox-container .checkmark:after {
+  left: 8px;
+  top: 4px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.task-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.completion-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.task-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-tag {
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.priority-normal {
+  background-color: var(--normal-color);
+  color: #1A202C;
+}
+.priority-important {
+  background-color: var(--important-color);
+  color: #1A202C;
+}
+.priority-urgent {
+  background-color: var(--urgent-color);
+  color: white;
+}
+
+body.dark .priority-normal,
+body.dark .priority-important{
+    color: #1A202C;
+}
+
+.creator {
+  background-color: var(--surface-color);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}

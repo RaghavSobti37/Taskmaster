@@ -1,0 +1,76 @@
+:root {
+  /* Light Mode Palette */
+  --background-light: #F7FAFC;
+  --surface-light: #FFFFFF;
+  --border-light: #E2E8F0;
+  --text-primary-light: #1A202C;
+  --text-secondary-light: #718096;
+  --primary-light: #5A67D8; /* Indigo */
+  --secondary-light: #38B2AC; /* Teal */
+  --urgent-light: #E53E3E; /* Red */
+  --important-light: #F6AD55; /* Orange */
+  --normal-light: #63B3ED; /* Cyan */
+  --success-light: #48BB78; /* Green */
+
+  /* Dark Mode Palette */
+  --background-dark: #1A202C;
+  --surface-dark: #2D3748;
+  --border-dark: #4A5568;
+  --text-primary-dark: #F7FAFC;
+  --text-secondary-dark: #A0AEC0;
+  --primary-dark: #90CDF4; /* Lighter Blue for contrast */
+  --secondary-dark: #4FD1C5; /* Lighter Teal */
+  --urgent-dark: #FC8181; /* Lighter Red */
+  --important-dark: #F6AD55; /* Orange */
+  --normal-dark: #63B3ED; /* Cyan */
+  --success-dark: #48BB78; /* Green */
+
+  /* Default (Light Mode) */
+  --background-color: var(--background-light);
+  --surface-color: var(--surface-light);
+  --border-color: var(--border-light);
+  --text-primary: var(--text-primary-light);
+  --text-secondary: var(--text-secondary-light);
+  --primary-color: var(--primary-light);
+  --secondary-color: var(--secondary-light);
+  --urgent-color: var(--urgent-light);
+  --important-color: var(--important-light);
+  --normal-color: var(--normal-light);
+  --success-color: var(--success-light);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+body.dark {
+  --background-color: var(--background-dark);
+  --surface-color: var(--surface-dark);
+  --border-color: var(--border-dark);
+  --text-primary: var(--text-primary-dark);
+  --text-secondary: var(--text-secondary-dark);
+  --primary-color: var(--primary-dark);
+  --secondary-color: var(--secondary-dark);
+  --urgent-color: var(--urgent-dark);
+  --important-color: var(--important-dark);
+  --normal-color: var(--normal-dark);
+  --success-color: var(--success-dark);
+}
+
+.container {
+  max-width: 1400px; /* Wider container for a more expansive feel */
+  margin: 0 auto;
+  padding: 2rem;
+  padding-top: 80px; /* Space for sticky navbar */
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1.5rem;
+    padding-top: 70px;
+  }
+}

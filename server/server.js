@@ -15,11 +15,9 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://taskmaster-sand.vercel.app',
-  // Removed trailing slash for consistency
-];
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'https://taskmaster-sand.vercel.app'];
 
 // Middleware
 app.use(cors({ origin: allowedOrigins }));

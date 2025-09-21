@@ -15,6 +15,12 @@ connectDB();
 
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://taskmaster-sand.vercel.app',
+  // Removed trailing slash for consistency
+];
+
 // Middleware
 app.use(cors());
 app.use(express.json()); // Body parser for JSON

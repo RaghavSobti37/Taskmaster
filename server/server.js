@@ -22,7 +22,7 @@ const allowedOrigins = [
 ];
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json()); // Body parser for JSON
 app.use(morgan('dev')); // HTTP request logger
 

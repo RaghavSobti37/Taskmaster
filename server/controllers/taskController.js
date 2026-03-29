@@ -8,6 +8,11 @@ export const createTask = async (req, res) => {
   const { title, description, priority, assignee, isVisibleInCircle, dueDate } = req.body;
 
   try {
+    // If assignee is provided, validate it's not the creator
+    if (assignee && assignee.toString() === req.user.id.toString()) {
+      return res.status(400).json({ message: 'You cannot assign a task to yourself' });
+    }
+
     // If assignee is not provided, assign it to the creator (personal task)
     const finalAssignee = assignee || req.user.id;
     const isPersonal = req.user.id.toString() === finalAssignee.toString();

@@ -5,7 +5,6 @@ const logSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     default: Date.now,
-    index: true,
   },
   level: {
     type: String,

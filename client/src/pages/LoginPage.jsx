@@ -6,15 +6,18 @@ import './Auth.css';
 const LoginPage = () => {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       await login(loginIdentifier, password);
     } catch (error) {
-      console.error('Failed to login');
-      // Here you can set an error state to show a message to the user
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Failed to login';
+      console.error('Login error:', errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -22,6 +25,7 @@ const LoginPage = () => {
     <div className="auth-container">
       <form className="auth-form" onSubmit={handleSubmit}>
         <h1>Login</h1>
+        {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
         <div className="form-group">
           <label htmlFor="login">Email or Username</label>
           <input type="text" id="login" value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} required />

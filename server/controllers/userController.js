@@ -101,6 +101,90 @@ export const addToTeam = async (req, res) => {
     }
 };
 
+// @desc    Get all users in the system
+// @route   GET /api/users/all
+// @access  Private
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('_id username email role profilePicture').lean();
+        res.json(users);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Update user profile (username, password, profile picture)
+// @route   PUT /api/users/profile
+// @access  Private
+export const updateProfile = async (req, res) => {
+    const { username, currentPassword, newPassword, profilePicture } = req.body;
+
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update username if provided
+        if (username) {
+            const existingUser = await User.findOne({ username, _id: { $ne: req.user.id } });
+            if (existingUser) {
+                return res.status(400).json({ message: 'Username already taken' });
+            }
+            user.username = username;
+        }
+
+        // Update password if provided
+        if (newPassword) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Current password required to change password' });
+            }
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password is incorrect' });
+            }
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(newPassword, salt);
+        }
+
+        // Update profile picture if provided
+        if (profilePicture !== undefined) {
+            user.profilePicture = profilePicture;
+        }
+
+        await user.save();
+
+        res.json({
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            profilePicture: user.profilePicture,
+            message: 'Profile updated successfully'
+        });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private
+export const getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 // Legacy function names for backward compatibility
 export const getMyCircle = getMyTeam;
 export const addToCircle = addToTeam;

@@ -38,7 +38,7 @@ export const clearLogs = async (req, res) => {
 export const getAllUsers = async (req, res) => {
     try {
         const users = await User.find()
-            .select('_id username email role createdAt')
+            .select('_id username email role createdAt lastLogin loginCount')
             .lean();
 
         // Get task counts for each user
@@ -97,7 +97,7 @@ export const deleteUser = async (req, res) => {
     try {
         const { userId } = req.params;
 
-        // Prevent deleting the current admin user
+        // Prevent deleting the current user
         if (userId === req.user.id) {
             return res.status(400).json({ message: 'Cannot delete your own account' });
         }
@@ -105,6 +105,11 @@ export const deleteUser = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Prevent deletion of admin users
+        if (user.role === 'admin') {
+            return res.status(403).json({ message: 'Cannot delete admin accounts' });
         }
 
         // Delete user's tasks

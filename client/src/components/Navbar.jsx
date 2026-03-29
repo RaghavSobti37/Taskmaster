@@ -11,14 +11,6 @@ const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    // Logic to search for user and add to circle
-    console.log(`Searching for user: ${searchQuery}`);
-    setSearchQuery('');
-  };
-
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand">CoreKnot</Link>
@@ -39,9 +31,9 @@ const Navbar = () => {
         {isAuthenticated && (
           <div className="profile-container">
             <button className="profile-avatar-button" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <ProfileAvatar username={user?.username} />
+              <ProfileAvatar username={user?.username} profilePicture={user?.profilePicture} />
             </button>
-            {isDropdownOpen && <ProfileDropdown onLogout={logout} />}
+            {isDropdownOpen && <ProfileDropdown user={user} onLogout={logout} />}
           </div>
         )}
         <button onClick={toggleTheme} className="theme-toggle">

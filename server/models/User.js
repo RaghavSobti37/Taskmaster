@@ -9,6 +9,9 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'lead', 'admin'], 
     default: 'user' 
   },
+  profilePicture: { type: String, default: null },
+  lastLogin: { type: Date, default: null },
+  loginCount: { type: Number, default: 0 },
   circle: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   team: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });

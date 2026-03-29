@@ -3,7 +3,8 @@ import ProfileAvatar from './ProfileAvatar';
 import './TeamMemberCard.css';
 
 const TeamMemberCard = ({ member, onAssignTask }) => {
-  const activeTasks = member.tasks.filter(task => task.status !== 'done');
+  const tasks = member.tasks || [];
+  const activeTasks = tasks.filter(task => task.status !== 'done');
 
   return (
     <div className="member-card">
@@ -11,21 +12,24 @@ const TeamMemberCard = ({ member, onAssignTask }) => {
         <ProfileAvatar username={member.username} />
         <div className="member-info">
           <h3 className="member-name">{member.username}</h3>
-          <span className="member-task-count">{activeTasks.length} active tasks</span>
+          <span className="member-role">{member.role || 'user'}</span>
+          {activeTasks.length > 0 && <span className="member-task-count">{activeTasks.length} active tasks</span>}
         </div>
       </div>
-      <div className="member-card-body">
-        <h4>Tasks:</h4>
-        {activeTasks.length > 0 ? (
-          <ul className="member-task-list">
-            {activeTasks.slice(0, 5).map(task => ( // Show up to 5 tasks
-              <li key={task._id}>{task.title}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="no-member-tasks">No active tasks.</p>
-        )}
-      </div>
+      {tasks.length > 0 && (
+        <div className="member-card-body">
+          <h4>Tasks:</h4>
+          {activeTasks.length > 0 ? (
+            <ul className="member-task-list">
+              {activeTasks.slice(0, 5).map(task => ( // Show up to 5 tasks
+                <li key={task._id}>{task.title}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="no-member-tasks">No active tasks.</p>
+          )}
+        </div>
+      )}
       <div className="member-card-footer">
         <button className="assign-task-btn" onClick={() => onAssignTask(member)}>Assign Task</button>
       </div>

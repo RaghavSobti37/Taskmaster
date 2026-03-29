@@ -30,12 +30,16 @@ export const createTask = async (req, res) => {
 
     const createdTask = await task.save();
 
-    // Log the action
-    await Log.create({
-      user: req.user.id,
-      action: 'CREATE_TASK',
-      details: { taskId: createdTask._id, title: createdTask.title, assignedTo: finalAssignee },
-    });
+    // Try to log the action (don't crash if it fails)
+    try {
+      await Log.create({
+        user: req.user.id,
+        action: 'CREATE_TASK',
+        details: { taskId: createdTask._id, title: createdTask.title, assignedTo: finalAssignee },
+      });
+    } catch (logError) {
+      console.error('Logging error (non-critical):', logError.message);
+    }
 
     res.status(201).json(createdTask);
   } catch (error) {
@@ -51,7 +55,10 @@ export const getTasks = async (req, res) => {
     // Find tasks where the logged-in user is either the creator or the assignee
     const tasks = await Task.find({
       $or: [{ assignee: req.user.id }, { creator: req.user.id }],
-    }).populate('creator', 'username').sort({ createdAt: -1 });
+    })
+      .populate('creator', '_id username email')
+      .populate('assignee', '_id username email')
+      .sort({ createdAt: -1 });
 
     res.json(tasks);
   } catch (error) {
@@ -83,8 +90,12 @@ export const updateTaskStatus = async (req, res) => {
 
     await task.save();
 
-    // Log the action
-    await Log.create({ user: req.user.id, action: 'UPDATE_TASK_STATUS', details: { taskId: task._id, newStatus: status } });
+    // Try to log the action (don't crash if it fails)
+    try {
+      await Log.create({ user: req.user.id, action: 'UPDATE_TASK_STATUS', details: { taskId: task._id, newStatus: status } });
+    } catch (logError) {
+      console.error('Logging error (non-critical):', logError.message);
+    }
 
     res.json(task);
   } catch (error)

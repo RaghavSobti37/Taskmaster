@@ -1,58 +1,95 @@
 .navbar {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 0 2rem;
-    height: 65px;
-    background-color: hsla(0, 0%, 100%, 0.8); /* Glassmorphism for light mode */
-    border-bottom: 1px solid var(--border-color);
-    gap: 1rem;
+    padding: 0 2.5rem;
+    height: 70px;
+    background: rgba(255, 236, 209, 0.85);
+    border-bottom: 2px solid var(--deep-teal);
     position: sticky;
     top: 0;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    transition: background-color 0.2s ease-in-out;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 2px 12px rgba(8, 61, 58, 0.08);
+    transition: all 0.3s ease-in-out;
 }
 
 .navbar-center {
-    flex-grow: 1;
-    /* display: flex; */ /* No longer needed */
-    justify-content: space-between;
+    flex: 1;
+    display: flex;
+    justify-content: center;
     align-items: center;
 }
 
 .navbar-brand {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--primary-color);
+    font-family: 'Signika', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--deep-teal);
     text-decoration: none;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    margin-right: 2rem;
+    flex-shrink: 0;
+}
+
+.navbar-brand:hover {
+    color: var(--pumpkin);
 }
 
 .nav-links {
     display: flex;
-    gap: 1.5rem;
+    gap: 2.5rem;
+    justify-content: center;
 }
 
 .nav-links a {
+    font-family: 'Signika', sans-serif;
     color: var(--text-secondary);
     text-decoration: none;
     font-size: 1rem;
     font-weight: 600;
-    transition: color 0.2s;
+    transition: all 0.3s ease;
     padding: 8px 0;
     position: relative;
+    border-radius: 6px;
 }
 
 .nav-links a:hover {
-    color: var(--text-primary);
+    color: var(--pumpkin);
+    text-shadow: 0 0 12px rgba(183, 75, 2, 0.15);
 }
+
 .nav-links a.active {
-    color: var(--primary-color);
+    color: var(--pumpkin);
+    border-bottom: 3px solid var(--pumpkin);
+    padding-bottom: 5px;
+}
+
+.nav-links a.server-link {
+    background: linear-gradient(135deg, rgba(212, 165, 116, 0.2) 0%, rgba(183, 75, 2, 0.1) 100%);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    color: var(--mustard);
+    box-shadow: 0 2px 6px rgba(212, 165, 116, 0.15);
+}
+
+.nav-links a.server-link:hover {
+    background: linear-gradient(135deg, rgba(212, 165, 116, 0.35) 0%, rgba(183, 75, 2, 0.2) 100%);
+    color: var(--pumpkin);
+    box-shadow: 0 3px 10px rgba(212, 165, 116, 0.25);
+}
+
+.nav-links a.server-link.active {
+    border: none;
 }
 
 .navbar-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
+    flex-shrink: 0;
 }
 
 .profile-container {
@@ -61,10 +98,16 @@
 
 .profile-avatar-button {
     background: none;
-    border: none;
-    padding: 0;
+    border: 2px solid var(--deep-teal);
+    padding: 0.35rem;
     cursor: pointer;
     border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.profile-avatar-button:hover {
+    border-color: var(--pumpkin);
+    box-shadow: 0 0 0 3px rgba(183, 75, 2, 0.1);
 }
 
 .logout-button {
@@ -72,25 +115,74 @@
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    font-weight: bold;
-    font-size: 0.9rem;
-    transition: color 0.2s;
+    font-family: 'Signika', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
 }
 
 .theme-toggle {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    padding: 0.5rem;
+    background: transparent;
+    border: 2px solid var(--deep-teal);
+    border-radius: 10px;
+    padding: 0.5rem 0.65rem;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     line-height: 1;
+    transition: all 0.3s ease;
 }
 
 .logout-button:hover {
-    color: var(--urgent-color);
+    color: var(--pumpkin);
+    background-color: rgba(183, 75, 2, 0.08);
+}
+
+.theme-toggle:hover {
+    background-color: rgba(8, 61, 58, 0.1);
+    border-color: var(--pumpkin);
 }
 
 body.dark .navbar {
-    background-color: hsla(222, 23%, 11%, 0.8); /* Glassmorphism for dark mode */
+    background: rgba(8, 61, 58, 0.85);
+    border-bottom-color: var(--cream);
+}
+
+body.dark .navbar-brand {
+    color: var(--cream);
+}
+
+body.dark .navbar-brand:hover {
+    color: var(--pumpkin);
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 1.5rem;
+        justify-content: flex-start;
+        gap: 1rem;
+    }
+
+    .navbar-brand {
+        font-size: 1.3rem;
+        margin-right: 1rem;
+    }
+
+    .navbar-center {
+        flex: 1;
+        justify-content: flex-start;
+    }
+
+    .nav-links {
+        gap: 1.5rem;
+    }
+
+    .nav-links a {
+        font-size: 0.9rem;
+    }
+
+    .navbar-right {
+        gap: 1rem;
+    }
 }

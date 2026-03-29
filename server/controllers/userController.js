@@ -1,19 +1,22 @@
 import User from '../models/User.js';
 import Task from '../models/Task.js';
 
-// @desc    Get the current user's circle with their tasks
-// @route   GET /api/users/circle
+// @desc    Get the current user's team with their tasks
+// @route   GET /api/users/team
 // @access  Private
-export const getMyCircle = async (req, res) => {
+export const getMyTeam = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).populate('circle', 'username');
+        const user = await User.findById(req.user.id).populate('team', 'username role').populate('circle', 'username');
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // For each member in the circle, fetch their visible, active tasks
-        const circleWithTasks = await Promise.all(user.circle.map(async (member) => {
+        // Use team field if available, fallback to circle for backward compatibility
+        const teamMembers = user.team && user.team.length > 0 ? user.team : user.circle;
+
+        // For each member in the team, fetch their visible, active tasks
+        const teamWithTasks = await Promise.all(teamMembers.map(async (member) => {
             const tasks = await Task.find({
                 assignee: member._id,
                 isVisibleInCircle: true,
@@ -23,7 +26,7 @@ export const getMyCircle = async (req, res) => {
             return { ...member.toObject(), tasks };
         }));
 
-        res.json(circleWithTasks);
+        res.json(teamWithTasks);
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
@@ -45,13 +48,15 @@ export const searchUsers = async (req, res) => {
 
     try {
         const currentUser = await User.findById(req.user.id);
-        const usersInCircle = currentUser.circle;
+        const usersInTeam = currentUser.team && currentUser.team.length > 0 
+            ? currentUser.team 
+            : currentUser.circle;
 
         // Find users that match the keyword, are not the current user,
-        // and are not already in the user's circle.
+        // and are not already in the user's team.
         const users = await User.find({
             ...keyword,
-            _id: { $ne: req.user.id, $nin: usersInCircle },
+            _id: { $ne: req.user.id, $nin: usersInTeam },
         })
         .limit(3) // Limit to top 3 results
         .select('id username'); // Only send back necessary info
@@ -63,23 +68,39 @@ export const searchUsers = async (req, res) => {
     }
 };
 
-// @desc    Add a user to the circle
-// @route   POST /api/users/circle
+// @desc    Add a user to the team
+// @route   POST /api/users/team
 // @access  Private
-export const addToCircle = async (req, res) => {
+export const addToTeam = async (req, res) => {
     const { userIdToAdd } = req.body;
 
     try {
-        // Add the new user to the current user's circle array
+        const currentUser = await User.findById(req.user.id);
+
+        // If this is the first team member being added, promote current user to lead
+        if ((!currentUser.team || currentUser.team.length === 0) && 
+            (!currentUser.circle || currentUser.circle.length === 0)) {
+            await User.findByIdAndUpdate(
+                req.user.id,
+                { role: 'lead' },
+                { new: true }
+            );
+        }
+
+        // Add the new user to the current user's team array
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,
-            { $addToSet: { circle: userIdToAdd } }, // $addToSet prevents duplicates
+            { $addToSet: { circle: userIdToAdd, team: userIdToAdd } }, // $addToSet prevents duplicates
             { new: true }
-        ).populate('circle', 'username');
+        ).populate('circle', 'username').populate('team', 'username');
 
-        res.json(updatedUser.circle);
+        res.json(updatedUser.team);
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
     }
 };
+
+// Legacy function names for backward compatibility
+export const getMyCircle = getMyTeam;
+export const addToCircle = addToTeam;

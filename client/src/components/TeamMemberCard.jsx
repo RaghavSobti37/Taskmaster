@@ -1,8 +1,8 @@
 import React from 'react';
 import ProfileAvatar from './ProfileAvatar';
-import './CircleMemberCard.css';
+import './TeamMemberCard.css';
 
-const CircleMemberCard = ({ member, onAssignTask }) => {
+const TeamMemberCard = ({ member, onAssignTask }) => {
   const activeTasks = member.tasks.filter(task => task.status !== 'done');
 
   return (
@@ -33,4 +33,4 @@ const CircleMemberCard = ({ member, onAssignTask }) => {
   );
 };
 
-export default CircleMemberCard;
+export default TeamMemberCard;

@@ -21,13 +21,16 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <Link to="/" className="navbar-brand">Taskmaster</Link>
+      <Link to="/" className="navbar-brand">CoreKnot</Link>
       <div className="navbar-center">
         {isAuthenticated && (
           <>
             <div className="nav-links">
               <NavLink to="/">Home</NavLink>
-              <NavLink to="/circle">Circle</NavLink>
+              <NavLink to="/team">Team</NavLink>
+              {user?.role === 'admin' && (
+                <NavLink to="/server" className="server-link">👑 Server</NavLink>
+              )}
             </div>
           </>
         )}

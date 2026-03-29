@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import CircleMemberCard from '../components/CircleMemberCard';
+import TeamMemberCard from '../components/TeamMemberCard';
 import CreateTaskModal from '../components/CreateTaskModal';
 import api from '../services/api';
-import './CircleView.css';
+import './TeamView.css';
 
-const CircleView = () => {
-  const [circle, setCircle] = useState([]);
+const TeamView = () => {
+  const [team, setTeam] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assignee, setAssignee] = useState(null);
 
-  const fetchCircle = async () => {
+  const fetchTeam = async () => {
     try {
-      const { data } = await api.get('/users/circle');
-      setCircle(data);
+      const { data } = await api.get('/users/team');
+      setTeam(data);
     } catch (error) {
-      console.error("Failed to fetch circle", error);
+      console.error("Failed to fetch team", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCircle();
+    fetchTeam();
   }, []);
 
   useEffect(() => {
@@ -44,12 +44,12 @@ const CircleView = () => {
 
   const handleAddUser = async (userId) => {
     try {
-      await api.post('/users/circle', { userIdToAdd: userId });
+      await api.post('/users/team', { userIdToAdd: userId });
       setSearchQuery('');
       setSearchResults([]);
-      fetchCircle(); // Refetch the circle to show the new member
+      fetchTeam(); // Refetch the team to show the new member
     } catch (error) {
-      console.error('Failed to add user to circle', error);
+      console.error('Failed to add user to team', error);
       alert('Could not add user.');
     }
   };
@@ -64,8 +64,8 @@ const CircleView = () => {
       await api.post('/tasks', newTaskData);
       setIsModalOpen(false);
       setAssignee(null);
-      // Optionally, you can refetch the circle data to show the new task count
-      fetchCircle();
+      // Optionally, you can refetch the team data to show the new task count
+      fetchTeam();
     } catch (error) {
       console.error('Failed to create/assign task', error);
     }
@@ -74,13 +74,13 @@ const CircleView = () => {
   return (
     <div>
       {isModalOpen && <CreateTaskModal onClose={() => setIsModalOpen(false)} onCreateTask={handleCreateTask} assignee={assignee} />}
-      <div className="circle-header">
-        <h1>Circle</h1>
-        <div className="circle-search-container">
+      <div className="team-header">
+        <h1>Team</h1>
+        <div className="team-search-container">
           <input
             type="text"
-            className="circle-search-input"
-            placeholder="Find users to add..."
+            className="team-search-input"
+            placeholder="Find team members to add..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -100,16 +100,16 @@ const CircleView = () => {
       </div>
 
       {isLoading ? (
-        <p>Loading circle...</p>
-      ) : circle.length === 0 ? (
+        <p>Loading team...</p>
+      ) : team.length === 0 ? (
         <div className="add-friend-prompt">
-          <h2>Your circle is empty!</h2>
-          <p>Add friends by searching for their username.</p>
+          <h2>Your team is empty!</h2>
+          <p>Add team members by searching for their username.</p>
         </div>
       ) : (
-        <div className="circle-grid">
-          {circle.map(member => (
-            <CircleMemberCard key={member._id} member={member} onAssignTask={handleOpenAssignModal} />
+        <div className="team-grid">
+          {team.map(member => (
+            <TeamMemberCard key={member._id} member={member} onAssignTask={handleOpenAssignModal} />
           ))}
         </div>
       )}
@@ -117,4 +117,4 @@ const CircleView = () => {
   );
 };
 
-export default CircleView;
+export default TeamView;

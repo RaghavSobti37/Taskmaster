@@ -4,11 +4,12 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Dashboard from './pages/Dashboard';
-import CalendarView from './pages/CalendarView';
+import TeamView from './pages/TeamView';
+import ServerAdmin from './pages/ServerAdmin';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import CircleView from './pages/CircleView';
 import './App.css';
 function App() {
   return (
@@ -29,11 +30,19 @@ function App() {
                 }
               />
               <Route
-                path="/circle"
+                path="/team"
                 element={
                   <ProtectedRoute>
-                    <CircleView />
+                    <TeamView />
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/server"
+                element={
+                  <AdminRoute>
+                    <ServerAdmin />
+                  </AdminRoute>
                 }
               />
               {/* This will catch any non-matching routes and redirect to the homepage */}

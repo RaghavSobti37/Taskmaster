@@ -1,38 +1,60 @@
 :root {
+  /* THE SHAKTI COLLECTIVE - Premium Design System */
+  
   /* Light Mode Palette */
-  --background-light: #F7FAFC;
-  --surface-light: #FFFFFF;
-  --border-light: #E2E8F0;
-  --text-primary-light: #1A202C;
-  --text-secondary-light: #718096;
-  --primary-light: #5A67D8; /* Indigo */
-  --secondary-light: #38B2AC; /* Teal */
-  --urgent-light: #E53E3E; /* Red */
-  --important-light: #F6AD55; /* Orange */
-  --normal-light: #63B3ED; /* Cyan */
-  --success-light: #48BB78; /* Green */
+  --cream: #ffecd1;
+  --deep-teal: #083d3a;
+  --pumpkin: #b74b02;
+  --wine: #6d2034;
+  --sea-foam: #126d5e;
+  --peacock: #08525f;
+  --mustard: #d4a574;
+  
+  --background-light: #ffecd1;
+  --surface-light: #fdf6f0;
+  --surface-alt-light: #ffffff;
+  --border-light: #083d3a;
+  --text-primary-light: #083d3a;
+  --text-secondary-light: #6d2034;
+  --text-tertiary-light: #896051;
+  --primary-light: #b74b02;
+  --secondary-light: #126d5e;
+  --accent-wine-light: #6d2034;
+  --accent-peacock-light: #08525f;
+  --urgent-light: #b74b02;
+  --important-light: #d4a574;
+  --normal-light: #126d5e;
+  --success-light: #126d5e;
 
   /* Dark Mode Palette */
-  --background-dark: #1A202C;
-  --surface-dark: #2D3748;
-  --border-dark: #4A5568;
-  --text-primary-dark: #F7FAFC;
-  --text-secondary-dark: #A0AEC0;
-  --primary-dark: #90CDF4; /* Lighter Blue for contrast */
-  --secondary-dark: #4FD1C5; /* Lighter Teal */
-  --urgent-dark: #FC8181; /* Lighter Red */
-  --important-dark: #F6AD55; /* Orange */
-  --normal-dark: #63B3ED; /* Cyan */
-  --success-dark: #48BB78; /* Green */
+  --background-dark: #083d3a;
+  --surface-dark: #0f4f4b;
+  --surface-alt-dark: #126d5e;
+  --border-dark: #ffecd1;
+  --text-primary-dark: #ffecd1;
+  --text-secondary-dark: #d4a574;
+  --text-tertiary-dark: #b8a69a;
+  --primary-dark: #b74b02;
+  --secondary-dark: #d4a574;
+  --accent-wine-dark: #e8a0ab;
+  --accent-peacock-dark: #a0d8d4;
+  --urgent-dark: #ff9a5a;
+  --important-dark: #ffd9a8;
+  --normal-dark: #7ce6d6;
+  --success-dark: #7ce6d6;
 
   /* Default (Light Mode) */
   --background-color: var(--background-light);
   --surface-color: var(--surface-light);
+  --surface-alt-color: var(--surface-alt-light);
   --border-color: var(--border-light);
   --text-primary: var(--text-primary-light);
   --text-secondary: var(--text-secondary-light);
+  --text-tertiary: var(--text-tertiary-light);
   --primary-color: var(--primary-light);
   --secondary-color: var(--secondary-light);
+  --accent-wine: var(--accent-wine-light);
+  --accent-peacock: var(--accent-peacock-light);
   --urgent-color: var(--urgent-light);
   --important-color: var(--important-light);
   --normal-color: var(--normal-light);
@@ -41,20 +63,24 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Almarai', sans-serif;
   background-color: var(--background-color);
   color: var(--text-primary);
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 body.dark {
   --background-color: var(--background-dark);
   --surface-color: var(--surface-dark);
+  --surface-alt-color: var(--surface-alt-dark);
   --border-color: var(--border-dark);
   --text-primary: var(--text-primary-dark);
   --text-secondary: var(--text-secondary-dark);
+  --text-tertiary: var(--text-tertiary-dark);
   --primary-color: var(--primary-dark);
   --secondary-color: var(--secondary-dark);
+  --accent-wine: var(--accent-wine-dark);
+  --accent-peacock: var(--accent-peacock-dark);
   --urgent-color: var(--urgent-dark);
   --important-color: var(--important-dark);
   --normal-color: var(--normal-dark);

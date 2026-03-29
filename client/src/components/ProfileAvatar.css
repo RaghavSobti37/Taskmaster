@@ -1,13 +1,21 @@
 .profile-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background-color: var(--primary-color);
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--pumpkin) 0%, var(--sea-foam) 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 1.2rem;
+  font-family: 'Signika', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(183, 75, 2, 0.2);
+  transition: all 0.3s ease;
+}
+
+.profile-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(183, 75, 2, 0.3);
 }

@@ -20,7 +20,8 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
 
 // Middleware
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json()); // Body parser for JSON
+// Increased limit to 10MB to handle base64-encoded profile pictures
+app.use(express.json({ limit: '10mb' })); // Body parser for JSON
 app.use(morgan('dev')); // HTTP request logger
 app.use(loggerMiddleware); // Custom logger middleware for DB logging
 

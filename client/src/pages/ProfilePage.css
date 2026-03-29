@@ -112,8 +112,30 @@
 }
 
 .profile-picture-input {
-  margin-top: 10px;
-  font-size: 12px;
+  display: none;
+}
+
+.profile-picture-label {
+  display: block;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.upload-button {
+  display: inline-block;
+  background: linear-gradient(135deg, #128c6e, #0e5952);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(18, 109, 94, 0.2);
+}
+
+.upload-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(18, 109, 94, 0.3);
 }
 
 .form-actions {

@@ -50,7 +50,11 @@ export const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
-  const value = { user, login, logout, register, loading, isAuthenticated: !!user };
+  const updateUserProfile = (updatedUserData) => {
+    setUser(updatedUserData);
+  };
+
+  const value = { user, login, logout, register, loading, isAuthenticated: !!user, updateUserProfile };
 
   return (
     <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>

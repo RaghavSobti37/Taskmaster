@@ -37,6 +37,24 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/tasks/${taskId}`);
+
+      // Remove the task from all task lists
+      setMyTasks(myTasks.filter(t => t._id !== taskId));
+      setAssignedToMe(assignedToMe.filter(t => t._id !== taskId));
+      setAssignedToOthers(assignedToOthers.filter(t => t._id !== taskId));
+    } catch (error) {
+      console.error('Failed to delete task', error);
+      alert('Failed to delete task');
+    }
+  };
+
   const handleCreateTask = async (newTaskData) => {
     try {
       const { data: createdTask } = await api.post('/tasks', newTaskData);
@@ -177,7 +195,7 @@ const Dashboard = () => {
               {assignedToMe.length > 0 ? (
                 <div className="task-list">
                   {assignedToMe.slice(0, 5).map(task => (
-                    <TaskItem key={task._id} task={task} onToggleComplete={handleToggleComplete} />
+                    <TaskItem key={task._id} task={task} onToggleComplete={handleToggleComplete} onDelete={handleDeleteTask} isCreator={task.creator._id === user._id} userRole={user.role} userId={user._id} />
                   ))}
                 </div>
               ) : (
@@ -196,7 +214,7 @@ const Dashboard = () => {
               {myTasks.length > 0 ? (
                 <div className="task-list">
                   {myTasks.slice(0, 5).map(task => (
-                    <TaskItem key={task._id} task={task} onToggleComplete={handleToggleComplete} />
+                    <TaskItem key={task._id} task={task} onToggleComplete={handleToggleComplete} onDelete={handleDeleteTask} isCreator={task.creator._id === user._id} userRole={user.role} userId={user._id} />
                   ))}
                 </div>
               ) : (
@@ -217,22 +235,26 @@ const Dashboard = () => {
               {allUsers.length > 0 ? (
                 <div className="team-preview-grid">
                   {allUsers
-                    .map(member => ({
-                      ...member,
-                      assignedTasksCount: assignedToOthers.filter(task => task.assignee._id === member._id).length
-                    }))
+                    .map(member => {
+                      // Get all tasks assigned to this member (from anyone, including themselves)
+                      const allMemberTasks = [...myTasks, ...assignedToMe, ...assignedToOthers].filter(
+                        task => task.assignee._id === member._id
+                      );
+                      return {
+                        ...member,
+                        assignedTasksCount: allMemberTasks.length,
+                        tasks: allMemberTasks
+                      };
+                    })
                     .sort((a, b) => b.assignedTasksCount - a.assignedTasksCount)
                     .slice(0, 4)
-                    .map(member => {
-                      const memberTasks = assignedToOthers.filter(task => task.assignee._id === member._id);
-                      return (
-                        <TeamMemberCard 
-                          key={member._id} 
-                          member={{ ...member, tasks: memberTasks }} 
-                          onAssignTask={handleOpenAssignModal} 
-                        />
-                      );
-                    })}
+                    .map(member => (
+                      <TeamMemberCard 
+                        key={member._id} 
+                        member={member}
+                        onAssignTask={handleOpenAssignModal} 
+                      />
+                    ))}
                   {allUsers.length > 4 && (
                     <div className="view-more-card">
                       <p>+ {allUsers.length - 4} more</p>

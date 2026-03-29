@@ -22,8 +22,8 @@ router.post(
   [
     check('login', 'Email or Username is required').not().isEmpty(),
     check('password', 'Password is required').exists(),
-  handleValidationErrors,
   ],
+  handleValidationErrors,
   loginUser
 );
 

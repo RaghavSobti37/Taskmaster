@@ -9,14 +9,15 @@ import api from '../services/api';
 const Dashboard = () => {
   const [myTasks, setMyTasks] = useState([]);
   const [assignedToMe, setAssignedToMe] = useState([]);
-  const [team, setTeam] = useState([]);
+  const [assignedToOthers, setAssignedToOthers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assignee, setAssignee] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   
   const handleToggleComplete = async (taskId) => {
-    const allTasks = [...myTasks, ...assignedToMe];
+    const allTasks = [...myTasks, ...assignedToMe, ...assignedToOthers];
     const taskToUpdate = allTasks.find(t => t._id === taskId);
     if (!taskToUpdate) return;
 
@@ -29,6 +30,7 @@ const Dashboard = () => {
       
       setMyTasks(updateState(myTasks));
       setAssignedToMe(updateState(assignedToMe));
+      setAssignedToOthers(updateState(assignedToOthers));
 
     } catch (error) {
       console.error('Failed to update task status', error);
@@ -38,8 +40,22 @@ const Dashboard = () => {
   const handleCreateTask = async (newTaskData) => {
     try {
       const { data: createdTask } = await api.post('/tasks', newTaskData);
-      const taskForUi = { ...createdTask, creator: { username: user.username } };
-      setMyTasks(prevTasks => [taskForUi, ...prevTasks]);
+      
+      // Ensure creator and assignee have proper structure
+      const taskWithDetails = {
+        ...createdTask,
+        creator: { ...createdTask.creator, _id: user._id },
+        assignee: createdTask.assignee || { _id: user._id, username: user.username }
+      };
+
+      // If task is assigned to someone else, add to assignedToOthers
+      if (createdTask.assignee && createdTask.assignee._id !== user._id) {
+        setAssignedToOthers(prevTasks => [taskWithDetails, ...prevTasks]);
+      } else {
+        // Otherwise it's a personal task
+        setMyTasks(prevTasks => [taskWithDetails, ...prevTasks]);
+      }
+      
       setIsModalOpen(false);
       setAssignee(null);
     } catch (error) {
@@ -52,12 +68,14 @@ const Dashboard = () => {
     setIsModalOpen(true);
   };
 
-  const fetchTeam = async () => {
+  const fetchAllUsers = async () => {
     try {
-      const { data } = await api.get('/users/team');
-      setTeam(data);
+      const { data } = await api.get('/users/all');
+      // Filter out current user from the list
+      const otherUsers = data.filter(u => u._id !== user?._id);
+      setAllUsers(otherUsers);
     } catch (error) {
-      console.error("Failed to fetch team", error);
+      console.error("Failed to fetch users", error);
     }
   };
 
@@ -66,20 +84,25 @@ const Dashboard = () => {
       if (!user) return;
       try {
         setIsLoading(true);
-        const [tasksRes, teamRes] = await Promise.all([
-          api.get('/tasks'),
-          api.get('/users/team')
-        ]);
-
+        const tasksRes = await api.get('/tasks');
         const data = tasksRes.data;
-        const tasksForMe = data.filter(
-          (task) => task.assignee === user._id && task.creator._id !== user._id
-        );
-        const tasksByMe = data.filter((task) => task.creator._id === user._id);
 
-        setAssignedToMe(tasksForMe);
-        setMyTasks(tasksByMe);
-        setTeam(teamRes.data);
+        // Categorize tasks into 3 groups
+        const tasksAssignedToMe = data.filter(
+          (task) => task.assignee._id === user._id && task.creator._id !== user._id
+        );
+        
+        const tasksAssignedToOthers = data.filter(
+          (task) => task.creator._id === user._id && task.assignee._id !== user._id
+        );
+        
+        const myPersonalTasks = data.filter(
+          (task) => task.creator._id === user._id && task.assignee._id === user._id
+        );
+
+        setAssignedToMe(tasksAssignedToMe);
+        setAssignedToOthers(tasksAssignedToOthers);
+        setMyTasks(myPersonalTasks);
       } catch (error) {
         console.error('Failed to fetch data', error);
       } finally {
@@ -88,10 +111,11 @@ const Dashboard = () => {
     };
 
     fetchData();
+    fetchAllUsers();
   }, [user]);
 
-  const totalTasks = myTasks.length + assignedToMe.length;
-  const completedTasks = [...myTasks, ...assignedToMe].filter(t => t.status === 'done').length;
+  const totalTasks = myTasks.length + assignedToMe.length + assignedToOthers.length;
+  const completedTasks = [...myTasks, ...assignedToMe, ...assignedToOthers].filter(t => t.status === 'done').length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
@@ -125,9 +149,9 @@ const Dashboard = () => {
           <p className="stat-label">{completedTasks} of {totalTasks} done</p>
         </div>
         <div className="stat-card">
-          <h3>Team Members</h3>
-          <p className="stat-number">{team.length}</p>
-          <p className="stat-label">In your team</p>
+          <h3>Assigned to Others</h3>
+          <p className="stat-number">{assignedToOthers.length}</p>
+          <p className="stat-label">Tasks delegated</p>
         </div>
         <div className="stat-card">
           <h3>Assigned to You</h3>
@@ -176,7 +200,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : (
-                <p className="no-tasks-msg">You haven't created any tasks yet.</p>
+                <p className="no-tasks-msg">You haven't created any personal tasks yet.</p>
               )}
             </section>
           </div>
@@ -185,51 +209,44 @@ const Dashboard = () => {
           <div className="dashboard-right">
             <section className="team-section">
               <div className="section-header">
-                <h2>👥 Team Overview</h2>
-                {team.length > 0 && (
-                  <span className="badge">{team.length}</span>
+                <h2>👥 Team Members</h2>
+                {allUsers.length > 0 && (
+                  <span className="badge">{allUsers.length}</span>
                 )}
               </div>
-              {team.length > 0 ? (
+              {allUsers.length > 0 ? (
                 <div className="team-preview-grid">
-                  {team.slice(0, 4).map(member => (
-                    <TeamMemberCard key={member._id} member={member} onAssignTask={handleOpenAssignModal} />
-                  ))}
-                  {team.length > 4 && (
+                  {allUsers
+                    .map(member => ({
+                      ...member,
+                      assignedTasksCount: assignedToOthers.filter(task => task.assignee._id === member._id).length
+                    }))
+                    .sort((a, b) => b.assignedTasksCount - a.assignedTasksCount)
+                    .slice(0, 4)
+                    .map(member => {
+                      const memberTasks = assignedToOthers.filter(task => task.assignee._id === member._id);
+                      return (
+                        <TeamMemberCard 
+                          key={member._id} 
+                          member={{ ...member, tasks: memberTasks }} 
+                          onAssignTask={handleOpenAssignModal} 
+                        />
+                      );
+                    })}
+                  {allUsers.length > 4 && (
                     <div className="view-more-card">
-                      <p>+ {team.length - 4} more</p>
+                      <p>+ {allUsers.length - 4} more</p>
                       <a href="/team" className="view-more-link">View Full Team →</a>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="empty-team-state">
-                  <h3>Your team is empty</h3>
-                  <p>Add team members to collaborate and assign tasks</p>
-                  <a href="/team" className="add-team-btn">Go to Team Page →</a>
+                  <h3>No other team members</h3>
+                  <p>You are the only member in your organization</p>
+                  <a href="/team" className="add-team-btn">View All Users →</a>
                 </div>
               )}
-            </section>
-
-            {/* Quick Actions */}
-            <section className="quick-actions">
-              <h3>Quick Actions</h3>
-              <div className="actions-list">
-                <a href="/team" className="action-item">
-                  <span className="action-icon">👥</span>
-                  <div>
-                    <p className="action-title">Manage Team</p>
-                    <p className="action-desc">Add or remove team members</p>
-                  </div>
-                </a>
-                <button onClick={() => setIsModalOpen(true)} className="action-item">
-                  <span className="action-icon">➕</span>
-                  <div>
-                    <p className="action-title">Create Task</p>
-                    <p className="action-desc">Add a new task or assignment</p>
-                  </div>
-                </button>
-              </div>
             </section>
           </div>
         </div>

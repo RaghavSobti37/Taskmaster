@@ -1,7 +1,10 @@
 import React from 'react';
 import './TaskItem.css';
 
-const TaskItem = ({ task, onToggleComplete }) => {
+const TaskItem = ({ task, onToggleComplete, onDelete, isCreator, userRole, userId }) => {
+  // Show delete button if: user is creator OR (user is admin AND is assignee of this task)
+  const isAssignee = userId && task.assignee._id === userId;
+  const canDelete = isCreator || (userRole === 'admin' && isAssignee);
   return (
     <div className={`task-item ${task.status === 'done' ? 'done' : ''}`}>
       <div className="task-item-main">
@@ -26,6 +29,15 @@ const TaskItem = ({ task, onToggleComplete }) => {
         <span className={`task-tag priority-${task.priority}`}>{task.priority}</span>
         {!task.isPersonal && (
           <span className="task-tag creator">from: {task.creator.username}</span>
+        )}
+        {canDelete && (
+          <button
+            className="task-delete-btn"
+            onClick={() => onDelete(task._id)}
+            title="Delete task"
+          >
+            🗑️
+          </button>
         )}
       </div>
     </div>

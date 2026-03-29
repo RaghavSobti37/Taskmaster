@@ -5,7 +5,7 @@ import ProfileAvatar from '../components/ProfileAvatar';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserProfile } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     currentPassword: '',
@@ -41,12 +41,42 @@ const ProfilePage = () => {
   const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file size (max 2MB before compression)
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image size must be less than 2MB');
+        return;
+      }
+
+      // Compress the image before converting to base64
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          profilePicture: reader.result,
-        }));
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize if image is larger than 800x800
+          if (width > 800 || height > 800) {
+            const ratio = Math.min(800 / width, 800 / height);
+            width *= ratio;
+            height *= ratio;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to base64 with 0.7 quality to reduce size
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setFormData(prev => ({
+            ...prev,
+            profilePicture: compressedBase64,
+          }));
+          setError(''); // Clear any previous errors
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -87,6 +117,16 @@ const ProfilePage = () => {
       const { data } = await api.put('/users/profile', updateData);
       setMessage(data.message || 'Profile updated successfully!');
       
+      // Update global user state with new profile data
+      updateUserProfile({
+        ...user,
+        username: data.username,
+        profilePicture: data.profilePicture,
+        role: data.role,
+        email: data.email,
+        _id: data._id,
+      });
+      
       // Update local state
       setFormData({
         ...formData,
@@ -111,14 +151,27 @@ const ProfilePage = () => {
       <div className="profile-card">
         <div className="profile-header">
           <div className="profile-avatar-section">
-            <ProfileAvatar username={user.username} size="large" />
+            {isEditing && formData.profilePicture ? (
+              <div className="profile-avatar avatar-large" style={{ 
+                backgroundImage: `url(${formData.profilePicture})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}>
+                <img src={formData.profilePicture} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ) : (
+              <ProfileAvatar username={user.username} profilePicture={user.profilePicture} size="large" />
+            )}
             {isEditing && (
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleProfilePictureChange}
-                className="profile-picture-input"
-              />
+              <label className="profile-picture-label">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className="profile-picture-input"
+                />
+                <span className="upload-button">📷 Change Photo</span>
+              </label>
             )}
           </div>
           <div className="profile-info">

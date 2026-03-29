@@ -1,5 +1,6 @@
 import Task from '../models/Task.js';
 import Log from '../models/Log.js';
+import User from '../models/User.js';
 
 // @desc    Create a new task
 // @route   POST /api/tasks
@@ -100,6 +101,47 @@ export const updateTaskStatus = async (req, res) => {
     res.json(task);
   } catch (error)
   {
+    console.error(error.message);
+    res.status(500).send('Server Error');
+  }
+};
+
+// @desc    Delete a task
+// @route   DELETE /api/tasks/:id
+// @access  Private
+export const deleteTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    const user = await User.findById(req.user.id);
+
+    if (!task) {
+      return res.status(404).json({ msg: 'Task not found' });
+    }
+
+    // Check permissions: creator can always delete, admin can delete if involved (creator or assignee)
+    const isCreator = task.creator.toString() === req.user.id.toString();
+    const isAssignee = task.assignee.toString() === req.user.id.toString();
+    const isAdmin = user.role === 'admin';
+
+    if (!isCreator && !(isAdmin && isAssignee)) {
+      return res.status(401).json({ msg: 'User not authorized to delete this task' });
+    }
+
+    await Task.findByIdAndDelete(req.params.id);
+
+    // Try to log the action (don't crash if it fails)
+    try {
+      await Log.create({
+        user: req.user.id,
+        action: 'DELETE_TASK',
+        details: { taskId: task._id, title: task.title, assignedTo: task.assignee }
+      });
+    } catch (logError) {
+      console.error('Logging error (non-critical):', logError.message);
+    }
+
+    res.json({ msg: 'Task deleted successfully' });
+  } catch (error) {
     console.error(error.message);
     res.status(500).send('Server Error');
   }

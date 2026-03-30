@@ -36,15 +36,46 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    corsOrigins: allowedOrigins
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err);
+  res.status(err.status || 500).json({ 
+    message: err.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'production' ? {} : err 
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 // Connect to Database and start server
 const startServer = async () => {
   try {
+    console.log('[STARTUP] Initializing server...');
+    console.log('[STARTUP] NODE_ENV:', process.env.NODE_ENV);
+    console.log('[STARTUP] CORS Origins:', allowedOrigins);
+    
     await connectDB();
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    
+    app.listen(PORT, () => {
+      console.log('[STARTUP] Server running on port', PORT);
+      console.log('[STARTUP] API base: http://localhost:' + PORT + '/api');
+    });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('[STARTUP] Failed to start server:', error);
     process.exit(1);
   }
 };

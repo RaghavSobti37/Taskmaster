@@ -16,8 +16,16 @@ export const registerUser = async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
+    console.log('[REGISTER] Attempting registration with:', { username, email, passwordLength: password?.length });
+
+    if (!username || !email || !password) {
+      console.log('[REGISTER] Missing required fields');
+      return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
+
     let user = await User.findOne({ email });
     if (user) {
+      console.log('[REGISTER] Email already exists:', email);
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -33,6 +41,7 @@ export const registerUser = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id);
+    console.log('[REGISTER] Registration successful for:', email);
 
     res.status(201).json({
       token,
@@ -45,8 +54,8 @@ export const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
+    console.error('[REGISTER] Server error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -57,15 +66,25 @@ export const loginUser = async (req, res) => {
   const { login, password } = req.body;
 
   try {
+    console.log('[LOGIN] Attempting login with:', { login, passwordLength: password?.length });
+
+    if (!login || !password) {
+      console.log('[LOGIN] Missing credentials');
+      return res.status(400).json({ message: 'Email/username and password are required' });
+    }
+
     let user = await User.findOne({
       $or: [{ email: login }, { username: login }],
     });
+    
     if (!user) {
+      console.log('[LOGIN] User not found:', login);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('[LOGIN] Password mismatch for user:', login);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -75,6 +94,7 @@ export const loginUser = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id);
+    console.log('[LOGIN] Login successful for user:', user.email);
 
     res.json({
       token,
@@ -87,8 +107,8 @@ export const loginUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
+    console.error('[LOGIN] Server error:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

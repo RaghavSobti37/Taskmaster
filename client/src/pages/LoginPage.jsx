@@ -12,11 +12,17 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    console.log('🔑 [LOGIN PAGE] Form submitted');
+    console.log('🔑 [LOGIN PAGE] Values:', { loginIdentifier, passwordLength: password.length });
+    
     try {
+      console.log('🔑 [LOGIN PAGE] Calling login function...');
       await login(loginIdentifier, password);
+      console.log('🔑 [LOGIN PAGE] Login succeeded');
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Failed to login';
-      console.error('Login error:', errorMessage);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to login';
+      console.error('🔑 [LOGIN PAGE] Login failed:', errorMessage);
       setError(errorMessage);
     }
   };
@@ -25,14 +31,32 @@ const LoginPage = () => {
     <div className="auth-container">
       <form className="auth-form" onSubmit={handleSubmit}>
         <h1>Login</h1>
-        {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+        {error && <div style={{ color: 'red', marginBottom: '10px' }}>⚠️ {error}</div>}
         <div className="form-group">
           <label htmlFor="login">Email or Username</label>
-          <input type="text" id="login" value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} required />
+          <input 
+            type="text" 
+            id="login" 
+            value={loginIdentifier} 
+            onChange={(e) => {
+              console.log('🔑 [LOGIN PAGE] Login identifier changed:', e.target.value);
+              setLoginIdentifier(e.target.value);
+            }} 
+            required 
+          />
         </div>
         <div className="form-group">
           <label htmlFor="password">Password</label>
-          <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input 
+            type="password" 
+            id="password" 
+            value={password} 
+            onChange={(e) => {
+              console.log('🔑 [LOGIN PAGE] Password changed, length:', e.target.value.length);
+              setPassword(e.target.value);
+            }} 
+            required 
+          />
         </div>
         <button type="submit" className="auth-button">
           Login

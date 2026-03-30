@@ -236,3 +236,12 @@
 {"timestamp":"2026-03-30T05:52:07.135Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
 {"timestamp":"2026-03-30T05:52:07.346Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
 {"timestamp":"2026-03-30T05:52:07.524Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
+{"timestamp":"2026-03-30T07:01:32.079Z","level":"info","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":200},"userId":null}
+{"timestamp":"2026-03-30T07:01:32.315Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
+{"timestamp":"2026-03-30T07:01:32.536Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
+{"timestamp":"2026-03-30T08:04:58.964Z","level":"info","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":200},"userId":null}
+{"timestamp":"2026-03-30T08:04:59.197Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
+{"timestamp":"2026-03-30T08:04:59.367Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69c90f9619c83f5a9ddf4b9b"}
+{"timestamp":"2026-03-30T08:05:11.457Z","level":"error","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":400},"userId":null}
+{"timestamp":"2026-03-30T08:05:21.990Z","level":"info","message":"POST /register","source":"http","metadata":{"method":"POST","path":"/register","status":201},"userId":null}
+{"timestamp":"2026-03-30T08:05:25.908Z","level":"info","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":200},"userId":null}

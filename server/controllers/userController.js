@@ -6,14 +6,22 @@ import Task from '../models/Task.js';
 // @access  Private
 export const getMyTeam = async (req, res) => {
     try {
+        console.log('[GET_MY_TEAM] ===== REQUEST RECEIVED =====');
+        console.log('[GET_MY_TEAM] User ID:', req.user?.id);
+        
         const user = await User.findById(req.user.id).populate('team', 'username role').populate('circle', 'username');
 
+        console.log('[GET_MY_TEAM] User found:', !!user);
+        
         if (!user) {
+            console.log('[GET_MY_TEAM] ❌ User not found');
             return res.status(404).json({ message: 'User not found' });
         }
 
         // Use team field if available, fallback to circle for backward compatibility
         const teamMembers = user.team && user.team.length > 0 ? user.team : user.circle;
+        console.log('[GET_MY_TEAM] Team members count:', teamMembers?.length || 0);
+        console.log('[GET_MY_TEAM] Team members:', teamMembers);
 
         // For each member in the team, fetch their visible, active tasks
         const teamWithTasks = await Promise.all(teamMembers.map(async (member) => {
@@ -26,10 +34,11 @@ export const getMyTeam = async (req, res) => {
             return { ...member.toObject(), tasks };
         }));
 
+        console.log('[GET_MY_TEAM] ✓ Sending response with', teamWithTasks.length, 'team members');
         res.json(teamWithTasks);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('[GET_MY_TEAM] ❌ Error:', error.message);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
@@ -47,10 +56,15 @@ export const searchUsers = async (req, res) => {
         : {};
 
     try {
+        console.log('[SEARCH_USERS] ===== REQUEST RECEIVED =====');
+        console.log('[SEARCH_USERS] Query:', req.query.q);
+        
         const currentUser = await User.findById(req.user.id);
         const usersInTeam = currentUser.team && currentUser.team.length > 0 
             ? currentUser.team 
             : currentUser.circle;
+
+        console.log('[SEARCH_USERS] Users in team:', usersInTeam?.length || 0);
 
         // Find users that match the keyword, are not the current user,
         // and are not already in the user's team.
@@ -61,10 +75,11 @@ export const searchUsers = async (req, res) => {
         .limit(3) // Limit to top 3 results
         .select('id username'); // Only send back necessary info
 
+        console.log('[SEARCH_USERS] Found', users.length, 'matching users');
         res.json(users);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('[SEARCH_USERS] ❌ Error:', error.message);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
@@ -75,11 +90,16 @@ export const addToTeam = async (req, res) => {
     const { userIdToAdd } = req.body;
 
     try {
+        console.log('[ADD_TO_TEAM] ===== REQUEST RECEIVED =====');
+        console.log('[ADD_TO_TEAM] Current user:', req.user?.id);
+        console.log('[ADD_TO_TEAM] User to add:', userIdToAdd);
+        
         const currentUser = await User.findById(req.user.id);
 
         // If this is the first team member being added, promote current user to lead
         if ((!currentUser.team || currentUser.team.length === 0) && 
             (!currentUser.circle || currentUser.circle.length === 0)) {
+            console.log('[ADD_TO_TEAM] First team member - promoting to lead');
             await User.findByIdAndUpdate(
                 req.user.id,
                 { role: 'lead' },
@@ -94,10 +114,11 @@ export const addToTeam = async (req, res) => {
             { new: true }
         ).populate('circle', 'username').populate('team', 'username');
 
+        console.log('[ADD_TO_TEAM] ✓ User added successfully');
         res.json(updatedUser.team);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('[ADD_TO_TEAM] ❌ Error:', error.message);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
@@ -106,11 +127,19 @@ export const addToTeam = async (req, res) => {
 // @access  Private
 export const getAllUsers = async (req, res) => {
     try {
+        console.log('[GET_ALL_USERS] ===== REQUEST RECEIVED =====');
+        console.log('[GET_ALL_USERS] User ID making request:', req.user?.id);
+        
         const users = await User.find().select('_id username email role profilePicture').lean();
+        
+        console.log('[GET_ALL_USERS] Found', users.length, 'users');
+        console.log('[GET_ALL_USERS] Users:', users);
+        console.log('[GET_ALL_USERS] Sending response...');
+        
         res.json(users);
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('[GET_ALL_USERS] ❌ Error:', error.message);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 

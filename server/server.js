@@ -19,7 +19,12 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
   : ['http://localhost:5173', 'http://localhost:5174', 'https://taskmaster-sand.vercel.app'];
 
 // Middleware
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ 
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 // Increased limit to 10MB to handle base64-encoded profile pictures
 app.use(express.json({ limit: '10mb' })); // Body parser for JSON
 app.use(morgan('dev')); // HTTP request logger

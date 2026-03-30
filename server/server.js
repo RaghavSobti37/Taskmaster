@@ -61,6 +61,15 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Get API base URL based on environment
+const getApiBaseUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Render sets RENDER_EXTERNAL_URL or we can infer from environment
+    return 'https://taskmaster-jfw0.onrender.com';
+  }
+  return `http://localhost:${PORT}`;
+};
+
 // Connect to Database and start server
 const startServer = async () => {
   try {
@@ -71,8 +80,10 @@ const startServer = async () => {
     await connectDB();
     
     app.listen(PORT, () => {
+      const apiBaseUrl = getApiBaseUrl();
       console.log('[STARTUP] Server running on port', PORT);
-      console.log('[STARTUP] API base: http://localhost:' + PORT + '/api');
+      console.log('[STARTUP] Environment: ' + (process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'));
+      console.log('[STARTUP] API base:', apiBaseUrl + '/api');
     });
   } catch (error) {
     console.error('[STARTUP] Failed to start server:', error);

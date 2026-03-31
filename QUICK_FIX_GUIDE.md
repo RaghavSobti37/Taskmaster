@@ -100,6 +100,28 @@ fetch('https://taskmaster-jfw0.onrender.com/api/health')
 
 ---
 
+## 🧭 If Production Shows Blank Screen
+
+Use these fast checks when API calls are visible but UI is blank:
+
+1. DevTools → Network → enable **Preserve log** + **Disable cache**
+2. Hard refresh (`Ctrl+Shift+R`)
+3. Check if `/api/auth/me` is stuck in **pending**
+4. DevTools → Console, run:
+   ```javascript
+   const root = document.getElementById('root');
+   console.log('root child count:', root?.childElementCount);
+   ```
+5. Re-test in Incognito (extensions disabled) to rule out extension script errors
+6. Run:
+   ```javascript
+   fetch('https://taskmaster-jfw0.onrender.com/api/health').then(r => console.log('health', r.status));
+   ```
+
+If `/auth/me` hangs and health is fine, the blank state is usually auth bootstrapping waiting on user load.
+
+---
+
 ## 🎉 That's It!
 
 If all 5 steps completed successfully, your login should now work!

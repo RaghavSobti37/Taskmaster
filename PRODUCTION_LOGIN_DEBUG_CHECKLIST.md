@@ -245,6 +245,69 @@ Access-Control-Allow-Credentials: true
 
 ## 🔍 BROWSER DEBUGGING
 
+## 🧭 BLANK SCREEN (BUT API/TABLE DATA WORKS) - TARGETED DEBUG
+
+If you can see successful API calls (for example team member data), but the page stays visually blank or mostly empty, use this flow.
+
+### Step A: Confirm whether React mounted
+1. Open `https://tsccoreknot.com/login`
+2. Open DevTools → **Console**
+3. Run:
+  ```javascript
+  const root = document.getElementById('root');
+  console.log('root exists:', !!root);
+  console.log('root child count:', root?.childElementCount);
+  ```
+4. Interpretation:
+  - `root child count = 0`: app failed before rendering
+  - `root child count > 0`: app rendered, likely CSS/layout/state issue
+
+### Step B: Check for auth bootstrap hang (`/auth/me` pending)
+1. Open DevTools → **Network**
+2. Enable **Preserve log** and **Disable cache**
+3. Hard refresh (`Ctrl+Shift+R`)
+4. Filter by `auth/me`
+5. If request stays **(pending)** for >10s, app can appear blank because `AuthProvider` waits for user load before rendering children.
+
+### Step C: Verify this is not extension-injected JS noise
+1. In Console, separate errors from your app files vs browser-extension files
+2. Errors like `webpage_content_reporter.js` usually come from extensions
+3. Re-test in Incognito (extensions off) or another browser profile
+4. If blank screen disappears there, disable the offending extension for your production domain
+
+### Step D: Validate runtime and asset loading
+In Console, run:
+```javascript
+Promise.all([
+  fetch('https://taskmaster-jfw0.onrender.com/api/health').then(r => ({ healthStatus: r.status })),
+  fetch('https://taskmaster-jfw0.onrender.com/api/auth/me', {
+   headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+  }).then(async r => ({ meStatus: r.status, meBody: await r.text() })).catch(e => ({ meError: e.message }))
+]).then(console.log);
+```
+
+Expected:
+- Health endpoint should return quickly (200)
+- `/auth/me` should return 200 (valid token) or 401 (expired token), but not hang indefinitely
+
+### Step E: Quick isolation checks
+1. Clear token and retry:
+  ```javascript
+  localStorage.removeItem('token');
+  location.reload();
+  ```
+2. Open `/login` directly and verify if form appears
+3. If `/login` is blank while CSS loads, capture first Console error and first pending Network request
+
+### Step F: Evidence bundle to capture
+Collect these 4 items for faster root-cause confirmation:
+1. Console screenshot (first red error)
+2. Network screenshot showing status of `/auth/me`
+3. Output of `root child count` check
+4. Result of the health + `/auth/me` script above
+
+---
+
 ### Step 1: Open DevTools
 1. Go to `https://tsccoreknot.com`
 2. Press `F12` to open Developer Tools

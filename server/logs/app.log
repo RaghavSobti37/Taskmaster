@@ -258,3 +258,11 @@
 {"timestamp":"2026-03-30T12:07:49.752Z","level":"info","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":200},"userId":null}
 {"timestamp":"2026-03-30T12:07:50.029Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
 {"timestamp":"2026-03-30T12:07:50.286Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:30:52.754Z","level":"error","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":400},"userId":null}
+{"timestamp":"2026-03-31T14:30:57.542Z","level":"info","message":"POST /login","source":"http","metadata":{"method":"POST","path":"/login","status":200},"userId":null}
+{"timestamp":"2026-03-31T14:30:57.649Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:30:57.732Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:31:00.874Z","level":"info","message":"GET /team","source":"http","metadata":{"method":"GET","path":"/team","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:31:00.951Z","level":"info","message":"GET /team","source":"http","metadata":{"method":"GET","path":"/team","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:31:07.278Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-03-31T14:31:07.354Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}

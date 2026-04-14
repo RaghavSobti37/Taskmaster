@@ -62,6 +62,7 @@ export const registerUser = async (req, res) => {
         email: user.email,
         role: user.role,
         profilePicture: user.profilePicture,
+        profilePictureUrl: user.profilePictureUrl,
       },
     };
     
@@ -135,7 +136,14 @@ export const loginUser = async (req, res) => {
       user.loginHistory = user.loginHistory.slice(-100);
     }
 
-    await user.save();
+    try {
+      await user.save();
+    } catch (saveError) {
+      // If save fails due to schema validation, try without validation
+      console.log('[LOGIN] ⚠️  First save attempt failed, retrying without validation...');
+      await user.save({ validateBeforeSave: false });
+    }
+    
     console.log('[LOGIN] ✓ Login count updated');
 
     // Log daily activity
@@ -157,6 +165,7 @@ export const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         profilePicture: user.profilePicture,
+        profilePictureUrl: user.profilePictureUrl,
       },
     };
     

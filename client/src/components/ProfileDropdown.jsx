@@ -17,14 +17,33 @@ const ProfileDropdown = ({ user, onLogout }) => {
     return `Hey ${user?.username}!`;
   };
 
+  const getImageUrl = () => {
+    if (user?.profilePictureUrl) {
+      // If it's a relative path, use API base URL
+      if (user.profilePictureUrl.startsWith('/')) {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        return `${apiUrl}${user.profilePictureUrl}`;
+      }
+      return user.profilePictureUrl;
+    }
+    // Fallback to old profilePicture field for backward compatibility
+    if (user?.profilePicture && user.profilePicture.startsWith('data:')) {
+      return user.profilePicture;
+    }
+    return null;
+  };
+
   return (
     <div className="profile-dropdown">
       {user && (
         <div className="dropdown-header">
           <div className="dropdown-avatar-section">
             <div className="dropdown-avatar">
-              {user?.profilePicture ? (
-                <img src={user.profilePicture} alt={user.username} />
+              {getImageUrl() ? (
+                <img src={getImageUrl()} alt={user.username} onError={(e) => {
+                  // Fallback to initials if image fails to load
+                  e.target.style.display = 'none';
+                }} />
               ) : (
                 <span>{getInitials()}</span>
               )}

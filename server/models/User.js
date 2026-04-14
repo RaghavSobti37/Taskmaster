@@ -8,10 +8,14 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { 
     type: String, 
-    enum: ['user', 'lead', 'admin', 'server_admin'], 
+    enum: {
+      values: ['user', 'lead', 'admin', 'server_admin'],
+      message: 'Role must be one of: user, lead, admin, server_admin'
+    },
     default: 'user' 
   },
-  profilePicture: { type: String, default: null },
+  profilePicture: { type: String, default: null }, // Keep for backward compatibility
+  profilePictureUrl: { type: String, default: null }, // New field for image URLs
   lastLogin: { type: Date, default: null },
   loginCount: { type: Number, default: 0 },
   isDisabled: { type: Boolean, default: false },

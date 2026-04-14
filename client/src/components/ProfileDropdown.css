@@ -7,21 +7,54 @@
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(8, 61, 58, 0.2);
   z-index: 1100;
-  width: 220px;
+  width: 280px;
   overflow: hidden;
 }
 
 .dropdown-header {
-  padding: 1rem 1.5rem;
+  padding: 1.2rem 1.5rem;
   border-bottom: 1px solid rgba(8, 61, 58, 0.1);
-  background-color: rgba(8, 61, 58, 0.05);
+  background: linear-gradient(135deg, rgba(8, 61, 58, 0.08) 0%, rgba(183, 75, 2, 0.05) 100%);
 }
 
-.dropdown-username {
-  margin: 0 0 5px 0;
+.dropdown-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dropdown-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--deep-teal), var(--pumpkin));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid rgba(8, 61, 58, 0.2);
+}
+
+.dropdown-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dropdown-text {
+  flex: 1;
+}
+
+.dropdown-greeting {
+  margin: 0 0 4px 0;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .dropdown-role {

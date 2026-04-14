@@ -8,6 +8,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 import { loggerMiddleware } from './middleware/logMiddleware.js';
 import { logger, getLogConfig } from './utils/logger.js';
 import { requestTracking, corsDebug, authDebug, logEnvironmentInfo } from './middleware/debugMiddleware.js';
@@ -45,12 +46,16 @@ app.use(morgan('combined'));
 // Custom logger middleware for DB logging
 app.use(loggerMiddleware);
 
+// Serve static files (uploaded images)
+app.use('/uploads', express.static('public/uploads'));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

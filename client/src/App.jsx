@@ -8,6 +8,7 @@ import AdminRoute from './components/AdminRoute';
 import Dashboard from './pages/Dashboard';
 import TeamView from './pages/TeamView';
 import ProfilePage from './pages/ProfilePage';
+import ProjectsView from './pages/ProjectsView';
 import ServerAdmin from './pages/ServerAdmin';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -43,6 +44,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <TeamView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects"
+                element={
+                  <ProtectedRoute>
+                    <ProjectsView />
                   </ProtectedRoute>
                 }
               />

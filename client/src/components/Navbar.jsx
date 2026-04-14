@@ -20,8 +20,12 @@ const Navbar = () => {
             <div className="nav-links">
               <NavLink to="/">Home</NavLink>
               <NavLink to="/team">Team</NavLink>
+              <NavLink to="/projects">Projects</NavLink>
               {user?.role === 'admin' && (
                 <NavLink to="/server" className="server-link">👑 Server</NavLink>
+              )}
+              {user?.role === 'server_admin' && (
+                <NavLink to="/server" className="server-link">👑 Admin</NavLink>
               )}
             </div>
           </>
@@ -31,7 +35,11 @@ const Navbar = () => {
         {isAuthenticated && (
           <div className="profile-container">
             <button className="profile-avatar-button" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <ProfileAvatar username={user?.username} profilePicture={user?.profilePicture} />
+              <ProfileAvatar 
+                username={user?.username} 
+                profilePicture={user?.profilePicture}
+                profilePictureUrl={user?.profilePictureUrl}
+              />
             </button>
             {isDropdownOpen && <ProfileDropdown user={user} onLogout={logout} />}
           </div>

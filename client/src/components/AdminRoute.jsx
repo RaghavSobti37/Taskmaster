@@ -10,7 +10,8 @@ const AdminRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user?.role !== 'admin') {
+  // Allow both admin and server_admin roles
+  if (user?.role !== 'admin' && user?.role !== 'server_admin') {
     return <Navigate to="/" replace />;
   }
 

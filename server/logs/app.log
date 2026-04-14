@@ -22,3 +22,7 @@
 {"timestamp":"2026-04-14T19:33:15.485Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
 {"timestamp":"2026-04-14T19:33:15.566Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
 {"timestamp":"2026-04-14T19:33:15.647Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-04-14T19:34:41.021Z","level":"info","message":"GET /team","source":"http","metadata":{"method":"GET","path":"/team","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-04-14T19:34:41.113Z","level":"info","message":"GET /team","source":"http","metadata":{"method":"GET","path":"/team","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-04-14T19:34:44.589Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}
+{"timestamp":"2026-04-14T19:34:44.692Z","level":"info","message":"GET /","source":"http","metadata":{"method":"GET","path":"/","status":200},"userId":"69ca6676f21bf292ddcca1fd"}

@@ -8,6 +8,9 @@ import taskRoutes from './routes/taskRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { loggerMiddleware } from './middleware/logMiddleware.js';
+import { logger, getLogConfig } from './utils/logger.js';
+import { requestTracking, corsDebug, authDebug, logEnvironmentInfo } from './middleware/debugMiddleware.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
 dotenv.config();
@@ -25,10 +28,21 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// Increased limit to 10MB to handle base64-encoded profile pictures
-app.use(express.json({ limit: '10mb' })); // Body parser for JSON
-app.use(morgan('dev')); // HTTP request logger
-app.use(loggerMiddleware); // Custom logger middleware for DB logging
+
+// Body parser middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Request tracking and debugging (add early)
+app.use(requestTracking);
+app.use(corsDebug);
+app.use(authDebug);
+
+// HTTP request logger
+app.use(morgan('combined'));
+
+// Custom logger middleware for DB logging
+app.use(loggerMiddleware);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -38,26 +52,22 @@ app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  logger.info('Health check requested', 'HEALTH_CHECK', { ip: req.ip });
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    corsOrigins: allowedOrigins
+    environment: process.env.NODE_ENV || 'development',
+    corsOrigins: allowedOrigins,
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+// 404 handler (must be before error handler)
+app.use(notFoundHandler);
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('[ERROR]', err);
-  res.status(err.status || 500).json({ 
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'production' ? {} : err 
-  });
-});
+// Error handler (must be LAST)
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
@@ -73,20 +83,93 @@ const getApiBaseUrl = () => {
 // Connect to Database and start server
 const startServer = async () => {
   try {
-    console.log('[STARTUP] Initializing server...');
-    console.log('[STARTUP] NODE_ENV:', process.env.NODE_ENV);
-    console.log('[STARTUP] CORS Origins:', allowedOrigins);
+    const logConfig = getLogConfig();
+    logger.info('Server initialization started', 'STARTUP', {
+      nodeEnv: process.env.NODE_ENV,
+      port: PORT,
+      logsDir: logConfig.logsDir
+    });
+
+    logEnvironmentInfo();
     
     await connectDB();
     
-    app.listen(PORT, () => {
-      const apiBaseUrl = getApiBaseUrl();
-      console.log('[STARTUP] Server running on port', PORT);
-      console.log('[STARTUP] Environment: ' + (process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'));
-      console.log('[STARTUP] API base:', apiBaseUrl + '/api');
+    // Try to start server, with fallback to alternate port if in use
+    const primaryPort = parseInt(PORT) || 5000;
+    const alternatePort = primaryPort === 5000 ? 5001 : 5000;
+    let actualPort = primaryPort;
+    
+    const startOnPort = (port) => {
+      return new Promise((resolve, reject) => {
+        const server = app.listen(port, () => {
+          actualPort = port;
+          const apiBaseUrl = getApiBaseUrl();
+          logger.info('Server started successfully', 'STARTUP', {
+            port: actualPort,
+            environment: process.env.NODE_ENV || 'development',
+            apiBase: apiBaseUrl + '/api',
+            corsOrigins: allowedOrigins
+          });
+          
+          // Additional startup info
+          console.log('\n========================================');
+          console.log('✓ Server is running');
+          console.log(`Port: ${actualPort}${actualPort !== primaryPort ? ` (fallback from ${primaryPort})` : ''}`);
+          console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+          console.log(`API Base: ${apiBaseUrl}/api`);
+          console.log(`Log Config: ${JSON.stringify(logConfig, null, 2)}`);
+          console.log('========================================\n');
+          resolve(server);
+        });
+
+        server.on('error', (err) => {
+          if (err.code === 'EADDRINUSE') {
+            reject(err);
+          } else {
+            logger.error('Server error', 'STARTUP', err);
+            process.exit(1);
+          }
+        });
+      });
+    };
+
+    // Try primary port first, then alternate if needed
+    try {
+      await startOnPort(primaryPort);
+    } catch (err) {
+      if (err.code === 'EADDRINUSE') {
+        logger.warn(`Port ${primaryPort} is already in use, trying port ${alternatePort}`, 'STARTUP', { 
+          attemptedPort: primaryPort,
+          alternatePort: alternatePort,
+          error: err.message 
+        });
+        
+        try {
+          await startOnPort(alternatePort);
+        } catch (retryErr) {
+          logger.error(`Failed to start server on both ports ${primaryPort} and ${alternatePort}`, 'STARTUP', retryErr);
+          process.exit(1);
+        }
+      } else {
+        logger.error('Server error', 'STARTUP', err);
+        process.exit(1);
+      }
+    }
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (err) => {
+      logger.critical('Uncaught exception', 'PROCESS', err);
+      process.exit(1);
     });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.critical('Unhandled rejection', 'PROCESS', { reason });
+    });
+
   } catch (error) {
-    console.error('[STARTUP] Failed to start server:', error);
+    logger.critical('Failed to start server', 'STARTUP', error);
+    console.error('[CRITICAL] Server startup failed:', error);
     process.exit(1);
   }
 };

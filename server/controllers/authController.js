@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { logUserActivity } from '../utils/dailyLogUtils.js';
 
 // Utility to generate token
 const generateToken = (id) => {
@@ -111,11 +112,37 @@ export const loginUser = async (req, res) => {
 
     console.log('[LOGIN] ✓ Password matched');
 
+    // Check if user is disabled
+    if (user.isDisabled) {
+      console.log('[LOGIN] ❌ User account is disabled:', login);
+      return res.status(403).json({ message: 'Account is disabled. Please contact administrator.' });
+    }
+
     // Update login timestamp and login count
     user.lastLogin = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
+    
+    // Track login in loginHistory
+    user.loginHistory = user.loginHistory || [];
+    user.loginHistory.push({
+      loginTime: new Date(),
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent']
+    });
+
+    // Keep only last 100 login records
+    if (user.loginHistory.length > 100) {
+      user.loginHistory = user.loginHistory.slice(-100);
+    }
+
     await user.save();
     console.log('[LOGIN] ✓ Login count updated');
+
+    // Log daily activity
+    await logUserActivity(user._id, 'login', {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
 
     const token = generateToken(user._id);
     console.log('[LOGIN] ✓ JWT token generated');
@@ -125,6 +152,8 @@ export const loginUser = async (req, res) => {
       user: {
         _id: user._id,
         username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role,
         profilePicture: user.profilePicture,
@@ -147,7 +176,7 @@ export const loginUser = async (req, res) => {
 export const getMe = async (req, res) => {
   // req.user is attached by the protect middleware
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password -loginHistory');
     res.json(user);
   } catch (error) {
     console.error(error.message);

@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
 import { loggerMiddleware } from './middleware/logMiddleware.js';
 import { logger, getLogConfig } from './utils/logger.js';
 import { requestTracking, corsDebug, authDebug, logEnvironmentInfo } from './middleware/debugMiddleware.js';
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

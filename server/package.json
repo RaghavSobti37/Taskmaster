@@ -6,7 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "cross-env DEBUG=true nodemon server.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:debug": "cross-env DEBUG=true npm test",
+    "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules node --experimental-vm-modules node_modules/jest/bin/jest.js --testMatch='**/*.e2e.test.js'",
     "data:import": "node seeder.js",
     "data:destroy": "node seeder.js -d"
   },
@@ -21,6 +26,9 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "cross-env": "^10.1.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
   }
 }

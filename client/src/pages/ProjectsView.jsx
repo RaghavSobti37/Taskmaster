@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectCard from '../components/ProjectCard';
 import ProjectDetail from '../components/ProjectDetail';
@@ -14,8 +15,6 @@ const ProjectsView = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   // Fetch all projects
   useEffect(() => {
     fetchProjects();
@@ -24,17 +23,8 @@ const ProjectsView = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/projects`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects');
-      }
-
-      const data = await response.json();
-      setProjects(data);
+      const response = await api.get('/projects');
+      setProjects(response.data);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -45,22 +35,8 @@ const ProjectsView = () => {
 
   const handleCreateProject = async (projectData) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/projects`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(projectData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create project');
-      }
-
-      const newProject = await response.json();
-      setProjects([...projects, newProject]);
+      const response = await api.post('/projects', projectData);
+      setProjects([...projects, response.data]);
       setShowCreateModal(false);
     } catch (err) {
       alert(`Error creating project: ${err.message}`);
@@ -71,16 +47,7 @@ const ProjectsView = () => {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete project');
-      }
-
+      await api.delete(`/projects/${projectId}`);
       setProjects(projects.filter(p => p._id !== projectId));
       if (selectedProject?._id === projectId) {
         setSelectedProject(null);
@@ -92,26 +59,21 @@ const ProjectsView = () => {
 
   const handleUpdateProject = async (projectId, updates) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/projects/${projectId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update project');
-      }
-
-      const updatedProject = await response.json();
-      setProjects(projects.map(p => p._id === projectId ? updatedProject : p));
-      setSelectedProject(updatedProject);
+      const response = await api.put(`/projects/${projectId}`, updates);
+      setProjects(projects.map(p => p._id === projectId ? response.data : p));
+      setSelectedProject(response.data);
     } catch (err) {
       alert(`Error updating project: ${err.message}`);
     }
+  };
+
+  const handleProjectChange = (updatedProject) => {
+    if (!updatedProject?._id) return;
+
+    setProjects(prevProjects =>
+      prevProjects.map(p => p._id === updatedProject._id ? updatedProject : p)
+    );
+    setSelectedProject(updatedProject);
   };
 
   const filteredProjects = projects.filter(p =>
@@ -181,8 +143,8 @@ const ProjectsView = () => {
             <ProjectDetail
               project={selectedProject}
               onUpdate={handleUpdateProject}
+              onProjectChange={handleProjectChange}
               onClose={() => setSelectedProject(null)}
-              apiUrl={apiUrl}
             />
           </div>
         )}

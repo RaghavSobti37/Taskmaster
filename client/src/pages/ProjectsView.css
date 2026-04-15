@@ -1,7 +1,6 @@
 .projects-view {
   width: 100%;
   padding: 0;
-  background: var(--background-color);
   min-height: 100vh;
 }
 
@@ -104,10 +103,12 @@
 
 .projects-list {
   padding: 20px;
-  background: var(--surface-alt-color);
-  border-radius: 12px;
-  border: 2px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   height: fit-content;
   position: sticky;
@@ -171,10 +172,12 @@
 
 .project-detail-section {
   padding: 20px;
-  background: var(--surface-alt-color);
-  border-radius: 12px;
-  border: 2px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

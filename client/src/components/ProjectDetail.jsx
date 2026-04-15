@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import ClusterManager from './ClusterManager';
 import TeamManager from './TeamManager';
-import ProjectTaskAssignment from './ProjectTaskAssignment';
 import './ProjectDetail.css';
 
-const ProjectDetail = ({ project, onUpdate, onClose, apiUrl }) => {
+const ProjectDetail = ({ project, onUpdate, onProjectChange, onClose }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: project.name,
@@ -62,7 +59,19 @@ const ProjectDetail = ({ project, onUpdate, onClose, apiUrl }) => {
             {project.status}
           </span>
         </div>
-        <button className="close-detail" onClick={onClose}>✕</button>
+        <div className="detail-header-actions">
+          {!isEditing && canEdit && (
+            <button
+              className="btn-edit btn-edit-icon"
+              onClick={() => setIsEditing(true)}
+              title="Edit project"
+              aria-label="Edit project"
+            >
+              ✏️
+            </button>
+          )}
+          <button className="close-detail" onClick={onClose}>✕</button>
+        </div>
       </div>
 
       {isEditing && (
@@ -100,7 +109,6 @@ const ProjectDetail = ({ project, onUpdate, onClose, apiUrl }) => {
               <select name="visibility" value={editData.visibility} onChange={handleEditChange}>
                 <option value="private">Private</option>
                 <option value="public">Public</option>
-                <option value="team">Team Only</option>
               </select>
             </div>
           </div>
@@ -108,108 +116,15 @@ const ProjectDetail = ({ project, onUpdate, onClose, apiUrl }) => {
       ) : (
         <div className="detail-description">
           <p>{project.description || 'No description added yet'}</p>
-          {canEdit && (
-            <button className="btn-edit" onClick={() => setIsEditing(true)}>
-              Edit Project
-            </button>
-          )}
         </div>
       )}
 
-      <div className="detail-tabs">
-        <button
-          className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tasks')}
-        >
-          Tasks
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'clusters' ? 'active' : ''}`}
-          onClick={() => setActiveTab('clusters')}
-        >
-          Clusters ({project.clusters?.length || 0})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'team' ? 'active' : ''}`}
-          onClick={() => setActiveTab('team')}
-        >
-          Team Members ({project.members?.length || 0})
-        </button>
-      </div>
-
       <div className="detail-content">
-        {activeTab === 'overview' && (
-          <div className="overview-tab">
-            <div className="info-grid">
-              <div className="info-item">
-                <label>Status</label>
-                <div className="value">{project.status}</div>
-              </div>
-              <div className="info-item">
-                <label>Visibility</label>
-                <div className="value">{project.visibility}</div>
-              </div>
-              <div className="info-item">
-                <label>Members</label>
-                <div className="value">{project.members?.length || 0}</div>
-              </div>
-              <div className="info-item">
-                <label>Clusters</label>
-                <div className="value">{project.clusters?.length || 0}</div>
-              </div>
-            </div>
-
-            {project.settings && (
-              <div className="settings-section">
-                <h3>Project Settings</h3>
-                <ul>
-                  <li>
-                    Require approval: <strong>
-                      {project.settings.requireApproval ? 'Yes' : 'No'}
-                    </strong>
-                  </li>
-                  <li>
-                    Allow task assignment: <strong>
-                      {project.settings.allowAssignment ? 'Yes' : 'No'}
-                    </strong>
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'tasks' && (
-          <ProjectTaskAssignment
-            project={project}
-            canEdit={canEdit}
-            onTaskCreated={onUpdate}
-          />
-        )}
-
-        {activeTab === 'clusters' && (
-          <ClusterManager
-            project={project}
-            onUpdate={onUpdate}
-            canEdit={canEdit}
-            apiUrl={apiUrl}
-          />
-        )}
-
-        {activeTab === 'team' && (
-          <TeamManager
-            project={project}
-            onUpdate={onUpdate}
-            canEdit={canEdit}
-            apiUrl={apiUrl}
-          />
-        )}
+        <TeamManager
+          project={project}
+          canEdit={canEdit}
+          onProjectChange={onProjectChange}
+        />
       </div>
     </div>
   );

@@ -11,7 +11,8 @@ import {
   getUserLoginHistory,
   getUserDailyLogs,
   getAllDailyLogs,
-  makeServerAdmin
+  makeServerAdmin,
+  getUserProgressReport
 } from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import adminOnly from '../middleware/adminMiddleware.js';
@@ -29,6 +30,7 @@ router.patch('/users/:userId/change-password', protect, adminOnly, changeUserPas
 router.patch('/users/:userId/make-server-admin', protect, adminOnly, makeServerAdmin);
 router.get('/users/:userId/login-history', protect, adminOnly, getUserLoginHistory);
 router.get('/users/:userId/daily-logs', protect, adminOnly, getUserDailyLogs);
+router.get('/users/:userId/progress-report', protect, adminOnly, getUserProgressReport);
 router.get('/stats', protect, adminOnly, getStats);
 router.get('/daily-logs', protect, adminOnly, getAllDailyLogs);
 

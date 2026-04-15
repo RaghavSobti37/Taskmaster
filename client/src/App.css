@@ -426,12 +426,12 @@ body.dark {
   max-width: 1400px; /* Wider container for a more expansive feel */
   margin: 0 auto;
   padding: 2rem;
-  padding-top: 80px; /* Space for sticky navbar */
+  padding-top: 2rem;
 }
 
 @media (max-width: 768px) {
   .container {
     padding: 1.5rem;
-    padding-top: 70px;
+    padding-top: 1.5rem;
   }
 }

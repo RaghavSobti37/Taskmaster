@@ -8,11 +8,13 @@
 }
 
 .auth-form {
-  background: var(--surface-alt-color);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 32px;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  border: 2px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   width: 100%;
   max-width: 450px;
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);

@@ -10,8 +10,8 @@ export const adminOnly = async (req, res, next) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (user.role !== 'admin') {
-            return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+        if (user.role !== 'admin' && user.role !== 'server_admin') {
+            return res.status(403).json({ message: 'Access denied. Admin or server admin privileges required.' });
         }
 
         next();

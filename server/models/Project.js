@@ -38,8 +38,8 @@ const projectSchema = new mongoose.Schema({
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       role: {
         type: String,
-        enum: ['member', 'lead', 'manager', 'admin'],
-        default: 'member'
+        enum: ['lead', 'supervisor', 'tech', 'content', 'member', 'manager', 'admin'],
+        default: 'tech'
       },
       joinedAt: { type: Date, default: Date.now }
     }

@@ -19,7 +19,7 @@ const Navbar = () => {
           <>
             <div className="nav-links">
               <NavLink to="/">Home</NavLink>
-              <NavLink to="/team">Team</NavLink>
+              <NavLink to="/daily-log">Daily Log</NavLink>
               <NavLink to="/projects">Projects</NavLink>
               {user?.role === 'admin' && (
                 <NavLink to="/server" className="server-link">👑 Server</NavLink>

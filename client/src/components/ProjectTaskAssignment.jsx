@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { createAssignedTask, getEntityId } from '../services/taskAssignmentService';
 import './ProjectTaskAssignment.css';
 
 const ProjectTaskAssignment = ({ project, onTaskCreated, canEdit }) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState('medium');
   const [selectedMember, setSelectedMember] = useState('');
@@ -37,16 +40,14 @@ const ProjectTaskAssignment = ({ project, onTaskCreated, canEdit }) => {
 
     setIsSubmitting(true);
     try {
-      const taskData = {
-        title: title.trim(),
+      const newTask = await createAssignedTask({
+        title,
         priority,
+        assigneeId: selectedMember || undefined,
+        currentUserId: getEntityId(user),
         projectId: project._id,
-        isPersonal: false,
-        assignee: selectedMember || undefined,
         status: 'todo'
-      };
-
-      const { data: newTask } = await api.post('/tasks', taskData);
+      });
       
       setProjectTasks([...projectTasks, newTask]);
       setTitle('');
@@ -55,7 +56,8 @@ const ProjectTaskAssignment = ({ project, onTaskCreated, canEdit }) => {
       setShowForm(false);
       
       if (onTaskCreated) {
-        onTaskCreated(newTask);
+        const { data: updatedProject } = await api.get(`/projects/${project._id}`);
+        onTaskCreated(updatedProject);
       }
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -70,7 +72,7 @@ const ProjectTaskAssignment = ({ project, onTaskCreated, canEdit }) => {
       <div className="task-assignment-header">
         <h4>📌 Project Tasks ({projectTasks.length})</h4>
         {canEdit && (
-          <button className="btn-add-task" onClick={() => setShowForm(!showForm)}>
+          <button className="project-task-add-btn" onClick={() => setShowForm(!showForm)}>
             {showForm ? '✕' : '+'}
           </button>
         )}

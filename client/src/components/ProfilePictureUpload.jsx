@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../services/api';
 import './ProfilePictureUpload.css';
 
 const ProfilePictureUpload = ({ onUploadSuccess, currentImageUrl, username }) => {
@@ -43,27 +44,14 @@ const ProfilePictureUpload = ({ onUploadSuccess, currentImageUrl, username }) =>
       const formData = new FormData();
       formData.append('profilePicture', file);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/upload/profile-picture`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
-      const data = await response.json();
-      setSuccess(`Uploaded! (${data.sizeKB} KB)`);
-      setPreviewUrl(data.imageUrl);
+      const response = await api.post('/upload/profile-picture', formData);
+      
+      setSuccess(`Uploaded! (${response.data.sizeKB} KB)`);
+      setPreviewUrl(response.data.imageUrl);
       
       // Call the success callback
       if (onUploadSuccess) {
-        onUploadSuccess(data.imageUrl);
+        onUploadSuccess(response.data.imageUrl);
       }
 
       // Clear preview after success

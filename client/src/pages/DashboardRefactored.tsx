@@ -5,12 +5,13 @@ import TaskItem from '../components/TaskItem';
 import TeamMemberCard from '../components/TeamMemberCard';
 import CreateTaskModal from '../components/CreateTaskModal';
 import api from '../services/api';
+import { createAssignedTask, splitTasksForUser, getEntityId } from '../services/taskAssignmentService';
 
 interface Task {
   _id: string;
   title: string;
   status: 'todo' | 'in_progress' | 'done';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'normal' | 'important' | 'urgent';
   creator: { _id: string; username: string };
   assignee: { _id: string; username: string };
   isPersonal?: boolean;
@@ -70,9 +71,7 @@ const DashboardRefactored: React.FC = () => {
         const tasks = tasksRes.data;
         const otherUsers = usersRes.data.filter((u: User) => u._id !== user?._id);
 
-        const myTasksList = tasks.filter((t: Task) => t.creator._id === user?._id);
-        const assignedList = tasks.filter((t: Task) => t.assignee._id === user?._id && t.creator._id !== user?._id);
-        const othersList = tasks.filter((t: Task) => t.creator._id === user?._id && t.assignee._id !== user?._id);
+        const { myTasks: myTasksList, assignedToMe: assignedList, assignedToOthers: othersList } = splitTasksForUser(tasks, user?._id || '');
 
         setMyTasks(myTasksList);
         setAssignedToMe(assignedList);
@@ -125,18 +124,30 @@ const DashboardRefactored: React.FC = () => {
 
   const handleCreateTask = async (newTaskData: any) => {
     try {
-      const { data: createdTask } = await api.post('/tasks', newTaskData);
+      const createdTask = await createAssignedTask({
+        title: newTaskData.title,
+        description: newTaskData.description,
+        priority: newTaskData.priority,
+        assigneeId: getEntityId(newTaskData.assignee),
+        currentUserId: user?._id || '',
+        projectId: newTaskData.projectId,
+        status: 'todo',
+        dueDate: newTaskData.dueDate
+      });
 
-      const taskWithDetails = {
-        ...createdTask,
-        creator: { ...createdTask.creator, _id: user?._id },
-        assignee: createdTask.assignee || { _id: user?._id, username: user?.username }
-      };
+      const creatorId = getEntityId(createdTask.creator);
+      const assigneeId = getEntityId(createdTask.assignee);
 
-      if (createdTask.assignee && createdTask.assignee._id !== user?._id) {
-        setAssignedToOthers(prev => [taskWithDetails, ...prev]);
-      } else {
-        setMyTasks(prev => [taskWithDetails, ...prev]);
+      if (creatorId === user?._id) {
+        setMyTasks(prev => [createdTask, ...prev]);
+      }
+
+      if (assigneeId === user?._id && creatorId !== user?._id) {
+        setAssignedToMe(prev => [createdTask, ...prev]);
+      }
+
+      if (creatorId === user?._id && assigneeId && assigneeId !== user?._id) {
+        setAssignedToOthers(prev => [createdTask, ...prev]);
       }
 
       setIsModalOpen(false);
@@ -370,29 +381,54 @@ const DashboardRefactored: React.FC = () => {
             {allUsers.length > 0 && (
               <motion.div variants={itemVariants} className="lg:col-span-2">
                 <div className="bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl rounded-2xl p-8 border border-gray-200/50 dark:border-gray-700/50">
-                  <div className="mb-6">
+                  <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-black tracking-tight text-gray-950 dark:text-white">
                       👥 Team Members
                     </h3>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => alert('Add member functionality coming soon!')}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-teal-700 text-white font-bold text-sm hover:shadow-md transition-shadow"
+                    >
+                      + Add Member
+                    </motion.button>
                   </div>
                   <motion.div
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+                    className="flex gap-4 overflow-x-auto pb-2 flex-nowrap scrollbar-hide"
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                   >
-                    {allUsers.slice(0, 4).map((member) => (
-                      <motion.div
-                        key={member._id}
-                        variants={itemVariants}
-                        whileHover={{ scale: 1.05 }}
-                        className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => handleOpenAssignModal(member)}
-                      >
-                        <p className="font-bold text-gray-900 dark:text-white truncate">{member.username}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Click to assign task</p>
-                      </motion.div>
-                    ))}
+                    {allUsers.map((member) => {
+                      // Count tasks assigned to this member
+                      const assignedCount = [...myTasks, ...assignedToOthers].filter(
+                        t => t.assignee._id === member._id
+                      ).length;
+
+                      return (
+                        <motion.div
+                          key={member._id}
+                          variants={itemVariants}
+                          whileHover={{ scale: 1.05, y: -4 }}
+                          className="flex-shrink-0 w-40 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                          onClick={() => handleOpenAssignModal(member)}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <p className="font-bold text-gray-900 dark:text-white truncate flex-1">
+                              {member.username}
+                            </p>
+                            <span className="flex-shrink-0 ml-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-bold">
+                              {assignedCount}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {assignedCount === 1 ? 'task assigned' : 'tasks assigned'}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Click to assign new task</p>
+                        </motion.div>
+                      );
+                    })}
                   </motion.div>
                 </div>
               </motion.div>
@@ -404,7 +440,7 @@ const DashboardRefactored: React.FC = () => {
       {/* Modal */}
       {isModalOpen && (
         <CreateTaskModal
-          onSubmit={handleCreateTask}
+          onCreateTask={handleCreateTask}
           onClose={() => {
             setIsModalOpen(false);
             setAssignee(null);

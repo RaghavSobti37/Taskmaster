@@ -6,14 +6,9 @@ import User from '../models/User.js';
 // @route   POST /api/tasks
 // @access  Private
 export const createTask = async (req, res) => {
-  const { title, description, priority, assignee, isVisibleInCircle, dueDate } = req.body;
+  const { title, description, priority, assignee, projectId, status, isVisibleInCircle, dueDate } = req.body;
 
   try {
-    // If assignee is provided, validate it's not the creator
-    if (assignee && assignee.toString() === req.user.id.toString()) {
-      return res.status(400).json({ message: 'You cannot assign a task to yourself' });
-    }
-
     // If assignee is not provided, assign it to the creator (personal task)
     const finalAssignee = assignee || req.user.id;
     const isPersonal = req.user.id.toString() === finalAssignee.toString();
@@ -22,7 +17,9 @@ export const createTask = async (req, res) => {
       title,
       description,
       priority,
+      status: status || 'todo',
       assignee: finalAssignee,
+      projectId: projectId || null,
       isVisibleInCircle,
       dueDate,
       creator: req.user.id,
@@ -30,6 +27,10 @@ export const createTask = async (req, res) => {
     });
 
     const createdTask = await task.save();
+    const populatedTask = await Task.findById(createdTask._id)
+      .populate('creator', '_id username email')
+      .populate('assignee', '_id username email')
+      .populate('projectId', '_id name');
 
     // Try to log the action (don't crash if it fails)
     try {
@@ -42,7 +43,7 @@ export const createTask = async (req, res) => {
       console.error('Logging error (non-critical):', logError.message);
     }
 
-    res.status(201).json(createdTask);
+    res.status(201).json(populatedTask);
   } catch (error) {
     res.status(400).json({ message: 'Error creating task', error: error.message });
   }
@@ -59,6 +60,7 @@ export const getTasks = async (req, res) => {
     })
       .populate('creator', '_id username email')
       .populate('assignee', '_id username email')
+      .populate('projectId', '_id name')
       .sort({ createdAt: -1 });
 
     res.json(tasks);

@@ -4,7 +4,7 @@ export interface Task {
   title: string;
   description?: string;
   status: 'todo' | 'in_progress' | 'done';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'normal' | 'important' | 'urgent';
   creator: User;
   assignee: User;
   isPersonal?: boolean;
@@ -83,15 +83,15 @@ export interface DashboardStats {
   total: number;
   completed: number;
   inProgress: number;
-  high: number;
-  medium: number;
-  low: number;
+  urgent: number;
+  important: number;
+  normal: number;
 }
 
 export interface CreateTaskFormData {
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'normal' | 'important' | 'urgent';
   assigneeId?: string;
   dueDate?: Date;
   isPersonal: boolean;

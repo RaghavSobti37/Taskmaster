@@ -73,18 +73,18 @@ const NavbarRefactored: React.FC<NavbarRefactoredProps> = ({ onSearchClick, onCr
             Dashboard
           </motion.a>
           <motion.a
+            href="/daily-log"
+            whileHover={{ color: '#b74b02' }}
+            className="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400 transition-colors hover:text-primary-600"
+          >
+            Daily Log
+          </motion.a>
+          <motion.a
             href="/projects"
             whileHover={{ color: '#b74b02' }}
             className="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400 transition-colors hover:text-primary-600"
           >
             Projects
-          </motion.a>
-          <motion.a
-            href="/teams"
-            whileHover={{ color: '#b74b02' }}
-            className="text-sm font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400 transition-colors hover:text-primary-600"
-          >
-            Teams
           </motion.a>
         </div>
 

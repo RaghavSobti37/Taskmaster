@@ -8,6 +8,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
+import dailyLogRoutes from './routes/dailyLogRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import { loggerMiddleware } from './middleware/logMiddleware.js';
 import { logger, getLogConfig } from './utils/logger.js';
@@ -55,6 +56,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/daily-logs', dailyLogRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Health check endpoint

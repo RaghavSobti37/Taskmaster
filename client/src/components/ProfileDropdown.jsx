@@ -61,7 +61,7 @@ const ProfileDropdown = ({ user, onLogout }) => {
         </li>
         {(user?.role === 'admin' || user?.role === 'server_admin') && (
           <li>
-            <Link to="/admin" className="dropdown-link">Server Administration</Link>
+            <Link to="/server" className="dropdown-link">Server Administration</Link>
           </li>
         )}
         <li>

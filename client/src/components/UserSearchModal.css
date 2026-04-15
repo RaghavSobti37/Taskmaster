@@ -22,8 +22,11 @@
 }
 
 .user-search-modal {
-  background: var(--surface-color);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
   width: 90%;
   max-width: 520px;
   max-height: 80vh;

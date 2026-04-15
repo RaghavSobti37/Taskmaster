@@ -4,14 +4,26 @@ import './CreateTaskModal.css';
 const CreateTaskModal = ({ onClose, onCreateTask, assignee = null }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('normal');
+  const [priority, setPriority] = useState('medium');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
 
+    // Map priority values to backend enum
+    const priorityMap = {
+      low: 'normal',
+      medium: 'important',
+      high: 'urgent'
+    };
+
     // Pass the assignee's ID if it exists
-    onCreateTask({ title, description, priority, assignee: assignee ? assignee._id : null });
+    onCreateTask({ 
+      title, 
+      description, 
+      priority: priorityMap[priority],
+      assignee: assignee ? assignee._id : null 
+    });
   };
 
   return (
@@ -44,12 +56,30 @@ const CreateTaskModal = ({ onClose, onCreateTask, assignee = null }) => {
             ></textarea>
           </div>
           <div className="form-group">
-            <label htmlFor="task-priority">Priority</label>
-            <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="normal">Normal</option>
-              <option value="important">Important</option>
-              <option value="urgent">Urgent</option>
-            </select>
+            <label>Priority</label>
+            <div className="priority-buttons">
+              <button
+                type="button"
+                className={`priority-btn priority-low ${priority === 'low' ? 'active' : ''}`}
+                onClick={() => setPriority('low')}
+              >
+                <span className="priority-icon">🔵</span> Low
+              </button>
+              <button
+                type="button"
+                className={`priority-btn priority-medium ${priority === 'medium' ? 'active' : ''}`}
+                onClick={() => setPriority('medium')}
+              >
+                <span className="priority-icon">🟡</span> Medium
+              </button>
+              <button
+                type="button"
+                className={`priority-btn priority-high ${priority === 'high' ? 'active' : ''}`}
+                onClick={() => setPriority('high')}
+              >
+                <span className="priority-icon">🔴</span> High
+              </button>
+            </div>
           </div>
           {/* Add fields for Assignee, Due Date, etc. here */}
           <div className="form-actions">

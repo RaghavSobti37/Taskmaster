@@ -33,22 +33,25 @@ const ProjectCard = ({ project, onSelect, onDelete, isSelected }) => {
       onClick={() => onSelect(project)}
     >
       <div className="project-card-header">
-        <div className="project-title-group">
-          <h3 title={project.name}>{project.name}</h3>
+        <h3 title={project.name}>{project.name}</h3>
+        <div className="project-header-actions">
           <span className={getStatusClass()}>
             {project.status || 'active'}
           </span>
+          <button
+            className="btn-delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(project._id);
+            }}
+            title="Delete project"
+            aria-label="Delete project"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z" />
+            </svg>
+          </button>
         </div>
-        <button
-          className="btn-delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(project._id);
-          }}
-          title="Delete project"
-        >
-          ✕
-        </button>
       </div>
 
       {project.description && (

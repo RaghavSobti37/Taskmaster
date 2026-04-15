@@ -10,6 +10,7 @@ import TeamView from './pages/TeamView';
 import ProfilePage from './pages/ProfilePage';
 import ProjectsView from './pages/ProjectsView';
 import ServerAdmin from './pages/ServerAdmin';
+import DailyLogPage from './pages/DailyLogPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './App.css';
@@ -40,14 +41,6 @@ function App() {
                 }
               />
               <Route
-                path="/team"
-                element={
-                  <ProtectedRoute>
-                    <TeamView />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/projects"
                 element={
                   <ProtectedRoute>
@@ -56,7 +49,23 @@ function App() {
                 }
               />
               <Route
+                path="/daily-log"
+                element={
+                  <ProtectedRoute>
+                    <DailyLogPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/server"
+                element={
+                  <AdminRoute>
+                    <ServerAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin"
                 element={
                   <AdminRoute>
                     <ServerAdmin />

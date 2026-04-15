@@ -6,6 +6,7 @@ import './Auth.css';
 const LoginPage = () => {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
 
@@ -47,16 +48,26 @@ const LoginPage = () => {
         </div>
         <div className="form-group">
           <label htmlFor="password">Password</label>
-          <input 
-            type="password" 
-            id="password" 
-            value={password} 
-            onChange={(e) => {
-              console.log('🔑 [LOGIN PAGE] Password changed, length:', e.target.value.length);
-              setPassword(e.target.value);
-            }} 
-            required 
-          />
+          <div className="password-input-group">
+            <input 
+              type={showPassword ? 'text' : 'password'} 
+              id="password" 
+              value={password} 
+              onChange={(e) => {
+                console.log('🔑 [LOGIN PAGE] Password changed, length:', e.target.value.length);
+                setPassword(e.target.value);
+              }} 
+              required 
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={() => setShowPassword(!showPassword)}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </button>
+          </div>
         </div>
         <button type="submit" className="auth-button">
           Login

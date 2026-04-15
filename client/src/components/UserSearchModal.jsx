@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import './UserSearchModal.css';
 
-const UserSearchModal = ({ isOpen, onClose, onSelectUsers, title = 'Add Users', selectedUserIds = [], allowMultiple = true }) => {
+const UserSearchModal = ({
+  isOpen,
+  onClose,
+  onSelectUsers,
+  title = 'Add Users',
+  selectedUserIds = [],
+  allowMultiple = true,
+  allowedUserIds = null
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState(new Set(selectedUserIds));
@@ -13,14 +21,24 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUsers, title = 'Add Users', 
   useEffect(() => {
     if (isOpen) {
       fetchAllUsers();
+      setSelectedUsers(new Set(selectedUserIds));
     }
-  }, [isOpen]);
+  }, [isOpen, selectedUserIds]);
 
   const fetchAllUsers = async () => {
     try {
       const { data } = await api.get('/users/all');
-      setAllUsers(data);
-      setSearchResults(data);
+
+      const allowedSet = Array.isArray(allowedUserIds)
+        ? new Set(allowedUserIds)
+        : null;
+
+      const filteredUsers = allowedSet
+        ? data.filter(user => allowedSet.has(user._id))
+        : data;
+
+      setAllUsers(filteredUsers);
+      setSearchResults(filteredUsers);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
@@ -37,7 +55,16 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUsers, title = 'Add Users', 
     const delayDebounceFn = setTimeout(async () => {
       try {
         const { data } = await api.get(`/users/search?q=${encodeURIComponent(searchQuery)}`);
-        setSearchResults(data);
+
+        const allowedSet = Array.isArray(allowedUserIds)
+          ? new Set(allowedUserIds)
+          : null;
+
+        const filteredUsers = allowedSet
+          ? data.filter(user => allowedSet.has(user._id))
+          : data;
+
+        setSearchResults(filteredUsers);
       } catch (error) {
         console.error('Search failed:', error);
         setSearchResults([]);
@@ -47,7 +74,7 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUsers, title = 'Add Users', 
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, allUsers]);
+  }, [searchQuery, allUsers, allowedUserIds]);
 
   const handleUserToggle = (userId) => {
     if (!allowMultiple) {

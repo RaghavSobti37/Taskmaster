@@ -17,8 +17,10 @@
 .modal-content {
   width: 100%;
   max-width: 600px;
-  background-color: var(--surface-alt-color);
-  border: 2px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 14px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
   padding: 0;
@@ -166,6 +168,80 @@
   background-color: rgba(183, 75, 2, 0.08);
   border-color: var(--primary-color);
   color: var(--primary-color);
+}
+
+/* Priority Buttons */
+.priority-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.priority-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--background-color);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.priority-icon {
+  font-size: 24px;
+  display: block;
+}
+
+.priority-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.priority-btn.priority-low {
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.priority-btn.priority-low.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+}
+
+.priority-btn.priority-medium {
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.priority-btn.priority-medium.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+  color: #b45309;
+}
+
+.priority-btn.priority-high {
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.priority-btn.priority-high.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  color: #991b1b;
 }
 
 @media (max-width: 768px) {

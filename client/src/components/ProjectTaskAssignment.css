@@ -3,8 +3,10 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  background: rgba(18, 109, 94, 0.04);
-  border: 2px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 10px;
 }
 
@@ -12,6 +14,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding-bottom: 12px;
   border-bottom: 2px solid var(--border-color);
 }
@@ -21,11 +24,14 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
 }
 
-.btn-add-task {
+.project-task-add-btn {
   width: 32px;
   height: 32px;
+  min-width: 32px;
   border-radius: 6px;
   background: linear-gradient(135deg, var(--primary-color), #e85d3f);
   color: white;
@@ -38,14 +44,15 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(183, 75, 2, 0.2);
+  flex-shrink: 0;
 }
 
-.btn-add-task:hover {
+.project-task-add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(183, 75, 2, 0.3);
 }
 
-.btn-add-task:active {
+.project-task-add-btn:active {
   transform: translateY(0);
 }
 

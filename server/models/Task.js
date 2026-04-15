@@ -15,6 +15,7 @@ const taskSchema = new mongoose.Schema({
   },
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
   isPersonal: { type: Boolean, default: false },
   isVisibleInCircle: { type: Boolean, default: true },
   dueDate: { type: Date },

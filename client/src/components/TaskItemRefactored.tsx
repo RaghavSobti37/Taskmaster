@@ -6,7 +6,7 @@ interface TaskItemRefactoredProps {
     _id: string;
     title: string;
     status: 'todo' | 'in_progress' | 'done';
-    priority: 'low' | 'medium' | 'high';
+    priority: 'normal' | 'important' | 'urgent';
     creator: { _id: string; username: string };
     assignee: { _id: string; username: string };
     projectId?: { _id: string; name: string; color?: string };
@@ -31,9 +31,9 @@ const TaskItemRefactored: React.FC<TaskItemRefactoredProps> = ({
   const isInProgress = task.status === 'in_progress';
 
   const priorityConfig = {
-    low: { label: '🔵 Low', color: 'from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20 text-blue-700 dark:text-blue-300' },
-    medium: { label: '🟡 Medium', color: 'from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-800/20 text-yellow-700 dark:text-yellow-300' },
-    high: { label: '🔴 High', color: 'from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/20 text-red-700 dark:text-red-300' }
+    normal: { label: '🔵 Low', color: 'from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20 text-blue-700 dark:text-blue-300' },
+    important: { label: '🟡 Medium', color: 'from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-800/20 text-yellow-700 dark:text-yellow-300' },
+    urgent: { label: '🔴 High', color: 'from-red-100 to-red-50 dark:from-red-900/30 dark:to-red-800/20 text-red-700 dark:text-red-300' }
   };
 
   const statusConfig = {
@@ -84,6 +84,22 @@ const TaskItemRefactored: React.FC<TaskItemRefactoredProps> = ({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
+          {/* Project Tag at Top */}
+          {task.projectId && (
+            <div className="flex justify-end mb-2">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold text-white"
+                style={{
+                  backgroundColor: projectColor,
+                  boxShadow: `0 2px 8px ${projectColor}40`
+                }}
+              >
+                📂 {task.projectId.name}
+              </motion.div>
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <motion.h4
@@ -136,20 +152,6 @@ const TaskItemRefactored: React.FC<TaskItemRefactoredProps> = ({
             >
               {statusConfig[task.status].icon} {statusConfig[task.status].label}
             </motion.div>
-
-            {/* Project Tag */}
-            {task.projectId && (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold text-white"
-                style={{
-                  backgroundColor: projectColor,
-                  boxShadow: `0 2px 8px ${projectColor}40`
-                }}
-              >
-                {task.projectId.name}
-              </motion.div>
-            )}
 
             {/* Assignee */}
             {task.assignee && (

@@ -14,8 +14,10 @@
 }
 
 .modal-content {
-  background: var(--surface-alt-color);
-  border: 2px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 14px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
   max-width: 550px;

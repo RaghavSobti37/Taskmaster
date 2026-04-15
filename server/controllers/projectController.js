@@ -176,7 +176,7 @@ export const addProjectMember = async (req, res) => {
 
     project.members.push({
       userId,
-      role: role || 'member'
+      role: role || 'tech'
     });
 
     await project.save();
@@ -219,40 +219,112 @@ export const removeProjectMember = async (req, res) => {
   }
 };
 
-// @desc    Create cluster within project
-// @route   POST /api/projects/:projectId/clusters
+// @desc    Update project member role
+// @route   PUT /api/projects/:projectId/members/:userId
 // @access  Private (Project admin only)
-export const createCluster = async (req, res) => {
+export const updateProjectMemberRole = async (req, res) => {
   try {
-    const { projectId } = req.params;
-    const { name, description, lead } = req.body;
+    const { projectId, userId } = req.params;
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
+    }
 
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
+    // Find and update the member's role
+    const memberIndex = project.members.findIndex(
+      m => m.userId.toString() === userId
+    );
+
+    if (memberIndex === -1) {
+      return res.status(404).json({ message: 'Member not found in project' });
+    }
+
+    project.members[memberIndex].role = role;
+    await project.save();
+
+    res.json({ 
+      message: 'Member role updated', 
+      member: project.members[memberIndex] 
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: 'Failed to update member role' });
+  }
+};
+
+// @desc    Create cluster within project
+// @route   POST /api/projects/:projectId/clusters
+// @access  Private (Project admin only)
+export const createCluster = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { name, description, lead, members = [] } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Cluster name is required' });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const projectMemberIds = new Set(project.members.map(m => m.userId.toString()));
+    projectMemberIds.add(project.creator.toString());
+
+    const normalizedMembers = Array.isArray(members)
+      ? [...new Set(members.map(id => id?.toString()).filter(Boolean))]
+      : [];
+
+    const validMembers = normalizedMembers.filter(id => projectMemberIds.has(id));
+
+    const leadId = (lead && projectMemberIds.has(lead.toString()))
+      ? lead.toString()
+      : req.user.id;
+
+    const clusterMembers = [
+      {
+        userId: leadId,
+        role: 'lead'
+      },
+      ...validMembers
+        .filter(id => id !== leadId)
+        .map(id => ({ userId: id, role: 'member' }))
+    ];
+
     const cluster = {
-      name,
+      name: name.trim(),
       description: description || '',
-      lead: lead || req.user.id,
-      members: [
-        {
-          userId: req.user.id,
-          role: 'lead'
-        }
-      ]
+      lead: leadId,
+      members: clusterMembers
     };
 
     project.clusters.push(cluster);
     await project.save();
 
+    const createdCluster = project.clusters[project.clusters.length - 1];
+
+    await project.populate('clusters.lead', 'username email firstName lastName');
+    await project.populate('clusters.members.userId', 'username email firstName lastName');
+
     logger.info(`Cluster created: ${name}`, 'CLUSTER_CREATE', {
       projectId,
-      clusterId: project.clusters[project.clusters.length - 1]._id
+      clusterId: createdCluster._id
     });
 
-    res.json(project);
+    const populatedCluster = project.clusters.id(createdCluster._id);
+
+    res.json({
+      message: 'Cluster created successfully',
+      cluster: populatedCluster,
+      project
+    });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: 'Failed to create cluster' });
@@ -292,10 +364,148 @@ export const addClusterMember = async (req, res) => {
     });
 
     await project.save();
-    res.json(project);
+    await project.populate('clusters.members.userId', 'username email firstName lastName');
+
+    const updatedCluster = project.clusters.id(clusterId);
+
+    res.json({
+      message: 'Member added to cluster',
+      cluster: updatedCluster,
+      project
+    });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ message: 'Failed to add member to cluster' });
+  }
+};
+
+// @desc    Update cluster details
+// @route   PUT /api/projects/:projectId/clusters/:clusterId
+// @access  Private
+export const updateCluster = async (req, res) => {
+  try {
+    const { projectId, clusterId } = req.params;
+    const { name, description } = req.body;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const cluster = project.clusters.id(clusterId);
+    if (!cluster) {
+      return res.status(404).json({ message: 'Cluster not found' });
+    }
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({ message: 'Cluster name cannot be empty' });
+      }
+      cluster.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      cluster.description = description;
+    }
+
+    await project.save();
+    await project.populate('clusters.members.userId', 'username email firstName lastName');
+    await project.populate('clusters.lead', 'username email firstName lastName');
+
+    res.json({
+      message: 'Cluster updated successfully',
+      cluster: project.clusters.id(clusterId),
+      project
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: 'Failed to update cluster' });
+  }
+};
+
+// @desc    Replace cluster member list
+// @route   PUT /api/projects/:projectId/clusters/:clusterId/members
+// @access  Private
+export const updateClusterMembers = async (req, res) => {
+  try {
+    const { projectId, clusterId } = req.params;
+    const { memberIds } = req.body;
+
+    if (!Array.isArray(memberIds)) {
+      return res.status(400).json({ message: 'memberIds must be an array' });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const cluster = project.clusters.id(clusterId);
+    if (!cluster) {
+      return res.status(404).json({ message: 'Cluster not found' });
+    }
+
+    const projectMemberIds = new Set(project.members.map(m => m.userId.toString()));
+    projectMemberIds.add(project.creator.toString());
+
+    const uniqueRequested = [...new Set(memberIds.map(id => id?.toString()).filter(Boolean))];
+    const validRequested = uniqueRequested.filter(id => projectMemberIds.has(id));
+
+    const leadId = cluster.lead?.toString();
+    if (leadId && !validRequested.includes(leadId)) {
+      validRequested.unshift(leadId);
+    }
+
+    cluster.members = validRequested.map(userId => {
+      const existingMember = cluster.members.find(m => m.userId.toString() === userId);
+      const role = existingMember?.role || (leadId === userId ? 'lead' : 'member');
+      return { userId, role };
+    });
+
+    await project.save();
+    await project.populate('clusters.members.userId', 'username email firstName lastName');
+    await project.populate('clusters.lead', 'username email firstName lastName');
+
+    res.json({
+      message: 'Cluster members updated successfully',
+      cluster: project.clusters.id(clusterId),
+      project
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: 'Failed to update cluster members' });
+  }
+};
+
+// @desc    Delete a cluster
+// @route   DELETE /api/projects/:projectId/clusters/:clusterId
+// @access  Private
+export const deleteCluster = async (req, res) => {
+  try {
+    const { projectId, clusterId } = req.params;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const cluster = project.clusters.id(clusterId);
+    if (!cluster) {
+      return res.status(404).json({ message: 'Cluster not found' });
+    }
+
+    cluster.deleteOne();
+    await project.save();
+    await project.populate('clusters.members.userId', 'username email firstName lastName');
+    await project.populate('clusters.lead', 'username email firstName lastName');
+
+    res.json({
+      message: 'Cluster deleted successfully',
+      project
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: 'Failed to delete cluster' });
   }
 };
 

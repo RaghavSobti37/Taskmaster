@@ -17,6 +17,9 @@ const ProfilePage = () => {
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -202,41 +205,71 @@ const ProfilePage = () => {
 
             <div className="form-group">
               <label htmlFor="currentPassword">Current Password</label>
-              <input
-                type="password"
-                id="currentPassword"
-                name="currentPassword"
-                value={formData.currentPassword}
-                onChange={handleChange}
-                placeholder="Required if changing password"
-                className="form-input"
-              />
+              <div className="password-input-group">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  id="currentPassword"
+                  name="currentPassword"
+                  value={formData.currentPassword}
+                  onChange={handleChange}
+                  placeholder="Required if changing password"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  title={showCurrentPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="newPassword">New Password</label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={formData.newPassword}
-                onChange={handleChange}
-                placeholder="Leave blank to keep current password"
-                className="form-input"
-              />
+              <div className="password-input-group">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  id="newPassword"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleChange}
+                  placeholder="Leave blank to keep current password"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  title={showNewPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="confirmPassword">Confirm New Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm new password"
-                className="form-input"
-              />
+              <div className="password-input-group">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm new password"
+                  className="form-input"
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
 
             <div className="form-actions">

@@ -27,6 +27,12 @@
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.dark .modal-content {
+  background-color: rgba(8, 61, 58, 0.92);
+  border-color: rgba(255, 236, 209, 0.18);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -34,6 +40,10 @@
   border-bottom: 2px solid var(--border-color);
   padding: 20px 24px;
   background: rgba(183, 75, 2, 0.04);
+}
+
+body.dark .modal-header {
+  background: rgba(183, 75, 2, 0.1);
 }
 
 .modal-header h2 {
@@ -235,6 +245,42 @@
 .priority-btn.priority-high {
   border-color: #ef4444;
   color: #991b1b;
+}
+
+body.dark .priority-btn.priority-low {
+  border-color: #60a5fa;
+  color: #93c5fd;
+}
+
+body.dark .priority-btn.priority-medium {
+  border-color: #fbbf24;
+  color: #fde68a;
+}
+
+body.dark .priority-btn.priority-high {
+  border-color: #f87171;
+  color: #fca5a5;
+}
+
+body.dark .priority-btn.priority-low.active {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.1) 100%);
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+  color: #93c5fd;
+}
+
+body.dark .priority-btn.priority-medium.active {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
+  color: #fde68a;
+}
+
+body.dark .priority-btn.priority-high.active {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.25);
+  color: #fca5a5;
 }
 
 .priority-btn.priority-high.active {

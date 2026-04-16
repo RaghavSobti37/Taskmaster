@@ -73,6 +73,13 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.dark .stat-card {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  border-left-color: var(--primary-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 6px 16px rgba(183, 75, 2, 0.12);
@@ -126,6 +133,13 @@
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+body.dark .task-section,
+body.dark .team-section {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .section-header {
@@ -278,6 +292,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+body.dark .quick-actions {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .quick-actions h3 {
   margin: 0 0 16px 0;
   font-size: 16px;
@@ -307,10 +325,18 @@
   font-family: inherit;
 }
 
+body.dark .action-item {
+  background: rgba(183, 75, 2, 0.08);
+}
+
 .action-item:hover {
   background: rgba(183, 75, 2, 0.1);
   border-color: var(--primary-color);
   transform: translateX(5px);
+}
+
+body.dark .action-item:hover {
+  background: rgba(183, 75, 2, 0.18);
 }
 
 .action-icon {

@@ -13,12 +13,14 @@ import ServerAdmin from './pages/ServerAdmin';
 import DailyLogPage from './pages/DailyLogPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import LoadingProgress from './components/LoadingProgress';
 import './App.css';
 function App() {
   return (
     <ThemeProvider>
       <Router>
         <AuthProvider>
+          <LoadingProgress />
           <Navbar />
           <main className="container">
             <Routes>

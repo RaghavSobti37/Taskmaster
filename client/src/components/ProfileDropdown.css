@@ -14,10 +14,21 @@
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.dark .profile-dropdown {
+  background-color: rgba(8, 61, 58, 0.92);
+  border-color: rgba(255, 236, 209, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
 .dropdown-header {
   padding: 16px 18px;
   border-bottom: 1px solid rgba(8, 61, 58, 0.1);
   background: linear-gradient(135deg, rgba(183, 75, 2, 0.05) 0%, rgba(8, 61, 58, 0.08) 100%);
+}
+
+body.dark .dropdown-header {
+  border-bottom-color: rgba(255, 236, 209, 0.12);
+  background: linear-gradient(135deg, rgba(183, 75, 2, 0.12) 0%, rgba(8, 61, 58, 0.25) 100%);
 }
 
 .dropdown-avatar-section {
@@ -116,8 +127,16 @@
   border-top: 1px solid rgba(8, 61, 58, 0.1);
 }
 
+body.dark .dropdown-logout-button {
+  border-top-color: rgba(255, 236, 209, 0.12) !important;
+}
+
 .dropdown-logout-button:hover {
   color: var(--accent-wine) !important;
   background-color: rgba(109, 32, 52, 0.08) !important;
   padding-left: 24px !important;
+}
+
+body.dark .dropdown-logout-button:hover {
+  background-color: rgba(232, 160, 171, 0.15) !important;
 }

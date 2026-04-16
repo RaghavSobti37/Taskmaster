@@ -290,3 +290,31 @@
   }
 }
 
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .projects-list {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .project-detail-section {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .search-input {
+  background-color: rgba(15, 79, 75, 0.5);
+  border-color: rgba(255, 236, 209, 0.2);
+}
+
+body.dark .search-input:focus {
+  background-color: rgba(15, 79, 75, 0.75);
+}
+
+body.dark .error-message {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef9a9a;
+}

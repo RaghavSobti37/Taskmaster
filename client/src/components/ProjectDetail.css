@@ -272,3 +272,114 @@
 .settings-section strong {
   color: #333;
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .project-detail {
+  background: rgba(15, 79, 75, 0.55);
+}
+
+body.dark .detail-header {
+  border-bottom-color: rgba(255, 236, 209, 0.15);
+}
+
+body.dark .detail-title h2 {
+  color: var(--text-primary-dark);
+}
+
+body.dark .close-detail {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .close-detail:hover {
+  color: var(--text-primary-dark);
+}
+
+body.dark .edit-controls {
+  background: rgba(8, 61, 58, 0.5);
+  border-bottom-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .btn-cancel {
+  background: rgba(255, 236, 209, 0.1);
+  color: var(--text-primary-dark);
+}
+
+body.dark .btn-cancel:hover {
+  background: rgba(255, 236, 209, 0.18);
+}
+
+body.dark .edit-form {
+  background: rgba(8, 61, 58, 0.4);
+  border-bottom-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .edit-form label {
+  color: var(--text-primary-dark);
+}
+
+body.dark .edit-form input,
+body.dark .edit-form textarea,
+body.dark .edit-form select {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(255, 236, 209, 0.2);
+  color: var(--text-primary-dark);
+}
+
+body.dark .detail-description {
+  border-bottom-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .detail-description p {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .info-item {
+  background: rgba(8, 61, 58, 0.4);
+  border-left-color: var(--secondary-dark);
+}
+
+body.dark .info-item label {
+  color: var(--text-tertiary-dark);
+}
+
+body.dark .info-item .value {
+  color: var(--text-primary-dark);
+}
+
+body.dark .settings-section {
+  background: rgba(8, 61, 58, 0.4);
+  border-left-color: #60a5fa;
+}
+
+body.dark .settings-section h3 {
+  color: var(--text-primary-dark);
+}
+
+body.dark .settings-section li {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .settings-section strong {
+  color: var(--text-primary-dark);
+}
+
+body.dark .status-active {
+  background: rgba(46, 125, 50, 0.2);
+  color: #81c784;
+}
+
+body.dark .status-paused {
+  background: rgba(230, 81, 0, 0.2);
+  color: #ffcc80;
+}
+
+body.dark .status-planning {
+  background: rgba(106, 27, 154, 0.2);
+  color: #ce93d8;
+}
+
+body.dark .status-completed {
+  background: rgba(13, 71, 161, 0.2);
+  color: #90caf9;
+}

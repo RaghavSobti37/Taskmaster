@@ -420,6 +420,8 @@ body.dark {
   --important-color: var(--important-dark);
   --normal-color: var(--normal-dark);
   --success-color: var(--success-dark);
+  background-image: radial-gradient(ellipse at 15% 50%, rgba(18, 109, 94, 0.08) 0%, transparent 60%),
+                    radial-gradient(ellipse at 85% 20%, rgba(183, 75, 2, 0.06) 0%, transparent 50%);
 }
 
 .container {

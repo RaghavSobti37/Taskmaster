@@ -306,3 +306,31 @@
     padding: 10px 16px;
   }
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .user-search-modal {
+  background: rgba(8, 61, 58, 0.92);
+  border-color: rgba(255, 236, 209, 0.18);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .modal-footer {
+  background: rgba(8, 61, 58, 0.7);
+}
+
+body.dark .user-item-role.role-admin {
+  background: rgba(232, 93, 63, 0.2);
+  color: #ff8a6e;
+}
+
+body.dark .user-item-role.role-lead {
+  background: rgba(244, 184, 96, 0.2);
+  color: #ffd080;
+}
+
+body.dark .user-item-role.role-member,
+body.dark .user-item-role.role-user {
+  background: rgba(18, 109, 94, 0.2);
+  color: #7ce6d6;
+}

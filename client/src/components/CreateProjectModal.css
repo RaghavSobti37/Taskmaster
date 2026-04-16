@@ -335,3 +335,25 @@
     width: 100%;
   }
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .modal-content {
+  background: rgba(8, 61, 58, 0.92);
+  border-color: rgba(255, 236, 209, 0.18);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+body.dark .modal-header {
+  background: rgba(183, 75, 2, 0.1);
+}
+
+body.dark .team-members-section {
+  background: rgba(183, 75, 2, 0.08);
+}
+
+body.dark .team-search-dropdown {
+  background: rgba(8, 61, 58, 0.95);
+  border-color: rgba(255, 236, 209, 0.2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}

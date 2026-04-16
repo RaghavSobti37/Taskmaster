@@ -474,3 +474,160 @@
   font-size: 13px !important;
   color: #aaa;
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .cluster-form {
+  background: rgba(8, 61, 58, 0.8);
+  border-color: rgba(255, 236, 209, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.dark .cluster-form h3 {
+  color: var(--text-primary-dark);
+}
+
+body.dark .form-group label {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .cluster-input {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(255, 236, 209, 0.2);
+  color: var(--text-primary-dark);
+}
+
+body.dark .cluster-input:focus {
+  background: rgba(15, 79, 75, 0.85);
+  border-color: #b74b02;
+  box-shadow: 0 0 0 3px rgba(183, 75, 2, 0.2);
+}
+
+body.dark .cluster-input:disabled {
+  background: rgba(8, 61, 58, 0.4);
+}
+
+body.dark .members-selector {
+  background: rgba(8, 61, 58, 0.4);
+  border-color: rgba(183, 75, 2, 0.25);
+}
+
+body.dark .btn-open-member-modal {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(183, 75, 2, 0.35);
+  color: #ffd9a8;
+}
+
+body.dark .btn-open-member-modal:hover:not(:disabled) {
+  background: rgba(15, 79, 75, 0.9);
+  border-color: rgba(183, 75, 2, 0.55);
+}
+
+body.dark .selected-member-chip {
+  background: rgba(183, 75, 2, 0.2);
+  color: #ffd9a8;
+}
+
+body.dark .member-label {
+  color: var(--text-primary-dark);
+}
+
+body.dark .member-label small {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .member-checkbox:hover {
+  background: rgba(183, 75, 2, 0.12);
+}
+
+body.dark .btn-cancel {
+  background: rgba(255, 236, 209, 0.08);
+  color: var(--text-secondary-dark);
+  border-color: rgba(255, 236, 209, 0.15);
+}
+
+body.dark .btn-cancel:hover:not(:disabled) {
+  background: rgba(255, 236, 209, 0.14);
+}
+
+body.dark .cluster-card {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .cluster-card:hover {
+  border-color: rgba(183, 75, 2, 0.4);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .cluster-header h4 {
+  color: var(--text-primary-dark);
+}
+
+body.dark .cluster-description {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .btn-edit,
+body.dark .btn-remove {
+  background: rgba(183, 75, 2, 0.15);
+  color: #ffd9a8;
+  border-color: rgba(183, 75, 2, 0.3);
+}
+
+body.dark .btn-remove:hover {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f87171;
+  border-color: rgba(220, 53, 69, 0.4);
+}
+
+body.dark .cluster-members {
+  border-top-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .members-header strong {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .member-item {
+  background: rgba(8, 61, 58, 0.4);
+}
+
+body.dark .member-item:hover {
+  background: rgba(183, 75, 2, 0.1);
+}
+
+body.dark .member-name {
+  color: var(--text-primary-dark);
+}
+
+body.dark .role-member {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+}
+
+body.dark .role-lead {
+  background: rgba(192, 132, 252, 0.15);
+  color: #d8b4fe;
+}
+
+body.dark .role-coordinator {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fde68a;
+}
+
+body.dark .empty-state {
+  background: rgba(15, 79, 75, 0.4);
+  border-color: rgba(255, 236, 209, 0.12);
+  color: var(--text-secondary-dark);
+}
+
+body.dark .empty-text {
+  color: var(--text-tertiary-dark);
+}
+
+body.dark .no-members,
+body.dark .no-members-text {
+  color: var(--text-tertiary-dark);
+}

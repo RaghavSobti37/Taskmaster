@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import TaskItem from '../components/TaskItem';
-import TeamMemberCard from '../components/TeamMemberCard';
 import CreateTaskModal from '../components/CreateTaskModal';
+import PageLoader from '../components/PageLoader';
 import api from '../services/api';
 import { createAssignedTask, splitTasksForUser, getEntityId } from '../services/taskAssignmentService';
 
@@ -180,7 +180,7 @@ const DashboardRefactored: React.FC = () => {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
+    visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 100 } }
   };
 
   const taskSection = (title: string, tasks: Task[], count: number) => (
@@ -205,7 +205,7 @@ const DashboardRefactored: React.FC = () => {
         animate="visible"
       >
         {tasks.length > 0 ? (
-          tasks.map((task, idx) => (
+          tasks.map((task) => (
             <motion.div key={task._id} variants={itemVariants} layout>
               <TaskItem
                 task={task}
@@ -233,11 +233,7 @@ const DashboardRefactored: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="w-12 h-12 border-3 border-orange-200 border-t-orange-600 rounded-full"
-        />
+        <PageLoader text="Loading your dashboard..." />
       </div>
     );
   }

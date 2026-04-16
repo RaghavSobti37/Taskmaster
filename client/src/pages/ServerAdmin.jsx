@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import PageLoader from '../components/PageLoader';
 import './ServerAdmin.css';
 
 const getDateString = (date) => date.toISOString().split('T')[0];
@@ -556,7 +557,7 @@ const ServerAdmin = () => {
           ) : (
             <div className="users-grid">
               {isLoading ? (
-                <p className="loading">Loading users...</p>
+                <PageLoader text="Loading users..." />
               ) : users.length === 0 ? (
                 <p className="empty-state">No users found</p>
               ) : (
@@ -648,7 +649,7 @@ const ServerAdmin = () => {
           </div>
 
           {isLoading ? (
-            <p className="loading">Loading logs...</p>
+            <PageLoader text="Loading logs..." />
           ) : logs.length === 0 ? (
             <p className="empty-state">No logs available</p>
           ) : (
@@ -704,7 +705,7 @@ const ServerAdmin = () => {
           <p className="daily-loaded-date-text">Showing logs for {loadedDailyDate}</p>
 
           {isLoading ? (
-            <p className="loading">Loading daily logs...</p>
+            <PageLoader text="Loading daily logs..." />
           ) : dailyLogs.length === 0 ? (
             <p className="empty-state">No daily logs available for this date</p>
           ) : (
@@ -787,7 +788,7 @@ const ServerAdmin = () => {
               </div>
 
               {isUserHistoryLoading ? (
-                <p className="loading">Loading history logs...</p>
+                <PageLoader text="Loading history logs..." />
               ) : userHistoryLogs.length === 0 ? (
                 <p className="empty-state">No historical logs found for selected filters</p>
               ) : (

@@ -483,3 +483,139 @@
     width: 100%;
   }
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .glass-container {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+body.dark .daily-log-header h1 {
+  color: var(--text-primary-dark);
+}
+
+body.dark .date-picker-wrapper-label {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .date-picker {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(183, 75, 2, 0.3);
+  color: var(--text-primary-dark);
+}
+
+body.dark .date-picker:focus {
+  background: rgba(15, 79, 75, 0.85);
+}
+
+body.dark .form-group label {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .task-form {
+  background: rgba(15, 79, 75, 0.5);
+  border-color: rgba(183, 75, 2, 0.2);
+}
+
+body.dark .task-form-header {
+  color: var(--text-primary-dark);
+}
+
+body.dark .form-group input,
+body.dark .form-group select,
+body.dark .form-group textarea {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(255, 236, 209, 0.15);
+  color: var(--text-primary-dark);
+}
+
+body.dark .form-group input:focus,
+body.dark .form-group select:focus,
+body.dark .form-group textarea:focus {
+  background: rgba(15, 79, 75, 0.85);
+}
+
+body.dark .task-item {
+  background: rgba(15, 79, 75, 0.5);
+  border-color: rgba(183, 75, 2, 0.15);
+}
+
+body.dark .task-item:hover {
+  background: rgba(15, 79, 75, 0.7);
+  border-color: rgba(183, 75, 2, 0.3);
+}
+
+body.dark .task-title {
+  color: var(--text-primary-dark);
+}
+
+body.dark .task-meta {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .status-completed {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+body.dark .status-in_progress {
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+}
+
+body.dark .status-blocked {
+  background: rgba(220, 53, 69, 0.2);
+  color: #f87171;
+}
+
+body.dark .status-pending {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffcc80;
+}
+
+body.dark .stats-card {
+  background: rgba(15, 79, 75, 0.5);
+  border-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .stats-label {
+  color: var(--text-secondary-dark);
+}
+
+body.dark .progress-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark .notes-header {
+  color: var(--text-primary-dark);
+}
+
+body.dark .notes-textarea {
+  background: rgba(15, 79, 75, 0.5);
+  border-color: rgba(183, 75, 2, 0.2);
+  color: var(--text-primary-dark);
+}
+
+body.dark .notes-textarea:focus {
+  background: rgba(15, 79, 75, 0.75);
+}
+
+body.dark .past-logs-title {
+  color: var(--text-primary-dark);
+}
+
+body.dark .past-log-card {
+  background: rgba(15, 79, 75, 0.5);
+  border-color: rgba(255, 236, 209, 0.12);
+}
+
+body.dark .past-log-card:hover {
+  background: rgba(15, 79, 75, 0.7);
+  border-color: rgba(183, 75, 2, 0.3);
+}
+
+body.dark .past-log-stats {
+  color: var(--text-secondary-dark);
+}

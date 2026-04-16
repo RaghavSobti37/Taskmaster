@@ -426,3 +426,59 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== DARK MODE OVERRIDES ===== */
+
+body.dark .member-card {
+  background: rgba(15, 79, 75, 0.55);
+  border-color: rgba(255, 236, 209, 0.15);
+}
+
+body.dark .member-card:hover {
+  border-color: var(--secondary-color);
+  background: rgba(18, 109, 94, 0.12);
+}
+
+body.dark .role-badge.role-lead {
+  background: rgba(183, 75, 2, 0.2);
+  color: #ffd9a8;
+  border-color: rgba(183, 75, 2, 0.4);
+}
+
+body.dark .role-badge.role-supervisor {
+  background: rgba(18, 109, 94, 0.2);
+  color: #7ce6d6;
+  border-color: rgba(18, 109, 94, 0.45);
+}
+
+body.dark .role-badge.role-tech {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+body.dark .role-badge.role-content {
+  background: rgba(192, 132, 252, 0.15);
+  color: #d8b4fe;
+  border-color: rgba(192, 132, 252, 0.3);
+}
+
+body.dark .member-task-section {
+  background: rgba(18, 109, 94, 0.08);
+  border-color: rgba(18, 109, 94, 0.2);
+}
+
+body.dark .member-task-item {
+  background: rgba(8, 61, 58, 0.5);
+  border-color: rgba(255, 236, 209, 0.1);
+}
+
+body.dark .member-task-status.status-done {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+body.dark .empty-state {
+  background: rgba(18, 109, 94, 0.08);
+  border-color: rgba(255, 236, 209, 0.12);
+}

@@ -13,9 +13,26 @@ const api = axios.create({
 
 console.log('🔧 [API] Base URL set to:', api.defaults.baseURL);
 
+let activeRequests = 0;
+
+const startLoading = () => {
+  if (activeRequests === 0) {
+    window.dispatchEvent(new Event('global-loading-start'));
+  }
+  activeRequests++;
+};
+
+const stopLoading = () => {
+  activeRequests = Math.max(0, activeRequests - 1);
+  if (activeRequests === 0) {
+    window.dispatchEvent(new Event('global-loading-stop'));
+  }
+};
+
 // Request interceptor - logs ALL outgoing requests
 api.interceptors.request.use(
   (config) => {
+    startLoading();
     console.log('📤 [API] Outgoing Request:');
     console.log('   Method:', config.method.toUpperCase());
     console.log('   URL:', config.url);
@@ -34,6 +51,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    stopLoading();
     console.error('❌ [API] Request error:', error);
     return Promise.reject(error);
   }
@@ -42,6 +60,7 @@ api.interceptors.request.use(
 // Response interceptor - logs ALL responses
 api.interceptors.response.use(
   (response) => {
+    stopLoading();
     console.log('📥 [API] Response received:');
     console.log('   Status:', response.status);
     console.log('   URL:', response.config.url);
@@ -49,6 +68,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    stopLoading();
     console.error('❌ [API] Response error:');
     console.error('   Status:', error.response?.status);
     console.error('   URL:', error.config?.url);

@@ -20,6 +20,12 @@
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+body.dark .auth-form {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(255, 236, 209, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

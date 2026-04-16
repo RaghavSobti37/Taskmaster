@@ -4,6 +4,7 @@ import api from '../services/api';
 import CreateProjectModal from '../components/CreateProjectModal';
 import ProjectCard from '../components/ProjectCard';
 import ProjectDetail from '../components/ProjectDetail';
+import PageLoader from '../components/PageLoader';
 import './ProjectsView.css';
 
 const ProjectsView = () => {
@@ -82,7 +83,7 @@ const ProjectsView = () => {
   );
 
   if (loading) {
-    return <div className="projects-view loading">Loading projects...</div>;
+    return <div className="projects-view loading"><PageLoader text="Loading projects..." /></div>;
   }
 
   return (

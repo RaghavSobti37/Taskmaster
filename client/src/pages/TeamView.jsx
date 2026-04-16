@@ -3,6 +3,7 @@ import TeamMemberCard from '../components/TeamMemberCard';
 import CreateTaskModal from '../components/CreateTaskModal';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import PageLoader from '../components/PageLoader';
 import './TeamView.css';
 
 const TeamView = () => {
@@ -121,7 +122,7 @@ const TeamView = () => {
       </div>
 
       {isLoading ? (
-        <p>Loading users...</p>
+        <PageLoader text="Loading users..." />
       ) : filteredUsers.length === 0 ? (
         <div className="add-friend-prompt">
           <h2>No other users found!</h2>

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import './CreateTaskModal.css';
 
+/**
+ * @param {{ onClose: () => void, onCreateTask: (data: any) => void, assignee?: any }} props
+ */
 const CreateTaskModal = ({ onClose, onCreateTask, assignee = null }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

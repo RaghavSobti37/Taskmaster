@@ -14,6 +14,12 @@
   padding: 28px;
 }
 
+body.dark .profile-card {
+  background: rgba(15, 79, 75, 0.6);
+  border-color: rgba(255, 236, 209, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
 .profile-header {
   display: flex;
   align-items: flex-start;
@@ -68,6 +74,11 @@
   font-weight: 600;
 }
 
+body.dark .success-message {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
 .error-message {
   background: rgba(244, 67, 54, 0.1);
   border: 2px solid #f44336;
@@ -77,6 +88,11 @@
   margin-bottom: 18px;
   font-size: 13px;
   font-weight: 600;
+}
+
+body.dark .error-message {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef9a9a;
 }
 
 .profile-form {

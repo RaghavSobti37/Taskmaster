@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import ProfileAvatar from '../components/ProfileAvatar';
+import PageLoader from '../components/PageLoader';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -146,7 +147,7 @@ const ProfilePage = () => {
   };
 
   if (!user) {
-    return <div>Loading...</div>;
+    return <PageLoader text="Loading profile..." />;
   }
 
   return (

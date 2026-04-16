@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import TaskItem from '../components/TaskItem';
 import TeamMemberCard from '../components/TeamMemberCard';
 import CreateTaskModal from '../components/CreateTaskModal';
+import PageLoader from '../components/PageLoader';
 import './Dashboard.css';
 import api from '../services/api';
 
@@ -179,7 +180,7 @@ const Dashboard = () => {
       </div>
 
       {isLoading ? (
-        <p className="loading-msg">Loading your dashboard...</p>
+        <PageLoader text="Loading your dashboard..." />
       ) : (
         <div className="dashboard-main">
           {/* Left Column - Tasks */}

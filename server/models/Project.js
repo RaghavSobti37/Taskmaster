@@ -11,9 +11,11 @@ const projectSchema = new mongoose.Schema({
     role: { type: String, default: 'member' }
   }],
   status: { type: String, enum: ['active', 'archived', 'completed'], default: 'active' },
-  metadataLayout: { type: mongoose.Schema.Types.ObjectId, ref: 'Layout' },
   tags: [{ type: String }],
   teams: [{ type: String }],
+  progress: { type: Number, default: 0 },
+  totalTasksCount: { type: Number, default: 0 },
+  completedTasksCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

@@ -12,10 +12,12 @@ import {
   Filter,
   ArrowUpRight,
   RotateCcw,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import axios from 'axios';
 import { Badge, ProgressBar } from '../components/ui';
+import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
@@ -51,33 +53,26 @@ const Dashboard = () => {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [undoTask, setUndoTask] = useState(null);
+  const [completingIds, setCompletingIds] = useState(new Set());
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
   const undoTimer = useRef(null);
   const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
-      const [tasksRes, logsRes, projectsRes] = await Promise.all([
+      const [tasksRes, logsRes, projectsRes, teamRes] = await Promise.all([
         axios.get('/api/tasks'),
         axios.get('/api/logs'),
-        axios.get('/api/projects')
+        axios.get('/api/projects'),
+        axios.get('/api/users/team')
       ]);
       
-      const allTasks = tasksRes.data;
-      setTasks(allTasks);
+      // Filter out tasks that are currently in the optimistic "undo" state
+      setTasks(tasksRes.data);
       setLogs(logsRes.data);
       setProjects(projectsRes.data);
-
-      const counts = allTasks.reduce((acc, task) => {
-        acc[task.status] = (acc[task.status] || 0) + 1;
-        return acc;
-      }, {});
-      
-      setStats({
-        done: counts['done'] || 0,
-        progress: counts['in-progress'] || 0,
-        todo: counts['todo'] || 0,
-        review: counts['in-review'] || 0
-      });
+      setTeamMembers(teamRes.data.team || []);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -86,60 +81,119 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    const counts = tasks.reduce((acc, task) => {
+      acc[task.status] = (acc[task.status] || 0) + 1;
+      return acc;
+    }, {});
+    
+    setStats({
+      'done': counts['done'] || 0,
+      'in-progress': counts['in-progress'] || 0,
+      'todo': counts['todo'] || 0,
+      'in-review': counts['in-review'] || 0
+    });
+  }, [tasks]);
+
+  useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 10000); // Sync every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [completingIds]);
 
   const handleCompleteTask = (task) => {
-    if (undoTask) clearTimeout(undoTimer.current);
+    if (undoTask) {
+      // If another task was being completed, finalize it immediately
+      finalizeCompletion(undoTask._id);
+    }
     
     setUndoTask(task);
-    setTasks(prev => prev.filter(t => t._id !== task._id));
+    setCompletingIds(prev => new Set(prev).add(task._id));
+    setTasks(prev => prev.map(t => t._id === task._id ? { ...t, status: 'done' } : t));
     
-    undoTimer.current = setTimeout(async () => {
-      try {
-        await axios.put(`/api/tasks/${task._id}`, { status: 'done' });
-        setUndoTask(null);
-        fetchData();
-      } catch (err) {
-        console.error('Failed to complete task:', err);
-      }
-    }, 10000);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => {
+      finalizeCompletion(task._id);
+    }, 10000); // Set to 10s to match UI bar
+  };
+
+  const finalizeCompletion = async (taskId) => {
+    try {
+      await axios.put(`/api/tasks/${taskId}`, { status: 'done' });
+      setCompletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+      setUndoTask(null);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to complete task:', err);
+      // Rollback on failure
+      setCompletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+      setUndoTask(null);
+      fetchData();
+    }
   };
 
   const handleUndo = () => {
+    if (!undoTask) return;
     clearTimeout(undoTimer.current);
-    setTasks(prev => [undoTask, ...prev]);
+    const restoredTask = undoTask;
+    setCompletingIds(prev => {
+      const next = new Set(prev);
+      next.delete(restoredTask._id);
+      return next;
+    });
+    setTasks(prev => prev.map(t => t._id === restoredTask._id ? restoredTask : t));
     setUndoTask(null);
   };
 
   const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
   
-  const activeLoadPercent = stats.todo + stats.progress + stats.review + stats.done === 0 
+  const activeLoadPercent = stats.todo + stats['in-progress'] + stats['in-review'] + stats.done === 0 
     ? 0 
-    : Math.round((stats.progress / (stats.todo + stats.progress + stats.review + stats.done)) * 100);
+    : Math.round((stats['in-progress'] / (stats.todo + stats['in-progress'] + stats['in-review'] + stats.done)) * 100);
 
-  if (loading) return <div className="flex items-center justify-center h-96 animate-pulse text-[var(--color-text-muted)]">Synchronizing Dashboard Matrix...</div>;
+  if (loading) return <div className="flex items-center justify-center h-96 animate-pulse text-[var(--color-text-muted)]">Loading Dashboard...</div>;
 
   return (
     <div className="space-y-8 relative">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Control Center</h1>
-          <p className="text-[var(--color-text-secondary)]">Overview of all active projects and tasks.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-[var(--color-text-secondary)]">Check your projects and tasks.</p>
         </div>
-        <div className="hidden md:flex items-center gap-2 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
+            <button 
+              onClick={() => setFilter('all')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            >
+              All Tasks
+            </button>
+            <div className="w-px h-4 bg-[var(--color-bg-border)] mx-1" />
+            <Badge variant={filter === 'all' ? 'todo' : filter}>{filter.toUpperCase()}</Badge>
+          </div>
           <button 
-            onClick={() => setFilter('all')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            onClick={() => setIsTaskModalOpen(true)}
+            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
           >
-            All Stream
+            <Plus size={20} /> Add New Task
           </button>
-          <div className="w-px h-4 bg-[var(--color-bg-border)] mx-1" />
-          <Badge variant={filter === 'all' ? 'todo' : filter}>{filter.toUpperCase()}</Badge>
         </div>
       </header>
+
+      <TaskCreateModal 
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        projects={projects}
+        members={teamMembers}
+        onTaskCreated={(newTask) => setTasks(prev => [newTask, ...prev])}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
@@ -153,8 +207,8 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={Clock} 
-          label="In Execution" 
-          value={stats.progress} 
+          label="Working" 
+          value={stats['in-progress']} 
           color="bg-[var(--color-status-progress)]" 
           delay={0.2}
           isActive={filter === 'in-progress'}
@@ -162,8 +216,8 @@ const Dashboard = () => {
         />
         <StatCard 
           icon={AlertCircle} 
-          label="Inspection" 
-          value={stats.review} 
+          label="Review" 
+          value={stats['in-review']} 
           color="bg-[var(--color-status-review)]" 
           delay={0.3}
           isActive={filter === 'in-review'}
@@ -187,60 +241,56 @@ const Dashboard = () => {
             <div className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
               <h3 className="font-bold flex items-center gap-2">
                 <Database size={18} className="text-[var(--color-action-primary)]" />
-                Task List: {filter.toUpperCase()}
+                Tasks: {filter.toUpperCase()}
               </h3>
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{filteredTasks.length} Units</span>
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{filteredTasks.length} Tasks</span>
             </div>
             <div className="divide-y divide-[var(--color-bg-border)] max-h-[500px] overflow-y-auto">
               {filteredTasks.length === 0 ? (
                 <div className="p-20 text-center text-[var(--color-text-muted)] italic">No tasks match current filter.</div>
-              ) : filteredTasks.map(task => (
-                <div key={task._id} className="p-4 flex items-center justify-between hover:bg-[var(--color-bg-workspace)] transition-all group">
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleCompleteTask(task)}
-                      className="w-5 h-5 rounded-md border-2 border-[var(--color-bg-border)] flex items-center justify-center hover:border-[var(--color-status-done)] hover:bg-[var(--color-status-done)]/10 transition-all text-transparent hover:text-[var(--color-status-done)]"
-                    >
-                      <CheckCircle2 size={14} />
-                    </button>
-                    <div>
-                      <p className="text-sm font-bold text-[var(--color-text-primary)]">{task.title}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] uppercase font-bold tracking-tighter">PRJ: {projects.find(p => p._id === task.projectId)?.name || 'ORPHAN'}</p>
+              ) : filteredTasks.map(task => {
+                const isDone = task.status === 'done';
+                const isFinalizing = completingIds.has(task._id);
+                
+                return (
+                  <div key={task._id} className={`p-4 flex items-center justify-between hover:bg-[var(--color-bg-workspace)] transition-all group ${isDone ? 'opacity-60' : ''}`}>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => !isDone && handleCompleteTask(task)}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                          isDone 
+                            ? 'bg-[var(--color-status-done)] border-[var(--color-status-done)] text-white cursor-default' 
+                            : 'border-[var(--color-bg-border)] text-transparent hover:border-[var(--color-status-done)] hover:bg-[var(--color-status-done)]/10 hover:text-[var(--color-status-done)]'
+                        }`}
+                      >
+                        <CheckCircle2 size={14} />
+                      </button>
+                      <div>
+                        <p className={`text-sm font-bold text-[var(--color-text-primary)] ${isDone ? 'line-through decoration-2 decoration-green-500/50' : ''}`}>{task.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[10px] text-[var(--color-text-muted)] uppercase font-bold tracking-tighter">Project: {projects.find(p => p._id === task.projectId)?.name || 'NONE'}</p>
+                          {isFinalizing && (
+                            <span className="text-[9px] text-[var(--color-action-primary)] font-black animate-pulse">● SAVING...</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isDone ? (
+                        <span className="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-lg">DONE</span>
+                      ) : (
+                        <Badge variant={task.priority === 'critical' || task.priority === 'high' ? 'critical' : 'todo'}>{task.priority}</Badge>
+                      )}
+                      <button 
+                        onClick={() => navigate(`/projects/${task.projectId}`)}
+                        className="p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
+                      >
+                        <ArrowUpRight size={16} />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={task.priority === 'critical' || task.priority === 'high' ? 'critical' : 'todo'}>{task.priority}</Badge>
-                    <button 
-                      onClick={() => navigate(`/projects/${task.projectId}`)}
-                      className="p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
-                    >
-                      <ArrowUpRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 gap-6">
-            {/* Active Load Replaced Temporal Deadlines */}
-            <div className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm p-8 flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="font-bold flex items-center gap-2 text-[var(--color-action-primary)]">
-                  <TrendingUp size={18} /> Active Load Capacity
-                </h3>
-                <p className="text-[10px] text-[var(--color-text-muted)] uppercase font-black tracking-widest">Global Resource Allocation</p>
-              </div>
-              <div className="text-right">
-                <p className="text-4xl font-black text-[var(--color-text-primary)]">{activeLoadPercent}%</p>
-                <div className="w-32 h-1.5 bg-[var(--color-bg-border)] rounded-full mt-2 overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${activeLoadPercent}%` }}
-                    className="h-full bg-[var(--color-action-primary)]"
-                  />
-                </div>
-              </div>
+                );
+              })}
             </div>
           </section>
         </div>
@@ -274,15 +324,6 @@ const Dashboard = () => {
               </button>
             </div>
           </section>
-
-          <section className="bg-gradient-to-br from-[var(--color-action-primary)] to-blue-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20">
-            <h3 className="font-bold mb-2">System Integrity</h3>
-            <p className="text-xs opacity-80 mb-4">All operational nodes are currently synchronized with the main cluster.</p>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white/10 px-3 py-1.5 rounded-lg w-fit">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Optimal Performance
-            </div>
-          </section>
         </div>
       </div>
 
@@ -299,8 +340,8 @@ const Dashboard = () => {
               <CheckCircle2 size={24} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-[var(--color-text-primary)]">Task Finalized</p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">Unit "{undoTask.title}" has been completed.</p>
+              <p className="text-sm font-bold text-[var(--color-text-primary)]">Task Done</p>
+              <p className="text-[10px] text-[var(--color-text-muted)]">"{undoTask.title}" has been completed.</p>
             </div>
             <button 
               onClick={handleUndo}

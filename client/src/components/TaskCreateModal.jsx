@@ -3,13 +3,31 @@ import axios from 'axios';
 import { X, CheckCircle2, UserPlus, Plus } from 'lucide-react';
 import Select from 'react-select';
 import CKDropdown from './ui/CKDropdown';
+import { addDays, format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
-const TaskCreateModal = ({ isOpen, onClose, projectId, members, onTaskCreated }) => {
+const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members, projects, onTaskCreated }) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState('medium');
-  const [assignees, setAssignees] = useState([]);
+  const [projectId, setProjectId] = useState(initialProjectId || '');
+  const [assignees, setAssignees] = useState(() => {
+    return user ? [{ value: user._id, label: user.name }] : [];
+  });
+  const [dueDate, setDueDate] = useState(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDesc('');
+      setPriority('medium');
+      setProjectId(initialProjectId || '');
+      setAssignees(user ? [{ value: user._id, label: user.name }] : []);
+      setDueDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+    }
+  }, [isOpen, user, initialProjectId]);
 
   const priorityOptions = [
     { value: 'low', label: 'Low' },
@@ -30,6 +48,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId, members, onTaskCreated })
         priority,
         projectId,
         assignees: assignees.map(a => a.value),
+        dueDate: dueDate || null,
         status: 'todo'
       });
       onTaskCreated(res.data);
@@ -46,6 +65,11 @@ const TaskCreateModal = ({ isOpen, onClose, projectId, members, onTaskCreated })
     label: m.user?.name || m.name || 'Unknown' 
   })) || [];
 
+  const projectOptions = projects?.map(p => ({
+    value: p._id,
+    label: p.name
+  })) || [];
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-[var(--color-bg-surface)] w-full max-w-lg rounded-3xl border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -60,10 +84,25 @@ const TaskCreateModal = ({ isOpen, onClose, projectId, members, onTaskCreated })
         </header>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {!initialProjectId && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Target Project</label>
+              <Select 
+                options={projectOptions}
+                value={projectOptions.find(p => p.value === projectId)}
+                onChange={opt => setProjectId(opt.value)}
+                placeholder="Select project..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                required
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Definition</label>
             <input 
-              autoFocus
+              autoFocus={!!initialProjectId}
               type="text" 
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -93,16 +132,27 @@ const TaskCreateModal = ({ isOpen, onClose, projectId, members, onTaskCreated })
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Operatives</label>
-              <Select 
-                isMulti
-                options={memberOptions}
-                onChange={setAssignees}
-                placeholder="Assign..."
-                className="react-select-container"
-                classNamePrefix="react-select"
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Deadline (Optional)</label>
+              <input 
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="w-full px-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none text-sm font-medium"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Operatives</label>
+            <Select 
+              isMulti
+              options={memberOptions}
+              value={assignees}
+              onChange={setAssignees}
+              placeholder="Assign to operatives..."
+              className="react-select-container"
+              classNamePrefix="react-select"
+            />
           </div>
 
           <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--color-bg-border)]">

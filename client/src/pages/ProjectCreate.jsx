@@ -38,7 +38,7 @@ const ProjectCreate = () => {
     const fetchUsers = async () => {
       try {
         const res = await axios.get('/api/users/team');
-        setUsers(res.data);
+        setUsers(res.data.team || []);
       } catch (err) {
         console.error('Error fetching users:', err);
       }

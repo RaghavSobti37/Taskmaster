@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Bell, Shield, Palette, Save, Globe, Lock, Sun, Moon } from 'lucide-react';
+import { Badge, NexusModal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import CKDropdown from '../components/ui/CKDropdown';
@@ -25,6 +26,7 @@ const SettingsPage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [activeTab, setActiveTab] = useState('profile');
 
   useState(() => {
@@ -58,7 +60,12 @@ const SettingsPage = () => {
       setNewPassword('');
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      alert(err.response?.data?.error || 'Update failed');
+      setModalConfig({
+        isOpen: true,
+        title: 'Synchronization Error',
+        message: err.response?.data?.error || 'Failed to update operative profile. Please verify credentials.',
+        type: 'danger'
+      });
     } finally {
       setLoading(false);
     }
@@ -277,6 +284,13 @@ const SettingsPage = () => {
           )}
         </main>
       </div>
+      <NexusModal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
     </div>
   );
 };

@@ -5,9 +5,17 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, async (req, res) => {
   try {
-    const logs = await Log.find()
+    const { userId, action, page = 1, limit = 50 } = req.query;
+    const filter = {};
+    if (userId && userId !== 'undefined' && userId !== 'null') {
+      filter.userId = userId;
+    }
+    if (action) filter.action = action;
+    
+    const logs = await Log.find(filter)
       .sort({ createdAt: -1 })
-      .limit(50)
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
       .populate('userId', 'name avatar');
     res.json(logs);
   } catch (err) {

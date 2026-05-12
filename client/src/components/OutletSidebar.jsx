@@ -85,48 +85,7 @@ const OutletSidebar = () => {
         </button>
       )}
 
-      {/* Workspace Switcher */}
-      <div className="px-3 mb-6 relative">
-        <button 
-          onClick={() => isOpen && setWsOpen(!wsOpen)}
-          className={`w-full p-2.5 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] flex items-center gap-3 hover:border-[var(--color-action-primary)] transition-all ${!isOpen && 'justify-center'}`}
-        >
-          <div className="w-7 h-7 bg-purple-500 rounded-lg shrink-0 flex items-center justify-center text-white">
-            <Layers size={16} />
-          </div>
-          {isOpen && (
-            <>
-              <div className="flex-1 text-left overflow-hidden">
-                <p className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] font-black">Cluster</p>
-                <p className="text-xs font-bold truncate text-[var(--color-text-primary)]">{activeWorkspace || 'Nexus One'}</p>
-              </div>
-              <ChevronDown size={14} className={`text-[var(--color-text-muted)] transition-transform ${wsOpen ? 'rotate-180' : ''}`} />
-            </>
-          )}
-        </button>
 
-        <AnimatePresence>
-          {wsOpen && isOpen && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="absolute left-3 right-3 mt-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl z-[60] overflow-hidden p-2 space-y-1"
-            >
-              {workspaces.map((hub) => (
-                <button 
-                  key={hub}
-                  className="w-full text-left px-3 py-2 text-xs font-bold rounded-lg hover:bg-[var(--color-bg-workspace)] transition-all flex items-center gap-2"
-                  onClick={() => setWsOpen(false)}
-                >
-                  <Circle size={8} className={hub === 'Main Hub' ? 'text-green-500 fill-green-500' : 'text-gray-300'} />
-                  {hub}
-                </button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-2 overflow-y-auto">

@@ -41,8 +41,8 @@ const RegisterPage = () => {
           <div className="w-16 h-16 bg-[var(--color-action-primary)] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-4">
             CK
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Operator Enrollment</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2">Initialize your CoreKnot credentials</p>
+          <h1 className="text-2xl font-bold tracking-tight">Create Account</h1>
+          <p className="text-[var(--color-text-secondary)] mt-2">Join the team today</p>
         </div>
 
         {error && (
@@ -68,7 +68,7 @@ const RegisterPage = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email Protocol</label>
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email Address</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input 
@@ -83,7 +83,7 @@ const RegisterPage = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Gender Identification</label>
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Gender</label>
             <div className="grid grid-cols-3 gap-2">
               {['male', 'female', 'other'].map((g) => (
                 <button
@@ -99,7 +99,7 @@ const RegisterPage = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Security Key</label>
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Password</label>
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input 
@@ -118,13 +118,13 @@ const RegisterPage = () => {
             disabled={loading}
             className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
           >
-            {loading ? 'Initializing...' : 'Complete Enrollment'} <ArrowRight size={20} />
+            {loading ? 'Registering...' : 'Sign Up'} <ArrowRight size={20} />
           </button>
         </form>
 
         <div className="mt-8 text-center text-sm">
           <p className="text-[var(--color-text-muted)]">
-            Already enrolled? <Link to="/login" className="text-[var(--color-action-primary)] font-bold hover:underline">Access Terminal</Link>
+            Already have an account? <Link to="/login" className="text-[var(--color-action-primary)] font-bold hover:underline">Sign in</Link>
           </p>
         </div>
       </motion.div>

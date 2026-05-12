@@ -10,6 +10,15 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
   const [priority, setPriority] = useState(task?.priority || 'medium');
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (task) {
+      setTitle(task.title || '');
+      setDesc(task.description || '');
+      setStatus(task.status || 'todo');
+      setPriority(task.priority || 'medium');
+    }
+  }, [task]);
+
   const statusOptions = [
     { value: 'todo', label: 'To Do' },
     { value: 'in-progress', label: 'In Progress' },

@@ -3,7 +3,6 @@ const dotenv = require('dotenv');
 const User = require('./models/User');
 const Project = require('./models/Project');
 const Phase = require('./models/Phase');
-const TaskList = require('./models/TaskList');
 const Task = require('./models/Task');
 
 const path = require('path');
@@ -18,29 +17,25 @@ const seedDatabase = async () => {
     await User.deleteMany({});
     await Project.deleteMany({});
     await Phase.deleteMany({});
-    await TaskList.deleteMany({});
     await Task.deleteMany({});
     console.log('Database cleared.');
 
-    // 2. Create Test Users
+    // 2. Create Core Users
     const admin = await User.create({
-      name: 'Raghav Raj Sobti',
-      email: 'raghavsobti37@gmail.com',
-      password: 'password123',
+      name: 'Raghav Raj',
+      email: 'raghavraj@theshakticollective.in',
+      password: '1234',
       role: 'admin',
       outletId: 'main',
       lastOnline: new Date()
     });
 
-    const standardUser = await User.create({
-      name: 'Alice Operator',
-      email: 'alice@coreknot.io',
-      password: 'password123',
-      role: 'user',
-      outletId: 'main',
-      lastOnline: new Date(Date.now() - 3600000) // 1 hour ago
-    });
-    console.log('Test Users Created: Raghav (Admin), Alice (User)');
+    await User.create({ name: 'Harshika', email: 'harshika@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Rohith', email: 'rohith@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Ops', email: 'ops@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Atharva', email: 'atharva@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
+
+    console.log('Core Users Created: Raghav Raj, Harshika, Rohith, Ops, Atharva');
 
     // 3. Create Sample Project
     const project = await Project.create({
@@ -67,22 +62,7 @@ const seedDatabase = async () => {
       status: 'todo'
     });
 
-    // 5. Create Task Lists
-    const list1 = await TaskList.create({
-      name: 'System Design',
-      phaseId: phase1._id,
-      projectId: project._id,
-      position: 1
-    });
-
-    const list2 = await TaskList.create({
-      name: 'Backend Core',
-      phaseId: phase1._id,
-      projectId: project._id,
-      position: 2
-    });
-
-    // 6. Create Tasks
+    // 5. Create Tasks
     await Task.create({
       title: 'Database Schema Design',
       description: 'Define models for Projects, Phases, and Tasks.',
@@ -90,7 +70,6 @@ const seedDatabase = async () => {
       priority: 'high',
       projectId: project._id,
       phaseId: phase1._id,
-      taskListId: list1._id,
       assignees: [admin._id],
       progress: 100
     });
@@ -101,7 +80,6 @@ const seedDatabase = async () => {
       priority: 'critical',
       projectId: project._id,
       phaseId: phase1._id,
-      taskListId: list2._id,
       assignees: [admin._id],
       progress: 40
     });
@@ -112,7 +90,6 @@ const seedDatabase = async () => {
       priority: 'medium',
       projectId: project._id,
       phaseId: phase1._id,
-      taskListId: list1._id,
       assignees: [admin._id],
       progress: 0
     });

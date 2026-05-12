@@ -1,17 +1,92 @@
-import React from 'react';
-import { User, Shield, Briefcase, Mail, Circle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Shield, Briefcase, Mail, Circle, Plus, X, Layers } from 'lucide-react';
 import { Badge } from '../ui';
+import CKDropdown from '../ui/CKDropdown';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ProjectTeam = ({ project }) => {
-  const members = project.members || [];
+  const { user: currentUser } = useAuth();
+  const [allTeams, setAllTeams] = useState([]);
+  const [allProjects, setAllProjects] = useState([]);
+  const [localMembers, setLocalMembers] = useState(project.members || []);
+  const isAdmin = currentUser?.role === 'admin';
+
+  const getTeamColor = (teamName) => {
+    const team = allTeams.find(t => t.name === teamName);
+    if (team?.color) return { borderLeft: `3px solid ${team.color}`, color: team.color };
+    
+    // Fallback logic
+    const colors = ['#3b82f6', '#a855f7', '#f97316', '#ec4899', '#06b6d4', '#10b981'];
+    let hash = 0;
+    if (!teamName) return { color: colors[0] };
+    const name = teamName.toString();
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = colors[Math.abs(hash) % colors.length];
+    return { borderLeft: `3px solid ${color}`, color };
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [teamsRes, projectsRes] = await Promise.all([
+          axios.get('/api/teams'),
+          axios.get('/api/projects')
+        ]);
+        setAllTeams(teamsRes.data);
+        setAllProjects(projectsRes.data);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleUpdateTeams = async (userId, teams) => {
+    try {
+      await axios.put(`/api/users/${userId}/teams`, { teams });
+      setLocalMembers(prev => prev.map(m => m._id === userId ? { ...m, teams } : m));
+    } catch (err) {
+      console.error('Error updating user teams:', err);
+    }
+  };
+
+  const getUserProjects = (userId) => {
+    return allProjects.filter(p => p.members?.some(m => (m._id || m) === userId));
+  };
+
+  const teamOptions = allTeams.map(t => ({ value: t.name, label: t.name.toUpperCase() }));
   const memberRoles = project.memberRoles || [];
 
+  const projectTeams = Array.from(new Set(localMembers.flatMap(m => m.teams || [])));
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Team Clusters Summary */}
+      <div className="flex flex-wrap gap-4 bg-[var(--color-bg-surface)] p-6 rounded-3xl border border-[var(--color-bg-border)]">
+        {allTeams.filter(t => projectTeams.includes(t.name)).map(t => (
+          <div key={t._id} className="flex items-center gap-3 px-4 py-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
+            <div className="w-2 h-8 rounded-full" style={{ backgroundColor: t.color }} />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{t.name}</p>
+              <p className="text-sm font-bold text-[var(--color-text-primary)]">
+                {localMembers.filter(m => m.teams?.includes(t.name)).length} Operatives
+              </p>
+            </div>
+          </div>
+        ))}
+        {projectTeams.length === 0 && (
+          <div className="text-xs text-[var(--color-text-muted)] italic py-2 px-4">No team affiliations detected in this cluster.</div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {members.map((member) => {
+        {localMembers.map((member) => {
           const roleEntry = memberRoles.find(r => r.user?._id === member._id || r.user === member._id);
           const roleLabel = roleEntry ? roleEntry.role : 'Member';
+          const memberProjects = getUserProjects(member._id);
           
           return (
             <div key={member._id} className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] p-6 shadow-sm hover:shadow-xl transition-all group">
@@ -36,23 +111,58 @@ const ProjectTeam = ({ project }) => {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-workspace)]/50 p-2 rounded-xl border border-[var(--color-bg-border)]/50">
                   <Mail size={14} className="text-[var(--color-text-muted)]" />
-                  <span className="font-medium">{member.email}</span>
+                  <span className="font-medium truncate">{member.email}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                  <Briefcase size={14} className="text-[var(--color-text-muted)]" />
-                  <div className="flex flex-wrap gap-1">
-                    {member.teams?.length > 0 ? (
-                      member.teams.map(t => (
-                        <span key={t} className="px-2 py-0.5 bg-[var(--color-bg-workspace)] rounded-md border border-[var(--color-bg-border)] text-[9px] font-black uppercase tracking-tighter">
-                          {t}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-[var(--color-text-muted)]">No active nexus</span>
-                    )}
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Briefcase size={14} className="text-[var(--color-text-muted)]" />
+                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Nexus Affiliations</span>
+                  </div>
+                  
+                  {isAdmin ? (
+                    <CKDropdown 
+                      multi
+                      placeholder="Assign Teams..."
+                      options={teamOptions}
+                      value={member.teams || []}
+                      onChange={(teams) => handleUpdateTeams(member._id, teams)}
+                      className="w-full"
+                    />
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {member.teams?.length > 0 ? (
+                        member.teams.map(t => (
+                          <span 
+                            key={t} 
+                            className="px-2.5 py-1 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] text-[9px] font-black uppercase tracking-widest transition-all"
+                            style={getTeamColor(t)}
+                          >
+                            {t.toUpperCase()}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold italic">Unassigned Operative</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Layers size={14} className="text-[var(--color-text-muted)]" />
+                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Active Deployments</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {memberProjects.map(p => (
+                      <span key={p._id} className="px-2 py-0.5 bg-[var(--color-bg-workspace)] rounded border border-[var(--color-bg-border)] text-[8px] font-bold text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)] transition-colors">
+                        {p.name}
+                      </span>
+                    ))}
+                    {memberProjects.length === 0 && <span className="text-[10px] text-[var(--color-text-muted)] italic">No active deployments</span>}
                   </div>
                 </div>
               </div>

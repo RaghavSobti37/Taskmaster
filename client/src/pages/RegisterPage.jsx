@@ -1,84 +1,116 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { User, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import './Auth.css';
 
 const RegisterPage = () => {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { register } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    console.log('📝 [REGISTER PAGE] Form submitted');
-    console.log('📝 [REGISTER PAGE] Values:', { username, email, passwordLength: password.length });
-    
+    setLoading(true);
     try {
-      console.log('📝 [REGISTER PAGE] Calling register function...');
-      await register(username, email, password);
-      console.log('📝 [REGISTER PAGE] Register succeeded');
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to register';
-      console.error('📝 [REGISTER PAGE] Register failed:', errorMessage);
-      setError(errorMessage);
+      const res = await axios.post('/api/auth/register', { name, email, password });
+      login(res.data.token, res.data);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="auth-container">
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>Create Account</h1>
-        {error && <div style={{ color: 'red', marginBottom: '10px' }}>⚠️ {error}</div>}
-        <div className="form-group">
-          <label htmlFor="username">Username</label>
-          <input 
-            type="text" 
-            id="username" 
-            value={username} 
-            onChange={(e) => {
-              console.log('📝 [REGISTER PAGE] Username changed:', e.target.value);
-              setUsername(e.target.value);
-            }} 
-            required 
-          />
+    <div className="min-h-screen bg-[var(--color-bg-workspace)] flex items-center justify-center p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-[var(--color-bg-surface)] p-8 rounded-3xl border border-[var(--color-bg-border)] shadow-xl"
+      >
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-[var(--color-action-primary)] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-4">
+            CK
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Operator Enrollment</h1>
+          <p className="text-[var(--color-text-secondary)] mt-2">Initialize your CoreKnot credentials</p>
         </div>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            value={email} 
-            onChange={(e) => {
-              console.log('📝 [REGISTER PAGE] Email changed:', e.target.value);
-              setEmail(e.target.value);
-            }} 
-            required 
-          />
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Full Name</label>
+            <div className="relative">
+              <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input 
+                type="text" 
+                required
+                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email Protocol</label>
+            <div className="relative">
+              <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input 
+                type="email" 
+                required
+                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                placeholder="operator@enterprise.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Security Key</label>
+            <div className="relative">
+              <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+              <input 
+                type="password" 
+                required
+                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+          >
+            {loading ? 'Initializing...' : 'Complete Enrollment'} <ArrowRight size={20} />
+          </button>
+        </form>
+
+        <div className="mt-8 text-center text-sm">
+          <p className="text-[var(--color-text-muted)]">
+            Already enrolled? <Link to="/login" className="text-[var(--color-action-primary)] font-bold hover:underline">Access Terminal</Link>
+          </p>
         </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input 
-            type="password" 
-            id="password" 
-            value={password} 
-            onChange={(e) => {
-              console.log('📝 [REGISTER PAGE] Password changed, length:', e.target.value.length);
-              setPassword(e.target.value);
-            }} 
-            required 
-          />
-        </div>
-        <button type="submit" className="auth-button">
-          Register
-        </button>
-        <p className="auth-switch">
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </form>
+      </motion.div>
     </div>
   );
 };

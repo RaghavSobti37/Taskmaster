@@ -1,194 +1,56 @@
-import User from '../models/User.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { logUserActivity } from '../utils/dailyLogUtils.js';
+const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 
-// Utility to generate token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-export const registerUser = async (req, res) => {
-  const { username, email, password } = req.body;
-
+exports.register = async (req, res) => {
   try {
-    console.log('[REGISTER] ===== REQUEST RECEIVED =====');
-    console.log('[REGISTER] Full request body:', JSON.stringify(req.body, null, 2));
-    console.log('[REGISTER] Extracted values:', { username, email, passwordLength: password?.length });
-    console.log('[REGISTER] Request headers:', req.headers);
+    const { name, email, password } = req.body;
+    const userExists = await User.findOne({ email });
 
-    if (!username || !email || !password) {
-      console.log('[REGISTER] ❌ Missing required fields');
-      console.log('[REGISTER] username present:', !!username);
-      console.log('[REGISTER] email present:', !!email);
-      console.log('[REGISTER] password present:', !!password);
-      return res.status(400).json({ message: 'Username, email, and password are required' });
+    if (userExists) {
+      return res.status(400).json({ error: 'User already exists' });
     }
 
-    console.log('[REGISTER] ✓ All fields present, checking for existing user');
-    let user = await User.findOne({ email });
-    if (user) {
-      console.log('[REGISTER] ❌ Email already exists:', email);
-      return res.status(400).json({ message: 'User already exists' });
-    }
+    const user = await User.create({ name, email, password });
 
-    console.log('[REGISTER] ✓ Email is unique, creating user');
-    user = new User({
-      username,
-      email,
-      password,
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id)
     });
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-    console.log('[REGISTER] ✓ Password hashed, saving user...');
-
-    await user.save();
-    console.log('[REGISTER] ✓ User saved successfully:', user._id);
-
-    const token = generateToken(user._id);
-    console.log('[REGISTER] ✓ JWT token generated');
-
-    const responseData = {
-      token,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        profilePicture: user.profilePicture,
-        profilePictureUrl: user.profilePictureUrl,
-      },
-    };
-    
-    console.log('[REGISTER] ✓ Sending response:', JSON.stringify(responseData, null, 2));
-    res.status(201).json(responseData);
   } catch (error) {
-    console.error('[REGISTER] ❌ SERVER ERROR:', error.message);
-    console.error('[REGISTER] Error stack:', error.stack);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Authenticate user & get token
-// @route   POST /api/auth/login
-// @access  Public
-export const loginUser = async (req, res) => {
-  const { login, password } = req.body;
-
+exports.login = async (req, res) => {
   try {
-    console.log('[LOGIN] ===== REQUEST RECEIVED =====');
-    console.log('[LOGIN] Full request body:', JSON.stringify(req.body, null, 2));
-    console.log('[LOGIN] Extracted values:', { login, passwordLength: password?.length });
-    console.log('[LOGIN] Request headers:', req.headers);
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
 
-    if (!login || !password) {
-      console.log('[LOGIN] ❌ Missing credentials');
-      console.log('[LOGIN] login present:', !!login);
-      console.log('[LOGIN] password present:', !!password);
-      return res.status(400).json({ message: 'Email/username and password are required' });
-    }
-
-    console.log('[LOGIN] ✓ Both fields present, finding user...');
-    let user = await User.findOne({
-      $or: [{ email: login }, { username: login }],
-    });
-    
-    if (!user) {
-      console.log('[LOGIN] ❌ User not found with:', login);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    console.log('[LOGIN] ✓ User found:', user.email, '- comparing password...');
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      console.log('[LOGIN] ❌ Password mismatch for user:', login);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    console.log('[LOGIN] ✓ Password matched');
-
-    // Check if user is disabled
-    if (user.isDisabled) {
-      console.log('[LOGIN] ❌ User account is disabled:', login);
-      return res.status(403).json({ message: 'Account is disabled. Please contact administrator.' });
-    }
-
-    // Update login timestamp and login count
-    user.lastLogin = new Date();
-    user.loginCount = (user.loginCount || 0) + 1;
-    
-    // Track login in loginHistory
-    user.loginHistory = user.loginHistory || [];
-    user.loginHistory.push({
-      loginTime: new Date(),
-      ipAddress: req.ip || req.connection.remoteAddress,
-      userAgent: req.headers['user-agent']
-    });
-
-    // Keep only last 100 login records
-    if (user.loginHistory.length > 100) {
-      user.loginHistory = user.loginHistory.slice(-100);
-    }
-
-    try {
-      await user.save();
-    } catch (saveError) {
-      // If save fails due to schema validation, try without validation
-      console.log('[LOGIN] ⚠️  First save attempt failed, retrying without validation...');
-      await user.save({ validateBeforeSave: false });
-    }
-    
-    console.log('[LOGIN] ✓ Login count updated');
-
-    // Log daily activity
-    await logUserActivity(user._id, 'login', {
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-
-    const token = generateToken(user._id);
-    console.log('[LOGIN] ✓ JWT token generated');
-
-    const responseData = {
-      token,
-      user: {
+    if (user && (await user.comparePassword(password))) {
+      res.json({
         _id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        name: user.name,
         email: user.email,
         role: user.role,
-        profilePicture: user.profilePicture,
-        profilePictureUrl: user.profilePictureUrl,
-      },
-    };
-    
-    console.log('[LOGIN] ✓ Login successful for user:', user.email);
-    console.log('[LOGIN] ✓ Sending response:', JSON.stringify(responseData, null, 2));
-    res.json(responseData);
+        token: generateToken(user._id)
+      });
+    } else {
+      res.status(401).json({ error: 'Invalid email or password' });
+    }
   } catch (error) {
-    console.error('[LOGIN] ❌ SERVER ERROR:', error.message);
-    console.error('[LOGIN] Error stack:', error.stack);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Get logged in user data
-// @route   GET /api/auth/me
-// @access  Private
-export const getMe = async (req, res) => {
-  // req.user is attached by the protect middleware
-  try {
-    const user = await User.findById(req.user.id).select('-password -loginHistory');
-    res.json(user);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server error');
-  }
+exports.getMe = async (req, res) => {
+  res.json(req.user);
 };

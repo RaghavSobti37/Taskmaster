@@ -1,21 +1,13 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const AdminRoute = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
-  const location = useLocation();
+const AdminRoute = () => {
+  const { user, loading } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  if (loading) return null;
 
-  // Allow both admin and server_admin roles
-  if (user?.role !== 'admin' && user?.role !== 'server_admin') {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
+  return user?.role === 'admin' ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 export default AdminRoute;

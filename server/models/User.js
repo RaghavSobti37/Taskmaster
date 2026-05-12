@@ -1,37 +1,24 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  firstName: { type: String, default: '' },
-  lastName: { type: String, default: '' },
-  email: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true },
-  role: { 
-    type: String, 
-    enum: {
-      values: ['user', 'lead', 'admin', 'server_admin'],
-      message: 'Role must be one of: user, lead, admin, server_admin'
-    },
-    default: 'user' 
-  },
-  profilePicture: { type: String, default: null }, // Keep for backward compatibility
-  profilePictureUrl: { type: String, default: null }, // New field for image URLs
-  lastLogin: { type: Date, default: null },
-  loginCount: { type: Number, default: 0 },
-  isDisabled: { type: Boolean, default: false },
-  loginHistory: [
-    {
-      loginTime: { type: Date, default: Date.now },
-      logoutTime: { type: Date, default: null },
-      ipAddress: String,
-      userAgent: String,
-      sessionId: String
-    }
-  ],
-  circle: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  team: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  projects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
-}, { timestamps: true });
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  avatar: { type: String },
+  lastOnline: { type: Date, default: Date.now },
+  online: { type: Boolean, default: false },
+});
 
-const User = mongoose.model('User', userSchema);
-export default User;
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);

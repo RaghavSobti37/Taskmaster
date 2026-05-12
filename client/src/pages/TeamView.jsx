@@ -1,137 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import TeamMemberCard from '../components/TeamMemberCard';
-import CreateTaskModal from '../components/CreateTaskModal';
-import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-import PageLoader from '../components/PageLoader';
-import './TeamView.css';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { motion } from 'framer-motion';
+import { User as UserIcon, Mail, Shield, Briefcase, ChevronRight } from 'lucide-react';
+import { Badge } from '../components/ui';
 
 const TeamView = () => {
-  const { user: currentUser } = useAuth();
-  const [allUsers, setAllUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [myTeam, setMyTeam] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [assignee, setAssignee] = useState(null);
+  const [team, setTeam] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchAllUsers = async () => {
-    try {
-      const { data } = await api.get('/users/all');
-      setAllUsers(data);
-      // Filter out current user
-      if (currentUser) {
-        const filtered = data.filter(user => user._id !== currentUser._id);
-        setFilteredUsers(filtered);
-      } else {
-        setFilteredUsers(data);
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        const res = await axios.get('/api/users/team');
+        setTeam(res.data);
+      } catch (err) {
+        console.error('Error fetching team:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch all users", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchMyTeam = async () => {
-    try {
-      const { data } = await api.get('/users/team');
-      setMyTeam(data);
-    } catch (error) {
-      console.error("Failed to fetch my team", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllUsers();
-    fetchMyTeam();
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (searchQuery.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(() => {
-      api.get(`/users/search?q=${searchQuery}`)
-        .then(res => setSearchResults(res.data))
-        .catch(err => console.error(err));
-    }, 300); // 300ms delay
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
-
-  const handleAddUser = async (userId) => {
-    try {
-      await api.post('/users/team', { userIdToAdd: userId });
-      setSearchQuery('');
-      setSearchResults([]);
-      fetchMyTeam(); // Refetch the team to show the new member
-    } catch (error) {
-      console.error('Failed to add user to team', error);
-      alert('Could not add user.');
-    }
-  };
-
-  const handleOpenAssignModal = (member) => {
-    setAssignee(member);
-    setIsModalOpen(true);
-  };
-
-  const handleCreateTask = async (newTaskData) => {
-    try {
-      await api.post('/tasks', newTaskData);
-      setIsModalOpen(false);
-      setAssignee(null);
-      // Optionally, you can refetch the team data to show the new task count
-      fetchMyTeam();
-    } catch (error) {
-      console.error('Failed to create/assign task', error);
-    }
-  };
+    };
+    fetchTeam();
+  }, []);
 
   return (
-    <div>
-      {isModalOpen && <CreateTaskModal onClose={() => setIsModalOpen(false)} onCreateTask={handleCreateTask} assignee={assignee} />}
-      <div className="team-header">
-        <h1>All Users</h1>
-        <div className="team-search-container">
-          <input
-            type="text"
-            className="team-search-input"
-            placeholder="Find users to add to your team..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchResults.length > 0 && (
-            <div className="search-results-dropdown">
-              <ul>
-                {searchResults.map(user => (
-                  <li key={user._id}>
-                    <span>{user.username}</span>
-                    <button className="add-user-btn" onClick={() => handleAddUser(user._id)}>Add</button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Organizational Grid</h1>
+        <p className="text-[var(--color-text-secondary)]">Coordinate cross-department collaboration resources and workload balancing.</p>
+      </header>
 
-      {isLoading ? (
-        <PageLoader text="Loading users..." />
-      ) : filteredUsers.length === 0 ? (
-        <div className="add-friend-prompt">
-          <h2>No other users found!</h2>
-          <p>Create more accounts to build your team.</p>
+      {loading ? (
+        <div className="flex items-center justify-center py-20 animate-pulse text-[var(--color-text-muted)]">
+          Scanning system directories...
         </div>
       ) : (
-        <div className="team-grid">
-          {filteredUsers.map(user => (
-            <TeamMemberCard key={user._id} member={user} onAssignTask={handleOpenAssignModal} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {team.map((member, index) => (
+            <motion.div 
+              key={member._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="p-6 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)] transition-all"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-workspace)] flex items-center justify-center text-[var(--color-action-primary)] text-2xl font-bold border border-[var(--color-bg-border)]">
+                  {member.avatar ? <img src={member.avatar} alt="" className="w-full h-full rounded-2xl object-cover" /> : member.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{member.name}</h3>
+                  <div className="flex items-center gap-2 text-[var(--color-text-muted)] text-xs font-medium">
+                    <Shield size={12} />
+                    <span className="capitalize">{member.role}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+                  <Mail size={16} className="text-[var(--color-text-muted)]" />
+                  <span className="truncate">{member.email}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+                  <Briefcase size={16} className="text-[var(--color-text-muted)]" />
+                  <span>Main Outlet</span>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+                <div className="text-center">
+                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Active Tasks</p>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)]">3</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Capacity</p>
+                  <p className="text-lg font-bold text-green-500">85%</p>
+                </div>
+                <button className="p-2 bg-[var(--color-bg-workspace)] rounded-lg text-[var(--color-text-muted)] group-hover:bg-[var(--color-action-primary)] group-hover:text-white transition-all">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </motion.div>
           ))}
         </div>
       )}

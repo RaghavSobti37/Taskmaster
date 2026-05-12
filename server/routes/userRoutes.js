@@ -1,15 +1,31 @@
-import express from 'express';
-import { getMyTeam, searchUsers, addToTeam, getAllUsers, updateProfile, getProfile } from '../controllers/userController.js';
-import { protect } from '../middleware/authMiddleware.js';
-
+const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-router.route('/team').get(protect, getMyTeam).post(protect, addToTeam);
-router.route('/circle').get(protect, getMyTeam).post(protect, addToTeam); // Legacy support
-router.get('/all', protect, getAllUsers);
-router.get('/profile', protect, getProfile);
-router.put('/profile', protect, updateProfile);
+router.use(protect);
 
-router.get('/search', protect, searchUsers);
+router.get('/team', async (req, res) => {
+  try {
+    const users = await User.find({ outletId: req.user.outletId }).select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-export default router;
+router.put('/profile', async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { name, avatar } },
+      { new: true }
+    ).select('-password');
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;

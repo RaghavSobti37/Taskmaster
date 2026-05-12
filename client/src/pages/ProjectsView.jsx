@@ -1,161 +1,82 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
-import CreateProjectModal from '../components/CreateProjectModal';
-import ProjectCard from '../components/ProjectCard';
-import ProjectDetail from '../components/ProjectDetail';
-import PageLoader from '../components/PageLoader';
-import './ProjectsView.css';
+import React, { useEffect, useState } from 'react';
+import { Plus, Search, Filter } from 'lucide-react';
+import axios from 'axios';
+import { Link } from 'react-router-dom';
+import { Badge, ProgressBar } from '../components/ui';
 
 const ProjectsView = () => {
-  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch all projects
   useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await axios.get('/api/projects');
+        setProjects(res.data);
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchProjects();
   }, []);
 
-  const fetchProjects = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/projects');
-      setProjects(response.data);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateProject = async (projectData) => {
-    try {
-      const response = await api.post('/projects', projectData);
-      setProjects([...projects, response.data]);
-      setShowCreateModal(false);
-    } catch (err) {
-      alert(`Error creating project: ${err.message}`);
-    }
-  };
-
-  const handleDeleteProject = async (projectId) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) return;
-
-    try {
-      await api.delete(`/projects/${projectId}`);
-      setProjects(projects.filter(p => p._id !== projectId));
-      if (selectedProject?._id === projectId) {
-        setSelectedProject(null);
-      }
-    } catch (err) {
-      alert(`Error deleting project: ${err.message}`);
-    }
-  };
-
-  const handleUpdateProject = async (projectId, updates) => {
-    try {
-      const response = await api.put(`/projects/${projectId}`, updates);
-      setProjects(projects.map(p => p._id === projectId ? response.data : p));
-      setSelectedProject(response.data);
-    } catch (err) {
-      alert(`Error updating project: ${err.message}`);
-    }
-  };
-
-  const handleProjectChange = (updatedProject) => {
-    if (!updatedProject?._id) return;
-
-    setProjects(prevProjects =>
-      prevProjects.map(p => p._id === updatedProject._id ? updatedProject : p)
-    );
-    setSelectedProject(updatedProject);
-  };
-
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
-    return <div className="projects-view loading"><PageLoader text="Loading projects..." /></div>;
-  }
-
   return (
-    <div className="projects-view">
-      <div className="projects-header">
-        <h1>Projects</h1>
-        <button
-          className="btn-primary"
-          onClick={() => setShowCreateModal(true)}
-        >
-          + New Project
+    <div className="space-y-8">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Project Workspaces</h1>
+          <p className="text-[var(--color-text-secondary)]">Manage high-level project environments and site identifiers.</p>
+        </div>
+        <button className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all">
+          <Plus size={20} /> Initialize Project
         </button>
-      </div>
+      </header>
 
-      {error && <div className="error-message">{error}</div>}
-
-      <div className="projects-search">
-        <input
-          type="text"
-          placeholder="Search projects..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
-
-      <div className="projects-container">
-        <div className="projects-list">
-          <h2>Your Projects ({filteredProjects.length})</h2>
-          
-          {filteredProjects.length === 0 ? (
-            <div className="empty-state">
-              <p>No projects yet. Create your first project!</p>
-              <button
-                className="btn-primary"
-                onClick={() => setShowCreateModal(true)}
-              >
-                Create Project
-              </button>
-            </div>
-          ) : (
-            <div className="projects-grid">
-              {filteredProjects.map(project => (
-                <ProjectCard
-                  key={project._id}
-                  project={project}
-                  onSelect={setSelectedProject}
-                  onDelete={handleDeleteProject}
-                  isSelected={selectedProject?._id === project._id}
-                />
-              ))}
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)] animate-pulse">
+          Retrieving project data...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <Link 
+              key={project._id} 
+              to={`/projects/${project._id}`}
+              className="p-6 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)] transition-all"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg uppercase">
+                  {project.name.substring(0, 2)}
+                </div>
+                <Badge variant={project.status === 'active' ? 'done' : 'todo'}>
+                  {project.status}
+                </Badge>
+              </div>
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">
+                {project.name}
+              </h3>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1 line-clamp-2">
+                {project.description || 'No description provided.'}
+              </p>
+              <div className="mt-6 flex items-center justify-between">
+                <div className="flex -space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[10px] font-bold">R</div>
+                </div>
+                <p className="text-sm font-bold text-[var(--color-text-primary)]">0% Progress</p>
+              </div>
+              <div className="mt-3">
+                <ProgressBar progress={0} />
+              </div>
+            </Link>
+          ))}
+          {projects.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-dashed border-[var(--color-bg-border)]">
+              <p className="text-[var(--color-text-muted)]">No active projects found.</p>
             </div>
           )}
         </div>
-
-        {selectedProject && (
-          <div className="project-detail-section">
-            <ProjectDetail
-              project={selectedProject}
-              onUpdate={handleUpdateProject}
-              onProjectChange={handleProjectChange}
-              onClose={() => setSelectedProject(null)}
-            />
-          </div>
-        )}
-      </div>
-
-      {showCreateModal && (
-        <CreateProjectModal
-          onSubmit={handleCreateProject}
-          onClose={() => setShowCreateModal(false)}
-        />
       )}
     </div>
   );

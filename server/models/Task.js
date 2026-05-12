@@ -1,26 +1,38 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
-  priority: {
-    type: String,
-    enum: ['normal', 'important', 'urgent'],
-    default: 'normal',
-  },
-  status: {
-    type: String,
-    enum: ['todo', 'in-progress', 'done'],
+  status: { 
+    type: String, 
+    enum: ['todo', 'in-progress', 'in-review', 'done'], 
     default: 'todo',
+    lowercase: true 
   },
-  creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
-  isPersonal: { type: Boolean, default: false },
-  isVisibleInCircle: { type: Boolean, default: true },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  phaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Phase' },
+  taskListId: { type: mongoose.Schema.Types.ObjectId, ref: 'TaskList' },
+  parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
+  
+  assignees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  
+  startDate: { type: Date },
   dueDate: { type: Date },
-  completedAt: { type: Date },
+  duration: { type: Number }, // In days
+  
+  plannedHours: { type: Number, default: 0 },
+  actualHours: { type: Number, default: 0 },
+  progress: { type: Number, default: 0, min: 0, max: 100 },
+  
+  dependencies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
+  
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-const Task = mongoose.model('Task', taskSchema);
-export default Task;
+taskSchema.index({ projectId: 1, status: 1 });
+taskSchema.index({ parentTaskId: 1, dueDate: 1 });
+taskSchema.index({ assignees: 1 });
+
+module.exports = mongoose.model('Task', taskSchema);

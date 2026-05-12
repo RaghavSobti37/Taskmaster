@@ -1,87 +1,46 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
-import Navbar from './components/Navbar.jsx';
-import ProtectedRoute from './components/ProtectedRoute';
-import AdminRoute from './components/AdminRoute';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
-import TeamView from './pages/TeamView';
-import ProfilePage from './pages/ProfilePage';
-import ProjectsView from './pages/ProjectsView';
-import ServerAdmin from './pages/ServerAdmin';
-import DailyLogPage from './pages/DailyLogPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import LoadingProgress from './components/LoadingProgress';
-import './App.css';
+import ProjectsView from './pages/ProjectsView';
+import ProjectDetail from './pages/ProjectDetail';
+import AdminPanel from './pages/AdminPanel';
+import TeamView from './pages/TeamView';
+import CalendarView from './pages/CalendarView';
+import SettingsPage from './pages/SettingsPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import { useAuth } from './contexts/AuthContext';
+
 function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading CoreKnot...</div>;
+
   return (
-    <ThemeProvider>
-      <Router>
-        <AuthProvider>
-          <LoadingProgress />
-          <Navbar />
-          <main className="container">
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects"
-                element={
-                  <ProtectedRoute>
-                    <ProjectsView />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/daily-log"
-                element={
-                  <ProtectedRoute>
-                    <DailyLogPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/server"
-                element={
-                  <AdminRoute>
-                    <ServerAdmin />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <ServerAdmin />
-                  </AdminRoute>
-                }
-              />
-              {/* This will catch any non-matching routes and redirect to the homepage */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-        </AuthProvider>
-      </Router>
-    </ThemeProvider>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="projects" element={<ProjectsView />} />
+          <Route path="projects/:id" element={<ProjectDetail />} />
+          <Route path="team" element={<TeamView />} />
+          <Route path="calendar" element={<CalendarView />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="admin" element={<AdminPanel />} />
+          </Route>
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
-export default App
+export default App;

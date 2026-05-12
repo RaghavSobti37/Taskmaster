@@ -9,6 +9,7 @@ const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [gender, setGender] = useState('male');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -19,7 +20,7 @@ const RegisterPage = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/register', { name, email, password });
+      const res = await axios.post('/api/auth/register', { name, email, password, gender });
       login(res.data.token, res.data);
       navigate('/');
     } catch (err) {
@@ -78,6 +79,22 @@ const RegisterPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Gender Identification</label>
+            <div className="grid grid-cols-3 gap-2">
+              {['male', 'female', 'other'].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGender(g)}
+                  className={`py-2 rounded-xl text-xs font-bold capitalize transition-all border ${gender === g ? 'bg-[var(--color-action-primary)] text-white border-[var(--color-action-primary)]' : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-[var(--color-text-muted)]'}`}
+                >
+                  {g}
+                </button>
+              ))}
             </div>
           </div>
 

@@ -6,13 +6,17 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProjectsView from './pages/ProjectsView';
 import ProjectDetail from './pages/ProjectDetail';
+import ProjectCreate from './pages/ProjectCreate';
 import AdminPanel from './pages/AdminPanel';
 import TeamView from './pages/TeamView';
 import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
+import DailyLogPage from './pages/DailyLogPage';
+import ChatPage from './pages/ChatPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import { useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
   const { user, loading } = useAuth();
@@ -20,26 +24,31 @@ function App() {
   if (loading) return <div>Loading CoreKnot...</div>;
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="projects" element={<ProjectsView />} />
-          <Route path="projects/:id" element={<ProjectDetail />} />
-          <Route path="team" element={<TeamView />} />
-          <Route path="calendar" element={<CalendarView />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route element={<AdminRoute />}>
-            <Route path="admin" element={<AdminPanel />} />
+    <ThemeProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="projects" element={<ProjectsView />} />
+            <Route path="projects/new" element={<ProjectCreate />} />
+            <Route path="projects/:id" element={<ProjectDetail />} />
+            <Route path="team" element={<TeamView />} />
+            <Route path="calendar" element={<CalendarView />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="logs" element={<DailyLogPage />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route element={<AdminRoute />}>
+              <Route path="admin" element={<AdminPanel />} />
+            </Route>
           </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ThemeProvider>
   );
 }
 

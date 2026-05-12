@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge, ProgressBar } from '../components/ui';
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -26,11 +27,14 @@ const ProjectsView = () => {
     <div className="space-y-8">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Project Workspaces</h1>
-          <p className="text-[var(--color-text-secondary)]">Manage high-level project environments and site identifiers.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Project List</h1>
+          <p className="text-[var(--color-text-secondary)]">All your active projects.</p>
         </div>
-        <button className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all">
-          <Plus size={20} /> Initialize Project
+        <button 
+          onClick={() => navigate('/projects/new')}
+          className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all"
+        >
+          <Plus size={20} /> New Project
         </button>
       </header>
 
@@ -60,14 +64,32 @@ const ProjectsView = () => {
               <p className="text-sm text-[var(--color-text-secondary)] mt-1 line-clamp-2">
                 {project.description || 'No description provided.'}
               </p>
+              
+              <div className="mt-4 flex flex-wrap gap-1">
+                {project.teams?.map(t => (
+                  <span key={t} className="px-2 py-0.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-md text-[9px] font-black uppercase tracking-tighter text-[var(--color-text-muted)]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+
               <div className="mt-6 flex items-center justify-between">
-                <div className="flex -space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[10px] font-bold">R</div>
+                <div className="flex -space-x-2 overflow-hidden">
+                  {project.members?.slice(0, 3).map(m => (
+                    <div key={m._id} className="w-8 h-8 rounded-lg bg-[var(--color-bg-workspace)] border-2 border-[var(--color-bg-surface)] flex items-center justify-center text-[10px] font-bold overflow-hidden shadow-sm">
+                      {m.avatar ? <img src={m.avatar} alt="" className="w-full h-full object-cover" /> : m.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  ))}
+                  {project.members?.length > 3 && (
+                    <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-workspace)] border-2 border-[var(--color-bg-surface)] flex items-center justify-center text-[10px] font-bold text-[var(--color-text-muted)]">
+                      +{project.members.length - 3}
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm font-bold text-[var(--color-text-primary)]">0% Progress</p>
+                <p className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">{project.progress}% Sync</p>
               </div>
               <div className="mt-3">
-                <ProgressBar progress={0} />
+                <ProgressBar progress={project.progress} />
               </div>
             </Link>
           ))}

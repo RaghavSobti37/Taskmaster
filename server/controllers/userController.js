@@ -1,0 +1,118 @@
+const User = require('../models/User');
+const Task = require('../models/Task');
+const Project = require('../models/Project');
+const { isAfter, subMinutes } = require('date-fns');
+
+const isUserOnline = (u) => {
+  if (!u.lastOnline) return false;
+  const fiveMinAgo = subMinutes(new Date(), 5);
+  return isAfter(u.lastOnline, fiveMinAgo);
+};
+
+exports.getTeam = async (req, res) => {
+  try {
+    const users = await User.find({ outletId: req.user.outletId }).select('-password');
+    const team = await Promise.all(
+      users.map(async (u) => {
+        const tasksDone = await Task.countDocuments({ assignees: u._id, status: 'done' });
+        const projects = await Project.find({ $or: [{ owner: u._id }, { members: u._id }] }).select('_id name');
+        return {
+          _id: u._id,
+          name: u.name,
+          email: u.email,
+          avatar: u.avatar,
+          role: u.role,
+          online: isUserOnline(u),
+          lastOnline: u.lastOnline,
+          tasksDone,
+          projectsInvolved: projects.map(p => ({ id: p._id, name: p.name })),
+          teamName: u.teamName || 'Nexus Ops',
+        };
+      })
+    );
+    res.json(team);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateUserTeams = async (req, res) => {
+  try {
+    const { teams, teamName } = req.body;
+    const update = {};
+    if (teams) update.teams = teams;
+    if (teamName) update.teamName = teamName;
+    
+    const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  const { name, avatar, phone, role, currentPassword, newPassword, teams, teamName } = req.body;
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (name) user.name = name;
+    if (avatar) user.avatar = avatar;
+    if (phone) user.phone = phone;
+    if (teams) user.teams = teams;
+    if (role && req.user.role === 'admin') {
+      // Protect root admin and ensure at least one admin exists
+      if (user.email === 'test@example.com' && role !== 'admin') {
+        return res.status(403).json({ error: 'Root Admin must retain administrative clearance.' });
+      }
+      user.role = role;
+    }
+
+    if (currentPassword && newPassword) {
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) return res.status(400).json({ error: 'Current password incorrect' });
+      user.password = newPassword;
+    }
+
+    user.lastOnline = new Date();
+    await user.save();
+
+    const updatedUser = await User.findById(user._id).select('-password');
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getDirectory = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    const enriched = users.map(u => ({
+      ...u._doc,
+      online: isUserOnline(u)
+    }));
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User de-authenticated and purged from nexus.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

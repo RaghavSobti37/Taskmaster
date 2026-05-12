@@ -45,6 +45,19 @@ export const Input = ({ label, icon: Icon, className = '', ...props }) => (
 );
 
 export const Badge = ({ children, variant = 'todo' }) => {
+  const variantMap = {
+    'todo': 'todo',
+    'in-progress': 'progress',
+    'in-review': 'review',
+    'done': 'done',
+    'critical': 'critical',
+    'high': 'critical',
+    'medium': 'todo',
+    'low': 'todo'
+  };
+  
+  const v = variantMap[variant] || variant;
+
   const colors = {
     todo: 'bg-gray-100 text-gray-700',
     progress: 'bg-blue-100 text-blue-700',
@@ -54,7 +67,7 @@ export const Badge = ({ children, variant = 'todo' }) => {
   };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[variant]}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[v] || colors.todo}`}>
       {children}
     </span>
   );

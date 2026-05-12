@@ -1,53 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import './PageLoader.css';
 
-const PageLoader = ({ text = "Loading..." }) => {
+const PageLoader = () => {
   return (
-    <div className="page-loader-container">
+    <div className="fixed inset-0 bg-[var(--color-bg-workspace)] flex flex-col items-center justify-center z-[9999]">
       <motion.div 
-        className="loader-circles"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <motion.div
-          className="circle circle-1"
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-            borderRadius: ["50%", "20%", "50%"]
-          }}
-          transition={{
-            duration: 2,
-            ease: "easeInOut",
-            times: [0, 0.5, 1],
-            repeat: Infinity,
-          }}
-        />
-        <motion.div
-          className="circle circle-2"
-          animate={{
-            scale: [1, 1.5, 1],
-            rotate: [360, 180, 0],
-            borderRadius: ["20%", "50%", "20%"]
-          }}
-          transition={{
-            duration: 2,
-            ease: "easeInOut",
-            times: [0, 0.5, 1],
-            repeat: Infinity,
-          }}
-        />
-      </motion.div>
-      <motion.p 
-        className="page-loader-text"
-        initial={{ opacity: 0.5 }}
-        animate={{ opacity: 1 }}
-        transition={{ repeat: Infinity, duration: 1, repeatType: "reverse" }}
-      >
-        {text}
-      </motion.p>
+        animate={{ 
+          scale: [1, 1.2, 1],
+          rotate: [0, 180, 360]
+        }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="w-12 h-12 bg-[var(--color-action-primary)] rounded-2xl shadow-xl shadow-blue-500/20 mb-6"
+      />
+      <h2 className="text-xl font-bold tracking-tight animate-pulse">Initializing CoreKnot...</h2>
+      <p className="text-[var(--color-text-muted)] text-sm mt-2">Connecting to High-Performance Backend</p>
     </div>
   );
 };

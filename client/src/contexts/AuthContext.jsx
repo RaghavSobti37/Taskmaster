@@ -1,92 +1,52 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
-
-export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [token, setToken] = useState(localStorage.getItem('coreknot_token'));
 
   useEffect(() => {
-    const loadUser = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          console.log('🔐 [AUTH] Loading user from token...');
-          const { data } = await api.get('/auth/me');
-          console.log('🔐 [AUTH] User loaded:', data);
-          setUser(data);
-        } catch (error) {
-          console.error('🔐 [AUTH] Session expired or token invalid.', error.message);
-          localStorage.removeItem('token');
-        }
-      } else {
-        console.log('🔐 [AUTH] No token in storage');
-      }
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      fetchUser();
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
       setLoading(false);
-    };
-    loadUser();
-  }, []);
+    }
+  }, [token]);
 
-  const login = async (loginIdentifier, password) => {
+  const fetchUser = async () => {
     try {
-      console.log('🔐 [AUTH] Login attempt:', { loginIdentifier, passwordLength: password.length });
-      console.log('🔐 [AUTH] Sending to /auth/login:', { login: loginIdentifier, password });
-      
-      const { data } = await api.post('/auth/login', { login: loginIdentifier, password });
-      
-      console.log('🔐 [AUTH] Login response received:', data);
-      localStorage.setItem('token', data.token);
-      console.log('🔐 [AUTH] Token saved to localStorage');
-      setUser(data.user);
-      console.log('🔐 [AUTH] User set in context:', data.user);
-      console.log('🔐 [AUTH] Navigating to home...');
-      navigate('/');
-    } catch (error) {
-      console.error('🔐 [AUTH] Login failed:', error.response?.data || error.message);
-      throw error;
+      const res = await axios.get('/api/auth/me');
+      setUser(res.data);
+      setLoading(false);
+    } catch (err) {
+      logout();
+      setLoading(false);
     }
   };
 
-  const register = async (username, email, password) => {
-    try {
-      console.log('🔐 [AUTH] Register attempt:', { username, email, passwordLength: password.length });
-      console.log('🔐 [AUTH] Sending to /auth/register:', { username, email, password });
-      
-      const { data } = await api.post('/auth/register', { username, email, password });
-      
-      console.log('🔐 [AUTH] Register response received:', data);
-      localStorage.setItem('token', data.token);
-      console.log('🔐 [AUTH] Token saved to localStorage');
-      setUser(data.user);
-      console.log('🔐 [AUTH] User set in context:', data.user);
-      console.log('🔐 [AUTH] Navigating to home...');
-      navigate('/');
-    } catch (error) {
-      console.error('🔐 [AUTH] Register failed:', error.response?.data || error.message);
-      throw error;
-    }
+  const login = (newToken, userData) => {
+    localStorage.setItem('coreknot_token', newToken);
+    setToken(newToken);
+    setUser(userData);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   };
 
   const logout = () => {
-    console.log('🔐 [AUTH] Logout');
-    localStorage.removeItem('token');
+    localStorage.removeItem('coreknot_token');
+    setToken(null);
     setUser(null);
-    navigate('/login');
   };
-
-  const updateUserProfile = (updatedUserData) => {
-    console.log('🔐 [AUTH] Updating user profile:', updatedUserData);
-    setUser(updatedUserData);
-  };
-
-  const value = { user, login, logout, register, loading, isAuthenticated: !!user, updateUserProfile };
 
   return (
-    <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);

@@ -11,7 +11,18 @@ const isUserOnline = (u) => {
 
 exports.getTeam = async (req, res) => {
   try {
-    const users = await User.find({ outletId: req.user.outletId }).select('-password');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    const users = await User.find(query)
+      .select('-password')
+      .skip(skip)
+      .limit(limit);
+    
+    const total = await User.countDocuments(query);
+
     const team = await Promise.all(
       users.map(async (u) => {
         const tasksDone = await Task.countDocuments({ assignees: u._id, status: 'done' });
@@ -25,12 +36,19 @@ exports.getTeam = async (req, res) => {
           online: isUserOnline(u),
           lastOnline: u.lastOnline,
           tasksDone,
-          projectsInvolved: projects.map(p => ({ id: p._id, name: p.name })),
-          teamName: u.teamName || 'Nexus Ops',
+          projectsInvolved: projects.map(p => ({ _id: p._id, name: p.name })),
+          teams: u.teams || [],
         };
       })
     );
-    res.json(team);
+    res.json({
+      team,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -39,10 +57,9 @@ exports.getTeam = async (req, res) => {
 
 exports.updateUserTeams = async (req, res) => {
   try {
-    const { teams, teamName } = req.body;
+    const { teams } = req.body;
     const update = {};
-    if (teams) update.teams = teams;
-    if (teamName) update.teamName = teamName;
+    if (teams) update.teams = teams.map(t => t.toUpperCase());
     
     const user = await User.findByIdAndUpdate(req.params.id, { $set: update }, { new: true }).select('-password');
     res.json(user);
@@ -87,12 +104,30 @@ exports.updateProfile = async (req, res) => {
 
 exports.getDirectory = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find()
+      .select('-password')
+      .skip(skip)
+      .limit(limit);
+    
+    const total = await User.countDocuments();
+    
     const enriched = users.map(u => ({
       ...u._doc,
       online: isUserOnline(u)
     }));
-    res.json(enriched);
+    
+    res.json({
+      users: enriched,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

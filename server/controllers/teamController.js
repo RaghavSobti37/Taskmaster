@@ -11,10 +11,11 @@ exports.getTeams = async (req, res) => {
 
 exports.createTeam = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, color } = req.body;
     const team = await Team.create({ 
-      name, 
+      name: name.toUpperCase(), 
       description,
+      color,
       createdBy: req.user._id 
     });
     res.status(201).json(team);

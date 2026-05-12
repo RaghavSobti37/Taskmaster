@@ -31,6 +31,8 @@ const ProjectDetail = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,18 +52,32 @@ const ProjectDetail = () => {
     fetchData();
   }, [id]);
 
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || task.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
   const handleTaskCreated = (newTask) => {
     setTableTasks([newTask, ...tasks]);
   };
 
   const handleTaskUpdate = async (taskId, updates) => {
+    const originalTasks = [...tasks];
+    // Optimistic Update
+    const optimisticTasks = tasks.map(t => t._id === taskId ? { ...t, ...updates } : t);
+    setTableTasks(optimisticTasks);
+
     try {
       const res = await axios.put(`/api/tasks/${taskId}`, updates);
-      const updatedTasks = tasks.map(t => t._id === taskId ? res.data : t);
-      setTableTasks(updatedTasks);
+      // Sync with server response
+      setTableTasks(prev => prev.map(t => t._id === taskId ? res.data : t));
       if (selectedTask?._id === taskId) setSelectedTask(res.data);
     } catch (err) {
       console.error('Error updating task:', err);
+      // Rollback on failure
+      setTableTasks(originalTasks);
     }
   };
 
@@ -85,7 +101,7 @@ const ProjectDetail = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
       <div className="w-12 h-12 border-4 border-[var(--color-action-primary)] border-t-transparent rounded-full animate-spin" />
-      <p className="text-[var(--color-text-muted)] font-medium">Synchronizing project hierarchy...</p>
+      <p className="text-[var(--color-text-muted)] font-medium">Loading project...</p>
     </div>
   );
 
@@ -96,7 +112,7 @@ const ProjectDetail = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Project Terminal</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Project</span>
             <span className="w-1 h-1 bg-[var(--color-text-muted)] rounded-full" />
             <span className="text-xs font-bold text-[var(--color-action-primary)]">{project._id.substring(0, 8).toUpperCase()}</span>
           </div>
@@ -113,7 +129,7 @@ const ProjectDetail = () => {
             onClick={() => setIsTaskModalOpen(true)}
             className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all"
           >
-            <Plus size={20} /> Create Task
+            <Plus size={20} /> Add Task
           </button>
         </div>
       </header>
@@ -169,25 +185,32 @@ const ProjectDetail = () => {
             <input 
               type="text" 
               placeholder="Search tasks..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 bg-transparent border border-[var(--color-bg-border)] rounded-xl text-sm focus:ring-1 focus:ring-[var(--color-action-primary)] outline-none"
             />
           </div>
-          <button 
-            onClick={() => alert('Filtering not implemented')}
-            className="flex items-center gap-2 px-4 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-border)] transition-all"
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="flex items-center gap-2 px-4 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-border)] transition-all bg-transparent outline-none"
           >
-            <Filter size={16} /> Filter
-          </button>
+            <option value="all">ALL STATUS</option>
+            <option value="todo">TODO</option>
+            <option value="in-progress">IN PROGRESS</option>
+            <option value="in-review">IN REVIEW</option>
+            <option value="done">COMPLETED</option>
+          </select>
         </div>
       </div>
 
       {/* Active View Container */}
       <div className="min-h-[500px]">
-        {activeTab === 'list' && <ProjectList tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
-        {activeTab === 'kanban' && <ProjectKanban tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
-        {activeTab === 'gantt' && <ProjectGantt tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'list' && <ProjectList tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'kanban' && <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'gantt' && <ProjectGantt tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
         {activeTab === 'team' && <ProjectTeam project={project} />}
-        {activeTab === 'resources' && <div className="p-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] text-[var(--color-text-muted)] italic">Capacity Heatmap Matrix Balancing Placeholder</div>}
+        {activeTab === 'resources' && <div className="p-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] text-[var(--color-text-muted)] italic">Resource tracking coming soon.</div>}
       </div>
     </div>
   );

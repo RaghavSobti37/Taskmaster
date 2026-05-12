@@ -12,7 +12,6 @@ const taskSchema = new mongoose.Schema({
   priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   phaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Phase' },
-  taskListId: { type: mongoose.Schema.Types.ObjectId, ref: 'TaskList' },
   parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
   
   assignees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -33,7 +32,8 @@ const taskSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 taskSchema.index({ projectId: 1, status: 1 });
-taskSchema.index({ parentTaskId: 1, dueDate: 1 });
+taskSchema.index({ phaseId: 1, status: 1 });
 taskSchema.index({ assignees: 1 });
+taskSchema.index({ projectId: 1, dueDate: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);

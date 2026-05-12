@@ -10,7 +10,7 @@ const calculateRollup = async (projectId, phaseId = null) => {
     const filter = { projectId };
     if (phaseId) filter.phaseId = phaseId;
     
-    const tasks = await Task.find(filter);
+    const tasks = await Task.find(filter).select('progress');
     if (tasks.length === 0) return 0;
 
     const totalProgress = tasks.reduce((acc, task) => acc + (task.progress || 0), 0);
@@ -18,6 +18,12 @@ const calculateRollup = async (projectId, phaseId = null) => {
 
     if (phaseId) {
       await Phase.findByIdAndUpdate(phaseId, { progress: averageProgress });
+    }
+    
+    // Update project progress
+    if (projectId) {
+      const Project = require('../models/Project');
+      await Project.findByIdAndUpdate(projectId, { progress: averageProgress });
     }
     
     return averageProgress;

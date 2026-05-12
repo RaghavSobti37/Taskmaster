@@ -23,7 +23,8 @@ import {
   Plus,
   Layers
 } from 'lucide-react';
-import { Badge } from '../components/ui';
+import { Badge, NexusModal } from '../components/ui';
+import { Link } from 'react-router-dom';
 import CKDropdown from '../components/ui/CKDropdown';
 import { format } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
@@ -32,6 +33,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
   const [userTasks, setUserTasks] = useState([]);
   const [userLogs, setUserLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -52,9 +54,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
   }, [user]);
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to PERMANENTLY DECOMMISSION operative ${user.name}? This action is irreversible.`)) {
-      onDelete(user._id);
-    }
+    setShowDeleteModal(true);
   };
 
   return (
@@ -142,8 +142,8 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
           <div className="lg:col-span-2 space-y-6">
             <section className="bg-[var(--color-bg-workspace)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden">
               <div className="px-6 py-4 border-b border-[var(--color-bg-border)] bg-black/5 flex items-center justify-between">
-                <h3 className="font-bold text-xs uppercase tracking-widest">Active Assignments</h3>
-                <Badge variant="todo">{userTasks.length} Units</Badge>
+                <h3 className="font-bold text-xs uppercase tracking-widest">Active Tasks</h3>
+                <Badge variant="todo">{userTasks.length} Tasks</Badge>
               </div>
               <div className="divide-y divide-[var(--color-bg-border)] max-h-[300px] overflow-y-auto">
                 {userTasks.length === 0 ? (
@@ -159,7 +159,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
 
             <section className="bg-[var(--color-bg-workspace)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden">
               <div className="px-6 py-4 border-b border-[var(--color-bg-border)] bg-black/5 flex items-center justify-between">
-                <h3 className="font-bold text-xs uppercase tracking-widest">Temporal Log History</h3>
+                <h3 className="font-bold text-xs uppercase tracking-widest">Activity History</h3>
                 <Badge variant="progress">RECENT</Badge>
               </div>
               <div className="p-6 space-y-4 max-h-[300px] overflow-y-auto">
@@ -176,6 +176,17 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
             </section>
           </div>
         </div>
+
+        <NexusModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          title="Delete User"
+          message={`Are you sure you want to PERMANENTLY DELETE user ${user.name}? This action cannot be undone.`}
+          type="danger"
+          isConfirm
+          confirmLabel="DELETE"
+          onConfirm={() => onDelete(user._id)}
+        />
       </motion.div>
     </motion.div>
   );
@@ -189,7 +200,9 @@ const AdminPanel = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chatMsg, setChatMsg] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamColor, setNewTeamColor] = useState('#3b82f6');
   const [loading, setLoading] = useState(true);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -201,7 +214,7 @@ const AdminPanel = () => {
         axios.get('/api/tasks'),
         axios.get('/api/teams')
       ]);
-      setUsers(usersRes.data);
+      setUsers(usersRes.data.users || []);
       setLogs(logsRes.data);
       setTeams(teamsRes.data);
       
@@ -211,7 +224,6 @@ const AdminPanel = () => {
         activeTasks: activeCount 
       });
 
-      // Handle deep linking from query param
       const userId = searchParams.get('user');
       if (userId && !selectedUser) {
         const user = usersRes.data.find(u => u._id === userId);
@@ -255,11 +267,19 @@ const AdminPanel = () => {
     e.preventDefault();
     if (!newTeamName.trim()) return;
     try {
-      const res = await axios.post('/api/teams', { name: newTeamName });
+      const res = await axios.post('/api/teams', { 
+        name: newTeamName.toUpperCase(), 
+        color: newTeamColor 
+      });
       setTeams([...teams, res.data]);
       setNewTeamName('');
     } catch (err) {
-      alert(err.response?.data?.error || 'Team creation failed');
+      setModalConfig({
+        isOpen: true,
+        title: 'Deployment Failed',
+        message: err.response?.data?.error || 'Team orchestration protocol failed. Please verify credentials.',
+        type: 'danger'
+      });
     }
   };
 
@@ -295,29 +315,37 @@ const AdminPanel = () => {
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="flex items-center justify-center h-96 text-[var(--color-text-muted)] animate-pulse">Initializing System Deck...</div>;
+  if (loading) return <div className="flex items-center justify-center h-96 text-[var(--color-text-muted)] animate-pulse">Loading Admin Panel...</div>;
 
   return (
     <div className="space-y-8 pb-20">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">System Deck</h1>
-        <p className="text-[var(--color-text-secondary)]">Central command for user authorization and operational monitoring.</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
+          <p className="text-[var(--color-text-secondary)]">Manage users and monitor system activity.</p>
+        </div>
+        <Link 
+          to="/logs" 
+          className="flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-bg-workspace)] transition-all shadow-sm"
+        >
+          <Clock size={18} className="text-[var(--color-action-primary)]" />
+          System Logs
+        </Link>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: User Directory */}
         <div className="lg:col-span-8 space-y-6">
           <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden">
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Users className="text-[var(--color-action-primary)]" />
-                <h3 className="font-bold">Personnel Directory</h3>
+                <h3 className="font-bold">User List</h3>
               </div>
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
                 <input 
                   type="text" 
-                  placeholder="Search personnel..."
+                  placeholder="Search users..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)]"
@@ -329,8 +357,8 @@ const AdminPanel = () => {
               <table className="w-full text-left text-sm">
                 <thead className="bg-[var(--color-bg-workspace)]/50 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest border-b border-[var(--color-bg-border)]">
                   <tr>
-                    <th className="px-6 py-4 font-bold">Operative</th>
-                    <th className="px-6 py-4 font-bold">Access Level</th>
+                    <th className="px-6 py-4 font-bold">User</th>
+                    <th className="px-6 py-4 font-bold">Role</th>
                     <th className="px-6 py-4 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
@@ -371,42 +399,73 @@ const AdminPanel = () => {
 
         {/* Right Column: Activity & Active Load */}
         <div className="lg:col-span-4 space-y-8">
-          <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm p-8 flex flex-col items-center justify-center text-center">
-            <div className="p-4 bg-blue-500/10 rounded-2xl mb-4">
-              <TrendingUp size={32} className="text-blue-500" />
+          <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm p-8 flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="font-bold flex items-center gap-2 text-[var(--color-action-primary)]">
+                <TrendingUp size={18} /> System Load
+              </h3>
+              <p className="text-[10px] text-[var(--color-text-muted)] uppercase font-black tracking-widest">Tasks in progress</p>
             </div>
-            <h3 className="text-4xl font-bold text-[var(--color-text-primary)]">
-              {stats.totalTasks === 0 ? '0%' : Math.round((stats.activeTasks / stats.totalTasks) * 100) + '%'}
-            </h3>
-            <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-2">Active Saturation</p>
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-4">Current load across all project clusters.</p>
+            <div className="text-right">
+              <p className="text-4xl font-black text-[var(--color-text-primary)]">
+                {stats.totalTasks === 0 ? '0%' : Math.round((stats.activeTasks / stats.totalTasks) * 100) + '%'}
+              </p>
+              <div className="w-32 h-1.5 bg-[var(--color-bg-border)] rounded-full mt-2 overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats.totalTasks === 0 ? 0 : (stats.activeTasks / stats.totalTasks) * 100}%` }}
+                  className="h-full bg-[var(--color-action-primary)]"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-gradient-to-br from-[var(--color-action-primary)] to-blue-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20">
+            <h3 className="font-bold mb-2">System Status</h3>
+            <p className="text-xs opacity-80 mb-4">All parts of the system are working normally.</p>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white/10 px-3 py-1.5 rounded-lg w-fit">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              Running Smoothly
+            </div>
           </section>
 
           <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Layers className="text-[var(--color-action-primary)]" size={20} />
-                <h3 className="font-bold">Team Orchestration</h3>
+                <h3 className="font-bold">Teams</h3>
               </div>
-              <Badge variant="todo">{teams.length} Nodes</Badge>
+              <Badge variant="todo">{teams.length} Teams</Badge>
             </div>
             <div className="p-6 space-y-4">
-              <form onSubmit={handleCreateTeam} className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="New Team Name..."
-                  value={newTeamName}
-                  onChange={e => setNewTeamName(e.target.value)}
-                  className="flex-1 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)]"
-                />
-                <button type="submit" className="p-2 bg-[var(--color-action-primary)] text-white rounded-xl hover:bg-[var(--color-action-hover)]">
-                  <Plus size={16} />
-                </button>
+              <form onSubmit={handleCreateTeam} className="space-y-3">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="New Team Name..."
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    className="flex-1 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)]"
+                  />
+                  <input 
+                    type="color"
+                    value={newTeamColor}
+                    onChange={e => setNewTeamColor(e.target.value)}
+                    className="w-10 h-10 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] cursor-pointer overflow-hidden p-0 border-none"
+                  />
+                  <button type="submit" className="p-2 bg-[var(--color-action-primary)] text-white rounded-xl hover:bg-[var(--color-action-hover)]">
+                    <Plus size={16} />
+                  </button>
+                </div>
               </form>
               <div className="flex flex-wrap gap-2">
                 {teams.map(team => (
-                  <div key={team._id} className="px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                    {team.name}
+                  <div 
+                    key={team._id} 
+                    className="px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                    style={{ borderLeft: `4px solid ${team.color || '#3b82f6'}` }}
+                  >
+                    <span style={{ color: team.color || 'var(--color-text-muted)' }}>{team.name}</span>
                   </div>
                 ))}
               </div>
@@ -417,7 +476,7 @@ const AdminPanel = () => {
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Activity className="text-[var(--color-action-primary)] animate-pulse" size={20} />
-                <h3 className="font-bold">Nexus Stream</h3>
+                <h3 className="font-bold">Activity Feed</h3>
               </div>
               <Badge variant="progress">LIVE</Badge>
             </div>
@@ -425,8 +484,8 @@ const AdminPanel = () => {
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--color-bg-workspace)]/30">
               {logs.map((log) => (
                 <div key={log._id} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] flex-shrink-0 flex items-center justify-center font-bold text-[10px] border border-[var(--color-bg-border)]">
-                    {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full rounded-lg object-cover" /> : log.userId?.name.substring(0, 2).toUpperCase() || 'SYS'}
+                  <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] flex-shrink-0 flex items-center justify-center font-bold text-[10px] border border-[var(--color-bg-border)] overflow-hidden">
+                    {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full object-cover" /> : <span>{log.userId?.name?.substring(0, 2).toUpperCase() || 'SY'}</span>}
                   </div>
                   <div className="space-y-1 max-w-[80%]">
                     <div className="flex items-center gap-2">
@@ -444,7 +503,7 @@ const AdminPanel = () => {
             <form onSubmit={handleSendChat} className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex gap-2">
               <input 
                 type="text" 
-                placeholder="Broadcast to nexus..."
+                placeholder="Post to feed..."
                 value={chatMsg}
                 onChange={e => setChatMsg(e.target.value)}
                 className="flex-1 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)] shadow-inner"
@@ -472,6 +531,14 @@ const AdminPanel = () => {
           />
         )}
       </AnimatePresence>
+
+      <NexusModal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
     </div>
   );
 };

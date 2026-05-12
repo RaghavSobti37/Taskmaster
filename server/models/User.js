@@ -7,8 +7,11 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   avatar: { type: String },
+  gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
+  phone: { type: String, default: '' },
   lastOnline: { type: Date, default: Date.now },
   online: { type: Boolean, default: false },
+  teams: [{ type: String }],
 });
 
 userSchema.pre('save', async function(next) {

@@ -3,29 +3,13 @@ const router = express.Router();
 const User = require('../models/User');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-router.use(protect);
+const { getTeam, updateProfile, getDirectory, updateUserRole, updateUserTeams, deleteUser } = require('../controllers/userController');
 
-router.get('/team', async (req, res) => {
-  try {
-    const users = await User.find({ outletId: req.user.outletId }).select('-password');
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.put('/profile', async (req, res) => {
-  try {
-    const { name, avatar } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: { name, avatar } },
-      { new: true }
-    ).select('-password');
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+router.get('/team', protect, getTeam);
+router.put('/profile', protect, updateProfile);
+router.get('/directory', protect, admin, getDirectory);
+router.put('/:id/role', protect, admin, updateUserRole);
+router.put('/:id/teams', protect, admin, updateUserTeams);
+router.delete('/:id', protect, admin, deleteUser);
 
 module.exports = router;

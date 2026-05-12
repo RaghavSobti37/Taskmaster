@@ -6,7 +6,8 @@ const Phase = require('./models/Phase');
 const TaskList = require('./models/TaskList');
 const Task = require('./models/Task');
 
-dotenv.config();
+const path = require('path');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const seedDatabase = async () => {
   try {
@@ -27,7 +28,8 @@ const seedDatabase = async () => {
       email: 'redacted@example.com',
       password: 'password123',
       role: 'admin',
-      outletId: 'main'
+      outletId: 'main',
+      lastOnline: new Date()
     });
 
     const standardUser = await User.create({
@@ -35,7 +37,8 @@ const seedDatabase = async () => {
       email: 'alice@coreknot.io',
       password: 'password123',
       role: 'user',
-      outletId: 'main'
+      outletId: 'main',
+      lastOnline: new Date(Date.now() - 3600000) // 1 hour ago
     });
     console.log('Test Users Created: Raghav (Admin), Alice (User)');
 

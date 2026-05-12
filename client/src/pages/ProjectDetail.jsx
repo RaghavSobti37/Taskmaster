@@ -9,19 +9,28 @@ import {
   Settings,
   Filter,
   Search,
-  Plus
+  Plus,
+  Users
 } from 'lucide-react';
 import ProjectList from '../components/project/ProjectList';
 import ProjectKanban from '../components/project/ProjectKanban';
 import ProjectGantt from '../components/project/ProjectGantt';
+import ProjectTeam from '../components/project/ProjectTeam';
 import { Badge, ProgressBar } from '../components/ui';
+import TaskCreateModal from '../components/TaskCreateModal';
+import ProjectSettingsModal from '../components/ProjectSettingsModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 
 const ProjectDetail = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTableTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('list');
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +40,7 @@ const ProjectDetail = () => {
           axios.get(`/api/tasks?projectId=${id}`)
         ]);
         setProject(projRes.data);
-        setTasks(tasksRes.data);
+        setTableTasks(tasksRes.data);
       } catch (err) {
         console.error('Error fetching project data:', err);
       } finally {
@@ -41,10 +50,35 @@ const ProjectDetail = () => {
     fetchData();
   }, [id]);
 
+  const handleTaskCreated = (newTask) => {
+    setTableTasks([newTask, ...tasks]);
+  };
+
+  const handleTaskUpdate = async (taskId, updates) => {
+    try {
+      const res = await axios.put(`/api/tasks/${taskId}`, updates);
+      const updatedTasks = tasks.map(t => t._id === taskId ? res.data : t);
+      setTableTasks(updatedTasks);
+      if (selectedTask?._id === taskId) setSelectedTask(res.data);
+    } catch (err) {
+      console.error('Error updating task:', err);
+    }
+  };
+
+  const handleTaskDelete = (taskId) => {
+    setTableTasks(tasks.filter(t => t._id !== taskId));
+  };
+
+  const handleOpenDetail = (task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
   const tabs = [
     { id: 'list', icon: List, label: 'List View' },
     { id: 'kanban', icon: Columns, label: 'Kanban Board' },
     { id: 'gantt', icon: ChartGantt, label: 'Gantt Timeline' },
+    { id: 'team', icon: Users, label: 'Project Team' },
     { id: 'resources', icon: PieChart, label: 'Utilization' },
   ];
 
@@ -69,14 +103,43 @@ const ProjectDetail = () => {
           <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button className="p-2.5 hover:bg-[var(--color-bg-border)] rounded-xl text-[var(--color-text-muted)] transition-all">
+          <button 
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="p-2.5 hover:bg-[var(--color-bg-border)] rounded-xl text-[var(--color-text-muted)] transition-all"
+          >
             <Settings size={22} />
           </button>
-          <button className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all">
+          <button 
+            onClick={() => setIsTaskModalOpen(true)}
+            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all"
+          >
             <Plus size={20} /> Create Task
           </button>
         </div>
       </header>
+
+      <TaskCreateModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+        projectId={id}
+        members={project.members}
+        onTaskCreated={handleTaskCreated}
+      />
+
+      <ProjectSettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        project={project}
+        onProjectUpdated={setProject}
+      />
+
+      <TaskDetailModal 
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        task={selectedTask}
+        onTaskUpdated={handleTaskUpdate}
+        onTaskDeleted={handleTaskDelete}
+      />
 
       {/* View Matrix Switcher */}
       <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-px">
@@ -109,7 +172,10 @@ const ProjectDetail = () => {
               className="pl-10 pr-4 py-2 bg-transparent border border-[var(--color-bg-border)] rounded-xl text-sm focus:ring-1 focus:ring-[var(--color-action-primary)] outline-none"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-border)] transition-all">
+          <button 
+            onClick={() => alert('Filtering not implemented')}
+            className="flex items-center gap-2 px-4 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-border)] transition-all"
+          >
             <Filter size={16} /> Filter
           </button>
         </div>
@@ -117,9 +183,10 @@ const ProjectDetail = () => {
 
       {/* Active View Container */}
       <div className="min-h-[500px]">
-        {activeTab === 'list' && <ProjectList tasks={tasks} />}
-        {activeTab === 'kanban' && <ProjectKanban tasks={tasks} />}
-        {activeTab === 'gantt' && <ProjectGantt tasks={tasks} />}
+        {activeTab === 'list' && <ProjectList tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'kanban' && <ProjectKanban tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'gantt' && <ProjectGantt tasks={tasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
+        {activeTab === 'team' && <ProjectTeam project={project} />}
         {activeTab === 'resources' && <div className="p-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] text-[var(--color-text-muted)] italic">Capacity Heatmap Matrix Balancing Placeholder</div>}
       </div>
     </div>

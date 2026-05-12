@@ -2,9 +2,14 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import OutletSidebar from './OutletSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
+import { requestNotificationPermission } from '../utils/notifications';
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
+
+  React.useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-[var(--color-bg-workspace)]">

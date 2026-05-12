@@ -32,6 +32,25 @@
   --spacing-row-density: 0.5rem;    /* 8px dense tabular list padding */
 }
 
+[data-theme="dark"] {
+  --color-text-primary: #f7fafc;
+  --color-text-secondary: #e2e8f0;
+  --color-text-muted: #a0aec0;
+  
+  --color-bg-workspace: #0f172a;
+  --color-bg-surface: #1e293b;
+  --color-bg-border: #334155;
+  
+  --color-action-primary: #3b82f6;
+  --color-action-hover: #60a5fa;
+  --color-action-active: #2563eb;
+  
+  --color-status-todo: #94a3b8;
+  --color-status-progress: #3b82f6;
+  --color-status-review: #f59e0b;
+  --color-status-done: #10b981;
+}
+
 @layer base {
   body {
     @apply bg-[var(--color-bg-workspace)] text-[var(--color-text-primary)] font-[var(--font-interface)];
@@ -63,4 +82,33 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-[var(--color-text-muted)];
+}
+
+/* React Select Theme Integration */
+.react-select__control {
+  @apply bg-[var(--color-bg-workspace)]! border-[var(--color-bg-border)]! rounded-xl! min-h-[46px]!;
+}
+
+.react-select__menu {
+  @apply bg-[var(--color-bg-surface)]! border-[var(--color-bg-border)]! rounded-xl! shadow-xl!;
+}
+
+.react-select__option {
+  @apply text-[var(--color-text-primary)]! font-medium!;
+}
+
+.react-select__option--is-focused {
+  @apply bg-[var(--color-bg-workspace)]!;
+}
+
+.react-select__option--is-selected {
+  @apply bg-[var(--color-action-primary)]! text-white!;
+}
+
+.react-select__single-value, .react-select__input-container {
+  @apply text-[var(--color-text-primary)]! font-medium!;
+}
+
+.react-select__placeholder {
+  @apply text-[var(--color-text-muted)]!;
 }

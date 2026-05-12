@@ -10,7 +10,7 @@ const taskSchema = new mongoose.Schema({
     lowercase: true 
   },
   priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   phaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Phase' },
   taskListId: { type: mongoose.Schema.Types.ObjectId, ref: 'TaskList' },
   parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
@@ -24,6 +24,7 @@ const taskSchema = new mongoose.Schema({
   plannedHours: { type: Number, default: 0 },
   actualHours: { type: Number, default: 0 },
   progress: { type: Number, default: 0, min: 0, max: 100 },
+  completedAt: { type: Date },
   
   dependencies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
   

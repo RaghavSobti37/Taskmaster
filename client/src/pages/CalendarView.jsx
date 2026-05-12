@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
+import CalendarEntryModal from '../components/CalendarEntryModal';
 
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -14,10 +17,22 @@ const CalendarView = () => {
         setTasks(res.data);
       } catch (err) {
         console.error('Error fetching tasks:', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchTasks();
   }, []);
+
+  const handleEntryCreated = (newEntry) => {
+    setTasks([...tasks, newEntry]);
+  };
+
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
 
   const renderHeader = () => (
     <div className="flex items-center justify-between mb-8">
@@ -37,10 +52,18 @@ const CalendarView = () => {
             <ChevronRight size={20} />
           </button>
         </div>
-        <button className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
+        >
           <Plus size={20} /> New Entry
         </button>
       </div>
+      <CalendarEntryModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onEntryCreated={handleEntryCreated} 
+      />
     </div>
   );
 
@@ -57,6 +80,25 @@ const CalendarView = () => {
     );
   };
 
+  const handleDragStart = (e, task) => {
+    e.dataTransfer.setData('taskId', task._id);
+  };
+
+  const handleDrop = async (e, date) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    const task = tasks.find(t => t._id === taskId);
+    if (!task) return;
+
+    try {
+      const updatedDate = format(date, 'yyyy-MM-dd');
+      const res = await axios.put(`/api/tasks/${taskId}`, { dueDate: updatedDate });
+      setTasks(tasks.map(t => t._id === taskId ? res.data : t));
+    } catch (err) {
+      console.error('Failed to reschedule task:', err);
+    }
+  };
+
   const renderCells = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
@@ -65,13 +107,20 @@ const CalendarView = () => {
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
+    if (loading) return <div className="flex items-center justify-center py-40 animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Temporal Sync in Progress...</div>;
+
     return (
       <div className="grid grid-cols-7 bg-[var(--color-bg-border)] gap-px border border-[var(--color-bg-border)] rounded-2xl overflow-hidden shadow-sm">
         {days.map(day => {
-          const dayTasks = tasks.filter(task => task.dueDate && isSameDay(new Date(task.dueDate), day));
+          const dayTasks = tasks.filter(task => {
+            const taskDate = parseLocalDate(task.dueDate);
+            return taskDate && isSameDay(taskDate, day);
+          });
           return (
             <div 
               key={day.toString()} 
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => handleDrop(e, day)}
               className={`min-h-[140px] bg-[var(--color-bg-surface)] p-3 transition-colors hover:bg-gray-50
                 ${!isSameMonth(day, monthStart) ? 'bg-gray-50/50' : ''}
               `}
@@ -83,7 +132,12 @@ const CalendarView = () => {
               </div>
               <div className="space-y-1 overflow-y-auto max-h-[90px]">
                 {dayTasks.map(task => (
-                  <div key={task._id} className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md truncate border border-blue-100">
+                  <div 
+                    key={task._id} 
+                    draggable
+                    onDragStart={e => handleDragStart(e, task)}
+                    className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md truncate border border-blue-100 cursor-move hover:bg-blue-100 transition-colors"
+                  >
                     {task.title}
                   </div>
                 ))}

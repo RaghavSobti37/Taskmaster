@@ -9,20 +9,35 @@ const generateToken = (id) => {
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, gender } = req.body;
     const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    const user = await User.create({ name, email, password });
+    // Default avatars based on gender
+    const avatars = {
+      male: 'https://raw.githubusercontent.com/Ashwinvalento/cartoon-avatar/master/lib/images/male/45.png',
+      female: 'https://raw.githubusercontent.com/Ashwinvalento/cartoon-avatar/master/lib/images/female/45.png',
+      other: 'https://i.pravatar.cc/150?u=a042581f4e29026704d'
+    };
+
+    const user = await User.create({ 
+      name, 
+      email, 
+      password, 
+      gender: gender || 'male',
+      avatar: avatars[gender] || avatars.male
+    });
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
+      gender: user.gender,
+      avatar: user.avatar,
       token: generateToken(user._id)
     });
   } catch (error) {

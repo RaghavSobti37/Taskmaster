@@ -9,6 +9,9 @@ const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const userRoutes = require('./routes/userRoutes');
+const logRoutes = require('./routes/logRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const teamRoutes = require('./routes/teamRoutes');
 
 const app = express();
 
@@ -21,7 +24,7 @@ app.use(express.json());
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000 // Increased for development polling
 });
 app.use('/api/', limiter);
 
@@ -34,14 +37,16 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot'
 app.use('/api/auth', authRoutes);
 
 // Apply logger to all subsequent routes (which usually require auth)
+// Logger middleware
 const systemLogger = require('./middleware/loggerMiddleware');
 app.use(systemLogger);
-const lastOnline = require('./middleware/lastOnline');
-app.use(lastOnline);
 
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/logs', logRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/teams', teamRoutes);
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 
 // Error handling

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createTask, getTasks, updateTask, updateTaskStatus } = require('../controllers/taskController');
+const { createTask, getTasks, updateTask, updateTaskStatus, deleteTask } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
@@ -10,7 +10,8 @@ router.route('/')
   .get(getTasks);
 
 router.route('/:id')
-  .put(updateTask);
+  .put(updateTask)
+  .delete(deleteTask);
 
 router.put('/:id/status', updateTaskStatus);
 

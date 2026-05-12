@@ -1,44 +1,91 @@
 import React from 'react';
 import { Badge, ProgressBar } from '../ui';
-import { User, Clock, AlertCircle } from 'lucide-react';
+import { User, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const KanbanCard = ({ task }) => (
-  <div className="p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group">
-    <div className="flex items-start justify-between mb-3">
-      <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
-        {task.priority}
-      </Badge>
-      <button className="text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">
-        <AlertCircle size={14} />
-      </button>
-    </div>
-    <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-1">{task.title}</h4>
-    <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 mb-4">{task.description}</p>
-    
-    <div className="flex items-center justify-between pt-4 border-t border-[var(--color-bg-border)]">
-      <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-        <Clock size={12} />
-        <span className="text-[10px] font-bold">2d left</span>
-      </div>
-      <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center">
-        <User size={12} className="text-[var(--color-text-muted)]" />
-      </div>
-    </div>
-  </div>
-);
+const KanbanCard = ({ task, onMove, onDetail }) => {
+  const statuses = ['todo', 'in-progress', 'in-review', 'done'];
+  const currentIndex = statuses.indexOf(task.status);
+  const isDone = task.status === 'done';
 
-const ProjectKanban = ({ tasks }) => {
+  return (
+    <div className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+      <div className="flex items-start justify-between mb-3">
+        <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
+          {task.priority}
+        </Badge>
+        {!isDone && (
+          <div className="flex items-center gap-1">
+            {currentIndex > 0 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onMove(task._id, statuses[currentIndex - 1]); }}
+                className="p-1 hover:bg-[var(--color-bg-border)] rounded text-[var(--color-text-muted)]"
+              >
+                <ChevronLeft size={14} />
+              </button>
+            )}
+            {currentIndex < statuses.length - 1 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onMove(task._id, statuses[currentIndex + 1]); }}
+                className="p-1 hover:bg-[var(--color-bg-border)] rounded text-[var(--color-text-muted)]"
+              >
+                <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className={`${isDone ? 'cursor-default' : 'cursor-pointer'}`} onClick={() => !isDone && onDetail(task)}>
+        <h4 className={`text-sm font-bold mb-1 transition-colors ${isDone ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)]'}`}>
+          {task.title}
+        </h4>
+        {isDone ? (
+          <div className="mt-3 pt-3 border-t border-[var(--color-bg-border)] space-y-1">
+            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5">
+              <CheckCircle2 size={12} /> Task Finalized
+            </p>
+            <p className="text-[9px] text-[var(--color-text-muted)] font-bold">
+              {task.completedAt ? new Date(task.completedAt).toLocaleString() : 'Recently'}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 mb-4">{task.description}</p>
+        )}
+      </div>
+      
+      {!isDone && (
+        <div className="flex items-center justify-between pt-4 border-t border-[var(--color-bg-border)]">
+          <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
+            <Clock size={12} />
+            <span className="text-[10px] font-bold">In Flow</span>
+          </div>
+          <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center">
+            <User size={12} className="text-[var(--color-text-muted)]" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
   const columns = [
-    { id: 'todo', label: 'Backlog', color: 'bg-gray-500' },
-    { id: 'in-progress', label: 'Active Execution', color: 'bg-blue-500' },
-    { id: 'in-review', label: 'Management Inspection', color: 'bg-orange-500' },
-    { id: 'done', label: 'Finalized', color: 'bg-green-500' },
+    { id: 'todo', label: 'To Do', color: 'bg-gray-500' },
+    { id: 'in-progress', label: 'In Progress', color: 'bg-blue-500' },
+    { id: 'in-review', label: 'In Review', color: 'bg-orange-500' },
+    { id: 'done', label: 'Done', color: 'bg-green-500' },
   ];
+
+  const handleMove = (taskId, newStatus) => {
+    onUpdate(taskId, { status: newStatus });
+  };
 
   return (
     <div className="flex gap-6 overflow-x-auto pb-4 min-h-[600px]">
       {columns.map(column => {
-        const columnTasks = tasks.filter(t => t.status === column.id);
+        let columnTasks = tasks.filter(t => t.status === column.id);
+        if (column.id === 'done') {
+          columnTasks = [...columnTasks].sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt));
+        }
         return (
           <div key={column.id} className="flex-shrink-0 w-80 flex flex-col gap-4">
             <div className="flex items-center justify-between px-2">
@@ -53,7 +100,7 @@ const ProjectKanban = ({ tasks }) => {
             
             <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3">
               {columnTasks.map(task => (
-                <KanbanCard key={task._id} task={task} />
+                <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} />
               ))}
               {columnTasks.length === 0 && (
                 <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-bg-border)] rounded-xl">

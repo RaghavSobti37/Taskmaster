@@ -86,13 +86,21 @@ exports.updateTask = async (req, res) => {
           
           if (updates.status === 'done') {
             const Log = require('../models/Log');
+            let projectInfo = 'Global Nexus';
+            if (task.projectId) {
+              const p = await Project.findById(task.projectId);
+              if (p) projectInfo = p.name;
+            }
+
             await Log.create({
               userId: req.user._id,
               action: 'DAILY_LOG',
               details: { 
                 type: 'TASK_COMPLETION',
                 title: `Task Finalized: ${task.title}`,
-                message: `Successfully completed mission critical task within ${task.projectId || 'Global Nexus'}.`
+                message: `Successfully completed mission critical task within ${projectInfo}.`,
+                project: projectInfo,
+                timeSpent: task.actualHours > 0 ? `${task.actualHours}h` : (task.plannedHours > 0 ? `${task.plannedHours}h` : '1h')
               },
               targetId: task._id,
               targetType: 'Task'

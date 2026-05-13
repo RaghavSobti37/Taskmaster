@@ -207,10 +207,9 @@ const CRMPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
-                    className="hover:bg-blue-500/5 transition-all cursor-pointer group"
+                    className="hover:bg-blue-500/5 transition-all group border-b border-[var(--color-bg-border)] last:border-0"
                   >
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 cursor-pointer" onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}>
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-sm font-black text-white border border-white/5">
                           {lead.name[0]}
@@ -221,7 +220,7 @@ const CRMPage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 cursor-pointer" onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}>
                       <span className="text-[11px] font-bold text-[var(--color-text-primary)] font-mono">{lead.phone}</span>
                     </td>
                     <td className="px-8 py-5">
@@ -231,10 +230,10 @@ const CRMPage = () => {
                     </td>
                     <td className="px-8 py-5">
                        <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center text-[10px] font-black">
-                          {lead.assignedRepId?.name[0] || '?'}
+                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-black ${lead.assignedRepId ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
+                          {lead.assignedRepId?.name?.[0] || '!'}
                         </div>
-                        <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${lead.assignedRepId ? 'text-[var(--color-text-muted)]' : 'text-rose-500'}`}>
                           {lead.assignedRepId?.name || 'UNASSIGNED'}
                         </span>
                       </div>
@@ -242,13 +241,16 @@ const CRMPage = () => {
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-1">
                         {[...Array(4)].map((_, i) => (
-                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (5 - parseInt(lead.leadQuality)) ? 'bg-blue-500' : 'bg-slate-200'}`} />
+                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (5 - parseInt(lead.leadQuality)) ? 'bg-blue-500' : 'bg-[var(--color-bg-border)]'}`} />
                         ))}
                       </div>
                     </td>
                     <td className="px-8 py-5 text-center">
-                      <button className="p-2 hover:bg-blue-500/10 rounded-lg text-[var(--color-text-muted)] group-hover:text-blue-500 transition-all">
-                        <ChevronRight size={18} />
+                      <button 
+                        onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
+                        className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+                      >
+                        Operate
                       </button>
                     </td>
                   </motion.tr>

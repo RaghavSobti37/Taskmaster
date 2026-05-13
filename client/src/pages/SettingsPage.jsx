@@ -309,26 +309,43 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            <div className="pt-6 border-t border-[var(--color-bg-border)]">
-              <CKDropdown
-                multi
-                label="My Teams"
-                placeholder="Select your teams..."
-                options={allTeams.map(t => ({ value: t.name, label: t.name }))}
-                value={teams}
-                onChange={setTeams}
-              />
-            </div>
-
-            <div className="pt-6 border-t border-[var(--color-bg-border)]">
-              <CKDropdown
-                multi
-                label="My Teams"
-                placeholder="Select your teams..."
-                options={allTeams.map(t => ({ value: t.name, label: t.name }))}
-                value={teams}
-                onChange={setTeams}
-              />
+            <div className="pt-6 border-t border-[var(--color-bg-border)] space-y-4">
+              <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">My Team Affiliations</label>
+              <div className="flex flex-wrap gap-3">
+                {[...allTeams]
+                  .sort((a, b) => {
+                    const aSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === a.name);
+                    const bSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === b.name);
+                    if (aSelected && !bSelected) return -1;
+                    if (!aSelected && bSelected) return 1;
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map(team => {
+                    const isSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === team.name);
+                    return (
+                      <button
+                        key={team._id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setTeams(teams.filter(t => (typeof t === 'object' ? t.value : t) !== team.name));
+                          } else {
+                            setTeams([...teams, { value: team.name, label: team.name }]);
+                          }
+                        }}
+                        className={`
+                          px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
+                          ${isSelected 
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-105' 
+                            : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/50'}
+                        `}
+                      >
+                        {team.name}
+                        {isSelected && <CheckCircle2 size={10} className="inline-block ml-2 text-blue-400" />}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
           </div>
         </motion.section>

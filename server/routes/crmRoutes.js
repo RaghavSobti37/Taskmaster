@@ -24,6 +24,9 @@ router.get('/imports', crmController.getImports);
 router.get('/purge-logs', crmController.getPurgeLogs);
 router.delete('/imports/:id', crmController.deleteImport);
 router.post('/reset', crmController.resetCRM);
+router.get('/debug/columns', crmController.getDebugColumns);
+router.post('/debug/save-mapping', crmController.saveMapping);
+router.post('/sync-bookings', require('../controllers/syncController').syncBookings);
 
 router.route('/leads')
   .get(crmController.getLeads)

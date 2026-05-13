@@ -5,7 +5,13 @@ const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 
 // Whitelists for mass-assignment protection
-const ALLOWED_LEAD_FIELDS = ['name','email','phone','webinarDates','attended','attendanceDurationMin','meaningfulConnect','leadQuality','callStatus','leadStatus','remarks','planOption','assignedRepId'];
+const ALLOWED_LEAD_FIELDS = [
+  'name', 'email', 'phone', 'webinarDates', 'attended', 'attendanceDurationMin',
+  'meaningfulConnect', 'leadQuality', 'callStatus', 'leadStatus', 'remarks',
+  'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
+  'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
+  'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime'
+];
 const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
 
 const pick = (src, keys) => {
@@ -34,7 +40,7 @@ exports.getLeads = async (req, res) => {
     if (req.user.role === 'sales') {
       query.assignedRepId = req.user._id;
     }
-    const leads = await Lead.find(query).populate('assignedRepId', 'name email').sort('-createdAt');
+    const leads = await Lead.find(query).populate('assignedRepId', 'name email avatar').sort('-createdAt');
     res.json(leads);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leads' });
@@ -44,12 +50,9 @@ exports.getLeads = async (req, res) => {
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
-    
-    // Auto-assignment if not specified
     if (!leadData.assignedRepId) {
       leadData.assignedRepId = await assignLeadToRep();
     }
-
     const lead = await Lead.create(leadData);
     res.status(201).json(lead);
   } catch (error) {
@@ -71,7 +74,6 @@ exports.updateLead = async (req, res) => {
       }
     }
 
-    // SECURITY: Whitelist fields
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
     const auditEntries = [];
     for (const key in updates) {
@@ -165,26 +167,41 @@ exports.uploadLeads = async (req, res) => {
         let repIndex = 0;
 
         for (const row of results) {
-          // Robust header matching
-          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || row['assigned_rep_id '] || '').toLowerCase().trim();
+          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || row['assigned_rep_id '] || row.rep_name || '').toLowerCase().trim();
           let assignedRepId = null;
           
           if (repName && repMap[repName]) {
             assignedRepId = repMap[repName];
           } else if (reps.length > 0) {
-            // Round-robin distribution for unassigned
             assignedRepId = reps[repIndex % reps.length]._id;
             repIndex++;
           }
 
           leadDocs.push({
-            name: row.name,
-            email: row.email,
-            phone: row.phone,
+            name: row.name || row.Name || row['Full Name'],
+            email: row.email || row.Email,
+            phone: row.phone || row.Phone || row['Mobile Number'],
             assignedRepId,
             createdBy: req.user._id,
-            leadStatus: 'New',
-            callStatus: 'Pending'
+            leadStatus: row.leadStatus || row.lead_status || 'New',
+            callStatus: row.callStatus || row.call_status || 'Pending',
+            rowId: row.row_id || row.rowId,
+            customerIdExly: row.customer_id_exly || row.customerIdExly,
+            transactionIdExly: row.transaction_id_exly || row.transactionIdExly,
+            webinarDates: row.webinar_dates || row.webinarDates,
+            attended: row.attended || row.Attended,
+            attendanceDurationMin: row.attendance_duration_min || row.attendanceDurationMin,
+            meaningfulConnect: row.meaningful_connect || row.meaningfulConnect,
+            leadQuality: row.lead_quality || row.leadQuality,
+            remarks: row.notes || row.remarks || row.Remarks,
+            artistType: row.artist_type || row.artistType,
+            fullTimeWillingness: row.full_time_willingness || row.fullTimeWillingness,
+            primaryRole: row.primary_role || row.primaryRole,
+            learningGoal: row.learning_goal || row.learningGoal,
+            learnedMusic: row.learned_music || row.learnedMusic,
+            currentJourney: row.current_journey || row.currentJourney,
+            nextFollowupDate: row.next_followup_date || row.nextFollowupDate,
+            nextFollowupTime: row.next_followup_time || row.nextFollowupTime
           });
         }
 
@@ -197,8 +214,8 @@ exports.uploadLeads = async (req, res) => {
         const finalDocs = leadDocs.map(d => ({ ...d, importId: importSession._id }));
         await Lead.insertMany(finalDocs);
         
-        fs.unlinkSync(req.file.path); // Clean up temp file
-        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed in batch ${importSession.filename}.` });
+        fs.unlinkSync(req.file.path);
+        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed.` });
       });
   } catch (error) {
     const fs = require('fs');
@@ -220,21 +237,17 @@ exports.getImports = async (req, res) => {
 
 exports.deleteImport = async (req, res) => {
   try {
-    // SECURITY: M-04 fix — admin only
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
-
     const { id } = req.params;
     const { reason } = req.body;
     const batch = await CRMImport.findById(id);
     if (!batch) return res.status(404).json({ error: 'Import batch not found' });
 
-    // Delete all leads associated with this import
     const result = await Lead.deleteMany({ importId: id });
     await CRMImport.findByIdAndDelete(id);
 
-    // Audit the deletion
     await CRMAudit.create({
       userId: req.user._id,
       userRole: req.user.role,
@@ -244,10 +257,119 @@ exports.deleteImport = async (req, res) => {
       newValue: 'DELETED',
       notes: reason || 'No reason provided'
     });
-
     res.json({ message: `${result.deletedCount} leads successfully purged from system.` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete import' });
+  }
+};
+
+exports.getDebugColumns = async (req, res) => {
+  const csv = require('csv-parser');
+  const fs = require('fs');
+  const path = require('path');
+  const CSV_PATH = path.join(__dirname, '../../Master Format CRM.csv');
+  
+  if (!fs.existsSync(CSV_PATH)) {
+    return res.status(404).json({ error: 'Master CSV not found' });
+  }
+
+  const columns = [];
+  fs.createReadStream(CSV_PATH)
+    .pipe(csv())
+    .on('headers', (headers) => {
+      res.json({ 
+        columns: headers,
+        currentMapping: global.crmMapping || {} 
+      });
+    })
+    .on('error', (err) => res.status(500).json({ error: err.message }));
+};
+
+exports.saveMapping = async (req, res) => {
+  global.crmMapping = req.body.mapping;
+  res.json({ message: 'Mapping synchronized' });
+};
+
+exports.uploadLeads = async (req, res) => {
+  const csv = require('csv-parser');
+  const fs = require('fs');
+  const results = [];
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file provided' });
+  }
+
+  try {
+    const reps = await User.find({ role: 'sales' });
+    const repMap = {};
+    reps.forEach(r => repMap[r.name.toLowerCase().trim()] = r._id);
+
+    const mapping = global.crmMapping || {};
+
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        const leadDocs = [];
+        let repIndex = 0;
+
+        for (const row of results) {
+          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
+          let assignedRepId = null;
+          
+          if (repName && repMap[repName]) {
+            assignedRepId = repMap[repName];
+          } else if (reps.length > 0) {
+            assignedRepId = reps[repIndex % reps.length]._id;
+            repIndex++;
+          }
+
+          const leadDoc = {
+            assignedRepId,
+            createdBy: req.user._id,
+            leadStatus: 'New',
+            callStatus: 'Pending',
+            metadata: {}
+          };
+
+          // Apply mapping
+          for (const [csvCol, dbField] of Object.entries(mapping)) {
+            const value = row[csvCol];
+            if (!value || dbField === 'IGNORE') continue;
+
+            if (dbField === 'metadata') {
+              leadDoc.metadata[csvCol] = value;
+            } else if (ALLOWED_LEAD_FIELDS.includes(dbField)) {
+              leadDoc[dbField] = value;
+            } else {
+              leadDoc.metadata[dbField || csvCol] = value;
+            }
+          }
+
+          // Fallback for basic fields if not mapped
+          if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
+          if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
+          if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
+
+          leadDocs.push(leadDoc);
+        }
+
+        const importSession = await CRMImport.create({
+          filename: req.file.originalname,
+          leadCount: leadDocs.length,
+          createdBy: req.user._id
+        });
+
+        const finalDocs = leadDocs.map(d => ({ ...d, importId: importSession._id }));
+        await Lead.insertMany(finalDocs);
+        
+        fs.unlinkSync(req.file.path);
+        res.status(201).json({ message: `${leadDocs.length} leads synchronized via matrix.` });
+      });
+  } catch (error) {
+    const fs = require('fs');
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch(e) {}
+    res.status(500).json({ error: 'Failed to synchronize leads' });
   }
 };
 
@@ -257,11 +379,9 @@ exports.resetCRM = async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
-
     await Lead.deleteMany({});
     await EMI.deleteMany({});
     await CRMImport.deleteMany({});
-    
     await CRMAudit.create({
       userId: req.user._id,
       userRole: req.user.role,
@@ -271,8 +391,7 @@ exports.resetCRM = async (req, res) => {
       newValue: 'purged',
       notes: reason || 'System-wide data reset protocol executed.'
     });
-
-    res.json({ message: 'CRM ecosystem successfully purged. All data erased.' });
+    res.json({ message: 'CRM ecosystem successfully purged.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to reset CRM' });
   }
@@ -280,7 +399,7 @@ exports.resetCRM = async (req, res) => {
 
 exports.getPurgeLogs = async (req, res) => {
   try {
-    const logs = await CRMAudit.find({ action: { $in: ['BATCH_DELETE', 'SYSTEM_RESET', 'PROJECT_DELETE'] } })
+    const logs = await CRMAudit.find({ action: { $in: ['BATCH_DELETE', 'SYSTEM_RESET'] } })
       .populate('userId', 'name')
       .sort('-createdAt');
     res.json(logs);
@@ -288,3 +407,4 @@ exports.getPurgeLogs = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch purge logs' });
   }
 };
+

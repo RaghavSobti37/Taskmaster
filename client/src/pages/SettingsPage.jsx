@@ -201,46 +201,46 @@ const SettingsPage = () => {
           viewport={{ once: true }}
           className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
         >
-          <div className="px-6 md:px-10 py-6 md:py-10 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
-            <div className="flex items-center gap-4 md:gap-5">
-              <div className="p-2.5 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl text-blue-500 shadow-sm">
-                <User size={18} md:size={20} strokeWidth={2.5} />
+          <div className="px-6 md:px-10 py-4 md:py-6 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="p-2 md:p-2.5 bg-blue-500/10 rounded-lg md:rounded-xl text-blue-500 shadow-sm">
+                <User size={16} md:size={18} strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">My Profile</h3>
-                <p className="hidden sm:block text-xs text-[var(--color-text-muted)] font-medium">Update your personal information.</p>
+                <h3 className="text-sm md:text-base font-black tracking-tight text-[var(--color-text-primary)] uppercase">My Profile</h3>
+                <p className="hidden sm:block text-[10px] text-[var(--color-text-muted)] font-medium">Update your personal information.</p>
               </div>
             </div>
           </div>
 
           <div className="p-6 md:p-10 space-y-8 md:space-y-10">
             {/* Avatar Profile Interaction */}
-            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 bg-[var(--color-bg-workspace)]/40 p-6 md:p-8 rounded-[2rem] border border-[var(--color-bg-border)] group">
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 bg-[var(--color-bg-workspace)]/40 p-6 md:p-8 rounded-[1.5rem] border border-[var(--color-bg-border)] group">
               <div
                 onClick={() => setIsAvatarModalOpen(true)}
                 className="relative cursor-pointer group/avatar"
               >
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-3xl bg-[var(--color-bg-surface)] border-4 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1rem] md:rounded-2xl bg-[var(--color-bg-surface)] border-2 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
                   {avatar ? (
                     <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <User size={32} md:size={40} className="text-[var(--color-text-muted)]" />
+                    <User size={24} md:size={30} className="text-[var(--color-text-muted)]" />
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-all">
-                    <Camera size={20} className="text-white" />
+                    <Camera size={14} className="text-white" />
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1.5 md:p-2 bg-blue-500 text-white rounded-lg md:rounded-xl shadow-lg border-2 border-[var(--color-bg-surface)]">
-                  <Sparkles size={12} md:size={14} />
+                <div className="absolute -bottom-1 -right-1 p-1 bg-blue-500 text-white rounded-md md:rounded-lg shadow-lg border-2 border-[var(--color-bg-surface)]">
+                  <Sparkles size={8} md:size={10} />
                 </div>
               </div>
-              <div className="flex-1 text-center md:text-left space-y-1.5">
-                <h4 className="text-lg md:text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Profile Picture</h4>
-                <p className="text-[10px] md:text-xs text-[var(--color-text-muted)] font-medium">User: {name || 'New User'}</p>
+              <div className="flex-1 text-center md:text-left space-y-1">
+                <h4 className="text-sm md:text-base font-black text-[var(--color-text-primary)] uppercase tracking-tight">Profile Picture</h4>
+                <p className="text-[8px] md:text-[9px] text-[var(--color-text-muted)] font-medium">User: {name || 'New User'}</p>
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
-                  className="mt-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-4 py-2 rounded-lg border border-blue-500/10"
+                  className="mt-1.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-3 py-1.5 rounded-md border border-blue-500/10"
                 >
                   Change Picture
                 </button>
@@ -248,36 +248,36 @@ const SettingsPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
                 <div className="relative group">
-                  <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+                  <User size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                     placeholder="Enter Name"
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
                 <div className="flex gap-2">
                     <NexusDropdown
                       options={[{ value: '+91', label: '+91 (IN)' }]}
                       value="+91"
                       onChange={() => {}}
                       variant="compact"
-                      className="w-24"
+                      className="w-20"
                     />
                   <div className="relative flex-1 group">
-                    <Smartphone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+                    <Smartphone size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                     <input
                       type="text"
                       value={phone.replace(/^\+91\s*/, '')}
                       onChange={(e) => setPhone('+91 ' + e.target.value)}
-                      className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                       placeholder="98765 43210"
                     />
                   </div>

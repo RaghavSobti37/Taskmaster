@@ -16,6 +16,9 @@ const crmRoutes = require('./routes/crmRoutes');
 
 const app = express();
 
+// Trust proxy for Render/Vercel (required for express-rate-limit)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(compression());

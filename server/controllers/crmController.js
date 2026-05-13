@@ -152,8 +152,9 @@ exports.uploadLeads = async (req, res) => {
         let repIndex = 0;
 
         for (const row of results) {
+          // Robust header matching
+          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || row['assigned_rep_id '] || '').toLowerCase().trim();
           let assignedRepId = null;
-          const repName = row.assigned_rep_id?.toLowerCase().trim();
           
           if (repName && repMap[repName]) {
             assignedRepId = repMap[repName];

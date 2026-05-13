@@ -5,7 +5,7 @@ const logActivity = require('../utils/activityLogger');
 
 exports.createTask = async (req, res) => {
   try {
-    const taskData = { ...req.body };
+    const taskData = { ...req.body, createdBy: req.user._id };
     if (!taskData.projectId) delete taskData.projectId;
     
     const task = await Task.create(taskData);
@@ -26,7 +26,10 @@ exports.createTask = async (req, res) => {
 exports.getTasks = async (req, res) => {
   try {
     const { projectId } = req.query;
-    const filter = projectId ? { projectId } : {};
+    // Strictly only show tasks created by the user
+    const filter = { createdBy: req.user._id };
+    if (projectId) filter.projectId = projectId;
+    
     const tasks = await Task.find(filter)
       .select('title status priority projectId assignees progress dueDate')
       .populate('assignees', 'name avatar')

@@ -28,7 +28,8 @@ const taskSchema = new mongoose.Schema({
   dependencies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
   
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
 taskSchema.index({ projectId: 1, status: 1 });

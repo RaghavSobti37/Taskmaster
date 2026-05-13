@@ -58,8 +58,17 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
             <Clock size={12} />
             <span className="text-[10px] font-bold">In Flow</span>
           </div>
-          <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center">
-            <User size={12} className="text-[var(--color-text-muted)]" />
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shadow-sm">
+              {task.assignees?.[0]?.avatar ? (
+                <img src={task.assignees[0].avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <User size={12} className="text-[var(--color-text-muted)]" />
+              )}
+            </div>
+            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase truncate max-w-[60px]">
+               {task.assignees?.[0]?.name || 'UNASSIGNED'}
+            </span>
           </div>
         </div>
       )}

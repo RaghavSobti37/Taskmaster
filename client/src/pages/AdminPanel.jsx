@@ -350,11 +350,11 @@ const AdminPanel = () => {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-8 pb-24">
       {/* Header */}
       <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 border border-white/5 shadow-xl">
+          <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
             <ShieldCheck size={20} strokeWidth={2.5} />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Admin Panel</h1>

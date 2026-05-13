@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon } from 'lucide-react';
+import { NexusDropdown } from './ui';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
   const [title, setTitle] = useState('');
@@ -79,20 +80,15 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Alignment</label>
-            <select 
+            <NexusDropdown
+              options={projects.map(p => ({ value: p._id, label: p.name }))}
               value={projectId}
-              onChange={e => setProjectId(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold appearance-none"
+              onChange={setProjectId}
+              label="Project"
+              placeholder="Select Project"
               required
-            >
-              <option value="" disabled>Select Project Nexus</option>
-              {projects.map(p => (
-                <option key={p._id} value={p._id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+              searchable={projects.length > 5}
+            />
 
           <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--color-bg-border)]">
             <button 

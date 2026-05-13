@@ -6,7 +6,7 @@ import {
   AlertCircle,
   TrendingUp,
   Database,
-  Calendar as CalIcon,
+  LayoutDashboard,
   Briefcase,
   ChevronRight,
   Filter,
@@ -16,7 +16,7 @@ import {
   Plus
 } from 'lucide-react';
 import axios from 'axios';
-import { Badge, ProgressBar } from '../components/ui';
+import { Badge, ProgressBar, PageHeader } from '../components/ui';
 import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -161,21 +161,19 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 relative">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Check your projects and tasks.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-
+      <PageHeader
+        icon={LayoutDashboard}
+        title="Dashboard"
+        subtitle="Check your projects and tasks."
+        actions={
           <button
             onClick={() => setIsTaskModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 text-xs sm:text-sm"
+            className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
           >
-            <Plus size={18} /> Add New Task
+            <Plus size={16} /> Add New Task
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <TaskCreateModal
         isOpen={isTaskModalOpen}

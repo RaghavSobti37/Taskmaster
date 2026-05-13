@@ -20,7 +20,7 @@ import {
   Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, NexusModal } from '../components/ui';
+import { Badge, NexusModal, NexusDropdown } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 
@@ -170,7 +170,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-8 pb-24">
       {/* Premium Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -399,33 +399,25 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
                     <div className="relative group">
-                      <select
+                      <NexusDropdown
+                        options={[{ value: '', label: 'Select time...' }, ...timeOptions.map(opt => ({ value: opt, label: opt }))]}
                         value={timeSpent}
-                        onChange={e => setTimeSpent(e.target.value)}
-                        className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
-                      >
-                        <option value="">Select time...</option>
-                        {timeOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                      <Timer size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-action-primary)] transition-colors pointer-events-none" />
+                        onChange={setTimeSpent}
+                        searchable
+                        placeholder="Select time..."
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
                     <div className="relative">
-                      <select
+                      <NexusDropdown
+                        options={[{ value: '', label: 'No Project (General)' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
                         value={selectedProject}
-                        onChange={e => setSelectedProject(e.target.value)}
-                        className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
-                      >
-                        <option value="">No Project (General)</option>
-                        {projects.map(p => (
-                          <option key={p._id} value={p._id}>{p.name}</option>
-                        ))}
-                      </select>
-                      <Layout size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                        onChange={setSelectedProject}
+                        searchable={projects.length > 5}
+                        placeholder="No Project (General)"
+                      />
                     </div>
                   </div>
                 </div>

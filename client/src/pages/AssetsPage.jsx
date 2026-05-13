@@ -8,15 +8,15 @@ import {
   Trash2, 
   Search, 
   Database,
-  Layers,
-  ChevronRight,
-  PlusCircle,
   X,
   Shield,
-  Briefcase
+  Briefcase,
+  Pencil,
+  Check,
+  XCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Badge, NexusModal } from '../components/ui';
+import { NexusModal, NexusLoader } from '../components/ui';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
@@ -28,18 +28,16 @@ const AssetsPage = () => {
   
   // Create Asset Form State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newAsset, setNewAsset] = useState({
-    projectId: '',
-    name: '',
-    links: ['', '', '']
-  });
+  const [newAsset, setNewAsset] = useState({ projectId: '', name: '', link: '' });
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({ name: '', link: '', projectId: '' });
 
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
@@ -59,22 +57,50 @@ const AssetsPage = () => {
 
   const handleAddAsset = async (e) => {
     e.preventDefault();
-    if (!newAsset.projectId || !newAsset.name) return;
+    if (!newAsset.name) return;
 
     setSubmitting(true);
     try {
-      const filteredLinks = newAsset.links.filter(l => l.trim() !== '');
       const res = await axios.post('/api/assets', {
-        ...newAsset,
-        links: filteredLinks
+        projectId: newAsset.projectId || null,
+        name: newAsset.name,
+        link: newAsset.link.trim()
       });
       setAssets([res.data, ...assets]);
       setShowAddModal(false);
-      setNewAsset({ projectId: '', name: '', links: ['', '', ''] });
+      setNewAsset({ projectId: '', name: '', link: '' });
     } catch (err) {
       console.error('Add asset error:', err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const startEdit = (asset) => {
+    setEditingId(asset._id);
+    setEditData({
+      name: asset.name,
+      link: asset.link || '',
+      projectId: asset.projectId?._id || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({ name: '', link: '', projectId: '' });
+  };
+
+  const saveEdit = async (assetId) => {
+    try {
+      const res = await axios.put(`/api/assets/${assetId}`, {
+        name: editData.name,
+        link: editData.link.trim(),
+        projectId: editData.projectId || null
+      });
+      setAssets(assets.map(a => a._id === assetId ? res.data : a));
+      setEditingId(null);
+    } catch (err) {
+      console.error('Edit asset error:', err);
     }
   };
 
@@ -89,45 +115,38 @@ const AssetsPage = () => {
     }
   };
 
+  const canEdit = (asset) => user.role === 'admin' || user._id === asset.createdBy?._id;
+
   const filteredAssets = assets.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.projectId?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.projectId?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-  };
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-      <div className="w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--color-text-muted)]">Loading Asset Inventory...</p>
-    </div>
-  );
+  if (loading) return <NexusLoader message="Loading Asset Inventory..." />;
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
       <NexusModal 
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, assetId: null })}
-        title="Asset Decommission"
-        message="Are you certain you want to permanently decommission this asset bundle? This action will sever all associated access nodes and is irreversible."
+        title="Delete Asset"
+        message="Are you sure you want to permanently delete this asset? This cannot be undone."
         type="danger"
         isConfirm
-        confirmLabel="Decommission"
+        confirmLabel="Delete Asset"
         onConfirm={handleDeleteAsset}
       />
-      {/* Premium Header */}
+
+      {/* Header */}
       <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500 border border-blue-500/20 shadow-xl">
               <Database size={20} strokeWidth={2.5} />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Resource Vault</h1>
+            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Assets</h1>
           </div>
-          <p className="text-[10px] font-bold text-[var(--color-text-muted)] ml-14 uppercase tracking-widest">Centralized project assets & critical links.</p>
+          <p className="text-[10px] font-bold text-[var(--color-text-muted)] ml-14 uppercase tracking-widest">Manage assets & important links.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -135,7 +154,7 @@ const AssetsPage = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
             <input 
               type="text" 
-              placeholder="Scan inventory..." 
+              placeholder="Search assets..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-12 pr-4 py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none w-64 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
@@ -145,27 +164,26 @@ const AssetsPage = () => {
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
           >
-            <Plus size={14} strokeWidth={3} /> Register Asset
+            <Plus size={14} strokeWidth={3} /> Add Asset
           </button>
         </div>
       </motion.header>
 
-      {/* Main Table Interface */}
+      {/* Table */}
       <motion.section 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0, transition: { duration: 0.4 } }}
         className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
               <tr>
-                <th className="px-10 py-6">Mission Unit</th>
-                <th className="px-10 py-6">Resource Specification</th>
-                <th className="px-10 py-6">Access Nodes (Max 3)</th>
-                <th className="px-10 py-6">Operative</th>
-                <th className="px-10 py-6 text-right">Protocol</th>
+                <th className="px-10 py-6">Project</th>
+                <th className="px-10 py-6">Asset Name</th>
+                <th className="px-10 py-6">Link</th>
+                <th className="px-10 py-6">Created By</th>
+                <th className="px-10 py-6 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -174,42 +192,75 @@ const AssetsPage = () => {
                   <td colSpan="5" className="px-10 py-32 text-center">
                     <div className="opacity-20 flex flex-col items-center gap-4">
                       <Shield size={48} />
-                      <p className="text-xs font-black uppercase tracking-widest">No assets indexed in this sector.</p>
+                      <p className="text-xs font-black uppercase tracking-widest">No assets found.</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredAssets.map((asset) => (
                 <tr key={asset._id} className="hover:bg-blue-500/5 transition-all group">
+                  {/* Project */}
                   <td className="px-10 py-8">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[var(--color-bg-workspace)] rounded-lg text-blue-500 border border-[var(--color-bg-border)] group-hover:border-blue-500/30 transition-all">
-                        <Briefcase size={14} />
+                    {editingId === asset._id ? (
+                      <select
+                        value={editData.projectId}
+                        onChange={e => setEditData({ ...editData, projectId: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                      >
+                        <option value="">No Project</option>
+                        {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-[var(--color-bg-workspace)] rounded-lg text-blue-500 border border-[var(--color-bg-border)] group-hover:border-blue-500/30 transition-all">
+                          <Briefcase size={14} />
+                        </div>
+                        <span className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-tight">{asset.projectId?.name || 'No Project'}</span>
                       </div>
-                      <span className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-tight">{asset.projectId?.name || 'Global System'}</span>
-                    </div>
+                    )}
                   </td>
+
+                  {/* Name */}
                   <td className="px-10 py-8">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-blue-600 transition-colors">{asset.name}</p>
-                      <p className="text-[9px] font-bold text-[var(--color-text-muted)]">{format(new Date(asset.createdAt), 'MMM d, yyyy')}</p>
-                    </div>
+                    {editingId === asset._id ? (
+                      <input
+                        type="text"
+                        value={editData.name}
+                        onChange={e => setEditData({ ...editData, name: e.target.value })}
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    ) : (
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-blue-600 transition-colors">{asset.name}</p>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)]">{format(new Date(asset.createdAt), 'MMM d, yyyy')}</p>
+                      </div>
+                    )}
                   </td>
+
+                  {/* Link */}
                   <td className="px-10 py-8">
-                    <div className="flex items-center gap-2">
-                      {asset.links.map((link, idx) => (
-                        <a 
-                          key={idx}
-                          href={link.startsWith('http') ? link : `https://${link}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black text-blue-500 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest shadow-sm"
-                        >
-                          <Link2 size={10} /> Node {idx + 1}
-                        </a>
-                      ))}
-                      {asset.links.length === 0 && <span className="text-[10px] text-[var(--color-text-muted)] italic">No links registered.</span>}
-                    </div>
+                    {editingId === asset._id ? (
+                      <input
+                        type="text"
+                        value={editData.link}
+                        onChange={e => setEditData({ ...editData, link: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    ) : asset.link ? (
+                      <a 
+                        href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black text-blue-500 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest shadow-sm max-w-[200px] truncate"
+                      >
+                        <ExternalLink size={10} /> Open Link
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-[var(--color-text-muted)] italic">No link</span>
+                    )}
                   </td>
+
+                  {/* Created By */}
                   <td className="px-10 py-8">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center font-black text-[8px] text-blue-400">
@@ -218,14 +269,47 @@ const AssetsPage = () => {
                       <span className="text-[10px] font-black text-[var(--color-text-secondary)] uppercase">{asset.createdBy?.name}</span>
                     </div>
                   </td>
+
+                  {/* Actions */}
                   <td className="px-10 py-8 text-right">
-                    {(user.role === 'admin' || user._id === asset.createdBy?._id) && (
-                      <button 
-                        onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
-                        className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-lg"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    {canEdit(asset) && (
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        {editingId === asset._id ? (
+                          <>
+                            <button 
+                              onClick={() => saveEdit(asset._id)}
+                              className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg"
+                              title="Save"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button 
+                              onClick={cancelEdit}
+                              className="p-2.5 bg-gray-500/10 text-gray-400 border border-gray-500/20 rounded-xl hover:bg-gray-500 hover:text-white transition-all shadow-lg"
+                              title="Cancel"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => startEdit(asset)}
+                              className="p-2.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-lg"
+                              title="Edit"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button 
+                              onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
+                              className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -253,8 +337,8 @@ const AssetsPage = () => {
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm"><Database size={20} strokeWidth={2.5} /></div>
                   <div>
-                    <h2 className="text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Resource Registration</h2>
-                    <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">Index a new project asset bundle.</p>
+                    <h2 className="text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Add New Asset</h2>
+                    <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">Save a link or resource.</p>
                   </div>
                 </div>
                 <button onClick={() => setShowAddModal(false)} className="p-2.5 hover:bg-[var(--color-bg-border)] rounded-xl transition-all"><X size={18} /></button>
@@ -263,14 +347,13 @@ const AssetsPage = () => {
               <form onSubmit={handleAddAsset} className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Target Mission</label>
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project (Optional)</label>
                     <select 
                       value={newAsset.projectId}
                       onChange={e => setNewAsset({ ...newAsset, projectId: e.target.value })}
-                      required
                       className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner appearance-none cursor-pointer"
                     >
-                      <option value="">Select Project...</option>
+                      <option value="">No Project</option>
                       {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
                     </select>
                   </div>
@@ -287,28 +370,19 @@ const AssetsPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-2">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Access Nodes (Max 3)</label>
-                  <div className="space-y-3">
-                    {newAsset.links.map((link, idx) => (
-                      <div key={idx} className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                          <Link2 size={14} />
-                        </div>
-                        <input 
-                          type="text" 
-                          placeholder={`Access Link ${idx + 1}...`}
-                          value={link}
-                          onChange={e => {
-                            const updatedLinks = [...newAsset.links];
-                            updatedLinks[idx] = e.target.value;
-                            setNewAsset({ ...newAsset, links: updatedLinks });
-                          }}
-                          className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-blue-500 uppercase tracking-widest">Node {idx + 1}</div>
-                      </div>
-                    ))}
+                <div className="space-y-2 pt-2">
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Link</label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                      <Link2 size={14} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="https://..."
+                      value={newAsset.link}
+                      onChange={e => setNewAsset({ ...newAsset, link: e.target.value })}
+                      className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    />
                   </div>
                 </div>
 
@@ -317,7 +391,7 @@ const AssetsPage = () => {
                   disabled={submitting}
                   className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] mt-4"
                 >
-                  {submitting ? 'Synchronizing Vault...' : 'Commit to Database'}
+                  {submitting ? 'Saving...' : 'Save Asset'}
                 </button>
               </form>
             </motion.div>

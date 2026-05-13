@@ -105,8 +105,8 @@ const CRMPage = () => {
     } catch (err) {
       setModal({
         open: true,
-        title: 'Ingestion Error',
-        message: err.response?.data?.error || 'Personnel data upload protocol failed.',
+        title: 'Upload Error',
+        message: err.response?.data?.error || 'File upload failed. Please try again.',
         type: 'danger'
       });
     } finally {
@@ -135,7 +135,7 @@ const CRMPage = () => {
               <Users size={20} />
             </div>
             <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
-              Operative CRM
+              CRM
             </h1>
           </div>
         </div>
@@ -145,7 +145,7 @@ const CRMPage = () => {
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search Identity/Signal..."
+              placeholder="Search contacts..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-12 pr-4 py-3 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
@@ -213,9 +213,9 @@ const CRMPage = () => {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-[var(--color-bg-workspace)] border-b border-[var(--color-bg-border)]">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Operative Identity</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Signal (Phone)</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Deployment (Status)</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Contact Name</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Phone</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Status</th>
                 <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Assigned Rep</th>
                 <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Priority</th>
                 <th className="px-8 py-5 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Actions</th>
@@ -278,7 +278,7 @@ const CRMPage = () => {
                         onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
                         className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95"
                       >
-                        Operate
+                        Open
                       </button>
                     </td>
                   </motion.tr>
@@ -289,7 +289,7 @@ const CRMPage = () => {
           {filteredLeads.length === 0 && (
             <div className="text-center py-32 opacity-30">
               <Users size={48} className="mx-auto mb-4" />
-              <p className="text-xs font-black uppercase tracking-[0.3em]">No operative data discovered</p>
+              <p className="text-xs font-black uppercase tracking-[0.3em]">No contacts found</p>
             </div>
           )}
         </div>

@@ -41,7 +41,7 @@ const LoginPage = () => {
             CK
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2">Taskmaster Management</p>
+          <p className="text-[var(--color-text-secondary)] mt-2">Welcome back! Sign in to continue.</p>
         </div>
 
         {error && (
@@ -52,7 +52,7 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Login Identity</label>
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email or Username</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input 
@@ -86,7 +86,7 @@ const LoginPage = () => {
             disabled={loading}
             className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
           >
-            {loading ? 'Logging in...' : 'Log In'} <ArrowRight size={20} />
+            {loading ? 'Signing in...' : 'Sign In'} <ArrowRight size={20} />
           </button>
 
           {/* Temporary Admin Bypass */}
@@ -98,7 +98,7 @@ const LoginPage = () => {
             }}
             className="w-full mt-2 border-2 border-dashed border-[var(--color-bg-border)] text-[var(--color-text-muted)] py-3 rounded-xl text-xs font-bold hover:bg-[var(--color-bg-workspace)] transition-all"
           >
-            DEBUG: SYSTEM BYPASS (ADMIN)
+            Quick Login (Admin Demo)
           </button>
         </form>
 

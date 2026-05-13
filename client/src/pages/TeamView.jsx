@@ -59,8 +59,8 @@ const TeamView = () => {
       <header className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Personnel Network</h1>
-            <p className="text-[var(--color-text-secondary)]">Operational nodes across all project clusters.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Team Directory</h1>
+            <p className="text-[var(--color-text-secondary)]">All team members across your organization.</p>
           </div>
           <Badge variant={selectedTeam === 'ALL' ? 'todo' : 'progress'}>
             {selectedTeam} VIEW
@@ -72,7 +72,7 @@ const TeamView = () => {
             onClick={() => setSelectedTeam('ALL')}
             className={`p-4 rounded-2xl border transition-all text-left relative overflow-hidden group ${selectedTeam === 'ALL' ? 'bg-[var(--color-bg-workspace)] border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/10' : 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)] hover:border-[var(--color-text-muted)]'}`}
           >
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Global Network</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Everyone</span>
             <div className="flex items-center justify-between mt-1">
               <span className="text-lg font-bold">{team.length} Users </span>
               <Users size={16} className={selectedTeam === 'ALL' ? 'text-[var(--color-action-primary)]' : 'text-[var(--color-text-muted)]'} />
@@ -98,7 +98,7 @@ const TeamView = () => {
 
       {loading ? (
         <div className="flex items-center justify-center py-20 animate-pulse text-[var(--color-text-muted)]">
-          Syncing team telemetry...
+          Loading team...
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -123,7 +123,7 @@ const TeamView = () => {
                   <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{member.name}</h3>
                   <div className="flex items-center gap-2">
                     <Badge variant={member.role === 'admin' ? 'progress' : 'todo'} className="text-[9px] uppercase tracking-tighter">
-                      {member.role === 'admin' ? 'Admin' : 'Standard Unit'}
+                      {member.role === 'admin' ? 'Admin' : 'Member'}
                     </Badge>
                   </div>
                 </div>
@@ -132,7 +132,7 @@ const TeamView = () => {
               <div className="space-y-4 flex-1">
                 <div className="p-4 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] space-y-3">
                   <div className="flex items-center justify-between text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                    <span>Eye of the Lion</span>
+                    <span>Teams</span>
                     {currentUser?.role === 'admin' && (
                       <button
                         onClick={() => navigate(`/admin?user=${member._id}`)}
@@ -150,7 +150,7 @@ const TeamView = () => {
                         <span style={{ color: getTeamColor(t) }}>{t}</span>
                       </div>
                     )) : (
-                      <span className="text-[10px] text-[var(--color-text-muted)] italic">Unassigned Unit</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] italic">No team yet</span>
                     )}
                   </div>
                 </div>
@@ -158,7 +158,7 @@ const TeamView = () => {
                 <div className="p-4 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)]/50 space-y-2">
                   <div className="flex items-center gap-2 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
                     <Layers size={12} />
-                    <span>Active Deployments</span>
+                    <span>Projects</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {member.projectsInvolved?.length > 0 ? member.projectsInvolved.map(p => (
@@ -166,7 +166,7 @@ const TeamView = () => {
                         {p.name}
                       </span>
                     )) : (
-                      <span className="text-[9px] text-[var(--color-text-muted)] italic">No active deployments</span>
+                      <span className="text-[9px] text-[var(--color-text-muted)] italic">No projects yet</span>
                     )}
                   </div>
                 </div>
@@ -177,7 +177,7 @@ const TeamView = () => {
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] font-bold px-2 pt-2">
-                  <span className="text-[var(--color-text-muted)] uppercase">Last Pulsed</span>
+                  <span className="text-[var(--color-text-muted)] uppercase">Last Seen</span>
                   <span className={member.online ? 'text-green-500 font-black' : 'text-[var(--color-text-muted)]'}>
                     {member.online ? 'LIVE' : formatDistanceToNow(new Date(member.lastOnline), { addSuffix: true })}
                   </span>
@@ -191,7 +191,7 @@ const TeamView = () => {
                     <p className="text-lg font-black text-[var(--color-text-primary)]">{member.tasksDone || 0}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">Cluster</p>
+                    <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">Projects</p>
                     <p className="text-lg font-black text-[var(--color-text-primary)]">{member.projectsInvolved?.length || 0}</p>
                   </div>
                 </div>

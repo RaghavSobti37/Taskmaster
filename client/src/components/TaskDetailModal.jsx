@@ -73,18 +73,18 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
       <NexusModal 
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
-        title="Terminate Task"
-        message="Are you certain you want to permanently sever this task entry from the project timeline? This action cannot be reversed."
+        title="Delete Task"
+        message="Are you sure you want to permanently delete this task? This cannot be undone."
         type="danger"
         isConfirm
-        confirmLabel="Terminate"
+        confirmLabel="Delete"
         onConfirm={handleDelete}
       />
       <div className="bg-[var(--color-bg-surface)] w-full max-w-xl rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
         <header className="px-8 py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <div>
             <h3 className="font-black text-[var(--color-text-primary)] text-xs uppercase tracking-[0.2em]">
-              Task Specification
+              Edit Task
             </h3>
             <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1">ID: {task._id.substring(0, 8).toUpperCase()}</p>
           </div>
@@ -119,7 +119,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
 
           <div className="grid grid-cols-2 gap-8">
             <CKDropdown 
-              label="Operational Status"
+              label="Status"
               options={statusOptions}
               value={status}
               disabled={isDone}
@@ -141,7 +141,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
                   <CheckCircle2 size={24} />
                </div>
                <div>
-                  <p className="text-sm font-bold text-green-600 uppercase tracking-tighter">Mission Accomplished</p>
+                  <p className="text-sm font-bold text-green-600 uppercase tracking-tighter">Task Completed</p>
                   <p className="text-[10px] text-[var(--color-text-muted)] font-bold">Completed on {task.completedAt ? new Date(task.completedAt).toLocaleString() : 'Recently'}</p>
                </div>
             </div>
@@ -172,7 +172,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
                   disabled={loading || !title}
                   className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-2xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-3 shadow-xl shadow-blue-500/20"
                 >
-                  {loading ? 'Syncing...' : <><CheckCircle2 size={20} /> Update Task</>}
+                  {loading ? 'Saving...' : <><CheckCircle2 size={20} /> Save Changes</>}
                 </button>
               )}
             </div>

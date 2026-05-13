@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Briefcase, Mail, Circle, Plus, X, Layers } from 'lucide-react';
-import { Badge } from '../ui';
+import { User, Shield, Briefcase, Mail, Circle, Plus, X, Layers, UserMinus } from 'lucide-react';
+import { Badge, NexusModal } from '../ui';
 import CKDropdown from '../ui/CKDropdown';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
-const ProjectTeam = ({ project }) => {
+const ProjectTeam = ({ project, onRemoveMember }) => {
   const { user: currentUser } = useAuth();
   const [allTeams, setAllTeams] = useState([]);
   const [allProjects, setAllProjects] = useState([]);
   const [localMembers, setLocalMembers] = useState(project.members || []);
+  const [removeModal, setRemoveModal] = useState({ open: false, member: null });
   const isAdmin = currentUser?.role === 'admin';
+  const isOwner = project.owner?._id === currentUser?._id || project.owner === currentUser?._id;
 
   const getTeamColor = (teamName) => {
     const team = allTeams.find(t => t.name === teamName);
@@ -62,8 +64,33 @@ const ProjectTeam = ({ project }) => {
 
   const projectTeams = Array.from(new Set(localMembers.flatMap(m => m.teams || [])));
 
+  const handleConfirmRemove = () => {
+    if (removeModal.member && onRemoveMember) {
+      onRemoveMember(removeModal.member._id);
+      setLocalMembers(prev => prev.filter(m => m._id !== removeModal.member._id));
+    }
+    setRemoveModal({ open: false, member: null });
+  };
+
+  const canRemoveMember = (member) => {
+    // Cannot remove the owner
+    const ownerId = project.owner?._id || project.owner;
+    if (member._id === ownerId) return false;
+    return isAdmin || isOwner;
+  };
+
   return (
     <div className="space-y-8">
+      <NexusModal
+        isOpen={removeModal.open}
+        onClose={() => setRemoveModal({ open: false, member: null })}
+        title="Remove Member"
+        message={`Are you sure you want to remove ${removeModal.member?.name || 'this member'} from the project?`}
+        type="danger"
+        isConfirm
+        confirmLabel="Remove"
+        onConfirm={handleConfirmRemove}
+      />
       {/* Team Clusters Summary */}
       <div className="flex flex-wrap gap-4 bg-[var(--color-bg-surface)] p-6 rounded-3xl border border-[var(--color-bg-border)]">
         {allTeams.filter(t => projectTeams.includes(t.name)).map(t => (
@@ -72,7 +99,7 @@ const ProjectTeam = ({ project }) => {
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{t.name}</p>
               <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                {localMembers.filter(m => m.teams?.includes(t.name)).length} Operatives
+                {localMembers.filter(m => m.teams?.includes(t.name)).length} Members
               </p>
             </div>
           </div>
@@ -111,6 +138,16 @@ const ProjectTeam = ({ project }) => {
                 </div>
               </div>
 
+              {canRemoveMember(member) && (
+                <button
+                  onClick={() => setRemoveModal({ open: true, member })}
+                  className="p-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                  title="Remove from project"
+                >
+                  <UserMinus size={14} />
+                </button>
+              )}
+
               <div className="space-y-5">
                 <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-workspace)]/50 p-2 rounded-xl border border-[var(--color-bg-border)]/50">
                   <Mail size={14} className="text-[var(--color-text-muted)]" />
@@ -145,7 +182,7 @@ const ProjectTeam = ({ project }) => {
                           </span>
                         ))
                       ) : (
-                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold italic">Unassigned Operative</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold italic">No team yet</span>
                       )}
                     </div>
                   )}
@@ -154,7 +191,7 @@ const ProjectTeam = ({ project }) => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Layers size={14} className="text-[var(--color-text-muted)]" />
-                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Active Deployments</span>
+                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Projects</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {memberProjects.map(p => (
@@ -162,7 +199,7 @@ const ProjectTeam = ({ project }) => {
                         {p.name}
                       </span>
                     ))}
-                    {memberProjects.length === 0 && <span className="text-[10px] text-[var(--color-text-muted)] italic">No active deployments</span>}
+                    {memberProjects.length === 0 && <span className="text-[10px] text-[var(--color-text-muted)] italic">No projects</span>}
                   </div>
                 </div>
               </div>

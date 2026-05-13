@@ -85,7 +85,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
       onClose();
     } catch (err) {
       if (err.response?.status === 423) {
-        setLockStatus('Locked by another operative');
+        setLockStatus('Locked by another user');
       } else {
         setModal({
           open: true,
@@ -164,9 +164,9 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
               {formData.name?.[0] || 'L'}
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight">{lead ? 'Edit Operative' : 'New Lead Capture'}</h3>
+              <h3 className="text-xl font-black uppercase tracking-tight">{lead ? 'Edit Contact' : 'New Lead'}</h3>
               <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                {lead ? `UID: ${lead._id}` : 'Initializing Personnel Data'}
+                {lead ? `ID: ${lead._id}` : 'New Contact'}
               </p>
             </div>
           </div>
@@ -268,7 +268,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
                 </div>
 
                 <div className="space-y-4 pt-6 border-t border-[var(--color-bg-border)]">
-                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Operative Remarks</label>
+                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Notes</label>
                    <textarea 
                     rows="4"
                     value={formData.remarks}

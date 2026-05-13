@@ -35,6 +35,8 @@ const AssetsPage = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -76,11 +78,12 @@ const AssetsPage = () => {
     }
   };
 
-  const handleDeleteAsset = async (id) => {
-    if (!window.confirm("PERMANENTLY DECOMMISSION THIS ASSET BUNDLE?")) return;
+  const handleDeleteAsset = async () => {
+    const { assetId } = deleteModal;
     try {
-      await axios.delete(`/api/assets/${id}`);
-      setAssets(assets.filter(a => a._id !== id));
+      await axios.delete(`/api/assets/${assetId}`);
+      setAssets(assets.filter(a => a._id !== assetId));
+      setDeleteModal({ open: false, assetId: null });
     } catch (err) {
       console.error('Delete asset error:', err);
     }
@@ -105,6 +108,16 @@ const AssetsPage = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
+      <NexusModal 
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, assetId: null })}
+        title="Asset Decommission"
+        message="Are you certain you want to permanently decommission this asset bundle? This action will sever all associated access nodes and is irreversible."
+        type="danger"
+        isConfirm
+        confirmLabel="Decommission"
+        onConfirm={handleDeleteAsset}
+      />
       {/* Premium Header */}
       <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
         <div className="space-y-1">
@@ -208,7 +221,7 @@ const AssetsPage = () => {
                   <td className="px-10 py-8 text-right">
                     {(user.role === 'admin' || user._id === asset.createdBy?._id) && (
                       <button 
-                        onClick={() => handleDeleteAsset(asset._id)}
+                        onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
                         className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-lg"
                       >
                         <Trash2 size={16} />

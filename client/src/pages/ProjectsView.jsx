@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { Badge, ProgressBar } from '../components/ui';
+import { Badge, ProgressBar, NexusModal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState({ open: false, projectId: null });
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -26,13 +27,12 @@ const ProjectsView = () => {
     fetchProjects();
   }, []);
 
-  const handleDeleteProject = async (e, projectId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!window.confirm("PURGE THIS PROJECT AND ALL ASSOCIATED DATA?")) return;
+  const handleDeleteProject = async () => {
+    const { projectId } = deleteModal;
     try {
       await axios.delete(`/api/projects/${projectId}`);
       setProjects(projects.filter(p => p._id !== projectId));
+      setDeleteModal({ open: false, projectId: null });
     } catch (err) {
       console.error('Delete project error:', err);
     }
@@ -40,6 +40,16 @@ const ProjectsView = () => {
 
   return (
     <div className="space-y-8">
+      <NexusModal 
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, projectId: null })}
+        title="Project Decommission"
+        message="Are you certain you want to purge this project and all its associated data nodes from the system deck? This action is irreversible."
+        type="danger"
+        isConfirm
+        confirmLabel="Decommission"
+        onConfirm={handleDeleteProject}
+      />
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Project List</h1>
@@ -60,10 +70,10 @@ const ProjectsView = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
-            <Link 
+            <div 
               key={project._id} 
-              to={`/projects/${project._id}`}
-              className="p-6 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)] transition-all"
+              className="p-6 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)] transition-all cursor-pointer relative"
+              onClick={() => navigate(`/projects/${project._id}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg uppercase">
@@ -75,7 +85,11 @@ const ProjectsView = () => {
                   </Badge>
                   {user?.role === 'admin' && (
                     <button 
-                      onClick={(e) => handleDeleteProject(e, project._id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeleteModal({ open: true, projectId: project._id });
+                      }}
                       className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
                     >
                       <Trash2 size={16} />

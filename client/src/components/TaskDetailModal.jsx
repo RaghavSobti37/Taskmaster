@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Clock, AlertCircle, Check } from 'lucide-react';
+import { NexusModal } from './ui';
 import CKDropdown from './ui/CKDropdown';
 
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }) => {
@@ -9,6 +10,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
   const [status, setStatus] = useState(task?.status || 'todo');
   const [priority, setPriority] = useState(task?.priority || 'medium');
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   React.useEffect(() => {
     if (task) {
@@ -54,10 +56,30 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/api/tasks/${task._id}`);
+      onTaskDeleted(task._id);
+      onClose();
+    } catch (err) {
+      console.error('Delete task error:', err);
+    }
+  };
+
   const isDone = status === 'done';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <NexusModal 
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Terminate Task"
+        message="Are you certain you want to permanently sever this task entry from the project timeline? This action cannot be reversed."
+        type="danger"
+        isConfirm
+        confirmLabel="Terminate"
+        onConfirm={handleDelete}
+      />
       <div className="bg-[var(--color-bg-surface)] w-full max-w-xl rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
         <header className="px-8 py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <div>
@@ -129,12 +151,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
             {!isDone ? (
               <button 
                 type="button"
-                onClick={() => {
-                  if (window.confirm('Terminate this task entry?')) {
-                    axios.delete(`/api/tasks/${task._id}`).then(() => onTaskDeleted(task._id));
-                    onClose();
-                  }
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
                 className="flex items-center gap-2 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-all"
               >
                 <Trash2 size={14} /> Remove Task

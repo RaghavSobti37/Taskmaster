@@ -1,0 +1,131 @@
+const Lead = require('../models/Lead');
+const EMI = require('../models/EMI');
+const CRMAudit = require('../models/CRMAudit');
+const User = require('../models/User');
+
+// Helper for auto-assignment (Least-Loaded strategy)
+const assignLeadToRep = async () => {
+  const reps = await User.find({ role: 'sales' });
+  if (reps.length === 0) return null;
+
+  const leadCounts = await Promise.all(reps.map(async (rep) => {
+    const count = await Lead.countDocuments({ assignedRepId: rep._id, leadStatus: { $ne: 'Converted' } });
+    return { repId: rep._id, count };
+  }));
+
+  leadCounts.sort((a, b) => a.count - b.count);
+  return leadCounts[0].repId;
+};
+
+exports.getLeads = async (req, res) => {
+  try {
+    let query = {};
+    if (req.user.role === 'sales') {
+      query.assignedRepId = req.user._id;
+    }
+    const leads = await Lead.find(query).populate('assignedRepId', 'name email').sort('-createdAt');
+    res.json(leads);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.createLead = async (req, res) => {
+  try {
+    const leadData = { ...req.body, createdBy: req.user._id };
+    
+    // Auto-assignment if not specified
+    if (!leadData.assignedRepId) {
+      leadData.assignedRepId = await assignLeadToRep();
+    }
+
+    const lead = await Lead.create(leadData);
+    res.status(201).json(lead);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.updateLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const oldLead = await Lead.findById(id);
+    if (!oldLead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Handle locking
+    if (oldLead.lockedBy && oldLead.lockedBy.toString() !== req.user._id.toString()) {
+      const lockDuration = Date.now() - new Date(oldLead.lockedAt).getTime();
+      if (lockDuration < 30 * 60 * 1000) { // 30 min lock
+        return res.status(423).json({ error: 'Row is locked by another user' });
+      }
+    }
+
+    // Capture changes for audit
+    const updates = req.body;
+    const auditEntries = [];
+    for (const key in updates) {
+      if (updates[key] !== oldLead[key] && key !== 'lockedBy' && key !== 'lockedAt') {
+        auditEntries.push({
+          userId: req.user._id,
+          userRole: req.user.role,
+          leadId: id,
+          fieldChanged: key,
+          oldValue: String(oldLead[key] || ''),
+          newValue: String(updates[key] || '')
+        });
+      }
+    }
+
+    const lead = await Lead.findByIdAndUpdate(id, { 
+      ...updates, 
+      lockedBy: req.user._id, 
+      lockedAt: new Date() 
+    }, { new: true });
+
+    if (auditEntries.length > 0) {
+      await CRMAudit.insertMany(auditEntries);
+    }
+
+    res.json(lead);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.getEmis = async (req, res) => {
+  try {
+    const emis = await EMI.find({ leadId: req.params.leadId }).sort('installmentNo');
+    res.json(emis);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.createEmi = async (req, res) => {
+  try {
+    const emi = await EMI.create({ ...req.body, leadId: req.params.leadId });
+    res.status(201).json(emi);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.updateEmi = async (req, res) => {
+  try {
+    const emi = await EMI.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(emi);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const logs = await CRMAudit.find({ leadId: req.params.leadId })
+      .populate('userId', 'name')
+      .sort('-createdAt');
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

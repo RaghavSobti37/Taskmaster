@@ -17,7 +17,7 @@ import ProjectList from '../components/project/ProjectList';
 import ProjectKanban from '../components/project/ProjectKanban';
 import ProjectGantt from '../components/project/ProjectGantt';
 import ProjectTeam from '../components/project/ProjectTeam';
-import { Badge, ProgressBar, NexusLoader } from '../components/ui';
+import { Badge, ProgressBar, NexusLoader, NexusDropdown } from '../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../components/TaskCreateModal';
 import ProjectSettingsModal from '../components/ProjectSettingsModal';
@@ -214,17 +214,19 @@ const ProjectDetail = () => {
             />
           </div>
           <div className="flex items-center gap-3">
-            <select 
+            <NexusDropdown
+              options={[
+                { value: 'all', label: 'ALL STATUS' },
+                { value: 'todo', label: 'TODO' },
+                { value: 'in-progress', label: 'IN PROGRESS' },
+                { value: 'in-review', label: 'IN REVIEW' },
+                { value: 'done', label: 'COMPLETED' },
+              ]}
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="flex-1 md:flex-none appearance-none px-4 py-2.5 border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--color-action-primary)] transition-all outline-none cursor-pointer"
-            >
-              <option value="all">ALL STATUS</option>
-              <option value="todo">TODO</option>
-              <option value="in-progress">IN PROGRESS</option>
-              <option value="in-review">IN REVIEW</option>
-              <option value="done">COMPLETED</option>
-            </select>
+              onChange={setFilterStatus}
+              variant="compact"
+              className="min-w-[140px]"
+            />
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ import {
   Shapes,
   UserSquare2
 } from 'lucide-react';
-import { Badge, NexusModal } from '../components/ui';
+import { Badge, NexusModal, NexusDropdown } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import CKDropdown from '../components/ui/CKDropdown';
@@ -168,7 +168,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-12 pb-32">
+    <div className="space-y-8 pb-24">
       {/* Premium Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -177,7 +177,7 @@ const SettingsPage = () => {
       >
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 shadow-2xl border border-white/5">
+            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
               <Settings size={20} />
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
@@ -264,15 +264,13 @@ const SettingsPage = () => {
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
                 <div className="flex gap-2">
-                  <div className="relative w-24">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                      <Globe size={12} />
-                    </div>
-                    <select className="w-full pl-8 pr-3 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold appearance-none cursor-pointer">
-                      <option value="+91">+91 (IN)</option>
-                    </select>
-                    <ChevronDown size={10} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-                  </div>
+                    <NexusDropdown
+                      options={[{ value: '+91', label: '+91 (IN)' }]}
+                      value="+91"
+                      onChange={() => {}}
+                      variant="compact"
+                      className="w-24"
+                    />
                   <div className="relative flex-1 group">
                     <Smartphone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                     <input
@@ -388,7 +386,7 @@ const SettingsPage = () => {
               </div>
 
               {/* Notifications Toggle */}
-              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
+              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
                 <div className="flex items-center gap-3">
                   <div className={`p-2.5 rounded-lg border transition-all ${notificationsEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
                     <Bell size={16} />

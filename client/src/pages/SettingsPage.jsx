@@ -300,27 +300,15 @@ const SettingsPage = () => {
               />
             </div>
 
-            <div className="pt-6 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
-              <AnimatePresence>
-                {success && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
-                    className="flex items-center gap-2 text-emerald-500 font-black text-[9px] md:text-[10px] uppercase tracking-widest"
-                  >
-                    <CheckCircle2 size={12} md:size={14} /> Profile Saved
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <button
-                type="submit"
-                onClick={handleUpdateProfile}
-                disabled={loading}
-                className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-slate-900 text-white px-8 py-3.5 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] hover:bg-slate-800 disabled:opacity-50 transition-all shadow-2xl active:scale-95"
-              >
-                {loading ? 'Saving...' : <><Save size={14} /> Save Profile</>}
-              </button>
+            <div className="pt-6 border-t border-[var(--color-bg-border)]">
+              <CKDropdown
+                multi
+                label="My Teams"
+                placeholder="Select your teams..."
+                options={allTeams.map(t => ({ value: t.name, label: t.name }))}
+                value={teams}
+                onChange={setTeams}
+              />
             </div>
           </div>
         </motion.section>
@@ -426,6 +414,47 @@ const SettingsPage = () => {
           </motion.section>
         </div>
       </div>
+
+      {/* Floating Action Bar */}
+      <motion.div 
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-4xl"
+      >
+        <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center gap-4 px-4">
+             <AnimatePresence>
+                {success ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="flex items-center gap-2 text-emerald-400 font-black text-[10px] uppercase tracking-widest"
+                  >
+                    <CheckCircle2 size={16} /> All Changes Saved
+                  </motion.div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                      <Save size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-white uppercase tracking-widest">Global Save</p>
+                      <p className="text-[9px] text-white/40 font-bold uppercase tracking-tight">Syncs profile & password</p>
+                    </div>
+                  </div>
+                )}
+              </AnimatePresence>
+          </div>
+          <button
+            onClick={handleUpdateProfile}
+            disabled={loading}
+            className="flex items-center justify-center gap-3 bg-white text-slate-900 px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-100 disabled:opacity-50 transition-all active:scale-95 shadow-xl"
+          >
+            {loading ? 'Saving...' : 'Save All Changes'}
+          </button>
+        </div>
+      </motion.div>
 
       {/* Categorized Avatar Modal */}
       <AnimatePresence>

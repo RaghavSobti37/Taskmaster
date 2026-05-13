@@ -5,12 +5,18 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, async (req, res) => {
   try {
-    const { userId, action, page = 1, limit = 50 } = req.query;
+    const { userId, action, page = 1, limit = 50, startDate, endDate } = req.query;
     const filter = {};
     if (userId && userId !== 'undefined' && userId !== 'null') {
       filter.userId = userId;
     }
     if (action) filter.action = action;
+    
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
     
     const logs = await Log.find(filter)
       .sort({ createdAt: -1 })
@@ -25,11 +31,12 @@ router.get('/', protect, async (req, res) => {
 
 router.post('/', protect, async (req, res) => {
   try {
-    const { action, targetType, details } = req.body;
+    const { action, targetType, targetId, details } = req.body;
     const log = await Log.create({
       userId: req.user._id,
       action,
       targetType,
+      targetId,
       details
     });
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');

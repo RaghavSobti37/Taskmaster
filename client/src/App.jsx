@@ -12,7 +12,9 @@ import TeamView from './pages/TeamView';
 import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
 import DailyLogPage from './pages/DailyLogPage';
+import AdminLogsPage from './pages/AdminLogsPage';
 import ChatPage from './pages/ChatPage';
+import CRMPage from './pages/CRMPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -40,8 +42,10 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="logs" element={<DailyLogPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="crm" element={<CRMPage />} />
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPanel />} />
+              <Route path="admin/logs" element={<AdminLogsPage />} />
             </Route>
           </Route>
         </Route>

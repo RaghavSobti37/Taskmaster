@@ -9,6 +9,8 @@ const upload = multer({ dest: 'uploads/' });
 router.use(protect);
 
 router.post('/leads/upload', upload.single('file'), crmController.uploadLeads);
+router.get('/imports', crmController.getImports);
+router.delete('/imports/:id', crmController.deleteImport);
 
 router.route('/leads')
   .get(crmController.getLeads)

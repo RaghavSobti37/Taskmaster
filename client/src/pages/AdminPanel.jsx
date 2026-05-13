@@ -205,18 +205,22 @@ const AdminPanel = () => {
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [crmImports, setCrmImports] = useState([]);
+  const [activeTab, setActiveTab] = useState('users');
 
   const fetchData = async () => {
     try {
-      const [usersRes, logsRes, tasksRes, teamsRes] = await Promise.all([
+      const [usersRes, logsRes, tasksRes, teamsRes, importsRes] = await Promise.all([
         axios.get('/api/users/directory'),
         axios.get('/api/logs'),
         axios.get('/api/tasks'),
-        axios.get('/api/teams')
+        axios.get('/api/teams'),
+        axios.get('/api/crm/imports')
       ]);
       setUsers(usersRes.data.users || []);
       setLogs(logsRes.data);
       setTeams(teamsRes.data);
+      setCrmImports(importsRes.data);
 
       const activeCount = tasksRes.data.filter(t => t.status === 'in-progress').length;
       setStats({
@@ -307,6 +311,17 @@ const AdminPanel = () => {
       setChatMsg('');
     } catch (err) {
       console.error('Chat error:', err);
+    }
+  };
+
+  const handleDeleteImport = async (importId, count) => {
+    if (window.confirm(`SECURITY CLEARANCE REQUIRED: You are about to PERMANENTLY PURGE ${count} contacts from the system. This action is irreversible. Continue?`)) {
+      try {
+        await axios.delete(`/api/crm/imports/${importId}`);
+        fetchData();
+      } catch (err) {
+        console.error('Delete import error:', err);
+      }
     }
   };
 
@@ -437,187 +452,232 @@ const AdminPanel = () => {
         </motion.div>
       </motion.section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        {/* Main Content: User Directory (LEFT) */}
-        <motion.main
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="lg:col-span-8 space-y-8"
-        >
-          <section className="bg-[var(--color-bg-surface)] rounded-[1.5rem] md:rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[500px] md:min-h-[600px]">
-            <div className="px-4 md:px-8 py-6 md:py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-blue-500/10 rounded-[1rem] md:rounded-[1.25rem] text-blue-500 shadow-sm">
-                  <Users size={18} md:size={20} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
-                </div>
-              </div>
-              <div className="relative w-full sm:w-64 md:w-72">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
-                <input
-                  type="text"
-                  placeholder="Scan directory..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] md:text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
-                />
-              </div>
-            </div>
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-4 border-b border-[var(--color-bg-border)]">
+        <button onClick={() => setActiveTab('users')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Personnel</button>
+        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Batches</button>
+      </div>
 
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left min-w-[600px]">
-                <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                  <tr>
-                    <th className="px-8 py-4">Operative Identification</th>
-                    <th className="px-8 py-4 text-center">Clearance</th>
-                    <th className="px-8 py-4 text-right">Access</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-bg-border)]">
-                  {filteredUsers.map((u) => (
-                    <tr
-                      key={u._id}
-                      onClick={() => setSelectedUser(u)}
-                      className="hover:bg-blue-500/5 transition-all group cursor-pointer"
-                    >
-                      <td className="px-8 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-9 h-9 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] relative overflow-hidden shadow-sm group-hover:border-blue-500/30 transition-all">
-                            {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : u.name.substring(0, 2).toUpperCase()}
-                            {u.online && <div className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white shadow-sm" />}
-                          </div>
-                          <div>
-                            <p className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-blue-600 transition-colors">{u.name}</p>
-                            <p className="text-[9px] font-bold text-[var(--color-text-muted)]">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-4 text-center">
-                        <Badge variant={u.role === 'admin' ? 'progress' : 'todo'}>{u.role.toUpperCase()}</Badge>
-                      </td>
-                      <td className="px-8 py-4 text-right">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:border-blue-500/30 transition-all">
-                          Manage <ChevronRight size={12} strokeWidth={3} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </motion.main>
-
-        {/* Right Sidebar: Teams & Stream (RIGHT) */}
-        <motion.aside
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="lg:col-span-4 space-y-8 sticky top-8"
-        >
-          {/* Teams Section */}
-          <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col">
-            <div className="px-6 py-5 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-blue-500/10 rounded-xl text-blue-500">
-                  <Layers size={14} strokeWidth={2.5} />
+      {activeTab === 'users' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          {/* Main Content: User Directory (LEFT) */}
+          <motion.main
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="lg:col-span-8 space-y-8"
+          >
+            <section className="bg-[var(--color-bg-surface)] rounded-[1.5rem] md:rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[500px] md:min-h-[600px]">
+              <div className="px-4 md:px-8 py-6 md:py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 bg-blue-500/10 rounded-[1rem] md:rounded-[1.25rem] text-blue-500 shadow-sm">
+                    <Users size={18} md:size={20} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
+                  </div>
                 </div>
-                <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">Deployment Teams</h3>
-              </div>
-              <Badge variant="todo">{teams.length} UNITS</Badge>
-            </div>
-            <div className="p-6 space-y-4">
-              <form onSubmit={handleCreateTeam} className="relative group">
-                <input
-                  type="text"
-                  placeholder="New Unit..."
-                  value={newTeamName}
-                  onChange={e => setNewTeamName(e.target.value)}
-                  className="w-full pl-5 pr-20 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
-                <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
+                <div className="relative w-full sm:w-64 md:w-72">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
                   <input
-                    type="color"
-                    value={newTeamColor}
-                    onChange={e => setNewTeamColor(e.target.value)}
-                    className="w-7 h-7 rounded-lg bg-[var(--color-bg-workspace)] border-none cursor-pointer p-0"
+                    type="text"
+                    placeholder="Scan directory..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] md:text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
                   />
-                  <button type="submit" className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
-                    <Plus size={14} strokeWidth={3} />
-                  </button>
                 </div>
-              </form>
-              <div className="grid grid-cols-2 gap-2.5">
-                {teams.map(team => (
-                  <div
-                    key={team._id}
-                    className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm hover:border-blue-500/30 transition-all group"
-                    style={{ borderLeft: `3px solid ${team.color || '#3b82f6'}` }}
-                  >
-                    <span className="truncate" style={{ color: team.color || 'var(--color-text-muted)' }}>{team.name}</span>
+              </div>
+
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left min-w-[600px]">
+                  <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                    <tr>
+                      <th className="px-8 py-4">Operative Identification</th>
+                      <th className="px-8 py-4 text-center">Clearance</th>
+                      <th className="px-8 py-4 text-right">Access</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-bg-border)]">
+                    {filteredUsers.map((u) => (
+                      <tr
+                        key={u._id}
+                        onClick={() => setSelectedUser(u)}
+                        className="hover:bg-blue-500/5 transition-all group cursor-pointer"
+                      >
+                        <td className="px-8 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-9 h-9 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] relative overflow-hidden shadow-sm group-hover:border-blue-500/30 transition-all">
+                              {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : u.name.substring(0, 2).toUpperCase()}
+                              {u.online && <div className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border border-white shadow-sm" />}
+                            </div>
+                            <div>
+                              <p className="font-black text-sm text-[var(--color-text-primary)] group-hover:text-blue-600 transition-colors">{u.name}</p>
+                              <p className="text-[9px] font-bold text-[var(--color-text-muted)]">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-4 text-center">
+                          <Badge variant={u.role === 'admin' ? 'progress' : 'todo'}>{u.role.toUpperCase()}</Badge>
+                        </td>
+                        <td className="px-8 py-4 text-right">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:border-blue-500/30 transition-all">
+                            Manage <ChevronRight size={12} strokeWidth={3} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </motion.main>
+
+          {/* Right Sidebar: Teams & Stream (RIGHT) */}
+          <motion.aside
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="lg:col-span-4 space-y-8 sticky top-8"
+          >
+            {/* Teams Section */}
+            <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col">
+              <div className="px-6 py-5 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-blue-500/10 rounded-xl text-blue-500">
+                    <Layers size={14} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">Deployment Teams</h3>
+                </div>
+                <Badge variant="todo">{teams.length} UNITS</Badge>
+              </div>
+              <div className="p-6 space-y-4">
+                <form onSubmit={handleCreateTeam} className="relative group">
+                  <input
+                    type="text"
+                    placeholder="New Unit..."
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    className="w-full pl-5 pr-20 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  />
+                  <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={newTeamColor}
+                      onChange={e => setNewTeamColor(e.target.value)}
+                      className="w-7 h-7 rounded-lg bg-[var(--color-bg-workspace)] border-none cursor-pointer p-0"
+                    />
+                    <button type="submit" className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
+                      <Plus size={14} strokeWidth={3} />
+                    </button>
+                  </div>
+                </form>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {teams.map(team => (
+                    <div
+                      key={team._id}
+                      className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-sm hover:border-blue-500/30 transition-all group"
+                      style={{ borderLeft: `3px solid ${team.color || '#3b82f6'}` }}
+                    >
+                      <span className="truncate" style={{ color: team.color || 'var(--color-text-muted)' }}>{team.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Activity Stream */}
+            <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col h-[550px]">
+              <div className="px-6 py-5 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                    <Activity size={14} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">API Calls</h3>
+                </div>
+                <div className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full text-[8px] font-black uppercase tracking-widest">
+                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                  Live
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--color-bg-workspace)]/30 custom-scrollbar">
+                {logs.map((log) => (
+                  <div key={log._id} className="flex gap-3 group">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] flex-shrink-0 flex items-center justify-center font-black text-[9px] border border-[var(--color-bg-border)] overflow-hidden shadow-sm group-hover:border-blue-500/30 transition-all">
+                      {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full object-cover" /> : <span>{log.userId?.name?.substring(0, 2).toUpperCase() || 'SY'}</span>}
+                    </div>
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black text-[var(--color-text-primary)] uppercase tracking-tight">{log.userId?.name || 'System'}</span>
+                        <span className="text-[8px] font-bold text-[var(--color-text-muted)]">{format(new Date(log.createdAt), 'HH:mm')}</span>
+                      </div>
+                      <div className={`p-3 rounded-xl rounded-tl-none text-[11px] font-medium leading-relaxed border transition-all ${log.action === 'CHAT_MESSAGE' ? 'bg-blue-500/5 text-blue-900 dark:text-blue-100 border-blue-500/20 shadow-sm' : 'bg-white dark:bg-black/20 text-[var(--color-text-secondary)] border-[var(--color-bg-border)] group-hover:border-blue-500/10'}`}>
+                        {log.action === 'CHAT_MESSAGE' ? log.details.message : (
+                          <div className="space-y-0.5">
+                            <span className="font-black uppercase text-[8px] tracking-widest text-blue-500">{log.action.replace('_', ' ')}</span>
+                            <p className="opacity-90">{log.details?.title || log.targetType}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </section>
 
-          {/* Activity Stream */}
-          <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col h-[550px]">
-            <div className="px-6 py-5 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
-                  <Activity size={14} strokeWidth={2.5} />
-                </div>
-                <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">API Calls</h3>
-              </div>
-              <div className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full text-[8px] font-black uppercase tracking-widest">
-                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                Live
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--color-bg-workspace)]/30 custom-scrollbar">
-              {logs.map((log) => (
-                <div key={log._id} className="flex gap-3 group">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] flex-shrink-0 flex items-center justify-center font-black text-[9px] border border-[var(--color-bg-border)] overflow-hidden shadow-sm group-hover:border-blue-500/30 transition-all">
-                    {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full object-cover" /> : <span>{log.userId?.name?.substring(0, 2).toUpperCase() || 'SY'}</span>}
-                  </div>
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-black text-[var(--color-text-primary)] uppercase tracking-tight">{log.userId?.name || 'System'}</span>
-                      <span className="text-[8px] font-bold text-[var(--color-text-muted)]">{format(new Date(log.createdAt), 'HH:mm')}</span>
-                    </div>
-                    <div className={`p-3 rounded-xl rounded-tl-none text-[11px] font-medium leading-relaxed border transition-all ${log.action === 'CHAT_MESSAGE' ? 'bg-blue-500/5 text-blue-900 dark:text-blue-100 border-blue-500/20 shadow-sm' : 'bg-white dark:bg-black/20 text-[var(--color-text-secondary)] border-[var(--color-bg-border)] group-hover:border-blue-500/10'}`}>
-                      {log.action === 'CHAT_MESSAGE' ? log.details.message : (
-                        <div className="space-y-0.5">
-                          <span className="font-black uppercase text-[8px] tracking-widest text-blue-500">{log.action.replace('_', ' ')}</span>
-                          <p className="opacity-90">{log.details?.title || log.targetType}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={handleSendChat} className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex gap-2">
-              <input
-                type="text"
-                placeholder="Secure channel transmission..."
-                value={chatMsg}
-                onChange={e => setChatMsg(e.target.value)}
-                className="flex-1 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-4 py-3 text-[10px] font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
-              />
-              <button type="submit" className="p-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20">
-                <Send size={14} strokeWidth={3} />
-              </button>
-            </form>
-          </section>
-        </motion.aside>
-      </div>
+              <form onSubmit={handleSendChat} className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Secure channel transmission..."
+                  value={chatMsg}
+                  onChange={e => setChatMsg(e.target.value)}
+                  className="flex-1 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-4 py-3 text-[10px] font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                />
+                <button type="submit" className="p-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20">
+                  <Send size={14} strokeWidth={3} />
+                </button>
+              </form>
+            </section>
+          </motion.aside>
+        </div>
+      ) : (
+        <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
+          <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent">
+            <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Ingestion History</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                <tr>
+                  <th className="px-8 py-4">Session Payload</th>
+                  <th className="px-8 py-4">Timestamp</th>
+                  <th className="px-8 py-4 text-center">Payload Size</th>
+                  <th className="px-8 py-4 text-center">Operative</th>
+                  <th className="px-8 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-bg-border)]">
+                {crmImports.map(batch => (
+                  <tr key={batch._id} className="hover:bg-rose-500/5 transition-all group">
+                    <td className="px-8 py-4 font-black text-xs uppercase tracking-tight">{batch.filename}</td>
+                    <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-muted)]">{new Date(batch.createdAt).toLocaleString()}</td>
+                    <td className="px-8 py-4 text-center"><Badge variant="todo">{batch.leadCount} CONTACTS</Badge></td>
+                    <td className="px-8 py-4 text-center text-[10px] font-black text-blue-500 uppercase">{batch.createdBy?.name}</td>
+                    <td className="px-8 py-4 text-right">
+                      <button 
+                        onClick={() => handleDeleteImport(batch._id, batch.leadCount)}
+                        className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <AnimatePresence>
         {selectedUser && (

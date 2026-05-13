@@ -35,12 +35,9 @@ const CRMPage = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [filter, setFilter] = useState('All');
 
-  useEffect(() => {
-    fetchLeads();
-  }, []);
-
   const fetchLeads = async () => {
     try {
+      setLoading(true);
       const res = await axios.get('/api/crm/leads');
       setLeads(res.data);
     } catch (err) {
@@ -49,6 +46,19 @@ const CRMPage = () => {
       setLoading(false);
     }
   };
+
+  const handleUpdatePriority = async (leadId, quality) => {
+    try {
+      await axios.put(`/api/crm/leads/${leadId}`, { leadQuality: quality });
+      fetchLeads();
+    } catch (err) {
+      console.error('Update priority error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -168,14 +178,15 @@ const CRMPage = () => {
             transition={{ delay: idx * 0.1 }}
             className="bg-[var(--color-bg-surface)] p-6 rounded-3xl border border-[var(--color-bg-border)] shadow-sm hover:shadow-md transition-all group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-2xl font-black text-[var(--color-text-primary)]">{stat.value}</h3>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${stat.color} opacity-80`}>{stat.label}</p>
+              </div>
+              <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} group-hover:rotate-12 transition-transform`}>
                 <stat.icon size={20} />
               </div>
-              <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Snapshot</span>
             </div>
-            <h4 className="text-2xl font-black text-[var(--color-text-primary)] mb-1">{stat.value}</h4>
-            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{stat.label}</p>
           </motion.div>
         ))}
       </div>
@@ -239,11 +250,17 @@ const CRMPage = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-1">
-                        {[...Array(4)].map((_, i) => (
-                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (5 - parseInt(lead.leadQuality)) ? 'bg-blue-500' : 'bg-[var(--color-bg-border)]'}`} />
-                        ))}
-                      </div>
+                      <select 
+                        value={lead.leadQuality} 
+                        onChange={(e) => handleUpdatePriority(lead._id, e.target.value)}
+                        className="bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-500/20 cursor-pointer outline-none hover:bg-blue-500 hover:text-white transition-all appearance-none"
+                      >
+                        <option value="1">P1 - CRITICAL</option>
+                        <option value="2">P2 - HIGH</option>
+                        <option value="3">P3 - MEDIUM</option>
+                        <option value="4">P4 - LOW</option>
+                        <option value="5">P5 - TRASH</option>
+                      </select>
                     </td>
                     <td className="px-8 py-5 text-center">
                       <button 

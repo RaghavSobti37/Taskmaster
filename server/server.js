@@ -43,20 +43,33 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // MongoDB Connection
-const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot';
+const dbUri = (process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot').trim();
 
 // Mask URI for logging
 const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
-console.log(`Connecting to DB: ${maskedUri}`);
+console.log(`[SYSTEM] Initializing DB Connection: ${maskedUri}`);
 
 mongoose.connect(dbUri, {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 10s
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('[SUCCESS] MongoDB Connected'))
   .catch(err => {
-    console.error('CRITICAL: MongoDB connection error:', err.message);
-    process.exit(1); // Exit if cannot connect in production
+    console.error('[ERROR] Initial MongoDB connection failed:', err.message);
+    console.log('[SYSTEM] Server will remain active but DB operations will fail until connection is established.');
   });
+
+mongoose.connection.on('error', err => {
+  console.error('[ERROR] Mongoose connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[WARN] Mongoose disconnected. Attempting reconnect...');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('[SUCCESS] Mongoose reconnected.');
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

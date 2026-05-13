@@ -62,24 +62,24 @@ const CRMPage = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">CRM Command</h1>
-          <p className="text-[var(--color-text-secondary)]">Manage your sales pipeline and leads.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">CRM Command</h1>
+          <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Manage your sales pipeline and leads.</p>
         </div>
         <button 
           onClick={() => { setSelectedLead(null); setIsModalOpen(true); }}
-          className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
+          className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 text-xs sm:text-sm"
         >
-          <Plus size={20} /> Add New Lead
+          <Plus size={18} /> Add New Lead
         </button>
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {[
-          { label: 'Total Leads', value: stats.total, icon: Database, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'New Leads', value: stats.new, icon: AlertCircle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+          { label: 'Total', value: stats.total, icon: Database, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'New', value: stats.new, icon: AlertCircle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
           { label: 'Contacted', value: stats.contacted, icon: Phone, color: 'text-purple-500', bg: 'bg-purple-500/10' },
           { label: 'Qualified', value: stats.qualified, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' }
         ].map((stat, i) => (
@@ -88,16 +88,16 @@ const CRMPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-[var(--color-bg-surface)] p-6 rounded-2xl border border-[var(--color-bg-border)] shadow-sm"
+            className="bg-[var(--color-bg-surface)] p-4 md:p-6 rounded-2xl border border-[var(--color-bg-border)] shadow-sm"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}>
-                <stat.icon size={20} />
+                <stat.icon size={16} className="md:size-20" />
               </div>
-              <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Live</span>
+              <span className="hidden sm:block text-[8px] md:text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Live</span>
             </div>
-            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
-            <p className="text-xs font-medium text-[var(--color-text-muted)]">{stat.label}</p>
+            <p className="text-xl md:text-2xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
+            <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)]">{stat.label}</p>
           </motion.div>
         ))}
       </div>

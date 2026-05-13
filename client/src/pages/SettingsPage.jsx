@@ -40,7 +40,7 @@ import axios from 'axios';
 const SettingsPage = () => {
   const { user, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
+
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
@@ -146,23 +146,23 @@ const SettingsPage = () => {
   return (
     <div className="max-w-[1200px] mx-auto space-y-12 pb-32">
       {/* Premium Header */}
-      <motion.header 
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-4"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4"
       >
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 shadow-2xl border border-white/5">
               <Settings size={20} className="animate-spin-slow" />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
-              System Configuration
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
+              Configuration
             </h1>
           </div>
-          <p className="text-xs font-medium text-[var(--color-text-muted)] ml-14">Calibrate operative parameters and interface protocols.</p>
+          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Calibrate operative parameters and interface protocols.</p>
         </div>
-        <div className="flex items-center gap-3 px-5 py-2.5 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm">
+        <div className="hidden sm:flex items-center gap-3 px-5 py-2.5 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm self-start md:self-center">
           <ShieldCheck size={14} className="text-emerald-500" />
           <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Security Cleared</span>
         </div>
@@ -170,53 +170,53 @@ const SettingsPage = () => {
 
       <div className="grid grid-cols-1 gap-10">
         {/* Profile Section */}
-        <motion.section 
+        <motion.section
           variants={sectionVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
         >
-          <div className="px-10 py-10 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm">
-                <User size={20} strokeWidth={2.5} />
+          <div className="px-6 md:px-10 py-6 md:py-10 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
+            <div className="flex items-center gap-4 md:gap-5">
+              <div className="p-2.5 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl text-blue-500 shadow-sm">
+                <User size={18} md:size={20} strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operative Profile</h3>
-                <p className="text-xs text-[var(--color-text-muted)] font-medium">Core identity and designation data.</p>
+                <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operative Profile</h3>
+                <p className="hidden sm:block text-xs text-[var(--color-text-muted)] font-medium">Core identity and designation data.</p>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleUpdateProfile} className="p-10 space-y-10">
+          <div className="p-6 md:p-10 space-y-8 md:space-y-10">
             {/* Avatar Profile Interaction */}
-            <div className="flex flex-col md:flex-row items-center gap-8 bg-[var(--color-bg-workspace)]/40 p-8 rounded-[2rem] border border-[var(--color-bg-border)] group">
-              <div 
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 bg-[var(--color-bg-workspace)]/40 p-6 md:p-8 rounded-[2rem] border border-[var(--color-bg-border)] group">
+              <div
                 onClick={() => setIsAvatarModalOpen(true)}
                 className="relative cursor-pointer group/avatar"
               >
-                <div className="w-24 h-24 rounded-3xl bg-[var(--color-bg-surface)] border-4 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-3xl bg-[var(--color-bg-surface)] border-4 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
                   {avatar ? (
                     <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <User size={40} className="text-[var(--color-text-muted)]" />
+                    <User size={32} md:size={40} className="text-[var(--color-text-muted)]" />
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-all">
-                    <Camera size={24} className="text-white" />
+                    <Camera size={20} className="text-white" />
                   </div>
                 </div>
-                <div className="absolute -bottom-2 -right-2 p-2 bg-blue-500 text-white rounded-xl shadow-lg border-2 border-[var(--color-bg-surface)]">
-                  <Sparkles size={14} />
+                <div className="absolute -bottom-1 -right-1 p-1.5 md:p-2 bg-blue-500 text-white rounded-lg md:rounded-xl shadow-lg border-2 border-[var(--color-bg-surface)]">
+                  <Sparkles size={12} md:size={14} />
                 </div>
               </div>
-              <div className="flex-1 text-center md:text-left space-y-2">
-                <h4 className="text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Designation Identity</h4>
-                <p className="text-xs text-[var(--color-text-muted)] font-medium">Operative: {name || 'UNINITIALIZED'}</p>
-                <button 
+              <div className="flex-1 text-center md:text-left space-y-1.5">
+                <h4 className="text-lg md:text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Designation Identity</h4>
+                <p className="text-[10px] md:text-xs text-[var(--color-text-muted)] font-medium">Operative: {name || 'UNINITIALIZED'}</p>
+                <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
-                  className="mt-2 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-4 py-2 rounded-lg border border-blue-500/10"
+                  className="mt-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-4 py-2 rounded-lg border border-blue-500/10"
                 >
                   Change Profile Icon
                 </button>
@@ -228,8 +228,8 @@ const SettingsPage = () => {
                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Personnel Name</label>
                 <div className="relative group">
                   <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
@@ -251,8 +251,8 @@ const SettingsPage = () => {
                   </div>
                   <div className="relative flex-1 group">
                     <Smartphone size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={phone.replace(/^\+91\s*/, '')}
                       onChange={(e) => setPhone('+91 ' + e.target.value)}
                       className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
@@ -264,7 +264,7 @@ const SettingsPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[var(--color-bg-border)]">
-              <CKDropdown 
+              <CKDropdown
                 label="Access Clearance"
                 options={roleOptions}
                 value={role}
@@ -275,8 +275,8 @@ const SettingsPage = () => {
                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Email Node (Static)</label>
                 <div className="relative">
                   <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     value={email}
                     disabled
                     className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium opacity-60 cursor-not-allowed"
@@ -286,7 +286,7 @@ const SettingsPage = () => {
             </div>
 
             <div className="pt-6 border-t border-[var(--color-bg-border)]">
-              <CKDropdown 
+              <CKDropdown
                 multi
                 label="Nexus Team Affiliations"
                 placeholder="Assign operational units..."
@@ -296,33 +296,33 @@ const SettingsPage = () => {
               />
             </div>
 
-            <div className="pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+            <div className="pt-6 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-4">
               <AnimatePresence>
                 {success && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
-                    className="flex items-center gap-2 text-emerald-500 font-black text-[10px] uppercase tracking-widest"
+                    className="flex items-center gap-2 text-emerald-500 font-black text-[9px] md:text-[10px] uppercase tracking-widest"
                   >
-                    <CheckCircle2 size={14} /> Data Synced Successfully
+                    <CheckCircle2 size={12} md:size={14} /> Data Synced Successfully
                   </motion.div>
                 )}
               </AnimatePresence>
-              <button 
+              <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2.5 bg-slate-900 text-white px-8 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-slate-800 disabled:opacity-50 transition-all shadow-2xl active:scale-95"
+                className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-slate-900 text-white px-8 py-3.5 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] hover:bg-slate-800 disabled:opacity-50 transition-all shadow-2xl active:scale-95"
               >
-                {loading ? 'Processing...' : <><Save size={14} /> Sync Operative Profile</>}
+                {loading ? 'Processing...' : <><Save size={14} /> Sync Profile</>}
               </button>
             </div>
-          </form>
+          </div>
         </motion.section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Preferences & Aesthetics */}
-          <motion.section 
+          <motion.section
             variants={sectionVariants}
             initial="hidden"
             whileInView="visible"
@@ -344,11 +344,11 @@ const SettingsPage = () => {
                     <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Dark mode environment</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={toggleTheme}
                   className={`w-10 h-5 rounded-full transition-all relative ${theme === 'dark' ? 'bg-blue-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                 >
-                  <motion.div 
+                  <motion.div
                     layout
                     className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
                     animate={{ x: theme === 'dark' ? 20 : 0 }}
@@ -368,11 +368,11 @@ const SettingsPage = () => {
                     <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Browser Notifications</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={requestNotificationPermission}
                   className={`w-10 h-5 rounded-full transition-all relative ${notificationsEnabled ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                 >
-                  <motion.div 
+                  <motion.div
                     layout
                     className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
                     animate={{ x: notificationsEnabled ? 20 : 0 }}
@@ -384,7 +384,7 @@ const SettingsPage = () => {
           </motion.section>
 
           {/* Security Section */}
-          <motion.section 
+          <motion.section
             variants={sectionVariants}
             initial="hidden"
             whileInView="visible"
@@ -398,8 +398,8 @@ const SettingsPage = () => {
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Current Protocol Key</label>
-                  <input 
-                    type="password" 
+                  <input
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-red-500/20 outline-none transition-all"
@@ -408,8 +408,8 @@ const SettingsPage = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">New Access Key</label>
-                  <input 
-                    type="password" 
+                  <input
+                    type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
@@ -432,56 +432,54 @@ const SettingsPage = () => {
       <AnimatePresence>
         {isAvatarModalOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAvatarModalOpen(false)}
               className="absolute inset-0 bg-black/80 backdrop-blur-xl"
             />
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative w-full max-w-4xl bg-[var(--color-bg-surface)] rounded-[3rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
             >
-              <header className="p-8 border-b border-[var(--color-bg-border)] bg-slate-900 text-white flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 rounded-2xl border border-white/5">
-                    <Sparkles size={20} className="text-blue-400" />
+              <header className="p-4 md:p-8 border-b border-[var(--color-bg-border)] bg-slate-900 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-2 md:p-3 bg-white/10 rounded-xl md:rounded-2xl border border-white/5">
+                    <Sparkles size={16} md:size={20} className="text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight">Icon Encryption Hub</h3>
-                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Select your operational visual signature</p>
+                    <h3 className="text-base md:text-xl font-black uppercase tracking-tight">Icon Hub</h3>
+                    <p className="hidden sm:block text-[9px] md:text-[10px] font-bold text-blue-400 uppercase tracking-widest">Select your visual signature</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsAvatarModalOpen(false)}
-                  className="p-3 hover:bg-white/10 rounded-2xl transition-all"
+                  className="p-2 md:p-3 hover:bg-white/10 rounded-xl md:rounded-2xl transition-all"
                 >
-                  <X size={20} />
+                  <X size={18} md:size={20} />
                 </button>
               </header>
 
               <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 {/* Category Sidebar */}
-                <aside className="w-full lg:w-64 bg-[var(--color-bg-workspace)]/50 border-r border-[var(--color-bg-border)] p-6 space-y-2">
-                  <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-4 ml-2">Categories</p>
-                  {categories.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group ${activeCategory === cat.id ? 'bg-slate-900 text-white shadow-xl' : 'hover:bg-[var(--color-bg-surface)] text-[var(--color-text-muted)]'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : `${cat.bg} ${cat.color}`}`}>
-                          <cat.icon size={14} />
+                <aside className="w-full lg:w-64 bg-[var(--color-bg-workspace)]/50 border-r border-[var(--color-bg-border)] p-4 md:p-6 overflow-x-auto lg:overflow-y-auto no-scrollbar">
+                  <div className="flex lg:flex-col gap-2 min-w-max lg:min-w-0">
+                    {categories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setActiveCategory(cat.id)}
+                        className={`flex items-center gap-3 px-4 py-2.5 md:py-3.5 rounded-xl transition-all whitespace-nowrap lg:w-full ${activeCategory === cat.id ? 'bg-slate-900 text-white shadow-xl' : 'hover:bg-[var(--color-bg-surface)] text-[var(--color-text-muted)]'}`}
+                      >
+                        <div className={`p-1.5 md:p-2 rounded-lg transition-all ${activeCategory === cat.id ? 'bg-white/10 text-white' : `${cat.bg} ${cat.color}`}`}>
+                          <cat.icon size={12} md:size={14} />
                         </div>
-                        <span className="text-[11px] font-black uppercase tracking-widest">{cat.id}</span>
-                      </div>
-                      {activeCategory === cat.id && <ChevronRight size={14} className="text-blue-400" />}
-                    </button>
-                  ))}
+                        <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest">{cat.id}</span>
+                      </button>
+                    ))}
+                  </div>
                 </aside>
 
                 {/* Grid Area */}
@@ -510,19 +508,19 @@ const SettingsPage = () => {
                 </main>
               </div>
 
-              <footer className="p-6 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--color-bg-surface)] border-2 border-[var(--color-bg-border)] overflow-hidden">
+              <footer className="p-4 md:p-6 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-[var(--color-bg-surface)] border-2 border-[var(--color-bg-border)] overflow-hidden">
                     {avatar && <img src={avatar} alt="current" className="w-full h-full object-cover" />}
                   </div>
                   <div>
-                    <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Active Signature</p>
-                    <p className="text-[10px] font-bold text-[var(--color-text-primary)]">Sync required for deployment</p>
+                    <p className="text-[8px] md:text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">Active Identity</p>
+                    <p className="text-[9px] md:text-[10px] font-bold text-[var(--color-text-primary)]">Selection pending sync</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsAvatarModalOpen(false)}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                  className="w-full sm:w-auto px-6 py-2.5 md:py-3 bg-slate-900 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                 >
                   Confirm Selection
                 </button>

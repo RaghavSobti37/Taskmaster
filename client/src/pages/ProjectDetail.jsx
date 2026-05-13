@@ -109,27 +109,27 @@ const ProjectDetail = () => {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Project</span>
+          <div className="flex items-center gap-3 mb-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</span>
             <span className="w-1 h-1 bg-[var(--color-text-muted)] rounded-full" />
-            <span className="text-xs font-bold text-[var(--color-action-primary)]">{project._id.substring(0, 8).toUpperCase()}</span>
+            <span className="text-[10px] font-black text-[var(--color-action-primary)] uppercase tracking-widest">{project._id.substring(0, 8).toUpperCase()}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight leading-tight">{project.name}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button 
             onClick={() => setIsSettingsModalOpen(true)}
-            className="p-2.5 hover:bg-[var(--color-bg-border)] rounded-xl text-[var(--color-text-muted)] transition-all"
+            className="flex-1 sm:flex-none p-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)]/50 rounded-xl text-[var(--color-text-muted)] transition-all flex items-center justify-center"
           >
-            <Settings size={22} />
+            <Settings size={20} />
           </button>
           <button 
             onClick={() => setIsTaskModalOpen(true)}
-            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all"
+            className="flex-[3] sm:flex-none flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-6 py-2.5 rounded-xl font-black text-xs md:text-sm hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
           >
-            <Plus size={20} /> Add Task
+            <Plus size={18} /> Add Task
           </button>
         </div>
       </header>
@@ -158,49 +158,54 @@ const ProjectDetail = () => {
       />
 
       {/* View Matrix Switcher */}
-      <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-px">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="flex flex-col space-y-4 border-b border-[var(--color-bg-border)] pb-2">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all relative whitespace-nowrap
+                flex items-center gap-2 px-4 md:px-6 py-3 text-xs md:text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap
                 ${activeTab === tab.id 
                   ? 'text-[var(--color-action-primary)]' 
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}
               `}
             >
-              <tab.icon size={18} />
+              <tab.icon size={16} />
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--color-action-primary)]" />
+                <motion.div 
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--color-action-primary)]" 
+                />
               )}
             </button>
           ))}
         </div>
-        <div className="hidden md:flex items-center gap-4">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input 
               type="text" 
               placeholder="Search tasks..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-transparent border border-[var(--color-bg-border)] rounded-xl text-sm focus:ring-1 focus:ring-[var(--color-action-primary)] outline-none"
+              className="w-full pl-9 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-1 focus:ring-[var(--color-action-primary)] outline-none transition-all"
             />
           </div>
-          <select 
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="flex items-center gap-2 px-4 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-border)] transition-all bg-transparent outline-none"
-          >
-            <option value="all">ALL STATUS</option>
-            <option value="todo">TODO</option>
-            <option value="in-progress">IN PROGRESS</option>
-            <option value="in-review">IN REVIEW</option>
-            <option value="done">COMPLETED</option>
-          </select>
+          <div className="flex items-center gap-3">
+            <select 
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="flex-1 md:flex-none appearance-none px-4 py-2.5 border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--color-action-primary)] transition-all outline-none cursor-pointer"
+            >
+              <option value="all">ALL STATUS</option>
+              <option value="todo">TODO</option>
+              <option value="in-progress">IN PROGRESS</option>
+              <option value="in-review">IN REVIEW</option>
+              <option value="done">COMPLETED</option>
+            </select>
+          </div>
         </div>
       </div>
 

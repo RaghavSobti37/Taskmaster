@@ -89,31 +89,31 @@ const CRMLeadModal = ({ isOpen, onClose, lead }) => {
           className="relative w-full max-w-4xl bg-[var(--color-bg-surface)] rounded-3xl shadow-2xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col max-h-[90vh]"
         >
           {/* Header */}
-          <div className="p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+          <div className="p-4 md:p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg">
                 {formData.name?.[0] || '?'}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">{formData.name || 'New Lead'}</h2>
+                <h2 className="text-lg md:text-xl font-bold text-[var(--color-text-primary)]">{formData.name || 'New Lead'}</h2>
                 <div className="flex items-center gap-2">
                   <Badge variant={formData.status?.toLowerCase() === 'new' ? 'todo' : 'progress'}>{formData.status}</Badge>
-                  <span className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">ID: {formData.row_id || 'PENDING'}</span>
+                  <span className="text-[8px] md:text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">ID: {formData.row_id || 'PENDING'}</span>
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-xl transition-all">
-              <X size={20} />
+            <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-all">
+              <X size={18} md:size={20} />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex px-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
+          <div className="flex px-4 md:px-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50 overflow-x-auto no-scrollbar">
             {['details', 'emis', 'notes'].map(tab => (
               <button 
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${
+                className={`px-4 md:px-6 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${
                   activeTab === tab 
                     ? 'border-[var(--color-action-primary)] text-[var(--color-action-primary)]' 
                     : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -125,7 +125,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead }) => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-8">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
             {activeTab === 'details' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
@@ -240,13 +240,13 @@ const CRMLeadModal = ({ isOpen, onClose, lead }) => {
             {activeTab === 'emis' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-text-muted)]">Payment Schedule (EMIs)</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-text-muted)]">EMIs</h3>
                   <button className="flex items-center gap-2 text-xs font-bold text-[var(--color-action-primary)] hover:underline">
-                    <Plus size={14} /> Add EMI
+                    <Plus size={14} /> Add
                   </button>
                 </div>
-                <div className="border border-[var(--color-bg-border)] rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-sm">
+                <div className="border border-[var(--color-bg-border)] rounded-2xl overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left text-xs md:text-sm min-w-[500px]">
                     <thead>
                       <tr className="bg-[var(--color-bg-workspace)]">
                         <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">Date</th>
@@ -291,24 +291,24 @@ const CRMLeadModal = ({ isOpen, onClose, lead }) => {
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
+          <div className="p-4 md:p-6 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[var(--color-bg-workspace)]">
             <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
               {formData.locked_by && (
-                <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-orange-500">
-                  <Shield size={12} /> Locked by {formData.locked_by}
+                <div className="flex items-center gap-1.5 text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-orange-500">
+                  <Shield size={10} md:size={12} /> Locked by {formData.locked_by}
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={onClose} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-border)] transition-all">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <button onClick={onClose} className="flex-1 sm:flex-none px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-border)] transition-all">
                 Cancel
               </button>
               <button 
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-6 md:px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 text-sm"
               >
-                {saving ? 'Saving...' : <><Save size={18} /> Save Lead</>}
+                {saving ? 'Saving...' : <><Save size={16} md:size={18} /> Save</>}
               </button>
             </div>
           </div>

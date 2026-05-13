@@ -28,7 +28,7 @@ exports.createProject = async (req, res) => {
     res.status(201).json(project);
   } catch (error) {
     console.error('Create Project Error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to create project' });
   }
 };
 
@@ -53,7 +53,7 @@ exports.getProjects = async (req, res) => {
 
     res.json(projectsWithProgress);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch projects' });
   }
 };
 
@@ -68,16 +68,33 @@ exports.getProjectById = async (req, res) => {
     
     res.json(project);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch project' });
   }
 };
 
 exports.updateProject = async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    res.json(project);
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // SECURITY: Only owner or admin can update
+    if (req.user.role !== 'admin' && project.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to update this project' });
+    }
+
+    // SECURITY: Whitelist allowed update fields (prevent owner/member injection)
+    const allowedFields = ['name', 'description', 'tags', 'members', 'memberRoles', 'status'];
+    const sanitizedUpdate = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        sanitizedUpdate[key] = req.body[key];
+      }
+    }
+
+    const updated = await Project.findByIdAndUpdate(req.params.id, sanitizedUpdate, { new: true, runValidators: true });
+    res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to update project' });
   }
 };
 
@@ -106,7 +123,7 @@ exports.deleteProject = async (req, res) => {
 
     res.json({ message: 'Project successfully purged from system deck.' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to delete project' });
   }
 };
 
@@ -143,6 +160,6 @@ exports.removeMember = async (req, res) => {
 
     res.json(updatedProject);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to remove member' });
   }
 };

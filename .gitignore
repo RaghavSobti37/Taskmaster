@@ -1,3 +1,5 @@
 .env
 node_modules
 *.csv
+server/uploads/
+*.log

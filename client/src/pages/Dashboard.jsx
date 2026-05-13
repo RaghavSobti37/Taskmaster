@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
+import {
+  CheckCircle2,
+  Clock,
+  AlertCircle,
   TrendingUp,
   Database,
   Calendar as CalIcon,
@@ -22,16 +22,15 @@ import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 const StatCard = ({ icon: Icon, label, value, color, delay, isActive, onClick }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
     onClick={onClick}
-    className={`p-6 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${
-      isActive 
-        ? 'bg-[var(--color-bg-surface)] border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/20' 
-        : 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]'
-    }`}
+    className={`p-6 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${isActive
+      ? 'bg-[var(--color-bg-surface)] border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/20'
+      : 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]'
+      }`}
   >
     <div className="flex items-center gap-4">
       <div className={`p-3 rounded-xl ${color}`}>
@@ -67,7 +66,7 @@ const Dashboard = () => {
         axios.get('/api/projects'),
         axios.get('/api/users/team')
       ]);
-      
+
       // Filter out tasks that are currently in the optimistic "undo" state
       setTasks(tasksRes.data);
       setLogs(logsRes.data);
@@ -85,7 +84,7 @@ const Dashboard = () => {
       acc[task.status] = (acc[task.status] || 0) + 1;
       return acc;
     }, {});
-    
+
     setStats({
       'done': counts['done'] || 0,
       'in-progress': counts['in-progress'] || 0,
@@ -105,11 +104,11 @@ const Dashboard = () => {
       // If another task was being completed, finalize it immediately
       finalizeCompletion(undoTask._id);
     }
-    
+
     setUndoTask(task);
     setCompletingIds(prev => new Set(prev).add(task._id));
     setTasks(prev => prev.map(t => t._id === task._id ? { ...t, status: 'done' } : t));
-    
+
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
       finalizeCompletion(task._id);
@@ -153,9 +152,9 @@ const Dashboard = () => {
   };
 
   const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
-  
-  const activeLoadPercent = stats.todo + stats['in-progress'] + stats['in-review'] + stats.done === 0 
-    ? 0 
+
+  const activeLoadPercent = stats.todo + stats['in-progress'] + stats['in-review'] + stats.done === 0
+    ? 0
     : Math.round((stats['in-progress'] / (stats.todo + stats['in-progress'] + stats['in-review'] + stats.done)) * 100);
 
   if (loading) return <div className="flex items-center justify-center h-96 animate-pulse text-[var(--color-text-muted)]">Loading Dashboard...</div>;
@@ -168,19 +167,8 @@ const Dashboard = () => {
           <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Check your projects and tasks.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
-            <button 
-              onClick={() => setFilter('all')}
-              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
-            >
-              All Tasks
-            </button>
-            <div className="w-px h-4 bg-[var(--color-bg-border)] mx-1" />
-            <div className="flex-1 sm:flex-none flex justify-center">
-              <Badge variant={filter === 'all' ? 'todo' : filter}>{filter.toUpperCase()}</Badge>
-            </div>
-          </div>
-          <button 
+
+          <button
             onClick={() => setIsTaskModalOpen(true)}
             className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 text-xs sm:text-sm"
           >
@@ -189,7 +177,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <TaskCreateModal 
+      <TaskCreateModal
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
         projects={projects}
@@ -198,38 +186,38 @@ const Dashboard = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          icon={CheckCircle2} 
-          label="Completed" 
-          value={stats.done} 
-          color="bg-[var(--color-status-done)]" 
+        <StatCard
+          icon={CheckCircle2}
+          label="Completed"
+          value={stats.done}
+          color="bg-[var(--color-status-done)]"
           delay={0.1}
           isActive={filter === 'done'}
           onClick={() => setFilter(filter === 'done' ? 'all' : 'done')}
         />
-        <StatCard 
-          icon={Clock} 
-          label="Working" 
-          value={stats['in-progress']} 
-          color="bg-[var(--color-status-progress)]" 
+        <StatCard
+          icon={Clock}
+          label="Working"
+          value={stats['in-progress']}
+          color="bg-[var(--color-status-progress)]"
           delay={0.2}
           isActive={filter === 'in-progress'}
           onClick={() => setFilter(filter === 'in-progress' ? 'all' : 'in-progress')}
         />
-        <StatCard 
-          icon={AlertCircle} 
-          label="Review" 
-          value={stats['in-review']} 
-          color="bg-[var(--color-status-review)]" 
+        <StatCard
+          icon={AlertCircle}
+          label="Review"
+          value={stats['in-review']}
+          color="bg-[var(--color-status-review)]"
           delay={0.3}
           isActive={filter === 'in-review'}
           onClick={() => setFilter(filter === 'in-review' ? 'all' : 'in-review')}
         />
-        <StatCard 
-          icon={TrendingUp} 
-          label="Backlog" 
-          value={stats.todo} 
-          color="bg-[var(--color-status-todo)]" 
+        <StatCard
+          icon={TrendingUp}
+          label="Backlog"
+          value={stats.todo}
+          color="bg-[var(--color-status-todo)]"
           delay={0.4}
           isActive={filter === 'todo'}
           onClick={() => setFilter(filter === 'todo' ? 'all' : 'todo')}
@@ -253,17 +241,16 @@ const Dashboard = () => {
               ) : filteredTasks.map(task => {
                 const isDone = task.status === 'done';
                 const isFinalizing = completingIds.has(task._id);
-                
+
                 return (
                   <div key={task._id} className={`p-4 flex items-center justify-between hover:bg-[var(--color-bg-workspace)] transition-all group ${isDone ? 'opacity-60' : ''}`}>
                     <div className="flex items-center gap-4">
-                      <button 
+                      <button
                         onClick={() => !isDone && handleCompleteTask(task)}
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                          isDone 
-                            ? 'bg-[var(--color-status-done)] border-[var(--color-status-done)] text-white cursor-default' 
-                            : 'border-[var(--color-bg-border)] text-transparent hover:border-[var(--color-status-done)] hover:bg-[var(--color-status-done)]/10 hover:text-[var(--color-status-done)]'
-                        }`}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isDone
+                          ? 'bg-[var(--color-status-done)] border-[var(--color-status-done)] text-white cursor-default'
+                          : 'border-[var(--color-bg-border)] text-transparent hover:border-[var(--color-status-done)] hover:bg-[var(--color-status-done)]/10 hover:text-[var(--color-status-done)]'
+                          }`}
                       >
                         <CheckCircle2 size={14} />
                       </button>
@@ -283,7 +270,7 @@ const Dashboard = () => {
                       ) : (
                         <Badge variant={task.priority === 'critical' || task.priority === 'high' ? 'critical' : 'todo'}>{task.priority}</Badge>
                       )}
-                      <button 
+                      <button
                         onClick={() => navigate(`/projects/${task.projectId}`)}
                         className="p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
                       >
@@ -318,7 +305,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))}
-              <button 
+              <button
                 onClick={() => navigate('/projects')}
                 className="w-full py-3 rounded-xl border border-dashed border-[var(--color-bg-border)] text-xs font-bold text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)] hover:text-[var(--color-action-primary)] transition-all"
               >
@@ -332,7 +319,7 @@ const Dashboard = () => {
       {/* Undo Notification */}
       <AnimatePresence>
         {undoTask && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
@@ -345,7 +332,7 @@ const Dashboard = () => {
               <p className="text-sm font-bold text-[var(--color-text-primary)]">Task Done</p>
               <p className="text-[10px] text-[var(--color-text-muted)]">"{undoTask.title}" has been completed.</p>
             </div>
-            <button 
+            <button
               onClick={handleUndo}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-workspace)] hover:bg-[var(--color-bg-border)] rounded-xl text-xs font-bold transition-all"
             >
@@ -355,12 +342,12 @@ const Dashboard = () => {
               <X size={16} />
             </button>
             <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-action-primary)] rounded-full overflow-hidden w-full">
-               <motion.div 
+              <motion.div
                 initial={{ width: "100%" }}
                 animate={{ width: 0 }}
                 transition={{ duration: 10, ease: "linear" }}
                 className="h-full bg-blue-400"
-               />
+              />
             </div>
           </motion.div>
         )}

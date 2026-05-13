@@ -129,3 +129,57 @@ exports.getAuditLogs = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.uploadLeads = async (req, res) => {
+  const csv = require('csv-parser');
+  const fs = require('fs');
+  const results = [];
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'No CSV file provided' });
+  }
+
+  try {
+    const reps = await User.find({ role: 'sales' });
+    const repMap = {};
+    reps.forEach(r => repMap[r.name.toLowerCase().trim()] = r._id);
+
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        const leadDocs = [];
+        let repIndex = 0;
+
+        for (const row of results) {
+          let assignedRepId = null;
+          const repName = row.assigned_rep_id?.toLowerCase().trim();
+          
+          if (repName && repMap[repName]) {
+            assignedRepId = repMap[repName];
+          } else if (reps.length > 0) {
+            // Round-robin distribution for unassigned
+            assignedRepId = reps[repIndex % reps.length]._id;
+            repIndex++;
+          }
+
+          leadDocs.push({
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+            assignedRepId,
+            createdBy: req.user._id,
+            leadStatus: 'New',
+            callStatus: 'Pending'
+          });
+        }
+
+        await Lead.insertMany(leadDocs);
+        fs.unlinkSync(req.file.path); // Clean up temp file
+        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed.` });
+      });
+  } catch (error) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: error.message });
+  }
+};

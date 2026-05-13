@@ -16,7 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { NexusModal, NexusLoader } from '../components/ui';
+import { NexusModal, NexusLoader, NexusDropdown } from '../components/ui';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
@@ -125,7 +125,7 @@ const AssetsPage = () => {
   if (loading) return <NexusLoader message="Loading Asset Inventory..." />;
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-8 pb-24">
       <NexusModal 
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, assetId: null })}
@@ -141,7 +141,7 @@ const AssetsPage = () => {
       <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500 border border-blue-500/20 shadow-xl">
+            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
               <Database size={20} strokeWidth={2.5} />
             </div>
             <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Assets</h1>
@@ -201,14 +201,12 @@ const AssetsPage = () => {
                   {/* Project */}
                   <td className="px-10 py-8">
                     {editingId === asset._id ? (
-                      <select
+                      <NexusDropdown
+                        options={[{ value: '', label: 'No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
                         value={editData.projectId}
-                        onChange={e => setEditData({ ...editData, projectId: e.target.value })}
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
-                      >
-                        <option value="">No Project</option>
-                        {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                      </select>
+                        onChange={(val) => setEditData({ ...editData, projectId: val })}
+                        variant="compact"
+                      />
                     ) : (
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-[var(--color-bg-workspace)] rounded-lg text-blue-500 border border-[var(--color-bg-border)] group-hover:border-blue-500/30 transition-all">
@@ -273,7 +271,7 @@ const AssetsPage = () => {
                   {/* Actions */}
                   <td className="px-10 py-8 text-right">
                     {canEdit(asset) && (
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                      <div className="flex items-center justify-end gap-2">
                         {editingId === asset._id ? (
                           <>
                             <button 
@@ -300,13 +298,15 @@ const AssetsPage = () => {
                             >
                               <Pencil size={16} />
                             </button>
-                            <button 
-                              onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
-                              className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {user.role === 'admin' && (
+                              <button 
+                                onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
+                                className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -346,17 +346,14 @@ const AssetsPage = () => {
 
               <form onSubmit={handleAddAsset} className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project (Optional)</label>
-                    <select 
+                    <NexusDropdown
+                      options={[{ value: '', label: 'No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
                       value={newAsset.projectId}
-                      onChange={e => setNewAsset({ ...newAsset, projectId: e.target.value })}
-                      className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner appearance-none cursor-pointer"
-                    >
-                      <option value="">No Project</option>
-                      {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                    </select>
-                  </div>
+                      onChange={(val) => setNewAsset({ ...newAsset, projectId: val })}
+                      label="Project (Optional)"
+                      searchable={projects.length > 5}
+                      placeholder="No Project"
+                    />
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Resource Name</label>
                     <input 

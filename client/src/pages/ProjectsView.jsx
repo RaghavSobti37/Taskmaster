@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Badge, ProgressBar, NexusModal } from '../components/ui';
+import { Badge, ProgressBar, NexusModal, PageHeader } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
 
@@ -50,18 +50,19 @@ const ProjectsView = () => {
         confirmLabel="Delete Project"
         onConfirm={handleDeleteProject}
       />
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Project List</h1>
-          <p className="text-[var(--color-text-secondary)]">All your active projects.</p>
-        </div>
-        <button 
-          onClick={() => navigate('/projects/new')}
-          className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all"
-        >
-          <Plus size={20} /> New Project
-        </button>
-      </header>
+      <PageHeader
+        icon={Briefcase}
+        title="Projects"
+        subtitle="All your active projects."
+        actions={
+          <button 
+            onClick={() => navigate('/projects/new')}
+            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
+          >
+            <Plus size={16} /> New Project
+          </button>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-[var(--color-text-muted)] animate-pulse">

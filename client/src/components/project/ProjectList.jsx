@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, ProgressBar } from '../ui';
+import { Badge, ProgressBar, NexusDropdown } from '../ui';
 import { MoreVertical, User, Calendar, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -55,18 +55,13 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
                 ) : (
                   <>
                     <td className="px-6 py-4">
-                      <select 
+                      <NexusDropdown
+                        options={statuses.map(s => ({ value: s, label: s.toUpperCase() }))}
                         value={task.status}
-                        onChange={(e) => onUpdate(task._id, { status: e.target.value })}
-                        className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-lg border border-[var(--color-bg-border)] outline-none bg-[var(--color-bg-workspace)] cursor-pointer ${
-                          task.status === 'in-progress' ? 'text-blue-500 border-blue-500/20' : 
-                          'text-[var(--color-text-muted)]'
-                        }`}
-                      >
-                        {statuses.map(s => (
-                          <option key={s} value={s}>{s.toUpperCase()}</option>
-                        ))}
-                      </select>
+                        onChange={(val) => onUpdate(task._id, { status: val })}
+                        variant="compact"
+                        className="w-[130px]"
+                      />
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
@@ -97,15 +92,13 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <select 
+                        <NexusDropdown
+                          options={[0, 10, 25, 50, 75, 90, 100].map(p => ({ value: p, label: `${p}%` }))}
                           value={task.progress}
-                          onChange={(e) => onUpdate(task._id, { progress: parseInt(e.target.value) })}
-                          className="bg-[var(--color-bg-workspace)] text-[10px] font-black border border-[var(--color-bg-border)] rounded-md px-1.5 py-1 outline-none appearance-none hover:border-[var(--color-action-primary)] transition-all"
-                        >
-                          {[0, 10, 25, 50, 75, 90, 100].map(p => (
-                            <option key={p} value={p}>{p}%</option>
-                          ))}
-                        </select>
+                          onChange={(val) => onUpdate(task._id, { progress: parseInt(val) })}
+                          variant="compact"
+                          className="w-[70px]"
+                        />
                         <button 
                           onClick={() => onUpdate(task._id, { status: 'done', progress: 100 })}
                           className="p-1.5 rounded-lg hover:bg-green-500/10 text-[var(--color-text-muted)] hover:text-green-600 transition-all"

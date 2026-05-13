@@ -329,14 +329,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                                 <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 px-2.5 py-0.5 bg-blue-500/5 rounded-lg border border-blue-500/10">
                                   {log.details?.project || 'GENERAL MISSION'}
                                 </span>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)] flex items-center gap-1.5">
                                   <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-xl border border-[var(--color-bg-border)] shadow-sm self-start md:self-center">
+                            <div className="flex items-center gap-2.5 px-4 py-2 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm self-start md:self-center">
                               <Timer size={14} className="text-[var(--color-action-primary)]" />
-                              <span className="text-xs font-black text-black">{log.details?.timeSpent || '0m'}</span>
+                              <span className="text-xs font-black text-[var(--color-text-primary)]">{log.details?.timeSpent || '0m'}</span>
                             </div>
                           </div>
                           <p className="text-sm text-[var(--color-text-secondary)] font-medium leading-relaxed opacity-90">

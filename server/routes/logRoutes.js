@@ -46,4 +46,16 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+router.delete('/clear', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+    await Log.deleteMany({});
+    res.json({ message: 'SYSTEM SIGNALS CLEARED' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

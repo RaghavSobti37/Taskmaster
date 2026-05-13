@@ -23,7 +23,8 @@ import {
   Plus,
   Layers,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Trash
 } from 'lucide-react';
 import { Badge, NexusModal } from '../components/ui';
 import { Link } from 'react-router-dom';
@@ -313,17 +314,13 @@ const AdminPanel = () => {
     }
   };
 
-  const handleResetCRM = async () => {
-    const reason = prompt("SECURITY OVERRIDE: PROVIDE REASON FOR SYSTEM PURGE:");
-    if (!reason) return;
-    
-    if (window.confirm("WARNING: THIS WILL ERASE ALL CRM LEADS PERMANENTLY. PROCEED?")) {
+  const handleClearSignals = async () => {
+    if (window.confirm("CLEAR ALL SYSTEM SIGNALS AND API CALL LOGS?")) {
       try {
-        await axios.post('/api/crm/reset', { reason });
-        fetchData();
-        setModalConfig({ isOpen: true, title: 'SYSTEM PURGED', message: 'All CRM data has been successfully erased.', type: 'progress' });
+        await axios.delete('/api/logs/clear');
+        setLogs([]);
       } catch (err) {
-        console.error('Reset CRM error:', err);
+        console.error('Clear logs error:', err);
       }
     }
   };
@@ -332,11 +329,6 @@ const AdminPanel = () => {
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, staggerChildren: 0.1 } }
-  };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -357,17 +349,13 @@ const AdminPanel = () => {
         </div>
         <div className="flex items-center gap-2.5">
           <Link to="/admin/logs" className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm">Daily Logs</Link>
-          <button onClick={handleResetCRM} className="p-3 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg" title="Reset CRM">
-            <RefreshCw size={16} />
-          </button>
         </div>
       </motion.header>
 
       {/* Tabs */}
       <div className="flex items-center gap-4 border-b border-[var(--color-bg-border)]">
         <button onClick={() => setActiveTab('users')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Personnel</button>
-        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Batches</button>
-        <button onClick={() => setActiveTab('purges')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'purges' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-[var(--color-text-muted)]'}`}>Purge Logs</button>
+        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Control</button>
       </div>
 
       {activeTab === 'users' ? (
@@ -402,7 +390,7 @@ const AdminPanel = () => {
                           </div>
                         </td>
                         <td className="px-8 py-4 text-center"><Badge variant={u.role === 'admin' ? 'progress' : 'todo'}>{u.role.toUpperCase()}</Badge></td>
-                        <td className="px-8 py-4 text-right"><div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:border-blue-500/30">Manage <ChevronRight size={12} strokeWidth={3} /></div></td>
+                        <td className="px-8 py-4 text-right"><div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] group-hover:text-blue-500 group-hover:border-blue-500/30">{u.name.split(' ')[0]} <ChevronRight size={12} strokeWidth={3} /></div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -432,10 +420,13 @@ const AdminPanel = () => {
             
             <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden h-[400px] flex flex-col">
               <div className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between">
-                <h3 className="font-black text-[10px] uppercase tracking-widest">Live Signals</h3>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 text-green-500 rounded-full text-[8px] font-black uppercase tracking-widest">
-                  <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" /> Live
+                <div className="flex items-center gap-2">
+                   <h3 className="font-black text-[10px] uppercase tracking-widest">Live Signals</h3>
+                   <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
                 </div>
+                <button onClick={handleClearSignals} className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-all" title="Clear Signals">
+                  <Trash size={14} />
+                </button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                 {logs.slice(0, 20).map(log => (
@@ -455,66 +446,68 @@ const AdminPanel = () => {
             </section>
           </motion.aside>
         </div>
-      ) : activeTab === 'crm' ? (
-        <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
-          <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-            <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Ingestion History</h3>
-            <Badge variant="progress">{crmImports.length} BATCHES</Badge>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                <tr><th className="px-8 py-4">Session Payload</th><th className="px-8 py-4">Timestamp</th><th className="px-8 py-4 text-center">Payload Size</th><th className="px-8 py-4 text-center">Operative</th><th className="px-8 py-4 text-right">Actions</th></tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-bg-border)]">
-                {crmImports.map(batch => (
-                  <tr key={batch._id} className="hover:bg-blue-500/5 transition-all group">
-                    <td className="px-8 py-4 font-black text-xs uppercase tracking-tight">{batch.filename}</td>
-                    <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-muted)]">{format(new Date(batch.createdAt), 'MMM d, yyyy HH:mm')}</td>
-                    <td className="px-8 py-4 text-center"><Badge variant="todo">{batch.leadCount} CONTACTS</Badge></td>
-                    <td className="px-8 py-4 text-center text-[10px] font-black text-blue-500 uppercase">{batch.createdBy?.name}</td>
-                    <td className="px-8 py-4 text-right">
-                      <button onClick={() => setDeleteModal({ isOpen: true, importId: batch._id, count: batch.leadCount, reason: '' })} className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       ) : (
-        <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
-          <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-            <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operational Rollback Audit</h3>
-            <Badge variant="todo">SYSTEM LOGS</Badge>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                <tr>
-                  <th className="px-8 py-4">Protocol</th>
-                  <th className="px-8 py-4">Timestamp</th>
-                  <th className="px-8 py-4">Operative</th>
-                  <th className="px-8 py-4">Justification</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-bg-border)]">
-                {purgeLogs.map(log => (
-                  <tr key={log._id} className="hover:bg-rose-500/5 transition-all group">
-                    <td className="px-8 py-4">
-                      <Badge variant={log.action === 'SYSTEM_RESET' ? 'danger' : 'progress'}>{log.action}</Badge>
-                    </td>
-                    <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-muted)]">{format(new Date(log.createdAt), 'MMM d, yyyy HH:mm')}</td>
-                    <td className="px-8 py-4 text-[10px] font-black text-blue-500 uppercase">{log.userId?.name}</td>
-                    <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-secondary)] max-w-md" title={log.notes}>{log.notes}</td>
+        <div className="space-y-8">
+           <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
+            <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
+              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Ingestion History</h3>
+              <Badge variant="progress">{crmImports.length} BATCHES</Badge>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                  <tr><th className="px-8 py-4">Session Payload</th><th className="px-8 py-4">Timestamp</th><th className="px-8 py-4 text-center">Payload Size</th><th className="px-8 py-4 text-center">Operative</th><th className="px-8 py-4 text-right">Actions</th></tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {crmImports.map(batch => (
+                    <tr key={batch._id} className="hover:bg-blue-500/5 transition-all group">
+                      <td className="px-8 py-4 font-black text-xs uppercase tracking-tight">{batch.filename}</td>
+                      <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-muted)]">{format(new Date(batch.createdAt), 'MMM d, yyyy HH:mm')}</td>
+                      <td className="px-8 py-4 text-center"><Badge variant="todo">{batch.leadCount} CONTACTS</Badge></td>
+                      <td className="px-8 py-4 text-center text-[10px] font-black text-blue-500 uppercase">{batch.createdBy?.name}</td>
+                      <td className="px-8 py-4 text-right">
+                        <button onClick={() => setDeleteModal({ isOpen: true, importId: batch._id, count: batch.leadCount, reason: '' })} className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
+            <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
+              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operational Rollback Audit</h3>
+              <Badge variant="todo">SYSTEM LOGS</Badge>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                  <tr>
+                    <th className="px-8 py-4">Protocol</th>
+                    <th className="px-8 py-4">Timestamp</th>
+                    <th className="px-8 py-4">Operative</th>
+                    <th className="px-8 py-4">Justification</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {purgeLogs.map(log => (
+                    <tr key={log._id} className="hover:bg-rose-500/5 transition-all group">
+                      <td className="px-8 py-4">
+                        <Badge variant={log.action === 'SYSTEM_RESET' ? 'danger' : 'progress'}>{log.action}</Badge>
+                      </td>
+                      <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-muted)]">{format(new Date(log.createdAt), 'MMM d, yyyy HH:mm')}</td>
+                      <td className="px-8 py-4 text-[10px] font-black text-blue-500 uppercase">{log.userId?.name}</td>
+                      <td className="px-8 py-4 text-[10px] font-bold text-[var(--color-text-secondary)] max-w-md" title={log.notes}>{log.notes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       )}
 
       {/* Modals */}

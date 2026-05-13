@@ -89,6 +89,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/crm', crmRoutes);
+app.use('/api/assets', require('./routes/assetRoutes'));
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 
 // Error handling

@@ -13,7 +13,7 @@ import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
 import DailyLogPage from './pages/DailyLogPage';
 import AdminLogsPage from './pages/AdminLogsPage';
-import ChatPage from './pages/ChatPage';
+import AssetsPage from './pages/AssetsPage';
 import CRMPage from './pages/CRMPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -41,7 +41,7 @@ function App() {
             <Route path="calendar" element={<CalendarView />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="logs" element={<DailyLogPage />} />
-            <Route path="chat" element={<ChatPage />} />
+            <Route path="assets" element={<AssetsPage />} />
             <Route path="crm" element={<CRMPage />} />
             <Route element={<AdminRoute />}>
               <Route path="admin" element={<AdminPanel />} />

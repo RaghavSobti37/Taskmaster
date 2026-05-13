@@ -138,7 +138,7 @@ const OutletSidebar = () => {
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={!isOpen} />
           <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={!isOpen} />
           <NavItem to="/team" icon={Users} label="Team" collapsed={!isOpen} />
-          <NavItem to="/chat" icon={MessageSquare} label="Chat" collapsed={!isOpen} />
+          <NavItem to="/assets" icon={Layers} label="Assets" collapsed={!isOpen} />
           <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={!isOpen} />
           <NavItem to="/logs" icon={ListTodo} label="Daily Logs" collapsed={!isOpen} />
           {(user?.role === 'admin' || user?.role === 'sales') && (

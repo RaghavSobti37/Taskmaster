@@ -5,6 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
+
+
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +30,9 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+
+
+
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-workspace)] flex items-center justify-center p-6">
@@ -89,17 +94,6 @@ const LoginPage = () => {
             {loading ? 'Signing in...' : 'Sign In'} <ArrowRight size={20} />
           </button>
 
-          {/* Temporary Admin Bypass */}
-          <button 
-            type="button"
-            onClick={() => {
-              login('bypass_token', { name: 'Root Admin', email: 'admin@coreknot.io', role: 'admin' });
-              navigate('/');
-            }}
-            className="w-full mt-2 border-2 border-dashed border-[var(--color-bg-border)] text-[var(--color-text-muted)] py-3 rounded-xl text-xs font-bold hover:bg-[var(--color-bg-workspace)] transition-all"
-          >
-            Quick Login (Admin Demo)
-          </button>
         </form>
 
         <div className="mt-8 text-center text-sm">

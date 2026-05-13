@@ -16,7 +16,8 @@ import {
   Plus
 } from 'lucide-react';
 import axios from 'axios';
-import { Badge, ProgressBar, PageHeader } from '../components/ui';
+import { Badge, ProgressBar, PageHeader, NexusLoader } from '../components/ui';
+
 import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -157,7 +158,8 @@ const Dashboard = () => {
     ? 0
     : Math.round((stats['in-progress'] / (stats.todo + stats['in-progress'] + stats['in-review'] + stats.done)) * 100);
 
-  if (loading) return <div className="flex items-center justify-center h-96 animate-pulse text-[var(--color-text-muted)]">Loading Dashboard...</div>;
+  if (loading) return <NexusLoader label="Dashboard Initializing..." sublabel="Streaming Task Intelligence" />;
+
 
   return (
     <div className="space-y-8 relative">

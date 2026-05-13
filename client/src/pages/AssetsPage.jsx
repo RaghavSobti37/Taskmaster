@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Link2, 
-  ExternalLink, 
-  Plus, 
-  Trash2, 
-  Search, 
+import {
+  Link2,
+  ExternalLink,
+  Plus,
+  Trash2,
+  Search,
   Database,
   X,
   Shield,
@@ -25,7 +25,9 @@ const AssetsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [driveFiles, setDriveFiles] = useState([]);
+
+
   // Create Asset Form State
   const [showAddModal, setShowAddModal] = useState(false);
   const [newAsset, setNewAsset] = useState({ projectId: '', name: '', link: '' });
@@ -42,18 +44,21 @@ const AssetsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [assetsRes, projectsRes] = await Promise.all([
+      const [assetsRes, projectsRes, driveRes] = await Promise.all([
         axios.get('/api/assets'),
-        axios.get('/api/projects')
+        axios.get('/api/projects'),
+        axios.get('/api/google/drive/files').catch(() => ({ data: [] }))
       ]);
       setAssets(assetsRes.data);
       setProjects(projectsRes.data);
+      setDriveFiles(driveRes.data);
     } catch (err) {
       console.error('Error fetching assets:', err);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleAddAsset = async (e) => {
     e.preventDefault();
@@ -117,16 +122,17 @@ const AssetsPage = () => {
 
   const canEdit = (asset) => user.role === 'admin' || user._id === asset.createdBy?._id;
 
-  const filteredAssets = assets.filter(a => 
+  const filteredAssets = assets.filter(a =>
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.projectId?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <NexusLoader message="Loading Asset Inventory..." />;
+  if (loading) return <NexusLoader label="Loading Asset Inventory..." sublabel="Synchronizing with Google Drive" />;
+
 
   return (
     <div className="space-y-8 pb-24">
-      <NexusModal 
+      <NexusModal
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, assetId: null })}
         title="Delete Asset"
@@ -150,17 +156,17 @@ const AssetsPage = () => {
         </div>
 
         <div className="flex items-center gap-3">
-           <div className="relative hidden md:block">
+          <div className="relative hidden md:block">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
-            <input 
-              type="text" 
-              placeholder="Search assets..." 
+            <input
+              type="text"
+              placeholder="Search assets..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-12 pr-4 py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none w-64 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
             />
           </div>
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
           >
@@ -169,8 +175,35 @@ const AssetsPage = () => {
         </div>
       </motion.header>
 
+      {/* Google Drive Folders Section */}
+      {driveFiles.length > 0 && (
+        <section className="space-y-4">
+          <h3 className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] ml-2">Synced Drive Folders</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {driveFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder').map(folder => (
+              <a
+                key={folder.id}
+                href={folder.webViewLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl flex items-center gap-4 hover:border-blue-500 transition-all group"
+              >
+                <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M7.71 3.502L1.15 15l3.446 6.004L11.157 9.502h-3.447zM9.73 15l3.447 6.004h13.116l-3.447-6.004H9.73zM12.29 3.502L15.737 9.502h6.895L19.185 3.502H12.29z" /></svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-[var(--color-text-primary)] truncate uppercase tracking-tight">{folder.name}</p>
+                  <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Google Drive Folder</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+
       {/* Table */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0, transition: { duration: 0.4 } }}
         className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
@@ -245,17 +278,23 @@ const AssetsPage = () => {
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
                       />
                     ) : asset.link ? (
-                      <a 
-                        href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black text-blue-500 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest shadow-sm max-w-[200px] truncate"
-                      >
-                        <ExternalLink size={10} /> Open Link
-                      </a>
+                      <div className="flex flex-col gap-2">
+                        <a
+                          href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[9px] font-black text-blue-500 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest shadow-sm max-w-[200px] truncate"
+                        >
+                          {asset.link.includes('drive.google.com') ? (
+                            <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M7.71 3.502L1.15 15l3.446 6.004L11.157 9.502h-3.447zM9.73 15l3.447 6.004h13.116l-3.447-6.004H9.73zM12.29 3.502L15.737 9.502h6.895L19.185 3.502H12.29z" /></svg>
+                          ) : <ExternalLink size={10} />}
+                          Open {asset.link.includes('drive.google.com') ? 'Drive' : 'Link'}
+                        </a>
+                      </div>
                     ) : (
                       <span className="text-[10px] text-[var(--color-text-muted)] italic">No link</span>
                     )}
+
                   </td>
 
                   {/* Created By */}
@@ -274,14 +313,14 @@ const AssetsPage = () => {
                       <div className="flex items-center justify-end gap-2">
                         {editingId === asset._id ? (
                           <>
-                            <button 
+                            <button
                               onClick={() => saveEdit(asset._id)}
                               className="p-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg"
                               title="Save"
                             >
                               <Check size={16} />
                             </button>
-                            <button 
+                            <button
                               onClick={cancelEdit}
                               className="p-2.5 bg-gray-500/10 text-gray-400 border border-gray-500/20 rounded-xl hover:bg-gray-500 hover:text-white transition-all shadow-lg"
                               title="Cancel"
@@ -291,7 +330,7 @@ const AssetsPage = () => {
                           </>
                         ) : (
                           <>
-                            <button 
+                            <button
                               onClick={() => startEdit(asset)}
                               className="p-2.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-lg"
                               title="Edit"
@@ -299,7 +338,7 @@ const AssetsPage = () => {
                               <Pencil size={16} />
                             </button>
                             {user.role === 'admin' && (
-                              <button 
+                              <button
                                 onClick={() => setDeleteModal({ open: true, assetId: asset._id })}
                                 className="p-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg"
                                 title="Delete"
@@ -322,15 +361,15 @@ const AssetsPage = () => {
       {/* Add Asset Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
           >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }} 
-              animate={{ scale: 1, y: 0 }} 
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
               className="bg-[var(--color-bg-surface)] w-full max-w-xl rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
             >
               <header className="p-8 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
@@ -346,18 +385,18 @@ const AssetsPage = () => {
 
               <form onSubmit={handleAddAsset} className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
-                    <NexusDropdown
-                      options={[{ value: '', label: 'No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
-                      value={newAsset.projectId}
-                      onChange={(val) => setNewAsset({ ...newAsset, projectId: val })}
-                      label="Project (Optional)"
-                      searchable={projects.length > 5}
-                      placeholder="No Project"
-                    />
+                  <NexusDropdown
+                    options={[{ value: '', label: 'No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
+                    value={newAsset.projectId}
+                    onChange={(val) => setNewAsset({ ...newAsset, projectId: val })}
+                    label="Project (Optional)"
+                    searchable={projects.length > 5}
+                    placeholder="No Project"
+                  />
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Resource Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="E.g., Production Keys..."
                       value={newAsset.name}
                       onChange={e => setNewAsset({ ...newAsset, name: e.target.value })}
@@ -373,8 +412,8 @@ const AssetsPage = () => {
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
                       <Link2 size={14} />
                     </div>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="https://..."
                       value={newAsset.link}
                       onChange={e => setNewAsset({ ...newAsset, link: e.target.value })}
@@ -383,8 +422,8 @@ const AssetsPage = () => {
                   </div>
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={submitting}
                   className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50 active:scale-[0.98] mt-4"
                 >

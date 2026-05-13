@@ -3,6 +3,8 @@ import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addDays } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import CalendarEntryModal from '../components/CalendarEntryModal';
+import NexusLoader from '../components/ui/NexusLoader';
+
 
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -11,18 +13,24 @@ const CalendarView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchTasks = async () => {
+    const fetchEvents = async () => {
       try {
-        const res = await axios.get('/api/tasks');
-        setTasks(res.data);
+        const res = await axios.get('/api/google/calendar/events');
+        setTasks(res.data.map(event => ({
+          _id: event.id,
+          title: event.summary,
+          dueDate: event.start.dateTime,
+          visibility: event.visibility
+        })));
       } catch (err) {
-        console.error('Error fetching tasks:', err);
+        console.error('Error fetching calendar events:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchTasks();
+    fetchEvents();
   }, []);
+
 
   const handleEntryCreated = (newEntry) => {
     setTasks([...tasks, newEntry]);
@@ -107,7 +115,8 @@ const CalendarView = () => {
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    if (loading) return <div className="flex items-center justify-center py-40 animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Temporal Sync in Progress...</div>;
+    if (loading) return <NexusLoader label="Temporal Sync Active" sublabel="Fetching Google Calendar Events" />;
+
 
     return (
       <div className="grid grid-cols-7 bg-[var(--color-bg-border)] gap-px border border-[var(--color-bg-border)] rounded-2xl overflow-hidden shadow-sm">

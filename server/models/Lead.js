@@ -1,31 +1,62 @@
 const mongoose = require('mongoose');
 
-const leadSchema = new mongoose.Schema({
-  assignedRepId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+/**
+ * Lead Schema for TSC CRM.
+ * Optimized for MongoDB migration while maintaining compatibility with current CSV structure.
+ */
+const LeadSchema = new mongoose.Schema({
+  // Core Identifiers
+  rowId: { type: String, unique: true, sparse: true }, // Legacy identifier from CSV
+  customerIdExly: { type: String, index: true },
+  transactionIdExly: { type: String, index: true },
+  
+  // Basic Information
   name: { type: String, required: true },
-  email: { type: String },
-  phone: { type: String, required: true },
+  email: { type: String, index: true },
+  phone: { type: String, required: true, index: true },
+  
+  // Webinar & Engagement (Source Data)
   webinarDates: { type: String },
-  attended: { type: String, enum: ['Y', 'N'], default: 'N' },
-  attendanceDurationMin: { type: Number, default: 0 },
-  meaningfulConnect: { type: String, enum: ['YES', 'NO'], default: 'NO' },
-  leadQuality: { type: String, enum: ['4', '3', '2', '1', 'Future 4'], default: '1' },
-  callStatus: { 
-    type: String, 
-    enum: ['DNP', 'Switch Off/Wrong Number', 'Busy', 'Connected', 'Pending'], 
-    default: 'Pending' 
-  },
-  leadStatus: { 
-    type: String, 
-    enum: ['Not Interested', 'Cold', 'Warm', 'Hot', 'Token Received', 'Converted', 'New'], 
-    default: 'New' 
-  },
+  attended: { type: String }, // 'Y', 'N', or ''
+  attendanceDurationMin: { type: String },
+  qnaAnswered: { type: String },
+  
+  // Artist Profile (Discovery Data)
+  artistType: { type: String }, // Full Time, Part Time, Hobbyist
+  fullTimeWillingness: { type: String }, // Yes, No, Maybe
+  primaryRole: { type: String },
+  learningGoal: { type: String },
+  learnedMusic: { type: String },
+  currentJourney: { type: String },
+  
+  // CRM Funnel & Sales Status
+  meaningfulConnect: { type: String, default: 'PENDING' }, // YES, NO, PENDING
+  leadQuality: { type: String, default: '1' }, // 1-5, Future 4
+  callStatus: { type: String, default: 'Pending' }, // Connected, Busy, DNP, etc.
+  leadStatus: { type: String, default: 'New' }, // Cold, Warm, Hot, Converted, etc.
   remarks: { type: String },
-  planOption: { type: String, enum: ['One-Time', '3 Mo', '6 Mo', '9 Mo', 'None'], default: 'None' },
-  lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  lockedAt: { type: Date },
+  planOption: { type: String }, // One-Time, 3 Mo, 6 Mo, 9 Mo
+  
+  // Followup Protocols
+  nextFollowupDate: { type: String },
+  nextFollowupTime: { type: String },
+  
+  // Internal Assignment & Metadata
+  assignedRepId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }, // Ref to User model
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'CRMImport' },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-}, { timestamps: true });
+  
+  // Flexible Metadata for future-proofing
+  metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  
+  // Concurrency Locking
+  lockedBy: { type: String }, // User ID holding the lock
+  lockedAt: { type: Date }
+}, { 
+  timestamps: true // Automatically handles createdAt and updatedAt
+});
 
-module.exports = mongoose.model('Lead', leadSchema);
+// Index for full-text search across multiple fields
+LeadSchema.index({ name: 'text', email: 'text', phone: 'text', remarks: 'text' });
+
+module.exports = mongoose.model('Lead', LeadSchema);

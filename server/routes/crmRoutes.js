@@ -4,7 +4,18 @@ const crmController = require('../controllers/crmController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const path = require('path');
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.csv') {
+      return cb(new Error('Only CSV files are allowed'), false);
+    }
+    cb(null, true);
+  }
+});
 
 router.use(protect);
 

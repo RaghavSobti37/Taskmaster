@@ -13,33 +13,32 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const isBypassEnabled = String(process.env.DEBUG_BYPASS).trim() === 'true';
-    if (isBypassEnabled && token === 'bypass_token') {
-      // console.log('DEBUG: Bypass triggered');
-      const adminUser = await User.findOne({ role: 'admin' });
+    // SECURITY: Debug bypass only in development AND only from localhost
+    const isBypassEnabled = process.env.NODE_ENV === 'development' 
+      && String(process.env.DEBUG_BYPASS).trim() === 'true';
+    const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
+    
+    if (isBypassEnabled && isLocalhost && token === 'bypass_token') {
+      const adminUser = await User.findOne({ role: 'admin' }).select('-password');
       if (adminUser) {
-        // console.log('DEBUG: Found admin user:', adminUser.email);
         req.user = adminUser;
       } else {
-        // console.log('DEBUG: No admin user in DB, using mock');
-        req.user = { 
-          _id: new User()._id,
-          name: 'Root Admin', 
-          role: 'admin', 
-          outletId: 'main' 
-        };
+        return res.status(503).json({ error: 'No admin user available for bypass' });
       }
       return next();
     }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id).select('-password');
     
-    // Update presence
-    if (req.user) {
-      await User.findByIdAndUpdate(req.user._id, { 
-        $set: { lastOnline: new Date(), online: true } 
-      });
+    if (!req.user) {
+      return res.status(401).json({ error: 'User no longer exists' });
     }
+
+    // Update presence
+    await User.findByIdAndUpdate(req.user._id, { 
+      $set: { lastOnline: new Date(), online: true } 
+    });
     
     next();
   } catch (error) {

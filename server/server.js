@@ -44,9 +44,19 @@ app.use('/api/', limiter);
 
 // MongoDB Connection
 const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot';
-mongoose.connect(dbUri)
+
+// Mask URI for logging
+const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
+console.log(`Connecting to DB: ${maskedUri}`);
+
+mongoose.connect(dbUri, {
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 10s
+})
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('CRITICAL: MongoDB connection error:', err.message);
+    process.exit(1); // Exit if cannot connect in production
+  });
 
 // Routes
 app.use('/api/auth', authRoutes);

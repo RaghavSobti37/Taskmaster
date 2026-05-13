@@ -2,8 +2,6 @@
 
 **Taskmaster** (formerly CoreKnot) is a team work management platform for tracking projects, tasks, daily work logs, and team communication — all in one place.
 
-![Banner](https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop)
-
 ## What It Does
 
 | Feature | Description |

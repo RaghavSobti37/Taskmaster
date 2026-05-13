@@ -16,11 +16,11 @@ const ProjectCreate = () => {
   const navigate = useNavigate();
 
   const roleOptions = [
-    { value: 'lead', label: 'Lead Strategist' },
-    { value: 'developer', label: 'System Developer' },
-    { value: 'designer', label: 'UX Designer' },
+    { value: 'lead', label: 'Lead' },
+    { value: 'developer', label: 'Developer' },
+    { value: 'designer', label: 'Designer' },
     { value: 'qa', label: 'QA Engineer' },
-    { value: 'member', label: 'Standard Operative' },
+    { value: 'member', label: 'Member' },
   ];
 
   const predefinedTags = [
@@ -93,21 +93,21 @@ const ProjectCreate = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Initialize Workspace</h1>
-        <p className="text-[var(--color-text-secondary)]">Establish a new project nexus and assign initial operatives.</p>
+        <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
+        <p className="text-[var(--color-text-secondary)]">Set up a new project and add team members.</p>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Project Identifier</label>
+              <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Project Name</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
-                placeholder="e.g. Project Overlord"
+                placeholder="e.g. Website Redesign"
                 required
               />
             </div>
@@ -134,7 +134,7 @@ const ProjectCreate = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Mission Briefing</label>
+            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Description</label>
             <textarea 
               value={desc}
               onChange={e => setDesc(e.target.value)}
@@ -146,15 +146,15 @@ const ProjectCreate = () => {
 
         <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden p-8 space-y-6">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Team Deployment</label>
-            <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{members.length} Operatives Assigned</span>
+            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Team Members</label>
+            <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{members.length} Members Added</span>
           </div>
 
           <div className="space-y-4">
             <Select
               options={users.map(u => ({ value: u._id, label: u.name }))}
               onChange={addMember}
-              placeholder="Search operatives to recruit..."
+              placeholder="Search team members to add..."
               className="react-select-container"
               classNamePrefix="react-select"
             />
@@ -191,7 +191,7 @@ const ProjectCreate = () => {
               {members.length === 0 && (
                 <div className="py-8 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl">
                   <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-2" />
-                  <p className="text-xs text-[var(--color-text-muted)]">No operatives assigned yet.</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">No team members added yet.</p>
                 </div>
               )}
             </div>
@@ -211,7 +211,7 @@ const ProjectCreate = () => {
             disabled={loading || !name}
             className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
           >
-            {loading ? 'Initializing...' : <><Briefcase size={20} /> Deploy Project</>}
+             {loading ? 'Creating...' : <><Briefcase size={20} /> Create Project</>}
           </button>
         </div>
       </form>

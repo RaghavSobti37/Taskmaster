@@ -107,7 +107,7 @@ const ChatPage = () => {
     msg.senderId?.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) return <div className="flex items-center justify-center h-screen animate-pulse text-[var(--color-text-muted)] italic">Decrypting Secure Signals...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen animate-pulse text-[var(--color-text-muted)] italic">Loading messages...</div>;
 
   const channels = [
     { id: 'general', name: 'General Hub', icon: Hash },
@@ -133,7 +133,7 @@ const ChatPage = () => {
           >
             <div className="p-6 border-b border-[var(--color-bg-border)]">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold tracking-tight">Nexus Chat</h2>
+                <h2 className="text-xl font-bold tracking-tight">Team Chat</h2>
                 <div className="w-8 h-8 rounded-xl bg-[var(--color-bg-workspace)] flex items-center justify-center text-[var(--color-action-primary)]">
                   <MessageSquare size={18} />
                 </div>
@@ -201,7 +201,7 @@ const ChatPage = () => {
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 text-[8px] md:text-[10px] font-bold text-green-500 uppercase tracking-widest">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span className="hidden sm:inline">{team.filter(m => m.online).length} Active Nodes</span>
+                  <span className="hidden sm:inline">{team.filter(m => m.online).length} Online</span>
                   <span className="sm:hidden">{team.filter(m => m.online).length} Online</span>
                 </span>
               </div>
@@ -252,7 +252,7 @@ const ChatPage = () => {
           {filteredMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] opacity-50 space-y-4">
               <Shield size={48} className="animate-pulse" />
-              <p className="text-xs font-bold uppercase tracking-widest">Awaiting Secure Input...</p>
+              <p className="text-xs font-bold uppercase tracking-widest">No messages yet. Start the conversation!</p>
             </div>
           ) : filteredMessages.map((msg, idx) => {
             const senderId = msg.senderId?._id || msg.senderId;
@@ -361,10 +361,10 @@ const ChatPage = () => {
           </form>
           <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest px-2">
             <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1 cursor-pointer hover:text-[var(--color-action-primary)]" onClick={() => { setNewMessage(prev => prev + ' @'); setShowMembers(true); }}><AtSign size={10} /> Mention Unit</span>
-              <span className="flex items-center gap-1 cursor-pointer hover:text-[var(--color-action-primary)]" onClick={() => fileInputRef.current?.click()}><PlusCircle size={10} /> Attach Logic</span>
+              <span className="flex items-center gap-1 cursor-pointer hover:text-[var(--color-action-primary)]" onClick={() => { setNewMessage(prev => prev + ' @'); setShowMembers(true); }}><AtSign size={10} /> Mention someone</span>
+              <span className="flex items-center gap-1 cursor-pointer hover:text-[var(--color-action-primary)]" onClick={() => fileInputRef.current?.click()}><PlusCircle size={10} /> Attach file</span>
             </div>
-            <span className="flex items-center gap-1 opacity-50"><Shield size={10} /> End-to-End Encrypted</span>
+            <span className="flex items-center gap-1 opacity-50"><Shield size={10} /> Secure</span>
           </div>
         </div>
       </main>
@@ -390,8 +390,8 @@ const ChatPage = () => {
               `}
             >
               <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
-                <h3 className="text-sm font-black uppercase tracking-widest">Unit Operatives</h3>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-bold">{team.length} Nodes Registered</p>
+                <h3 className="text-sm font-black uppercase tracking-widest">Team Members</h3>
+                <p className="text-[10px] text-[var(--color-text-muted)] font-bold">{team.length} Members</p>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-1">
                 {team.map(member => (

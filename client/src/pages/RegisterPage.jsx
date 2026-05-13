@@ -75,7 +75,7 @@ const RegisterPage = () => {
                 type="email" 
                 required
                 className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
-                placeholder="operator@enterprise.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

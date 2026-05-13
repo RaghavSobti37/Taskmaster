@@ -151,10 +151,10 @@ const OutletSidebar = () => {
                 {!isOpen && !isMobileOpen ? (
                   <div className="h-px bg-[var(--color-bg-border)]" />
                 ) : (
-                  <p className="text-[10px] uppercase font-black text-[var(--color-text-muted)] tracking-widest">Command</p>
+                  <p className="text-[10px] uppercase font-black text-[var(--color-text-muted)] tracking-widest">Admin</p>
                 )}
               </div>
-              <NavItem to="/admin" icon={ShieldCheck} label="System Deck" collapsed={!isOpen} />
+              <NavItem to="/admin" icon={ShieldCheck} label="Admin Panel" collapsed={!isOpen} />
             </>
           )}
         </nav>
@@ -171,7 +171,7 @@ const OutletSidebar = () => {
                   <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">{user?.name}</p>
                   <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                    Authorized
+                    Online
                   </div>
                 </div>
               </div>
@@ -183,7 +183,7 @@ const OutletSidebar = () => {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
           >
             <LogOut size={22} className="shrink-0" />
-            {(isOpen || isMobileOpen) && <span className="font-bold text-sm">Terminate Session</span>}
+            {(isOpen || isMobileOpen) && <span className="font-bold text-sm">Log Out</span>}
           </button>
         </div>
       </motion.aside>

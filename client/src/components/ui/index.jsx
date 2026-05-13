@@ -85,3 +85,4 @@ export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)
 
 export { default as CKDropdown } from './CKDropdown';
 export { NexusModal } from './NexusModal';
+export { default as NexusLoader } from './NexusLoader';

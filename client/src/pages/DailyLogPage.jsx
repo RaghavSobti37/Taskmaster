@@ -183,10 +183,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
               <Activity size={18} strokeWidth={2.5} />
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] leading-tight">
-              {targetUserName ? `${targetUserName}'s Log` : 'Activity Hub'}
+              {targetUserName ? `${targetUserName}'s Log` : 'My Daily Log'}
             </h1>
           </div>
-          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Monitoring operational efficiency and deployment logs.</p>
+          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Track your daily work and time spent on tasks.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -225,7 +225,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-0.5">
-              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Deployments</p>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Log Entries</p>
               <h3 className="text-lg md:text-2xl font-black text-white">{dailyLogs.length}</h3>
             </div>
             <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-blue-400">
@@ -238,7 +238,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-0.5">
-              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time</p>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time Logged</p>
               <h3 className="text-lg md:text-2xl font-black text-white">{formatTime(totalMinutes)}</h3>
             </div>
             <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-emerald-400">
@@ -251,14 +251,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Daily Quota</p>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Daily Goal</p>
               <Trophy size={14} className="text-orange-400" />
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between items-end">
                 <span className="text-base md:text-lg font-black text-white">{Math.min(100, Math.round((totalMinutes / 480) * 100))}%</span>
                 <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-                  {totalMinutes >= 480 ? 'Target Achieved' : 'Active Status'}
+                  {totalMinutes >= 480 ? 'Goal Reached!' : 'In Progress'}
                 </span>
               </div>
               <div className="w-full bg-white/5 h-1 md:h-1.5 rounded-full overflow-hidden border border-white/5">
@@ -288,8 +288,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   <Layout size={20} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)]">Work Intelligence</h3>
-                  <p className="text-xs text-[var(--color-text-muted)] font-medium">Verified technical logs and operational history.</p>
+                  <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)]">Today's Work</h3>
+                  <p className="text-xs text-[var(--color-text-muted)] font-medium">Your logged work entries for the selected day.</p>
                 </div>
               </div>
               <div className="px-5 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
@@ -302,12 +302,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 {loading ? (
                   <div className="p-32 text-center animate-pulse space-y-4">
                     <Activity size={32} className="mx-auto text-[var(--color-action-primary)]/20" />
-                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Decoding Streams...</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Loading...</p>
                   </div>
                 ) : dailyLogs.length === 0 ? (
                   <div className="p-32 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[2.5rem] opacity-30 space-y-4">
                     <Send size={32} className="mx-auto" />
-                    <p className="text-xs font-black uppercase tracking-widest">Awaiting Initial Deployment.</p>
+                    <p className="text-xs font-black uppercase tracking-widest">No work logged for this day yet.</p>
                   </div>
                 ) : (
                   <div className="space-y-8">
@@ -329,7 +329,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                               </h4>
                               <div className="flex items-center gap-3">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 px-2.5 py-0.5 bg-blue-500/5 rounded-lg border border-blue-500/10">
-                                  {log.details?.project || 'GENERAL MISSION'}
+                                  {log.details?.project || 'GENERAL'}
                                 </span>
                                 <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)] flex items-center gap-1.5">
                                   <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
@@ -342,7 +342,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                             </div>
                           </div>
                           <p className="text-sm text-[var(--color-text-secondary)] font-medium leading-relaxed opacity-90">
-                            {log.details?.message || "Operational parameters registered."}
+                            {log.details?.message || "No description provided."}
                           </p>
                         </div>
                       </motion.div>
@@ -378,8 +378,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     Auto Fill
                   </button>
                 </div>
-                <h3 className="font-black text-base text-[var(--color-text-primary)]">New Deployment</h3>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Record specific mission outcomes.</p>
+                <h3 className="font-black text-base text-[var(--color-text-primary)]">Add Work Entry</h3>
+                <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Log what you worked on today.</p>
               </div>
 
               <form onSubmit={handleManualSubmit} className="p-8 space-y-5">
@@ -389,7 +389,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="E.g., Backend Optimization..."
+                    placeholder="E.g., Updated homepage design..."
                     className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] outline-none transition-all shadow-inner"
                     required
                   />
@@ -397,14 +397,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 
                 <div className="space-y-5">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Invested</label>
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
                     <div className="relative group">
                       <select
                         value={timeSpent}
                         onChange={e => setTimeSpent(e.target.value)}
                         className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
                       >
-                        <option value="">Duration</option>
+                        <option value="">Select time...</option>
                         {timeOptions.map(opt => (
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
@@ -413,14 +413,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Mission Unit</label>
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
                     <div className="relative">
                       <select
                         value={selectedProject}
                         onChange={e => setSelectedProject(e.target.value)}
                         className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
                       >
-                        <option value="">Global Systems</option>
+                        <option value="">No Project (General)</option>
                         {projects.map(p => (
                           <option key={p._id} value={p._id}>{p.name}</option>
                         ))}
@@ -431,11 +431,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Technical Brief</label>
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
                   <textarea
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="Detail specific operations performed..."
+                    placeholder="Describe what you did..."
                     className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[100px] focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all resize-none shadow-inner"
                   />
                 </div>
@@ -448,7 +448,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   {submitting ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <><Send size={14} /> Commit Log</>
+                    <><Send size={14} /> Save Entry</>
                   )}
                 </button>
               </form>
@@ -460,8 +460,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       <NexusModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Intelligence Synced"
-        message="Operational deployment log has been committed successfully."
+        title="Entry Saved!"
+        message="Your work entry has been saved successfully."
         type="success"
       />
     </div>

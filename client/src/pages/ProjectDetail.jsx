@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   List, 
   Columns, 
   ChartGantt, 
-  PieChart, 
+  Database, 
   Settings,
   Filter,
   Search,
   Plus,
-  Users
+  Users,
+  ArrowLeft
 } from 'lucide-react';
 import ProjectList from '../components/project/ProjectList';
 import ProjectKanban from '../components/project/ProjectKanban';
 import ProjectGantt from '../components/project/ProjectGantt';
 import ProjectTeam from '../components/project/ProjectTeam';
-import { Badge, ProgressBar } from '../components/ui';
+import { Badge, ProgressBar, NexusLoader } from '../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../components/TaskCreateModal';
 import ProjectSettingsModal from '../components/ProjectSettingsModal';
@@ -24,6 +25,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 
 const ProjectDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [tasks, setTableTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,20 +93,24 @@ const ProjectDetail = () => {
     setIsDetailModalOpen(true);
   };
 
+  const handleRemoveMember = async (userId) => {
+    try {
+      const res = await axios.put(`/api/projects/${id}/remove-member`, { userId });
+      setProject(res.data);
+    } catch (err) {
+      console.error('Error removing member:', err);
+    }
+  };
+
   const tabs = [
     { id: 'list', icon: List, label: 'List View' },
     { id: 'kanban', icon: Columns, label: 'Kanban Board' },
     { id: 'gantt', icon: ChartGantt, label: 'Gantt Timeline' },
     { id: 'team', icon: Users, label: 'Project Team' },
-    { id: 'resources', icon: PieChart, label: 'Utilization' },
+    { id: 'assets', icon: Database, label: 'Assets' },
   ];
 
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
-      <div className="w-12 h-12 border-4 border-[var(--color-action-primary)] border-t-transparent rounded-full animate-spin" />
-      <p className="text-[var(--color-text-muted)] font-medium">Loading project...</p>
-    </div>
-  );
+  if (loading) return <NexusLoader message="Loading project..." />;
 
   if (!project) return <div>Project not found.</div>;
 
@@ -113,6 +119,13 @@ const ProjectDetail = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4">
         <div>
           <div className="flex items-center gap-3 mb-1.5">
+            <button
+              onClick={() => navigate('/projects')}
+              className="p-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)]/50 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)] transition-all"
+              title="Back to Projects"
+            >
+              <ArrowLeft size={16} />
+            </button>
             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</span>
             <span className="w-1 h-1 bg-[var(--color-text-muted)] rounded-full" />
             <span className="text-[10px] font-black text-[var(--color-action-primary)] uppercase tracking-widest">{project._id.substring(0, 8).toUpperCase()}</span>
@@ -164,7 +177,13 @@ const ProjectDetail = () => {
           {tabs.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                if (tab.id === 'assets') {
+                  navigate('/assets');
+                } else {
+                  setActiveTab(tab.id);
+                }
+              }}
               className={`
                 flex items-center gap-2 px-4 md:px-6 py-3 text-xs md:text-sm font-black uppercase tracking-widest transition-all relative whitespace-nowrap
                 ${activeTab === tab.id 
@@ -215,8 +234,7 @@ const ProjectDetail = () => {
         {activeTab === 'list' && <ProjectList tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
         {activeTab === 'kanban' && <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
         {activeTab === 'gantt' && <ProjectGantt tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />}
-        {activeTab === 'team' && <ProjectTeam project={project} />}
-        {activeTab === 'resources' && <div className="p-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] text-[var(--color-text-muted)] italic">Resource tracking coming soon.</div>}
+        {activeTab === 'team' && <ProjectTeam project={project} onRemoveMember={handleRemoveMember} />}
       </div>
     </div>
   );

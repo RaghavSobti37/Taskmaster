@@ -141,7 +141,7 @@ const SettingsPage = () => {
       setModalConfig({
         isOpen: true,
         title: 'Synchronization Error',
-        message: err.response?.data?.error || 'Failed to update operative profile.',
+        message: err.response?.data?.error || 'Failed to update your profile. Please try again.',
         type: 'danger'
       });
     } finally {

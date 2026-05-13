@@ -7,6 +7,7 @@ router.use(protect);
 
 router.get('/', assetController.getAssets);
 router.post('/', assetController.createAsset);
+router.put('/:id', assetController.updateAsset);
 router.delete('/:id', assetController.deleteAsset);
 
 module.exports = router;

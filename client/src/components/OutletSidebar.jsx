@@ -14,7 +14,9 @@ import {
   ChevronDown,
   Layers,
   Circle,
-  MessageSquare
+  MessageSquare,
+  Database,
+  ListTodo
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -94,6 +96,10 @@ const OutletSidebar = () => {
         <NavItem to="/team" icon={Users} label="Team" collapsed={!isOpen} />
         <NavItem to="/chat" icon={MessageSquare} label="Chat" collapsed={!isOpen} />
         <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={!isOpen} />
+        <NavItem to="/logs" icon={ListTodo} label="Daily Logs" collapsed={!isOpen} />
+        {(user?.role === 'admin' || user?.role === 'sales') && (
+          <NavItem to="/crm" icon={Database} label="CRM" collapsed={!isOpen} />
+        )}
         
         {user?.role === 'admin' && (
           <>

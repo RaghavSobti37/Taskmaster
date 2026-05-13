@@ -12,6 +12,7 @@ const userRoutes = require('./routes/userRoutes');
 const logRoutes = require('./routes/logRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const teamRoutes = require('./routes/teamRoutes');
+const crmRoutes = require('./routes/crmRoutes');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/crm', crmRoutes);
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 
 // Error handling

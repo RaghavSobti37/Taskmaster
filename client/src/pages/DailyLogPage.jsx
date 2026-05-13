@@ -1,49 +1,68 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
-import { 
-  Calendar as CalIcon, 
-  CheckCircle2, 
-  Clock, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Calendar as CalIcon,
+  CheckCircle2,
+  Clock,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
   User,
   Plus,
   Send,
   Timer,
   Zap,
-  Target
+  Target,
+  Circle,
+  Activity,
+  Trophy,
+  Layout
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, NexusModal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [logs, setLogs] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  
-  // Manual Entry Form State
+
+  const initialDate = searchParams.get('date') ? new Date(searchParams.get('date')) : new Date();
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timeSpent, setTimeSpent] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-
-  const targetUserId = adminViewUserId || user?._id;
+  const [targetUserName, setTargetUserName] = useState(adminViewUserName || '');
+  const [tasks, setTasks] = useState([]);
+  const targetUserId = adminViewUserId || searchParams.get('user') || user?._id;
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [logsRes, projectsRes] = await Promise.all([
+      const [logsRes, projectsRes, tasksRes] = await Promise.all([
         axios.get(`/api/logs?userId=${targetUserId}&limit=200`),
-        axios.get('/api/projects')
+        axios.get('/api/projects'),
+        axios.get('/api/tasks')
       ]);
       setLogs(logsRes.data);
       setProjects(projectsRes.data);
+      setTasks(tasksRes.data.filter(t => 
+        t.assignees?.some(a => (typeof a === 'string' ? a : a._id) === targetUserId)
+      ));
+
+      if (targetUserId !== user?._id && !adminViewUserName) {
+        const userRes = await axios.get(`/api/users/directory`);
+        const found = userRes.data.users.find(u => u._id === targetUserId);
+        if (found) setTargetUserName(found.name);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
     } finally {
@@ -62,29 +81,29 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
 
   const handleManualSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!title.trim()) return;
-    
+
     setSubmitting(true);
     try {
       await axios.post('/api/logs', {
         action: 'DAILY_LOG',
-        details: { 
-          title, 
-          message: description, 
+        details: {
+          title,
+          message: description,
           timeSpent,
           project: projects.find(p => p._id === selectedProject)?.name || 'General'
         },
         targetId: selectedProject || null,
         targetType: selectedProject ? 'Project' : 'System'
       });
-      
+
       setTitle('');
       setDescription('');
       setTimeSpent('');
       setSelectedProject('');
       fetchData();
-      setModalOpen(true); // Success feedback
+      setModalOpen(true);
     } catch (err) {
       console.error('Manual log submission error:', err);
     } finally {
@@ -92,13 +111,25 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     }
   };
 
-  const dailyLogs = logs.filter(l => isSameDay(new Date(l.createdAt), selectedDate));
+  const addDummyData = () => {
+    setTitle('Automated System Audit');
+    setDescription('Performed a routine check of the CRM backend and synchronized data states.');
+    setTimeSpent('1h 45m');
+    if (projects.length > 0) setSelectedProject(projects[0]._id);
+  };
+
+  const dailyLogs = logs.filter(l => 
+    l.action === 'DAILY_LOG' && isSameDay(new Date(l.createdAt), selectedDate)
+  );
   
-  // Calculate total time spent if available in details
+  const dailyTasks = tasks.filter(t => {
+    const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
+    return isSameDay(taskDate, selectedDate);
+  });
+
   const totalMinutes = dailyLogs.reduce((acc, log) => {
     const time = log.details?.timeSpent;
     if (!time) return acc;
-    // Handle formats like "1h 30m" or just "30" or "1.5h"
     const hours = time.match(/(\d+(?:\.\d+)?)\s*h/);
     const mins = time.match(/(\d+)\s*m/);
     let total = 0;
@@ -114,213 +145,321 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   };
 
-  return (
-    <div className="space-y-8 pb-20">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {adminViewUserName ? `${adminViewUserName}'s Work Log` : 'Daily Activity'}
-          </h1>
-          <p className="text-[var(--color-text-secondary)]">Keep track of what you did today.</p>
-        </div>
-        
-        <div className="flex items-center gap-4 bg-[var(--color-bg-surface)] p-2 rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
-          <button 
-            onClick={() => handleDateChange(-1)}
-            className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div className="flex items-center gap-2 px-4 border-x border-[var(--color-bg-border)]">
-            <CalIcon size={18} className="text-[var(--color-action-primary)]" />
-            <span className="font-bold text-sm">{format(selectedDate, 'MMM dd, yyyy')}</span>
-          </div>
-          <button 
-            onClick={() => handleDateChange(1)}
-            disabled={isSameDay(selectedDate, new Date())}
-            className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all disabled:opacity-30"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </header>
+  const timeOptions = [];
+  for (let h = 0; h <= 8; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 0 && m === 0) continue;
+      if (h === 8 && m > 0) break;
+      const label = h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}` : `${m}m`;
+      timeOptions.push(label);
+    }
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Form & Stats */}
-        <aside className="lg:col-span-4 space-y-6">
-          {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
-            <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center gap-2">
-                <Plus size={18} className="text-[var(--color-action-primary)]" />
-                <h3 className="font-bold text-xs uppercase tracking-widest">Add to Log</h3>
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.4, staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+  };
+
+  return (
+    <div className="max-w-[1400px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
+      {/* Premium Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-8"
+      >
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-2xl text-[var(--color-action-primary)]">
+              <Activity size={18} strokeWidth={2.5} />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)]">
+              {targetUserName ? `${targetUserName}'s Log` : 'Activity Hub'}
+            </h1>
+          </div>
+          <p className="text-xs font-medium text-[var(--color-text-muted)] ml-14">Monitoring operational efficiency and deployment logs.</p>
+        </div>
+
+        <div className="flex flex-col sm:row items-center gap-4">
+          <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] p-1.5 rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
+            <button
+              onClick={() => handleDateChange(-1)}
+              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all active:scale-95 text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)]"
+            >
+              <ChevronLeft size={16} strokeWidth={2.5} />
+            </button>
+
+            <div className="flex items-center gap-2.5 px-5 py-1.5 min-w-[160px] justify-center bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]/50 shadow-inner">
+              <CalIcon size={14} className="text-[var(--color-action-primary)]" />
+              <span className="font-black text-xs tracking-tight">{format(selectedDate, 'EEEE, MMM dd')}</span>
+            </div>
+
+            <button
+              onClick={() => handleDateChange(1)}
+              disabled={isSameDay(selectedDate, new Date())}
+              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all active:scale-95 text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] disabled:opacity-20"
+            >
+              <ChevronRight size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      </motion.header>
+
+      {/* Stats Row: Tactical Summary (HORIZONTAL) */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Deployments</p>
+              <h3 className="text-2xl font-black text-white">{dailyLogs.length}</h3>
+            </div>
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400">
+              <Zap size={18} className="fill-blue-400/20" />
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Mission Time</p>
+              <h3 className="text-2xl font-black text-white">{formatTime(totalMinutes)}</h3>
+            </div>
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-emerald-400">
+              <Timer size={18} className="fill-emerald-400/20" />
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
+          <div className="relative z-10 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Daily Quota</p>
+              <Trophy size={14} className="text-orange-400" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-end">
+                <span className="text-lg font-black text-white">85%</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Status</span>
               </div>
-              <form onSubmit={handleManualSubmit} className="p-6 space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">What did you do?</label>
-                  <input 
-                    type="text" 
+              <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '85%' }}
+                  className="bg-gradient-to-r from-orange-500 to-amber-400 h-full shadow-[0_0_10px_rgba(249,115,22,0.3)]"
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        {/* Main Area: Daily Logs (LEFT) */}
+        <motion.main
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="lg:col-span-8 order-2 lg:order-1"
+        >
+          <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[600px]">
+            <div className="px-10 py-10 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
+              <div className="flex items-center gap-5">
+                <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm">
+                  <Layout size={20} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)]">Work Intelligence</h3>
+                  <p className="text-xs text-[var(--color-text-muted)] font-medium">Verified technical logs and operational history.</p>
+                </div>
+              </div>
+              <div className="px-5 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+                {dailyLogs.length} LOGS
+              </div>
+            </div>
+            
+            <div className="p-10 space-y-10">
+              <AnimatePresence mode="wait">
+                {loading ? (
+                  <div className="p-32 text-center animate-pulse space-y-4">
+                    <Activity size={32} className="mx-auto text-[var(--color-action-primary)]/20" />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Decoding Streams...</p>
+                  </div>
+                ) : dailyLogs.length === 0 ? (
+                  <div className="p-32 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[2.5rem] opacity-30 space-y-4">
+                    <Send size={32} className="mx-auto" />
+                    <p className="text-xs font-black uppercase tracking-widest">Awaiting Initial Deployment.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {dailyLogs.map((log, idx) => (
+                      <motion.div
+                        key={log._id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="relative pl-10 before:absolute before:left-[11px] before:top-8 before:bottom-[-40px] before:w-[2px] before:bg-gradient-to-b before:from-[var(--color-bg-border)] before:to-transparent last:before:hidden"
+                      >
+                        <div className="absolute left-0 top-1 w-6 h-6 rounded-xl bg-[var(--color-bg-surface)] border-4 border-[var(--color-action-primary)] shadow-md z-10" />
+                        
+                        <div className="p-8 bg-[var(--color-bg-workspace)]/40 rounded-[2rem] border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)]/30 transition-all hover:shadow-lg">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
+                            <div className="space-y-1.5">
+                              <h4 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors leading-tight">
+                                {log.details?.title}
+                              </h4>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-blue-500 px-2.5 py-0.5 bg-blue-500/5 rounded-lg border border-blue-500/10">
+                                  {log.details?.project || 'GENERAL MISSION'}
+                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                                  <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2.5 px-4 py-2 bg-white rounded-xl border border-[var(--color-bg-border)] shadow-sm self-start md:self-center">
+                              <Timer size={14} className="text-[var(--color-action-primary)]" />
+                              <span className="text-xs font-black text-black">{log.details?.timeSpent || '0m'}</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-[var(--color-text-secondary)] font-medium leading-relaxed opacity-90">
+                            {log.details?.message || "Operational parameters registered."}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+          </section>
+        </motion.main>
+
+        {/* Action Sidebar: Create Entry (RIGHT) */}
+        <motion.aside
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-4 order-1 lg:order-2 space-y-8 sticky top-8"
+        >
+          {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
+            <motion.section
+              variants={itemVariants}
+              className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
+            >
+              <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                    <Plus size={16} strokeWidth={3} />
+                  </div>
+                  <button
+                    onClick={addDummyData}
+                    className="px-3 py-1.5 text-[8px] font-black uppercase tracking-widest bg-orange-500/5 text-orange-600 border border-orange-500/20 rounded-lg hover:bg-orange-500 hover:text-white transition-all active:scale-95"
+                  >
+                    Auto Fill
+                  </button>
+                </div>
+                <h3 className="font-black text-base text-[var(--color-text-primary)]">New Deployment</h3>
+                <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Record specific mission outcomes.</p>
+              </div>
+
+              <form onSubmit={handleManualSubmit} className="p-8 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Title</label>
+                  <input
+                    type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="E.g. Fixed the login bug"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-1 focus:ring-[var(--color-action-primary)] outline-none"
+                    placeholder="E.g., Backend Optimization..."
+                    className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] outline-none transition-all shadow-inner"
                     required
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
-                    <div className="relative">
-                      <Timer size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                      <input 
-                        type="text" 
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Invested</label>
+                    <div className="relative group">
+                      <select
                         value={timeSpent}
                         onChange={e => setTimeSpent(e.target.value)}
-                        placeholder="e.g. 1h 30m"
-                        className="w-full pl-9 pr-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none"
-                      />
+                        className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
+                      >
+                        <option value="">Duration</option>
+                        {timeOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                      <Timer size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-action-primary)] transition-colors pointer-events-none" />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
-                    <select 
-                      value={selectedProject}
-                      onChange={e => setSelectedProject(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none appearance-none"
-                    >
-                      <option value="">General</option>
-                      {projects.map(p => (
-                        <option key={p._id} value={p._id}>{p.name}</option>
-                      ))}
-                    </select>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Mission Unit</label>
+                    <div className="relative">
+                      <select
+                        value={selectedProject}
+                        onChange={e => setSelectedProject(e.target.value)}
+                        className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all appearance-none cursor-pointer shadow-inner"
+                      >
+                        <option value="">Global Systems</option>
+                        {projects.map(p => (
+                          <option key={p._id} value={p._id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <Layout size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-                  <textarea 
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Technical Brief</label>
+                  <textarea
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder="Add more details..."
-                    className="w-full px-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none min-h-[80px]"
+                    placeholder="Detail specific operations performed..."
+                    className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[100px] focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all resize-none shadow-inner"
                   />
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={submitting || !title.trim()}
-                  className="w-full py-3 bg-[var(--color-action-primary)] text-white rounded-xl font-bold text-xs hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  className="w-full py-4 bg-[var(--color-action-primary)] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-[var(--color-action-hover)] hover:shadow-2xl hover:shadow-blue-500/40 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
                 >
-                  {submitting ? 'Saving...' : <><Send size={14} /> Save to Log</>}
+                  {submitting ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <><Send size={14} /> Commit Log</>
+                  )}
                 </button>
               </form>
-            </section>
+            </motion.section>
           )}
-
-          <section className="bg-[var(--color-bg-surface)] p-8 rounded-3xl border border-[var(--color-bg-border)] shadow-sm space-y-8">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-xs uppercase tracking-widest text-[var(--color-text-muted)]">Today's Summary</h3>
-              <Zap size={16} className="text-yellow-500 animate-pulse" />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)]">
-                <p className="text-2xl font-black text-[var(--color-text-primary)]">{dailyLogs.length}</p>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">Logs added</p>
-              </div>
-              <div className="p-4 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)]">
-                <p className="text-2xl font-black text-[var(--color-action-primary)]">{formatTime(totalMinutes)}</p>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest">Time Tracked</p>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-[var(--color-bg-border)]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Progress</span>
-                <span className="text-xs font-bold text-green-500">Good progress!</span>
-              </div>
-              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-green-500 h-full w-[85%] transition-all duration-1000" />
-              </div>
-            </div>
-          </section>
-        </aside>
-
-        {/* Right Column: Log Feed */}
-        <main className="lg:col-span-8">
-          <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden flex flex-col h-full min-h-[600px]">
-            <div className="px-6 py-5 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-                  <Target size={20} />
-                </div>
-                <h3 className="font-bold">Activity History</h3>
-              </div>
-              <Badge variant="todo">{format(selectedDate, 'EEEE').toUpperCase()}</Badge>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {loading ? (
-                <div className="p-20 text-center space-y-4">
-                  <div className="w-12 h-12 border-4 border-[var(--color-action-primary)]/20 border-t-[var(--color-action-primary)] rounded-full animate-spin mx-auto" />
-                  <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Loading logs...</p>
-                </div>
-              ) : dailyLogs.length === 0 ? (
-                <div className="p-20 text-center space-y-2">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                    <Clock size={32} />
-                  </div>
-                  <p className="font-bold text-[var(--color-text-primary)]">No Logs Found</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">No activity recorded for this day.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[var(--color-bg-border)]">
-                  {dailyLogs.map(log => (
-                    <div key={log._id} className="p-6 flex gap-6 hover:bg-[var(--color-bg-workspace)] transition-all group">
-                      <div className="text-[10px] font-black text-[var(--color-text-muted)] w-16 pt-1 flex flex-col items-center">
-                        <span>{format(new Date(log.createdAt), 'HH:mm')}</span>
-                        <div className="w-px h-full bg-[var(--color-bg-border)] mt-2 group-last:hidden" />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge variant={log.action === 'DAILY_LOG' ? 'done' : 'progress'}>
-                              {log.action === 'DAILY_LOG' ? 'LOG' : log.action.replace('_', ' ')}
-                            </Badge>
-                            <span className="text-sm font-black text-[var(--color-text-primary)] tracking-tight">
-                              {log.details?.title || log.targetType}
-                            </span>
-                          </div>
-                          {log.details?.timeSpent && (
-                            <span className="text-[10px] font-bold text-[var(--color-action-primary)] bg-blue-500/10 px-2 py-1 rounded-lg flex items-center gap-1">
-                              <Timer size={10} /> {log.details.timeSpent}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                          {log.details?.message || 'System updated.'}
-                        </p>
-                        {log.details?.project && (
-                          <div className="flex items-center gap-1.5 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                            <Target size={10} />
-                            {log.details.project}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        </main>
+        </motion.aside>
       </div>
 
-      <NexusModal 
+      <NexusModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Saved!"
-        message="Your activity log has been saved."
+        title="Intelligence Synced"
+        message="Operational deployment log has been committed successfully."
         type="success"
       />
     </div>

@@ -10,7 +10,9 @@ router.use(protect);
 
 router.post('/leads/upload', upload.single('file'), crmController.uploadLeads);
 router.get('/imports', crmController.getImports);
+router.get('/purge-logs', crmController.getPurgeLogs);
 router.delete('/imports/:id', crmController.deleteImport);
+router.post('/reset', crmController.resetCRM);
 
 router.route('/leads')
   .get(crmController.getLeads)

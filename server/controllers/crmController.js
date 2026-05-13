@@ -208,6 +208,7 @@ exports.getImports = async (req, res) => {
 exports.deleteImport = async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     const batch = await CRMImport.findById(id);
     if (!batch) return res.status(404).json({ error: 'Import batch not found' });
 
@@ -215,7 +216,56 @@ exports.deleteImport = async (req, res) => {
     const result = await Lead.deleteMany({ importId: id });
     await CRMImport.findByIdAndDelete(id);
 
+    // Audit the deletion
+    await CRMAudit.create({
+      userId: req.user._id,
+      userRole: req.user.role,
+      action: 'BATCH_DELETE',
+      fieldChanged: 'batch',
+      oldValue: batch.filename,
+      newValue: 'DELETED',
+      notes: reason || 'No reason provided'
+    });
+
     res.json({ message: `${result.deletedCount} leads successfully purged from system.` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.resetCRM = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+
+    await Lead.deleteMany({});
+    await EMI.deleteMany({});
+    await CRMImport.deleteMany({});
+    
+    await CRMAudit.create({
+      userId: req.user._id,
+      userRole: req.user.role,
+      action: 'SYSTEM_RESET',
+      fieldChanged: 'all',
+      oldValue: 'active',
+      newValue: 'purged',
+      notes: reason || 'System-wide data reset protocol executed.'
+    });
+
+    res.json({ message: 'CRM ecosystem successfully purged. All data erased.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getPurgeLogs = async (req, res) => {
+  try {
+    const logs = await CRMAudit.find({ action: { $in: ['BATCH_DELETE', 'SYSTEM_RESET'] } })
+      .populate('userId', 'name')
+      .sort('-createdAt');
+    res.json(logs);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

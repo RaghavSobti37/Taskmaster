@@ -262,7 +262,7 @@ exports.resetCRM = async (req, res) => {
 
 exports.getPurgeLogs = async (req, res) => {
   try {
-    const logs = await CRMAudit.find({ action: { $in: ['BATCH_DELETE', 'SYSTEM_RESET'] } })
+    const logs = await CRMAudit.find({ action: { $in: ['BATCH_DELETE', 'SYSTEM_RESET', 'PROJECT_DELETE'] } })
       .populate('userId', 'name')
       .sort('-createdAt');
     res.json(logs);

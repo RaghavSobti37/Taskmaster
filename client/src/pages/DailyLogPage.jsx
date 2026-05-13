@@ -256,13 +256,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between items-end">
-                <span className="text-base md:text-lg font-black text-white">85%</span>
-                <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Status</span>
+                <span className="text-base md:text-lg font-black text-white">{Math.min(100, Math.round((totalMinutes / 480) * 100))}%</span>
+                <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                  {totalMinutes >= 480 ? 'Target Achieved' : 'Active Status'}
+                </span>
               </div>
               <div className="w-full bg-white/5 h-1 md:h-1.5 rounded-full overflow-hidden border border-white/5">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: '85%' }}
+                  animate={{ width: `${Math.min(100, (totalMinutes / 480) * 100)}%` }}
                   className="bg-gradient-to-r from-orange-500 to-amber-400 h-full"
                 />
               </div>

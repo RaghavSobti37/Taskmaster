@@ -17,6 +17,7 @@ import ProjectKanban from '../components/project/ProjectKanban';
 import ProjectGantt from '../components/project/ProjectGantt';
 import ProjectTeam from '../components/project/ProjectTeam';
 import { Badge, ProgressBar } from '../components/ui';
+import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../components/TaskCreateModal';
 import ProjectSettingsModal from '../components/ProjectSettingsModal';
 import TaskDetailModal from '../components/TaskDetailModal';

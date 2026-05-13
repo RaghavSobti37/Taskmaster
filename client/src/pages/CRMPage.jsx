@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Filter, 
-  ChevronRight, 
-  Phone, 
-  Mail, 
-  Clock, 
+import {
+  Users,
+  Search,
+  Plus,
+  Filter,
+  ChevronRight,
+  Phone,
+  Mail,
+  Clock,
   Shield,
   CreditCard,
   History,
@@ -61,8 +61,8 @@ const CRMPage = () => {
   }, []);
 
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) || 
-                          lead.phone.includes(search);
+    const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) ||
+      lead.phone.includes(search);
     const matchesFilter = filter === 'All' || lead.leadStatus === filter;
     return matchesSearch && matchesFilter;
   });
@@ -111,7 +111,7 @@ const CRMPage = () => {
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
       {/* Premium Header */}
-      <motion.header 
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-6"
@@ -125,13 +125,12 @@ const CRMPage = () => {
               Operative CRM
             </h1>
           </div>
-          <p className="text-xs font-medium text-[var(--color-text-muted)] ml-14">Management of potential converts and lead lifecycles.</p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="relative group">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
-            <input 
+            <input
               type="text"
               placeholder="Search Identity/Signal..."
               value={search}
@@ -139,8 +138,8 @@ const CRMPage = () => {
               className="pl-12 pr-4 py-3 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
-          
-          <button 
+
+          <button
             onClick={fetchLeads}
             disabled={loading}
             className="p-3 bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] rounded-xl border border-[var(--color-bg-border)] hover:text-blue-500 hover:border-blue-500/50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
@@ -154,7 +153,7 @@ const CRMPage = () => {
             <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
           </label>
 
-          <button 
+          <button
             onClick={() => { setSelectedLead(null); setIsModalOpen(true); }}
             className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-blue-500/10 active:scale-95"
           >
@@ -192,7 +191,7 @@ const CRMPage = () => {
       </div>
 
       {/* Main Table View */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] overflow-hidden shadow-sm"
@@ -235,12 +234,12 @@ const CRMPage = () => {
                       <span className="text-[11px] font-bold text-[var(--color-text-primary)] font-mono">{lead.phone}</span>
                     </td>
                     <td className="px-8 py-5">
-                       <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColor(lead.leadStatus)}`}>
+                      <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColor(lead.leadStatus)}`}>
                         {lead.leadStatus}
                       </span>
                     </td>
                     <td className="px-8 py-5">
-                       <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-black ${lead.assignedRepId ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}>
                           {lead.assignedRepId?.name?.[0] || '!'}
                         </div>
@@ -250,20 +249,17 @@ const CRMPage = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <select 
-                        value={lead.leadQuality} 
-                        onChange={(e) => handleUpdatePriority(lead._id, e.target.value)}
-                        className="bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-500/20 cursor-pointer outline-none hover:bg-blue-500 hover:text-white transition-all appearance-none"
-                      >
-                        <option value="1">P1 - CRITICAL</option>
-                        <option value="2">P2 - HIGH</option>
-                        <option value="3">P3 - MEDIUM</option>
-                        <option value="4">P4 - LOW</option>
-                        <option value="5">P5 - TRASH</option>
-                      </select>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`w-1.5 h-1.5 rounded-full ${i < (6 - parseInt(lead.leadQuality || 5)) ? 'bg-blue-500' : 'bg-[var(--color-bg-border)]'}`} 
+                          />
+                        ))}
+                      </div>
                     </td>
                     <td className="px-8 py-5 text-center">
-                      <button 
+                      <button
                         onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
                         className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95"
                       >
@@ -285,7 +281,7 @@ const CRMPage = () => {
       </motion.div>
 
       {/* Modal */}
-      <CRMLeadModal 
+      <CRMLeadModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         lead={selectedLead}

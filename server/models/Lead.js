@@ -24,6 +24,7 @@ const leadSchema = new mongoose.Schema({
   planOption: { type: String, enum: ['One-Time', '3 Mo', '6 Mo', '9 Mo', 'None'], default: 'None' },
   lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   lockedAt: { type: Date },
+  importId: { type: mongoose.Schema.Types.ObjectId, ref: 'CRMImport' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 

@@ -2,6 +2,7 @@ const Lead = require('../models/Lead');
 const EMI = require('../models/EMI');
 const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
+const CRMImport = require('../models/CRMImport');
 
 // Helper for auto-assignment (Least-Loaded strategy)
 const assignLeadToRep = async () => {
@@ -175,12 +176,47 @@ exports.uploadLeads = async (req, res) => {
           });
         }
 
-        await Lead.insertMany(leadDocs);
+        const importSession = await CRMImport.create({
+          filename: req.file.originalname,
+          leadCount: leadDocs.length,
+          createdBy: req.user._id
+        });
+
+        const finalDocs = leadDocs.map(d => ({ ...d, importId: importSession._id }));
+        await Lead.insertMany(finalDocs);
+        
         fs.unlinkSync(req.file.path); // Clean up temp file
-        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed.` });
+        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed in batch ${importSession.filename}.` });
       });
   } catch (error) {
     if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getImports = async (req, res) => {
+  try {
+    const imports = await CRMImport.find()
+      .populate('createdBy', 'name')
+      .sort('-createdAt');
+    res.json(imports);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteImport = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const batch = await CRMImport.findById(id);
+    if (!batch) return res.status(404).json({ error: 'Import batch not found' });
+
+    // Delete all leads associated with this import
+    const result = await Lead.deleteMany({ importId: id });
+    await CRMImport.findByIdAndDelete(id);
+
+    res.json({ message: `${result.deletedCount} leads successfully purged from system.` });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };

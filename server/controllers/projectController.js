@@ -83,8 +83,28 @@ exports.updateProject = async (req, res) => {
 
 exports.deleteProject = async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
     await Project.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Project deleted' });
+
+    // Log the purge
+    const CRMAudit = require('../models/CRMAudit');
+    await CRMAudit.create({
+      userId: req.user._id,
+      userRole: req.user.role,
+      action: 'PROJECT_DELETE',
+      fieldChanged: 'project',
+      oldValue: project.name,
+      newValue: 'PURGED',
+      notes: `Project ${project.name} decommissioned by root administrator.`
+    });
+
+    res.json({ message: 'Project successfully purged from system deck.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

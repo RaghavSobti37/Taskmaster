@@ -243,6 +243,12 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
                         value={formData.callStatus}
                         onChange={(v) => setFormData({...formData, callStatus: v})}
                       />
+                      <CKDropdown 
+                        label="Priority Level"
+                        options={[1, 2, 3, 4, 5].map(v => ({ value: v.toString(), label: `${v} DOT${v > 1 ? 'S' : ''}` }))}
+                        value={formData.leadQuality?.toString() || '1'}
+                        onChange={(v) => setFormData({...formData, leadQuality: v})}
+                      />
                     </div>
                   </div>
                 </div>

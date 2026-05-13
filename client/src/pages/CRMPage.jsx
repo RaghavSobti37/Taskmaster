@@ -78,6 +78,26 @@ const CRMPage = () => {
     visible: { opacity: 1, y: 0 }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setLoading(true);
+      await axios.post('/api/crm/leads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      fetchLeads();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to upload leads');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
       {/* Premium Header */}
@@ -109,6 +129,12 @@ const CRMPage = () => {
               className="pl-12 pr-4 py-3 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold w-full md:w-64 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
             />
           </div>
+          
+          <label className="flex items-center gap-2 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] px-5 py-3 rounded-xl border border-[var(--color-bg-border)] font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-bg-workspace)] transition-all cursor-pointer shadow-sm active:scale-95">
+            <Plus size={16} /> Import Leads
+            <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+          </label>
+
           <button 
             onClick={() => { setSelectedLead(null); setIsModalOpen(true); }}
             className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-blue-500/10 active:scale-95"

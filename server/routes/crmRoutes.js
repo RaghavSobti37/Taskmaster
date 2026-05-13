@@ -3,7 +3,12 @@ const router = express.Router();
 const crmController = require('../controllers/crmController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
 router.use(protect);
+
+router.post('/leads/upload', upload.single('file'), crmController.uploadLeads);
 
 router.route('/leads')
   .get(crmController.getLeads)

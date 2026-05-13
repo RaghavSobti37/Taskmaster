@@ -75,10 +75,16 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-border)] flex items-center justify-center">
-                          <User size={12} className="text-[var(--color-text-muted)]" />
+                        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-border)] flex items-center justify-center overflow-hidden border border-[var(--color-bg-border)] shadow-sm">
+                          {task.assignees?.[0]?.avatar ? (
+                            <img src={task.assignees[0].avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={12} className="text-[var(--color-text-muted)]" />
+                          )}
                         </div>
-                        <span className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase">Assignee</span>
+                        <span className="text-[10px] font-black text-[var(--color-text-secondary)] uppercase truncate max-w-[80px]">
+                          {task.assignees?.[0]?.name || 'UNASSIGNED'}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

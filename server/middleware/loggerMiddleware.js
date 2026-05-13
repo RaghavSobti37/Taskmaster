@@ -1,5 +1,17 @@
 const Log = require('../models/Log');
 
+// Fields that must NEVER be logged
+const SENSITIVE_FIELDS = ['password', 'currentPassword', 'newPassword', 'token', 'secret', 'jwt'];
+
+const sanitizeBody = (body) => {
+  if (!body || typeof body !== 'object') return body;
+  const safe = { ...body };
+  for (const field of SENSITIVE_FIELDS) {
+    if (safe[field]) safe[field] = '[REDACTED]';
+  }
+  return safe;
+};
+
 const systemLogger = async (req, res, next) => {
   const originalSend = res.send;
 
@@ -13,7 +25,7 @@ const systemLogger = async (req, res, next) => {
         action: `${req.method} ${req.originalUrl}`,
         targetId: req.params.id || null,
         details: {
-          body: req.body,
+          body: sanitizeBody(req.body),
           statusCode: res.statusCode
         }
       }).catch(err => console.error('Logging error:', err));

@@ -4,6 +4,16 @@ const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 
+// Whitelists for mass-assignment protection
+const ALLOWED_LEAD_FIELDS = ['name','email','phone','webinarDates','attended','attendanceDurationMin','meaningfulConnect','leadQuality','callStatus','leadStatus','remarks','planOption','assignedRepId'];
+const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
+
+const pick = (src, keys) => {
+  const r = {};
+  for (const k of keys) { if (src[k] !== undefined) r[k] = src[k]; }
+  return r;
+};
+
 // Helper for auto-assignment (Least-Loaded strategy)
 const assignLeadToRep = async () => {
   const reps = await User.find({ role: 'sales' });
@@ -27,13 +37,13 @@ exports.getLeads = async (req, res) => {
     const leads = await Lead.find(query).populate('assignedRepId', 'name email').sort('-createdAt');
     res.json(leads);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch leads' });
   }
 };
 
 exports.createLead = async (req, res) => {
   try {
-    const leadData = { ...req.body, createdBy: req.user._id };
+    const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
     
     // Auto-assignment if not specified
     if (!leadData.assignedRepId) {
@@ -43,7 +53,7 @@ exports.createLead = async (req, res) => {
     const lead = await Lead.create(leadData);
     res.status(201).json(lead);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Failed to create lead' });
   }
 };
 
@@ -61,8 +71,8 @@ exports.updateLead = async (req, res) => {
       }
     }
 
-    // Capture changes for audit
-    const updates = req.body;
+    // SECURITY: Whitelist fields
+    const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
     const auditEntries = [];
     for (const key in updates) {
       if (updates[key] !== oldLead[key] && key !== 'lockedBy' && key !== 'lockedAt') {
@@ -89,7 +99,7 @@ exports.updateLead = async (req, res) => {
 
     res.json(lead);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Failed to update lead' });
   }
 };
 
@@ -98,25 +108,27 @@ exports.getEmis = async (req, res) => {
     const emis = await EMI.find({ leadId: req.params.leadId }).sort('installmentNo');
     res.json(emis);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch EMIs' });
   }
 };
 
 exports.createEmi = async (req, res) => {
   try {
-    const emi = await EMI.create({ ...req.body, leadId: req.params.leadId });
+    const emiData = { ...pick(req.body, ALLOWED_EMI_FIELDS), leadId: req.params.leadId };
+    const emi = await EMI.create(emiData);
     res.status(201).json(emi);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Failed to create EMI' });
   }
 };
 
 exports.updateEmi = async (req, res) => {
   try {
-    const emi = await EMI.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updates = pick(req.body, ALLOWED_EMI_FIELDS);
+    const emi = await EMI.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.json(emi);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Failed to update EMI' });
   }
 };
 
@@ -127,7 +139,7 @@ exports.getAuditLogs = async (req, res) => {
       .sort('-createdAt');
     res.json(logs);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };
 
@@ -189,8 +201,9 @@ exports.uploadLeads = async (req, res) => {
         res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed in batch ${importSession.filename}.` });
       });
   } catch (error) {
-    if (req.file) fs.unlinkSync(req.file.path);
-    res.status(500).json({ error: error.message });
+    const fs = require('fs');
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch(e) {}
+    res.status(500).json({ error: 'Failed to upload leads' });
   }
 };
 
@@ -201,12 +214,17 @@ exports.getImports = async (req, res) => {
       .sort('-createdAt');
     res.json(imports);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch imports' });
   }
 };
 
 exports.deleteImport = async (req, res) => {
   try {
+    // SECURITY: M-04 fix — admin only
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+
     const { id } = req.params;
     const { reason } = req.body;
     const batch = await CRMImport.findById(id);
@@ -229,7 +247,7 @@ exports.deleteImport = async (req, res) => {
 
     res.json({ message: `${result.deletedCount} leads successfully purged from system.` });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to delete import' });
   }
 };
 
@@ -256,7 +274,7 @@ exports.resetCRM = async (req, res) => {
 
     res.json({ message: 'CRM ecosystem successfully purged. All data erased.' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to reset CRM' });
   }
 };
 
@@ -267,6 +285,6 @@ exports.getPurgeLogs = async (req, res) => {
       .sort('-createdAt');
     res.json(logs);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch purge logs' });
   }
 };

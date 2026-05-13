@@ -136,18 +136,45 @@ exports.getDirectory = async (req, res) => {
 exports.updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
+
+    // SECURITY: Validate role enum
+    const validRoles = ['user', 'admin', 'sales'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+    }
+
+    // SECURITY: Prevent self-demotion
+    if (req.params.id === req.user._id.toString() && role !== 'admin') {
+      return res.status(403).json({ error: 'Cannot demote yourself. Another admin must change your role.' });
+    }
+
+    // SECURITY: Protect root admin
+    const targetUser = await User.findById(req.params.id);
+    if (targetUser && targetUser.email === 'REDACTED_ADMIN@example.com' && role !== 'admin') {
+      return res.status(403).json({ error: 'Root Admin must retain administrative clearance.' });
+    }
+
     const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to update user role' });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
+    // SECURITY: Prevent deleting self or root admin
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(403).json({ error: 'Cannot delete your own account' });
+    }
+    const targetUser = await User.findById(req.params.id);
+    if (targetUser && targetUser.email === 'REDACTED_ADMIN@example.com') {
+      return res.status(403).json({ error: 'Root Admin cannot be deleted' });
+    }
+
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User de-authenticated and purged from nexus.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 };

@@ -130,6 +130,15 @@ const CRMPage = () => {
             />
           </div>
           
+          <button 
+            onClick={fetchLeads}
+            disabled={loading}
+            className="p-3 bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] rounded-xl border border-[var(--color-bg-border)] hover:text-blue-500 hover:border-blue-500/50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            title="Sync Signals"
+          >
+            <Clock size={18} className={loading ? 'animate-spin' : ''} />
+          </button>
+
           <label className="flex items-center gap-2 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] px-5 py-3 rounded-xl border border-[var(--color-bg-border)] font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-bg-workspace)] transition-all cursor-pointer shadow-sm active:scale-95">
             <Plus size={16} /> Import Leads
             <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />

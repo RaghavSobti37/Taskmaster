@@ -124,18 +124,6 @@ cd server
 node seeder.js
 ```
 
-## Login
-
-### Test Accounts (Password: `1234`)
-- `raghavraj@theshakticollective.in`
-- `harshika@theshakticollective.in`
-- `rohith@theshakticollective.in`
-- `ops@theshakticollective.in`
-- `atharva@theshakticollective.in`
-
-### Quick Login (Dev)
-Click **"Quick Login (Admin Demo)"** on the login screen for instant admin access.
-
 ## Project Structure
 
 ```

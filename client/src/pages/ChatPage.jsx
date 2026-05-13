@@ -119,63 +119,90 @@ const ChatPage = () => {
 
   return (
     <div className="h-[calc(100vh-80px)] flex gap-4 overflow-hidden">
-      {/* Channels Sidebar */}
-      <aside className="w-80 bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-sm">
-        <div className="p-6 border-b border-[var(--color-bg-border)]">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold tracking-tight">Nexus Chat</h2>
-            <div className="w-8 h-8 rounded-xl bg-[var(--color-bg-workspace)] flex items-center justify-center text-[var(--color-action-primary)]">
-              <MessageSquare size={18} />
+      {/* Channels Sidebar (Mobile Overlay) */}
+      <AnimatePresence>
+        {(showSearch || !window.matchMedia("(max-width: 1024px)").matches) && (
+          <motion.aside 
+            initial={window.matchMedia("(max-width: 1024px)").matches ? { x: -320, opacity: 0 } : { width: 320, opacity: 1 }}
+            animate={window.matchMedia("(max-width: 1024px)").matches ? { x: 0, opacity: 1 } : { width: 320, opacity: 1 }}
+            exit={window.matchMedia("(max-width: 1024px)").matches ? { x: -320, opacity: 0 } : { width: 0, opacity: 0 }}
+            className={`
+              ${window.matchMedia("(max-width: 1024px)").matches ? 'fixed inset-y-0 left-0 z-[110] w-72' : 'w-80'}
+              bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-2xl lg:shadow-sm
+            `}
+          >
+            <div className="p-6 border-b border-[var(--color-bg-border)]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold tracking-tight">Nexus Chat</h2>
+                <div className="w-8 h-8 rounded-xl bg-[var(--color-bg-workspace)] flex items-center justify-center text-[var(--color-action-primary)]">
+                  <MessageSquare size={18} />
+                </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+                <input 
+                  type="text" 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Filter channels..." 
+                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)]"
+                />
+              </div>
             </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
-            <input 
-              type="text" 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Filter channels..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs outline-none focus:ring-1 focus:ring-[var(--color-action-primary)]"
-            />
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-          <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest px-2 mb-2 mt-4">Active Channels</p>
-          {channels.map(ch => (
-            <button 
-              key={ch.id}
-              onClick={() => setActiveChannel(ch.name)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold transition-all ${activeChannel === ch.name ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]'}`}
-            >
-              <ch.icon size={18} />
-              <span>{ch.name}</span>
-            </button>
-          ))}
-          
-          <div className="mt-8 p-4 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] border-dashed text-center">
-            <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest mb-2">Cluster Status</p>
-            <div className="flex items-center justify-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-[var(--color-text-primary)] tracking-tighter">ENCRYPTED NODE ACTIVE</span>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
+              <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest px-2 mb-2 mt-4">Active Channels</p>
+              {channels.map(ch => (
+                <button 
+                  key={ch.id}
+                  onClick={() => {
+                    setActiveChannel(ch.name);
+                    if (window.matchMedia("(max-width: 1024px)").matches) setShowSearch(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold transition-all ${activeChannel === ch.name ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]'}`}
+                >
+                  <ch.icon size={18} />
+                  <span>{ch.name}</span>
+                </button>
+              ))}
             </div>
-          </div>
-        </div>
-      </aside>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Sidebar Overlay Backdrop */}
+      <AnimatePresence>
+        {showSearch && window.matchMedia("(max-width: 1024px)").matches && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSearch(false)}
+            className="fixed inset-0 z-[105] bg-black/40 backdrop-blur-sm"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Main Chat Interface */}
       <main className="flex-1 bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-xl">
-        <header className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50 backdrop-blur-md flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--color-action-primary)] flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              {channels.find(ch => ch.name === activeChannel)?.icon ? React.createElement(channels.find(ch => ch.name === activeChannel).icon, { size: 24 }) : <Hash size={24} />}
+        <header className="px-4 py-3 md:p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50 backdrop-blur-md flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 md:gap-4">
+            <button 
+              onClick={() => setShowSearch(!showSearch)}
+              className="lg:hidden p-2 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)]"
+            >
+              <Hash size={18} />
+            </button>
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-[var(--color-action-primary)] flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+              {channels.find(ch => ch.name === activeChannel)?.icon ? React.createElement(channels.find(ch => ch.name === activeChannel).icon, { size: 20 }) : <Hash size={20} />}
             </div>
             <div>
-              <h2 className="text-lg font-bold">{activeChannel}</h2>
+              <h2 className="text-sm md:text-lg font-bold truncate max-w-[120px] sm:max-w-none">{activeChannel}</h2>
               <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 uppercase tracking-widest">
+                <span className="flex items-center gap-1 text-[8px] md:text-[10px] font-bold text-green-500 uppercase tracking-widest">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  {team.filter(m => m.online).length} Active Nodes
+                  <span className="hidden sm:inline">{team.filter(m => m.online).length} Active Nodes</span>
+                  <span className="sm:hidden">{team.filter(m => m.online).length} Online</span>
                 </span>
               </div>
             </div>
@@ -221,7 +248,7 @@ const ChatPage = () => {
         </AnimatePresence>
 
         {/* Message Stream */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-4 bg-[var(--color-bg-workspace)]/10">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 bg-[var(--color-bg-workspace)]/10 custom-scrollbar">
           {filteredMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-[var(--color-text-muted)] opacity-50 space-y-4">
               <Shield size={48} className="animate-pulse" />
@@ -342,37 +369,48 @@ const ChatPage = () => {
         </div>
       </main>
 
-      {/* Right Members Drawer */}
+      {/* Right Members Drawer (Mobile Overlay) */}
       <AnimatePresence>
         {showMembers && (
-          <motion.aside 
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-sm"
-          >
-            <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
-              <h3 className="text-sm font-black uppercase tracking-widest">Unit Operatives</h3>
-              <p className="text-[10px] text-[var(--color-text-muted)] font-bold">{team.length} Nodes Registered</p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-1">
-              {team.map(member => (
-                <div key={member._id} className="flex items-center justify-between px-3 py-3 rounded-xl hover:bg-[var(--color-bg-workspace)] transition-all cursor-default group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden relative border border-[var(--color-bg-border)]">
-                      {member.avatar ? <img src={member.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-xs">{member.name.substring(0, 2).toUpperCase()}</div>}
-                      {member.online && <div className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white" />}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-[var(--color-text-primary)]">{member.name}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-tighter">{member.role}</p>
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMembers(false)}
+              className="lg:hidden fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm"
+            />
+            <motion.aside 
+              initial={{ x: 320, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 320, opacity: 0 }}
+              className={`
+                fixed lg:relative inset-y-0 right-0 z-[130] w-72 lg:w-80
+                bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-2xl lg:shadow-sm
+              `}
+            >
+              <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
+                <h3 className="text-sm font-black uppercase tracking-widest">Unit Operatives</h3>
+                <p className="text-[10px] text-[var(--color-text-muted)] font-bold">{team.length} Nodes Registered</p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                {team.map(member => (
+                  <div key={member._id} className="flex items-center justify-between px-3 py-3 rounded-xl hover:bg-[var(--color-bg-workspace)] transition-all cursor-default group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden relative border border-[var(--color-bg-border)]">
+                        {member.avatar ? <img src={member.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-[10px]">{member.name.substring(0, 2).toUpperCase()}</div>}
+                        {member.online && <div className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-green-500 border-2 border-white" />}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-black text-[var(--color-text-primary)] leading-tight">{member.name}</p>
+                        <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tighter">{member.role}</p>
+                      </div>
                     </div>
                   </div>
-                  {member.role === 'admin' && <Shield size={14} className="text-blue-500 opacity-50 group-hover:opacity-100 transition-opacity" />}
-                </div>
-              ))}
-            </div>
-          </motion.aside>
+                ))}
+              </div>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
     </div>

@@ -67,30 +67,30 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-[var(--color-bg-surface)] w-full max-w-4xl rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-[var(--color-bg-surface)] w-full max-w-4xl rounded-[1.5rem] md:rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]"
       >
-        <header className="p-8 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--color-action-primary)] flex items-center justify-center text-xl font-black text-white shadow-xl shadow-blue-500/20 overflow-hidden">
+        <header className="p-4 md:p-8 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-[var(--color-action-primary)] flex items-center justify-center text-sm md:text-xl font-black text-white shadow-xl shadow-blue-500/20 overflow-hidden">
               {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user.name.substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-lg font-black text-[var(--color-text-primary)]">{user.name}</h2>
-              <div className="flex items-center gap-3 mt-0.5">
+              <h2 className="text-sm md:text-lg font-black text-[var(--color-text-primary)]">{user.name}</h2>
+              <div className="flex items-center gap-2 md:gap-3 mt-0.5">
                 <Badge variant={user.role === 'admin' ? 'progress' : 'todo'}>{user.role.toUpperCase()}</Badge>
-                <span className="text-[10px] text-[var(--color-text-muted)] font-bold flex items-center gap-1">
-                  <Circle size={6} className={user.online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
+                <span className="text-[8px] md:text-[10px] text-[var(--color-text-muted)] font-bold flex items-center gap-1">
+                  <Circle size={4} className={user.online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
                   {user.online ? 'SYNCED' : 'OFFLINE'}
                 </span>
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2.5 hover:bg-[var(--color-bg-border)] rounded-xl transition-all">
-            <X size={18} />
+          <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-all">
+            <X size={16} />
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="space-y-6">
             <section className="p-6 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)]">
               <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Core Identification</h3>
@@ -342,29 +342,29 @@ const AdminPanel = () => {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-8"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4"
       >
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 border border-white/5 shadow-xl">
               <ShieldCheck size={20} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
+              <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
                 System Deck
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Core Security Active</p>
+                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Core Security Active</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Link
             to="/admin/logs"
-            className="group flex items-center gap-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm"
+            className="flex-1 md:flex-none group flex items-center justify-center gap-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm"
           >
             <Clock size={14} className="text-blue-500 group-hover:rotate-12 transition-transform" />
             Daily Logs
@@ -375,63 +375,63 @@ const AdminPanel = () => {
         </div>
       </motion.header>
 
-      {/* Stats Row: System Health (HORIZONTAL) */}
+      {/* Stats Row: System Health */}
       <motion.section
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
       >
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Personnel</p>
-              <h3 className="text-2xl font-black text-white">{users.length}</h3>
+            <div className="space-y-0.5 md:space-y-1">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Personnel</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">{users.length}</h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400">
-              <Users size={18} />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-blue-400">
+              <Users size={16} className="md:size-18" />
             </div>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Mission Load</p>
-              <h3 className="text-2xl font-black text-white">{stats.activeTasks}</h3>
+            <div className="space-y-0.5 md:space-y-1">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Load</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">{stats.activeTasks}</h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-emerald-400">
-              <TrendingUp size={18} />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-emerald-400">
+              <TrendingUp size={16} className="md:size-18" />
             </div>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Deployment Units</p>
-              <h3 className="text-2xl font-black text-white">{teams.length}</h3>
+            <div className="space-y-0.5 md:space-y-1">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Units</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">{teams.length}</h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-orange-400">
-              <Layers size={18} />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-orange-400">
+              <Layers size={16} className="md:size-18" />
             </div>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">System Load</p>
-              <h3 className="text-2xl font-black text-white">
+            <div className="space-y-0.5 md:space-y-1">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">Health</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">
                 {stats.totalTasks === 0 ? '0%' : Math.round((stats.activeTasks / stats.totalTasks) * 100) + '%'}
               </h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-purple-400">
-              <Activity size={18} />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-purple-400">
+              <Activity size={16} className="md:size-18" />
             </div>
           </div>
         </motion.div>
@@ -445,30 +445,30 @@ const AdminPanel = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="lg:col-span-8 space-y-8"
         >
-          <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[600px]">
-            <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-500/10 rounded-[1.25rem] text-blue-500 shadow-sm">
-                  <Users size={20} strokeWidth={2.5} />
+          <section className="bg-[var(--color-bg-surface)] rounded-[1.5rem] md:rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[500px] md:min-h-[600px]">
+            <div className="px-4 md:px-8 py-6 md:py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-blue-500/10 rounded-[1rem] md:rounded-[1.25rem] text-blue-500 shadow-sm">
+                  <Users size={18} md:size={20} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
+                  <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
                 </div>
               </div>
-              <div className="relative w-full md:w-72">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+              <div className="relative w-full sm:w-64 md:w-72">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
                 <input
                   type="text"
                   placeholder="Scan directory..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-5 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] md:text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
                 />
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left min-w-[600px]">
                 <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                   <tr>
                     <th className="px-8 py-4">Operative Identification</th>

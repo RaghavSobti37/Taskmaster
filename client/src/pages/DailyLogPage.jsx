@@ -175,38 +175,38 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-8"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4"
       >
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-2xl text-[var(--color-action-primary)]">
+            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)]">
               <Activity size={18} strokeWidth={2.5} />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)]">
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] leading-tight">
               {targetUserName ? `${targetUserName}'s Log` : 'Activity Hub'}
             </h1>
           </div>
-          <p className="text-xs font-medium text-[var(--color-text-muted)] ml-14">Monitoring operational efficiency and deployment logs.</p>
+          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Monitoring operational efficiency and deployment logs.</p>
         </div>
 
-        <div className="flex flex-col sm:row items-center gap-4">
-          <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] p-1.5 rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)] shadow-sm">
             <button
               onClick={() => handleDateChange(-1)}
-              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all active:scale-95 text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)]"
+              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-lg transition-all active:scale-95 text-[var(--color-text-secondary)]"
             >
               <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
 
-            <div className="flex items-center gap-2.5 px-5 py-1.5 min-w-[160px] justify-center bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]/50 shadow-inner">
-              <CalIcon size={14} className="text-[var(--color-action-primary)]" />
-              <span className="font-black text-xs tracking-tight">{format(selectedDate, 'EEEE, MMM dd')}</span>
+            <div className="flex-1 flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)]/50 shadow-inner min-w-[140px] justify-center">
+              <CalIcon size={12} className="text-[var(--color-action-primary)]" />
+              <span className="font-black text-[10px] tracking-tight truncate">{format(selectedDate, 'EEEE, MMM dd')}</span>
             </div>
 
             <button
               onClick={() => handleDateChange(1)}
               disabled={isSameDay(selectedDate, new Date())}
-              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all active:scale-95 text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] disabled:opacity-20"
+              className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-lg transition-all active:scale-95 text-[var(--color-text-secondary)] disabled:opacity-20"
             >
               <ChevronRight size={16} strokeWidth={2.5} />
             </button>
@@ -214,56 +214,56 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </div>
       </motion.header>
 
-      {/* Stats Row: Tactical Summary (HORIZONTAL) */}
+      {/* Stats Row: Tactical Summary */}
       <motion.section
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
       >
-        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-1">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-0.5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Deployments</p>
-              <h3 className="text-2xl font-black text-white">{dailyLogs.length}</h3>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Deployments</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">{dailyLogs.length}</h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400">
-              <Zap size={18} className="fill-blue-400/20" />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-blue-400">
+              <Zap size={16} className="md:size-18 fill-blue-400/20" />
             </div>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-1">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-0.5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Mission Time</p>
-              <h3 className="text-2xl font-black text-white">{formatTime(totalMinutes)}</h3>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time</p>
+              <h3 className="text-lg md:text-2xl font-black text-white">{formatTime(totalMinutes)}</h3>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-emerald-400">
-              <Timer size={18} className="fill-emerald-400/20" />
+            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-emerald-400">
+              <Timer size={16} className="md:size-18 fill-emerald-400/20" />
             </div>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-2 md:col-span-1">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 space-y-3">
+          <div className="relative z-10 space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Daily Quota</p>
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Daily Quota</p>
               <Trophy size={14} className="text-orange-400" />
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between items-end">
-                <span className="text-lg font-black text-white">85%</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Status</span>
+                <span className="text-base md:text-lg font-black text-white">85%</span>
+                <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">Active Status</span>
               </div>
-              <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+              <div className="w-full bg-white/5 h-1 md:h-1.5 rounded-full overflow-hidden border border-white/5">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: '85%' }}
-                  className="bg-gradient-to-r from-orange-500 to-amber-400 h-full shadow-[0_0_10px_rgba(249,115,22,0.3)]"
+                  className="bg-gradient-to-r from-orange-500 to-amber-400 h-full"
                 />
               </div>
             </div>

@@ -162,27 +162,29 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 relative">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-[var(--color-text-secondary)]">Check your projects and tasks.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Check your projects and tasks.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
             <button 
               onClick={() => setFilter('all')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${filter === 'all' ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             >
               All Tasks
             </button>
             <div className="w-px h-4 bg-[var(--color-bg-border)] mx-1" />
-            <Badge variant={filter === 'all' ? 'todo' : filter}>{filter.toUpperCase()}</Badge>
+            <div className="flex-1 sm:flex-none flex justify-center">
+              <Badge variant={filter === 'all' ? 'todo' : filter}>{filter.toUpperCase()}</Badge>
+            </div>
           </div>
           <button 
             onClick={() => setIsTaskModalOpen(true)}
-            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
+            className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 text-xs sm:text-sm"
           >
-            <Plus size={20} /> Add New Task
+            <Plus size={18} /> Add New Task
           </button>
         </div>
       </header>
@@ -334,10 +336,10 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="fixed bottom-8 right-8 z-[200] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl p-4 flex items-center gap-4 min-w-[300px]"
+            className="fixed bottom-4 left-4 right-4 md:left-auto md:bottom-8 md:right-8 z-[200] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl p-4 flex items-center gap-4 min-w-[280px] md:min-w-[300px]"
           >
-            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
-              <CheckCircle2 size={24} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+              <CheckCircle2 size={20} className="md:size-24" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold text-[var(--color-text-primary)]">Task Done</p>

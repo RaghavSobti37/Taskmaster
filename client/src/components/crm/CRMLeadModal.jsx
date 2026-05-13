@@ -16,7 +16,8 @@ import {
   Plus,
   CheckCircle2,
   AlertCircle,
-  FileText
+  FileText,
+  ChevronRight
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';

@@ -171,68 +171,89 @@ const CRMPage = () => {
         ))}
       </div>
 
-      {/* Main Grid */}
+      {/* Main Table View */}
       <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 xl:grid-cols-3 gap-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] overflow-hidden shadow-sm"
       >
-        <AnimatePresence mode="popLayout">
-          {filteredLeads.map((lead) => (
-            <motion.div
-              key={lead._id}
-              layout
-              variants={itemVariants}
-              onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
-              className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] p-6 hover:border-blue-500/30 transition-all cursor-pointer group relative overflow-hidden"
-            >
-              {/* Status Ribbon */}
-              <div className={`absolute top-0 right-0 px-4 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest border-l border-b ${getStatusColor(lead.leadStatus)}`}>
-                {lead.leadStatus}
-              </div>
-
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--color-bg-workspace)] flex items-center justify-center text-xl font-black text-blue-500 border border-[var(--color-bg-border)] shadow-inner">
-                  {lead.name[0]}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-black text-[var(--color-text-primary)] uppercase tracking-tight group-hover:text-blue-500 transition-colors">
-                    {lead.name}
-                  </h3>
-                  <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><Phone size={10} /> {lead.phone}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-3 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)]">
-                  <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Lead Quality</p>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">Priority: {lead.leadQuality}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)]">
-                  <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Call Status</p>
-                  <p className="text-xs font-bold text-[var(--color-text-primary)]">{lead.callStatus}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-[var(--color-bg-border)]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-[10px] text-white font-bold">
-                    {lead.assignedRepId?.name[0] || '?'}
-                  </div>
-                  <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                    {lead.assignedRepId?.name || 'Unassigned'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 text-blue-500 text-[10px] font-black uppercase tracking-widest">
-                  Operate <ChevronRight size={14} />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-[var(--color-bg-workspace)] border-b border-[var(--color-bg-border)]">
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Operative Identity</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Signal (Phone)</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Deployment (Status)</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Assigned Rep</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Priority</th>
+                <th className="px-8 py-5 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-bg-border)]">
+              <AnimatePresence mode="popLayout">
+                {filteredLeads.map((lead) => (
+                  <motion.tr
+                    key={lead._id}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
+                    className="hover:bg-blue-500/5 transition-all cursor-pointer group"
+                  >
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-sm font-black text-white border border-white/5">
+                          {lead.name[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-[var(--color-text-primary)] uppercase tracking-tight group-hover:text-blue-500 transition-colors">{lead.name}</p>
+                          <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{lead.email || 'NO_EMAIL'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-[11px] font-bold text-[var(--color-text-primary)] font-mono">{lead.phone}</span>
+                    </td>
+                    <td className="px-8 py-5">
+                       <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColor(lead.leadStatus)}`}>
+                        {lead.leadStatus}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                       <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center text-[10px] font-black">
+                          {lead.assignedRepId?.name[0] || '?'}
+                        </div>
+                        <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                          {lead.assignedRepId?.name || 'UNASSIGNED'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-1">
+                        {[...Array(4)].map((_, i) => (
+                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (5 - parseInt(lead.leadQuality)) ? 'bg-blue-500' : 'bg-slate-200'}`} />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 text-center">
+                      <button className="p-2 hover:bg-blue-500/10 rounded-lg text-[var(--color-text-muted)] group-hover:text-blue-500 transition-all">
+                        <ChevronRight size={18} />
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+            </tbody>
+          </table>
+          {filteredLeads.length === 0 && (
+            <div className="text-center py-32 opacity-30">
+              <Users size={48} className="mx-auto mb-4" />
+              <p className="text-xs font-black uppercase tracking-[0.3em]">No operative data discovered</p>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* Modal */}

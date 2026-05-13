@@ -158,17 +158,17 @@ const SettingsPage = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 shadow-2xl border border-white/5">
-              <Settings size={20} className="animate-spin-slow" />
+              <Settings size={20} />
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">
-              Configuration
+              Settings
             </h1>
           </div>
-          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Calibrate operative parameters and interface protocols.</p>
+          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Manage your profile and account preferences.</p>
         </div>
         <div className="hidden sm:flex items-center gap-3 px-5 py-2.5 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm self-start md:self-center">
           <ShieldCheck size={14} className="text-emerald-500" />
-          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Security Cleared</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Account Secure</span>
         </div>
       </motion.header>
 
@@ -187,8 +187,8 @@ const SettingsPage = () => {
                 <User size={18} md:size={20} strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operative Profile</h3>
-                <p className="hidden sm:block text-xs text-[var(--color-text-muted)] font-medium">Core identity and designation data.</p>
+                <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">My Profile</h3>
+                <p className="hidden sm:block text-xs text-[var(--color-text-muted)] font-medium">Update your personal information.</p>
               </div>
             </div>
           </div>
@@ -215,21 +215,21 @@ const SettingsPage = () => {
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left space-y-1.5">
-                <h4 className="text-lg md:text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Designation Identity</h4>
-                <p className="text-[10px] md:text-xs text-[var(--color-text-muted)] font-medium">Operative: {name || 'UNINITIALIZED'}</p>
+                <h4 className="text-lg md:text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight">Profile Picture</h4>
+                <p className="text-[10px] md:text-xs text-[var(--color-text-muted)] font-medium">User: {name || 'New User'}</p>
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
                   className="mt-2 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-4 py-2 rounded-lg border border-blue-500/10"
                 >
-                  Change Profile Icon
+                  Change Picture
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Personnel Name</label>
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
                 <div className="relative group">
                   <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                   <input
@@ -237,12 +237,12 @@ const SettingsPage = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                    placeholder="Enter Identity"
+                    placeholder="Enter Name"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Contact Signal</label>
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
                 <div className="flex gap-2">
                   <div className="relative w-24">
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
@@ -269,14 +269,14 @@ const SettingsPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[var(--color-bg-border)]">
               <CKDropdown
-                label="Access Clearance"
+                label="Account Role"
                 options={roleOptions}
                 value={role}
                 onChange={setRole}
                 disabled={user?.role !== 'admin'}
               />
               <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Email Node (Static)</label>
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Email Address</label>
                 <div className="relative">
                   <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
                   <input
@@ -292,8 +292,8 @@ const SettingsPage = () => {
             <div className="pt-6 border-t border-[var(--color-bg-border)]">
               <CKDropdown
                 multi
-                label="Nexus Team Affiliations"
-                placeholder="Assign operational units..."
+                label="My Teams"
+                placeholder="Select your teams..."
                 options={allTeams.map(t => ({ value: t.name, label: t.name }))}
                 value={teams}
                 onChange={setTeams}
@@ -309,23 +309,24 @@ const SettingsPage = () => {
                     exit={{ opacity: 0, x: 10 }}
                     className="flex items-center gap-2 text-emerald-500 font-black text-[9px] md:text-[10px] uppercase tracking-widest"
                   >
-                    <CheckCircle2 size={12} md:size={14} /> Data Synced Successfully
+                    <CheckCircle2 size={12} md:size={14} /> Profile Saved
                   </motion.div>
                 )}
               </AnimatePresence>
               <button
                 type="submit"
+                onClick={handleUpdateProfile}
                 disabled={loading}
                 className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-slate-900 text-white px-8 py-3.5 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] hover:bg-slate-800 disabled:opacity-50 transition-all shadow-2xl active:scale-95"
               >
-                {loading ? 'Processing...' : <><Save size={14} /> Sync Profile</>}
+                {loading ? 'Saving...' : <><Save size={14} /> Save Profile</>}
               </button>
             </div>
           </div>
         </motion.section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Preferences & Aesthetics */}
+          {/* Preferences */}
           <motion.section
             variants={sectionVariants}
             initial="hidden"
@@ -334,7 +335,7 @@ const SettingsPage = () => {
             className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
           >
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-              <h3 className="text-base font-black tracking-tight uppercase">Interface Protocols</h3>
+              <h3 className="text-base font-black tracking-tight uppercase">Preferences</h3>
             </div>
             <div className="p-6 space-y-4">
               {/* Dark Mode Toggle */}
@@ -344,8 +345,8 @@ const SettingsPage = () => {
                     {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
                   </div>
                   <div>
-                    <p className="text-xs font-black text-[var(--color-text-primary)]">Nocturnal Shift</p>
-                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Dark mode environment</p>
+                    <p className="text-xs font-black text-[var(--color-text-primary)]">Dark Mode</p>
+                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Toggle dark appearance</p>
                   </div>
                 </div>
                 <button
@@ -362,14 +363,14 @@ const SettingsPage = () => {
               </div>
 
               {/* Notifications Toggle */}
-              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
+              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
                 <div className="flex items-center gap-3">
                   <div className={`p-2.5 rounded-lg border transition-all ${notificationsEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
                     <Bell size={16} />
                   </div>
                   <div>
-                    <p className="text-xs font-black text-[var(--color-text-primary)]">Alert Signals</p>
-                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Browser Notifications</p>
+                    <p className="text-xs font-black text-[var(--color-text-primary)]">Notifications</p>
+                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Manage browser alerts</p>
                   </div>
                 </div>
                 <button
@@ -396,22 +397,22 @@ const SettingsPage = () => {
             className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
           >
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-              <h3 className="text-base font-black tracking-tight uppercase">Security Vault</h3>
+              <h3 className="text-base font-black tracking-tight uppercase">Change Password</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Current Protocol Key</label>
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Current Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-red-500/20 outline-none transition-all"
+                    className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                     placeholder="••••••••"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">New Access Key</label>
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">New Password</label>
                   <input
                     type="password"
                     value={newPassword}
@@ -420,12 +421,6 @@ const SettingsPage = () => {
                     placeholder="••••••••"
                   />
                 </div>
-              </div>
-              <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-xl flex gap-3">
-                <ShieldAlert size={16} className="text-orange-500 shrink-0" />
-                <p className="text-[8px] font-bold text-orange-700 dark:text-orange-300 leading-relaxed uppercase tracking-tight">
-                  Warning: Changing access key will require full system re-authentication across active deployments.
-                </p>
               </div>
             </div>
           </motion.section>

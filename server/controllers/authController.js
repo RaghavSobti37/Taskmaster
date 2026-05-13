@@ -41,8 +41,14 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const { email, password } = req.body; // 'email' field used for any identifier
+    const user = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { phone: email },
+        { name: email }
+      ]
+    });
 
     if (user && (await user.comparePassword(password))) {
       res.json({

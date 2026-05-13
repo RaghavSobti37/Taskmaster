@@ -52,14 +52,14 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email Address</label>
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Login Identity</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input 
-                type="email" 
+                type="text" 
                 required
                 className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] focus:border-transparent outline-none transition-all"
-                placeholder="your@email.com"
+                placeholder="Email, Phone, or Name"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

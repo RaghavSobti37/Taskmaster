@@ -249,11 +249,13 @@ const CRMPage = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`w-1.5 h-1.5 rounded-full ${i < (6 - parseInt(lead.leadQuality || 5)) ? 'bg-blue-500' : 'bg-[var(--color-bg-border)]'}`} 
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((level) => (
+                          <button
+                            key={level}
+                            onClick={() => handleUpdatePriority(lead._id, level)}
+                            className={`w-2 h-2 rounded-full transition-all hover:scale-150 ${level <= parseInt(lead.leadQuality || 1) ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-[var(--color-bg-border)]'}`}
+                            title={`Set Priority ${level}`}
                           />
                         ))}
                       </div>

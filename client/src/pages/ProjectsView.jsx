@@ -3,10 +3,13 @@ import { Plus, Search, Filter } from 'lucide-react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge, ProgressBar } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { Trash2 } from 'lucide-react';
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +25,18 @@ const ProjectsView = () => {
     };
     fetchProjects();
   }, []);
+
+  const handleDeleteProject = async (e, projectId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("PURGE THIS PROJECT AND ALL ASSOCIATED DATA?")) return;
+    try {
+      await axios.delete(`/api/projects/${projectId}`);
+      setProjects(projects.filter(p => p._id !== projectId));
+    } catch (err) {
+      console.error('Delete project error:', err);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -54,9 +69,19 @@ const ProjectsView = () => {
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-bold text-lg uppercase">
                   {project.name.substring(0, 2)}
                 </div>
-                <Badge variant={project.status === 'active' ? 'done' : 'todo'}>
-                  {project.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={project.status === 'active' ? 'done' : 'todo'}>
+                    {project.status}
+                  </Badge>
+                  {user?.role === 'admin' && (
+                    <button 
+                      onClick={(e) => handleDeleteProject(e, project._id)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
               <h3 className="text-lg font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">
                 {project.name}

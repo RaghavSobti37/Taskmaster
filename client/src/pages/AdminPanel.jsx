@@ -24,7 +24,13 @@ import {
   Layers,
   AlertTriangle,
   RefreshCw,
-  Trash
+  Trash,
+  Upload,
+  Download,
+  FileText,
+  PlusCircle,
+  FileJson,
+  Database as DbIcon
 } from 'lucide-react';
 import { Badge, NexusModal } from '../components/ui';
 import { Link } from 'react-router-dom';
@@ -298,6 +304,47 @@ const AdminPanel = () => {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setLoading(true);
+      await axios.post('/api/crm/leads/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      fetchData();
+      setModalConfig({ open: true, title: 'Upload Successful', message: 'Leads imported successfully.', type: 'success' });
+    } catch (err) {
+      setModalConfig({ open: true, title: 'Upload Error', message: err.response?.data?.error || 'File upload failed.', type: 'danger' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get('/api/crm/leads', { responseType: 'blob' });
+      // This is a placeholder for a real CSV export endpoint if it exists, 
+      // or we can generate it on the fly. 
+      // Assuming /api/export exists from previous context
+      const exportRes = await axios.get('/api/export?format=db', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([exportRes.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Export error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteImport = async () => {
     if (!deleteModal.reason.trim()) {
       setModalConfig({
@@ -459,11 +506,106 @@ const AdminPanel = () => {
           </motion.aside>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-12">
+           {/* Command Center */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Import Section */}
+              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><Upload size={24} /></div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight italic">Data Ingestion</h3>
+                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Upload Legacy Datasets</p>
+                  </div>
+                </div>
+                <label className="group relative block w-full flex-1 min-h-[120px] border-2 border-dashed border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all cursor-pointer bg-[var(--color-bg-workspace)]/50 overflow-hidden">
+                  <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 group-hover:scale-105 transition-transform">
+                    <PlusCircle size={32} className="text-[var(--color-text-muted)]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Select CSV Source</span>
+                  </div>
+                </label>
+              </section>
+
+              {/* Sync Section */}
+              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><RefreshCw size={24} /></div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight italic">Live Sync</h3>
+                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">HolySheet Automation</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 flex-1 justify-center">
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await axios.post('/api/crm/sync-bookings');
+                        setModalConfig({ isOpen: true, title: 'Sync Successful', message: res.data.message, type: 'success' });
+                        fetchData();
+                      } catch (err) {
+                        setModalConfig({ isOpen: true, title: 'Sync Failed', message: err.response?.data?.error || 'Check HOLYSHEET_API_KEY', type: 'danger' });
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all group"
+                  >
+                    <Database size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Sync Bookings</span>
+                  </button>
+                  <p className="text-[8px] text-[var(--color-text-muted)] text-center font-bold italic tracking-wider">Target: Leads Booking Sheet</p>
+                </div>
+              </section>
+
+              {/* Export Section */}
+              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500"><Download size={24} /></div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight italic">Data Extraction</h3>
+                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Master Dataset Export</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                   <button onClick={handleExportCSV} className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-emerald-500/50 transition-all group">
+                      <FileText size={32} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-center">Full CSV</span>
+                   </button>
+                   <button className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all group opacity-50">
+                      <FileJson size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-center">JSON Batch</span>
+                   </button>
+                </div>
+              </section>
+            </div>
+
            <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
             <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
               <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Import History</h3>
-              <Badge variant="progress">{crmImports.length} BATCHES</Badge>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => {
+                    setModalConfig({
+                      isOpen: true,
+                      title: 'SYSTEM PURGE ALERT',
+                      message: 'Are you sure you want to PERMANENTLY ERASE all leads, EMIs, and audit logs? This protocol is irreversible.',
+                      type: 'danger',
+                      isConfirm: true,
+                      onConfirm: async () => {
+                        try {
+                          await axios.post('/api/crm/reset', { reason: 'System Admin Manual Reset' });
+                          fetchData();
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }
+                    });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                >
+                  <RefreshCw size={14} /> Reset CRM Ecosystem
+                </button>
+                <Badge variant="progress">{crmImports.length} BATCHES</Badge>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">

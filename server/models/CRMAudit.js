@@ -1,14 +1,17 @@
 const mongoose = require('mongoose');
 
-const crmAuditSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+/**
+ * Audit Log Schema
+ */
+const AuditSchema = new mongoose.Schema({
+  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', index: true },
+  leadRowId: { type: String, index: true }, // Legacy link
+  userId: { type: String, required: true, index: true }, // ID of user who made the change (e.g. sr01)
   userRole: { type: String },
-  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' }, // Optional for system-wide actions
-  action: { type: String }, // e.g., 'UPDATE', 'BATCH_DELETE', 'SYSTEM_RESET'
   fieldChanged: { type: String, required: true },
   oldValue: { type: String },
   newValue: { type: String },
-  notes: { type: String }
-}, { timestamps: true });
+  timestamp: { type: Date, default: Date.now }
+});
 
-module.exports = mongoose.model('CRMAudit', crmAuditSchema);
+module.exports = mongoose.model('CRMAudit', AuditSchema);

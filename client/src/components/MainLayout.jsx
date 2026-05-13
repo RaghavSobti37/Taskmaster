@@ -50,7 +50,7 @@ const MainLayout = () => {
             ${isOpen ? 'lg:ml-64' : 'lg:ml-20'} 
             p-4 md:p-6 lg:p-8`}
         >
-          <div className="max-w-7xl mx-auto w-full">
+          <div className="w-full">
             <Outlet />
           </div>
         </main>

@@ -124,18 +124,6 @@ cd server
 node seeder.js
 ```
 
-## Login
-
-### Test Accounts (Password: `1234`)
-- `REDACTED_ADMIN@example.com`
-- `redacted-staff@example.com`
-- `redacted-staff@example.com`
-- `ops@theshakticollective.in`
-- `atharva@theshakticollective.in`
-
-### Quick Login (Dev)
-Click **"Quick Login (Admin Demo)"** on the login screen for instant admin access.
-
 ## Project Structure
 
 ```

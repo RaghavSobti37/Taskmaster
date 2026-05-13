@@ -14,16 +14,25 @@ import SettingsPage from './pages/SettingsPage';
 import DailyLogPage from './pages/DailyLogPage';
 import AdminLogsPage from './pages/AdminLogsPage';
 import AssetsPage from './pages/AssetsPage';
-import CRMPage from './pages/CRMPage';
+import LeadsPage from './pages/LeadsPage';
+import FollowupsPage from './pages/FollowupsPage';
+
+import FeaturesPage from './pages/FeaturesPage';
+import TodoPage from './pages/TodoPage';
 import ProtectedRoute from './components/ProtectedRoute';
+
+
 import AdminRoute from './components/AdminRoute';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
+import NexusLoader from './components/ui/NexusLoader';
+
 function App() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Loading CoreKnot...</div>;
+  if (loading) return <NexusLoader />;
+
 
   return (
     <ThemeProvider>
@@ -42,8 +51,15 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="logs" element={<DailyLogPage />} />
             <Route path="assets" element={<AssetsPage />} />
-            <Route path="crm" element={<CRMPage />} />
+            <Route path="leads" element={<LeadsPage />} />
+            <Route path="followups" element={<FollowupsPage />} />
+
+
+            <Route path="features" element={<FeaturesPage />} />
+            <Route path="todo" element={<TodoPage />} />
             <Route element={<AdminRoute />}>
+
+
               <Route path="admin" element={<AdminPanel />} />
               <Route path="admin/logs" element={<AdminLogsPage />} />
             </Route>

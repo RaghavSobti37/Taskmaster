@@ -1,5 +1,8 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -66,6 +69,41 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.googleLogin = async (req, res) => {
+  try {
+    const { tokenId } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: tokenId,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const { name, email, picture } = ticket.getPayload();
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Create new user if not exists
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        password: Math.random().toString(36).slice(-8), // Random password
+        avatar: picture,
+        role: 'operative' // Default role
+      });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.getMe = async (req, res) => {
+
   res.json(req.user);
 };

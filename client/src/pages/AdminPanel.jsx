@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 import {
   Users,
   Shield,
@@ -9,34 +9,37 @@ import {
   Activity,
   Send,
   Database,
+  FileJson,
+  Database as DbIcon,
   TrendingUp,
-  Clock,
+  BarChart3,
+  Phone,
+  UserCheck,
+  FileBarChart,
   Circle,
-  UserCog,
   X,
   Mail,
-  Calendar,
-  Briefcase,
+  UserCog,
   Trash2,
-  ChevronRight,
-  Phone,
+  Trash,
   Plus,
-  Layers,
   AlertTriangle,
   RefreshCw,
-  Trash,
   Upload,
   Download,
   FileText,
   PlusCircle,
-  FileJson,
-  Database as DbIcon
+  Clock,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
-import { Badge, NexusModal } from '../components/ui';
-import { Link } from 'react-router-dom';
+import { Badge, NexusModal, ProgressBar } from '../components/ui';
+import { Link, useSearchParams } from 'react-router-dom';
 import CKDropdown from '../components/ui/CKDropdown';
 import { format } from 'date-fns';
-import { useSearchParams } from 'react-router-dom';
+import { getRepName } from '../utils/crmUtils';
+
+
 
 const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTeamsChange }) => {
   const [userTasks, setUserTasks] = useState([]);
@@ -188,7 +191,9 @@ const AdminPanel = () => {
   const [chatMsg, setChatMsg] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamColor, setNewTeamColor] = useState('#3b82f6');
+  const [crmLeads, setCrmLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', isConfirm: false, onConfirm: null });
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -198,19 +203,24 @@ const AdminPanel = () => {
 
   const fetchData = async () => {
     try {
-      const [usersRes, logsRes, tasksRes, teamsRes, importsRes, purgeRes] = await Promise.all([
+      const [usersRes, logsRes, tasksRes, teamsRes, importsRes, purgeRes, leadsRes] = await Promise.all([
         axios.get('/api/users/directory'),
         axios.get('/api/logs'),
         axios.get('/api/tasks'),
         axios.get('/api/teams'),
         axios.get('/api/crm/imports'),
-        axios.get('/api/crm/purge-logs')
+        axios.get('/api/crm/purge-logs'),
+        axios.get('/api/crm/leads')
       ]);
+
+
       setUsers(usersRes.data.users || []);
       setLogs(logsRes.data);
       setTeams(teamsRes.data);
       setCrmImports(importsRes.data);
       setPurgeLogs(purgeRes.data);
+      setCrmLeads(leadsRes.data || []);
+
 
       const activeCount = tasksRes.data.filter(t => t.status === 'in-progress').length;
       setStats({
@@ -399,34 +409,37 @@ const AdminPanel = () => {
   return (
     <div className="space-y-8 pb-24">
       {/* Header */}
-      <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
+      <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
             <ShieldCheck size={20} strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Admin Panel</h1>
+          <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Admin Panel</h1>
         </div>
-        <div className="flex items-center gap-2.5">
-          <Link to="/admin/logs" className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm">Daily Logs</Link>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <Link to="/admin/logs" className="flex-1 sm:flex-none text-center bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm">Daily Logs</Link>
         </div>
       </motion.header>
 
       {/* Tabs */}
-      <div className="flex items-center gap-4 border-b border-[var(--color-bg-border)]">
-        <button onClick={() => setActiveTab('users')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Users</button>
-        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Data</button>
+      <div className="flex items-center gap-2 md:gap-4 border-b border-[var(--color-bg-border)] overflow-x-auto no-scrollbar">
+        <button onClick={() => setActiveTab('users')} className={`px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Users</button>
+        <button onClick={() => setActiveTab('crm-intel')} className={`px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'crm-intel' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Intel</button>
+        <button onClick={() => setActiveTab('crm-data')} className={`px-4 md:px-6 py-3 text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'crm-data' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Maintenance</button>
       </div>
 
+
       {activeTab === 'users' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="lg:col-span-8 space-y-8">
             <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[600px]">
-              <div className="px-8 py-8 border-b border-[var(--color-bg-border)] flex items-center justify-between gap-6">
+              <div className="px-6 md:px-8 py-6 md:py-8 border-b border-[var(--color-bg-border)] flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm"><Users size={20} strokeWidth={2.5} /></div>
-                  <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
+                  <div className="p-2.5 md:p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm"><Users size={18} md:size={20} strokeWidth={2.5} /></div>
+                  <h3 className="text-base md:text-lg font-black tracking-tight text-[var(--color-text-primary)]">User Directory</h3>
                 </div>
-                <div className="relative w-72">
+                <div className="relative w-full md:w-72">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
                   <input type="text" placeholder="Search users..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none shadow-inner" />
                 </div>
@@ -505,35 +518,34 @@ const AdminPanel = () => {
             </section>
           </motion.aside>
         </div>
-      ) : (
         <div className="space-y-12">
            {/* Command Center */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
               {/* Import Section */}
-              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+              <section className="bg-[var(--color-bg-surface)] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-6 md:space-y-8 flex flex-col">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><Upload size={24} /></div>
+                  <div className="p-2.5 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl text-blue-500"><Upload size={20} md:size={24} /></div>
                   <div>
-                    <h3 className="text-lg font-black uppercase tracking-tight italic">Data Ingestion</h3>
-                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Upload Legacy Datasets</p>
+                    <h3 className="text-base md:text-lg font-black uppercase tracking-tight italic">Data Ingestion</h3>
+                    <p className="text-[9px] md:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Upload Legacy Datasets</p>
                   </div>
                 </div>
-                <label className="group relative block w-full flex-1 min-h-[120px] border-2 border-dashed border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all cursor-pointer bg-[var(--color-bg-workspace)]/50 overflow-hidden">
+                <label className="group relative block w-full flex-1 min-h-[100px] md:min-h-[120px] border-2 border-dashed border-[var(--color-bg-border)] rounded-[1.5rem] md:rounded-[2rem] hover:border-blue-500/50 transition-all cursor-pointer bg-[var(--color-bg-workspace)]/50 overflow-hidden">
                   <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 group-hover:scale-105 transition-transform">
-                    <PlusCircle size={32} className="text-[var(--color-text-muted)]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Select CSV Source</span>
+                    <PlusCircle size={24} md:size={32} className="text-[var(--color-text-muted)]" />
+                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Select CSV Source</span>
                   </div>
                 </label>
               </section>
 
               {/* Sync Section */}
-              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+              <section className="bg-[var(--color-bg-surface)] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-6 md:space-y-8 flex flex-col">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><RefreshCw size={24} /></div>
+                  <div className="p-2.5 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl text-blue-500"><RefreshCw size={20} md:size={24} /></div>
                   <div>
-                    <h3 className="text-lg font-black uppercase tracking-tight italic">Live Sync</h3>
-                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">HolySheet Automation</p>
+                    <h3 className="text-base md:text-lg font-black uppercase tracking-tight italic">Live Sync</h3>
+                    <p className="text-[9px] md:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">HolySheet Automation</p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-4 flex-1 justify-center">
@@ -547,32 +559,32 @@ const AdminPanel = () => {
                         setModalConfig({ isOpen: true, title: 'Sync Failed', message: err.response?.data?.error || 'Check HOLYSHEET_API_KEY', type: 'danger' });
                       }
                     }}
-                    className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all group"
+                    className="flex items-center justify-center gap-4 p-6 md:p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[1.5rem] md:rounded-[2rem] hover:border-blue-500/50 transition-all group"
                   >
-                    <Database size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Sync Bookings</span>
+                    <Database size={24} md:size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                    <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">Sync Bookings</span>
                   </button>
                   <p className="text-[8px] text-[var(--color-text-muted)] text-center font-bold italic tracking-wider">Target: Leads Booking Sheet</p>
                 </div>
               </section>
 
               {/* Export Section */}
-              <section className="bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-8 flex flex-col">
+              <section className="bg-[var(--color-bg-surface)] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-[var(--color-bg-border)] shadow-xl space-y-6 md:space-y-8 flex flex-col">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500"><Download size={24} /></div>
+                  <div className="p-2.5 md:p-3 bg-emerald-500/10 rounded-xl md:rounded-2xl text-emerald-500"><Download size={20} md:size={24} /></div>
                   <div>
-                    <h3 className="text-lg font-black uppercase tracking-tight italic">Data Extraction</h3>
-                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Master Dataset Export</p>
+                    <h3 className="text-base md:text-lg font-black uppercase tracking-tight italic">Data Extraction</h3>
+                    <p className="text-[9px] md:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Master Dataset Export</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                   <button onClick={handleExportCSV} className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-emerald-500/50 transition-all group">
-                      <FileText size={32} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-center">Full CSV</span>
+                <div className="grid grid-cols-2 gap-3 md:gap-4 flex-1">
+                   <button onClick={handleExportCSV} className="flex flex-col items-center justify-center gap-3 md:gap-4 p-6 md:p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[1.5rem] md:rounded-[2rem] hover:border-emerald-500/50 transition-all group">
+                      <FileText size={24} md:size={32} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-center">Full CSV</span>
                    </button>
-                   <button className="flex flex-col items-center justify-center gap-4 p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[2rem] hover:border-blue-500/50 transition-all group opacity-50">
-                      <FileJson size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-center">JSON Batch</span>
+                   <button className="flex flex-col items-center justify-center gap-3 md:gap-4 p-6 md:p-8 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[1.5rem] md:rounded-[2rem] hover:border-blue-500/50 transition-all group opacity-50">
+                      <FileJson size={24} md:size={32} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-center">JSON Batch</span>
                    </button>
                 </div>
               </section>
@@ -662,7 +674,94 @@ const AdminPanel = () => {
             </div>
           </section>
         </div>
+      </>
+      ) : activeTab === 'crm-intel' ? (
+        <div className="space-y-12">
+          {/* Dashboard View Adapted from CRMPage */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Database', value: crmLeads.length, icon: DbIcon, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+              { label: 'Connected', value: crmLeads.filter(l => l.callStatus === 'Connected').length, icon: Phone, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { label: 'Meaningful', value: crmLeads.filter(l => l.meaningfulConnect === 'YES').length, icon: UserCheck, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+              { label: 'Converted', value: crmLeads.filter(l => l.leadStatus === 'Converted').length, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+            ].map((stat, i) => (
+              <div key={i} className="bg-[var(--color-bg-surface)] p-6 rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-xl shadow-black/5 group">
+                <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}><stat.icon size={20} /></div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{stat.label}</p>
+                <h2 className="text-2xl font-black text-[var(--color-text-primary)] tracking-tighter">{stat.value}</h2>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             <section className="lg:col-span-2 bg-[var(--color-bg-surface)] p-10 rounded-[3rem] border border-[var(--color-bg-border)] shadow-2xl">
+               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-text-primary)] mb-8 flex items-center gap-2">
+                 <FileBarChart size={18} className="text-blue-500" /> Rep Performance Metrics
+               </h3>
+               <div className="overflow-x-auto">
+                 <table className="w-full">
+                    <thead className="bg-[var(--color-bg-workspace)] border-b border-[var(--color-bg-border)]">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Representative</th>
+                        <th className="px-6 py-4 text-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Units</th>
+                        <th className="px-6 py-4 text-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Converted</th>
+                        <th className="px-6 py-4 text-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Efficiency</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-bg-border)]">
+                      {Object.entries(crmLeads.reduce((acc, l) => {
+                        const id = typeof l.assignedRepId === 'object' ? l.assignedRepId._id : (l.assignedRepId || 'unassigned');
+                        acc[id] = (acc[id] || 0) + 1;
+                        return acc;
+                      }, {})).map(([id, count]) => {
+                        const repLeads = crmLeads.filter(l => (typeof l.assignedRepId === 'object' ? l.assignedRepId._id : l.assignedRepId) === id);
+                        const conv = repLeads.filter(l => l.leadStatus === 'Converted').length;
+                        const rate = repLeads.length > 0 ? ((conv / repLeads.length) * 100).toFixed(1) : 0;
+                        const name = getRepName(repLeads[0]?.assignedRepId) || id;
+                        return (
+                          <tr key={id} className="hover:bg-[var(--color-bg-workspace)] transition-all">
+                            <td className="px-6 py-4"><span className="font-black text-[10px] uppercase tracking-tight italic">{name}</span></td>
+                            <td className="px-6 py-4 text-center text-xs font-bold">{repLeads.length}</td>
+                            <td className="px-6 py-4 text-center text-xs font-bold text-amber-500">{conv}</td>
+                            <td className="px-6 py-4 text-center"><span className="px-2 py-1 bg-blue-500/10 text-blue-500 rounded-md text-[9px] font-black border border-blue-500/10">{rate}%</span></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                 </table>
+               </div>
+             </section>
+
+             <section className="bg-[var(--color-bg-surface)] p-8 rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl flex flex-col">
+               <h3 className="text-[10px] font-black uppercase tracking-widest mb-6">Pipeline Health</h3>
+               <div className="space-y-6 flex-1">
+                 {[
+                   { label: 'Total Base', value: crmLeads.length, percent: 100, color: 'bg-blue-500' },
+                   { label: 'Connected', value: crmLeads.filter(l => l.callStatus === 'Connected').length, percent: (crmLeads.filter(l => l.callStatus === 'Connected').length / crmLeads.length * 100) || 0, color: 'bg-emerald-500' },
+                   { label: 'Meaningful', value: crmLeads.filter(l => l.meaningfulConnect === 'YES').length, percent: (crmLeads.filter(l => l.meaningfulConnect === 'YES').length / crmLeads.length * 100) || 0, color: 'bg-purple-500' },
+                   { label: 'Converted', value: crmLeads.filter(l => l.leadStatus === 'Converted').length, percent: (crmLeads.filter(l => l.leadStatus === 'Converted').length / crmLeads.length * 100) || 0, color: 'bg-amber-500' },
+                 ].map((item, i) => (
+                   <div key={i} className="space-y-2">
+                     <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                       <span>{item.label}</span>
+                       <span>{Math.round(item.percent)}%</span>
+                     </div>
+                     <ProgressBar progress={item.percent} color={item.color} />
+                   </div>
+                 ))}
+               </div>
+             </section>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 opacity-30">
+          <Shield size={48} className="mb-4" />
+          <p className="text-[10px] font-black uppercase tracking-widest">Select Administrative Protocol</p>
+        </div>
       )}
+
+
+
 
       {/* Modals */}
       <AnimatePresence>

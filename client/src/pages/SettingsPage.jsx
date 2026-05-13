@@ -202,7 +202,7 @@ const SettingsPage = () => {
           className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
         >
           <div className="px-6 md:px-10 py-4 md:py-6 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
-            <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-3 md:gap-4 scale-[0.65] origin-left">
               <div className="p-2 md:p-2.5 bg-blue-500/10 rounded-lg md:rounded-xl text-blue-500 shadow-sm">
                 <User size={16} md:size={18} strokeWidth={2.5} />
               </div>
@@ -214,135 +214,137 @@ const SettingsPage = () => {
           </div>
 
           <div className="p-6 md:p-10 space-y-8 md:space-y-10">
-            {/* Avatar Profile Interaction */}
-            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 bg-[var(--color-bg-workspace)]/40 p-6 md:p-8 rounded-[1.5rem] border border-[var(--color-bg-border)] group">
-              <div
-                onClick={() => setIsAvatarModalOpen(true)}
-                className="relative cursor-pointer group/avatar"
-              >
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1rem] md:rounded-2xl bg-[var(--color-bg-surface)] border-2 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
-                  {avatar ? (
-                    <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={24} md:size={30} className="text-[var(--color-text-muted)]" />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-all">
-                    <Camera size={14} className="text-white" />
+            <div className="scale-[0.7] origin-top-left space-y-8">
+              {/* Avatar Profile Interaction */}
+              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 bg-[var(--color-bg-workspace)]/40 p-6 md:p-8 rounded-[1.5rem] border border-[var(--color-bg-border)] group">
+                <div
+                  onClick={() => setIsAvatarModalOpen(true)}
+                  className="relative cursor-pointer group/avatar"
+                >
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-[1rem] md:rounded-2xl bg-[var(--color-bg-surface)] border-2 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
+                    {avatar ? (
+                      <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={24} md:size={30} className="text-[var(--color-text-muted)]" />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-all">
+                      <Camera size={14} className="text-white" />
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 p-1 bg-blue-500 text-white rounded-md md:rounded-lg shadow-lg border-2 border-[var(--color-bg-surface)]">
+                    <Sparkles size={8} md:size={10} />
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 p-1 bg-blue-500 text-white rounded-md md:rounded-lg shadow-lg border-2 border-[var(--color-bg-surface)]">
-                  <Sparkles size={8} md:size={10} />
+                <div className="flex-1 text-center md:text-left space-y-1">
+                  <h4 className="text-sm md:text-base font-black text-[var(--color-text-primary)] uppercase tracking-tight">Profile Picture</h4>
+                  <p className="text-[8px] md:text-[9px] text-[var(--color-text-muted)] font-medium">User: {name || 'New User'}</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAvatarModalOpen(true)}
+                    className="mt-1.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-3 py-1.5 rounded-md border border-blue-500/10"
+                  >
+                    Change Picture
+                  </button>
                 </div>
               </div>
-              <div className="flex-1 text-center md:text-left space-y-1">
-                <h4 className="text-sm md:text-base font-black text-[var(--color-text-primary)] uppercase tracking-tight">Profile Picture</h4>
-                <p className="text-[8px] md:text-[9px] text-[var(--color-text-muted)] font-medium">User: {name || 'New User'}</p>
-                <button
-                  type="button"
-                  onClick={() => setIsAvatarModalOpen(true)}
-                  className="mt-1.5 text-[7px] md:text-[8px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors bg-blue-500/5 px-3 py-1.5 rounded-md border border-blue-500/10"
-                >
-                  Change Picture
-                </button>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
-                <div className="relative group">
-                  <User size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                    placeholder="Enter Name"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
-                <div className="flex gap-2">
-                    <NexusDropdown
-                      options={[{ value: '+91', label: '+91 (IN)' }]}
-                      value="+91"
-                      onChange={() => {}}
-                      variant="compact"
-                      className="w-20"
-                    />
-                  <div className="relative flex-1 group">
-                    <Smartphone size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
+                  <div className="relative group">
+                    <User size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                     <input
                       type="text"
-                      value={phone.replace(/^\+91\s*/, '')}
-                      onChange={(e) => setPhone('+91 ' + e.target.value)}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-                      placeholder="98765 43210"
+                      placeholder="Enter Name"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
+                  <div className="flex gap-2">
+                      <NexusDropdown
+                        options={[{ value: '+91', label: '+91 (IN)' }]}
+                        value="+91"
+                        onChange={() => {}}
+                        variant="compact"
+                        className="w-20"
+                      />
+                    <div className="relative flex-1 group">
+                      <Smartphone size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+                      <input
+                        type="text"
+                        value={phone.replace(/^\+91\s*/, '')}
+                        onChange={(e) => setPhone('+91 ' + e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                        placeholder="98765 43210"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[var(--color-bg-border)]">
+                <CKDropdown
+                  label="Account Role"
+                  options={roleOptions}
+                  value={role}
+                  onChange={setRole}
+                  disabled={user?.role !== 'admin'}
+                />
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Email Address</label>
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
+                    <input
+                      type="email"
+                      value={email}
+                      disabled
+                      className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium opacity-60 cursor-not-allowed"
                     />
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[var(--color-bg-border)]">
-              <CKDropdown
-                label="Account Role"
-                options={roleOptions}
-                value={role}
-                onChange={setRole}
-                disabled={user?.role !== 'admin'}
-              />
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">Email Address</label>
-                <div className="relative">
-                  <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    className="w-full pl-11 pr-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium opacity-60 cursor-not-allowed"
-                  />
+              <div className="pt-6 border-t border-[var(--color-bg-border)] space-y-4">
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">My Teams</label>
+                <div className="flex flex-wrap gap-3">
+                  {[...allTeams]
+                    .sort((a, b) => {
+                      const aSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === a.name);
+                      const bSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === b.name);
+                      if (aSelected && !bSelected) return -1;
+                      if (!aSelected && bSelected) return 1;
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map(team => {
+                      const isSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === team.name);
+                      return (
+                        <button
+                          key={team._id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setTeams(teams.filter(t => (typeof t === 'object' ? t.value : t) !== team.name));
+                            } else {
+                              setTeams([...teams, { value: team.name, label: team.name }]);
+                            }
+                          }}
+                          className={`
+                            px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
+                            ${isSelected
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-105'
+                              : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/50'}
+                          `}
+                        >
+                          {team.name}
+                          {isSelected && <CheckCircle2 size={10} className="inline-block ml-2 text-blue-400" />}
+                        </button>
+                      );
+                    })}
                 </div>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-[var(--color-bg-border)] space-y-4">
-              <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">My Teams</label>
-              <div className="flex flex-wrap gap-3">
-                {[...allTeams]
-                  .sort((a, b) => {
-                    const aSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === a.name);
-                    const bSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === b.name);
-                    if (aSelected && !bSelected) return -1;
-                    if (!aSelected && bSelected) return 1;
-                    return a.name.localeCompare(b.name);
-                  })
-                  .map(team => {
-                    const isSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === team.name);
-                    return (
-                      <button
-                        key={team._id}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setTeams(teams.filter(t => (typeof t === 'object' ? t.value : t) !== team.name));
-                          } else {
-                            setTeams([...teams, { value: team.name, label: team.name }]);
-                          }
-                        }}
-                        className={`
-                          px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
-                          ${isSelected
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-105'
-                            : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/50'}
-                        `}
-                      >
-                        {team.name}
-                        {isSelected && <CheckCircle2 size={10} className="inline-block ml-2 text-blue-400" />}
-                      </button>
-                    );
-                  })}
               </div>
             </div>
           </div>
@@ -358,55 +360,57 @@ const SettingsPage = () => {
             className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
           >
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-              <h3 className="text-base font-black tracking-tight uppercase">Preferences</h3>
+              <h3 className="text-base font-black tracking-tight uppercase scale-[0.6] origin-left">Preferences</h3>
             </div>
             <div className="p-6 space-y-4">
-              {/* Dark Mode Toggle */}
-              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-blue-500/20 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-lg border transition-all ${theme === 'dark' ? 'bg-slate-900 border-white/5 text-blue-400' : 'bg-white border-slate-200 text-orange-400'}`}>
-                    {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+              <div className="scale-[0.7] origin-top-left space-y-4">
+                {/* Dark Mode Toggle */}
+                <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-blue-500/20 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-lg border transition-all ${theme === 'dark' ? 'bg-slate-900 border-white/5 text-blue-400' : 'bg-white border-slate-200 text-orange-400'}`}>
+                      {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-[var(--color-text-primary)]">Dark Mode</p>
+                      <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Toggle dark appearance</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-[var(--color-text-primary)]">Dark Mode</p>
-                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Toggle dark appearance</p>
-                  </div>
+                  <button
+                    onClick={toggleTheme}
+                    className={`w-10 h-5 rounded-full transition-all relative ${theme === 'dark' ? 'bg-blue-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                  >
+                    <motion.div
+                      layout
+                      className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
+                      animate={{ x: theme === 'dark' ? 20 : 0 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </button>
                 </div>
-                <button
-                  onClick={toggleTheme}
-                  className={`w-10 h-5 rounded-full transition-all relative ${theme === 'dark' ? 'bg-blue-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                >
-                  <motion.div
-                    layout
-                    className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
-                    animate={{ x: theme === 'dark' ? 20 : 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                </button>
-              </div>
 
-              {/* Notifications Toggle */}
-              <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-lg border transition-all ${notificationsEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
-                    <Bell size={16} />
+                {/* Notifications Toggle */}
+                <div className="flex items-center justify-between p-5 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-sm hover:border-emerald-500/20 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-lg border transition-all ${notificationsEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+                      <Bell size={16} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-[var(--color-text-primary)]">Notifications</p>
+                      <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Manage browser alerts</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-black text-[var(--color-text-primary)]">Notifications</p>
-                    <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-tight">Manage browser alerts</p>
-                  </div>
+                  <button
+                    onClick={requestNotificationPermission}
+                    className={`w-10 h-5 rounded-full transition-all relative ${notificationsEnabled ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                  >
+                    <motion.div
+                      layout
+                      className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
+                      animate={{ x: notificationsEnabled ? 20 : 0 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  </button>
                 </div>
-                <button
-                  onClick={requestNotificationPermission}
-                  className={`w-10 h-5 rounded-full transition-all relative ${notificationsEnabled ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
-                >
-                  <motion.div
-                    layout
-                    className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
-                    animate={{ x: notificationsEnabled ? 20 : 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                </button>
               </div>
             </div>
           </motion.section>
@@ -420,10 +424,10 @@ const SettingsPage = () => {
             className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
           >
             <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-              <h3 className="text-base font-black tracking-tight uppercase">Change Password</h3>
+              <h3 className="text-base font-black tracking-tight uppercase scale-[0.6] origin-left">Change Password</h3>
             </div>
             <div className="p-6 space-y-4">
-              <div className="space-y-3">
+              <div className="scale-[0.7] origin-top-left space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Current Password</label>
                   <input

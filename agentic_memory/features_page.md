@@ -12,7 +12,9 @@
 - [x] **Team Chat**: Channels, mentions, file attach, task creation from messages
 - [x] **CRM**: Lead table, CSV import, priority dots, status badges, lead modal
 - [x] **Assets**: Project-scoped links (max 3), add/delete with modal confirmations
-- [x] **Settings**: Profile editing, avatar upload, theme toggle
+- [x] **Artists**: High-fidelity profiles (Harshad & Duhita), collective numbers, discography, and mission timelines.
+- [x] **Todo/Task Management**: Synchronized Protocol Log (TodoPage) with backend Task model and Project associations.
+- [x] **Settings**: Profile editing, avatar upload, theme toggle, and 30% scaled-down high-density UI components.
 
 ## Backend — Status
 

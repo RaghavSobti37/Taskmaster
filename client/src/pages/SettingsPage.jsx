@@ -46,7 +46,9 @@ const SettingsPage = () => {
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [phone, setPhone] = useState(user?.phone || '+91 ');
   const [role, setRole] = useState(user?.role || 'user');
-  const [teams, setTeams] = useState(user?.teams || []);
+  const [teams, setTeams] = useState(() => {
+    return user?.teams ? user.teams.map(t => ({ value: t, label: t })) : [];
+  });
   const [allTeams, setAllTeams] = useState([]);
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -100,7 +102,9 @@ const SettingsPage = () => {
     setLoading(true);
     setSuccess(false);
     try {
-      const payload = { name, avatar, phone, teams };
+      // Map teams back to string array for backend compatibility
+      const teamStrings = teams.map(t => typeof t === 'object' ? t.value : t);
+      const payload = { name, avatar, phone, teams: teamStrings };
       if (user?.role === 'admin') payload.role = role;
       if (password && newPassword) {
         payload.currentPassword = password;

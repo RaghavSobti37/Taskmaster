@@ -101,9 +101,9 @@ const SettingsPage = () => {
     if (!user) return false;
     const teamStrings = teams.map(t => typeof t === 'object' ? t.value : t);
     const initialTeamStrings = user.teams || [];
-    
-    const teamsMatch = teamStrings.length === initialTeamStrings.length && 
-                      teamStrings.every(t => initialTeamStrings.includes(t));
+
+    const teamsMatch = teamStrings.length === initialTeamStrings.length &&
+      teamStrings.every(t => initialTeamStrings.includes(t));
 
     return (
       name !== user.name ||
@@ -310,7 +310,7 @@ const SettingsPage = () => {
             </div>
 
             <div className="pt-6 border-t border-[var(--color-bg-border)] space-y-4">
-              <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">My Team Affiliations</label>
+              <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] ml-1">My Teams</label>
               <div className="flex flex-wrap gap-3">
                 {[...allTeams]
                   .sort((a, b) => {
@@ -335,8 +335,8 @@ const SettingsPage = () => {
                         }}
                         className={`
                           px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
-                          ${isSelected 
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-105' 
+                          ${isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-lg scale-105'
                             : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/50'}
                         `}
                       >
@@ -455,7 +455,7 @@ const SettingsPage = () => {
       {/* Floating Action Bar */}
       <AnimatePresence>
         {(hasChanges || success) && (
-          <motion.div 
+          <motion.div
             initial={{ y: 100, x: '-50%', opacity: 0 }}
             animate={{ y: 0, x: '-50%', opacity: 1 }}
             exit={{ y: 100, x: '-50%', opacity: 0 }}
@@ -463,35 +463,35 @@ const SettingsPage = () => {
           >
             <div className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
               <div className="flex items-center gap-4 px-4">
-                 <AnimatePresence mode="wait">
-                    {success ? (
-                      <motion.div
-                        key="success"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="flex items-center gap-2 text-emerald-400 font-black text-[10px] uppercase tracking-widest"
-                      >
-                        <CheckCircle2 size={16} /> All Changes Saved
-                      </motion.div>
-                    ) : (
-                      <motion.div 
-                        key="prompt"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        className="flex items-center gap-3"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                          <Save size={16} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-white uppercase tracking-widest">Unsaved Changes</p>
-                          <p className="text-[9px] text-white/40 font-bold uppercase tracking-tight">Sync profile & password</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                <AnimatePresence mode="wait">
+                  {success ? (
+                    <motion.div
+                      key="success"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="flex items-center gap-2 text-emerald-400 font-black text-[10px] uppercase tracking-widest"
+                    >
+                      <CheckCircle2 size={16} /> All Changes Saved
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="prompt"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                        <Save size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Unsaved Changes</p>
+                        <p className="text-[9px] text-white/40 font-bold uppercase tracking-tight">Sync profile & password</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               <button
                 onClick={handleUpdateProfile}

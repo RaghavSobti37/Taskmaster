@@ -71,6 +71,8 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
     }
   };
 
+  const [modal, setModal] = useState({ open: false, title: '', message: '', type: 'info' });
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -85,7 +87,12 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
       if (err.response?.status === 423) {
         setLockStatus('Locked by another operative');
       } else {
-        alert(err.response?.data?.error || 'Failed to save lead');
+        setModal({
+          open: true,
+          title: 'Sync Failed',
+          message: err.response?.data?.error || 'Lead data synchronization protocol failed.',
+          type: 'danger'
+        });
       }
     } finally {
       setLoading(false);
@@ -143,6 +150,13 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         className="relative w-full max-w-5xl bg-[var(--color-bg-surface)] rounded-[3rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
+        <NexusModal 
+          isOpen={modal.open}
+          onClose={() => setModal({ ...modal, open: false })}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+        />
         {/* Header */}
         <header className="p-8 border-b border-[var(--color-bg-border)] bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-4">

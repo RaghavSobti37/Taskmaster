@@ -183,7 +183,7 @@ const AdminPanel = () => {
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamColor, setNewTeamColor] = useState('#3b82f6');
   const [loading, setLoading] = useState(true);
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', isConfirm: false, onConfirm: null });
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('users');
@@ -300,7 +300,12 @@ const AdminPanel = () => {
 
   const handleDeleteImport = async () => {
     if (!deleteModal.reason.trim()) {
-      alert("PLEASE PROVIDE A REASON FOR DELETION PROTOCOL.");
+      setModalConfig({
+        isOpen: true,
+        title: 'Security Requirement',
+        message: 'A formal justification is mandatory for execution of deletion protocols.',
+        type: 'warning'
+      });
       return;
     }
     try {
@@ -314,15 +319,22 @@ const AdminPanel = () => {
     }
   };
 
-  const handleClearSignals = async () => {
-    if (window.confirm("CLEAR ALL SYSTEM SIGNALS AND API CALL LOGS?")) {
-      try {
-        await axios.delete('/api/logs/clear');
-        setLogs([]);
-      } catch (err) {
-        console.error('Clear logs error:', err);
+  const handleClearSignals = () => {
+    setModalConfig({
+      isOpen: true,
+      title: 'Signal Purge',
+      message: 'Are you certain you want to clear all system signals and API call logs? This action is irreversible.',
+      type: 'danger',
+      isConfirm: true,
+      onConfirm: async () => {
+        try {
+          await axios.delete('/api/logs/clear');
+          setLogs([]);
+        } catch (err) {
+          console.error('Clear logs error:', err);
+        }
       }
-    }
+    });
   };
 
   const filteredUsers = users.filter(u =>
@@ -538,7 +550,15 @@ const AdminPanel = () => {
         )}
       </AnimatePresence>
 
-      <NexusModal isOpen={modalConfig.isOpen} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} />
+      <NexusModal 
+        isOpen={modalConfig.isOpen} 
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} 
+        title={modalConfig.title} 
+        message={modalConfig.message} 
+        type={modalConfig.type} 
+        isConfirm={modalConfig.isConfirm}
+        onConfirm={modalConfig.onConfirm}
+      />
     </div>
   );
 };

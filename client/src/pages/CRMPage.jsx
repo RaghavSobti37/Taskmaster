@@ -34,6 +34,7 @@ const CRMPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
   const [filter, setFilter] = useState('All');
+  const [modal, setModal] = useState({ open: false, title: '', message: '', type: 'info' });
 
   const fetchLeads = async () => {
     try {
@@ -102,7 +103,12 @@ const CRMPage = () => {
       });
       fetchLeads();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to upload leads');
+      setModal({
+        open: true,
+        title: 'Ingestion Error',
+        message: err.response?.data?.error || 'Personnel data upload protocol failed.',
+        type: 'danger'
+      });
     } finally {
       setLoading(false);
     }
@@ -110,6 +116,13 @@ const CRMPage = () => {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
+      <NexusModal 
+        isOpen={modal.open}
+        onClose={() => setModal({ ...modal, open: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+      />
       {/* Premium Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}

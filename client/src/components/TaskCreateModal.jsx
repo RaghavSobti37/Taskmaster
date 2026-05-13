@@ -76,7 +76,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <Plus size={18} className="text-[var(--color-action-primary)]" />
-            Initialize Atomic Task
+            Create New Task
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
             <X size={20} />
@@ -86,7 +86,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {!initialProjectId && (
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Target Project</label>
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Select Project</label>
               <Select 
                 options={projectOptions}
                 value={projectOptions.find(p => p.value === projectId)}
@@ -100,25 +100,25 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           )}
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Definition</label>
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Title</label>
             <input 
               autoFocus={!!initialProjectId}
               type="text" 
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
-              placeholder="e.g. Implement JWT Rotation"
+              placeholder="e.g. Update homepage layout"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Context / Briefing</label>
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
             <textarea 
               value={desc}
               onChange={e => setDesc(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[100px] text-sm"
-              placeholder="Add technical constraints or acceptance criteria..."
+              placeholder="Add details or notes about this task..."
             />
           </div>
 
@@ -132,7 +132,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Deadline (Optional)</label>
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Due Date (Optional)</label>
               <input 
                 type="date"
                 value={dueDate}
@@ -143,13 +143,13 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Operatives</label>
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Assign To</label>
             <Select 
               isMulti
               options={memberOptions}
               value={assignees}
               onChange={setAssignees}
-              placeholder="Assign to operatives..."
+              placeholder="Assign to team members..."
               className="react-select-container"
               classNamePrefix="react-select"
             />
@@ -161,14 +161,14 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
               onClick={onClose}
               className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)] transition-all"
             >
-              Abort
+              Cancel
             </button>
             <button 
               type="submit"
               disabled={loading || !title}
               className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
             >
-              {loading ? 'Initializing...' : <><CheckCircle2 size={18} /> Commit Task</>}
+              {loading ? 'Creating...' : <><CheckCircle2 size={18} /> Create Task</>}
             </button>
           </div>
         </form>

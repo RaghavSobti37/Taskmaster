@@ -207,7 +207,7 @@ const AdminLogsPage = () => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Deployment Time</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time Logged</p>
               <h3 className="text-2xl font-black text-white">{formatMins(getDayTotalTime(logs))}</h3>
             </div>
             <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-emerald-400">
@@ -220,7 +220,7 @@ const AdminLogsPage = () => {
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Active Operatives</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Active Users</p>
               <h3 className="text-2xl font-black text-white">{new Set(logs.map(l => l.userId?._id)).size}</h3>
             </div>
             <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-orange-400">
@@ -253,7 +253,7 @@ const AdminLogsPage = () => {
               <div className="p-2 bg-blue-500/10 rounded-xl text-blue-500 shadow-sm border border-blue-500/10">
                 <Users size={14} strokeWidth={2.5} />
               </div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-primary)]">Operative Directory</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-primary)]">User Directory</h3>
             </div>
             <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-3">
               <button

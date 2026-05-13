@@ -94,7 +94,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
         <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-6">
             <section className="p-6 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)]">
-              <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Core Identification</h3>
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Contact Info</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Mail size={14} className="text-[var(--color-action-primary)]" />
@@ -102,7 +102,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone size={14} className="text-[var(--color-action-primary)]" />
-                  <span className="text-[11px] font-bold">{user.phone || 'No Signal'}</span>
+                  <span className="text-[11px] font-bold">{user.phone || 'Not set'}</span>
                 </div>
                 <div className="space-y-1.5 pt-1.5">
                   <label className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Teams</label>
@@ -118,20 +118,20 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
             </section>
 
             <section className="p-6 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] space-y-3">
-              <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Access Control</h3>
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Actions</h3>
               <button
                 onClick={() => onRoleChange(user._id, user.role)}
                 className="w-full py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-bold hover:border-[var(--color-action-primary)] transition-all flex items-center justify-center gap-2"
               >
                 <UserCog size={14} />
-                Toggle Admin
+                Toggle Admin Role
               </button>
               <button
                 onClick={handleDelete}
                 className="w-full py-2.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-[10px] font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
               >
                 <Trash2 size={14} />
-                Decommission
+                Delete User
               </button>
             </section>
           </div>
@@ -140,11 +140,11 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
             <section className="bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] overflow-hidden">
               <div className="px-6 py-3.5 border-b border-[var(--color-bg-border)] bg-black/5 flex items-center justify-between">
                 <h3 className="font-bold text-[10px] uppercase tracking-widest">Active Tasks</h3>
-                <Badge variant="todo">{userTasks.length} Units</Badge>
+                <Badge variant="todo">{userTasks.length} Tasks</Badge>
               </div>
               <div className="divide-y divide-[var(--color-bg-border)] max-h-[250px] overflow-y-auto">
                 {userTasks.length === 0 ? (
-                  <div className="p-8 text-center text-[10px] text-[var(--color-text-muted)] italic">No active assignments.</div>
+                  <div className="p-8 text-center text-[10px] text-[var(--color-text-muted)] italic">No tasks assigned.</div>
                 ) : userTasks.map(task => (
                   <div key={task._id} className="p-3.5 flex items-center justify-between hover:bg-black/5 transition-all">
                     <span className="text-[11px] font-bold">{task.title}</span>
@@ -264,8 +264,8 @@ const AdminPanel = () => {
     } catch (err) {
       setModalConfig({
         isOpen: true,
-        title: 'Deployment Failed',
-        message: err.response?.data?.error || 'Team orchestration protocol failed.',
+        title: 'Error',
+        message: err.response?.data?.error || 'Failed to create team. Please try again.',
         type: 'danger'
       });
     }
@@ -302,8 +302,8 @@ const AdminPanel = () => {
     if (!deleteModal.reason.trim()) {
       setModalConfig({
         isOpen: true,
-        title: 'Security Requirement',
-        message: 'A formal justification is mandatory for execution of deletion protocols.',
+        title: 'Reason Required',
+        message: 'Please provide a reason before deleting this import batch.',
         type: 'warning'
       });
       return;
@@ -322,8 +322,8 @@ const AdminPanel = () => {
   const handleClearSignals = () => {
     setModalConfig({
       isOpen: true,
-      title: 'Signal Purge',
-      message: 'Are you certain you want to clear all system signals and API call logs? This action is irreversible.',
+      title: 'Clear All Logs',
+      message: 'Are you sure you want to clear all activity logs? This cannot be undone.',
       type: 'danger',
       isConfirm: true,
       onConfirm: async () => {
@@ -345,7 +345,7 @@ const AdminPanel = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
       <div className="w-8 h-8 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--color-text-muted)]">Initializing System Deck...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--color-text-muted)]">Loading Admin Panel...</p>
     </div>
   );
 
@@ -357,7 +357,7 @@ const AdminPanel = () => {
           <div className="p-2.5 bg-slate-900 rounded-xl text-blue-500 border border-white/5 shadow-xl">
             <ShieldCheck size={20} strokeWidth={2.5} />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">System Deck</h1>
+          <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Admin Panel</h1>
         </div>
         <div className="flex items-center gap-2.5">
           <Link to="/admin/logs" className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-blue-500 transition-all shadow-sm">Daily Logs</Link>
@@ -366,8 +366,8 @@ const AdminPanel = () => {
 
       {/* Tabs */}
       <div className="flex items-center gap-4 border-b border-[var(--color-bg-border)]">
-        <button onClick={() => setActiveTab('users')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Personnel</button>
-        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Control</button>
+        <button onClick={() => setActiveTab('users')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>Users</button>
+        <button onClick={() => setActiveTab('crm')} className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'crm' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-[var(--color-text-muted)]'}`}>CRM Data</button>
       </div>
 
       {activeTab === 'users' ? (
@@ -381,13 +381,13 @@ const AdminPanel = () => {
                 </div>
                 <div className="relative w-72">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
-                  <input type="text" placeholder="Scan directory..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none shadow-inner" />
+                  <input type="text" placeholder="Search users..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none shadow-inner" />
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                    <tr><th className="px-8 py-4">Operative Identification</th><th className="px-8 py-4 text-center">Clearance</th><th className="px-8 py-4 text-right">Access</th></tr>
+                    <tr><th className="px-8 py-4">Name & Email</th><th className="px-8 py-4 text-center">Role</th><th className="px-8 py-4 text-right">View</th></tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-bg-border)]">
                     {filteredUsers.map((u) => (
@@ -413,9 +413,9 @@ const AdminPanel = () => {
 
           <motion.aside initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-4 space-y-8 sticky top-8">
             <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden p-6 space-y-4">
-              <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">Deployment Teams</h3>
+              <h3 className="font-black text-[10px] uppercase tracking-widest text-[var(--color-text-primary)]">Teams</h3>
               <form onSubmit={handleCreateTeam} className="relative">
-                <input type="text" placeholder="New Unit..." value={newTeamName} onChange={e => setNewTeamName(e.target.value)} className="w-full pl-5 pr-20 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest outline-none" />
+                <input type="text" placeholder="New team name..." value={newTeamName} onChange={e => setNewTeamName(e.target.value)} className="w-full pl-5 pr-20 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[9px] font-black uppercase tracking-widest outline-none" />
                 <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
                   <input type="color" value={newTeamColor} onChange={e => setNewTeamColor(e.target.value)} className="w-7 h-7 rounded-lg bg-[var(--color-bg-workspace)] border-none cursor-pointer p-0" />
                   <button type="submit" className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"><Plus size={14} strokeWidth={3} /></button>
@@ -433,10 +433,10 @@ const AdminPanel = () => {
             <section className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden h-[400px] flex flex-col">
               <div className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                   <h3 className="font-black text-[10px] uppercase tracking-widest">Live Signals</h3>
+                   <h3 className="font-black text-[10px] uppercase tracking-widest">Activity Feed</h3>
                    <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
                 </div>
-                <button onClick={handleClearSignals} className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-all" title="Clear Signals">
+                <button onClick={handleClearSignals} className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-all" title="Clear All Logs">
                   <Trash size={14} />
                 </button>
               </div>
@@ -462,13 +462,13 @@ const AdminPanel = () => {
         <div className="space-y-8">
            <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
             <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Ingestion History</h3>
+              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">CRM Import History</h3>
               <Badge variant="progress">{crmImports.length} BATCHES</Badge>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                  <tr><th className="px-8 py-4">Session Payload</th><th className="px-8 py-4">Timestamp</th><th className="px-8 py-4 text-center">Payload Size</th><th className="px-8 py-4 text-center">Operative</th><th className="px-8 py-4 text-right">Actions</th></tr>
+                  <tr><th className="px-8 py-4">File Name</th><th className="px-8 py-4">Date</th><th className="px-8 py-4 text-center">Contacts</th><th className="px-8 py-4 text-center">Uploaded By</th><th className="px-8 py-4 text-right">Actions</th></tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-bg-border)]">
                   {crmImports.map(batch => (
@@ -491,17 +491,17 @@ const AdminPanel = () => {
 
           <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden">
             <div className="px-8 py-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Operational Rollback Audit</h3>
+              <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Deletion History</h3>
               <Badge variant="todo">SYSTEM LOGS</Badge>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                   <tr>
-                    <th className="px-8 py-4">Protocol</th>
-                    <th className="px-8 py-4">Timestamp</th>
-                    <th className="px-8 py-4">Operative</th>
-                    <th className="px-8 py-4">Justification</th>
+                    <th className="px-8 py-4">Action</th>
+                    <th className="px-8 py-4">Date</th>
+                    <th className="px-8 py-4">Done By</th>
+                    <th className="px-8 py-4">Reason</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -529,15 +529,15 @@ const AdminPanel = () => {
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-[var(--color-bg-surface)] w-full max-w-md rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl p-8 space-y-6">
               <div className="flex items-center gap-4 text-rose-500">
                 <AlertTriangle size={32} />
-                <h2 className="text-xl font-black uppercase tracking-tight">Security Clearance</h2>
+                <h2 className="text-xl font-black uppercase tracking-tight">Confirm Deletion</h2>
               </div>
               <p className="text-[11px] font-bold text-[var(--color-text-secondary)] leading-relaxed">
-                PERMANENTLY PURGE <span className="text-rose-500 font-black">{deleteModal.count} contacts</span>. Provide justification.
+               PERMANENTLY DELETE <span className="text-rose-500 font-black">{deleteModal.count} contacts</span> from this import. Please provide a reason.
               </p>
-              <textarea value={deleteModal.reason} onChange={e => setDeleteModal({ ...deleteModal, reason: e.target.value })} placeholder="Reason for deletion protocol..." className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-4 text-xs font-bold min-h-[100px] outline-none" />
+              <textarea value={deleteModal.reason} onChange={e => setDeleteModal({ ...deleteModal, reason: e.target.value })} placeholder="Why are you deleting this?" className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-4 text-xs font-bold min-h-[100px] outline-none" />
               <div className="flex gap-3 pt-4">
-                <button onClick={() => setDeleteModal({ isOpen: false, importId: null, count: 0, reason: '' })} className="flex-1 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest">Abort</button>
-                <button onClick={handleDeleteImport} className="flex-1 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Purge</button>
+                <button onClick={() => setDeleteModal({ isOpen: false, importId: null, count: 0, reason: '' })} className="flex-1 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest">Cancel</button>
+                <button onClick={handleDeleteImport} className="flex-1 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Delete</button>
               </div>
             </motion.div>
           </motion.div>

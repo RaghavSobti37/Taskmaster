@@ -44,7 +44,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
         <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <Settings size={18} className="text-[var(--color-action-primary)]" />
-            Project Nexus Configuration
+            Project Settings
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
             <X size={20} />
@@ -57,9 +57,9 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
               <AlertTriangle size={32} />
             </div>
             <div>
-              <h4 className="text-xl font-bold text-red-600">Critical: Project Deletion</h4>
+              <h4 className="text-xl font-bold text-red-600">Delete This Project?</h4>
               <p className="text-sm text-[var(--color-text-muted)] mt-2">
-                This will permanently decommission this project workspace and all associated task matrices. This action is irreversible.
+                This will permanently delete this project and all its tasks. This cannot be undone.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -67,20 +67,20 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 px-6 py-3 bg-[var(--color-bg-workspace)] rounded-xl font-bold text-sm"
               >
-                Abort
+                Cancel
               </button>
               <button 
                 onClick={handleDelete}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-500/20"
               >
-                Confirm Deletion
+                Delete Project
               </button>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Workspace Identifier</label>
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
               <input 
                 type="text" 
                 value={name}
@@ -91,7 +91,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Mission Briefing</label>
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
               <textarea 
                 value={desc}
                 onChange={e => setDesc(e.target.value)}
@@ -105,7 +105,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
                 onClick={() => setShowDeleteConfirm(true)}
                 className="flex items-center gap-2 text-red-500 font-bold text-xs hover:underline"
               >
-                <Trash2 size={14} /> Decommission Workspace
+                <Trash2 size={14} /> Delete Project
               </button>
               <div className="flex items-center gap-3">
                 <button 
@@ -120,7 +120,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
                   disabled={loading || !name}
                   className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
                 >
-                  {loading ? 'Updating...' : <><CheckCircle2 size={18} /> Update Workspace</>}
+                  {loading ? 'Saving...' : <><CheckCircle2 size={18} /> Save Changes</>}
                 </button>
               </div>
             </div>

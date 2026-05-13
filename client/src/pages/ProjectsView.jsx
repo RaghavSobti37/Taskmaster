@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Badge, ProgressBar, NexusModal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
@@ -43,11 +43,11 @@ const ProjectsView = () => {
       <NexusModal 
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, projectId: null })}
-        title="Project Decommission"
-        message="Are you certain you want to purge this project and all its associated data nodes from the system deck? This action is irreversible."
+        title="Delete Project"
+        message="Are you sure you want to delete this project and all its data? This cannot be undone."
         type="danger"
         isConfirm
-        confirmLabel="Decommission"
+        confirmLabel="Delete Project"
         onConfirm={handleDeleteProject}
       />
       <header className="flex items-center justify-between">
@@ -125,16 +125,16 @@ const ProjectsView = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">{project.progress}% Sync</p>
+                <p className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-widest">{project.progress}% Done</p>
               </div>
               <div className="mt-3">
                 <ProgressBar progress={project.progress} />
               </div>
-            </Link>
+            </div>
           ))}
           {projects.length === 0 && (
             <div className="col-span-full py-20 text-center bg-[var(--color-bg-surface)] rounded-2xl border border-dashed border-[var(--color-bg-border)]">
-              <p className="text-[var(--color-text-muted)]">No active projects found.</p>
+              <p className="text-[var(--color-text-muted)]">No projects yet. Create one to get started!</p>
             </div>
           )}
         </div>

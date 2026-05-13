@@ -1,40 +1,68 @@
-# CoreKnot Startup Guide
+# Taskmaster Startup Guide
 
-Follow these steps to initialize and run the CoreKnot enterprise platform.
+Follow these steps to run the Taskmaster app locally.
 
 ## Prerequisites
-- **Node.js**: v16+ recommended.
-- **MongoDB**: Local instance running at `mongodb://localhost:27017/coreknot` (or update `.env`).
+- **Node.js** v16 or newer
+- **MongoDB** running locally at `mongodb://localhost:27017/coreknot` (or set your own in `.env`)
 
-## 1. Backend Setup (Server)
-1. Navigate to the `server` directory.
-2. Ensure `.env` exists with correct `MONGODB_URI`.
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   *Server will run on http://localhost:5000*
+## Step 1: Start the Backend
 
-## 2. Frontend Setup (Client)
-1. Navigate to the `client` directory.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   *Client will run on http://localhost:5173*
+```bash
+cd server
+npm install
+npm run dev
+```
+The API server starts on **http://localhost:5000**
 
-## 3. Temporary Admin Access
-For development purposes, a **DEBUG BYPASS** is available on the Login screen:
-- Click the **"DEBUG: SYSTEM BYPASS (ADMIN)"** button to enter the dashboard with full administrative privileges immediately.
+## Step 2: Start the Frontend
+
+```bash
+cd client
+npm install
+npm run dev
+```
+The app opens at **http://localhost:5173**
+
+## Step 3: Log In
+
+### Option A — Use Test Accounts
+These accounts are pre-seeded with password `1234`:
+| Email | Role |
+|---|---|
+| `REDACTED_ADMIN@example.com` | Admin |
+| `redacted-staff@example.com` | Admin |
+| `redacted-staff@example.com` | Admin |
+| `ops@theshakticollective.in` | Admin |
+| `atharva@theshakticollective.in` | Admin |
+
+### Option B — Quick Login (Dev Only)
+Click the **"Quick Login (Admin Demo)"** button on the login screen to bypass authentication and enter as the root admin.
+
+### Option C — Register a New Account
+Go to the Register page and create a new account. New accounts default to the `user` role.
+
+## Step 4: Seed Sample Data (Optional)
+
+```bash
+cd server
+node seeder.js
+```
+This creates test users, teams, and sample projects.
 
 ## Directory Structure
-- `/server`: Node/Express API with Mongoose models.
-- `/client`: React/Vite/Tailwind v4 frontend.
+
+```
+/server         — Backend API (Node.js, Express, MongoDB)
+/client         — Frontend app (React, Vite)
+/agentic_memory — Project documentation and architecture maps
+```
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| MongoDB connection error | Make sure MongoDB is running locally |
+| Port 5000 in use | Change `PORT` in `server/.env` |
+| Blank page on frontend | Check that the backend is running first |
+| Login fails | Run `node seeder.js` in `/server` to create test accounts |

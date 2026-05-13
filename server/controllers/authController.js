@@ -16,19 +16,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    // Default avatars based on gender
-    const avatars = {
-      male: 'https://raw.githubusercontent.com/Ashwinvalento/cartoon-avatar/master/lib/images/male/45.png',
-      female: 'https://raw.githubusercontent.com/Ashwinvalento/cartoon-avatar/master/lib/images/female/45.png',
-      other: 'https://i.pravatar.cc/150?u=a042581f4e29026704d'
-    };
-
+    const { getRandomAvatar } = require('../utils/avatarGenerator');
     const user = await User.create({ 
       name, 
       email, 
       password, 
       gender: gender || 'male',
-      avatar: avatars[gender] || avatars.male
+      avatar: getRandomAvatar(gender || 'male')
     });
 
     res.status(201).json({

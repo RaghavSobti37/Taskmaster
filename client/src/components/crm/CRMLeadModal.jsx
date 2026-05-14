@@ -22,7 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import CKDropdown from '../ui/CKDropdown';
 import { NexusModal } from '../ui';
 
-const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
+const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [salesReps, setSalesReps] = useState([]);
@@ -113,31 +113,29 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh }) => {
       return;
     }
 
-    try {
-      setLoading(true);
-      const payload = {
-        ...formData,
-        assignedRepId: formData.assignedRepId === 'unassigned' ? null : formData.assignedRepId
-      };
+    const payload = {
+      ...formData,
+      assignedRepId: formData.assignedRepId === 'unassigned' ? null : formData.assignedRepId
+    };
 
+    // Optimistic Update
+    if (lead && onOptimisticUpdate) {
+      onOptimisticUpdate({ ...lead, ...payload });
+    }
+
+    // Close modal immediately for "background" feel
+    onClose();
+
+    try {
       if (lead) {
         await axios.put(`/api/crm/leads/${lead._id}`, payload);
       } else {
         await axios.post('/api/crm/leads', payload);
       }
-      
-      onRefresh();
-      onClose();
+      onRefresh(); // Refresh to get final server state (with ID if new, etc)
     } catch (err) {
-      console.error('Save error:', err);
-      setConfirmModal({
-        open: true,
-        type: 'danger',
-        title: 'Error',
-        message: err.response?.data?.error || 'Failed to save lead.'
-      });
-    } finally {
-      setLoading(false);
+      console.error('Background Sync error:', err);
+      // In a real app, we'd show a "Retry" or "Sync Failed" notification here
     }
   };
 

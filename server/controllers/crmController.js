@@ -37,12 +37,49 @@ const assignLeadToRep = async () => {
 exports.getLeads = async (req, res) => {
   try {
     let query = {};
-    if (req.user.role === 'sales') {
+    // Security: Non-admins can only see their own assigned leads
+    if (req.user.role !== 'admin') {
       query.assignedRepId = req.user._id;
     }
-    const leads = await Lead.find(query).populate('assignedRepId', 'name email avatar').sort('-createdAt');
-    res.json(leads);
+
+    // Search
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, 'i');
+      query.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex }
+      ];
+    }
+
+    // Filters
+    if (req.query.leadQuality && req.query.leadQuality !== 'all') query.leadQuality = req.query.leadQuality;
+    if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
+    if (req.query.leadStatus && req.query.leadStatus !== 'all') query.leadStatus = req.query.leadStatus;
+    if (req.query.assignedRepId && req.query.assignedRepId !== 'all') query.assignedRepId = req.query.assignedRepId;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    const total = await Lead.countDocuments(query);
+    const leads = await Lead.find(query)
+      .populate('assignedRepId', 'name email avatar')
+      .sort({ [sortField]: sortOrder })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      leads,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
   } catch (error) {
+    console.error('Error in getLeads:', error);
     res.status(500).json({ error: 'Failed to fetch leads' });
   }
 };

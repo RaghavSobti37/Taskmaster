@@ -158,7 +158,25 @@ const Dashboard = () => {
     ? 0
     : Math.round((stats['in-progress'] / (stats.todo + stats['in-progress'] + stats['in-review'] + stats.done)) * 100);
 
-  if (loading) return <NexusLoader label="Dashboard Initializing..." sublabel="Streaming Task Intelligence" />;
+  const DashboardSkeleton = () => (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex justify-between items-center h-16">
+        <div className="h-8 w-48 bg-slate-200 rounded" />
+        <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-8">
+        <div className="col-span-2 h-[500px] bg-slate-100 rounded-3xl" />
+        <div className="h-[500px] bg-slate-100 rounded-3xl" />
+      </div>
+    </div>
+  );
+
+  if (loading && tasks.length === 0) return <DashboardSkeleton />;
 
 
   return (

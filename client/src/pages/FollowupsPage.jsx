@@ -21,8 +21,9 @@ const FollowupsPage = () => {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/crm/leads');
-      setLeads(res.data);
+      // Fetch all leads that have a followup date
+      const res = await axios.get('/api/crm/leads', { params: { limit: 1000 } });
+      setLeads(res.data.leads || []);
     } catch (err) {
       console.error('Error fetching leads:', err);
     } finally {
@@ -34,9 +35,42 @@ const FollowupsPage = () => {
     fetchLeads();
   }, []);
 
-  const overdue = leads.filter(l => l.nextFollowupDate && new Date(l.nextFollowupDate) < new Date().setHours(0,0,0,0));
-  const today = leads.filter(l => l.nextFollowupDate && new Date(l.nextFollowupDate).toDateString() === new Date().toDateString());
-  const upcoming = leads.filter(l => l.nextFollowupDate && new Date(l.nextFollowupDate) > new Date());
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const normalizeDate = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const overdue = leads.filter(l => {
+    const d = normalizeDate(l.nextFollowupDate);
+    return d && d < now && l.leadStatus !== 'Converted';
+  });
+
+  const today = leads.filter(l => {
+    const d = normalizeDate(l.nextFollowupDate);
+    return d && d.getTime() === now.getTime() && l.leadStatus !== 'Converted';
+  });
+
+  const upcoming = leads.filter(l => {
+    const d = normalizeDate(l.nextFollowupDate);
+    return d && d > now && l.leadStatus !== 'Converted';
+  });
+
+  const ColumnSkeleton = () => (
+    <div className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] p-8 space-y-6 flex-1 flex flex-col min-w-[320px] animate-pulse">
+      <div className="h-4 w-32 bg-slate-200 rounded mb-4" />
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-32 bg-slate-100 rounded-2xl border border-slate-200" />
+        ))}
+      </div>
+    </div>
+  );
 
   const Column = ({ title, items, color }) => (
     <div className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] p-8 space-y-6 flex-1 flex flex-col min-w-[320px] shadow-2xl shadow-black/5">
@@ -82,8 +116,6 @@ const FollowupsPage = () => {
     </div>
   );
 
-  if (loading) return <NexusLoader label="Loading Protocols" sublabel="Synchronizing Temporal Grid" />;
-
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8 pb-24 space-y-8">
       <header className="flex items-center justify-between">
@@ -100,9 +132,19 @@ const FollowupsPage = () => {
       </header>
 
       <div className="flex flex-col xl:flex-row gap-8">
-        <Column title="Overdue Signal" items={overdue} color="bg-rose-500" />
-        <Column title="Due Today" items={today} color="bg-amber-500" />
-        <Column title="Future Queue" items={upcoming} color="bg-blue-500" />
+        {loading ? (
+          <>
+            <ColumnSkeleton />
+            <ColumnSkeleton />
+            <ColumnSkeleton />
+          </>
+        ) : (
+          <>
+            <Column title="Overdue Signal" items={overdue} color="bg-rose-500" />
+            <Column title="Due Today" items={today} color="bg-amber-500" />
+            <Column title="Future Queue" items={upcoming} color="bg-blue-500" />
+          </>
+        )}
       </div>
 
       <CRMLeadModal

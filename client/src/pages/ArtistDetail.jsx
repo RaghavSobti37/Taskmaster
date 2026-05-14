@@ -99,8 +99,29 @@ const ArtistDetail = () => {
     }
   };
 
-  if (loading) return <NexusLoader label="Synchronizing Intelligence" sublabel="Fetching Artist Ecosystem" />;
-  if (!artist) return <div className="p-20 text-center">Artist Not Found</div>;
+  const DetailSkeleton = () => (
+    <div className="max-w-[1600px] mx-auto px-6 py-8 pb-32 space-y-8 animate-pulse">
+      <div className="h-6 w-32 bg-slate-200 rounded" />
+      <div className="h-[400px] bg-slate-100 rounded-[3rem]" />
+      <div className="grid grid-cols-4 gap-8">
+        <div className="col-span-3 space-y-8">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="h-40 bg-slate-100 rounded-[2.5rem]" />
+            <div className="h-40 bg-slate-100 rounded-[2.5rem]" />
+            <div className="h-40 bg-slate-100 rounded-[2.5rem]" />
+          </div>
+          <div className="h-96 bg-slate-100 rounded-[3rem]" />
+        </div>
+        <div className="space-y-8">
+          <div className="h-80 bg-slate-100 rounded-[3rem]" />
+          <div className="h-64 bg-slate-100 rounded-[3rem]" />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) return <DetailSkeleton />;
+  if (!artist) return <div className="p-20 text-center font-black uppercase tracking-widest text-rose-500">Artist Protocol Not Found</div>;
 
   const totalReach = (artist.analytics?.spotify?.followers || 0) + 
                     (artist.analytics?.youtube?.subscribers || 0) + 

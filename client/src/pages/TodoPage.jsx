@@ -73,7 +73,20 @@ const TodoPage = () => {
     return true;
   });
 
-  if (loading) return <NexusLoader label="Loading Protocols..." />;
+  const TodoSkeleton = () => (
+    <div className="space-y-4 animate-pulse">
+      {[1, 2, 3, 4, 5].map(i => (
+        <div key={i} className="h-20 bg-slate-100 rounded-[1.5rem]" />
+      ))}
+    </div>
+  );
+
+  if (loading && tasks.length === 0) return (
+    <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="h-10 w-48 bg-slate-200 rounded mb-12" />
+      <TodoSkeleton />
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32 space-y-8">

@@ -110,7 +110,28 @@ const ProjectDetail = () => {
     { id: 'assets', icon: Database, label: 'Assets' },
   ];
 
-  if (loading) return <NexusLoader message="Loading project..." />;
+  const ProjectSkeleton = () => (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex justify-between items-center h-20">
+        <div className="space-y-3">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-10 w-64 bg-slate-200 rounded-xl" />
+        </div>
+        <div className="flex gap-3">
+          <div className="h-10 w-10 bg-slate-200 rounded-xl" />
+          <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+        </div>
+      </div>
+      <div className="h-12 w-full bg-slate-100 rounded-xl" />
+      <div className="h-[500px] bg-slate-100 rounded-[2.5rem]" />
+    </div>
+  );
+
+  if (loading && !project) return (
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-8">
+      <ProjectSkeleton />
+    </div>
+  );
 
   if (!project) return <div>Project not found.</div>;
 

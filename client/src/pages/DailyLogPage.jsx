@@ -54,7 +54,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       ]);
       setLogs(logsRes.data);
       setProjects(projectsRes.data);
-      setTasks(tasksRes.data.filter(t => 
+      setTasks(tasksRes.data.filter(t =>
         t.assignees?.some(a => (typeof a === 'string' ? a : a._id) === targetUserId)
       ));
 
@@ -118,10 +118,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     if (projects.length > 0) setSelectedProject(projects[0]._id);
   };
 
-  const dailyLogs = logs.filter(l => 
+  const dailyLogs = logs.filter(l =>
     l.action === 'DAILY_LOG' && isSameDay(new Date(l.createdAt), selectedDate)
   );
-  
+
   const dailyTasks = tasks.filter(t => {
     const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
     return isSameDay(taskDate, selectedDate);
@@ -164,10 +164,20 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0 }
-  };
+  const LogSkeleton = () => (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex justify-between items-center h-16">
+        <div className="h-8 w-48 bg-slate-200 rounded" />
+        <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-100 rounded-[2rem]" />)}
+      </div>
+      <div className="h-96 bg-slate-100 rounded-[2.5rem]" />
+    </div>
+  );
+
+  if (loading && logs.length === 0) return <div className="max-w-6xl mx-auto p-8"><LogSkeleton /></div>;
 
   return (
     <div className="space-y-8 pb-24">
@@ -296,7 +306,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 {dailyLogs.length} LOGS
               </div>
             </div>
-            
+
             <div className="p-10 space-y-10">
               <AnimatePresence mode="wait">
                 {loading ? (
@@ -320,7 +330,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                         className="relative pl-10 before:absolute before:left-[11px] before:top-8 before:bottom-[-40px] before:w-[2px] before:bg-gradient-to-b before:from-[var(--color-bg-border)] before:to-transparent last:before:hidden"
                       >
                         <div className="absolute left-0 top-1 w-6 h-6 rounded-xl bg-[var(--color-bg-surface)] border-4 border-[var(--color-action-primary)] shadow-md z-10" />
-                        
+
                         <div className="p-8 bg-[var(--color-bg-workspace)]/40 rounded-[2rem] border border-[var(--color-bg-border)] group hover:border-[var(--color-action-primary)]/30 transition-all hover:shadow-lg">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
                             <div className="space-y-1.5">
@@ -394,7 +404,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>

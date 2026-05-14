@@ -20,7 +20,7 @@ const MainLayout = () => {
       <OutletSidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[180px]">
         {/* Mobile Header */}
         <header className="lg:hidden h-16 flex items-center justify-between px-4 bg-[var(--color-bg-surface)] border-b border-[var(--color-bg-border)] sticky top-0 z-40">
           <div className="flex items-center gap-3">
@@ -46,9 +46,7 @@ const MainLayout = () => {
         </header>
 
         <main 
-          className={`flex-1 transition-all duration-300 ease-in-out 
-            ${isOpen ? 'lg:ml-64' : 'lg:ml-20'} 
-            p-4 md:p-6 lg:p-8`}
+          className="flex-1 p-4 md:p-6 lg:p-8"
         >
           <div className="w-full">
             <Outlet />

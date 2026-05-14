@@ -1,19 +1,19 @@
-# Taskmaster
+# Taskmaster v1.0.0
 
-**Taskmaster** (formerly CoreKnot) is a team work management platform for tracking projects, tasks, daily work logs, and team communication — all in one place.
+**Taskmaster** is a premium team productivity and CRM platform designed for high-performance teams.
 
 ## What It Does
 
 | Feature | Description |
 |---|---|
-| **Dashboard** | See all your tasks at a glance with quick filters and completion tracking |
-| **Projects** | Create projects, add team members, track progress with List/Kanban/Gantt views |
-| **Daily Logs** | Log your work each day with time tracking and project tagging |
-| **Team Chat** | Send messages, mention teammates, create tasks from chat |
-| **CRM** | Manage leads and contacts with import, status tracking, and assignment |
-| **Assets** | Store important links (up to 3 per asset) organized by project |
-| **Admin Panel** | Manage users, teams, roles, and view system activity |
-| **Settings** | Update your profile, avatar, and app preferences |
+| **Dashboard** | Unified workspace with real-time task tracking and productivity metrics |
+| **Projects** | Multi-view project management (List/Kanban/Gantt) with automated progress rollups |
+| **Calendar** | Persistent MongoDB-backed calendar with public/private event visibility |
+| **Follow-ups** | Automated CRM follow-up system with smart notifications |
+| **Daily Logs** | Effortless work logging with project tagging and performance tracking |
+| **CRM** | Advanced lead management with CSV deduplication and automated assignment |
+| **Assets** | Centralized project resource management with multi-link support |
+| **Admin Panel** | Comprehensive system oversight, user management, and activity auditing |
 
 ## Tech Stack
 
@@ -37,6 +37,8 @@ graph TD
         CH[Team Chat]
         ST[Settings]
         CRM_F[CRM]
+        FOL[Follow-ups]
+        CAL[Calendar]
         ASSETS[Assets]
         TV[Team Directory]
     end
@@ -50,6 +52,7 @@ graph TD
         TM_API["/api/teams"]
         C_API["/api/chat"]
         CR_API["/api/crm"]
+        CAL_API["/api/calendar"]
         AS_API["/api/assets"]
     end
 
@@ -62,6 +65,7 @@ graph TD
         M_Team[(Team)]
         M_Message[(Message)]
         M_Lead[(Lead)]
+        M_Event[(Event)]
         M_Asset[(Asset)]
     end
 
@@ -74,6 +78,8 @@ graph TD
     CH --> C_API
     ST --> U_API & A_API
     CRM_F --> CR_API
+    FOL --> CR_API
+    CAL --> CAL_API
     ASSETS --> AS_API & P_API
     TV --> U_API & TM_API
 
@@ -85,6 +91,7 @@ graph TD
     TM_API --> M_Team
     C_API --> M_Message
     CR_API --> M_Lead
+    CAL_API --> M_Event
     AS_API --> M_Asset
 
     M_Project -- "has" --> M_Phase

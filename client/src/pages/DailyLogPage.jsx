@@ -146,8 +146,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
 
   const timeOptions = [];
-  for (let h = 0; h <= 8; h++) {
-    for (let m = 0; m < 60; m += 15) {
+  for (let h = 0; h <= 4; h++) {
+    for (let m = 0; m < 60; m += 30) {
       if (h === 0 && m === 0) continue;
       if (h === 8 && m > 0) break;
       const label = h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}` : `${m}m`;
@@ -226,33 +226,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         animate="visible"
         className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
       >
-        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-1">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Log Entries</p>
-              <h3 className="text-lg md:text-2xl font-black text-white">{dailyLogs.length}</h3>
-            </div>
-            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-blue-400">
-              <Zap size={16} className="md:size-18 fill-blue-400/20" />
-            </div>
-          </div>
-        </motion.div>
+        {/* Log Entries and Time Logged removed per request */}
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-1">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time Logged</p>
-              <h3 className="text-lg md:text-2xl font-black text-white">{formatTime(totalMinutes)}</h3>
-            </div>
-            <div className="p-2 md:p-3 bg-white/5 rounded-lg md:rounded-xl border border-white/10 text-emerald-400">
-              <Timer size={16} className="md:size-18 fill-emerald-400/20" />
-            </div>
-          </div>
-        </motion.div>
 
-        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-2 md:col-span-1">
+        <motion.div variants={itemVariants} className="bg-slate-900 p-4 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group col-span-full">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
           <div className="relative z-10 space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">

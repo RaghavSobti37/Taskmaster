@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus } from 'lucid
 import CalendarEntryModal from '../components/CalendarEntryModal';
 import NexusLoader from '../components/ui/NexusLoader';
 
-
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [tasks, setTasks] = useState([]);
@@ -19,8 +18,9 @@ const CalendarView = () => {
         setTasks(res.data.map(event => ({
           _id: event.id,
           title: event.summary,
-          dueDate: event.start.dateTime,
-          visibility: event.visibility
+          dueDate: event.start.dateTime || event.start.date,
+          visibility: event.visibility,
+          type: event.type || 'task'
         })));
       } catch (err) {
         console.error('Error fetching calendar events:', err);
@@ -30,7 +30,6 @@ const CalendarView = () => {
     };
     fetchEvents();
   }, []);
-
 
   const handleEntryCreated = (newEntry) => {
     setTasks([...tasks, newEntry]);
@@ -96,7 +95,7 @@ const CalendarView = () => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
     const task = tasks.find(t => t._id === taskId);
-    if (!task) return;
+    if (!task || task.type === 'holiday') return;
 
     try {
       const updatedDate = format(date, 'yyyy-MM-dd');
@@ -112,11 +111,9 @@ const CalendarView = () => {
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
-
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    if (loading) return <NexusLoader label="Temporal Sync Active" sublabel="Fetching Google Calendar Events" />;
-
+    if (loading && tasks.length === 0) return <div className="p-12"><NexusLoader /></div>;
 
     return (
       <div className="grid grid-cols-7 bg-[var(--color-bg-border)] gap-px border border-[var(--color-bg-border)] rounded-2xl overflow-hidden shadow-sm">
@@ -139,13 +136,17 @@ const CalendarView = () => {
                   {format(day, 'd')}
                 </span>
               </div>
-              <div className="space-y-1 overflow-y-auto max-h-[90px]">
+              <div className="space-y-1 overflow-y-auto max-h-[100px]">
                 {dayTasks.map(task => (
                   <div 
                     key={task._id} 
-                    draggable
-                    onDragStart={e => handleDragStart(e, task)}
-                    className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-md truncate border border-blue-100 cursor-move hover:bg-blue-100 transition-colors"
+                    draggable={task.type !== 'holiday'}
+                    onDragStart={e => task.type !== 'holiday' && handleDragStart(e, task)}
+                    className={`px-2 py-1 text-[9px] font-bold rounded-md truncate border transition-all
+                      ${task.type === 'holiday' 
+                        ? 'bg-rose-50 text-rose-700 border-rose-100 italic cursor-default' 
+                        : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 cursor-move'}
+                    `}
                   >
                     {task.title}
                   </div>
@@ -159,7 +160,7 @@ const CalendarView = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {renderHeader()}
       {renderDays()}
       {renderCells()}

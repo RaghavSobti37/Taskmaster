@@ -23,9 +23,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaMusic } from 'react-icons/fa';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -75,34 +73,22 @@ const OutletSidebar = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
   const { width } = useWindowSize();
-  const [crmOpen, setCrmOpen] = useState(location.pathname.startsWith('/crm'));
   
   const isMobile = width < 1024;
 
   useEffect(() => {
     closeMobileSidebar();
-    if (location.pathname.startsWith('/crm')) {
-      setCrmOpen(true);
-    }
   }, [location]);
 
-  // Auto-collapse CRM submenu when sidebar collapses
-  useEffect(() => {
-    if (!isOpen && !isMobileOpen) {
-      setCrmOpen(false);
-    }
-  }, [isOpen, isMobileOpen]);
-
   const sidebarVariants = {
-    open: { x: 0, width: 256 },
-    collapsed: { x: 0, width: 80 },
+    open: { x: 0, width: 180 },
+    collapsed: { x: 0, width: 180 },
     mobileOpen: { x: 0, width: 280 },
     mobileClosed: { x: -300, width: 280 }
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
       <AnimatePresence>
         {isMobileOpen && (
           <motion.div
@@ -120,14 +106,11 @@ const OutletSidebar = () => {
         animate={
           isMobile
             ? (isMobileOpen ? "mobileOpen" : "mobileClosed")
-            : (isOpen ? "open" : "collapsed")
+            : "open"
         }
         variants={sidebarVariants}
-        onMouseEnter={() => !isOpen && !isMobile && toggleSidebar()}
-        onMouseLeave={() => isOpen && !isMobile && toggleSidebar()}
         className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col shadow-2xl shadow-black/5 transition-[width,transform] duration-300 ease-in-out`}
       >
-        {/* Header */}
         <div className="p-3 py-5 flex items-center justify-between overflow-hidden">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 shrink-0 bg-[var(--color-action-primary)] rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
@@ -138,7 +121,6 @@ const OutletSidebar = () => {
             </span>
           </div>
 
-          {/* Mobile Close */}
           {isMobileOpen && (
             <button
               onClick={closeMobileSidebar}
@@ -149,32 +131,27 @@ const OutletSidebar = () => {
           )}
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
-          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/team" icon={Users} label="Team" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/assets" icon={Layers} label="Assets" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/todo" icon={ListTodo} label="To-Do List" collapsed={!isOpen} isMobile={isMobile} />
-          <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={!isOpen} isMobile={isMobile} />
-
-
+          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/assets" icon={Layers} label="Assets" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/todo" icon={ListTodo} label="To-Do List" collapsed={false} isMobile={isMobile} />
+          <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={false} isMobile={isMobile} />
 
           {(user?.role === 'admin' || user?.role === 'sales') && (
             <div className="space-y-1">
-              <NavItem to="/leads" icon={Users} label="Leads" collapsed={!isOpen} isMobile={isMobile} />
-              <NavItem to="/followups" icon={UserCheck} label="Followups" collapsed={!isOpen} isMobile={isMobile} />
+              <NavItem to="/leads" icon={Users} label="Leads" collapsed={false} isMobile={isMobile} />
+              <NavItem to="/followups" icon={UserCheck} label="Followups" collapsed={false} isMobile={isMobile} />
             </div>
           )}
 
-
           {user?.role === 'admin' && (
-            <NavItem to="/admin" icon={ShieldCheck} label="Admin Panel" collapsed={!isOpen} isMobile={isMobile} />
+            <NavItem to="/admin" icon={ShieldCheck} label="Admin Panel" collapsed={false} isMobile={isMobile} />
           )}
         </nav>
 
-        {/* Footer */}
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-1">
           <div className={`px-3 py-3 mb-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] transition-all duration-300 overflow-hidden`}>
             <div className="flex items-center gap-3">
@@ -185,10 +162,9 @@ const OutletSidebar = () => {
                 <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">{user?.name}</p>
                 <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                  Online {user?.teams?.length > 0 && `• ${user.teams.join(', ')}`}
+                  Online
                 </div>
               </div>
-
             </div>
           </div>
           <NavItem to="/settings" icon={Settings} label="Settings" collapsed={!isOpen} isMobile={isMobile} />

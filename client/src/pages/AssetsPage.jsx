@@ -127,7 +127,22 @@ const AssetsPage = () => {
     (a.projectId?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <NexusLoader label="Loading Asset Inventory..." sublabel="Synchronizing with Google Drive" />;
+  const AssetSkeleton = () => (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="h-8 w-48 bg-slate-200 rounded" />
+        <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+      </div>
+      <div className="h-48 bg-slate-100 rounded-[2rem]" />
+      <div className="h-[500px] bg-slate-100 rounded-[2.5rem]" />
+    </div>
+  );
+
+  if (loading) return (
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-8 pb-32">
+      <AssetSkeleton />
+    </div>
+  );
 
 
   return (

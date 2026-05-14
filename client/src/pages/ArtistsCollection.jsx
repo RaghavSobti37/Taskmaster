@@ -100,7 +100,19 @@ const ArtistsCollection = () => {
     fetchArtists();
   }, []);
 
-  if (loading) return <NexusLoader label="Synchronizing Intelligence" sublabel="Fetching Roster Data" />;
+  const ArtistSkeleton = () => (
+    <div className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] overflow-hidden shadow-2xl shadow-black/5 animate-pulse h-[450px]">
+      <div className="h-64 bg-slate-200" />
+      <div className="p-8 space-y-6">
+        <div className="h-8 bg-slate-200 rounded-xl w-3/4" />
+        <div className="grid grid-cols-3 gap-4">
+          <div className="h-10 bg-slate-100 rounded-lg" />
+          <div className="h-10 bg-slate-100 rounded-lg" />
+          <div className="h-10 bg-slate-100 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 
   const filteredArtists = artists.filter(a => a.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -133,11 +145,19 @@ const ArtistsCollection = () => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-10">
-        <AnimatePresence>
-          {filteredArtists.map(artist => (
-            <ArtistCard key={artist._id} artist={artist} onClick={(id) => navigate(`/artists/${id}`)} />
-          ))}
-        </AnimatePresence>
+        {loading ? (
+          <>
+            <ArtistSkeleton />
+            <ArtistSkeleton />
+            <ArtistSkeleton />
+          </>
+        ) : (
+          <AnimatePresence>
+            {filteredArtists.map(artist => (
+              <ArtistCard key={artist._id} artist={artist} onClick={(id) => navigate(`/artists/${id}`)} />
+            ))}
+          </AnimatePresence>
+        )}
       </div>
 
       {filteredArtists.length === 0 && (

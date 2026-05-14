@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
-import CKDropdown from '../components/ui/CKDropdown';
+import { Badge, PageHeader, PageContainer, Card } from '../components/ui';
 
 const ProjectCreate = () => {
   const [name, setName] = useState('');
@@ -14,14 +14,6 @@ const ProjectCreate = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const roleOptions = [
-    { value: 'lead', label: 'Lead' },
-    { value: 'developer', label: 'Developer' },
-    { value: 'designer', label: 'Designer' },
-    { value: 'qa', label: 'QA Engineer' },
-    { value: 'member', label: 'Member' },
-  ];
 
   const predefinedTags = [
     { value: 'PR', label: 'PR' },
@@ -49,16 +41,12 @@ const ProjectCreate = () => {
   const addMember = (userOption) => {
     const user = users.find(u => u._id === userOption.value);
     if (!members.find(m => m.userId === user._id)) {
-      setMembers([...members, { userId: user._id, name: user.name, role: 'member' }]);
+      setMembers([...members, { userId: user._id, name: user.name, role: user.role, avatar: user.avatar }]);
     }
   };
 
   const removeMember = (userId) => {
     setMembers(members.filter(m => m.userId !== userId));
-  };
-
-  const updateRole = (userId, role) => {
-    setMembers(members.map(m => m.userId === userId ? { ...m, role } : m));
   };
 
   const handleAddCustomTag = (e) => {
@@ -90,132 +78,146 @@ const ProjectCreate = () => {
     }
   };
 
+  const formatOptionLabel = ({ value, label }) => {
+    const user = users.find(u => u._id === value);
+    if (!user) return label;
+    return (
+      <div className="flex items-center gap-3">
+        <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
+          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.substring(0, 2).toUpperCase()}
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
+          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{user.role}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
-        <p className="text-[var(--color-text-secondary)]">Set up a new project and add team members.</p>
-      </header>
+    <PageContainer maxWidth="1000px">
+      <PageHeader
+        title="Create New Project"
+        subtitle="Set up your project and add team members."
+        icon={Briefcase}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden p-8 space-y-6">
+        <Card className="p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Project Name</label>
+              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
-                placeholder="e.g. Website Redesign"
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-black text-sm uppercase tracking-tight"
+                placeholder="Enter project name"
                 required
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Focus Tags</label>
+              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Tags</label>
               <Select
                 isMulti
                 options={predefinedTags}
                 value={tags}
                 onChange={setTags}
-                placeholder="Select or type custom..."
+                placeholder="Select tags..."
+                menuPortalTarget={document.body}
                 className="react-select-container"
                 classNamePrefix="react-select"
+                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
               />
               <input 
                 type="text"
                 value={customTag}
                 onChange={e => setCustomTag(e.target.value)}
                 onKeyDown={handleAddCustomTag}
-                placeholder="Press Enter for custom tag"
-                className="w-full mt-2 px-4 py-2 text-xs bg-transparent border-b border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)] outline-none"
+                placeholder="+ Add Custom Tag"
+                className="w-full mt-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-transparent border-b border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)] outline-none"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Description</label>
+            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
             <textarea 
               value={desc}
               onChange={e => setDesc(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[100px]"
-              placeholder="Describe the objectives and scope..."
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[120px] text-sm font-medium"
+              placeholder="Describe what this project is about..."
             />
           </div>
-        </section>
+        </Card>
 
-        <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden p-8 space-y-6">
+        <Card className="p-8 space-y-6">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-[var(--color-text-secondary)] uppercase tracking-widest ml-1">Team Members</label>
-            <span className="text-[10px] font-bold text-[var(--color-text-muted)]">{members.length} Members Added</span>
+            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Team Members</label>
+            <Badge variant="todo">{members.length} ADDED</Badge>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Select
               options={users.map(u => ({ value: u._id, label: u.name }))}
               onChange={addMember}
-              placeholder="Search team members to add..."
+              placeholder="Search team members..."
+              formatOptionLabel={formatOptionLabel}
+              menuPortalTarget={document.body}
               className="react-select-container"
               classNamePrefix="react-select"
+              styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
             />
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {members.map((m) => (
-                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]">
+                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] group">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] flex items-center justify-center font-bold text-xs">
-                      {m.name.substring(0, 2).toUpperCase()}
+                    <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] text-blue-500 uppercase overflow-hidden">
+                      {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" alt="" /> : m.name.substring(0, 2)}
                     </div>
-                    <span className="font-bold text-sm">{m.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-4">
-                      <CKDropdown 
-                        options={roleOptions}
-                        value={m.role}
-                        onChange={(role) => updateRole(m.userId, role)}
-                        className="w-48"
-                        placeholder="Assign Role"
-                      />
+                    <div>
+                      <p className="font-black text-xs uppercase tracking-tight text-[var(--color-text-primary)]">{m.name}</p>
+                      <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">{m.role}</p>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => removeMember(m.userId)}
-                      className="p-2 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                    >
-                      <X size={16} />
-                    </button>
                   </div>
+                  <button 
+                    type="button" 
+                    onClick={() => removeMember(m.userId)}
+                    className="p-1.5 hover:text-red-500 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
               ))}
               {members.length === 0 && (
-                <div className="py-8 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl">
-                  <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-2" />
-                  <p className="text-xs text-[var(--color-text-muted)]">No team members added yet.</p>
+                <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl opacity-30">
+                  <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">No Members Added</p>
                 </div>
               )}
             </div>
           </div>
-        </section>
+        </Card>
 
         <div className="flex justify-end gap-4">
           <button 
             type="button" 
             onClick={() => navigate('/projects')}
-            className="px-8 py-3 rounded-xl font-bold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] transition-all"
+            className="px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-all"
           >
             Cancel
           </button>
           <button 
             type="submit"
             disabled={loading || !name}
-            className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+            className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
           >
-             {loading ? 'Creating...' : <><Briefcase size={20} /> Create Project</>}
+             {loading ? 'Creating...' : <><Plus size={18} /> Create Project</>}
           </button>
         </div>
       </form>
-    </div>
+    </PageContainer>
   );
 };
 

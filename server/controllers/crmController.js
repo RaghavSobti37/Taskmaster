@@ -182,84 +182,6 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
-exports.uploadLeads = async (req, res) => {
-  const csv = require('csv-parser');
-  const fs = require('fs');
-  const results = [];
-  
-  if (!req.file) {
-    return res.status(400).json({ error: 'No CSV file provided' });
-  }
-
-  try {
-    const reps = await User.find({ role: 'sales' });
-    const repMap = {};
-    reps.forEach(r => repMap[r.name.toLowerCase().trim()] = r._id);
-
-    fs.createReadStream(req.file.path)
-      .pipe(csv())
-      .on('data', (data) => results.push(data))
-      .on('end', async () => {
-        const leadDocs = [];
-        let repIndex = 0;
-
-        for (const row of results) {
-          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || row['assigned_rep_id '] || row.rep_name || '').toLowerCase().trim();
-          let assignedRepId = null;
-          
-          if (repName && repMap[repName]) {
-            assignedRepId = repMap[repName];
-          } else if (reps.length > 0) {
-            assignedRepId = reps[repIndex % reps.length]._id;
-            repIndex++;
-          }
-
-          leadDocs.push({
-            name: row.name || row.Name || row['Full Name'],
-            email: row.email || row.Email,
-            phone: row.phone || row.Phone || row['Mobile Number'],
-            assignedRepId,
-            createdBy: req.user._id,
-            leadStatus: row.leadStatus || row.lead_status || 'New',
-            callStatus: row.callStatus || row.call_status || 'Pending',
-            rowId: row.row_id || row.rowId,
-            customerIdExly: row.customer_id_exly || row.customerIdExly,
-            transactionIdExly: row.transaction_id_exly || row.transactionIdExly,
-            webinarDates: row.webinar_dates || row.webinarDates,
-            attended: row.attended || row.Attended,
-            attendanceDurationMin: row.attendance_duration_min || row.attendanceDurationMin,
-            meaningfulConnect: row.meaningful_connect || row.meaningfulConnect,
-            leadQuality: row.lead_quality || row.leadQuality,
-            remarks: row.notes || row.remarks || row.Remarks,
-            artistType: row.artist_type || row.artistType,
-            fullTimeWillingness: row.full_time_willingness || row.fullTimeWillingness,
-            primaryRole: row.primary_role || row.primaryRole,
-            learningGoal: row.learning_goal || row.learningGoal,
-            learnedMusic: row.learned_music || row.learnedMusic,
-            currentJourney: row.current_journey || row.currentJourney,
-            nextFollowupDate: row.next_followup_date || row.nextFollowupDate,
-            nextFollowupTime: row.next_followup_time || row.nextFollowupTime
-          });
-        }
-
-        const importSession = await CRMImport.create({
-          filename: req.file.originalname,
-          leadCount: leadDocs.length,
-          createdBy: req.user._id
-        });
-
-        const finalDocs = leadDocs.map(d => ({ ...d, importId: importSession._id }));
-        await Lead.insertMany(finalDocs);
-        
-        fs.unlinkSync(req.file.path);
-        res.status(201).json({ message: `${leadDocs.length} leads uploaded and distributed.` });
-      });
-  } catch (error) {
-    const fs = require('fs');
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch(e) {}
-    res.status(500).json({ error: 'Failed to upload leads' });
-  }
-};
 
 exports.getImports = async (req, res) => {
   try {
@@ -351,12 +273,21 @@ exports.uploadLeads = async (req, res) => {
         let repIndex = 0;
 
         for (const row of results) {
-          const repName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
+          const rawRepName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
           let assignedRepId = null;
           
-          if (repName && repMap[repName]) {
-            assignedRepId = repMap[repName];
-          } else if (reps.length > 0) {
+          // Explicitly unassign Shivam or unknown
+          if (rawRepName === 'shivam') {
+            assignedRepId = null;
+          } else if (rawRepName.includes('vicky')) {
+            assignedRepId = repMap['vicky'] || null;
+          } else if (rawRepName.includes('aryaman')) {
+            assignedRepId = repMap['aryaman'] || null;
+          } else if (rawRepName && repMap[rawRepName]) {
+            assignedRepId = repMap[rawRepName];
+          } else if (reps.length > 0 && rawRepName !== '') {
+            // Round-robin only if we have a rep name that didn't match known sales reps
+            // If repName is empty, it stays unassigned
             assignedRepId = reps[repIndex % reps.length]._id;
             repIndex++;
           }
@@ -445,3 +376,135 @@ exports.getPurgeLogs = async (req, res) => {
   }
 };
 
+exports.exportLeads = async (req, res) => {
+  try {
+    const { format: exportFormat } = req.query;
+    const leads = await Lead.find({}).populate('assignedRepId', 'name');
+
+    if (exportFormat === 'json') {
+      return res.json(leads);
+    }
+
+    const fields = ['name', 'email', 'phone', 'leadStatus', 'callStatus', 'leadQuality', 'remarks', 'assignedRep', 'createdAt'];
+    
+    let csv = fields.join(',') + '\n';
+    
+    leads.forEach(l => {
+      const row = [
+        `"${(l.name || '').replace(/"/g, '""')}"`,
+        `"${(l.email || '').replace(/"/g, '""')}"`,
+        `"${(l.phone || '').replace(/"/g, '""')}"`,
+        `"${(l.leadStatus || '').replace(/"/g, '""')}"`,
+        `"${(l.callStatus || '').replace(/"/g, '""')}"`,
+        `"${(l.leadQuality || '').replace(/"/g, '""')}"`,
+        `"${(l.remarks || '').replace(/"/g, '""')}"`,
+        `"${(l.assignedRepId?.name || 'Unassigned').replace(/"/g, '""')}"`,
+        `"${l.createdAt ? l.createdAt.toISOString() : ''}"`
+      ];
+      csv += row.join(',') + '\n';
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Failed to export leads' });
+  }
+};
+
+exports.getCRMStats = async (req, res) => {
+  try {
+    const [total, connected, meaningful, converted, totalReps] = await Promise.all([
+      Lead.countDocuments({}),
+      Lead.countDocuments({ callStatus: 'Connected' }),
+      Lead.countDocuments({ meaningfulConnect: 'YES' }),
+      Lead.countDocuments({ leadStatus: 'Converted' }),
+      User.countDocuments({ role: 'sales' })
+    ]);
+
+    res.json({
+      total,
+      connected,
+      meaningful,
+      converted,
+      totalReps
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch CRM stats' });
+  }
+};
+
+exports.getCRMConfig = async (req, res) => {
+  try {
+    const [callStatuses, leadStatuses, artistTypes] = await Promise.all([
+      Lead.distinct('callStatus'),
+      Lead.distinct('leadStatus'),
+      Lead.distinct('artistType')
+    ]);
+
+    // Ensure some defaults if DB is empty
+    const defaults = {
+      callStatuses: callStatuses.length ? callStatuses : ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'],
+      leadStatuses: leadStatuses.length ? leadStatuses : ['New', 'Interested', 'Not Interested', 'Followup', 'Converted'],
+      artistTypes: artistTypes.length ? artistTypes : ['Full Time', 'Part Time', 'Hobbyist'],
+      qualities: ['1', '2', '3', '4', '5']
+    };
+
+    res.json(defaults);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch CRM config' });
+  }
+};
+
+exports.getRepSummary = async (req, res) => {
+  try {
+    const summary = await Lead.aggregate([
+      {
+        $group: {
+          _id: "$assignedRepId",
+          count: { $sum: 1 },
+          conv: {
+            $sum: {
+              $cond: [{ $eq: ["$leadStatus", "Converted"] }, 1, 0]
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "rep"
+        }
+      },
+      {
+        $unwind: {
+          path: "$rep",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          id: "$_id",
+          name: { $ifNull: ["$rep.name", "Unassigned"] },
+          count: 1,
+          conv: 1,
+          rate: {
+            $cond: [
+              { $gt: ["$count", 0] },
+              { $multiply: [{ $divide: ["$conv", "$count"] }, 100] },
+              0
+            ]
+          }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+    res.json(summary);
+  } catch (error) {
+    console.error('Rep summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch rep summary' });
+  }
+};

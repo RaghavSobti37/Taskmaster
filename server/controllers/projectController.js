@@ -163,3 +163,45 @@ exports.removeMember = async (req, res) => {
     res.status(500).json({ error: 'Failed to remove member' });
   }
 };
+exports.addMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    const project = await Project.findById(id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Only admin or project owner can add members
+    if (req.user.role !== 'admin' && project.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to add members' });
+    }
+
+    // Check if already a member
+    if (project.members.includes(userId)) {
+      return res.status(400).json({ error: 'User is already a member of this project' });
+    }
+
+    project.members.push(userId);
+    
+    // Fetch user to get their current role
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    project.memberRoles.push({
+      user: userId,
+      role: user.role || 'member'
+    });
+
+    await project.save();
+
+    const updatedProject = await Project.findById(id)
+      .populate('owner', 'name email avatar teams')
+      .populate('members', 'name email avatar teams online lastOnline')
+      .populate('memberRoles.user', 'name email avatar');
+
+    res.json(updatedProject);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add member' });
+  }
+};

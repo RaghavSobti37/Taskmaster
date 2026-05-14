@@ -1,23 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Calendar as CalIcon } from 'lucide-react';
-import { NexusDropdown } from './ui';
+import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [projectId, setProjectId] = useState('');
-  const [projects, setProjects] = useState([]);
+  const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState('private');
   const [loading, setLoading] = useState(false);
-
-  React.useEffect(() => {
-    if (isOpen) {
-      axios.get('/api/projects').then(res => {
-        setProjects(res.data);
-        if (res.data.length > 0) setProjectId(res.data[0]._id);
-      });
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -25,15 +15,17 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post('/api/tasks', {
+      const res = await axios.post('/api/calendar', {
         title,
-        dueDate: date,
-        projectId,
-        status: 'todo',
-        priority: 'medium',
-        description: 'Scheduled via Temporal Layout'
+        date,
+        description,
+        visibility
       });
       onEntryCreated(res.data);
+      setTitle('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setDescription('');
+      setVisibility('private');
       onClose();
     } catch (err) {
       console.error('Error creating calendar entry:', err);
@@ -48,29 +40,29 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
         <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <CalIcon size={18} className="text-[var(--color-action-primary)]" />
-            Schedule Temporal Unit
+            New Calendar Event
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
             <X size={20} />
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Event Identifier</label>
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Event Name</label>
             <input 
               autoFocus
               type="text" 
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
-              placeholder="e.g. System Audit"
+              placeholder="e.g. Team meeting"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Temporal Anchor</label>
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
             <input 
               type="date" 
               value={date}
@@ -80,15 +72,46 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
             />
           </div>
 
-            <NexusDropdown
-              options={projects.map(p => ({ value: p._id, label: p.name }))}
-              value={projectId}
-              onChange={setProjectId}
-              label="Project"
-              placeholder="Select Project"
-              required
-              searchable={projects.length > 5}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description (optional)</label>
+            <textarea 
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold min-h-[80px] resize-none"
+              placeholder="Add details..."
             />
+          </div>
+
+          {/* Visibility Toggle */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Who can see this?</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setVisibility('private')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs border transition-all ${
+                  visibility === 'private'
+                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 shadow-sm'
+                    : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-purple-500/30'
+                }`}
+              >
+                <Lock size={14} />
+                Only Me
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibility('public')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs border transition-all ${
+                  visibility === 'public'
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 shadow-sm'
+                    : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-emerald-500/30'
+                }`}
+              >
+                <Globe size={14} />
+                Everyone
+              </button>
+            </div>
+          </div>
 
           <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--color-bg-border)]">
             <button 
@@ -103,7 +126,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
               disabled={loading || !title}
               className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
             >
-              {loading ? 'Scheduling...' : <><CheckCircle2 size={18} /> Confirm Entry</>}
+              {loading ? 'Saving...' : <><CheckCircle2 size={18} /> Save Event</>}
             </button>
           </div>
         </form>

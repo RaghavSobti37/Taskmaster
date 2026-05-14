@@ -121,7 +121,7 @@ const ArtistDetail = () => {
   );
 
   if (loading) return <DetailSkeleton />;
-  if (!artist) return <div className="p-20 text-center font-black uppercase tracking-widest text-rose-500">Artist Protocol Not Found</div>;
+  if (!artist) return <div className="p-20 text-center font-black uppercase tracking-widest text-rose-500">Artist not found</div>;
 
   const totalReach = (artist.analytics?.spotify?.followers || 0) + 
                     (artist.analytics?.youtube?.subscribers || 0) + 
@@ -236,13 +236,13 @@ const ArtistDetail = () => {
                <div className="p-8 border-b border-[var(--color-bg-border)] flex items-center justify-between">
                   <div>
                     <h3 className="text-2xl font-black text-[var(--color-text-primary)] uppercase tracking-tight italic">Mission Timeline</h3>
-                    <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest mt-1">Operational Event History</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-widest mt-1">Event History</p>
                   </div>
                    <button 
                     onClick={() => setIsInjectModalOpen(true)}
                     className="flex items-center gap-2 bg-blue-500 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:shadow-blue-500/20 transition-all"
                    >
-                    <Zap size={14} strokeWidth={3} /> Inject Event
+                    <Zap size={14} strokeWidth={3} /> Add Event
                   </button>
                </div>
                <div className="p-8 space-y-6">
@@ -272,7 +272,7 @@ const ArtistDetail = () => {
             {/* Catalogue Analysis */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="bg-[var(--color-bg-surface)] p-8 rounded-[3rem] border border-[var(--color-bg-border)]">
-                  <h3 className="text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight italic mb-6">Discography Protocol</h3>
+                  <h3 className="text-xl font-black text-[var(--color-text-primary)] uppercase tracking-tight italic mb-6">Discography</h3>
                   <div className="space-y-4">
                      {artist.discography?.map((song, i) => (
                        <div key={i} className="p-4 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl flex items-center justify-between hover:border-emerald-500 transition-all group">
@@ -316,7 +316,7 @@ const ArtistDetail = () => {
                      </div>
                      <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                           <span>Conversion Protocol (Profile Visits)</span>
+                           <span>Profile Visit Rate</span>
                            <span className="text-purple-500">{(artist.analytics?.instagram?.profileVisitRatio * 100).toFixed(1) || 15}%</span>
                         </div>
                         <div className="w-full h-2 bg-[var(--color-bg-workspace)] rounded-full overflow-hidden">
@@ -371,10 +371,10 @@ const ArtistDetail = () => {
             </div>
 
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white space-y-6 shadow-2xl shadow-blue-500/20">
-               <h4 className="text-xl font-black uppercase tracking-tight italic">Operational Health</h4>
+               <h4 className="text-xl font-black uppercase tracking-tight italic">Overall Health</h4>
                <div className="flex items-center gap-4">
                   <div className="text-4xl font-black italic">A+</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">System sync optimal</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Everything looks great</div>
                </div>
                <div className="space-y-4">
                   <div className="p-4 bg-white/10 rounded-2xl border border-white/10">
@@ -383,7 +383,7 @@ const ArtistDetail = () => {
                   </div>
                   <div className="p-4 bg-white/10 rounded-2xl border border-white/10">
                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Assigned Team</p>
-                     <p className="text-xs font-bold mt-1">Operational Nexus</p>
+                     <p className="text-xs font-bold mt-1">Core Team</p>
                   </div>
                </div>
             </div>
@@ -393,7 +393,7 @@ const ArtistDetail = () => {
       <NexusModal
         isOpen={isInjectModalOpen}
         onClose={() => setIsInjectModalOpen(false)}
-        title="Inject Operational Event"
+        title="Add New Event"
       >
         <form onSubmit={handleInjectEvent} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -447,14 +447,14 @@ const ArtistDetail = () => {
               className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3 text-xs text-[var(--color-text-primary)] min-h-[100px]"
               value={newEvent.description}
               onChange={e => setNewEvent({...newEvent, description: e.target.value})}
-              placeholder="Operational details..."
+              placeholder="Add event details..."
             />
           </div>
           <button 
             type="submit"
             className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-2xl hover:shadow-blue-500/30 transition-all"
           >
-            Confirm Protocol Injection
+            Add Event
           </button>
         </form>
       </NexusModal>

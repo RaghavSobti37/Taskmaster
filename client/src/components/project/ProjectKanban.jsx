@@ -11,7 +11,7 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
     <div className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}>
       <div className="flex items-start justify-between mb-3">
         <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
-          {task.priority}
+          {task.priority.toUpperCase()}
         </Badge>
         {!isDone && (
           <div className="flex items-center gap-1">
@@ -34,21 +34,18 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
           </div>
         )}
       </div>
-      <div className={`${isDone ? 'cursor-default' : 'cursor-pointer'}`} onClick={() => !isDone && onDetail(task)}>
-        <h4 className={`text-sm font-bold mb-1 transition-colors ${isDone ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)]'}`}>
+      <div className={`${isDone ? 'cursor-default' : 'cursor-pointer'} mb-3`} onClick={() => !isDone && onDetail(task)}>
+        <h4 className={`text-xs font-black mb-1 transition-colors uppercase tracking-tight leading-tight ${isDone ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)]'}`}>
           {task.title}
         </h4>
         {isDone ? (
-          <div className="mt-3 pt-3 border-t border-[var(--color-bg-border)] space-y-1">
-            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5">
-              <CheckCircle2 size={12} /> Task Finalized
-            </p>
-            <p className="text-[9px] text-[var(--color-text-muted)] font-bold">
-              {task.completedAt ? new Date(task.completedAt).toLocaleString() : 'Recently'}
+          <div className="pt-2 border-t border-[var(--color-bg-border)] border-dashed space-y-1">
+            <p className="text-[9px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5">
+              <CheckCircle2 size={10} /> Completed
             </p>
           </div>
-        ) : (
-          <p className="text-xs text-[var(--color-text-muted)] line-clamp-2 mb-4">{task.description}</p>
+        ) : task.description && (
+          <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-1 italic">{task.description}</p>
         )}
       </div>
       
@@ -56,7 +53,7 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
         <div className="flex items-center justify-between pt-4 border-t border-[var(--color-bg-border)]">
           <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
             <Clock size={12} />
-            <span className="text-[10px] font-bold">In Flow</span>
+            <span className="text-[10px] font-bold">Active</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shadow-sm">
@@ -89,7 +86,7 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
   };
 
   return (
-    <div className="flex gap-6 overflow-x-auto pb-4 min-h-[600px]">
+    <div className="flex gap-6 overflow-x-auto pb-4 h-full scroll-smooth custom-scrollbar">
       {columns.map(column => {
         let columnTasks = tasks.filter(t => t.status === column.id);
         if (column.id === 'done') {
@@ -107,13 +104,13 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
               </div>
             </div>
             
-            <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3">
+            <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3 overflow-y-auto custom-scrollbar">
               {columnTasks.map(task => (
                 <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} />
               ))}
               {columnTasks.length === 0 && (
                 <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-bg-border)] rounded-xl">
-                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">No active units</p>
+                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">No tasks here</p>
                 </div>
               )}
             </div>

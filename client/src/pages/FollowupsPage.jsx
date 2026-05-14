@@ -8,11 +8,22 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
-import { NexusLoader } from '../components/ui';
+import { NexusLoader, PageHeader, PageContainer, Card } from '../components/ui';
 import CRMLeadModal from '../components/crm/CRMLeadModal';
 import { getRepName } from '../utils/crmUtils';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const FollowupsPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && user.role !== 'admin' && user.role !== 'sales') {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -76,7 +87,7 @@ const FollowupsPage = () => {
     <div className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] p-8 space-y-6 flex-1 flex flex-col min-w-[320px] shadow-2xl shadow-black/5">
       <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-5">
         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--color-text-primary)]">{title}</h3>
-        <span className={`px-3 py-1 rounded-full text-[10px] font-black text-white ${color} shadow-lg shadow-black/10`}>{items.length} Units</span>
+        <span className={`px-3 py-1 rounded-full text-[10px] font-black text-white ${color} shadow-lg shadow-black/10`}>{items.length} Leads</span>
       </div>
       <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[60vh]">
         {items.map(lead => (
@@ -109,7 +120,7 @@ const FollowupsPage = () => {
         {items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32 opacity-20 text-[var(--color-text-muted)]">
             <CheckCircle2 size={48} className="mb-4" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Protocol Clear</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em]">All Clear</p>
           </div>
         )}
       </div>
@@ -117,19 +128,12 @@ const FollowupsPage = () => {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-8 pb-24 space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-[var(--color-text-primary)] uppercase tracking-tighter italic">Follow-up Protocols</h1>
-          <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-[0.4em] mt-2 italic">Temporal Synchronization Active</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] flex items-center gap-3">
-             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-             <span className="text-[9px] font-black uppercase tracking-widest">System Online</span>
-          </div>
-        </div>
-      </header>
+    <PageContainer>
+      <PageHeader
+        title="Follow-ups"
+        subtitle="Track and manage your upcoming follow-ups."
+        icon={Clock}
+      />
 
       <div className="flex flex-col xl:flex-row gap-8">
         {loading ? (
@@ -140,9 +144,9 @@ const FollowupsPage = () => {
           </>
         ) : (
           <>
-            <Column title="Overdue Signal" items={overdue} color="bg-rose-500" />
+            <Column title="Overdue" items={overdue} color="bg-rose-500" />
             <Column title="Due Today" items={today} color="bg-amber-500" />
-            <Column title="Future Queue" items={upcoming} color="bg-blue-500" />
+            <Column title="Upcoming" items={upcoming} color="bg-blue-500" />
           </>
         )}
       </div>
@@ -153,7 +157,7 @@ const FollowupsPage = () => {
         lead={selectedLead}
         onRefresh={fetchLeads}
       />
-    </div>
+    </PageContainer>
   );
 };
 

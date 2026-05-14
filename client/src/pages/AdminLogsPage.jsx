@@ -32,7 +32,7 @@ import {
   ArrowUpRight,
   ShieldCheck
 } from 'lucide-react';
-import { Badge } from '../components/ui';
+import { Badge, PageHeader, PageContainer, Card, TabSwitcher } from '../components/ui';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -157,118 +157,66 @@ const AdminLogsPage = () => {
   }) : [];
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-12 pb-24 px-4 sm:px-6 lg:px-8">
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-8"
-      >
-        <div className="flex items-center gap-6">
-          <div className="space-y-0.5">
-            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Log Summary Matrix</h1>
-            <p className="text-xs font-medium text-[var(--color-text-muted)]">Operational audit and time tracking intelligence.</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)] shadow-sm">
-          <button
-            onClick={() => setViewType('day')}
-            className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'day' ? 'bg-slate-900 text-white shadow-xl' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
-          >
-            Daily View
-          </button>
-          <button
-            onClick={() => setViewType('7d')}
-            className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewType === '7d' ? 'bg-slate-900 text-white shadow-xl' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
-          >
-            7-Day Summary
-          </button>
-          <button
-            onClick={() => setViewType('month')}
-            className={`px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewType === 'month' ? 'bg-slate-900 text-white shadow-xl' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
-          >
-            Monthly View
-          </button>
-        </div>
-      </motion.header>
+    <PageContainer>
+      <PageHeader
+        title="Activity Logs"
+        subtitle="View team activity and time logs."
+        icon={ShieldCheck}
+        actions={
+          <TabSwitcher
+            activeTab={viewType}
+            onChange={setViewType}
+            tabs={[
+              { id: 'day', label: 'Daily View' },
+              { id: '7d', label: '7-Day Summary' },
+              { id: 'month', label: 'Monthly View' }
+            ]}
+          />
+        }
+      />
 
       <motion.section
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-2 md:grid-cols-4 gap-4"
       >
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Total Activity</p>
-              <h3 className="text-2xl font-black text-white">{logs.length}</h3>
+        {[
+          { label: 'Total Activity', value: logs.length, icon: BarChart3, color: 'text-blue-400', bg: 'bg-blue-500/5' },
+          { label: 'Time Logged', value: formatMins(getDayTotalTime(logs)), icon: Timer, color: 'text-emerald-400', bg: 'bg-emerald-500/5' },
+          { label: 'Active Users', value: new Set(logs.map(l => l.userId?._id)).size, icon: Users, color: 'text-orange-400', bg: 'bg-orange-500/5' },
+          { label: 'Avg. per Day', value: Math.round(logs.length / Math.max(1, days.length)), icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/5' }
+        ].map((stat, i) => (
+          <motion.div key={i} variants={itemVariants} className="bg-slate-900 p-4 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-16 h-16 ${stat.bg} blur-2xl rounded-full`} />
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${stat.color}`}>{stat.label}</p>
+                <h3 className="text-xl font-black text-white">{stat.value}</h3>
+              </div>
+              <div className={`p-2 bg-white/5 rounded-lg border border-white/10 ${stat.color}`}>
+                <stat.icon size={16} />
+              </div>
             </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400">
-              <BarChart3 size={18} />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Time Logged</p>
-              <h3 className="text-2xl font-black text-white">{formatMins(getDayTotalTime(logs))}</h3>
-            </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-emerald-400">
-              <Timer size={18} />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">Active Users</p>
-              <h3 className="text-2xl font-black text-white">{new Set(logs.map(l => l.userId?._id)).size}</h3>
-            </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-orange-400">
-              <Users size={18} />
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div variants={itemVariants} className="bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl rounded-full" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">Capture Rate</p>
-              <h3 className="text-2xl font-black text-white">{Math.round(logs.length / Math.max(1, days.length))}</h3>
-            </div>
-            <div className="p-3 bg-white/5 rounded-xl border border-white/10 text-purple-400">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        ))}
       </motion.section>
 
       <main className="w-full space-y-10">
         <AnimatePresence mode="wait">
           {!selectedFeedLogs ? (
             <motion.section
-              key="activity-grid"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col min-h-[600px]"
-            >
+          >
+            <Card className="overflow-hidden flex flex-col min-h-[600px]">
               <div className="px-8 py-8 border-b border-[var(--color-bg-border)] flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
                     <Activity size={20} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Activity Matrix</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Visualizing operational frequency.</p>
+                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Activity Overview</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily activity for all team members.</p>
                   </div>
                 </div>
                 
@@ -301,7 +249,7 @@ const AdminLogsPage = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {userIds.length === 0 ? (
                           <div className="col-span-full p-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-3xl opacity-20">
-                            <p className="text-xs font-black uppercase tracking-widest">No Activity Records</p>
+                            <p className="text-xs font-black uppercase tracking-widest">No activity for this day</p>
                           </div>
                         ) : userIds.map(uid => {
                           const uLogs = dateLogs[uid];
@@ -323,7 +271,7 @@ const AdminLogsPage = () => {
                                 </div>
                                 <div className="text-left">
                                   <p className="text-sm font-black text-[var(--color-text-primary)]">{userObj?.name || 'System'}</p>
-                                  <Badge variant="todo">{uLogs.length} SIGNALS</Badge>
+                                  <Badge variant="todo">{uLogs.length} entries</Badge>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -338,26 +286,24 @@ const AdminLogsPage = () => {
                   );
                 })}
               </div>
-            </motion.section>
+            </Card>
+          </motion.section>
           ) : (
             <motion.section
-              key="drill-down"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden min-h-[600px]"
-            >
+          >
+            <Card className="overflow-hidden min-h-[600px]">
               <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-slate-900 text-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <button onClick={() => setSelectedFeedLogs(null)} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all"><ArrowLeft size={16} /></button>
                   <div>
-                    <h3 className="text-lg font-black uppercase italic">{feedTarget?.name}'s Intelligence</h3>
+                    <h3 className="text-lg font-black uppercase italic">{feedTarget?.name}'s Activity</h3>
                     <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{format(new Date(feedTarget?.date), 'MMMM dd, yyyy')}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'manual' ? 'bg-white text-slate-900' : 'bg-white/10'}`}>Manual Logs</button>
-                  <button onClick={() => setActiveTab('api')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'api' ? 'bg-white text-slate-900' : 'bg-white/10'}`}>System Signals</button>
+                  <button onClick={() => setActiveTab('api')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'api' ? 'bg-white text-slate-900' : 'bg-white/10'}`}>Auto-Logged</button>
                 </div>
               </div>
               <div className="p-8 space-y-4">
@@ -378,13 +324,14 @@ const AdminLogsPage = () => {
                     )}
                   </div>
                 ))}
-                {filteredLogs.length === 0 && <div className="p-20 text-center opacity-20"><Activity size={48} className="mx-auto mb-4" /><p className="text-xs font-black uppercase">No records in this sector</p></div>}
+                {filteredLogs.length === 0 && <div className="p-20 text-center opacity-20"><Activity size={48} className="mx-auto mb-4" /><p className="text-xs font-black uppercase">No entries found</p></div>}
               </div>
-            </motion.section>
+            </Card>
+          </motion.section>
           )}
         </AnimatePresence>
       </main>
-    </div>
+    </PageContainer>
   );
 };
 

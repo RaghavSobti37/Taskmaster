@@ -6,9 +6,7 @@ import {
   Users, Plus, TrendingUp, Search, Zap, BarChart3
 } from 'lucide-react';
 import { FaYoutube, FaInstagram, FaSpotify } from 'react-icons/fa';
-import { NexusModal, Badge } from '../components/ui';
-import { useAuth } from '../contexts/AuthContext';
-import NexusLoader from '../components/ui/NexusLoader';
+import { NexusModal, Badge, PageHeader, PageContainer, Card, NexusLoader } from '../components/ui';
 
 const ArtistCard = ({ artist, onClick }) => (
   <motion.div
@@ -17,8 +15,9 @@ const ArtistCard = ({ artist, onClick }) => (
     animate={{ opacity: 1, y: 0 }}
     whileHover={{ y: -10 }}
     onClick={() => onClick(artist._id)}
-    className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] overflow-hidden shadow-2xl shadow-black/5 cursor-pointer group flex flex-col h-full"
+    className="group flex flex-col h-full cursor-pointer"
   >
+    <Card className="overflow-hidden shadow-2xl shadow-black/5 flex flex-col h-full" hover>
     <div className="relative h-64 overflow-hidden">
       <img
         src={artist.profileImage || "/hnd-posing.jpeg"}
@@ -31,7 +30,7 @@ const ArtistCard = ({ artist, onClick }) => (
       </div>
       <div className="absolute bottom-6 left-8 right-8">
         <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic drop-shadow-xl">{artist.name}</h3>
-        <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.3em] mt-1">Operational Artist Protocol</p>
+        <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.3em] mt-1">Artist</p>
       </div>
     </div>
 
@@ -69,10 +68,11 @@ const ArtistCard = ({ artist, onClick }) => (
           ))}
         </div>
         <button className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors">
-          Analyze Ecosystem <Zap size={10} fill="currentColor" />
+          View Details <Zap size={10} fill="currentColor" />
         </button>
       </div>
     </div>
+    </Card>
   </motion.div>
 );
 
@@ -117,32 +117,32 @@ const ArtistsCollection = () => {
   const filteredArtists = artists.filter(a => a.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-8 pb-32 space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black text-[var(--color-text-primary)] uppercase tracking-tighter italic">Operational Roster</h1>
-          <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-[0.4em] mt-2">Managing Excellence in Sound Ecosystems</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
-          <div className="relative group flex-1 md:min-w-[300px]">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="SEARCH PROTOCOL..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)] outline-none focus:ring-4 focus:ring-blue-500/5 transition-all shadow-xl shadow-black/5"
-            />
+    <PageContainer>
+      <PageHeader
+        title="Artists"
+        subtitle="Your artist roster and analytics."
+        icon={Users}
+        actions={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+            <div className="relative group flex-1 md:min-w-[300px]">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="Search artists..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)] outline-none focus:ring-2 focus:ring-[var(--color-action-primary)] transition-all shadow-inner"
+              />
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center gap-3 bg-[var(--color-action-primary)] text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+            >
+              <Plus size={18} strokeWidth={3} /> Add Artist
+            </button>
           </div>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-2xl hover:shadow-blue-500/30 transition-all active:scale-95"
-          >
-            <Plus size={18} strokeWidth={3} /> Add Artist
-          </button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-10">
         {loading ? (
@@ -165,10 +165,10 @@ const ArtistsCollection = () => {
           <div className="w-20 h-20 rounded-[2rem] bg-[var(--color-bg-workspace)] flex items-center justify-center mb-6">
             <BarChart3 size={32} className="text-[var(--color-text-muted)] opacity-20" />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--color-text-muted)] opacity-50 italic">No artists matching protocol</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--color-text-muted)] opacity-50 italic">No artists found</p>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

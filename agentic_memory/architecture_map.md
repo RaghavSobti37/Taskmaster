@@ -16,8 +16,8 @@ graph TD
         CH[Team Chat]
         ST[Settings]
         CRM_F[CRM]
-        ASSETS[Assets]
         TV[Team Directory]
+        CV[Calendar]
     end
 
     subgraph API ["Backend API (Node/Express)"]
@@ -30,6 +30,7 @@ graph TD
         C_API["/api/chat"]
         CR_API["/api/crm"]
         AS_API["/api/assets"]
+        CAL_API["/api/calendar"]
     end
 
     subgraph Models ["Database (MongoDB/Mongoose)"]
@@ -42,6 +43,7 @@ graph TD
         M_Message[(Message)]
         M_Lead[(Lead)]
         M_Asset[(Asset)]
+        M_Event[(CalendarEvent)]
     end
 
     D --> T_API & L_API
@@ -55,6 +57,7 @@ graph TD
     CRM_F --> CR_API
     ASSETS --> AS_API & P_API
     TV --> U_API & TM_API
+    CV --> CAL_API
 
     T_API --> M_Task
     P_API --> M_Project
@@ -65,6 +68,7 @@ graph TD
     C_API --> M_Message
     CR_API --> M_Lead
     AS_API --> M_Asset
+    CAL_API --> M_Event
 
     M_Project -- "has" --> M_Phase
     M_Phase -- "contains" --> M_Task
@@ -74,6 +78,7 @@ graph TD
     M_Log -- "records" --> M_User
     M_Asset -- "belongs to" --> M_Project
     M_Lead -- "assigned to" --> M_User
+    M_Event -- "created by" --> M_User
 ```
 
 ## Module Overview
@@ -89,6 +94,7 @@ graph TD
 | **Team Chat** | Channel-based messaging | Mentions, file references, task creation from chat |
 | **CRM** | Lead/contact management | CSV import, status tracking, rep assignment |
 | **Assets** | Project resource links | Up to 3 links per asset, project-scoped |
+| **Calendar** | Event scheduling | DB persistence, Public/Private visibility |
 
 ## Data Relationships
 
@@ -110,3 +116,6 @@ CRM leads are assigned to users (reps) for follow-up. Leads track status (New/Ho
 
 ### Asset → Project
 Assets store important links for a project. Each asset can hold up to 3 URLs.
+
+### CalendarEvent → User
+Calendar events are owned by users. Public events are visible to everyone; private events only to the owner.

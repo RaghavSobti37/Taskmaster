@@ -23,6 +23,7 @@ erDiagram
     TASK ||--o{ TASK : "depends on"
     USER ||--o{ MESSAGE : "sends"
     USER ||--o{ LEAD : "assigned to"
+    USER ||--o{ CALENDAR_EVENT : "creates"
 ```
 
 ### Model Fields
@@ -38,6 +39,7 @@ erDiagram
 | **Message** | `content`, `channel` | `senderId` → User, `mentions` → User[] |
 | **Lead** | `name`, `phone`, `email`, `leadStatus`, `leadQuality` | `assignedRepId` → User |
 | **Asset** | `name`, `links[]` | `projectId` → Project, `createdBy` → User |
+| **CalendarEvent** | `title`, `date`, `visibility` | `createdBy` → User |
 
 ---
 
@@ -138,6 +140,9 @@ sequenceDiagram
 | `/api/assets` | GET | AssetsPage | List all assets |
 | `/api/assets` | POST | AssetsPage | Create a new asset |
 | `/api/assets/:id` | DELETE | AssetsPage | Delete an asset |
+| `/api/calendar` | GET | CalendarView | Fetch public + owned events |
+| `/api/calendar` | POST | CalendarEntryModal | Create persistent event |
+| `/api/calendar/:id` | DELETE | CalendarView | Delete an event |
 
 ---
 
@@ -157,6 +162,7 @@ What happens when a user does something, step by step:
 | **Log daily work** | DailyLogPage → "Save Entry" | `POST /api/logs` | `createLog` | Log.create() | Tracks time + project |
 | **Import CSV leads** | CRMPage → "Import" | `POST /api/crm/leads/upload` | `uploadLeads` | Lead.insertMany() | Batch creates contacts |
 | **Add asset** | AssetsPage → "Save Asset" | `POST /api/assets` | `createAsset` | Asset.create() | Links to project |
+| **Add event** | Calendar → "Save Event" | `POST /api/calendar` | `createEvent` | CalendarEvent.create() | Sets visibility |
 
 ### Example: Completing a Task
 

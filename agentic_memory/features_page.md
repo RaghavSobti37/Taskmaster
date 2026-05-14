@@ -12,6 +12,7 @@
 - [x] **Team Chat**: Channels, mentions, file attach, task creation from messages
 - [x] **CRM**: Lead table, CSV import, priority dots, status badges, lead modal
 - [x] **Assets**: Project-scoped links (max 3), add/delete with modal confirmations
+- [x] **Calendar**: Monthly view, internal event persistence, visibility toggles (Public/Private), holiday integration
 - [x] **Artists**: High-fidelity profiles (Harshad & Duhita), collective numbers, discography, and mission timelines.
 - [x] **Todo/Task Management**: Synchronized Protocol Log (TodoPage) with backend Task model and Project associations.
 - [x] **Settings**: Profile editing, avatar upload, theme toggle, and 30% scaled-down high-density UI components.
@@ -23,8 +24,9 @@
 - [x] Admin protection safeguards (can't delete self, can't remove last admin)
 - [x] CastError and field mismatch fixes resolved
 - [x] Log validation fix (action field required)
-- [x] CRM batch import/delete with audit trail
-- [x] Asset CRUD with project linking
+- [x] **CRM batch import/delete with audit trail**
+- [x] **Asset CRUD with project linking**
+- [x] **Persistent Calendar system** with role-based visibility (Public/Private)
 
 ## UI Language Cleanup — Status
 

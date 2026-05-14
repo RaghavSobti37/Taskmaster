@@ -98,6 +98,7 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/calendar', require('./routes/calendarRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 
@@ -109,6 +110,10 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Initialize Reminder Service
+  const notificationService = require('./services/notificationService');
+  notificationService.init();
 });

@@ -7,6 +7,7 @@ import { Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationTray from './NotificationTray';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar } = useSidebar();
@@ -36,9 +37,9 @@ const MainLayout = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[180px]">
-        {/* Mobile Header */}
-        <header className="lg:hidden h-16 flex items-center justify-between px-4 bg-[var(--color-bg-surface)] border-b border-[var(--color-bg-border)] sticky top-0 z-40">
-          <div className="flex items-center gap-3">
+        {/* Top Header (Desktop & Mobile) */}
+        <header className="h-16 flex items-center justify-between px-6 bg-[var(--color-bg-surface)]/80 backdrop-blur-md border-b border-[var(--color-bg-border)] sticky top-0 z-40">
+          <div className="flex items-center gap-3 lg:hidden">
             <button 
               onClick={toggleMobileSidebar}
               className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-[var(--color-text-secondary)] transition-colors"
@@ -50,16 +51,22 @@ const MainLayout = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="hidden lg:block">
+            {/* Breadcrumbs or Page Title could go here */}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <NotificationTray />
+            
             <div className="relative" ref={profileMenuRef}>
               <button 
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] active:scale-95 transition-transform"
+                className="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] active:scale-95 transition-transform shadow-sm"
               >
                 {user?.avatar ? (
                   <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[10px] font-black uppercase bg-[var(--color-bg-workspace)]">
+                  <div className="w-full h-full flex items-center justify-center text-xs font-black uppercase bg-[var(--color-bg-workspace)]">
                     {user?.name?.[0]}
                   </div>
                 )}
@@ -73,10 +80,14 @@ const MainLayout = () => {
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute right-0 mt-3 w-48 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
                   >
+                    <div className="px-4 py-3 mb-1 border-b border-[var(--color-bg-border)]">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate">{user.name}</p>
+                      <p className="text-[8px] font-bold text-[var(--color-text-secondary)] uppercase">{user.role}</p>
+                    </div>
                     <Link
                       to="/settings"
                       onClick={() => setIsProfileMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-workspace)] hover:text-[var(--color-text-primary)] transition-all"
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-workspace)] hover:text-[var(--color-text-primary)] transition-all"
                     >
                       Settings
                     </Link>
@@ -85,7 +96,7 @@ const MainLayout = () => {
                         setIsProfileMenuOpen(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/5 transition-all"
                     >
                       Logout
                     </button>
@@ -97,7 +108,7 @@ const MainLayout = () => {
         </header>
 
         <main 
-          className="flex-1 p-4 md:p-6 lg:p-8"
+          className="flex-1 p-6 lg:p-8"
         >
           <div className="w-full">
             <Outlet />

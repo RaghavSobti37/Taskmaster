@@ -1,7 +1,11 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const { google } = require('googleapis');
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
 
 
 const generateToken = (id) => {
@@ -104,6 +108,77 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-
   res.json(req.user);
+};
+
+exports.googleAuthRedirect = (req, res) => {
+  const scopes = [
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/calendar'
+  ];
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: scopes
+  });
+
+  res.redirect(url);
+};
+
+exports.googleAuthCallback = async (req, res) => {
+  try {
+    const { code } = req.query;
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const { data: profile } = await oauth2.userinfo.get();
+
+    const email = profile.email;
+    const domain = email.split('@')[1];
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+    const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN;
+
+    if (email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN) {
+      return res.redirect(`http://localhost:5173/login?error=unauthorized_domain`);
+    }
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      user = await User.create({
+        name: profile.name,
+        email: email.toLowerCase(),
+        avatar: profile.picture,
+        googleId: profile.id,
+        googleAccessToken: tokens.access_token,
+        googleRefreshToken: tokens.refresh_token,
+        googleCalendarLinked: true // Auto-link if they sign in via Google
+      });
+    } else {
+      user.googleId = profile.id;
+      user.googleAccessToken = tokens.access_token;
+      if (tokens.refresh_token) {
+        user.googleRefreshToken = tokens.refresh_token;
+      }
+      user.googleCalendarLinked = true;
+      await user.save();
+    }
+
+    const token = generateToken(user._id);
+    const userJson = JSON.stringify({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar
+    });
+
+    res.redirect(`http://localhost:5173/auth/google/success?token=${token}&user=${encodeURIComponent(userJson)}`);
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    res.redirect(`http://localhost:5173/login?error=auth_failed`);
+  }
 };

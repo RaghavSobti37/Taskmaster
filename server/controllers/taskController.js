@@ -64,7 +64,8 @@ exports.updateTask = async (req, res) => {
         updates.completedAt = null;
       }
     }
-    const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
+      .populate('assignees', 'name avatar');
     res.json(task);
     if (task) {
       setImmediate(async () => {

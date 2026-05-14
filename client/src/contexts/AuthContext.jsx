@@ -34,6 +34,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    if (token) {
+      const interval = setInterval(fetchUser, 30000); // Sync every 30s
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
   const login = (newToken, userData) => {
     localStorage.setItem('coreknot_token', newToken);
     localStorage.setItem('coreknot_user', JSON.stringify(userData));

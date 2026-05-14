@@ -6,7 +6,7 @@ const ProjectGantt = ({ tasks }) => {
     <div className="bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] overflow-hidden">
       <div className="flex border-b border-[var(--color-bg-border)]">
         <div className="w-64 flex-shrink-0 p-4 border-r border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-          <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Operational Unit</h3>
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task</h3>
         </div>
         <div className="flex-1 p-4 bg-[var(--color-bg-workspace)] overflow-hidden">
           <div className="flex justify-between">
@@ -46,7 +46,7 @@ const ProjectGantt = ({ tasks }) => {
         ))}
         {tasks.length === 0 && (
           <div className="p-20 text-center text-[var(--color-text-muted)] italic">
-            Chronology Gantt: No active sequence paths mapped.
+            No tasks to show on the timeline.
           </div>
         )}
       </div>

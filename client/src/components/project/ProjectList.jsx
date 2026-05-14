@@ -13,11 +13,11 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
           <thead>
             <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] w-10"></th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Identifier</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status Protocol</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Name</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Priority</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Assignee</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Timeline</th>
+              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Due Date</th>
               <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-right">Actions</th>
             </tr>
           </thead>
@@ -38,7 +38,7 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
                       {task.title}
                     </p>
                     <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-xs uppercase font-black tracking-widest">
-                      {task.status === 'done' && task.completedAt ? `Finalized ${format(new Date(task.completedAt), 'MMM d')}` : task.description}
+                      {task.status === 'done' && task.completedAt ? `Completed ${format(new Date(task.completedAt), 'MMM d')}` : task.description}
                     </p>
                   </div>
                 </td>
@@ -102,7 +102,7 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
             {tasks.length === 0 && (
               <tr>
                 <td colSpan="7" className="px-6 py-20 text-center text-[var(--color-text-muted)] italic">
-                  No execution rows found in this workspace.
+                  No tasks found in this project.
                 </td>
               </tr>
             )}

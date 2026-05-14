@@ -10,12 +10,13 @@ import {
   ListTodo,
   Calendar,
   Filter,
-  ArrowUpRight
+  ArrowUpRight,
+  Users
 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import TaskCreateModal from '../components/TaskCreateModal';
-import { NexusLoader } from '../components/ui';
+import { Badge, PageHeader, PageContainer, Card, TabSwitcher } from '../components/ui';
 
 const TodoPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -89,33 +90,30 @@ const TodoPage = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 pb-32 space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-[var(--color-text-primary)] uppercase tracking-tight italic flex items-center gap-3">
-             <ListTodo className="text-blue-500" /> Protocol Log
-          </h1>
-          <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-[0.3em] mt-2">Active Task Management Grid</p>
-        </div>
-        <div className="flex bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)]">
-          {['all', 'pending', 'completed'].map(f => (
-            <button 
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-blue-500 text-white shadow-lg' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </header>
+    <PageContainer>
+      <PageHeader 
+        icon={Users}
+        title="To-Do List"
+        subtitle="Your personal task tracker."
+        actions={
+          <TabSwitcher
+            activeTab={filter}
+            onChange={setFilter}
+            tabs={[
+              { id: 'all', label: 'All' },
+              { id: 'pending', label: 'Pending' },
+              { id: 'completed', label: 'Completed' }
+            ]}
+          />
+        }
+      />
 
       <div 
         onClick={() => setIsTaskModalOpen(true)}
-        className="relative cursor-pointer group"
+        className="relative cursor-pointer group mb-8"
       >
         <div className="w-full pl-6 pr-16 py-5 bg-[var(--color-bg-surface)] border-2 border-[var(--color-bg-border)] rounded-[2rem] text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] outline-none group-hover:border-blue-500 transition-all shadow-xl shadow-black/5 flex items-center">
-          ENTER NEW PROTOCOL...
+          Add a new task...
         </div>
         <div className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-blue-500 text-white rounded-2xl group-hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
           <Plus size={20} strokeWidth={3} />
@@ -132,19 +130,20 @@ const TodoPage = () => {
 
       <div className="space-y-3">
         <AnimatePresence mode="popLayout">
-          {filteredTasks.map(task => {
+          {filteredTasks.map((task, index) => {
             const isDone = task.status === 'done';
             const project = projects.find(p => p._id === task.projectId);
             
             return (
               <motion.div
                 key={task._id}
-                layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className={`p-6 bg-[var(--color-bg-surface)] rounded-[1.5rem] border border-[var(--color-bg-border)] flex items-center justify-between group transition-all ${isDone ? 'opacity-60' : ''}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.05 }}
+                className="group"
               >
+                <Card className={`p-6 flex items-center justify-between group transition-all ${isDone ? 'opacity-60' : ''}`} hover>
                 <div className="flex items-center gap-4 min-w-0">
                   <button 
                     onClick={() => toggleTask(task)}
@@ -180,6 +179,7 @@ const TodoPage = () => {
                     <Trash2 size={18} />
                   </button>
                 </div>
+                </Card>
               </motion.div>
             );
           })}
@@ -188,11 +188,11 @@ const TodoPage = () => {
         {filteredTasks.length === 0 && (
           <div className="text-center py-20 opacity-20">
              <CheckCircle2 size={48} className="mx-auto mb-4" />
-             <p className="text-[10px] font-black uppercase tracking-[0.3em]">All protocols completed</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.3em]">All done!</p>
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

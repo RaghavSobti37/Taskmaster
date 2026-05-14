@@ -20,7 +20,8 @@ import {
   X,
   Clock,
   Zap,
-  UserCheck
+  UserCheck,
+  RefreshCw
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -158,8 +159,18 @@ const OutletSidebar = () => {
               <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] shrink-0">
                 {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
               </div>
-              <div className={`flex-1 min-w-0 transition-all duration-300 overflow-hidden ${(!isOpen && !isMobileOpen) ? 'w-0' : 'w-auto'}`}>
-                <p className="text-xs font-bold text-[var(--color-text-primary)] truncate">{user?.name}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-tight truncate">{user.name}</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</span>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    title="Refresh"
+                    className="p-1 hover:bg-[var(--color-bg-border)] rounded text-blue-500 transition-colors"
+                  >
+                    <RefreshCw size={10} />
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
                   Online

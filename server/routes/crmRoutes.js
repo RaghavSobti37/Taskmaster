@@ -20,6 +20,10 @@ const upload = multer({
 router.use(protect);
 
 router.post('/leads/upload', upload.single('file'), crmController.uploadLeads);
+router.get('/export', admin, crmController.exportLeads);
+router.get('/stats', crmController.getCRMStats);
+router.get('/rep-summary', crmController.getRepSummary);
+router.get('/config', crmController.getCRMConfig);
 router.get('/imports', crmController.getImports);
 router.get('/purge-logs', crmController.getPurgeLogs);
 router.delete('/imports/:id', crmController.deleteImport);

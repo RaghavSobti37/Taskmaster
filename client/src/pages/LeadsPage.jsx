@@ -22,11 +22,22 @@ import {
   CheckCircle2,
   ChevronDown
 } from 'lucide-react';
-import { Badge, NexusModal, NexusDropdown } from '../components/ui';
+import { Badge, NexusModal, NexusDropdown, PageHeader, Card, PageContainer } from '../components/ui';
 import CRMLeadModal from '../components/crm/CRMLeadModal';
 import { getRepName } from '../utils/crmUtils';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function LeadsPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (user && user.role !== 'admin' && user.role !== 'sales') {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,6 +57,11 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reps, setReps] = useState([]);
+  const [config, setConfig] = useState({
+    callStatuses: [],
+    leadStatuses: [],
+    qualities: []
+  });
 
   const fetchLeads = async () => {
     try {
@@ -59,14 +75,17 @@ export default function LeadsPage() {
         order: sortConfig.direction
       };
       
-      const res = await axios.get('/api/crm/leads', { params });
-      setLeads(res.data.leads || []);
-      setTotalPages(res.data.pages || 1);
-      setTotalLeads(res.data.total || 0);
-      
-      const repsRes = await axios.get('/api/users/directory');
-      // Only show sales reps who have a profile picture
-      setReps(repsRes.data.users?.filter(u => u.role === 'sales' && u.avatar) || []);
+      const [leadsRes, repsRes, configRes] = await Promise.all([
+        axios.get('/api/crm/leads', { params }),
+        axios.get('/api/users/directory', { params: { limit: 100 } }),
+        axios.get('/api/crm/config')
+      ]);
+
+      setLeads(leadsRes.data.leads || []);
+      setTotalPages(leadsRes.data.pages || 1);
+      setTotalLeads(leadsRes.data.total || 0);
+      setReps(repsRes.data.users?.filter(u => u.role === 'sales') || []);
+      setConfig(configRes.data);
     } catch (err) {
       console.error('Error fetching leads:', err);
     } finally {
@@ -118,23 +137,19 @@ export default function LeadsPage() {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-6 py-8 pb-24 space-y-8">
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black text-[var(--color-text-primary)] uppercase tracking-tighter italic">Lead Ecosystem</h1>
-          <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase tracking-[0.4em] mt-2 italic">Neural Matrix Lead Distribution</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-blue-500/50 transition-all shadow-sm">
-            <Download size={14} /> Export CSV
-          </button>
-          <button onClick={() => { setSelectedLead(null); setIsModalOpen(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20">
+    <PageContainer>
+      <PageHeader
+        title="Leads"
+        subtitle="Manage and track all your leads."
+        icon={Database}
+        actions={
+          <button onClick={() => { setSelectedLead(null); setIsModalOpen(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-action-primary)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20">
             <Plus size={16} /> New Lead
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      <section className="bg-[var(--color-bg-surface)] p-6 rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl shadow-black/5 space-y-6">
+      <Card className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" size={16} />
@@ -168,19 +183,19 @@ export default function LeadsPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <NexusDropdown 
-            options={[{value: 'all', label: 'All Qualities'}, {value: '1', label: '1 - Low'}, {value: '2', label: '2'}, {value: '3', label: '3'}, {value: '4', label: '4'}, {value: '5', label: '5 - High'}]}
+            options={[{value: 'all', label: 'All Qualities'}, ...config.qualities.map(q => ({value: q, label: q}))]}
             value={filters.leadQuality}
             onChange={v => setFilters(prev => ({...prev, leadQuality: v}))}
             placeholder="Lead Quality"
           />
           <NexusDropdown 
-            options={[{value: 'all', label: 'All Call Status'}, {value: 'Pending', label: 'Pending'}, {value: 'Connected', label: 'Connected'}, {value: 'Busy', label: 'Busy'}, {value: 'DNP', label: 'DNP'}, {value: 'Switched Off', label: 'Switched Off'}]}
+            options={[{value: 'all', label: 'All Call Status'}, ...config.callStatuses.map(s => ({value: s, label: s.toUpperCase()}))]}
             value={filters.callStatus}
             onChange={v => setFilters(prev => ({...prev, callStatus: v}))}
             placeholder="Call Status"
           />
           <NexusDropdown 
-            options={[{value: 'all', label: 'All Lead Status'}, {value: 'New', label: 'New'}, {value: 'Interested', label: 'Interested'}, {value: 'Not Interested', label: 'Not Interested'}, {value: 'Followup', label: 'Followup'}, {value: 'Converted', label: 'Converted'}]}
+            options={[{value: 'all', label: 'All Lead Status'}, ...config.leadStatuses.map(s => ({value: s, label: s.toUpperCase()}))]}
             value={filters.leadStatus}
             onChange={v => setFilters(prev => ({...prev, leadStatus: v}))}
             placeholder="Lead Status"
@@ -192,9 +207,9 @@ export default function LeadsPage() {
             placeholder="Assigned Rep"
           />
         </div>
-      </section>
+      </Card>
 
-      <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl shadow-black/5 overflow-hidden">
+      <Card className="overflow-hidden">
         {loading && leads.length === 0 ? (
           <div className="p-12"><LeadsSkeleton /></div>
         ) : (
@@ -208,9 +223,21 @@ export default function LeadsPage() {
                     </button>
                   </th>
                   <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Profile</th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center">Quality</th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Status</th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Assigned Rep</th>
+                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center">
+                    <button onClick={() => handleSort('leadQuality')} className="flex items-center gap-2 mx-auto hover:text-blue-500 transition-colors">
+                      Quality <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('leadStatus')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Status <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('assignedRepId')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Assigned Rep <ArrowUpDown size={12} />
+                    </button>
+                  </th>
                   <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-right">Actions</th>
                 </tr>
               </thead>
@@ -273,7 +300,7 @@ export default function LeadsPage() {
                     <td colSpan="6" className="px-8 py-32 text-center">
                       <div className="flex flex-col items-center justify-center opacity-20">
                         <Database size={48} className="mb-4" />
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em]">Zero Leads Detected in Matrix</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em]">No leads found</p>
                       </div>
                     </td>
                   </tr>
@@ -285,7 +312,7 @@ export default function LeadsPage() {
 
         <div className="px-8 py-6 bg-[var(--color-bg-workspace)]/50 border-t border-[var(--color-bg-border)] flex items-center justify-between">
           <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-            Showing <span className="text-[var(--color-text-primary)]">{leads.length}</span> of <span className="text-[var(--color-text-primary)]">{totalLeads}</span> Units
+            Showing <span className="text-[var(--color-text-primary)]">{leads.length}</span> of <span className="text-[var(--color-text-primary)]">{totalLeads}</span> leads
           </p>
           <div className="flex items-center gap-2">
             <button 
@@ -309,7 +336,7 @@ export default function LeadsPage() {
             </button>
           </div>
         </div>
-      </section>
+      </Card>
 
       <CRMLeadModal 
         isOpen={isModalOpen}
@@ -317,6 +344,6 @@ export default function LeadsPage() {
         lead={selectedLead}
         onRefresh={fetchLeads}
       />
-    </div>
+    </PageContainer>
   );
 }

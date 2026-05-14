@@ -25,9 +25,41 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
   );
 };
 
-export const Card = ({ children, className = '' }) => (
-  <div className={`bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] shadow-sm ${className}`}>
+export const Card = ({ children, className = '', hover = false, variant = 'surface' }) => {
+  const variants = {
+    surface: 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]',
+    workspace: 'bg-[var(--color-bg-workspace)] border-[var(--color-bg-border)]',
+    glass: 'bg-white/5 backdrop-blur-md border-white/10'
+  };
+
+  return (
+    <div className={`rounded-[2rem] border shadow-sm transition-all ${variants[variant]} ${hover ? 'hover:shadow-xl hover:border-[var(--color-action-primary)]/30' : ''} ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
+  <div className={`mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-10 space-y-10 pb-24 ${className}`} style={{ maxWidth }}>
     {children}
+  </div>
+);
+
+export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
+  <div className={`flex items-center gap-2 bg-[var(--color-bg-workspace)] p-1.5 rounded-xl border border-[var(--color-bg-border)] shadow-inner w-fit ${className}`}>
+    {tabs.map((tab) => (
+      <button
+        key={tab.id}
+        onClick={() => onChange(tab.id)}
+        className={`px-5 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-lg whitespace-nowrap ${
+          activeTab === tab.id
+            ? 'bg-white text-[var(--color-action-primary)] shadow-sm border border-[var(--color-bg-border)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+        }`}
+      >
+        {tab.label}
+      </button>
+    ))}
   </div>
 );
 

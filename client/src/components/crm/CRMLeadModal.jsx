@@ -49,25 +49,35 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
     currentJourney: '',
     metadata: {}
   });
+  const [config, setConfig] = useState({
+    callStatuses: [],
+    leadStatuses: [],
+    artistTypes: [],
+    qualities: []
+  });
 
   const [confirmModal, setConfirmModal] = useState({ open: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
-    const fetchSalesReps = async () => {
+    const fetchSalesRepsAndConfig = async () => {
       try {
-        const res = await axios.get('/api/users/team');
-        const team = res.data.team || [];
+        const [teamRes, configRes] = await Promise.all([
+          axios.get('/api/users/team'),
+          axios.get('/api/crm/config')
+        ]);
+        const team = teamRes.data.team || [];
         const filtered = team
-          .filter(u => u.role === 'sales' || u.role === 'admin')
+          .filter(u => u.role === 'sales')
           .map(u => ({ value: u._id, label: u.name.toUpperCase(), avatar: u.avatar }));
         setSalesReps(filtered);
+        setConfig(configRes.data);
       } catch (err) {
-        console.error('Failed to fetch sales reps:', err);
+        console.error('Failed to fetch CRM data:', err);
       }
     };
 
     if (isOpen) {
-      fetchSalesReps();
+      fetchSalesRepsAndConfig();
       if (lead) {
         setFormData({
           ...lead,
@@ -144,7 +154,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
   const tabs = [
     { id: 'identity', label: 'Identity', icon: User },
     { id: 'profile', label: 'Profile', icon: Briefcase },
-    { id: 'protocols', label: 'Protocols', icon: Clock },
+    { id: 'protocols', label: 'Schedule', icon: Clock },
     { id: 'logic', label: 'Logic', icon: Zap },
     { id: 'intel', label: 'Intel', icon: FileText },
   ];
@@ -223,11 +233,11 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <User size={14} /> Identity Core
+                      <User size={14} /> Contact Info
                     </h3>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Full Identity</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Full Name</label>
                         <input 
                           type="text" 
                           placeholder="NAME"
@@ -237,7 +247,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Mobile Access</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Phone</label>
                         <input 
                           type="text" 
                           placeholder="PHONE"
@@ -247,7 +257,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Mail Route</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Email</label>
                         <input 
                           type="email" 
                           placeholder="EMAIL"
@@ -264,7 +274,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                     </h3>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Webinar Timeline</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Webinar Date</label>
                         <input 
                           type="text" 
                           value={formData.webinarDates} 
@@ -300,11 +310,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                     <div className="space-y-4">
                       <CKDropdown 
                         label="Artist Category"
-                        options={[
-                          { value: 'Full Time', label: 'FULL TIME' },
-                          { value: 'Part Time', label: 'PART TIME' },
-                          { value: 'Hobbyist', label: 'HOBBYIST' }
-                        ]}
+                        options={config.artistTypes.map(t => ({ value: t, label: t.toUpperCase() }))}
                         value={formData.artistType}
                         onChange={v => setFormData({...formData, artistType: v})}
                       />
@@ -346,11 +352,11 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <Clock size={14} /> Timing Protocols
+                      <Clock size={14} /> Follow-up Schedule
                     </h3>
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Follow-up Window</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Follow-up Date</label>
                         <div className="relative">
                           <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
                           <input 
@@ -362,7 +368,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Signal Quality</label>
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Lead Quality</label>
                         <div className="flex gap-2 bg-[var(--color-bg-workspace)] p-3 rounded-2xl border border-[var(--color-bg-border)] justify-center shadow-inner">
                           {[1, 2, 3, 4, 5].map(i => (
                             <button key={i} onClick={() => setFormData({...formData, leadQuality: i.toString()})} className="hover:scale-125 transition-transform">
@@ -380,25 +386,25 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <Zap size={14} /> Logic Flow
+                      <Zap size={14} /> Status & Assignment
                     </h3>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <CKDropdown 
                           label="Lead Status"
-                          options={['New', 'Hot', 'Warm', 'Cold', 'Converted', 'Not Interested'].map(opt => ({ value: opt, label: opt.toUpperCase() }))}
+                          options={config.leadStatuses.map(opt => ({ value: opt, label: opt.toUpperCase() }))}
                           value={formData.leadStatus}
                           onChange={v => setFormData({...formData, leadStatus: v})}
                         />
                         <CKDropdown 
                           label="Call Result"
-                          options={['Pending', 'Connected', 'Busy', 'DNP', 'Switch Off/Wrong Number'].map(opt => ({ value: opt, label: opt.toUpperCase() }))}
+                          options={config.callStatuses.map(opt => ({ value: opt, label: opt.toUpperCase() }))}
                           value={formData.callStatus}
                           onChange={v => setFormData({...formData, callStatus: v})}
                         />
                       </div>
                       <CKDropdown 
-                        label="Assigned Operative"
+                        label="Assigned Rep"
                         options={[
                           { value: 'unassigned', label: 'UNASSIGNED' },
                           ...salesReps
@@ -414,7 +420,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
               {activeTab === 'intel' && (
                 <div className="space-y-6">
                   <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                    <FileText size={14} /> Intel & Remarks
+                    <FileText size={14} /> Notes & Remarks
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
@@ -432,7 +438,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                       <div className="space-y-1.5">
                         <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Internal Remarks</label>
                         <textarea 
-                          placeholder="ENTER INTEL..."
+                          placeholder="Add notes..."
                           value={formData.remarks} 
                           onChange={e => setFormData({...formData, remarks: e.target.value})}
                           className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-4 text-xs font-bold outline-none shadow-sm min-h-[120px] resize-none focus:border-blue-500 transition-all"
@@ -460,7 +466,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
             className="flex items-center gap-3 bg-blue-500 text-white px-10 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-2xl hover:shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-50 shadow-xl shadow-blue-500/10"
           >
             {loading ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-            {lead ? 'Sync Lead' : 'Initialize Lead'}
+            {lead ? 'Save Lead' : 'Create Lead'}
           </button>
         </footer>
       </motion.div>

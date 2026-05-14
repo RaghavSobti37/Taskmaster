@@ -16,7 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { NexusModal, NexusLoader, NexusDropdown } from '../components/ui';
+import { NexusModal, NexusLoader, NexusDropdown, PageHeader, PageContainer, Card } from '../components/ui';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
@@ -146,49 +146,32 @@ const AssetsPage = () => {
 
 
   return (
-    <div className="space-y-8 pb-24">
-      <NexusModal
-        isOpen={deleteModal.open}
-        onClose={() => setDeleteModal({ open: false, assetId: null })}
-        title="Delete Asset"
-        message="Are you sure you want to permanently delete this asset? This cannot be undone."
-        type="danger"
-        isConfirm
-        confirmLabel="Delete Asset"
-        onConfirm={handleDeleteAsset}
-      />
-
-      {/* Header */}
-      <motion.header initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between pt-4">
-        <div className="space-y-1">
+    <PageContainer>
+      <PageHeader
+        icon={Database}
+        title="Assets"
+        subtitle="Manage assets & important links."
+        actions={
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
-              <Database size={20} strokeWidth={2.5} />
+            <div className="relative hidden md:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
+              <input
+                type="text"
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-12 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none w-64 focus:ring-2 focus:ring-[var(--color-action-primary)]/20 transition-all shadow-inner"
+              />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase">Assets</h1>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-[var(--color-action-primary)] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
+            >
+              <Plus size={14} strokeWidth={3} /> Add Asset
+            </button>
           </div>
-          <p className="text-[10px] font-bold text-[var(--color-text-muted)] ml-14 uppercase tracking-widest">Manage assets & important links.</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={14} />
-            <input
-              type="text"
-              placeholder="Search assets..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-12 pr-4 py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none w-64 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
-            />
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20"
-          >
-            <Plus size={14} strokeWidth={3} /> Add Asset
-          </button>
-        </div>
-      </motion.header>
+        }
+      />
 
       {/* Google Drive Folders Section */}
       {driveFiles.length > 0 && (
@@ -221,8 +204,8 @@ const AssetsPage = () => {
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0, transition: { duration: 0.4 } }}
-        className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
       >
+        <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
@@ -371,6 +354,7 @@ const AssetsPage = () => {
             </tbody>
           </table>
         </div>
+        </Card>
       </motion.section>
 
       {/* Add Asset Modal */}
@@ -449,7 +433,18 @@ const AssetsPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      <NexusModal
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, assetId: null })}
+        title="Delete Asset"
+        message="Are you sure you want to permanently delete this asset? This cannot be undone."
+        type="danger"
+        isConfirm
+        confirmLabel="Delete Asset"
+        onConfirm={handleDeleteAsset}
+      />
+    </PageContainer>
   );
 };
 

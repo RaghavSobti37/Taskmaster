@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const NexusLoader = ({ label = "Initializing CoreKnot...", sublabel = "Connecting to High-Performance Backend", fullScreen = true }) => {
+const NexusLoader = ({ label = "Loading...", sublabel = "Setting things up", fullScreen = true }) => {
   const containerClasses = fullScreen 
     ? "fixed inset-0 bg-[var(--color-bg-workspace)] z-[9999] flex flex-col items-center justify-center backdrop-blur-md"
     : "w-full h-full min-h-[300px] flex flex-col items-center justify-center p-8 bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)]";

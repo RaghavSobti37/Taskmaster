@@ -81,7 +81,7 @@ const NexusDropdown = ({
         className={`
           w-full flex items-center justify-between transition-all outline-none
           ${isCompact
-            ? 'px-2.5 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]'
+            ? 'px-3 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]'
             : 'px-4 py-3 text-xs font-bold rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] shadow-inner'
           }
           ${disabled

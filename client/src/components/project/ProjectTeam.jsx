@@ -91,23 +91,29 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         confirmLabel="Remove"
         onConfirm={handleConfirmRemove}
       />
-      {/* Team Clusters Summary */}
-      <div className="flex flex-wrap gap-4 bg-[var(--color-bg-surface)] p-6 rounded-3xl border border-[var(--color-bg-border)]">
-        {allTeams.filter(t => projectTeams.includes(t.name)).map(t => (
-          <div key={t._id} className="flex items-center gap-3 px-4 py-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
-            <div className="w-2 h-8 rounded-full" style={{ backgroundColor: t.color }} />
+      {(isAdmin || isOwner) && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-bg-workspace)] p-4 rounded-2xl border border-[var(--color-bg-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
+              <Plus size={18} />
+            </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{t.name}</p>
-              <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                {localMembers.filter(m => m.teams?.includes(t.name)).length} Members
-              </p>
+              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">Add Members</h3>
+              <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)]">Add new members to this project</p>
             </div>
           </div>
-        ))}
-        {projectTeams.length === 0 && (
-          <div className="text-xs text-[var(--color-text-muted)] italic py-2 px-4">No team affiliations detected in this cluster.</div>
-        )}
-      </div>
+          <div className="w-full md:w-80">
+            <AddMemberDropdown onAdd={async (userId) => {
+              try {
+                await axios.post(`/api/projects/${project._id}/members`, { userId });
+                window.location.reload(); // Refresh to show new member
+              } catch (err) {
+                console.error('Error adding member:', err);
+              }
+            }} />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {localMembers.map((member) => {
@@ -157,7 +163,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Briefcase size={14} className="text-[var(--color-text-muted)]" />
-                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Nexus Affiliations</span>
+                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Teams</span>
                   </div>
                   
                   {isAdmin ? (
@@ -205,10 +211,10 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
               </div>
               
               <div className="mt-6 pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Signal Status</span>
+                <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Status</span>
                 <div className="flex items-center gap-1.5">
                   <Circle size={8} className={member.online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
-                  <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">{member.online ? 'Synced' : 'Offline'}</span>
+                  <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">{member.online ? 'Online' : 'Offline'}</span>
                 </div>
               </div>
             </div>
@@ -216,6 +222,57 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         })}
       </div>
     </div>
+  );
+};
+
+import Select from 'react-select';
+
+const AddMemberDropdown = ({ onAdd }) => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get('/api/users/team');
+        setUsers(res.data.team || []);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const formatOptionLabel = ({ value, label }) => {
+    const user = users.find(u => u._id === value);
+    if (!user) return label;
+    return (
+      <div className="flex items-center gap-3">
+        <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
+          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.substring(0, 2).toUpperCase()}
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
+          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{user.role}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Select
+      isLoading={loading}
+      options={users.map(u => ({ value: u._id, label: u.name }))}
+      onChange={(opt) => onAdd(opt.value)}
+      placeholder="Select member..."
+      formatOptionLabel={formatOptionLabel}
+      menuPortalTarget={document.body}
+      className="react-select-container"
+      classNamePrefix="react-select"
+      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+    />
   );
 };
 

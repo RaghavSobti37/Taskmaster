@@ -97,6 +97,7 @@ app.use('/api/crm', crmRoutes);
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
 app.use('/api/artists', artistRoutes);
+app.use('/api/calendar', require('./routes/calendarRoutes'));
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 

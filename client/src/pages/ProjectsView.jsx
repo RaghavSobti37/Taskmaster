@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Briefcase, ChevronRight, Filter, Search, Tag } from 'lucide-react';
-import { Badge, ProgressBar, PageHeader, NexusLoader } from '../components/ui';
+import { Plus, Briefcase, ChevronRight, Search, Tag } from 'lucide-react';
+import { Badge, ProgressBar, PageHeader, PageContainer, Card } from '../components/ui';
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState([]);
@@ -30,17 +30,27 @@ const ProjectsView = () => {
     p.tags?.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  if (loading) return <div className="p-20"><NexusLoader /></div>;
+  if (loading) return (
+    <div className="space-y-8 px-4 py-8 max-w-7xl mx-auto animate-pulse">
+      <div className="h-24 bg-slate-100 rounded-[2.5rem] w-full mb-10" />
+      <div className="h-14 bg-slate-100 rounded-2xl w-full mb-8" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="h-64 bg-slate-50 rounded-[2rem] border border-slate-100" />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-8 px-4 py-8 max-w-7xl mx-auto">
+    <PageContainer maxWidth="1600px">
       <PageHeader 
         icon={Briefcase}
-        title="Project Management"
-        subtitle="Orchestrate and monitor all active operational units."
+        title="Projects"
+        subtitle="View and manage all your projects."
         actions={
           <button 
-            onClick={() => navigate('/projects/create')}
+            onClick={() => navigate('/projects/new')}
             className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-6 py-3 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
           >
             <Plus size={20} /> Create Project
@@ -69,60 +79,49 @@ const ProjectsView = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             onClick={() => navigate(`/projects/${project._id}`)}
-            className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] p-6 space-y-6 cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all group"
+            className="cursor-pointer group"
           >
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <h3 className="text-xl font-black text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors uppercase tracking-tight leading-none">{project.name}</h3>
-                <p className="text-xs text-[var(--color-text-muted)] font-medium line-clamp-1">{project.description || 'No description provided'}</p>
+            <Card className="p-4 space-y-4 hover:shadow-xl hover:scale-[1.01] transition-all" hover>
+              <div className="flex justify-between items-start gap-4">
+                <div className="space-y-0.5 min-w-0">
+                  <h3 className="text-sm font-black text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors uppercase tracking-tight leading-tight truncate">{project.name}</h3>
+                  <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">{project.description || 'No description provided'}</p>
+                </div>
+                <Badge variant={project.status === 'completed' ? 'done' : 'progress'}>{project.status || 'Active'}</Badge>
               </div>
-              <Badge variant={project.status === 'completed' ? 'done' : 'progress'}>{project.status || 'Active'}</Badge>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                <span>Progress</span>
-                <span className="text-[var(--color-action-primary)]">{project.progress || 0}%</span>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                  <span>Progress</span>
+                  <span className="text-[var(--color-action-primary)]">{project.progress || 0}%</span>
+                </div>
+                <ProgressBar progress={project.progress || 0} />
               </div>
-              <ProgressBar progress={project.progress || 0} />
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              {project.tags?.map(tag => (
-                <span key={tag} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[var(--color-bg-workspace)] px-2.5 py-1 rounded-lg text-[var(--color-text-muted)] border border-[var(--color-bg-border)]">
-                  <Tag size={10} /> {tag}
-                </span>
-              ))}
-              {(!project.tags || project.tags.length === 0) && <span className="text-[10px] text-[var(--color-text-muted)] italic">No tags</span>}
-            </div>
-
-            <div className="pt-4 border-t border-[var(--color-bg-border)] flex items-center justify-between">
-              <div className="flex -space-x-2">
-                {project.members?.slice(0, 3).map((m, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-[var(--color-bg-workspace)] border-2 border-[var(--color-bg-surface)] flex items-center justify-center text-[10px] font-bold uppercase" title={m.role}>
-                    {m.userId?.name?.substring(0, 2) || m.role?.substring(0, 2) || '??'}
+              <div className="flex items-center justify-between pt-1 border-t border-[var(--color-bg-border)] border-dashed">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded bg-[var(--color-bg-workspace)] flex items-center justify-center text-[8px] font-black border border-[var(--color-bg-border)]">
+                    <Tag size={10} className="text-[var(--color-action-primary)]" />
                   </div>
-                ))}
-                {project.members?.length > 3 && (
-                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-workspace)] border-2 border-[var(--color-bg-surface)] flex items-center justify-center text-[10px] font-bold">
-                    +{project.members.length - 3}
-                  </div>
-                )}
+                  <span className="text-[9px] font-bold text-[var(--color-text-secondary)]">{(project.tags || []).length} Tags</span>
+                </div>
+                <button className="p-1 rounded-lg bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] group-hover:bg-[var(--color-action-primary)] group-hover:text-white transition-all">
+                  <ChevronRight size={12} />
+                </button>
               </div>
-              <ChevronRight size={20} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-action-primary)] group-hover:translate-x-1 transition-all" />
-            </div>
+            </Card>
           </motion.div>
         ))}
 
         {filteredProjects.length === 0 && (
           <div className="col-span-full py-32 text-center bg-[var(--color-bg-workspace)] rounded-[3rem] border-4 border-dashed border-[var(--color-bg-border)]">
             <Briefcase size={48} className="mx-auto text-[var(--color-text-muted)] mb-4 opacity-20" />
-            <h3 className="text-xl font-bold text-[var(--color-text-muted)] uppercase tracking-widest">No Projects Detected</h3>
-            <p className="text-xs text-[var(--color-text-muted)] mt-2">Adjust your filters or initiate a new project deployment.</p>
+            <h3 className="text-xl font-bold text-[var(--color-text-muted)] uppercase tracking-widest">No Projects Found</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-2">Try a different search or create a new project.</p>
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
 

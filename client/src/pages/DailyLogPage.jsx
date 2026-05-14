@@ -20,7 +20,7 @@ import {
   Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge, NexusModal, NexusDropdown } from '../components/ui';
+import { Badge, NexusModal, NexusDropdown, PageHeader, Card, PageContainer } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 
@@ -155,6 +155,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     }
   }
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -180,26 +189,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   if (loading && logs.length === 0) return <div className="max-w-6xl mx-auto p-8"><LogSkeleton /></div>;
 
   return (
-    <div className="space-y-8 pb-24">
-      {/* Premium Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4"
-      >
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)]">
-              <Activity size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] leading-tight">
-              {targetUserName ? `${targetUserName}'s Log` : 'My Daily Log'}
-            </h1>
-          </div>
-          <p className="text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ml-12 md:ml-14">Track your daily work and time spent on tasks.</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+    <PageContainer>
+      <PageHeader
+        icon={Activity}
+        title={targetUserName ? `${targetUserName}'s Log` : 'My Daily Log'}
+        subtitle="Track your daily work and time spent on tasks."
+        actions={
           <div className="flex items-center gap-1 bg-[var(--color-bg-surface)] p-1 rounded-xl border border-[var(--color-bg-border)] shadow-sm">
             <button
               onClick={() => handleDateChange(-1)}
@@ -221,8 +216,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
               <ChevronRight size={16} strokeWidth={2.5} />
             </button>
           </div>
-        </div>
-      </motion.header>
+        }
+      />
 
       {/* Stats Row: Tactical Summary */}
       <motion.section
@@ -291,7 +286,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="lg:col-span-8 order-2 lg:order-1"
         >
-          <section className="bg-[var(--color-bg-surface)] rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden flex flex-col min-h-[600px]">
+          <Card className="overflow-hidden flex flex-col min-h-[600px]">
             <div className="px-10 py-10 border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
               <div className="flex items-center gap-5">
                 <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 shadow-sm">
@@ -361,7 +356,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 )}
               </AnimatePresence>
             </div>
-          </section>
+          </Card>
         </motion.main>
 
         {/* Action Sidebar: Create Entry (RIGHT) */}
@@ -374,86 +369,87 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
             <motion.section
               variants={itemVariants}
-              className="bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-xl overflow-hidden"
             >
-              <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
-                    <Plus size={16} strokeWidth={3} />
+              <Card className="overflow-hidden">
+                <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500">
+                      <Plus size={16} strokeWidth={3} />
+                    </div>
+                    <button
+                      onClick={addDummyData}
+                      className="px-3 py-1.5 text-[8px] font-black uppercase tracking-widest bg-orange-500/5 text-orange-600 border border-orange-500/20 rounded-lg hover:bg-orange-500 hover:text-white transition-all active:scale-95"
+                    >
+                      Auto Fill
+                    </button>
                   </div>
+                  <h3 className="font-black text-base text-[var(--color-text-primary)]">Add Work Entry</h3>
+                  <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Log what you worked on today.</p>
+                </div>
+
+                <form onSubmit={handleManualSubmit} className="p-8 space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Title</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      placeholder="E.g., Updated homepage design..."
+                      className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] outline-none transition-all shadow-inner"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
+                      <div className="relative group">
+                        <NexusDropdown
+                          options={[{ value: '', label: 'Select time...' }, ...timeOptions.map(opt => ({ value: opt, label: opt }))]}
+                          value={timeSpent}
+                          onChange={setTimeSpent}
+                          searchable
+                          placeholder="Select time..."
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
+                      <div className="relative">
+                        <NexusDropdown
+                          options={[{ value: '', label: 'No Project (General)' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
+                          value={selectedProject}
+                          onChange={setSelectedProject}
+                          searchable={projects.length > 5}
+                          placeholder="No Project (General)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
+                    <textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="Describe what you did..."
+                      className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[100px] focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all resize-none shadow-inner"
+                    />
+                  </div>
+
                   <button
-                    onClick={addDummyData}
-                    className="px-3 py-1.5 text-[8px] font-black uppercase tracking-widest bg-orange-500/5 text-orange-600 border border-orange-500/20 rounded-lg hover:bg-orange-500 hover:text-white transition-all active:scale-95"
+                    type="submit"
+                    disabled={submitting || !title.trim()}
+                    className="w-full py-4 bg-[var(--color-action-primary)] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-[var(--color-action-hover)] hover:shadow-2xl hover:shadow-blue-500/40 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
                   >
-                    Auto Fill
+                    {submitting ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <><Send size={14} /> Save Entry</>
+                    )}
                   </button>
-                </div>
-                <h3 className="font-black text-base text-[var(--color-text-primary)]">Add Work Entry</h3>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-medium">Log what you worked on today.</p>
-              </div>
-
-              <form onSubmit={handleManualSubmit} className="p-8 space-y-5">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder="E.g., Updated homepage design..."
-                    className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] outline-none transition-all shadow-inner"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
-                    <div className="relative group">
-                      <NexusDropdown
-                        options={[{ value: '', label: 'Select time...' }, ...timeOptions.map(opt => ({ value: opt, label: opt }))]}
-                        value={timeSpent}
-                        onChange={setTimeSpent}
-                        searchable
-                        placeholder="Select time..."
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
-                    <div className="relative">
-                      <NexusDropdown
-                        options={[{ value: '', label: 'No Project (General)' }, ...projects.map(p => ({ value: p._id, label: p.name }))]}
-                        value={selectedProject}
-                        onChange={setSelectedProject}
-                        searchable={projects.length > 5}
-                        placeholder="No Project (General)"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-                  <textarea
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="Describe what you did..."
-                    className="w-full px-4 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[100px] focus:ring-2 focus:ring-[var(--color-action-primary)]/20 focus:border-[var(--color-action-primary)] transition-all resize-none shadow-inner"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submitting || !title.trim()}
-                  className="w-full py-4 bg-[var(--color-action-primary)] text-white rounded-xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-[var(--color-action-hover)] hover:shadow-2xl hover:shadow-blue-500/40 disabled:opacity-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5"
-                >
-                  {submitting ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <><Send size={14} /> Save Entry</>
-                  )}
-                </button>
-              </form>
+                </form>
+              </Card>
             </motion.section>
           )}
         </motion.aside>
@@ -466,7 +462,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         message="Your work entry has been saved successfully."
         type="success"
       />
-    </div>
+    </PageContainer>
   );
 };
 

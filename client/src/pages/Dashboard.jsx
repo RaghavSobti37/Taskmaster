@@ -16,7 +16,7 @@ import {
   Plus
 } from 'lucide-react';
 import axios from 'axios';
-import { Badge, ProgressBar, PageHeader, NexusLoader } from '../components/ui';
+import { Badge, ProgressBar, PageHeader, NexusLoader, Card, PageContainer } from '../components/ui';
 
 import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
@@ -28,18 +28,18 @@ const StatCard = ({ icon: Icon, label, value, color, delay, isActive, onClick })
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
     onClick={onClick}
-    className={`p-6 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${isActive
+    className={`p-4 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${isActive
       ? 'bg-[var(--color-bg-surface)] border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/20'
       : 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]'
       }`}
   >
-    <div className="flex items-center gap-4">
-      <div className={`p-3 rounded-xl ${color}`}>
-        <Icon size={24} className="text-white" />
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${color}`}>
+        <Icon size={20} className="text-white" />
       </div>
       <div>
-        <p className="text-sm font-medium text-[var(--color-text-muted)]">{label}</p>
-        <p className="text-2xl font-bold text-[var(--color-text-primary)]">{value}</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none mb-1">{label}</p>
+        <p className="text-xl font-black text-[var(--color-text-primary)] leading-none">{value}</p>
       </div>
     </div>
   </motion.div>
@@ -180,7 +180,7 @@ const Dashboard = () => {
 
 
   return (
-    <div className="space-y-8 relative">
+    <PageContainer>
       <PageHeader
         icon={LayoutDashboard}
         title="Dashboard"
@@ -245,7 +245,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Panel - Filtered Tasks */}
         <div className="lg:col-span-2 space-y-6">
-          <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm overflow-hidden">
+          <Card className="overflow-hidden">
             <div className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
               <h3 className="font-bold flex items-center gap-2">
                 <Database size={18} className="text-[var(--color-action-primary)]" />
@@ -299,20 +299,20 @@ const Dashboard = () => {
                 );
               })}
             </div>
-          </section>
+          </Card>
         </div>
 
         {/* Sidebar Panel - Projects Progress */}
         <div className="space-y-6">
-          <section className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] shadow-sm p-6">
+          <Card className="p-6">
             <h3 className="font-bold mb-6 flex items-center gap-2">
               <Briefcase size={18} className="text-orange-500" /> Project Progress
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {projects.slice(0, 4).map(project => (
-                <div key={project._id} className="space-y-2 cursor-pointer group" onClick={() => navigate(`/projects/${project._id}`)}>
+                <div key={project._id} className="space-y-1.5 cursor-pointer group" onClick={() => navigate(`/projects/${project._id}`)}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">{project.name}</span>
+                    <span className="text-xs font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">{project.name}</span>
                     <span className="text-[10px] font-bold text-[var(--color-action-primary)]">{project.progress}%</span>
                   </div>
                   <ProgressBar progress={project.progress} />
@@ -325,12 +325,12 @@ const Dashboard = () => {
               ))}
               <button
                 onClick={() => navigate('/projects')}
-                className="w-full py-3 rounded-xl border border-dashed border-[var(--color-bg-border)] text-xs font-bold text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)] hover:text-[var(--color-action-primary)] transition-all"
+                className="w-full py-2 rounded-xl border border-dashed border-[var(--color-bg-border)] text-[10px] font-bold text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)] hover:text-[var(--color-action-primary)] transition-all"
               >
                 View All Projects
               </button>
             </div>
-          </section>
+          </Card>
         </div>
       </div>
 
@@ -370,7 +370,7 @@ const Dashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageContainer>
   );
 };
 

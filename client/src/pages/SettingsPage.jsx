@@ -180,8 +180,8 @@ const SettingsPage = () => {
         <Card className="overflow-hidden">
           <div className="px-5 md:px-8 py-3.5 border-b border-[var(--color-bg-border)] bg-gradient-to-r from-[var(--color-bg-workspace)] to-transparent flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500 shadow-sm border border-blue-500/20">
-                <UserSquare2 size={16} strokeWidth={2.5} />
+              <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-500 shadow-sm border border-blue-500/20">
+                <UserSquare2 size={12} strokeWidth={2.5} />
               </div>
               <div>
                 <h3 className="text-[13px] font-black tracking-tighter text-[var(--color-text-primary)] uppercase italic">Profile</h3>
@@ -202,23 +202,23 @@ const SettingsPage = () => {
                   onClick={() => setIsAvatarModalOpen(true)}
                   className="relative cursor-pointer group/avatar"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-surface)] border-2 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--color-bg-surface)] border-2 border-blue-500/20 flex items-center justify-center overflow-hidden shadow-2xl group-hover/avatar:border-blue-500/50 transition-all">
                     {avatar ? (
                       <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                      <User size={24} className="text-[var(--color-text-muted)]" />
+                      <User size={18} className="text-[var(--color-text-muted)]" />
                     )}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-all">
-                      <Camera size={16} className="text-white" />
+                      <Camera size={12} className="text-white" />
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 p-1 bg-blue-500 text-white rounded-lg shadow-lg border-2 border-[var(--color-bg-surface)]">
-                    <Sparkles size={10} />
+                  <div className="absolute -bottom-1 -right-1 p-0.5 bg-blue-500 text-white rounded-lg shadow-lg border-2 border-[var(--color-bg-surface)]">
+                    <Sparkles size={8} />
                   </div>
                 </div>
                 <div className="flex-1 text-center md:text-left space-y-0.5">
-                  <h4 className="text-sm font-black text-[var(--color-text-primary)] uppercase tracking-tight italic">Avatar Selection</h4>
-                  <p className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">Profile Name: {name || 'Anonymous'}</p>
+                  <h4 className="text-[11px] font-black text-[var(--color-text-primary)] uppercase tracking-tight italic">Avatar Selection</h4>
+                  <p className="text-[7px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">Profile Name: {name || 'Anonymous'}</p>
                   <button
                     type="button"
                     onClick={() => setIsAvatarModalOpen(true)}
@@ -233,12 +233,12 @@ const SettingsPage = () => {
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] ml-1">Full Name</label>
                   <div className="relative group">
-                    <User size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+                    <User size={9} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-black outline-none focus:border-blue-500/50 transition-all shadow-inner"
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[8px] font-black outline-none focus:border-blue-500/50 transition-all shadow-inner"
                       placeholder="Enter Full Name"
                     />
                   </div>
@@ -248,12 +248,12 @@ const SettingsPage = () => {
                   <div className="flex gap-3">
 
                     <div className="relative flex-1 group">
-                      <Smartphone size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
+                      <Smartphone size={9} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" />
                       <input
                         type="text"
                         value={phone.replace(/^\+91\s*/, '')}
                         onChange={(e) => setPhone('+91 ' + e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-black outline-none focus:border-blue-500/50 transition-all shadow-inner"
+                        className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[8px] font-black outline-none focus:border-blue-500/50 transition-all shadow-inner"
                         placeholder="98765 43210"
                       />
                     </div>
@@ -275,12 +275,12 @@ const SettingsPage = () => {
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.3em] ml-1">Email Address</label>
                   <div className="relative">
-                    <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
+                    <Mail size={10} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] opacity-50" />
                     <input
                       type="email"
                       value={email}
                       disabled
-                      className="w-full pl-10 pr-4 py-3 bg-[var(--color-bg-workspace)]/50 border border-[var(--color-bg-border)] rounded-xl text-[11px] font-bold opacity-50 cursor-not-allowed"
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-workspace)]/50 border border-[var(--color-bg-border)] rounded-xl text-[8px] font-bold opacity-50 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -311,14 +311,14 @@ const SettingsPage = () => {
                             }
                           }}
                           className={`
-                            px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border
+                            px-3 py-1.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border
                             ${isSelected
                               ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105'
                               : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/50'}
                           `}
                         >
                           {team.name}
-                          {isSelected && <CheckCircle2 size={10} className="inline-block ml-2 text-blue-400" />}
+                          {isSelected && <CheckCircle2 size={8} className="inline-block ml-1 text-blue-400" />}
                         </button>
                       );
                     })}
@@ -331,35 +331,35 @@ const SettingsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Preferences */}
           <Card className="overflow-hidden">
-            <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
+            <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500/10 rounded-xl text-amber-500 border border-amber-500/20">
-                  <Palette size={16} />
+                <div className="p-1.5 bg-amber-500/10 rounded-xl text-amber-500 border border-amber-500/20">
+                  <Palette size={12} />
                 </div>
-                <h3 className="text-[13px] font-black tracking-tight uppercase italic">App Preferences</h3>
+                <h3 className="text-[11px] font-black tracking-tight uppercase italic">App Preferences</h3>
               </div>
             </div>
             <div className="p-6 space-y-6">
               <div className="space-y-6">
                 {/* Dark Mode Toggle */}
-                <div className="flex items-center justify-between p-6 bg-[var(--color-bg-workspace)] rounded-[1.5rem] border border-[var(--color-bg-border)] shadow-inner hover:border-blue-500/20 transition-all group">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl border transition-all ${theme === 'dark' ? 'bg-slate-900 border-white/10 text-blue-400' : 'bg-white border-slate-200 text-orange-400'}`}>
-                      {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                <div className="flex items-center justify-between p-4 bg-[var(--color-bg-workspace)] rounded-[1.25rem] border border-[var(--color-bg-border)] shadow-inner hover:border-blue-500/20 transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl border transition-all ${theme === 'dark' ? 'bg-slate-900 border-white/10 text-blue-400' : 'bg-white border-slate-200 text-orange-400'}`}>
+                      {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
                     </div>
                     <div>
-                      <p className="text-xs font-black text-[var(--color-text-primary)]">Dark Mode</p>
-                      <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest mt-0.5">Toggle theme</p>
+                      <p className="text-[10px] font-black text-[var(--color-text-primary)]">Dark Mode</p>
+                      <p className="text-[7px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest mt-0.5">Toggle theme</p>
                     </div>
                   </div>
                   <button
                     onClick={toggleTheme}
-                    className={`w-12 h-6 rounded-full transition-all relative ${theme === 'dark' ? 'bg-blue-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                    className={`w-10 h-5 rounded-full transition-all relative ${theme === 'dark' ? 'bg-blue-600 shadow-inner' : 'bg-slate-200 shadow-inner'}`}
                   >
                     <motion.div
                       layout
-                      className="absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-xl"
-                      animate={{ x: theme === 'dark' ? 24 : 0 }}
+                      className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xl"
+                      animate={{ x: theme === 'dark' ? 20 : 0 }}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   </button>
@@ -394,12 +394,12 @@ const SettingsPage = () => {
 
           {/* Security Section */}
           <Card className="overflow-hidden">
-            <div className="p-6 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
+            <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500 border border-rose-500/20">
-                  <Lock size={16} />
+                <div className="p-1.5 bg-rose-500/10 rounded-xl text-rose-500 border border-rose-500/20">
+                  <Lock size={12} />
                 </div>
-                <h3 className="text-[13px] font-black tracking-tight uppercase italic">Password Settings</h3>
+                <h3 className="text-[11px] font-black tracking-tight uppercase italic">Password Settings</h3>
               </div>
             </div>
             <div className="p-6 space-y-6">
@@ -410,7 +410,7 @@ const SettingsPage = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-5 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-black outline-none focus:border-rose-500/50 transition-all shadow-inner"
+                    className="w-full px-5 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[8px] font-black outline-none focus:border-rose-500/50 transition-all shadow-inner"
                     placeholder="••••••••"
                   />
                 </div>
@@ -420,7 +420,7 @@ const SettingsPage = () => {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-5 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[11px] font-black outline-none focus:border-rose-500/50 transition-all shadow-inner"
+                    className="w-full px-5 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[8px] font-black outline-none focus:border-rose-500/50 transition-all shadow-inner"
                     placeholder="••••••••"
                   />
                 </div>

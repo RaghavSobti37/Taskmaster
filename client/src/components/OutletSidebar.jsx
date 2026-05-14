@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   LayoutDashboard,
   Briefcase,
@@ -21,7 +22,8 @@ import {
   Clock,
   Zap,
   UserCheck,
-  RefreshCw
+  RefreshCw,
+  Bell
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,7 +53,7 @@ const useWindowSize = () => {
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile }) => (
+const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count }) => (
   <NavLink
     to={to}
     onClick={onClick}
@@ -62,11 +64,21 @@ const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile }) => (
         : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)]'}
     `}
   >
-    <Icon size={22} className="shrink-0" />
+    <div className="relative">
+      <Icon size={22} className="shrink-0" />
+      {count > 0 && (
+        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+      )}
+    </div>
     <div className="flex-1 flex items-center justify-between min-w-0">
       <span className={`font-medium whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
         {label}
       </span>
+      {count > 0 && (!collapsed || isMobile) && (
+        <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-md">
+          {count}
+        </span>
+      )}
     </div>
   </NavLink>
 );
@@ -75,7 +87,24 @@ const OutletSidebar = () => {
   const { isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
   const { logout, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { width } = useWindowSize();
+  const [notifications, setNotifications] = useState([]);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get('/api/notifications');
+      setNotifications(res.data);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isMobile = width < 1024;
 
@@ -125,7 +154,6 @@ const OutletSidebar = () => {
           </div>
 
           <div className="flex items-center gap-1">
-            <NotificationTray />
             {isMobileOpen && (
               <button
                 onClick={closeMobileSidebar}
@@ -156,33 +184,52 @@ const OutletSidebar = () => {
           {user?.role === 'admin' && (
             <NavItem to="/admin" icon={ShieldCheck} label="Admin Panel" collapsed={false} isMobile={isMobile} />
           )}
+
+          <div className="pt-4 pb-2">
+            <NavItem 
+              to="/notifications" 
+              icon={Bell} 
+              label="Notifications" 
+              collapsed={!isOpen && !isMobileOpen} 
+              isMobile={isMobile} 
+              count={notifications.filter(n => !n.read).length}
+            />
+          </div>
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-1">
-          <div className={`px-3 py-3 mb-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] transition-all duration-300 overflow-hidden`}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] shrink-0">
-                {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-tight truncate">{user.name}</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</span>
-                  <button
-                    onClick={() => window.location.reload()}
-                    title="Refresh"
-                    className="p-1 hover:bg-[var(--color-bg-border)] rounded text-blue-500 transition-colors"
-                  >
-                    <RefreshCw size={10} />
-                  </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-full text-left group"
+          >
+            <div className={`px-3 py-3 mb-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] shrink-0">
+                  {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                  Online
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.reload();
+                      }}
+                      title="Refresh"
+                      className="p-1 hover:bg-[var(--color-bg-border)] rounded text-blue-500 transition-colors"
+                    >
+                      <RefreshCw size={10} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                    Online
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </button>
           <NavItem to="/settings" icon={Settings} label="Settings" collapsed={!isOpen} isMobile={isMobile} />
           <button
             onClick={logout}

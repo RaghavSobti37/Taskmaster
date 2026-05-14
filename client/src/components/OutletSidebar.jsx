@@ -27,6 +27,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationTray from './NotificationTray';
+import { Menu } from 'lucide-react';
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -122,14 +124,17 @@ const OutletSidebar = () => {
             </span>
           </div>
 
-          {isMobileOpen && (
-            <button
-              onClick={closeMobileSidebar}
-              className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)] transition-colors"
-            >
-              <X size={20} />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            <NotificationTray />
+            {isMobileOpen && (
+              <button
+                onClick={closeMobileSidebar}
+                className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)] transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">

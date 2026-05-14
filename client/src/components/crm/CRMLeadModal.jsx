@@ -81,7 +81,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
       if (lead) {
         setFormData({
           ...lead,
-          assignedRepId: (typeof lead.assignedRepId === 'object' ? lead.assignedRepId._id : lead.assignedRepId) || 'unassigned',
+          assignedRepId: (lead.assignedRepId && typeof lead.assignedRepId === 'object' ? lead.assignedRepId._id : lead.assignedRepId) || 'unassigned',
           remarks: lead.remarks || lead.notes || '',
           metadata: lead.metadata || {}
         });

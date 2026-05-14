@@ -13,9 +13,15 @@
 - [x] **CRM**: Lead table, CSV import, priority dots, status badges, lead modal
 - [x] **Assets**: Project-scoped links (max 3), add/delete with modal confirmations
 - [x] **Calendar**: Monthly view, internal event persistence, visibility toggles (Public/Private), holiday integration
+- [x] **Follow-ups**: Tabbed CRM follow-up view (Today, Overdue, Upcoming), automated reminders, and lead modal integration.
 - [x] **Artists**: High-fidelity profiles (Harshad & Duhita), collective numbers, discography, and mission timelines.
 - [x] **Todo/Task Management**: Synchronized Protocol Log (TodoPage) with backend Task model and Project associations.
 - [x] **Settings**: Profile editing, avatar upload, theme toggle, and 30% scaled-down high-density UI components.
+
+## UI Overhaul — Status
+- [x] **Top Navbar Removed**: Completely removed top navbar for a more immersive, high-density vertical workspace.
+- [x] **Vertical Sidebar Integration**: Moved notifications and profile access to the primary vertical sidebar.
+- [x] **Mobile Floating Toggle**: Added floating action button for mobile sidebar access.
 
 ## Backend — Status
 

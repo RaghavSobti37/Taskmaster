@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const CalendarEvent = require('../models/CalendarEvent');
+const Task = require('../models/Task');
+const Project = require('../models/Project');
 
 router.use(protect);
 
@@ -43,6 +45,36 @@ router.post('/', async (req, res) => {
     });
 
     const populated = await event.populate('createdBy', 'name avatar');
+
+    // Also create a task for this event
+    try {
+      // Find or create "Google Calendar" project
+      let project = await Project.findOne({ name: 'Google Calendar' });
+      if (!project) {
+        project = await Project.create({
+          name: 'Google Calendar',
+          description: 'Tasks synced from calendar inputs',
+          outletId: 'SYSTEM', // System-level project
+          owner: req.user._id,
+          status: 'active'
+        });
+      }
+
+      await Task.create({
+        title: title,
+        description: description || 'Calendar Event',
+        projectId: project._id,
+        dueDate: date,
+        createdBy: req.user._id,
+        assignees: [req.user._id],
+        status: 'todo',
+        priority: 'medium'
+      });
+    } catch (taskErr) {
+      console.error('Failed to create task for calendar event:', taskErr);
+      // We don't fail the event creation if task creation fails
+    }
+
     res.status(201).json(populated);
   } catch (err) {
     console.error('Error creating calendar event:', err);

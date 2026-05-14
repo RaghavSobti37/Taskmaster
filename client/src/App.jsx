@@ -8,7 +8,7 @@ import ProjectsView from './pages/ProjectsView';
 import ProjectDetail from './pages/ProjectDetail';
 import ProjectCreate from './pages/ProjectCreate';
 import AdminPanel from './pages/AdminPanel';
-import TeamView from './pages/TeamView';
+// import TeamView from './pages/TeamView';
 import CalendarView from './pages/CalendarView';
 import SettingsPage from './pages/SettingsPage';
 import DailyLogPage from './pages/DailyLogPage';
@@ -19,6 +19,7 @@ import FollowupsPage from './pages/FollowupsPage';
 
 import FeaturesPage from './pages/FeaturesPage';
 import TodoPage from './pages/TodoPage';
+import GoogleSuccessPage from './pages/GoogleSuccessPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 
@@ -39,14 +40,15 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        
+        <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="projects" element={<ProjectsView />} />
             <Route path="projects/new" element={<ProjectCreate />} />
             <Route path="projects/:id" element={<ProjectDetail />} />
-            <Route path="team" element={<TeamView />} />
+            {/* <Route path="team" element={<TeamView />} /> */}
             <Route path="calendar" element={<CalendarView />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="logs" element={<DailyLogPage />} />

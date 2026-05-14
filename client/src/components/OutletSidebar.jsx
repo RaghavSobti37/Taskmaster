@@ -74,7 +74,7 @@ const OutletSidebar = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
   const { width } = useWindowSize();
-  
+
   const isMobile = width < 1024;
 
   useEffect(() => {
@@ -135,7 +135,7 @@ const OutletSidebar = () => {
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={false} isMobile={isMobile} />
           <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={false} isMobile={isMobile} />
-          <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} />
+          {/* <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} /> */}
           <NavItem to="/assets" icon={Layers} label="Assets" collapsed={false} isMobile={isMobile} />
           <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={false} isMobile={isMobile} />
           <NavItem to="/todo" icon={ListTodo} label="To-Do List" collapsed={false} isMobile={isMobile} />
@@ -163,8 +163,8 @@ const OutletSidebar = () => {
                 <p className="text-[10px] font-black uppercase tracking-tight truncate">{user.name}</p>
                 <div className="flex items-center gap-1">
                   <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</span>
-                  <button 
-                    onClick={() => window.location.reload()} 
+                  <button
+                    onClick={() => window.location.reload()}
                     title="Refresh"
                     className="p-1 hover:bg-[var(--color-bg-border)] rounded text-blue-500 transition-colors"
                   >

@@ -33,7 +33,7 @@ const FollowupsPage = () => {
     try {
       setLoading(true);
       // Fetch all leads that have a followup date
-      const res = await axios.get('/api/crm/leads', { params: { limit: 1000 } });
+      const res = await axios.get('/api/crm/leads', { params: { limit: 1000, hasFollowup: 'true' } });
       setLeads(res.data.leads || []);
     } catch (err) {
       console.error('Error fetching leads:', err);

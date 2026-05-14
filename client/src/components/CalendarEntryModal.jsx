@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
 
-const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
+const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState('private');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setDate(initialData.dueDate ? initialData.dueDate.split('T')[0] : '');
+      setDescription(initialData.description || '');
+      setVisibility(initialData.visibility || 'private');
+    } else {
+      setTitle('');
+      setDate(new Date().toISOString().split('T')[0]);
+      setDescription('');
+      setVisibility('private');
+    }
+  }, [initialData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -15,20 +29,26 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post('/api/calendar', {
-        title,
-        date,
-        description,
-        visibility
-      });
-      onEntryCreated(res.data);
-      setTitle('');
-      setDate(new Date().toISOString().split('T')[0]);
-      setDescription('');
-      setVisibility('private');
+      if (initialData?._id) {
+        const res = await axios.put(`/api/calendar/${initialData._id}`, {
+          title,
+          date,
+          description,
+          visibility
+        });
+        onEntryCreated(res.data, true); // true indicates update
+      } else {
+        const res = await axios.post('/api/calendar', {
+          title,
+          date,
+          description,
+          visibility
+        });
+        onEntryCreated(res.data, false); // false indicates new entry
+      }
       onClose();
     } catch (err) {
-      console.error('Error creating calendar entry:', err);
+      console.error('Error saving calendar entry:', err);
     } finally {
       setLoading(false);
     }
@@ -40,7 +60,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
         <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
           <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <CalIcon size={18} className="text-[var(--color-action-primary)]" />
-            New Calendar Event
+            {initialData ? 'Edit Event' : 'New Calendar Event'}
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
             <X size={20} />
@@ -126,7 +146,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated }) => {
               disabled={loading || !title}
               className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
             >
-              {loading ? 'Saving...' : <><CheckCircle2 size={18} /> Save Event</>}
+              {loading ? 'Saving...' : <><CheckCircle2 size={18} /> {initialData ? 'Update Event' : 'Save Event'}</>}
             </button>
           </div>
         </form>

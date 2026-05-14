@@ -420,10 +420,30 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
               {activeTab === 'intel' && (
                 <div className="space-y-6">
                   <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                    <FileText size={14} /> Notes & Remarks
+                    <FileText size={14} /> Intelligence & Discovery
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Transaction ID</label>
+                          <input 
+                            type="text" 
+                            readOnly
+                            value={formData.transactionIdExly || 'N/A'} 
+                            className="w-full bg-[var(--color-bg-workspace)]/50 border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-[10px] font-mono outline-none opacity-70"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Duration (Min)</label>
+                          <input 
+                            type="text" 
+                            value={formData.attendanceDurationMin} 
+                            onChange={e => setFormData({...formData, attendanceDurationMin: e.target.value})}
+                            className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-xs font-bold outline-none shadow-sm"
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-1.5">
                         <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Learning Goal</label>
                         <input 
@@ -433,8 +453,30 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                           className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-xs font-bold outline-none shadow-sm"
                         />
                       </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Current Journey</label>
+                        <textarea 
+                          value={formData.currentJourney} 
+                          onChange={e => setFormData({...formData, currentJourney: e.target.value})}
+                          className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-xs font-bold outline-none shadow-sm min-h-[60px] resize-none"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <CKDropdown 
+                          label="QnA Answered"
+                          options={[{ value: 'Yes', label: 'YES' }, { value: 'No', label: 'NO' }, { value: '', label: '?' }]}
+                          value={formData.qnaAnswered}
+                          onChange={v => setFormData({...formData, qnaAnswered: v})}
+                        />
+                        <CKDropdown 
+                          label="Full-time Willing"
+                          options={[{ value: 'Yes', label: 'YES' }, { value: 'No', label: 'NO' }, { value: 'Maybe', label: 'MAYBE' }, { value: '', label: '?' }]}
+                          value={formData.fullTimeWillingness}
+                          onChange={v => setFormData({...formData, fullTimeWillingness: v})}
+                        />
+                      </div>
                       <div className="space-y-1.5">
                         <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Internal Remarks</label>
                         <textarea 

@@ -57,6 +57,9 @@ exports.getLeads = async (req, res) => {
     if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
     if (req.query.leadStatus && req.query.leadStatus !== 'all') query.leadStatus = req.query.leadStatus;
     if (req.query.assignedRepId && req.query.assignedRepId !== 'all') query.assignedRepId = req.query.assignedRepId;
+    if (req.query.webinarDates && req.query.webinarDates !== 'all') query.webinarDates = req.query.webinarDates;
+    if (req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') query.meaningfulConnect = req.query.meaningfulConnect;
+    if (req.query.hasFollowup === 'true') query.nextFollowupDate = { $exists: true, $ne: '' };
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -87,12 +90,29 @@ exports.getLeads = async (req, res) => {
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
+    
+    // Duplicate check
+    const filter = { $or: [] };
+    if (leadData.rowId) filter.$or.push({ rowId: leadData.rowId });
+    if (leadData.phone) filter.$or.push({ phone: leadData.phone });
+    if (leadData.email) filter.$or.push({ email: leadData.email.toLowerCase() });
+
+    if (filter.$or.length > 0) {
+      const existing = await Lead.findOne(filter);
+      if (existing) {
+        Object.assign(existing, leadData);
+        await existing.save();
+        return res.json(existing);
+      }
+    }
+
     if (!leadData.assignedRepId) {
       leadData.assignedRepId = await assignLeadToRep();
     }
     const lead = await Lead.create(leadData);
     res.status(201).json(lead);
   } catch (error) {
+    console.error('Create lead error:', error);
     res.status(400).json({ error: 'Failed to create lead' });
   }
 };
@@ -283,6 +303,8 @@ exports.uploadLeads = async (req, res) => {
             assignedRepId = repMap['vicky'] || null;
           } else if (rawRepName.includes('aryaman')) {
             assignedRepId = repMap['aryaman'] || null;
+          } else if (rawRepName.includes('satyam')) {
+            assignedRepId = repMap['satyam'] || null;
           } else if (rawRepName && repMap[rawRepName]) {
             assignedRepId = repMap[rawRepName];
           } else if (reps.length > 0 && rawRepName !== '') {
@@ -328,11 +350,30 @@ exports.uploadLeads = async (req, res) => {
           createdBy: req.user._id
         });
 
-        const finalDocs = leadDocs.map(d => ({ ...d, importId: importSession._id }));
-        await Lead.insertMany(finalDocs);
+        const bulkOps = leadDocs.map(doc => {
+          const filter = { $or: [] };
+          if (doc.rowId) filter.$or.push({ rowId: doc.rowId });
+          if (doc.phone) filter.$or.push({ phone: doc.phone });
+          if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
+          
+          if (filter.$or.length === 0) {
+            // If no unique fields, skip duplicate check and insert (should not happen with defaults)
+            return { insertOne: { document: { ...doc, importId: importSession._id } } };
+          }
+
+          return {
+            updateOne: {
+              filter,
+              update: { $set: { ...doc, importId: importSession._id } },
+              upsert: true
+            }
+          };
+        });
+
+        await Lead.bulkWrite(bulkOps);
         
         fs.unlinkSync(req.file.path);
-        res.status(201).json({ message: `${leadDocs.length} leads synchronized via matrix.` });
+        res.status(201).json({ message: `${leadDocs.length} leads processed with duplicate checking.` });
       });
   } catch (error) {
     const fs = require('fs');
@@ -437,10 +478,12 @@ exports.getCRMStats = async (req, res) => {
 
 exports.getCRMConfig = async (req, res) => {
   try {
-    const [callStatuses, leadStatuses, artistTypes] = await Promise.all([
+    const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses] = await Promise.all([
       Lead.distinct('callStatus'),
       Lead.distinct('leadStatus'),
-      Lead.distinct('artistType')
+      Lead.distinct('artistType'),
+      Lead.distinct('webinarDates'),
+      Lead.distinct('meaningfulConnect')
     ]);
 
     // Ensure some defaults if DB is empty
@@ -448,6 +491,8 @@ exports.getCRMConfig = async (req, res) => {
       callStatuses: callStatuses.length ? callStatuses : ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'],
       leadStatuses: leadStatuses.length ? leadStatuses : ['New', 'Interested', 'Not Interested', 'Followup', 'Converted'],
       artistTypes: artistTypes.length ? artistTypes : ['Full Time', 'Part Time', 'Hobbyist'],
+      webinarDates: webinarDates.filter(Boolean),
+      meaningfulConnectStatuses: meaningfulConnectStatuses.length ? meaningfulConnectStatuses : ['YES', 'NO', 'PENDING'],
       qualities: ['1', '2', '3', '4', '5']
     };
 

@@ -1,5 +1,6 @@
 const { createOAuth2Client, getCalendar, getDrive } = require('../utils/googleAuth');
 const User = require('../models/User');
+const Project = require('../models/Project');
 const ical = require('node-ical');
 
 // Cache for Indian holidays (refreshed every 24h)
@@ -183,6 +184,80 @@ exports.getDriveFiles = async (req, res) => {
       { id: 'd2', name: 'Brand Guidelines.pdf', mimeType: 'application/pdf', webViewLink: 'https://drive.google.com' }
     ];
     res.json(mockFiles);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.linkProjectCalendar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { calendarId } = req.body;
+    const userId = req.user._id;
+
+    const project = await Project.findById(id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Check if user is already linked
+    const existingLink = project.linkedCalendars.find(lc => lc.userId.toString() === userId.toString());
+    if (existingLink) {
+      existingLink.calendarId = calendarId || 'primary';
+    } else {
+      project.linkedCalendars.push({ userId, calendarId: calendarId || 'primary' });
+    }
+
+    await project.save();
+    res.json({ message: 'Calendar linked to project successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getProjectCalendarEvents = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await Project.findById(id).populate('linkedCalendars.userId');
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const allEvents = [];
+    const oauth2Client = createOAuth2Client();
+
+    for (const link of project.linkedCalendars) {
+      const user = link.userId;
+      if (!user.googleRefreshToken) continue;
+
+      try {
+        oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
+        const calendar = getCalendar(oauth2Client);
+        
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        const response = await calendar.events.list({
+          calendarId: link.calendarId || 'primary',
+          timeMin: monthStart.toISOString(),
+          timeMax: monthEnd.toISOString(),
+          singleEvents: true,
+          orderBy: 'startTime'
+        });
+
+        const events = (response.data.items || []).map(event => ({
+          id: event.id,
+          summary: event.summary,
+          start: event.start,
+          end: event.end,
+          user: { name: user.name, avatar: user.avatar },
+          type: 'project'
+        }));
+
+        allEvents.push(...events);
+      } catch (err) {
+        console.error(`[CALENDAR] Failed to fetch events for user ${user.name}:`, err.message);
+      }
+    }
+
+    res.json(allEvents);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

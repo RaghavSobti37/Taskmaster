@@ -51,7 +51,8 @@ const LeadSchema = new mongoose.Schema({
   
   // Concurrency Locking
   lockedBy: { type: String }, // User ID holding the lock
-  lockedAt: { type: Date }
+  lockedAt: { type: Date },
+  reminderSent: { type: Boolean, default: false }
 }, { 
   timestamps: true // Automatically handles createdAt and updatedAt
 });

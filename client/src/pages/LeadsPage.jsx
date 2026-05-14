@@ -31,7 +31,7 @@ import { useNavigate } from 'react-router-dom';
 export default function LeadsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     if (user && user.role !== 'admin' && user.role !== 'sales') {
       navigate('/');
@@ -45,14 +45,16 @@ export default function LeadsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
-  
+
   const [filters, setFilters] = useState({
     leadQuality: 'all',
     callStatus: 'all',
     leadStatus: 'all',
-    assignedRepId: 'all'
+    assignedRepId: 'all',
+    webinarDates: 'all',
+    meaningfulConnect: 'all'
   });
-  
+
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,7 +62,9 @@ export default function LeadsPage() {
   const [config, setConfig] = useState({
     callStatuses: [],
     leadStatuses: [],
-    qualities: []
+    qualities: [],
+    webinarDates: [],
+    meaningfulConnectStatuses: []
   });
 
   const fetchLeads = async () => {
@@ -74,7 +78,7 @@ export default function LeadsPage() {
         sort: sortConfig.key,
         order: sortConfig.direction
       };
-      
+
       const [leadsRes, repsRes, configRes] = await Promise.all([
         axios.get('/api/crm/leads', { params }),
         axios.get('/api/users/directory', { params: { limit: 100 } }),
@@ -140,12 +144,18 @@ export default function LeadsPage() {
     <PageContainer>
       <PageHeader
         title="Leads"
-        subtitle="Manage and track all your leads."
+        subtitle={`Database contains ${totalLeads.toLocaleString()} total entries.`}
         icon={Database}
         actions={
-          <button onClick={() => { setSelectedLead(null); setIsModalOpen(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-action-primary)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20">
-            <Plus size={16} /> New Lead
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex flex-col items-end mr-4">
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Global Reach</span>
+              <span className="text-lg font-black text-[var(--color-text-primary)] tracking-tighter">{totalLeads.toLocaleString()}</span>
+            </div>
+            <button onClick={() => { setSelectedLead(null); setIsModalOpen(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-action-primary)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20">
+              <Plus size={16} /> New Lead
+            </button>
+          </div>
         }
       />
 
@@ -153,9 +163,9 @@ export default function LeadsPage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-blue-500 transition-colors" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search by name, email, or phone..." 
+            <input
+              type="text"
+              placeholder="Search by name, email, or phone..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner"
@@ -164,7 +174,7 @@ export default function LeadsPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-[var(--color-bg-workspace)] px-4 py-2.5 rounded-2xl border border-[var(--color-bg-border)] shadow-inner">
               <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Show</span>
-              <select 
+              <select
                 value={pageSize}
                 onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
                 className="bg-transparent text-xs font-black outline-none cursor-pointer"
@@ -182,29 +192,41 @@ export default function LeadsPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <NexusDropdown 
-            options={[{value: 'all', label: 'All Qualities'}, ...config.qualities.map(q => ({value: q, label: q}))]}
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Qualities' }, ...config.qualities.map(q => ({ value: q, label: q }))]}
             value={filters.leadQuality}
-            onChange={v => setFilters(prev => ({...prev, leadQuality: v}))}
+            onChange={v => setFilters(prev => ({ ...prev, leadQuality: v }))}
             placeholder="Lead Quality"
           />
-          <NexusDropdown 
-            options={[{value: 'all', label: 'All Call Status'}, ...config.callStatuses.map(s => ({value: s, label: s.toUpperCase()}))]}
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Call Status' }, ...config.callStatuses.map(s => ({ value: s, label: s.toUpperCase() }))]}
             value={filters.callStatus}
-            onChange={v => setFilters(prev => ({...prev, callStatus: v}))}
+            onChange={v => setFilters(prev => ({ ...prev, callStatus: v }))}
             placeholder="Call Status"
           />
-          <NexusDropdown 
-            options={[{value: 'all', label: 'All Lead Status'}, ...config.leadStatuses.map(s => ({value: s, label: s.toUpperCase()}))]}
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Lead Status' }, ...config.leadStatuses.map(s => ({ value: s, label: s.toUpperCase() }))]}
             value={filters.leadStatus}
-            onChange={v => setFilters(prev => ({...prev, leadStatus: v}))}
+            onChange={v => setFilters(prev => ({ ...prev, leadStatus: v }))}
             placeholder="Lead Status"
           />
-          <NexusDropdown 
-            options={[{value: 'all', label: 'All Reps'}, ...reps.map(r => ({value: r._id, label: r.name}))]}
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Reps' }, ...reps.map(r => ({ value: r._id, label: r.name }))]}
             value={filters.assignedRepId}
-            onChange={v => setFilters(prev => ({...prev, assignedRepId: v}))}
+            onChange={v => setFilters(prev => ({ ...prev, assignedRepId: v }))}
             placeholder="Assigned Rep"
+          />
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Webinars' }, ...(config.webinarDates || []).map(w => ({ value: w, label: w }))]}
+            value={filters.webinarDates}
+            onChange={v => setFilters(prev => ({ ...prev, webinarDates: v }))}
+            placeholder="Webinar"
+          />
+          <NexusDropdown
+            options={[{ value: 'all', label: 'All Connect' }, ...(config.meaningfulConnectStatuses || []).map(s => ({ value: s, label: s }))]}
+            value={filters.meaningfulConnect}
+            onChange={v => setFilters(prev => ({ ...prev, meaningfulConnect: v }))}
+            placeholder="Meaningful Connect"
           />
         </div>
       </Card>
@@ -217,76 +239,98 @@ export default function LeadsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[var(--color-bg-workspace)]/50 border-b border-[var(--color-bg-border)]">
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
                     <button onClick={() => handleSort('name')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
-                      Identity <ArrowUpDown size={12} />
+                      Name <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Profile</th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center">
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('webinarDates')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Webinar <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('attendanceDurationMin')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Time Attended <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('meaningfulConnect')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Connect <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                    <button onClick={() => handleSort('callStatus')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
+                      Call Status <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-center">
                     <button onClick={() => handleSort('leadQuality')} className="flex items-center gap-2 mx-auto hover:text-blue-500 transition-colors">
                       Quality <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
                     <button onClick={() => handleSort('leadStatus')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
                       Status <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
                     <button onClick={() => handleSort('assignedRepId')} className="flex items-center gap-2 hover:text-blue-500 transition-colors">
-                      Assigned Rep <ArrowUpDown size={12} />
+                      Sales Rep <ArrowUpDown size={12} />
                     </button>
                   </th>
-                  <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-right">Actions</th>
+
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] text-right">Edit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-bg-border)]">
                 {leads.map(lead => (
                   <tr key={lead._id} className="hover:bg-blue-500/5 transition-all group">
-                    <td className="px-8 py-5">
+                    <td className="px-6 py-5">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs font-black text-[var(--color-text-primary)] group-hover:text-blue-600 transition-colors uppercase tracking-tight">{lead.name}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[9px] font-mono text-[var(--color-text-muted)]">{lead.phone}</span>
-                          {lead.email && <span className="text-[9px] font-mono text-[var(--color-text-muted)]">• {lead.email}</span>}
-                        </div>
+                        <span className="text-[9px] font-mono text-[var(--color-text-muted)]">{lead.phone}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{lead.artistType || 'N/A'}</span>
-                        <span className="text-[9px] font-medium text-[var(--color-text-muted)] italic">{lead.primaryRole || 'No role defined'}</span>
-                      </div>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter whitespace-nowrap">{lead.webinarDates || 'N/A'}</span>
                     </td>
-                    <td className="px-8 py-5 text-center">
-                      <div className={`inline-flex items-center justify-center w-7 h-7 rounded-lg font-black text-xs ${
-                        lead.leadQuality === '5' ? 'bg-emerald-500 text-white' :
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-[10px] font-black text-[var(--color-text-primary)]">{lead.attendanceDurationMin || '0'}m</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <Badge variant={lead.meaningfulConnect === 'YES' ? 'done' : lead.meaningfulConnect === 'NO' ? 'todo' : 'progress'}>
+                        {lead.meaningfulConnect || 'PENDING'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{lead.callStatus}</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <div className={`inline-flex items-center justify-center w-7 h-7 rounded-lg font-black text-xs ${lead.leadQuality === '5' ? 'bg-emerald-500 text-white' :
                         lead.leadQuality === '4' ? 'bg-blue-500 text-white' :
-                        lead.leadQuality === '3' ? 'bg-amber-500 text-white' :
-                        'bg-slate-200 text-slate-600'
-                      }`}>
+                          lead.leadQuality === '3' ? 'bg-amber-500 text-white' :
+                            'bg-slate-200 text-slate-600'
+                        }`}>
                         {lead.leadQuality}
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-col gap-1.5">
-                        <Badge variant={lead.leadStatus === 'Converted' ? 'done' : lead.leadStatus === 'Followup' ? 'progress' : 'todo'}>
-                          {lead.leadStatus.toUpperCase()}
-                        </Badge>
-                        <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">CALL: {lead.callStatus}</span>
-                      </div>
+                    <td className="px-6 py-5">
+                      <Badge variant={lead.leadStatus === 'Converted' ? 'done' : lead.leadStatus === 'Followup' ? 'progress' : 'todo'}>
+                        {lead.leadStatus.toUpperCase()}
+                      </Badge>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center text-[10px] font-black text-blue-500 uppercase shadow-inner">
-                          {lead.assignedRepId?.avatar ? <img src={lead.assignedRepId.avatar} className="w-full h-full object-cover rounded-lg" /> : getRepName(lead.assignedRepId).substring(0, 2)}
+                        <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center text-[10px] font-black text-blue-500 uppercase shadow-inner overflow-hidden">
+                          {lead.assignedRepId?.avatar ? <img src={lead.assignedRepId.avatar} className="w-full h-full object-cover" /> : getRepName(lead.assignedRepId).substring(0, 2)}
                         </div>
-                        <span className="text-[10px] font-black text-[var(--color-text-primary)] uppercase">{getRepName(lead.assignedRepId)}</span>
+                        <span className="text-[10px] font-black text-[var(--color-text-primary)] uppercase truncate max-w-[100px]">{getRepName(lead.assignedRepId)}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <button 
+
+                    <td className="px-6 py-5 text-right">
+                      <button
                         onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }}
                         className="p-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all active:scale-90"
                       >
@@ -315,7 +359,7 @@ export default function LeadsPage() {
             Showing <span className="text-[var(--color-text-primary)]">{leads.length}</span> of <span className="text-[var(--color-text-primary)]">{totalLeads}</span> leads
           </p>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               disabled={page === 1}
               onClick={() => setPage(p => Math.max(1, p - 1))}
               className="p-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl disabled:opacity-30 hover:border-blue-500 transition-all active:scale-90"
@@ -327,7 +371,7 @@ export default function LeadsPage() {
               <span className="text-[10px] font-black text-[var(--color-text-muted)]">/</span>
               <span className="text-[10px] font-black text-[var(--color-text-muted)]">{totalPages}</span>
             </div>
-            <button 
+            <button
               disabled={page === totalPages}
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               className="p-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl disabled:opacity-30 hover:border-blue-500 transition-all active:scale-90"
@@ -338,7 +382,7 @@ export default function LeadsPage() {
         </div>
       </Card>
 
-      <CRMLeadModal 
+      <CRMLeadModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         lead={selectedLead}

@@ -16,6 +16,10 @@ const projectSchema = new mongoose.Schema({
   progress: { type: Number, default: 0 },
   totalTasksCount: { type: Number, default: 0 },
   completedTasksCount: { type: Number, default: 0 },
+  linkedCalendars: [{ 
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    calendarId: { type: String, default: 'primary' }
+  }],
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

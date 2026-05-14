@@ -14,31 +14,51 @@ const CalendarView = () => {
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
   const [showHolidays, setShowHolidays] = useState(true);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  // Fetch persistent calendar events from DB
+  // Fetch calendar events (Internal DB + Google)
+  const fetchAllEvents = async () => {
+    try {
+      const [dbRes, googleRes] = await Promise.all([
+        axios.get('/api/calendar'),
+        user.googleRefreshToken ? axios.get('/api/google/calendar/events') : Promise.resolve({ data: [] })
+      ]);
+
+      const dbEvents = dbRes.data.map(ev => ({
+        _id: ev._id,
+        title: ev.title,
+        description: ev.description,
+        dueDate: ev.date,
+        visibility: ev.visibility,
+        createdBy: ev.createdBy,
+        type: 'event'
+      }));
+
+      const googleEvents = googleRes.data.map(ev => ({
+        _id: ev.id,
+        title: ev.summary,
+        description: '',
+        dueDate: ev.start.dateTime || ev.start.date,
+        visibility: 'private', // Personal Google events shown as private
+        type: 'google',
+        source: 'google_calendar'
+      }));
+
+      setCalendarEvents([...dbEvents, ...googleEvents]);
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCalendarEvents = async () => {
-      try {
-        const res = await axios.get('/api/calendar');
-        setCalendarEvents(res.data.map(ev => ({
-          _id: ev._id,
-          title: ev.title,
-          description: ev.description,
-          dueDate: ev.date,
-          visibility: ev.visibility,
-          createdBy: ev.createdBy,
-          type: 'event'
-        })));
-      } catch (err) {
-        console.error('Error fetching calendar events:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCalendarEvents();
-  }, []);
+    fetchAllEvents();
+    const interval = setInterval(fetchAllEvents, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [user.googleRefreshToken]);
 
   // Fetch Indian holidays (public, no auth)
   useEffect(() => {
@@ -61,16 +81,30 @@ const CalendarView = () => {
     fetchHolidays();
   }, [currentMonth]);
 
-  const handleEntryCreated = (newEntry) => {
-    setCalendarEvents(prev => [...prev, {
-      _id: newEntry._id,
-      title: newEntry.title,
-      description: newEntry.description,
-      dueDate: newEntry.date,
-      visibility: newEntry.visibility,
-      createdBy: newEntry.createdBy,
-      type: 'event'
-    }]);
+  const handleEntryCreated = (newEntry, isUpdate = false) => {
+    if (isUpdate) {
+      setCalendarEvents(prev => prev.map(e => e._id === newEntry._id ? {
+        ...newEntry,
+        dueDate: newEntry.date,
+        type: 'event'
+      } : e));
+    } else {
+      setCalendarEvents(prev => [...prev, {
+        _id: newEntry._id,
+        title: newEntry.title,
+        description: newEntry.description,
+        dueDate: newEntry.date,
+        visibility: newEntry.visibility,
+        createdBy: newEntry.createdBy,
+        type: 'event'
+      }]);
+    }
+    setEditingEvent(null);
+  };
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event);
+    setIsModalOpen(true);
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -106,118 +140,54 @@ const CalendarView = () => {
     }).length;
   }, [holidays, currentMonth]);
 
-  const renderDays = () => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return (
-      <div className="grid grid-cols-7 mb-2">
-        {days.map(day => (
-          <div key={day} className="text-center text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] py-3">
-            {day}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderCells = () => {
+  const renderMiniCalendar = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    if (loading && calendarEvents.length === 0) {
-      return (
-        <Card className="grid grid-cols-7 bg-[var(--color-bg-border)] gap-px border border-[var(--color-bg-border)] overflow-hidden">
-          {Array.from({ length: 35 }).map((_, i) => (
-            <div key={i} className="min-h-[120px] bg-[var(--color-bg-surface)] p-3 animate-pulse">
-              <div className="h-4 w-6 bg-[var(--color-bg-border)] rounded mb-2" />
-              <div className="h-3 w-full bg-[var(--color-bg-border)] rounded mb-1 opacity-50" />
-            </div>
-          ))}
-        </Card>
-      );
-    }
-
     return (
-      <Card className="grid grid-cols-7 bg-[var(--color-bg-border)] gap-px border border-[var(--color-bg-border)] overflow-hidden">
-        {days.map(day => {
-          const dayEvents = allEvents.filter(event => {
-            const eventDate = parseLocalDate(event.dueDate);
-            return eventDate && isSameDay(eventDate, day);
-          });
-          const dayHolidays = dayEvents.filter(e => e.type === 'holiday');
-          const dayUserEvents = dayEvents.filter(e => e.type === 'event');
-          const isToday = isSameDay(day, new Date());
-          const isCurrentMonth = isSameMonth(day, monthStart);
-          const isSelected = selectedDay && isSameDay(day, selectedDay);
-          const hasHoliday = dayHolidays.length > 0;
-
-          return (
-            <div
-              key={day.toString()}
-              onClick={() => setSelectedDay(isSelected ? null : day)}
-              className={`min-h-[120px] bg-[var(--color-bg-surface)] p-2.5 transition-all cursor-pointer relative
-                ${!isCurrentMonth ? 'opacity-40' : ''}
-                ${isToday ? 'ring-2 ring-inset ring-[var(--color-action-primary)]/40' : ''}
-                ${isSelected ? 'bg-[var(--color-action-primary)]/5' : 'hover:bg-[var(--color-bg-workspace)]'}
-                ${hasHoliday ? 'bg-rose-50/30 dark:bg-rose-900/5' : ''}
-              `}
-            >
-              {/* Day Number */}
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs font-bold leading-none
-                  ${isToday
-                    ? 'w-6 h-6 bg-[var(--color-action-primary)] text-white flex items-center justify-center rounded-full text-[10px] font-black'
-                    : 'text-[var(--color-text-secondary)]'}
-                `}>
-                  {format(day, 'd')}
-                </span>
-                {hasHoliday && (
-                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" title="Holiday" />
+      <div className="p-4 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+            {format(currentMonth, 'MMMM yyyy')}
+          </span>
+          <div className="flex gap-1">
+            <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-[var(--color-bg-workspace)] rounded-md transition-colors"><ChevronLeft size={14} /></button>
+            <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-[var(--color-bg-workspace)] rounded-md transition-colors"><ChevronRight size={14} /></button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-y-1">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+            <div key={d} className="text-center text-[8px] font-black text-[var(--color-text-muted)]">{d}</div>
+          ))}
+          {days.map(day => {
+            const hasEvents = allEvents.some(e => {
+              const d = parseLocalDate(e.dueDate);
+              return d && isSameDay(d, day);
+            });
+            return (
+              <div 
+                key={day.toString()} 
+                className={`relative text-center py-1.5 text-[9px] font-bold rounded-full transition-all cursor-pointer
+                  ${!isSameMonth(day, monthStart) ? 'text-[var(--color-text-muted)] opacity-30' : 'text-[var(--color-text-primary)]'}
+                  ${isSameDay(day, new Date()) ? 'bg-[var(--color-action-primary)] text-white' : 'hover:bg-[var(--color-bg-workspace)]'}
+                `}
+                onClick={() => setCurrentMonth(day)}
+              >
+                {format(day, 'd')}
+                {hasEvents && !isSameDay(day, new Date()) && (
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[var(--color-action-primary)] rounded-full" />
                 )}
               </div>
-
-              {/* Events */}
-              <div className="space-y-1 overflow-y-auto max-h-[80px] custom-scrollbar">
-                {/* Holidays first */}
-                {dayHolidays.map(holiday => (
-                  <motion.div
-                    key={holiday._id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="px-1.5 py-1 text-[8px] font-bold rounded-md truncate border transition-all
-                      bg-gradient-to-r from-rose-50 to-orange-50 text-rose-700 border-rose-200/60
-                      dark:from-rose-900/20 dark:to-orange-900/20 dark:text-rose-300 dark:border-rose-700/30
-                      cursor-default leading-tight"
-                    title={holiday.description || holiday.title}
-                  >
-                    {holiday.title}
-                  </motion.div>
-                ))}
-                {/* User calendar events */}
-                {dayUserEvents.map(event => (
-                  <div
-                    key={event._id}
-                    className={`px-1.5 py-1 text-[8px] font-bold rounded-md truncate border transition-all leading-tight flex items-center gap-1
-                      ${event.visibility === 'public'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-700/30'
-                        : 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700/30'
-                      }`}
-                  >
-                    {event.visibility === 'public' ? <Globe size={8} className="shrink-0" /> : <Lock size={8} className="shrink-0" />}
-                    <span className="truncate">{event.title}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </Card>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
-  // Selected day detail panel
   const renderDayDetail = () => {
     if (!selectedDay) return null;
     const dayEvents = allEvents.filter(event => {
@@ -258,28 +228,32 @@ const CalendarView = () => {
                   const creatorName = event.createdBy?.name || '';
 
                   return (
-                    <div key={event._id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all
+                    <div key={event._id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:border-[var(--color-action-primary)]/50
                       ${event.type === 'holiday'
-                        ? 'bg-gradient-to-r from-rose-50 to-orange-50 border-rose-200/60 dark:from-rose-900/10 dark:to-orange-900/10 dark:border-rose-800/30'
-                        : event.visibility === 'public'
-                          ? 'bg-emerald-50/50 border-emerald-200/60 dark:bg-emerald-900/10 dark:border-emerald-800/30'
-                          : 'bg-purple-50/50 border-purple-200/60 dark:bg-purple-900/10 dark:border-purple-800/30'
+                        ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-800/30'
+                        : event.type === 'google'
+                          ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-800/30'
+                          : event.visibility === 'public'
+                            ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-800/30'
+                            : 'bg-blue-50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-800/30'
                       }
                     `}>
-                      <div className={`w-2 h-8 rounded-full flex-shrink-0
+                      <div className={`w-1.5 h-6 rounded-full flex-shrink-0
                         ${event.type === 'holiday' 
-                          ? 'bg-gradient-to-b from-rose-400 to-orange-400' 
-                          : event.visibility === 'public' ? 'bg-emerald-500' : 'bg-purple-500'}
+                          ? 'bg-rose-400' 
+                          : event.type === 'google' ? 'bg-amber-400' : event.visibility === 'public' ? 'bg-emerald-500' : 'bg-blue-500'}
                       `} />
                       <div className="min-w-0 flex-1">
-                        <p className={`text-xs font-bold truncate
+                        <p className={`text-[11px] font-bold truncate
                           ${event.type === 'holiday' ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--color-text-primary)]'}
                         `}>{event.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="text-[9px] text-[var(--color-text-muted)] uppercase tracking-widest font-bold">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[8px] text-[var(--color-text-muted)] uppercase tracking-widest font-black">
                             {event.type === 'holiday' ? '🇮🇳 Holiday' : (
                               <span className="flex items-center gap-1">
-                                {event.visibility === 'public' ? <><Globe size={8} /> Public</> : <><Lock size={8} /> Private</>}
+                                {event.type === 'google' ? <><Lock size={8} /> Private (Google)</> : (
+                                  event.visibility === 'public' ? <><Globe size={8} /> Public</> : <><Lock size={8} /> Private</>
+                                )}
                                 {creatorName && ` • ${creatorName}`}
                               </span>
                             )}
@@ -287,13 +261,22 @@ const CalendarView = () => {
                         </div>
                       </div>
                       {event.type === 'event' && isOwner && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
-                          className="p-1.5 hover:bg-red-100 rounded-lg text-red-400 hover:text-red-600 transition-all"
-                          title="Delete event"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
+                            className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-400 hover:text-blue-600 transition-all"
+                            title="Edit event"
+                          >
+                            <Plus size={12} className="rotate-45" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 hover:text-red-600 transition-all"
+                            title="Delete event"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
@@ -310,63 +293,137 @@ const CalendarView = () => {
     <PageContainer>
       <PageHeader
         icon={CalendarIcon}
-        title="Calendar"
-        subtitle="View and manage your scheduled events."
+        title="Workspace Calendar"
+        subtitle="Manage your schedule across projects and personal events."
         actions={
-          <div className="flex items-center gap-4">
-            {/* Holiday Toggle */}
-            <button
-              onClick={() => setShowHolidays(!showHolidays)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border
-                ${showHolidays
-                  ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800/30'
-                  : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:text-[var(--color-text-primary)]'}
-              `}
-            >
-              <Globe size={14} />
-              Holidays {showHolidays ? 'ON' : 'OFF'}
-              {showHolidays && monthHolidayCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-rose-200/60 text-rose-800 rounded-full text-[9px] font-black">
-                  {monthHolidayCount}
-                </span>
-              )}
-            </button>
-
-            {/* Month Navigation */}
-            <div className="flex items-center bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl overflow-hidden shadow-inner">
-              <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2.5 hover:bg-[var(--color-bg-surface)] transition-colors border-r border-[var(--color-bg-border)]">
-                <ChevronLeft size={20} />
-              </button>
-              <div className="px-6 py-2.5 font-bold text-sm min-w-[140px] text-center">
-                {format(currentMonth, 'MMMM yyyy')}
-              </div>
-              <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2.5 hover:bg-[var(--color-bg-surface)] transition-colors border-l border-[var(--color-bg-border)]">
-                <ChevronRight size={20} />
-              </button>
-            </div>
-
-            {/* New Entry */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
-            >
-              <Plus size={20} /> New Event
-            </button>
-          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+          >
+            <Plus size={18} strokeWidth={3} /> Create Event
+          </button>
         }
       />
 
       <CalendarEntryModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setEditingEvent(null); }}
         onEntryCreated={handleEntryCreated}
+        initialData={editingEvent}
       />
 
-      <div>
-        {renderDays()}
-        {renderCells()}
-      </div>
+      <div className="flex flex-col lg:flex-row gap-8 mt-6">
+        {/* Sidebar */}
+        <div className="w-full lg:w-72 flex-shrink-0">
+          {renderMiniCalendar()}
+          
+          <div className="bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] p-4">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">My Calendars</h4>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative w-4 h-4 rounded border-2 border-[var(--color-action-primary)] flex items-center justify-center transition-all group-hover:scale-110">
+                   <div className="w-2 h-2 bg-[var(--color-action-primary)] rounded-sm" />
+                </div>
+                <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Personal Events</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group" onClick={() => setShowHolidays(!showHolidays)}>
+                <div className={`relative w-4 h-4 rounded border-2 flex items-center justify-center transition-all group-hover:scale-110 ${showHolidays ? 'border-rose-400 bg-rose-400' : 'border-[var(--color-bg-border)]'}`}>
+                   {showHolidays && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
+                </div>
+                <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Indian Holidays</span>
+              </label>
+            </div>
+          </div>
+        </div>
 
+        {/* Main Calendar Area */}
+        <div className="flex-1 bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-sm">
+          <div className="p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between">
+             <div className="flex items-center gap-4">
+               <button 
+                 onClick={() => setCurrentMonth(new Date())}
+                 className="px-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--color-action-primary)] transition-all"
+               >
+                 Today
+               </button>
+               <div className="flex items-center gap-1">
+                 <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-[var(--color-text-muted)]"><ChevronLeft size={20} /></button>
+                 <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-[var(--color-text-muted)]"><ChevronRight size={20} /></button>
+               </div>
+               <h3 className="text-lg font-black text-[var(--color-text-primary)] ml-2 uppercase tracking-tight">
+                 {format(currentMonth, 'MMMM yyyy')}
+               </h3>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-7 border-b border-[var(--color-bg-border)]">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-r border-[var(--color-bg-border)] last:border-r-0 bg-[var(--color-bg-workspace)]/30">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-1 grid grid-cols-7 auto-rows-fr h-[700px] overflow-y-auto custom-scrollbar">
+            {eachDayOfInterval({ 
+              start: startOfWeek(startOfMonth(currentMonth)), 
+              end: endOfWeek(endOfMonth(currentMonth)) 
+            }).map((day, idx) => {
+              const isToday = isSameDay(day, new Date());
+              const isCurrentMonth = isSameMonth(day, currentMonth);
+              const dayEvents = allEvents.filter(e => {
+                const d = parseLocalDate(e.dueDate);
+                return d && isSameDay(d, day);
+              });
+
+              return (
+                <div 
+                  key={day.toString()}
+                  className={`min-h-[140px] p-2 border-r border-b border-[var(--color-bg-border)] transition-all hover:bg-[var(--color-bg-workspace)]/30 
+                    ${!isCurrentMonth ? 'bg-[var(--color-bg-workspace)]/20' : ''}
+                    ${isToday ? 'bg-[var(--color-action-primary)]/5' : ''}
+                  `}
+                >
+                  <div className="flex justify-center mb-3">
+                    <span className={`w-8 h-8 flex items-center justify-center text-[11px] font-black rounded-full transition-all relative
+                      ${isToday ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/30' : 
+                        isCurrentMonth ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] opacity-50'}
+                    `}>
+                      {format(day, 'd')}
+                      {dayEvents.length > 0 && !isToday && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[var(--color-action-primary)] rounded-full" />
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    {dayEvents.map(event => (
+                      <div 
+                        key={event._id}
+                        className={`px-2 py-1 text-[9px] font-bold rounded-md truncate border leading-tight transition-all cursor-pointer hover:shadow-md
+                          ${event.type === 'holiday' 
+                            ? 'bg-rose-100 text-rose-700 border-rose-200' 
+                            : event.type === 'google'
+                              ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              : event.visibility === 'public'
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : 'bg-blue-100 text-blue-700 border-blue-200'
+                          }
+                        `}
+                        title={event.title}
+                        onClick={() => setSelectedDay(day)}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      
       {renderDayDetail()}
     </PageContainer>
   );

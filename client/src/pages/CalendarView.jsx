@@ -46,7 +46,11 @@ const CalendarView = () => {
         source: 'google_calendar'
       }));
 
-      setCalendarEvents([...dbEvents, ...googleEvents]);
+      // Deduplicate by _id
+      const combined = [...dbEvents, ...googleEvents];
+      const uniqueEvents = Array.from(new Map(combined.map(ev => [ev._id, ev])).values());
+      
+      setCalendarEvents(uniqueEvents);
     } catch (err) {
       console.error('Error fetching calendar events:', err);
     } finally {
@@ -66,7 +70,10 @@ const CalendarView = () => {
       try {
         const currentYear = currentMonth.getFullYear();
         const res = await axios.get(`/api/google/holidays?year=${currentYear}`);
-        setHolidays(res.data.map(h => ({
+        // Deduplicate holidays by id
+        const uniqueHolidays = Array.from(new Map(res.data.map(h => [h.id, h])).values());
+        
+        setHolidays(uniqueHolidays.map(h => ({
           _id: h.id,
           title: h.summary,
           dueDate: h.start.date || h.start.dateTime,
@@ -400,7 +407,7 @@ const CalendarView = () => {
                     {dayEvents.map(event => (
                       <div 
                         key={event._id}
-                        className={`px-2 py-1 text-[9px] font-bold rounded-md truncate border leading-tight transition-all cursor-pointer hover:shadow-md
+                        className={`px-2 py-1 text-[9px] font-bold rounded-md truncate border leading-tight transition-all cursor-pointer hover:shadow-md flex items-center gap-1
                           ${event.type === 'holiday' 
                             ? 'bg-rose-100 text-rose-700 border-rose-200' 
                             : event.type === 'google'
@@ -413,7 +420,9 @@ const CalendarView = () => {
                         title={event.title}
                         onClick={() => setSelectedDay(day)}
                       >
-                        {event.title}
+                        {event.type === 'holiday' && <span className="text-[10px]">🇮🇳</span>}
+                        {event.visibility === 'public' && event.type !== 'holiday' && <Globe size={8} />}
+                        <span className="truncate">{event.title}</span>
                       </div>
                     ))}
                   </div>

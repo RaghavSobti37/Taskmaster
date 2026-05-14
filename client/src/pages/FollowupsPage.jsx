@@ -106,7 +106,7 @@ const FollowupsPage = () => {
             <p className="text-[10px] font-mono text-[var(--color-text-muted)] mb-4">{lead.phone || 'NO PHONE'}</p>
             <div className="flex items-center justify-between pt-3 border-t border-[var(--color-bg-border)]">
               <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
-                <Clock size={12} /> {lead.nextFollowupDate}
+                <Clock size={12} /> {lead.nextFollowupDate ? new Date(lead.nextFollowupDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'NOT SET'}
               </span>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-[8px] font-black text-blue-500 uppercase">

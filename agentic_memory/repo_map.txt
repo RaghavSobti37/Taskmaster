@@ -1,871 +1,153 @@
-C:\Users\ragha\OneDrive\Desktop\Taskmaster
-├── client
-|  ├── eslint.config.js
-|  ├── index.html
-|  ├── node_modules
-|  |  ├── @babel
-|  |  ├── @emotion
-|  |  ├── @esbuild
-|  |  ├── @eslint
-|  |  ├── @eslint-community
-|  |  ├── @floating-ui
-|  |  ├── @humanwhocodes
-|  |  ├── @jridgewell
-|  |  ├── @nodelib
-|  |  ├── @remix-run
-|  |  ├── @rolldown
-|  |  ├── @rollup
-|  |  ├── @tailwindcss
-|  |  ├── @types
-|  |  ├── @ungap
-|  |  ├── @vitejs
-|  |  ├── acorn
-|  |  ├── acorn-jsx
-|  |  ├── ajv
-|  |  ├── ansi-regex
-|  |  ├── ansi-styles
-|  |  ├── argparse
-|  |  ├── array-buffer-byte-length
-|  |  ├── array-includes
-|  |  ├── array.prototype.findlast
-|  |  ├── array.prototype.flat
-|  |  ├── array.prototype.flatmap
-|  |  ├── array.prototype.tosorted
-|  |  ├── arraybuffer.prototype.slice
-|  |  ├── async-function
-|  |  ├── asynckit
-|  |  ├── available-typed-arrays
-|  |  ├── axios
-|  |  ├── babel-plugin-macros
-|  |  ├── balanced-match
-|  |  ├── baseline-browser-mapping
-|  |  ├── brace-expansion
-|  |  ├── browserslist
-|  |  ├── call-bind
-|  |  ├── call-bind-apply-helpers
-|  |  ├── call-bound
-|  |  ├── callsites
-|  |  ├── caniuse-lite
-|  |  ├── chalk
-|  |  ├── color-convert
-|  |  ├── color-name
-|  |  ├── combined-stream
-|  |  ├── concat-map
-|  |  ├── convert-source-map
-|  |  ├── cosmiconfig
-|  |  ├── cross-spawn
-|  |  ├── csstype
-|  |  ├── data-view-buffer
-|  |  ├── data-view-byte-length
-|  |  ├── data-view-byte-offset
-|  |  ├── date-fns
-|  |  ├── debug
-|  |  ├── deep-is
-|  |  ├── define-data-property
-|  |  ├── define-properties
-|  |  ├── delayed-stream
-|  |  ├── detect-libc
-|  |  ├── doctrine
-|  |  ├── dom-helpers
-|  |  ├── dunder-proto
-|  |  ├── electron-to-chromium
-|  |  ├── enhanced-resolve
-|  |  ├── error-ex
-|  |  ├── es-abstract
-|  |  ├── es-define-property
-|  |  ├── es-errors
-|  |  ├── es-iterator-helpers
-|  |  ├── es-object-atoms
-|  |  ├── es-set-tostringtag
-|  |  ├── es-shim-unscopables
-|  |  ├── es-to-primitive
-|  |  ├── esbuild
-|  |  ├── escalade
-|  |  ├── escape-string-regexp
-|  |  ├── eslint
-|  |  ├── eslint-plugin-react
-|  |  ├── eslint-plugin-react-hooks
-|  |  ├── eslint-plugin-react-refresh
-|  |  ├── eslint-scope
-|  |  ├── eslint-visitor-keys
-|  |  ├── espree
-|  |  ├── esquery
-|  |  ├── esrecurse
-|  |  ├── estraverse
-|  |  ├── esutils
-|  |  ├── fast-deep-equal
-|  |  ├── fast-json-stable-stringify
-|  |  ├── fast-levenshtein
-|  |  ├── fastq
-|  |  ├── file-entry-cache
-|  |  ├── find-root
-|  |  ├── find-up
-|  |  ├── flat-cache
-|  |  ├── flatted
-|  |  ├── follow-redirects
-|  |  ├── for-each
-|  |  ├── form-data
-|  |  ├── framer-motion
-|  |  ├── fs.realpath
-|  |  ├── function-bind
-|  |  ├── function.prototype.name
-|  |  ├── functions-have-names
-|  |  ├── generator-function
-|  |  ├── gensync
-|  |  ├── get-intrinsic
-|  |  ├── get-proto
-|  |  ├── get-symbol-description
-|  |  ├── glob
-|  |  ├── glob-parent
-|  |  ├── globals
-|  |  ├── globalthis
-|  |  ├── gopd
-|  |  ├── graceful-fs
-|  |  ├── graphemer
-|  |  ├── has-bigints
-|  |  ├── has-flag
-|  |  ├── has-property-descriptors
-|  |  ├── has-proto
-|  |  ├── has-symbols
-|  |  ├── has-tostringtag
-|  |  ├── hasown
-|  |  ├── hoist-non-react-statics
-|  |  ├── ignore
-|  |  ├── import-fresh
-|  |  ├── imurmurhash
-|  |  ├── inflight
-|  |  ├── inherits
-|  |  ├── internal-slot
-|  |  ├── is-array-buffer
-|  |  ├── is-arrayish
-|  |  ├── is-async-function
-|  |  ├── is-bigint
-|  |  ├── is-boolean-object
-|  |  ├── is-callable
-|  |  ├── is-core-module
-|  |  ├── is-data-view
-|  |  ├── is-date-object
-|  |  ├── is-extglob
-|  |  ├── is-finalizationregistry
-|  |  ├── is-generator-function
-|  |  ├── is-glob
-|  |  ├── is-map
-|  |  ├── is-negative-zero
-|  |  ├── is-number-object
-|  |  ├── is-path-inside
-|  |  ├── is-regex
-|  |  ├── is-set
-|  |  ├── is-shared-array-buffer
-|  |  ├── is-string
-|  |  ├── is-symbol
-|  |  ├── is-typed-array
-|  |  ├── is-weakmap
-|  |  ├── is-weakref
-|  |  ├── is-weakset
-|  |  ├── isarray
-|  |  ├── isexe
-|  |  ├── iterator.prototype
-|  |  ├── jiti
-|  |  ├── js-tokens
-|  |  ├── js-yaml
-|  |  ├── jsesc
-|  |  ├── json-buffer
-|  |  ├── json-parse-even-better-errors
-|  |  ├── json-schema-traverse
-|  |  ├── json-stable-stringify-without-jsonify
-|  |  ├── json5
-|  |  ├── jsx-ast-utils
-|  |  ├── keyv
-|  |  ├── levn
-|  |  ├── lightningcss
-|  |  ├── lightningcss-win32-x64-msvc
-|  |  ├── lines-and-columns
-|  |  ├── locate-path
-|  |  ├── lodash.merge
-|  |  ├── loose-envify
-|  |  ├── lru-cache
-|  |  ├── lucide-react
-|  |  ├── magic-string
-|  |  ├── math-intrinsics
-|  |  ├── memoize-one
-|  |  ├── mime-db
-|  |  ├── mime-types
-|  |  ├── minimatch
-|  |  ├── ms
-|  |  ├── nanoid
-|  |  ├── natural-compare
-|  |  ├── node-exports-info
-|  |  ├── node-releases
-|  |  ├── object-assign
-|  |  ├── object-inspect
-|  |  ├── object-keys
-|  |  ├── object.assign
-|  |  ├── object.entries
-|  |  ├── object.fromentries
-|  |  ├── object.values
-|  |  ├── once
-|  |  ├── optionator
-|  |  ├── own-keys
-|  |  ├── p-limit
-|  |  ├── p-locate
-|  |  ├── parent-module
-|  |  ├── parse-json
-|  |  ├── path-exists
-|  |  ├── path-is-absolute
-|  |  ├── path-key
-|  |  ├── path-parse
-|  |  ├── path-type
-|  |  ├── picocolors
-|  |  ├── possible-typed-array-names
-|  |  ├── postcss
-|  |  ├── prelude-ls
-|  |  ├── prop-types
-|  |  ├── proxy-from-env
-|  |  ├── punycode
-|  |  ├── queue-microtask
-|  |  ├── react
-|  |  ├── react-dom
-|  |  ├── react-is
-|  |  ├── react-refresh
-|  |  ├── react-router
-|  |  ├── react-router-dom
-|  |  ├── react-select
-|  |  ├── react-transition-group
-|  |  ├── reflect.getprototypeof
-|  |  ├── regexp.prototype.flags
-|  |  ├── resolve
-|  |  ├── resolve-from
-|  |  ├── reusify
-|  |  ├── rimraf
-|  |  ├── rollup
-|  |  ├── run-parallel
-|  |  ├── safe-array-concat
-|  |  ├── safe-push-apply
-|  |  ├── safe-regex-test
-|  |  ├── scheduler
-|  |  ├── semver
-|  |  ├── set-function-length
-|  |  ├── set-function-name
-|  |  ├── set-proto
-|  |  ├── shebang-command
-|  |  ├── shebang-regex
-|  |  ├── side-channel
-|  |  ├── side-channel-list
-|  |  ├── side-channel-map
-|  |  ├── side-channel-weakmap
-|  |  ├── source-map
-|  |  ├── source-map-js
-|  |  ├── stop-iteration-iterator
-|  |  ├── string.prototype.matchall
-|  |  ├── string.prototype.repeat
-|  |  ├── string.prototype.trim
-|  |  ├── string.prototype.trimend
-|  |  ├── string.prototype.trimstart
-|  |  ├── strip-ansi
-|  |  ├── strip-json-comments
-|  |  ├── stylis
-|  |  ├── supports-color
-|  |  ├── supports-preserve-symlinks-flag
-|  |  ├── tailwindcss
-|  |  ├── tapable
-|  |  ├── text-table
-|  |  ├── tslib
-|  |  ├── type-check
-|  |  ├── type-fest
-|  |  ├── typed-array-buffer
-|  |  ├── typed-array-byte-length
-|  |  ├── typed-array-byte-offset
-|  |  ├── typed-array-length
-|  |  ├── unbox-primitive
-|  |  ├── update-browserslist-db
-|  |  ├── uri-js
-|  |  ├── use-isomorphic-layout-effect
-|  |  ├── vite
-|  |  ├── which
-|  |  ├── which-boxed-primitive
-|  |  ├── which-builtin-type
-|  |  ├── which-collection
-|  |  ├── which-typed-array
-|  |  ├── word-wrap
-|  |  ├── wrappy
-|  |  ├── yallist
-|  |  ├── yaml
-|  |  └── yocto-queue
-|  ├── package-lock.json
-|  ├── package.json
-|  ├── public
-|  |  ├── favicon.svg
-|  |  └── icons.svg
-|  ├── README.md
-|  ├── src
-|  |  ├── App.css
-|  |  ├── App.jsx
-|  |  ├── assets
-|  |  ├── components
-|  |  ├── contexts
-|  |  ├── index.css
-|  |  ├── main.jsx
-|  |  ├── pages
-|  |  └── utils
-|  └── vite.config.js
-├── crm
-|  ├── app
-|  |  ├── (crm)
-|  |  ├── api
-|  |  ├── favicon.ico
-|  |  ├── fonts
-|  |  ├── globals.css
-|  |  ├── layout.tsx
-|  |  └── page.tsx
-|  ├── babel.config.js
-|  ├── BACKEND_DOCUMENTATION.md
-|  ├── data
-|  |  ├── audit.csv
-|  |  ├── emis.csv
-|  |  ├── leads.csv
-|  |  └── reports-sent-log.json
-|  ├── docs
-|  |  ├── AUDIT_REPORTS.md
-|  |  └── DATA_SYNC.md
-|  ├── HOLYSHEET_SCHEMA.md
-|  ├── lib
-|  |  ├── api-base.ts
-|  |  ├── api-client.ts
-|  |  ├── audit-reports.ts
-|  |  ├── auth.ts
-|  |  ├── csv-store.ts
-|  |  ├── followup-utils.ts
-|  |  ├── format-date.ts
-|  |  ├── holysheet.ts
-|  |  ├── rep-assignment.ts
-|  |  ├── reports
-|  |  ├── schema.ts
-|  |  ├── sync-state.ts
-|  |  ├── users.ts
-|  |  └── validation.ts
-|  ├── middleware.ts
-|  ├── next.config.mjs
-|  ├── node_modules
-|  |  ├── @alloc
-|  |  ├── @babel
-|  |  ├── @emnapi
-|  |  ├── @eslint
-|  |  ├── @eslint-community
-|  |  ├── @humanwhocodes
-|  |  ├── @isaacs
-|  |  ├── @jridgewell
-|  |  ├── @napi-rs
-|  |  ├── @next
-|  |  ├── @nodelib
-|  |  ├── @nolyfill
-|  |  ├── @pkgjs
-|  |  ├── @rtsao
-|  |  ├── @rushstack
-|  |  ├── @swc
-|  |  ├── @tybys
-|  |  ├── @types
-|  |  ├── @typescript-eslint
-|  |  ├── @ungap
-|  |  ├── @unrs
-|  |  ├── acorn
-|  |  ├── acorn-jsx
-|  |  ├── ajv
-|  |  ├── ansi-regex
-|  |  ├── ansi-styles
-|  |  ├── any-promise
-|  |  ├── anymatch
-|  |  ├── arg
-|  |  ├── argparse
-|  |  ├── aria-query
-|  |  ├── array-buffer-byte-length
-|  |  ├── array-includes
-|  |  ├── array.prototype.findlast
-|  |  ├── array.prototype.findlastindex
-|  |  ├── array.prototype.flat
-|  |  ├── array.prototype.flatmap
-|  |  ├── array.prototype.tosorted
-|  |  ├── arraybuffer.prototype.slice
-|  |  ├── ast-types-flow
-|  |  ├── async-function
-|  |  ├── available-typed-arrays
-|  |  ├── axe-core
-|  |  ├── axobject-query
-|  |  ├── balanced-match
-|  |  ├── binary-extensions
-|  |  ├── brace-expansion
-|  |  ├── braces
-|  |  ├── busboy
-|  |  ├── call-bind
-|  |  ├── call-bind-apply-helpers
-|  |  ├── call-bound
-|  |  ├── callsites
-|  |  ├── camelcase-css
-|  |  ├── caniuse-lite
-|  |  ├── chalk
-|  |  ├── chokidar
-|  |  ├── client-only
-|  |  ├── color-convert
-|  |  ├── color-name
-|  |  ├── commander
-|  |  ├── concat-map
-|  |  ├── cross-spawn
-|  |  ├── cssesc
-|  |  ├── csstype
-|  |  ├── damerau-levenshtein
-|  |  ├── data-view-buffer
-|  |  ├── data-view-byte-length
-|  |  ├── data-view-byte-offset
-|  |  ├── debug
-|  |  ├── deep-is
-|  |  ├── define-data-property
-|  |  ├── define-properties
-|  |  ├── didyoumean
-|  |  ├── dlv
-|  |  ├── doctrine
-|  |  ├── dunder-proto
-|  |  ├── eastasianwidth
-|  |  ├── emoji-regex
-|  |  ├── es-abstract
-|  |  ├── es-define-property
-|  |  ├── es-errors
-|  |  ├── es-iterator-helpers
-|  |  ├── es-object-atoms
-|  |  ├── es-set-tostringtag
-|  |  ├── es-shim-unscopables
-|  |  ├── es-to-primitive
-|  |  ├── escape-string-regexp
-|  |  ├── eslint
-|  |  ├── eslint-config-next
-|  |  ├── eslint-import-resolver-node
-|  |  ├── eslint-import-resolver-typescript
-|  |  ├── eslint-module-utils
-|  |  ├── eslint-plugin-import
-|  |  ├── eslint-plugin-jsx-a11y
-|  |  ├── eslint-plugin-react
-|  |  ├── eslint-plugin-react-hooks
-|  |  ├── eslint-scope
-|  |  ├── eslint-visitor-keys
-|  |  ├── espree
-|  |  ├── esquery
-|  |  ├── esrecurse
-|  |  ├── estraverse
-|  |  ├── esutils
-|  |  ├── fast-deep-equal
-|  |  ├── fast-glob
-|  |  ├── fast-json-stable-stringify
-|  |  ├── fast-levenshtein
-|  |  ├── fastq
-|  |  ├── file-entry-cache
-|  |  ├── fill-range
-|  |  ├── find-up
-|  |  ├── flat-cache
-|  |  ├── flatted
-|  |  ├── for-each
-|  |  ├── foreground-child
-|  |  ├── fs.realpath
-|  |  ├── function-bind
-|  |  ├── function.prototype.name
-|  |  ├── functions-have-names
-|  |  ├── generator-function
-|  |  ├── get-intrinsic
-|  |  ├── get-proto
-|  |  ├── get-symbol-description
-|  |  ├── get-tsconfig
-|  |  ├── glob
-|  |  ├── glob-parent
-|  |  ├── globals
-|  |  ├── globalthis
-|  |  ├── gopd
-|  |  ├── graceful-fs
-|  |  ├── graphemer
-|  |  ├── has-bigints
-|  |  ├── has-flag
-|  |  ├── has-property-descriptors
-|  |  ├── has-proto
-|  |  ├── has-symbols
-|  |  ├── has-tostringtag
-|  |  ├── hasown
-|  |  ├── ignore
-|  |  ├── import-fresh
-|  |  ├── imurmurhash
-|  |  ├── inflight
-|  |  ├── inherits
-|  |  ├── internal-slot
-|  |  ├── is-array-buffer
-|  |  ├── is-async-function
-|  |  ├── is-bigint
-|  |  ├── is-binary-path
-|  |  ├── is-boolean-object
-|  |  ├── is-bun-module
-|  |  ├── is-callable
-|  |  ├── is-core-module
-|  |  ├── is-data-view
-|  |  ├── is-date-object
-|  |  ├── is-extglob
-|  |  ├── is-finalizationregistry
-|  |  ├── is-fullwidth-code-point
-|  |  ├── is-generator-function
-|  |  ├── is-glob
-|  |  ├── is-map
-|  |  ├── is-negative-zero
-|  |  ├── is-number
-|  |  ├── is-number-object
-|  |  ├── is-path-inside
-|  |  ├── is-regex
-|  |  ├── is-set
-|  |  ├── is-shared-array-buffer
-|  |  ├── is-string
-|  |  ├── is-symbol
-|  |  ├── is-typed-array
-|  |  ├── is-weakmap
-|  |  ├── is-weakref
-|  |  ├── is-weakset
-|  |  ├── isarray
-|  |  ├── isexe
-|  |  ├── iterator.prototype
-|  |  ├── jackspeak
-|  |  ├── jiti
-|  |  ├── js-tokens
-|  |  ├── js-yaml
-|  |  ├── json-buffer
-|  |  ├── json-schema-traverse
-|  |  ├── json-stable-stringify-without-jsonify
-|  |  ├── json5
-|  |  ├── jsx-ast-utils
-|  |  ├── keyv
-|  |  ├── language-subtag-registry
-|  |  ├── language-tags
-|  |  ├── levn
-|  |  ├── lilconfig
-|  |  ├── lines-and-columns
-|  |  ├── locate-path
-|  |  ├── lodash.merge
-|  |  ├── loose-envify
-|  |  ├── lru-cache
-|  |  ├── math-intrinsics
-|  |  ├── merge2
-|  |  ├── micromatch
-|  |  ├── minimatch
-|  |  ├── minimist
-|  |  ├── minipass
-|  |  ├── ms
-|  |  ├── mz
-|  |  ├── nanoid
-|  |  ├── napi-postinstall
-|  |  ├── natural-compare
-|  |  ├── next
-|  |  ├── node-exports-info
-|  |  ├── nodemailer
-|  |  ├── normalize-path
-|  |  ├── object-assign
-|  |  ├── object-hash
-|  |  ├── object-inspect
-|  |  ├── object-keys
-|  |  ├── object.assign
-|  |  ├── object.entries
-|  |  ├── object.fromentries
-|  |  ├── object.groupby
-|  |  ├── object.values
-|  |  ├── once
-|  |  ├── optionator
-|  |  ├── own-keys
-|  |  ├── p-limit
-|  |  ├── p-locate
-|  |  ├── parent-module
-|  |  ├── path-exists
-|  |  ├── path-is-absolute
-|  |  ├── path-key
-|  |  ├── path-parse
-|  |  ├── path-scurry
-|  |  ├── picocolors
-|  |  ├── picomatch
-|  |  ├── pify
-|  |  ├── pirates
-|  |  ├── possible-typed-array-names
-|  |  ├── postcss
-|  |  ├── postcss-import
-|  |  ├── postcss-js
-|  |  ├── postcss-load-config
-|  |  ├── postcss-nested
-|  |  ├── postcss-selector-parser
-|  |  ├── postcss-value-parser
-|  |  ├── prelude-ls
-|  |  ├── prop-types
-|  |  ├── punycode
-|  |  ├── queue-microtask
-|  |  ├── react
-|  |  ├── react-dom
-|  |  ├── react-is
-|  |  ├── read-cache
-|  |  ├── readdirp
-|  |  ├── reflect.getprototypeof
-|  |  ├── regexp.prototype.flags
-|  |  ├── resolve
-|  |  ├── resolve-from
-|  |  ├── resolve-pkg-maps
-|  |  ├── reusify
-|  |  ├── rimraf
-|  |  ├── run-parallel
-|  |  ├── safe-array-concat
-|  |  ├── safe-push-apply
-|  |  ├── safe-regex-test
-|  |  ├── scheduler
-|  |  ├── semver
-|  |  ├── set-function-length
-|  |  ├── set-function-name
-|  |  ├── set-proto
-|  |  ├── shebang-command
-|  |  ├── shebang-regex
-|  |  ├── side-channel
-|  |  ├── side-channel-list
-|  |  ├── side-channel-map
-|  |  ├── side-channel-weakmap
-|  |  ├── signal-exit
-|  |  ├── source-map-js
-|  |  ├── stable-hash
-|  |  ├── stop-iteration-iterator
-|  |  ├── streamsearch
-|  |  ├── string-width
-|  |  ├── string-width-cjs
-|  |  ├── string.prototype.includes
-|  |  ├── string.prototype.matchall
-|  |  ├── string.prototype.repeat
-|  |  ├── string.prototype.trim
-|  |  ├── string.prototype.trimend
-|  |  ├── string.prototype.trimstart
-|  |  ├── strip-ansi
-|  |  ├── strip-ansi-cjs
-|  |  ├── strip-bom
-|  |  ├── strip-json-comments
-|  |  ├── styled-jsx
-|  |  ├── sucrase
-|  |  ├── supports-color
-|  |  ├── supports-preserve-symlinks-flag
-|  |  ├── tailwindcss
-|  |  ├── text-table
-|  |  ├── thenify
-|  |  ├── thenify-all
-|  |  ├── tinyglobby
-|  |  ├── to-regex-range
-|  |  ├── ts-api-utils
-|  |  ├── ts-interface-checker
-|  |  ├── tsconfig-paths
-|  |  ├── tslib
-|  |  ├── type-check
-|  |  ├── type-fest
-|  |  ├── typed-array-buffer
-|  |  ├── typed-array-byte-length
-|  |  ├── typed-array-byte-offset
-|  |  ├── typed-array-length
-|  |  ├── typescript
-|  |  ├── unbox-primitive
-|  |  ├── undici-types
-|  |  ├── unrs-resolver
-|  |  ├── uri-js
-|  |  ├── util-deprecate
-|  |  ├── which
-|  |  ├── which-boxed-primitive
-|  |  ├── which-builtin-type
-|  |  ├── which-collection
-|  |  ├── which-typed-array
-|  |  ├── word-wrap
-|  |  ├── wrap-ansi
-|  |  ├── wrap-ansi-cjs
-|  |  ├── wrappy
-|  |  └── yocto-queue
-|  ├── package-lock.json
-|  ├── package.json
-|  ├── PASSKEYS.md
-|  ├── postcss.config.mjs
-|  ├── README.md
-|  ├── scripts
-|  |  ├── distribute-unassigned-leads.mjs
-|  |  ├── import-leads.mjs
-|  |  ├── normalize-assigned-reps.mjs
-|  |  ├── reassign-other-reps-to-shivam-satyam.mjs
-|  |  ├── seed-leads.mjs
-|  |  ├── seed-local.mjs
-|  |  └── sync-data-from-server.sh
-|  ├── tailwind.config.ts
-|  ├── tsconfig.json
-|  └── types
-|     └── index.ts
-├── PENDING_FEATURES.md
-├── scratch
-|  └── seed_test_users.js
-├── server
-|  ├── controllers
-|  |  ├── authController.js
-|  |  ├── projectController.js
-|  |  ├── taskController.js
-|  |  └── userController.js
-|  ├── index.js
-|  ├── middleware
-|  |  ├── authMiddleware.js
-|  |  ├── lastOnline.js
-|  |  └── loggerMiddleware.js
-|  ├── models
-|  |  ├── Log.js
-|  |  ├── Message.js
-|  |  ├── Phase.js
-|  |  ├── Project.js
-|  |  ├── Task.js
-|  |  ├── TaskList.js
-|  |  └── User.js
-|  ├── node_modules
-|  |  ├── @img
-|  |  ├── @mongodb-js
-|  |  ├── @types
-|  |  ├── accepts
-|  |  ├── anymatch
-|  |  ├── array-flatten
-|  |  ├── balanced-match
-|  |  ├── bcryptjs
-|  |  ├── binary-extensions
-|  |  ├── body-parser
-|  |  ├── brace-expansion
-|  |  ├── braces
-|  |  ├── bson
-|  |  ├── buffer-equal-constant-time
-|  |  ├── bytes
-|  |  ├── call-bind-apply-helpers
-|  |  ├── call-bound
-|  |  ├── chokidar
-|  |  ├── compressible
-|  |  ├── compression
-|  |  ├── concat-map
-|  |  ├── content-disposition
-|  |  ├── content-type
-|  |  ├── cookie
-|  |  ├── cookie-signature
-|  |  ├── cors
-|  |  ├── date-fns
-|  |  ├── debug
-|  |  ├── depd
-|  |  ├── destroy
-|  |  ├── dotenv
-|  |  ├── dunder-proto
-|  |  ├── ecdsa-sig-formatter
-|  |  ├── ee-first
-|  |  ├── encodeurl
-|  |  ├── es-define-property
-|  |  ├── es-errors
-|  |  ├── es-object-atoms
-|  |  ├── escape-html
-|  |  ├── etag
-|  |  ├── express
-|  |  ├── express-rate-limit
-|  |  ├── fill-range
-|  |  ├── finalhandler
-|  |  ├── forwarded
-|  |  ├── fresh
-|  |  ├── function-bind
-|  |  ├── get-intrinsic
-|  |  ├── get-proto
-|  |  ├── glob-parent
-|  |  ├── gopd
-|  |  ├── has-flag
-|  |  ├── has-symbols
-|  |  ├── hasown
-|  |  ├── helmet
-|  |  ├── http-errors
-|  |  ├── iconv-lite
-|  |  ├── ignore-by-default
-|  |  ├── inherits
-|  |  ├── ip-address
-|  |  ├── ipaddr.js
-|  |  ├── is-binary-path
-|  |  ├── is-extglob
-|  |  ├── is-glob
-|  |  ├── is-number
-|  |  ├── jsonwebtoken
-|  |  ├── jwa
-|  |  ├── jws
-|  |  ├── kareem
-|  |  ├── lodash.includes
-|  |  ├── lodash.isboolean
-|  |  ├── lodash.isinteger
-|  |  ├── lodash.isnumber
-|  |  ├── lodash.isplainobject
-|  |  ├── lodash.isstring
-|  |  ├── lodash.once
-|  |  ├── math-intrinsics
-|  |  ├── media-typer
-|  |  ├── memory-pager
-|  |  ├── merge-descriptors
-|  |  ├── methods
-|  |  ├── mime
-|  |  ├── mime-db
-|  |  ├── mime-types
-|  |  ├── minimatch
-|  |  ├── mongodb
-|  |  ├── mongodb-connection-string-url
-|  |  ├── mongoose
-|  |  ├── mpath
-|  |  ├── mquery
-|  |  ├── ms
-|  |  ├── negotiator
-|  |  ├── nodemon
-|  |  ├── normalize-path
-|  |  ├── object-assign
-|  |  ├── object-inspect
-|  |  ├── on-finished
-|  |  ├── on-headers
-|  |  ├── parseurl
-|  |  ├── path-to-regexp
-|  |  ├── picomatch
-|  |  ├── proxy-addr
-|  |  ├── pstree.remy
-|  |  ├── punycode
-|  |  ├── qs
-|  |  ├── range-parser
-|  |  ├── raw-body
-|  |  ├── readdirp
-|  |  ├── safe-buffer
-|  |  ├── safer-buffer
-|  |  ├── semver
-|  |  ├── send
-|  |  ├── serve-static
-|  |  ├── setprototypeof
-|  |  ├── side-channel
-|  |  ├── side-channel-list
-|  |  ├── side-channel-map
-|  |  ├── side-channel-weakmap
-|  |  ├── sift
-|  |  ├── simple-update-notifier
-|  |  ├── smart-buffer
-|  |  ├── socks
-|  |  ├── sparse-bitfield
-|  |  ├── statuses
-|  |  ├── supports-color
-|  |  ├── to-regex-range
-|  |  ├── toidentifier
-|  |  ├── touch
-|  |  ├── tr46
-|  |  ├── type-is
-|  |  ├── undefsafe
-|  |  ├── undici-types
-|  |  ├── unpipe
-|  |  ├── utils-merge
-|  |  ├── vary
-|  |  ├── webidl-conversions
-|  |  └── whatwg-url
-|  ├── package-lock.json
-|  ├── package.json
-|  ├── routes
-|  |  ├── authRoutes.js
-|  |  ├── chatRoutes.js
-|  |  ├── logRoutes.js
-|  |  ├── projectRoutes.js
-|  |  ├── taskRoutes.js
-|  |  └── userRoutes.js
-|  ├── seeder.js
-|  ├── seed_projects.js
-|  ├── seed_test_users.js
-|  └── utils
-|     ├── activityLogger.js
-|     └── rollup.js
-└── STARTUP_GUIDE.md
-
-directory: 781 file: 86
-
+﻿client
+  public
+    favicon.svg
+    hnd-posing.jpeg
+    icons.svg
+  src
+    assets
+      hero.png
+      react.svg
+      vite.svg
+    components
+      crm
+        CRMLeadModal.jsx
+      project
+        ProjectGantt.jsx
+        ProjectKanban.jsx
+        ProjectList.jsx
+        ProjectTeam.jsx
+      ui
+        CKDropdown.jsx
+        index.jsx
+        NexusDropdown.jsx
+        NexusLoader.jsx
+        NexusModal.jsx
+        PageHeader.jsx
+      AdminRoute.jsx
+      CalendarEntryModal.jsx
+      MainLayout.jsx
+      OutletSidebar.jsx
+      PageLoader.jsx
+      ProjectSettingsModal.jsx
+      ProtectedRoute.jsx
+      TaskCreateModal.jsx
+      TaskDetailModal.jsx
+    contexts
+      AuthContext.jsx
+      SidebarContext.jsx
+      ThemeContext.jsx
+    pages
+      AdminLogsPage.jsx
+      AdminPanel.jsx
+      ArtistDetail.jsx
+      ArtistsCollection.jsx
+      AssetsPage.jsx
+      CalendarView.jsx
+      ChatPage.jsx
+      DailyLogPage.jsx
+      Dashboard.jsx
+      FeaturesPage.jsx
+      FollowupsPage.jsx
+      LeadsPage.jsx
+      LoginPage.jsx
+      ProjectCreate.jsx
+      ProjectDetail.jsx
+      ProjectsView.jsx
+      RegisterPage.jsx
+      SettingsPage.jsx
+      TeamView.jsx
+      TodoPage.jsx
+    utils
+      crmUtils.js
+      notifications.js
+    App.css
+    App.jsx
+    index.css
+    main.jsx
+  .gitignore
+  eslint.config.js
+  index.html
+  package-lock.json
+  package.json
+  README.md
+  vercel.json
+  vite.config.js
+server
+  controllers
+    artistController.js
+    assetController.js
+    authController.js
+    crmController.js
+    googleController.js
+    projectController.js
+    syncController.js
+    taskController.js
+    teamController.js
+    userController.js
+  crm
+    data
+      emis.csv
+      leads.csv
+    lib
+      csv-store.js
+      rep-assignment.js
+      schema.js
+  middleware
+    authMiddleware.js
+    lastOnline.js
+    loggerMiddleware.js
+  models
+    Artist.js
+    Asset.js
+    CalendarEvent.js
+    CRMAudit.js
+    CRMImport.js
+    EMI.js
+    Lead.js
+    Log.js
+    Message.js
+    Phase.js
+    Project.js
+    Task.js
+    Team.js
+    User.js
+  routes
+    artistRoutes.js
+    assetRoutes.js
+    authRoutes.js
+    calendarRoutes.js
+    chatRoutes.js
+    crmRoutes.js
+    googleRoutes.js
+    logRoutes.js
+    projectRoutes.js
+    taskRoutes.js
+    teamRoutes.js
+    userRoutes.js
+  scripts
+    importData.js
+    setupGoogle.js
+  uploads
+    1b8394e281cb0d06347ad0286efc6a75
+  utils
+    activityLogger.js
+    avatarGenerator.js
+    googleAuth.js
+    holySheet.js
+    rollup.js
+  .env
+  check_types.js
+  debug_leads.js
+  migrate_reps_temp.js
+  package-lock.json
+  package.json
+  seedArtist.js
+  seeder.js
+  server.js
+  updateAvatars.js
+  update_harshad.js
+.gitignore
+google_service_account.json
+leads_db_import.csv
+README.md
+STARTUP_GUIDE.md

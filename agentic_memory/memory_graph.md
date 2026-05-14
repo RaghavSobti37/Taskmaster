@@ -4,7 +4,7 @@
 - **Frontend**: React 18 (Vite), Tailwind CSS v4, Framer Motion, Lucide Icons
 - **Backend**: Node.js, Express, JWT Authentication
 - **Database**: MongoDB with Mongoose ODM
-- **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset
+- **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset, CalendarEvent
 
 ## Pages (12 total)
 1. Dashboard — Task overview + completion tracking
@@ -33,6 +33,7 @@
 - `/api/chat` — Channel-based messaging
 - `/api/crm` — Lead CRUD, CSV import, batch operations
 - `/api/assets` — Asset CRUD with project linking
+- `/api/calendar` — Persistent event CRUD with visibility controls
 
 ## Key Components
 - `OutletSidebar` — Main navigation sidebar
@@ -42,6 +43,7 @@
 - `ProjectList/Kanban/Gantt` — Project view modes
 - `ProjectTeam` — Team members within a project
 - `CRMLeadModal` — Create/edit CRM lead
+- `CalendarEntryModal` — Create persistent calendar event
 - `CKDropdown` — Custom styled dropdown component
 - `NexusModal` — Reusable confirmation/alert modal
 - `Badge` / `ProgressBar` — UI primitives

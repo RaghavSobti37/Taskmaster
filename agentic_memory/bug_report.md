@@ -14,6 +14,8 @@
 - **API**: Fixed 500 Error in `taskController` (Missing `action` field in Log). [FIXED]
 - **Dashboard**: Task completion "reappearing" bug fixed via async confirmation and rollback. [FIXED]
 - **All Pages**: Replaced `window.alert()` / `window.confirm()` with NexusModal. [FIXED]
+- **Calendar**: Events "disappearing" on refresh bug fixed via MongoDB persistence. [FIXED]
+- **All Pages**: Excessive top padding in `PageHeader` (double padding with `PageContainer`) resolved. [FIXED]
 
 ## UI Migrations
 

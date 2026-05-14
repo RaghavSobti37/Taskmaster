@@ -538,18 +538,14 @@ const AdminPanel = () => {
                         <th className="px-8 py-5">User</th>
                         <th className="px-8 py-5 text-center">Role</th>
                         <th className="px-8 py-5 text-center">Status</th>
-
-                        <th className="px-8 py-5 text-right">Actions</th>
+                        <th className="px-8 py-5 text-right">Teams</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-bg-border)]">
                       {filteredUsers.map((u) => (
                         <tr
                           key={u._id}
-                          onClick={() => {
-                            setActiveTab('logs');
-                            navigate(`/admin-logs?user=${u._id}`);
-                          }}
+                          onClick={() => setSelectedUser(u)}
                           className="hover:bg-blue-500/5 transition-all group cursor-pointer"
                         >
                           <td className="px-5 py-3.5">
@@ -575,16 +571,15 @@ const AdminPanel = () => {
                             <Badge variant={u.online ? 'progress' : 'todo'}>{u.online ? 'ACTIVE' : 'IDLE'}</Badge>
                           </td>
                           <td className="px-5 py-3.5 text-right">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedUser(u);
-                              }}
-                              className="p-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500 hover:text-blue-500 transition-all"
-                              aria-label={`View details for ${u.name}`}
-                            >
-                              <UserCog size={14} />
-                            </button>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {u.teams?.length > 0 ? u.teams.map(t => (
+                                <span key={t} className="px-1.5 py-0.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded text-[7px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] group-hover:border-blue-500/30">
+                                  {t}
+                                </span>
+                              )) : (
+                                <span className="text-[7px] font-bold text-[var(--color-text-muted)] uppercase italic">No Teams</span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

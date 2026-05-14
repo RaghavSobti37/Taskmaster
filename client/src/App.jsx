@@ -16,6 +16,7 @@ import AdminLogsPage from './pages/AdminLogsPage';
 import AssetsPage from './pages/AssetsPage';
 import LeadsPage from './pages/LeadsPage';
 import FollowupsPage from './pages/FollowupsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 import FeaturesPage from './pages/FeaturesPage';
 import TodoPage from './pages/TodoPage';
@@ -55,6 +56,7 @@ function App() {
             <Route path="assets" element={<AssetsPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="followups" element={<FollowupsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
 
 
             <Route path="features" element={<FeaturesPage />} />

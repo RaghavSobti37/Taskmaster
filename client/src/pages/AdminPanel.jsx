@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import {
-  ChevronRight, Lock, LayoutDashboard, Fingerprint, ShieldAlert, ShieldCheck,
+  Fingerprint, ShieldAlert, ShieldCheck,
   Mail as MailIcon, Send, XCircle, Eye, Zap, Play, Settings, Plus, Users, 
   Search, PlusCircle, Database, Phone, UserCheck, TrendingUp, FileBarChart,
   X, Trash2
 } from 'lucide-react';
-import { Badge, NexusModal, ProgressBar, PageHeader, TabSwitcher, PageContainer, Card } from '../components/ui';
+import { Badge, NexusModal, PageHeader, TabSwitcher, PageContainer, Card } from '../components/ui';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import CKDropdown from '../components/ui/CKDropdown';
 import { format } from 'date-fns';
@@ -92,7 +92,7 @@ const UserDetailModal = ({ user, onClose, onRoleChange, onDelete, allTeams, onTe
               <SectionHeader icon={Fingerprint} title="User Details" subtitle="Core info" color="text-blue-500" />
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-4 bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
-                  <Mail size={16} className="text-blue-500" />
+                  <MailIcon size={16} className="text-blue-500" />
                   <span className="text-xs font-black text-[var(--color-text-primary)]">{user.email}</span>
                 </div>
                 <div className="space-y-2 px-1">

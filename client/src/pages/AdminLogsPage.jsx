@@ -159,8 +159,8 @@ const AdminLogsPage = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="Activity Logs"
-        subtitle="View team activity and time logs."
+        title="System Logs"
+        subtitle="View platform activity and system signals."
         icon={ShieldCheck}
         actions={
           <TabSwitcher
@@ -183,18 +183,18 @@ const AdminLogsPage = () => {
       >
         {[
           { label: 'Total Activity', value: logs.length, icon: BarChart3, color: 'text-blue-400', bg: 'bg-blue-500/5' },
-          { label: 'Time Logged', value: formatMins(getDayTotalTime(logs)), icon: Timer, color: 'text-emerald-400', bg: 'bg-emerald-500/5' },
+          { label: 'Time Tracked', value: formatMins(getDayTotalTime(logs)), icon: Timer, color: 'text-emerald-400', bg: 'bg-emerald-500/5' },
           { label: 'Active Users', value: new Set(logs.map(l => l.userId?._id)).size, icon: Users, color: 'text-orange-400', bg: 'bg-orange-500/5' },
           { label: 'Avg. per Day', value: Math.round(logs.length / Math.max(1, days.length)), icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/5' }
         ].map((stat, i) => (
-          <motion.div key={i} variants={itemVariants} className="bg-slate-900 p-4 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden group">
+          <motion.div key={i} variants={itemVariants} className="bg-[var(--color-bg-surface)] p-4 rounded-2xl border border-[var(--color-bg-border)] shadow-2xl relative overflow-hidden group">
             <div className={`absolute top-0 right-0 w-16 h-16 ${stat.bg} blur-2xl rounded-full`} />
             <div className="relative z-10 flex items-center justify-between">
               <div>
                 <p className={`text-[8px] font-black uppercase tracking-[0.2em] ${stat.color}`}>{stat.label}</p>
-                <h3 className="text-xl font-black text-white">{stat.value}</h3>
+                <h3 className="text-xl font-black text-[var(--color-text-primary)]">{stat.value}</h3>
               </div>
-              <div className={`p-2 bg-white/5 rounded-lg border border-white/10 ${stat.color}`}>
+              <div className={`p-2 bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)] ${stat.color}`}>
                 <stat.icon size={16} />
               </div>
             </div>
@@ -215,8 +215,8 @@ const AdminLogsPage = () => {
                     <Activity size={20} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">Activity Overview</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily activity for all team members.</p>
+                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">System Signals</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily platform activity overview.</p>
                   </div>
                 </div>
                 
@@ -293,17 +293,17 @@ const AdminLogsPage = () => {
               exit={{ opacity: 0, x: 20 }}
           >
             <Card className="overflow-hidden min-h-[600px]">
-              <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-slate-900 text-white flex items-center justify-between">
+              <div className="px-8 py-8 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] text-[var(--color-text-primary)] flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setSelectedFeedLogs(null)} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all"><ArrowLeft size={16} /></button>
+                  <button onClick={() => setSelectedFeedLogs(null)} className="p-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl hover:bg-[var(--color-bg-border)] transition-all"><ArrowLeft size={16} /></button>
                   <div>
                     <h3 className="text-lg font-black uppercase italic">{feedTarget?.name}'s Activity</h3>
                     <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{format(new Date(feedTarget?.date), 'MMMM dd, yyyy')}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'manual' ? 'bg-white text-slate-900' : 'bg-white/10'}`}>Manual Logs</button>
-                  <button onClick={() => setActiveTab('api')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'api' ? 'bg-white text-slate-900' : 'bg-white/10'}`}>Auto-Logged</button>
+                  <button onClick={() => setActiveTab('manual')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'manual' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] border border-[var(--color-bg-border)]'}`}>Daily Logs</button>
+                  <button onClick={() => setActiveTab('api')} className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${activeTab === 'api' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] border border-[var(--color-bg-border)]'}`}>System Activity</button>
                 </div>
               </div>
               <div className="p-8 space-y-4">

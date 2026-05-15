@@ -58,6 +58,11 @@ const LeadSchema = new mongoose.Schema({
   timestamps: true // Automatically handles createdAt and updatedAt
 });
 
+// Indexes for common query patterns
+LeadSchema.index({ assignedRepId: 1, leadStatus: 1 });
+LeadSchema.index({ assignedRepId: 1, nextFollowupDate: 1 });
+LeadSchema.index({ createdAt: -1 });
+
 // Index for full-text search across multiple fields
 LeadSchema.index({ name: 'text', email: 'text', phone: 'text', remarks: 'text' });
 

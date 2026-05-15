@@ -1,10 +1,10 @@
 # Taskmaster Memory Graph
 
 ## Architecture
-- **Frontend**: React 18 (Vite), Tailwind CSS v4, Framer Motion, Lucide Icons, **React Query (TanStack)**
+- **Frontend**: React 18 (Vite), Tailwind CSS v4 (Zero-flash theme engine), Framer Motion, Lucide Icons, **React Query (TanStack)**
 - **Backend**: Node.js, Express, JWT Authentication, Compression
 - **Database**: MongoDB with Mongoose ODM (.lean() optimized)
-- **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset, CalendarEvent
+- **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset, CalendarEvent, Notification
 
 ## Data Hooks (React Query)
 - `useTasks` — Managed task fetching with caching
@@ -52,6 +52,8 @@
 - `ProjectTeam` — Team members within a project
 - `CRMLeadModal` — Create/edit CRM lead
 - `CalendarEntryModal` — Create persistent calendar event
-- `CKDropdown` — Custom styled dropdown component
-- `NexusModal` — Reusable confirmation/alert modal
-- `Badge` / `ProgressBar` — UI primitives
+- `CKDropdown` — Custom accessibility-first dropdown with auto-focus search
+- `NexusModal` — High-fidelity reusable modal with backdrop blur
+- `CommandPalette` — Global `Ctrl+K` search and action hub
+- `VelocitySparkline` / `ProgressRing` / `ActivityHeatmap` — High-density analytics primitives
+- `Badge` / `ProgressBar` — Standard UI primitives

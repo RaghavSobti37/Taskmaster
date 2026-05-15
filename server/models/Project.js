@@ -24,5 +24,7 @@ const projectSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 projectSchema.index({ outletId: 1, createdAt: -1 });
+projectSchema.index({ owner: 1 });
+projectSchema.index({ members: 1 });
 
 module.exports = mongoose.model('Project', projectSchema);

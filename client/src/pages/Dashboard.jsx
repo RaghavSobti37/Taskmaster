@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
@@ -12,12 +12,15 @@ import {
   Filter,
   ArrowUpRight,
   RotateCcw,
-  X,
-  Plus
+  Plus,
+  Calendar as CalendarIcon,
+  Globe,
+  Lock
 } from 'lucide-react';
 import axios from 'axios';
 import { Badge, ProgressBar, PageHeader, NexusLoader, Card, PageContainer } from '../components/ui';
 
+import { useQueryClient } from '@tanstack/react-query';
 import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -63,22 +66,57 @@ const Dashboard = () => {
   const { data: logs = [], isLoading: logsLoading } = useLogs(user?._id, 10);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: teamMembers = [] } = useUserDirectory();
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  const [stats, setStats] = useState({ done: 0, progress: 0, todo: 0, review: 0 });
+  const queryClient = useQueryClient();
   const loading = tasksLoading || logsLoading || projectsLoading;
 
   useEffect(() => {
+    const fetchTodayEvents = async () => {
+      try {
+        const [dbRes, holidayRes] = await Promise.all([
+          axios.get('/api/calendar'),
+          axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)
+        ]);
+        
+        const today = new Date();
+        const parseDate = (d) => {
+          if (!d) return null;
+          const [y, m, d_] = d.split('T')[0].split('-').map(Number);
+          return new Date(y, m - 1, d_);
+        };
+
+        const dbEvents = dbRes.data.map(e => ({ ...e, type: 'event', dueDate: e.date }));
+        const holidays = holidayRes.data.map(h => ({ ...h, type: 'holiday', dueDate: h.start.date || h.start.dateTime, title: h.summary }));
+        
+        const combined = [...dbEvents, ...holidays].filter(e => {
+          const d = parseDate(e.dueDate);
+          return d && isSameDay(d, today);
+        });
+
+        setCalendarEvents(combined);
+      } catch (err) {
+        console.error('Dashboard calendar fetch failed:', err);
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchTodayEvents();
+  }, []);
+
+  const stats = useMemo(() => {
     const counts = tasks.reduce((acc, task) => {
       acc[task.status] = (acc[task.status] || 0) + 1;
       return acc;
     }, {});
 
-    setStats({
+    return {
       'done': counts['done'] || 0,
       'in-progress': counts['in-progress'] || 0,
       'todo': counts['todo'] || 0,
       'in-review': counts['in-review'] || 0
-    });
+    };
   }, [tasks]);
 
   const handleCompleteTask = (task) => {
@@ -279,6 +317,43 @@ const Dashboard = () => {
 
         {/* Sidebar Panel - Projects Progress */}
         <div className="space-y-6">
+          {/* Calendar Preview */}
+          <Card className="p-6">
+            <h3 className="font-bold mb-6 flex items-center gap-2">
+              <CalendarIcon size={18} className="text-blue-500" /> Today's Schedule
+            </h3>
+            <div className="space-y-4">
+              {loadingEvents ? (
+                <div className="space-y-3">
+                  <div className="h-10 bg-slate-50 animate-pulse rounded-xl" />
+                  <div className="h-10 bg-slate-50 animate-pulse rounded-xl" />
+                </div>
+              ) : calendarEvents.length === 0 ? (
+                <div className="py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-100">
+                  <p className="text-[10px] font-black uppercase text-slate-300">No events today</p>
+                </div>
+              ) : calendarEvents.map((event, i) => (
+                <div key={i} className={`p-3 rounded-xl border flex items-center gap-3 transition-all hover:border-blue-500/30 cursor-default
+                  ${event.type === 'holiday' ? 'bg-rose-50 border-rose-100' : 'bg-blue-50/50 border-blue-100'}
+                `}>
+                  <div className={`w-1 h-6 rounded-full ${event.type === 'holiday' ? 'bg-rose-400' : 'bg-blue-500'}`} />
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold truncate text-slate-900">{event.title}</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+                      {event.type === 'holiday' ? '🇮🇳 Holiday' : (event.visibility === 'public' ? 'Public Event' : 'Private Event')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => navigate('/calendar')}
+                className="w-full py-2.5 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 rounded-xl border border-slate-100 hover:bg-slate-100 transition-all"
+              >
+                Open Calendar
+              </button>
+            </div>
+          </Card>
+
           <Card className="p-6">
             <h3 className="font-bold mb-6 flex items-center gap-2">
               <Briefcase size={18} className="text-orange-500" /> Project Progress

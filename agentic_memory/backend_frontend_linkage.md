@@ -150,12 +150,15 @@ sequenceDiagram
 
 | Endpoint | Method | Used By | What It Does |
 |---|---|---|---|
-| `/api/assets` | GET | AssetsPage | List all assets |
-| `/api/assets` | POST | AssetsPage | Create a new asset |
-| `/api/assets/:id` | DELETE | AssetsPage | Delete an asset |
-| `/api/calendar` | GET | CalendarView | Fetch public + owned events |
+| `/api/assets` | GET | AssetsPage, ProjectAssets | List assets (optional projectId filter) |
+| `/api/assets` | POST | AssetsPage, ProjectAssets | Create a new asset |
+| `/api/assets/:id` | DELETE | AssetsPage, ProjectAssets | Delete an asset |
+| `/api/calendar` | GET | CalendarView, Dashboard | Fetch public + owned events |
 | `/api/calendar` | POST | CalendarEntryModal | Create persistent event |
 | `/api/calendar/:id` | DELETE | CalendarView | Delete an event |
+| `/api/notifications` | GET | NotificationTray, Sidebar | Fetch recent system notifications |
+| `/api/notifications/read-all` | PATCH | NotificationTray | Mark all notifications as read |
+| `/api/notifications/status-counts` | GET | Sidebar | Get unread counts for all modules |
 
 ---
 

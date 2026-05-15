@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check } from 'lucide-react';
 
-const CKDropdown = ({ 
+const CKDropdown = memo(({ 
   options = [], 
   value, 
   onChange, 
@@ -11,10 +11,13 @@ const CKDropdown = ({
   className = "",
   multi = false,
   disabled = false,
-  rightAction = null
+  rightAction = null,
+  searchable = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -25,6 +28,12 @@ const CKDropdown = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && searchable && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen, searchable]);
 
   const handleSelect = (option) => {
     if (multi) {
@@ -42,6 +51,10 @@ const CKDropdown = ({
     }
   };
 
+  const filteredOptions = options.filter(opt => 
+    opt.label.toLowerCase().includes(search.toLowerCase())
+  );
+
   const selectedLabels = options
     .filter(opt => multi ? (value || []).includes(opt.value) : opt.value === value)
     .map(opt => opt.label);
@@ -50,11 +63,16 @@ const CKDropdown = ({
     ? (multi ? selectedLabels.join(', ') : selectedLabels[0]) 
     : placeholder;
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') setIsOpen(false);
+    if (e.key === 'Tab') setIsOpen(false);
+  };
+
   return (
-    <div className={`space-y-2 relative ${className}`} ref={dropdownRef}>
+    <div className={`space-y-1.5 relative ${className}`} ref={dropdownRef} onKeyDown={handleKeyDown}>
       <div className="flex items-center justify-between px-1">
-        {label && <label className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{label}</label>}
-        {rightAction && <button type="button" onClick={rightAction.onClick} className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest">{rightAction.label}</button>}
+        {label && <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">{label}</label>}
+        {rightAction && <button type="button" onClick={rightAction.onClick} className="text-[9px] font-black text-[var(--color-action-primary)] hover:text-[var(--color-action-hover)] uppercase tracking-widest">{rightAction.label}</button>}
       </div>
       
       <div className="flex gap-2">
@@ -62,16 +80,16 @@ const CKDropdown = ({
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`flex-1 flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl transition-all outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] focus:ring-2 focus:ring-[var(--color-action-primary)]/20'}`}
+          className={`flex-1 flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl transition-all outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] focus:ring-2 focus:ring-[var(--color-action-primary)]/10 shadow-sm active:scale-[0.98]'}`}
         >
-          <span className={`text-sm font-bold truncate ${selectedLabels.length === 0 ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+          <span className={`text-[13px] font-bold truncate ${selectedLabels.length === 0 ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
             {displayText}
           </span>
-          <ChevronDown size={16} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isOpen ? 'rotate-180 text-[var(--color-action-primary)]' : ''}`} />
+          <ChevronDown size={14} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${isOpen ? 'rotate-180 text-[var(--color-action-primary)]' : ''}`} />
         </button>
         {rightAction?.icon && (
-          <div className="w-12 h-12 rounded-2xl bg-blue-500 shadow-lg shadow-blue-500/30 flex items-center justify-center text-white shrink-0">
-             <rightAction.icon size={20} />
+          <div className="w-12 h-12 rounded-2xl bg-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20 flex items-center justify-center text-white shrink-0 active:scale-95 transition-transform">
+             <rightAction.icon size={18} />
           </div>
         )}
       </div>
@@ -79,16 +97,31 @@ const CKDropdown = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-full left-0 right-0 mt-2 z-[200] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl overflow-hidden py-2"
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+            className="absolute top-full left-0 right-0 mt-2 z-[200] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-xl overflow-hidden backdrop-blur-xl"
           >
-            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-              {options.length === 0 ? (
-                <div className="px-4 py-3 text-xs text-[var(--color-text-muted)] italic text-center">No active nodes available</div>
+            {searchable && (
+              <div className="p-2 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Quick search..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none focus:border-[var(--color-action-primary)]/50 transition-all"
+                />
+              </div>
+            )}
+            <div className="max-h-64 overflow-y-auto custom-scrollbar py-1">
+              {filteredOptions.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No matching results</p>
+                </div>
               ) : (
-                options.map((option) => {
+                filteredOptions.map((option) => {
                   const isSelected = multi 
                     ? (value || []).includes(option.value) 
                     : value === option.value;
@@ -98,12 +131,12 @@ const CKDropdown = ({
                       key={option.value}
                       type="button"
                       onClick={() => handleSelect(option)}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-xs font-bold transition-all hover:bg-[var(--color-bg-workspace)] ${isSelected ? 'text-blue-500 bg-blue-500/5' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                      className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold transition-all hover:bg-[var(--color-bg-workspace)] ${isSelected ? 'text-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
                     >
                       {option.label}
                       {isSelected && (
                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                          <Check size={14} className="text-blue-500" />
+                          <Check size={14} className="text-[var(--color-action-primary)]" />
                         </motion.div>
                       )}
                     </button>
@@ -116,6 +149,6 @@ const CKDropdown = ({
       </AnimatePresence>
     </div>
   );
-};
+});
 
 export default CKDropdown;

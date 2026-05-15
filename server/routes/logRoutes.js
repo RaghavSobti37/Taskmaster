@@ -5,13 +5,17 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, async (req, res) => {
   try {
-    const { userId, action, page = 1, limit = 50, startDate, endDate } = req.query;
+    const { userId, action, lastId, limit = 50, startDate, endDate } = req.query;
     const filter = {};
     if (userId && userId !== 'undefined' && userId !== 'null') {
       filter.userId = userId;
     }
     if (action) filter.action = action;
     
+    if (lastId) {
+      filter._id = { $lt: lastId };
+    }
+
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
@@ -19,11 +23,11 @@ router.get('/', protect, async (req, res) => {
     }
     
     const logs = await Log.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .sort({ _id: -1 }) // Sort by ID for stable cursor pagination
       .limit(parseInt(limit))
-      .populate('userId', 'name avatar')
+      .populate({ path: 'userId', select: 'name avatar role' })
       .lean();
+      
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });

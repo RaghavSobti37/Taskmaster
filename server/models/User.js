@@ -2,13 +2,13 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: true, index: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: false }, // Optional — Google OAuth users have no password
   role: { type: String, enum: ['user', 'admin', 'sales'], default: 'user' },
   avatar: { type: String },
   gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
-  phone: { type: String, default: '' },
+  phone: { type: String, default: '', index: true },
   lastOnline: { type: Date, default: Date.now },
   online: { type: Boolean, default: false },
   teams: [{ type: String }],
@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password') || !this.password) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 

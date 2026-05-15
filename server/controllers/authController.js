@@ -14,6 +14,10 @@ const generateToken = (id) => {
   });
 };
 
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim();
+const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim();
+
 exports.register = async (req, res) => {
   try {
     const { name, email, password, gender } = req.body;
@@ -48,14 +52,12 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body; // 'email' field used for any identifier
-    const user = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { phone: email },
-        { name: email }
-      ]
-    });
+    const { email, password } = req.body; 
+    const query = email.includes('@') 
+      ? { email: email.toLowerCase() } 
+      : { $or: [{ phone: email }, { name: email }] };
+
+    const user = await User.findOne(query);
 
     if (user && (await user.comparePassword(password))) {
       res.json({
@@ -76,7 +78,7 @@ exports.login = async (req, res) => {
 exports.googleLogin = async (req, res) => {
   try {
     const { tokenId } = req.body;
-    const ticket = await client.verifyIdToken({
+    const ticket = await oauth2Client.verifyIdToken({
       idToken: tokenId,
       audience: process.env.GOOGLE_CLIENT_ID
     });
@@ -130,19 +132,19 @@ exports.googleAuthRedirect = (req, res) => {
 exports.googleAuthCallback = async (req, res) => {
   try {
     const { code } = req.query;
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
+    const { createOAuth2Client } = require('../utils/googleAuth');
+    const callbackClient = createOAuth2Client();
+    const { tokens } = await callbackClient.getToken(code);
+    callbackClient.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const oauth2 = google.oauth2({ version: 'v2', auth: callbackClient });
     const { data: profile } = await oauth2.userinfo.get();
 
     const email = profile.email;
     const domain = email.split('@')[1];
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-    const ALLOWED_DOMAIN = process.env.ALLOWED_DOMAIN;
 
     if (email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN) {
-      return res.redirect(`http://localhost:5173/login?error=unauthorized_domain`);
+      return res.redirect(`${FRONTEND_URL}/login?error=unauthorized_domain`);
     }
 
     let user = await User.findOne({ email: email.toLowerCase() });
@@ -176,9 +178,9 @@ exports.googleAuthCallback = async (req, res) => {
       avatar: user.avatar
     });
 
-    res.redirect(`http://localhost:5173/auth/google/success?token=${token}&user=${encodeURIComponent(userJson)}`);
+    res.redirect(`${FRONTEND_URL}/auth/google/success?token=${token}&user=${encodeURIComponent(userJson)}`);
   } catch (error) {
     console.error('Google Auth Error:', error);
-    res.redirect(`http://localhost:5173/login?error=auth_failed`);
+    res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
   }
 };

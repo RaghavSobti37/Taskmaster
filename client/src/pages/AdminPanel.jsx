@@ -29,10 +29,15 @@ import {
   Download,
   FileText,
   PlusCircle,
-  Clock,
-  Layers,
-  ChevronRight,
-  Settings
+  Settings,
+  Mail as MailIcon,
+  Server,
+  Zap,
+  BarChart,
+  Eye,
+  MousePointer2,
+  XCircle,
+  Play
 } from 'lucide-react';
 import { Badge, NexusModal, ProgressBar, PageHeader, TabSwitcher, PageContainer, Card } from '../components/ui';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
@@ -216,10 +221,13 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('users');
 
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, importId: null, count: 0, reason: '' });
+  const [mailStats, setMailStats] = useState({ totalCampaigns: 0, totalSent: 0, totalBounced: 0, totalOpened: 0 });
+  const [campaigns, setCampaigns] = useState([]);
+  const [profiles, setProfiles] = useState([]);
 
   const fetchData = async () => {
     try {
-      const [usersRes, logsRes, tasksRes, teamsRes, importsRes, purgeRes, leadsRes, statsRes, summaryRes] = await Promise.all([
+      const [usersRes, logsRes, tasksRes, teamsRes, importsRes, purgeRes, leadsRes, statsRes, summaryRes, mailStatsRes, campaignsRes, profilesRes] = await Promise.all([
         axios.get('/api/users/directory'),
         axios.get('/api/logs'),
         axios.get('/api/tasks'),
@@ -228,8 +236,15 @@ const AdminPanel = () => {
         axios.get('/api/crm/purge-logs'),
         axios.get('/api/crm/leads', { params: { limit: 100 } }),
         axios.get('/api/crm/stats'),
-        axios.get('/api/crm/rep-summary')
+        axios.get('/api/crm/rep-summary'),
+        axios.get('/api/mail/stats'),
+        axios.get('/api/mail/campaigns'),
+        axios.get('/api/mail/profiles')
       ]);
+      
+      setMailStats(mailStatsRes.data);
+      setCampaigns(campaignsRes.data);
+      setProfiles(profilesRes.data);
 
 
       setUsers(usersRes.data.users || []);
@@ -509,6 +524,7 @@ const AdminPanel = () => {
             tabs={[
               { id: 'users', label: 'User Directory' },
               { id: 'crm', label: 'CRM Data' },
+              { id: 'mail', label: 'Email Studio' },
               { id: 'logs', label: 'Activity Logs' }
             ]}
           />
@@ -856,6 +872,13 @@ const AdminPanel = () => {
             </div>
           </section>
         </div>
+      ) : activeTab === 'mail' ? (
+        <EmailMarketingContent 
+          stats={mailStats} 
+          campaigns={campaigns} 
+          profiles={profiles} 
+          onRefresh={fetchData} 
+        />
       ) : activeTab === 'logs' ? (
         <div className="space-y-8">
           <AdminLogsContent />
@@ -908,6 +931,277 @@ const AdminPanel = () => {
         onConfirm={modalConfig.onConfirm}
       />
     </PageContainer>
+  );
+};
+
+const EmailMarketingContent = ({ stats, campaigns, profiles, onRefresh }) => {
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [newProfile, setNewProfile] = useState({ name: '', email: '', smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '' });
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [newCampaign, setNewCampaign] = useState({ title: '', subject: '', content: '', senderProfileId: '' });
+  const [loading, setLoading] = useState(false);
+
+  const handleCreateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/mail/profiles', newProfile);
+      setShowProfileModal(false);
+      onRefresh();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreateCampaign = async (e) => {
+    e.preventDefault();
+    try {
+      // For demo, we'll just use the first 10 leads if none selected
+      const leadsRes = await axios.get('/api/crm/leads', { params: { limit: 10 } });
+      const leadIds = leadsRes.data.leads.map(l => l._id);
+      
+      await axios.post('/api/mail/campaigns', { ...newCampaign, leadIds });
+      setShowCampaignModal(false);
+      onRefresh();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleSend = async (id) => {
+    try {
+      await axios.post(`/api/mail/campaigns/${id}/send`);
+      onRefresh();
+    } catch (err) { console.error(err); }
+  };
+
+  const metrics = [
+    { label: 'Campaigns', value: stats.totalCampaigns, icon: MailIcon, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Total Sent', value: stats.totalSent, icon: Send, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Bounces', value: stats.totalBounced, icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+    { label: 'Opens', value: stats.totalOpened, icon: Eye, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  ];
+
+  return (
+    <div className="space-y-10">
+      {/* Sessy-Style Analytics Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {metrics.map((m, i) => (
+          <Card key={i} className="p-6">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}><m.icon size={20} /></div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{m.label}</p>
+                <h4 className="text-xl font-black">{m.value}</h4>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* AutoMailer-Style Campaign List */}
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="overflow-hidden">
+            <div className="px-8 py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]/50">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500"><Zap size={18} /></div>
+                <h3 className="text-sm font-black uppercase">Active Campaigns</h3>
+              </div>
+              <button 
+                onClick={() => setShowCampaignModal(true)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"
+              >
+                <Plus size={14} /> New Campaign
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/30">
+                  <tr>
+                    <th className="px-8 py-4">Campaign</th>
+                    <th className="px-8 py-4 text-center">Status</th>
+                    <th className="px-8 py-4 text-center">Delivery</th>
+                    <th className="px-8 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {campaigns.length === 0 ? (
+                    <tr><td colSpan="4" className="px-8 py-12 text-center text-xs text-[var(--color-text-muted)] italic">No campaigns created yet.</td></tr>
+                  ) : campaigns.map(c => (
+                    <tr key={c._id} className="hover:bg-blue-500/5 transition-all">
+                      <td className="px-8 py-5">
+                        <p className="text-xs font-black uppercase tracking-tight">{c.title}</p>
+                        <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate max-w-xs">{c.subject}</p>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <Badge variant={c.status === 'Completed' ? 'done' : c.status === 'Sending' ? 'progress' : 'todo'}>
+                          {c.status.toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex gap-2 text-[9px] font-black">
+                            <span className="text-emerald-500">{c.stats.sent} SENT</span>
+                            <span className="text-rose-500">{c.stats.bounced} BOUNCED</span>
+                          </div>
+                          <div className="w-24 h-1 bg-[var(--color-bg-border)] rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-500" 
+                              style={{ width: `${(c.stats.sent / (c.stats.total || 1)) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button 
+                          disabled={c.status === 'Sending' || c.status === 'Completed'}
+                          onClick={() => handleSend(c._id)}
+                          className="p-2.5 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-xl hover:bg-blue-500 hover:text-white transition-all disabled:opacity-30"
+                        >
+                          <Play size={14} fill="currentColor" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+
+        {/* Profiles Sidebar */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-[10px] font-black uppercase tracking-widest">Sender Profiles</h3>
+              <button 
+                onClick={() => setShowProfileModal(true)}
+                className="p-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {profiles.length === 0 ? (
+                <div className="p-4 bg-[var(--color-bg-workspace)] border border-dashed border-[var(--color-bg-border)] rounded-xl text-center">
+                  <p className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase italic">No profiles set up</p>
+                </div>
+              ) : profiles.map(p => (
+                <div key={p._id} className="p-4 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl flex items-center gap-4 group hover:border-blue-500/50 transition-all shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs">
+                    {p.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black uppercase truncate group-hover:text-blue-500 transition-colors">{p.name}</p>
+                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] truncate">{p.email}</p>
+                  </div>
+                  {p.isDefault && (
+                    <div className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[7px] font-black uppercase tracking-widest border border-emerald-500/10">
+                      DEF
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-8 bg-blue-600 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden group">
+            <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+              <Zap size={120} strokeWidth={3} />
+            </div>
+            <h3 className="text-base font-black italic tracking-tight mb-2 uppercase">Pro Insights</h3>
+            <p className="text-[10px] font-medium opacity-80 leading-relaxed mb-6">
+              SES events are tracked in real-time. Bounces are automatically removed from your active leads to maintain deliverability.
+            </p>
+            <button 
+              onClick={() => onRefresh()}
+              className="w-full py-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white hover:text-blue-600 transition-all"
+            >
+              Refresh Engine
+            </button>
+          </Card>
+        </div>
+      </div>
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {showProfileModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-[var(--color-bg-surface)] w-full max-w-md rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black uppercase tracking-tight italic">New Profile</h2>
+                <button onClick={() => setShowProfileModal(false)}><X size={20} /></button>
+              </div>
+              <form onSubmit={handleCreateProfile} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Name</label>
+                    <input required value={newProfile.name} onChange={e => setNewProfile({...newProfile, name: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="E.g. Support Team" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Email</label>
+                    <input required type="email" value={newProfile.email} onChange={e => setNewProfile({...newProfile, email: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="hello@company.com" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">SMTP Host</label>
+                  <input required value={newProfile.smtpHost} onChange={e => setNewProfile({...newProfile, smtpHost: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="email-smtp.us-east-1.amazonaws.com" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Port</label>
+                    <input required type="number" value={newProfile.smtpPort} onChange={e => setNewProfile({...newProfile, smtpPort: parseInt(e.target.value)})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" />
+                  </div>
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">SMTP User</label>
+                    <input required value={newProfile.smtpUser} onChange={e => setNewProfile({...newProfile, smtpUser: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="SMTP Username" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">SMTP Password / App Key</label>
+                  <input required type="password" value={newProfile.smtpPass} onChange={e => setNewProfile({...newProfile, smtpPass: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="••••••••••••••••" />
+                </div>
+                <button type="submit" className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20">Save Profile</button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Campaign Modal */}
+      <AnimatePresence>
+        {showCampaignModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-[var(--color-bg-surface)] w-full max-w-2xl rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black uppercase tracking-tight italic">Create Campaign</h2>
+                <button onClick={() => setShowCampaignModal(false)}><X size={20} /></button>
+              </div>
+              <form onSubmit={handleCreateCampaign} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Campaign Title</label>
+                  <input required value={newCampaign.title} onChange={e => setNewCampaign({...newCampaign, title: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="E.g. Summer Sale 2024" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Sender Profile</label>
+                    <select required value={newCampaign.senderProfileId} onChange={e => setNewCampaign({...newCampaign, senderProfileId: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner">
+                      <option value="">Select profile...</option>
+                      {profiles.map(p => <option key={p._id} value={p._id}>{p.name} ({p.email})</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Email Subject</label>
+                    <input required value={newCampaign.subject} onChange={e => setNewCampaign({...newCampaign, subject: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3.5 text-xs font-bold outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="Don't miss out on this deal!" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] ml-1">Content (HTML)</label>
+                  <textarea required value={newCampaign.content} onChange={e => setNewCampaign({...newCampaign, content: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-4 text-xs font-bold min-h-[150px] outline-none focus:border-blue-500/50 transition-all shadow-inner" placeholder="<h1>Hello!</h1><p>Check out our new products...</p>" />
+                </div>
+                <button type="submit" className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-600 transition-all shadow-xl shadow-blue-500/20">Initialize Sequence</button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

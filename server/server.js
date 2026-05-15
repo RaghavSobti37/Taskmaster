@@ -58,8 +58,9 @@ const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
 console.log(`[SYSTEM] Initializing DB Connection: ${maskedUri}`);
 
 mongoose.connect(dbUri, {
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 60000,
+  heartbeatFrequencyMS: 10000,
 })
   .then(() => console.log('[SUCCESS] MongoDB Connected'))
   .catch(err => {
@@ -99,6 +100,8 @@ app.use('/api/google', googleRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/calendar', require('./routes/calendarRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/mail', require('./routes/mailRoutes'));
+app.use('/api/ses', require('./routes/sesRoutes'));
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 

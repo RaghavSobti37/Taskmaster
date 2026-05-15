@@ -11,12 +11,15 @@ import {
   Calendar,
   Filter,
   ArrowUpRight,
-  Users
+  Users,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import TaskCreateModal from '../components/TaskCreateModal';
 import { Badge, PageHeader, PageContainer, Card, TabSwitcher } from '../components/ui';
+import PlugConnectedIcon from '../components/ui/plug-connected-icon';
 
 const TodoPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -107,6 +110,62 @@ const TodoPage = () => {
           />
         }
       />
+
+      <AnimatePresence>
+        {tasks.some(t => {
+          if (t.status === 'done' || !t.dueDate) return false;
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          return new Date(t.dueDate).setHours(0,0,0,0) === now.getTime();
+        }) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4 text-amber-600 shadow-sm"
+          >
+            <div className="p-2 bg-amber-500 text-white rounded-xl">
+              <PlugConnectedIcon size={18} color="white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-widest">Tasks Due Today</p>
+              <p className="text-[10px] font-medium opacity-80">You have tasks that need to be finished today. Keep the momentum going!</p>
+            </div>
+            <div className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black rounded-lg">
+              {tasks.filter(t => {
+                if (t.status === 'done' || !t.dueDate) return false;
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                return new Date(t.dueDate).setHours(0,0,0,0) === now.getTime();
+              }).length} DUE
+            </div>
+          </motion.div>
+        )}
+
+        {tasks.some(t => {
+          if (t.status === 'done' || !t.dueDate) return false;
+          return new Date(t.dueDate) < new Date();
+        }) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-600 shadow-sm"
+          >
+            <div className="p-2 bg-rose-500 text-white rounded-xl">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-widest text-rose-700">Overdue Tasks</p>
+              <p className="text-[10px] font-medium opacity-80">Some tasks have missed their deadlines. Resolve them immediately!</p>
+            </div>
+            <div className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black rounded-lg">
+              {tasks.filter(t => {
+                if (t.status === 'done' || !t.dueDate) return false;
+                return new Date(t.dueDate) < new Date();
+              }).length} OVERDUE
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div 
         onClick={() => setIsTaskModalOpen(true)}

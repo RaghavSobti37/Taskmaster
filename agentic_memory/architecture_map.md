@@ -18,6 +18,7 @@ graph TD
         CRM_F[CRM]
         TV[Team Directory]
         CV[Calendar]
+        RQ["React Query (Cache Layer)"]
     end
 
     subgraph API ["Backend API (Node/Express)"]
@@ -46,18 +47,8 @@ graph TD
         M_Event[(CalendarEvent)]
     end
 
-    D --> T_API & L_API
-    PL --> P_API
-    PD --> P_API & T_API
-    AP --> U_API & L_API & TM_API & CR_API
-    DL --> L_API & P_API
-    AL --> L_API & U_API
-    CH --> C_API
-    ST --> U_API & A_API
-    CRM_F --> CR_API
-    ASSETS --> AS_API & P_API
-    TV --> U_API & TM_API
-    CV --> CAL_API
+    D & PL & PD & AP & DL & AL & CH & ST & CRM_F & TV & CV --> RQ
+    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & C_API & CR_API & AS_API & CAL_API
 
     T_API --> M_Task
     P_API --> M_Project
@@ -81,16 +72,29 @@ graph TD
     M_Event -- "created by" --> M_User
 ```
 
+## Performance & Caching Architecture
+
+### Caching Layer (React Query)
+The system uses `@tanstack/react-query` to manage server state.
+- **Deduplication**: Multiple components can request the same data (e.g., current user) but only one network request is made.
+- **Caching**: Data is cached for 5 minutes (`staleTime: 5m`). Navigating between pages is instantaneous.
+- **Optimistic Updates**: Changes (like adding a log) appear in the UI immediately while the server syncs in the background.
+
+### Backend Optimization
+- **Lean Queries**: All read-only database fetches use `.lean()`. This bypasses Mongoose hydration, making API responses significantly faster.
+- **Indexing**: Database fields used for filtering (`userId`, `projectId`, `createdAt`) are indexed for O(1) or O(log n) lookup speed.
+- **Compression**: Gzip/Brotli compression is applied to all JSON responses to minimize bandwidth usage.
+
 ## Module Overview
 
 | Module | What It Does | Key Interactions |
 |---|---|---|
-| **Frontend** | Renders the UI, manages local state | Calls API via Axios, animates via Framer Motion |
+| **Frontend** | Renders the UI, manages local state | Uses React Query hooks for optimized data fetching |
 | **Auth** | JWT-based login/register | Protects all `/api/*` routes except login/register |
 | **Tasks** | Create, update, complete tasks | Status transitions trigger progress rollups + auto-logging |
 | **Projects** | Organize work into projects | Contains phases, tasks, members, and teams |
 | **Admin Panel** | Manage users, teams, roles | User directory, team creation, activity feed |
-| **Daily Logs** | Time tracking + work entries | Manual entries + auto-captured task completions |
+| **Daily Logs** | Time tracking + work entries | Managed via optimistic React Query mutations |
 | **Team Chat** | Channel-based messaging | Mentions, file references, task creation from chat |
 | **CRM** | Lead/contact management | CSV import, status tracking, rep assignment |
 | **Assets** | Project resource links | Up to 3 links per asset, project-scoped |

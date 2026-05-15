@@ -174,6 +174,10 @@ const CalendarView = () => {
               const d = parseLocalDate(e.dueDate);
               return d && isSameDay(d, day);
             });
+            const hasPublicEvents = allEvents.some(e => {
+              const d = parseLocalDate(e.dueDate);
+              return d && isSameDay(d, day) && e.visibility === 'public';
+            });
             return (
               <div 
                 key={day.toString()} 
@@ -185,7 +189,7 @@ const CalendarView = () => {
               >
                 {format(day, 'd')}
                 {hasEvents && !isSameDay(day, new Date()) && (
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[var(--color-action-primary)] rounded-full" />
+                  <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${hasPublicEvents ? 'bg-emerald-500' : 'bg-[var(--color-action-primary)]'}`} />
                 )}
               </div>
             );
@@ -332,6 +336,12 @@ const CalendarView = () => {
                    <div className="w-2 h-2 bg-[var(--color-action-primary)] rounded-sm" />
                 </div>
                 <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Personal Events</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative w-4 h-4 rounded border-2 border-emerald-500 flex items-center justify-center transition-all group-hover:scale-110">
+                   <div className="w-2 h-2 bg-emerald-500 rounded-sm" />
+                </div>
+                <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Public Workspace</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group" onClick={() => setShowHolidays(!showHolidays)}>
                 <div className={`relative w-4 h-4 rounded border-2 flex items-center justify-center transition-all group-hover:scale-110 ${showHolidays ? 'border-rose-400 bg-rose-400' : 'border-[var(--color-bg-border)]'}`}>

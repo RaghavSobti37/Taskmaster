@@ -22,7 +22,8 @@ router.get('/', protect, async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .populate('userId', 'name avatar');
+      .populate('userId', 'name avatar')
+      .lean();
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -21,6 +21,8 @@ import { Badge, ProgressBar, PageHeader, NexusLoader, Card, PageContainer } from
 import TaskCreateModal from '../components/TaskCreateModal';
 import { format, isToday } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useTasks, useLogs, useProjects, useUserDirectory } from '../hooks/useTaskmasterQueries';
 
 const StatCard = ({ icon: Icon, label, value, color, delay, isActive, onClick }) => (
   <motion.div
@@ -45,40 +47,25 @@ const StatCard = ({ icon: Icon, label, value, color, delay, isActive, onClick })
   </motion.div>
 );
 
+
+
 const Dashboard = () => {
-  const [stats, setStats] = useState({ done: 0, progress: 0, todo: 0, review: 0 });
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
   const [undoTask, setUndoTask] = useState(null);
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [teamMembers, setTeamMembers] = useState([]);
   const undoTimer = useRef(null);
   const navigate = useNavigate();
 
-  const fetchData = async () => {
-    try {
-      const [tasksRes, logsRes, projectsRes, teamRes] = await Promise.all([
-        axios.get('/api/tasks'),
-        axios.get('/api/logs'),
-        axios.get('/api/projects'),
-        axios.get('/api/users/team')
-      ]);
+  // Optimized Data Fetching with Polling (optional, React Query handles stale/refetch)
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
+  const { data: logs = [], isLoading: logsLoading } = useLogs(user?._id, 10);
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: teamMembers = [] } = useUserDirectory();
 
-      // Filter out tasks that are currently in the optimistic "undo" state
-      setTasks(tasksRes.data);
-      setLogs(logsRes.data);
-      setProjects(projectsRes.data);
-      setTeamMembers(teamRes.data.team || []);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [stats, setStats] = useState({ done: 0, progress: 0, todo: 0, review: 0 });
+  const loading = tasksLoading || logsLoading || projectsLoading;
 
   useEffect(() => {
     const counts = tasks.reduce((acc, task) => {
@@ -94,26 +81,18 @@ const Dashboard = () => {
     });
   }, [tasks]);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // Sync every 10s
-    return () => clearInterval(interval);
-  }, [completingIds]);
-
   const handleCompleteTask = (task) => {
     if (undoTask) {
-      // If another task was being completed, finalize it immediately
       finalizeCompletion(undoTask._id);
     }
 
     setUndoTask(task);
     setCompletingIds(prev => new Set(prev).add(task._id));
-    setTasks(prev => prev.map(t => t._id === task._id ? { ...t, status: 'done' } : t));
-
+    // Note: Local state update for immediate feedback, React Query will refetch on settle
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => {
       finalizeCompletion(task._id);
-    }, 10000); // Set to 10s to match UI bar
+    }, 10000);
   };
 
   const finalizeCompletion = async (taskId) => {
@@ -125,17 +104,14 @@ const Dashboard = () => {
         return next;
       });
       setUndoTask(null);
-      await fetchData();
     } catch (err) {
       console.error('Failed to complete task:', err);
-      // Rollback on failure
       setCompletingIds(prev => {
         const next = new Set(prev);
         next.delete(taskId);
         return next;
       });
       setUndoTask(null);
-      fetchData();
     }
   };
 
@@ -148,7 +124,6 @@ const Dashboard = () => {
       next.delete(restoredTask._id);
       return next;
     });
-    setTasks(prev => prev.map(t => t._id === restoredTask._id ? restoredTask : t));
     setUndoTask(null);
   };
 

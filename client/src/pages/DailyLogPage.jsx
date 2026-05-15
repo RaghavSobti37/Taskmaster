@@ -21,58 +21,37 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, NexusModal, NexusDropdown, PageHeader, Card, PageContainer } from '../components/ui';
+import PlugConnectedIcon from '../components/ui/plug-connected-icon';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+
+import { useLogs, useProjects, useTasks, useUserDirectory, useCreateLog } from '../hooks/useTaskmasterQueries';
 
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const [logs, setLogs] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const initialDate = searchParams.get('date') ? new Date(searchParams.get('date')) : new Date();
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ? new Date(searchParams.get('date')) : new Date());
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timeSpent, setTimeSpent] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [targetUserName, setTargetUserName] = useState(adminViewUserName || '');
-  const [tasks, setTasks] = useState([]);
+
   const targetUserId = adminViewUserId || searchParams.get('user') || user?._id;
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [logsRes, projectsRes, tasksRes] = await Promise.all([
-        axios.get(`/api/logs?userId=${targetUserId}&limit=200`),
-        axios.get('/api/projects'),
-        axios.get('/api/tasks')
-      ]);
-      setLogs(logsRes.data);
-      setProjects(projectsRes.data);
-      setTasks(tasksRes.data.filter(t =>
-        t.assignees?.some(a => (typeof a === 'string' ? a : a._id) === targetUserId)
-      ));
+  // Optimized Data Fetching with Caching
+  const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, 200);
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks(targetUserId);
+  const { data: userDirectory = [] } = useUserDirectory();
 
-      if (targetUserId !== user?._id && !adminViewUserName) {
-        const userRes = await axios.get(`/api/users/directory`);
-        const found = userRes.data.users.find(u => u._id === targetUserId);
-        if (found) setTargetUserName(found.name);
-      }
-    } catch (err) {
-      console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = logsLoading || projectsLoading || tasksLoading;
 
-  useEffect(() => {
-    if (targetUserId) fetchData();
-  }, [targetUserId]);
+  const targetUser = userDirectory.find(u => u._id === targetUserId);
+  const targetUserName = adminViewUserName || targetUser?.name || '';
+
+  const createLogMutation = useCreateLog();
 
   const handleDateChange = (days) => {
     const nextDate = new Date(selectedDate);
@@ -84,32 +63,28 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     if (e) e.preventDefault();
     if (!title.trim()) return;
 
-    setSubmitting(true);
-    try {
-      await axios.post('/api/logs', {
-        action: 'DAILY_LOG',
-        details: {
-          title,
-          message: description,
-          timeSpent,
-          project: projects.find(p => p._id === selectedProject)?.name || 'General'
-        },
-        targetId: selectedProject || null,
-        targetType: selectedProject ? 'Project' : 'System'
-      });
-
-      setTitle('');
-      setDescription('');
-      setTimeSpent('');
-      setSelectedProject('');
-      fetchData();
-      setModalOpen(true);
-    } catch (err) {
-      console.error('Manual log submission error:', err);
-    } finally {
-      setSubmitting(false);
-    }
+    createLogMutation.mutate({
+      action: 'DAILY_LOG',
+      details: {
+        title,
+        message: description,
+        timeSpent,
+        project: projects.find(p => p._id === selectedProject)?.name || 'General'
+      },
+      targetId: selectedProject || null,
+      targetType: selectedProject ? 'Project' : 'System'
+    }, {
+      onSuccess: () => {
+        setTitle('');
+        setDescription('');
+        setTimeSpent('');
+        setSelectedProject('');
+        setModalOpen(true);
+      }
+    });
   };
+
+  const submitting = createLogMutation.isLoading;
 
   const addDummyData = () => {
     setTitle('Automated System Audit');
@@ -218,6 +193,28 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
           </div>
         }
       />
+
+      <AnimatePresence>
+        {isSameDay(selectedDate, new Date()) && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-8 p-6 bg-blue-500/10 border border-blue-500/20 rounded-[2.5rem] flex items-center gap-6 text-blue-600 shadow-xl shadow-blue-500/5 overflow-hidden"
+          >
+            <div className="p-4 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-500/20">
+              <PlugConnectedIcon size={24} color="white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-black uppercase tracking-widest">Active Workspace: Today</h4>
+              <p className="text-xs font-medium opacity-80 mt-1">You are currently logging work for today. All entries will be synchronized in real-time.</p>
+            </div>
+            <div className="hidden md:block px-4 py-2 bg-blue-500/20 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest rounded-xl">
+              Live Sync Active
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats Row: Tactical Summary */}
       <motion.section

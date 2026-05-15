@@ -1,4 +1,4 @@
-﻿client
+client
   public
     favicon.svg
     hnd-posing.jpeg
@@ -36,6 +36,9 @@
       AuthContext.jsx
       SidebarContext.jsx
       ThemeContext.jsx
+    hooks
+      useDebounce.js
+      useTaskmasterQueries.js
     pages
       AdminLogsPage.jsx
       AdminPanel.jsx

@@ -23,7 +23,9 @@ import {
   Zap,
   UserCheck,
   RefreshCw,
-  Bell
+  Bell,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +55,7 @@ const useWindowSize = () => {
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count }) => (
+const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count, todayCount }) => (
   <NavLink
     to={to}
     onClick={onClick}
@@ -64,21 +66,31 @@ const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count })
         : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)]'}
     `}
   >
-    <div className="relative">
+    <div className="relative flex items-center justify-center">
       <Icon size={22} className="shrink-0" />
-      {count > 0 && (
-        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-      )}
+      <AnimatePresence>
+        {count > 0 && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10"
+          />
+        )}
+        {count === 0 && todayCount > 0 && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-[var(--color-bg-surface)] z-10"
+          />
+        )}
+      </AnimatePresence>
     </div>
     <div className="flex-1 flex items-center justify-between min-w-0">
-      <span className={`font-medium whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
+      <span className={`font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
         {label}
       </span>
-      {count > 0 && (!collapsed || isMobile) && (
-        <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-md">
-          {count}
-        </span>
-      )}
     </div>
   </NavLink>
 );
@@ -90,6 +102,13 @@ const OutletSidebar = () => {
   const navigate = useNavigate();
   const { width } = useWindowSize();
   const [notifications, setNotifications] = useState([]);
+  const [statusCounts, setStatusCounts] = useState({
+    tasks: { overdue: 0, today: 0 },
+    followups: { overdue: 0, today: 0 },
+    calendar: { today: 0 },
+    notifications: { unread: 0 }
+  });
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
   const fetchNotifications = async () => {
     try {
@@ -100,11 +119,40 @@ const OutletSidebar = () => {
     }
   };
 
+  const fetchStatusCounts = async () => {
+    try {
+      const res = await axios.get('/api/notifications/status-counts');
+      setStatusCounts(res.data);
+    } catch (err) {
+      console.error('Failed to fetch status counts:', err);
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    fetchStatusCounts();
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchStatusCounts();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   const isMobile = width < 1024;
 
@@ -170,14 +218,37 @@ const OutletSidebar = () => {
           <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={false} isMobile={isMobile} />
           {/* <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} /> */}
           <NavItem to="/assets" icon={Layers} label="Assets" collapsed={false} isMobile={isMobile} />
-          <NavItem to="/calendar" icon={Calendar} label="Calendar" collapsed={false} isMobile={isMobile} />
-          <NavItem to="/todo" icon={ListTodo} label="To-Do List" collapsed={false} isMobile={isMobile} />
+          <NavItem
+            to="/calendar"
+            icon={Calendar}
+            label="Calendar"
+            collapsed={false}
+            isMobile={isMobile}
+            todayCount={statusCounts.calendar?.today}
+          />
+          <NavItem
+            to="/todo"
+            icon={ListTodo}
+            label="To-Do List"
+            collapsed={false}
+            isMobile={isMobile}
+            count={statusCounts.tasks.overdue}
+            todayCount={statusCounts.tasks.today}
+          />
           <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={false} isMobile={isMobile} />
 
           {(user?.role === 'admin' || user?.role === 'sales') && (
             <div className="space-y-1">
               <NavItem to="/leads" icon={Users} label="Leads" collapsed={false} isMobile={isMobile} />
-              <NavItem to="/followups" icon={UserCheck} label="Followups" collapsed={false} isMobile={isMobile} />
+              <NavItem
+                to="/followups"
+                icon={UserCheck}
+                label="Followups"
+                collapsed={false}
+                isMobile={isMobile}
+                count={statusCounts.followups.overdue}
+                todayCount={statusCounts.followups.today}
+              />
             </div>
           )}
 
@@ -186,23 +257,41 @@ const OutletSidebar = () => {
           )}
 
           <div className="pt-4 pb-2">
-            <NavItem 
-              to="/notifications" 
-              icon={Bell} 
-              label="Notifications" 
-              collapsed={!isOpen && !isMobileOpen} 
-              isMobile={isMobile} 
-              count={notifications.filter(n => !n.read).length}
+            <NavItem
+              to="/notifications"
+              icon={Bell}
+              label="Notifications"
+              collapsed={!isOpen && !isMobileOpen}
+              isMobile={isMobile}
+              count={statusCounts.notifications?.unread}
             />
           </div>
         </nav>
 
-        <div className="p-3 border-t border-[var(--color-bg-border)] space-y-1">
+        <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-blue-500/50 transition-all group overflow-hidden"
+          >
+            <div className="flex items-center gap-3">
+              {theme === 'light' ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-blue-400" />}
+              <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-secondary)]">
+                {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+              </span>
+            </div>
+            <div className={`w-8 h-4 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
+              <motion.div
+                animate={{ x: theme === 'light' ? 2 : 18 }}
+                className="absolute top-1 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full"
+              />
+            </div>
+          </button>
+
           <button
             onClick={() => navigate('/settings')}
             className="w-full text-left group"
           >
-            <div className={`px-3 py-3 mb-2 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
+            <div className={`px-3 py-3 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] shrink-0">
                   {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}

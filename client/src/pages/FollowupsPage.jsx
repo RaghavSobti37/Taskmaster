@@ -12,10 +12,13 @@ import {
   Search,
   RefreshCw,
   Database,
-  Edit2
+  Edit2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { NexusLoader, PageHeader, PageContainer, Card, Badge } from '../components/ui';
 import CRMLeadModal from '../components/crm/CRMLeadModal';
+import PlugConnectedIcon from '../components/ui/plug-connected-icon';
 import { getRepName } from '../utils/crmUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -143,6 +146,66 @@ const FollowupsPage = () => {
         subtitle="Manage your scheduled client connections."
         icon={Clock}
       />
+
+      <AnimatePresence>
+        {leads.some(l => {
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          return new Date(l.nextFollowupDate).setHours(0,0,0,0) === now.getTime();
+        }) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4 text-amber-600 shadow-sm"
+          >
+            <div className="p-2 bg-amber-500 text-white rounded-xl">
+              <PlugConnectedIcon size={18} color="white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-widest">Action Required Today</p>
+              <p className="text-[10px] font-medium opacity-80">You have follow-ups scheduled for today. Don't miss out on these leads!</p>
+            </div>
+            <div className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black rounded-lg">
+              {leads.filter(l => {
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                return new Date(l.nextFollowupDate).setHours(0,0,0,0) === now.getTime();
+              }).length} DUE
+            </div>
+          </motion.div>
+        )}
+
+        {leads.some(l => {
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          const fDate = new Date(l.nextFollowupDate);
+          fDate.setHours(0,0,0,0);
+          return fDate < now;
+        }) && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-600 shadow-sm"
+          >
+            <div className="p-2 bg-rose-500 text-white rounded-xl">
+              <AlertTriangle size={18} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-widest text-rose-700">Overdue Follow-ups</p>
+              <p className="text-[10px] font-medium opacity-80">Some follow-ups are past their scheduled date. Resolve them immediately!</p>
+            </div>
+            <div className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black rounded-lg">
+              {leads.filter(l => {
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                const fDate = new Date(l.nextFollowupDate);
+                fDate.setHours(0,0,0,0);
+                return fDate < now;
+              }).length} OVERDUE
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Card className="p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-4">

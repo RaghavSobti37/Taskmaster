@@ -41,7 +41,8 @@ exports.getProjects = async (req, res) => {
       ]
     })
     .populate('members', 'name avatar teams')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
     const Task = require('../models/Task');
     const projectsWithProgress = await Promise.all(projects.map(async (project) => {
@@ -62,7 +63,8 @@ exports.getProjectById = async (req, res) => {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email avatar teams')
       .populate('members', 'name email avatar teams online lastOnline')
-      .populate('memberRoles.user', 'name email avatar');
+      .populate('memberRoles.user', 'name email avatar')
+      .lean();
     
     if (!project) return res.status(404).json({ error: 'Project not found' });
     

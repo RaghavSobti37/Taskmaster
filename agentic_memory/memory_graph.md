@@ -1,10 +1,18 @@
 # Taskmaster Memory Graph
 
 ## Architecture
-- **Frontend**: React 18 (Vite), Tailwind CSS v4, Framer Motion, Lucide Icons
-- **Backend**: Node.js, Express, JWT Authentication
-- **Database**: MongoDB with Mongoose ODM
+- **Frontend**: React 18 (Vite), Tailwind CSS v4, Framer Motion, Lucide Icons, **React Query (TanStack)**
+- **Backend**: Node.js, Express, JWT Authentication, Compression
+- **Database**: MongoDB with Mongoose ODM (.lean() optimized)
 - **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset, CalendarEvent
+
+## Data Hooks (React Query)
+- `useTasks` — Managed task fetching with caching
+- `useLogs` — Managed activity log fetching
+- `useProjects` — Managed project fetching
+- `useUserDirectory` — Centralized user data
+- `useCreateLog` — Optimistic work entry creation
+- `useDebounce` — Input stabilization hook
 
 ## Pages (12 total)
 1. Dashboard — Task overview + completion tracking

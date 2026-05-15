@@ -45,23 +45,36 @@ erDiagram
 
 ## 2. How Frontend Connects to Backend
 
+### Data Fetching Layer (React Query)
+
+The frontend uses a centralized hook system in `client/src/hooks/useTaskmasterQueries.js` powered by `@tanstack/react-query`. This provides:
+1. **Caching**: Data is stored globally for 5 minutes.
+2. **Background Sync**: Data is refetched in the background when the user focuses the window.
+3. **Optimistic Updates**: UI updates immediately on mutations (e.g., adding a log) before the server confirms.
+
 ### Request Flow
 
 ```mermaid
 sequenceDiagram
-    participant UI as Frontend (React)
+    participant UI as Component
+    participant RQ as useQuery / useMutation
     participant AX as Axios + JWT
     participant RT as Express Router
-    participant CT as Controller
+    participant CT as Controller (.lean())
     participant DB as MongoDB
 
-    UI->>AX: axios.get('/api/tasks?projectId=123')
-    AX->>RT: GET /api/tasks (with auth header)
-    RT->>CT: taskController.getTasks(req)
-    CT->>DB: Task.find({ projectId: '123' })
-    DB-->>CT: Return documents
+    UI->>RQ: useTasks(projectId)
+    RQ-->>UI: Return Cached Data (Instant)
+    Note over RQ,AX: If stale, trigger background fetch
+    RQ->>AX: axios.get('/api/tasks')
+    AX->>RT: GET /api/tasks (with auth)
+    RT->>CT: taskController.getTasks
+    CT->>DB: Task.find().lean()
+    DB-->>CT: Plain JS Object
     CT-->>RT: res.json(tasks)
-    RT-->>UI: HTTP 200 (JSON array)
+    RT-->>AX: HTTP 200
+    AX-->>RQ: Updated Data
+    RQ-->>UI: Re-render UI (Smooth)
 ```
 
 ---
@@ -78,21 +91,21 @@ sequenceDiagram
 
 ### Projects
 
-| Endpoint | Method | Used By | What It Does |
+| Endpoint | Method | Hook / Used By | What It Does |
 |---|---|---|---|
-| `/api/projects` | GET | ProjectsView | List all projects |
-| `/api/projects/:id` | GET | ProjectDetail | Get one project's details |
+| `/api/projects` | GET | `useProjects` | List all projects |
+| `/api/projects/:id` | GET | `useProjects` | Get one project's details |
 | `/api/projects` | POST | ProjectCreate | Create a new project |
-| `/api/projects/:id` | PUT | ProjectSettingsModal | Update project name/description |
-| `/api/projects/:id` | DELETE | ProjectsView, ProjectSettingsModal | Delete a project |
+| `/api/projects/:id` | PUT | ProjectSettingsModal | Update project details |
+| `/api/projects/:id` | DELETE | ProjectsView | Delete a project |
 
 ### Tasks
 
-| Endpoint | Method | Used By | What It Does |
+| Endpoint | Method | Hook / Used By | What It Does |
 |---|---|---|---|
-| `/api/tasks` | GET | Dashboard, ProjectDetail | Fetch tasks (filter by project) |
-| `/api/tasks` | POST | TaskCreateModal, ChatPage | Create a new task |
-| `/api/tasks/:id` | PUT | ProjectDetail, TaskDetailModal | Update task status/priority |
+| `/api/tasks` | GET | `useTasks` | Fetch tasks (filter by project) |
+| `/api/tasks` | POST | TaskCreateModal | Create a new task |
+| `/api/tasks/:id` | PUT | `useMutation` | Update task status/priority |
 | `/api/tasks/:id` | DELETE | TaskDetailModal | Delete a task |
 
 ### Users & Teams
@@ -109,10 +122,10 @@ sequenceDiagram
 
 ### Daily Logs
 
-| Endpoint | Method | Used By | What It Does |
+| Endpoint | Method | Hook / Used By | What It Does |
 |---|---|---|---|
-| `/api/logs` | GET | DailyLogPage, AdminLogsPage | Get logs (filter by date/user) |
-| `/api/logs` | POST | DailyLogPage | Create a manual work log entry |
+| `/api/logs` | GET | `useLogs` | Get logs (filter by date/user) |
+| `/api/logs` | POST | `useCreateLog` | Create manual log (Optimistic) |
 | `/api/logs` | DELETE | AdminPanel | Clear all activity logs |
 
 ### Chat
@@ -148,45 +161,36 @@ sequenceDiagram
 
 ## 4. End-to-End Traces
 
-What happens when a user does something, step by step:
+| Action | Frontend Hook | API Call | Optimization | Side Effects |
+|---|---|---|---|---|
+| **Complete a task** | `useMutation` | `PUT /api/tasks/:id` | Background refetch | Auto-logs; project progress rollup |
+| **Log daily work** | `useCreateLog` | `POST /api/logs` | **Optimistic UI** | Immediate UI update, then background sync |
+| **View Dashboard** | `useTasks`, `useLogs` | `GET /api/*` | **Global Cache** | Instant load if data is in cache |
+| **Import Leads** | `useMutation` | `POST /api/crm/upload` | Batch insert | Creates multiple records at once |
 
-| Action | Frontend | API Call | Controller | DB Update | Side Effects |
-|---|---|---|---|---|---|
-| **Complete a task** | Dashboard → "Done" button | `PUT /api/tasks/:id` | `updateTask` | Task.status='done', progress=100 | Auto-logs activity; recalculates project progress |
-| **Create a project** | ProjectCreate → "Create" | `POST /api/projects` | `createProject` | Project.create() | Sets owner, adds members |
-| **Update profile** | Settings → "Save" | `PUT /api/users/profile` | `updateProfile` | User.findByIdAndUpdate | Updates name, phone, avatar |
-| **Register** | RegisterPage → "Sign Up" | `POST /api/auth/register` | `register` | User.create() | Hashes password via pre-save hook |
-| **Toggle role** | AdminPanel → "Toggle Admin" | `PUT /api/users/:id/role` | `updateUserRole` | User.role toggled | Changes access permissions |
-| **Send message** | ChatPage → Send | `POST /api/chat` | `sendMessage` | Message.create() | Broadcasts to channel |
-| **Add team** | AdminPanel → "Add" | `POST /api/teams` | `createTeam` | Team.create() | Available for user assignment |
-| **Log daily work** | DailyLogPage → "Save Entry" | `POST /api/logs` | `createLog` | Log.create() | Tracks time + project |
-| **Import CSV leads** | CRMPage → "Import" | `POST /api/crm/leads/upload` | `uploadLeads` | Lead.insertMany() | Batch creates contacts |
-| **Add asset** | AssetsPage → "Save Asset" | `POST /api/assets` | `createAsset` | Asset.create() | Links to project |
-| **Add event** | Calendar → "Save Event" | `POST /api/calendar` | `createEvent` | CalendarEvent.create() | Sets visibility |
-
-### Example: Completing a Task
+### Example: Optimistic Log Creation
 
 ```mermaid
 graph TD
-    subgraph Frontend
-        A["Dashboard: Click 'Done'"] -->|axios.put| B["/api/tasks/:id"]
+    subgraph UI ["User Interaction"]
+        A["DailyLogPage: Click 'Save'"] --> B["useCreateLog.mutate(newLog)"]
     end
 
-    subgraph Backend
-        B --> C[taskController.updateTask]
-        C --> D{Business Logic}
+    subgraph Cache ["React Query Cache"]
+        B --> C["Update Cache Locally"]
+        C --> D["UI Re-renders Instantly"]
     end
 
-    subgraph Database
-        D -->|Set status='done', progress=100| E[Task]
-        D -->|Recalculate progress| F[Project / Phase]
-        D -->|Create activity record| G[Log]
+    subgraph Network ["Server Sync"]
+        B -->|axios.post| E["/api/logs"]
+        E --> F["Controller: .create()"]
+        F --> G["Invalidate 'logs' Query"]
+        G --> H["Background Refresh"]
     end
 ```
 
-1. User clicks "Done" on a task card in Dashboard
-2. Frontend sends `PUT /api/tasks/TASK_ID` with `{ status: 'done' }`
-3. Express routes to `taskController.updateTask`
-4. Controller sets `progress: 100` and `completedAt: new Date()`
-5. `Task.findByIdAndUpdate` saves to MongoDB
-6. Post-update: project progress recalculated, activity log created
+1. User enters work details and clicks "Save".
+2. `useCreateLog` hook immediately updates the local cache with a temporary ID.
+3. The UI shows the new entry **before** the network request starts.
+4. Axios sends the POST request to the backend.
+5. On success, React Query invalidates the 'logs' key, ensuring the data is perfectly synced with the database.

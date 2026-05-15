@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const nodemailer = require('nodemailer');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
+const Task = require('../models/Task');
 const Notification = require('../models/Notification');
 const { parse, addMinutes, isBefore, isAfter, format } = require('date-fns');
 
@@ -77,11 +78,72 @@ const checkFollowups = async () => {
   }
 };
 
+const checkOverdue = async () => {
+  try {
+    const now = new Date();
+
+    // 1. Check for Overdue Tasks
+    const overdueTasks = await Task.find({
+      status: { $ne: 'done' },
+      dueDate: { $lt: now },
+      notifiedOverdue: false
+    }).populate('assignees');
+
+    for (const task of overdueTasks) {
+      for (const assignee of task.assignees) {
+        await Notification.create({
+          recipient: assignee._id,
+          title: 'Overdue Task Alert',
+          message: `Task "${task.title}" is overdue. Please resolve it as soon as possible.`,
+          type: 'alert'
+        });
+      }
+      task.notifiedOverdue = true;
+      await task.save();
+    }
+
+    // 2. Check for Overdue Followups (Leads)
+    const overdueLeads = await Lead.find({
+      leadStatus: { $ne: 'Converted' },
+      nextFollowupDate: { $exists: true, $ne: '' },
+      notifiedOverdue: false
+    }).populate('assignedRepId');
+
+    for (const lead of overdueLeads) {
+      try {
+        const followupDate = new Date(lead.nextFollowupDate);
+        if (isNaN(followupDate.getTime())) continue;
+
+        if (followupDate < now) {
+          const rep = lead.assignedRepId;
+          if (!rep) continue;
+
+          await Notification.create({
+            recipient: rep._id,
+            title: 'Overdue Follow-up Alert',
+            message: `Follow-up with ${lead.name} is overdue. Scheduled date was ${lead.nextFollowupDate}.`,
+            relatedLeadId: lead._id,
+            type: 'alert'
+          });
+
+          lead.notifiedOverdue = true;
+          await lead.save();
+        }
+      } catch (err) {
+        console.error(`Error processing overdue lead ${lead._id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('Error in checkOverdue:', err);
+  }
+};
+
 // Run every minute
 const init = () => {
   console.log('[SYSTEM] Initializing Reminder Service...');
   cron.schedule('* * * * *', () => {
     checkFollowups();
+    checkOverdue();
   });
 };
 

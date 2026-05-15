@@ -316,9 +316,18 @@ export default function LeadsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <Badge variant={lead.leadStatus === 'Converted' ? 'done' : lead.leadStatus === 'Followup' ? 'progress' : 'todo'}>
-                        {lead.leadStatus.toUpperCase()}
-                      </Badge>
+                      {lead.leadStatus === 'Followup' ? (
+                        <div className="flex flex-col items-center">
+                          <Badge variant="progress" className="w-8 h-8 !rounded-xl flex flex-col items-center justify-center gap-0 leading-none p-0">
+                            <span className="text-[8px] opacity-70">F</span>
+                            <span className="text-xs font-black">{lead.leadQuality}</span>
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Badge variant={lead.leadStatus === 'Converted' ? 'done' : 'todo'}>
+                          {lead.leadStatus.toUpperCase()}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">

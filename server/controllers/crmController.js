@@ -73,7 +73,8 @@ exports.getLeads = async (req, res) => {
       .populate('assignedRepId', 'name email avatar')
       .sort({ [sortField]: sortOrder })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     res.json({
       leads,
@@ -164,7 +165,7 @@ exports.updateLead = async (req, res) => {
 
 exports.getEmis = async (req, res) => {
   try {
-    const emis = await EMI.find({ leadId: req.params.leadId }).sort('installmentNo');
+    const emis = await EMI.find({ leadId: req.params.leadId }).sort('installmentNo').lean();
     res.json(emis);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch EMIs' });
@@ -195,7 +196,8 @@ exports.getAuditLogs = async (req, res) => {
   try {
     const logs = await CRMAudit.find({ leadId: req.params.leadId })
       .populate('userId', 'name')
-      .sort('-createdAt');
+      .sort('-createdAt')
+      .lean();
     res.json(logs);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch audit logs' });
@@ -456,22 +458,41 @@ exports.exportLeads = async (req, res) => {
 
 exports.getCRMStats = async (req, res) => {
   try {
-    const [total, connected, meaningful, converted, totalReps] = await Promise.all([
-      Lead.countDocuments({}),
-      Lead.countDocuments({ callStatus: 'Connected' }),
-      Lead.countDocuments({ meaningfulConnect: 'YES' }),
-      Lead.countDocuments({ leadStatus: 'Converted' }),
-      User.countDocuments({ role: 'sales' })
+    const stats = await Lead.aggregate([
+      {
+        $facet: {
+          total: [{ $count: "count" }],
+          connected: [
+            { $match: { callStatus: 'Connected' } },
+            { $count: "count" }
+          ],
+          meaningful: [
+            { $match: { meaningfulConnect: 'YES' } },
+            { $count: "count" }
+          ],
+          converted: [
+            { $match: { leadStatus: 'Converted' } },
+            { $count: "count" }
+          ],
+          totalReps: [
+            { $group: { _id: "$assignedRepId" } },
+            { $match: { _id: { $ne: null } } },
+            { $count: "count" }
+          ]
+        }
+      }
     ]);
 
+    const result = stats[0];
     res.json({
-      total,
-      connected,
-      meaningful,
-      converted,
-      totalReps
+      total: result.total[0]?.count || 0,
+      connected: result.connected[0]?.count || 0,
+      meaningful: result.meaningful[0]?.count || 0,
+      converted: result.converted[0]?.count || 0,
+      totalReps: result.totalReps[0]?.count || 0
     });
   } catch (error) {
+    console.error('CRM Stats Error:', error);
     res.status(500).json({ error: 'Failed to fetch CRM stats' });
   }
 };

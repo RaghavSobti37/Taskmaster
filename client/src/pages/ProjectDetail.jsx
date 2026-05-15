@@ -17,7 +17,7 @@ import {
 import ProjectList from '../components/project/ProjectList';
 import ProjectKanban from '../components/project/ProjectKanban';
 import ProjectTeam from '../components/project/ProjectTeam';
-import ProjectCalendar from '../components/project/ProjectCalendar';
+import ProjectAssets from '../components/project/ProjectAssets';
 import { Badge, ProgressBar, NexusLoader, NexusDropdown, PageHeader, TabSwitcher, PageContainer } from '../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../components/TaskCreateModal';
@@ -107,7 +107,6 @@ const ProjectDetail = () => {
     { id: 'list', icon: List, label: 'List View' },
     { id: 'kanban', icon: Columns, label: 'Kanban Board' },
     { id: 'team', icon: Users, label: 'Project Team' },
-    { id: 'calendar', icon: CalendarIcon, label: 'Calendar' },
     { id: 'assets', icon: Database, label: 'Assets' },
   ];
 
@@ -137,12 +136,12 @@ const ProjectDetail = () => {
   if (!project) return <div>Project not found.</div>;
 
   return (
-    <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-160px)] lg:h-[calc(100vh-120px)] flex flex-col overflow-hidden px-4 md:px-6 lg:px-8">
+    <div className={`h-[calc(100vh-120px)] md:h-[calc(100vh-160px)] lg:h-[calc(100vh-120px)] flex flex-col overflow-hidden ${activeTab === 'kanban' ? 'px-0' : 'px-4 md:px-6 lg:px-8'}`}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="flex-shrink-0 space-y-6 pt-6"
+        className={`flex-shrink-0 space-y-6 pt-6 ${activeTab === 'kanban' ? 'px-4 md:px-6 lg:px-8' : ''}`}
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-6">
@@ -209,11 +208,11 @@ const ProjectDetail = () => {
       />
 
       {/* View Matrix Switcher & Controls */}
-      <div className="flex-shrink-0 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-[var(--color-bg-border)] pb-4 mb-6">
+      <div className={`flex-shrink-0 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-[var(--color-bg-border)] pb-4 mb-6 ${activeTab === 'kanban' ? 'mx-4 md:mx-6 lg:mx-8' : ''}`}>
         <div className="w-full xl:w-auto overflow-x-auto custom-scrollbar-hide -mx-4 px-4 xl:mx-0 xl:px-0">
           <TabSwitcher
             activeTab={activeTab}
-            onChange={(id) => id === 'assets' ? navigate('/assets') : setActiveTab(id)}
+            onChange={setActiveTab}
             tabs={tabs}
             className="bg-transparent border-none shadow-none !p-0 min-w-max"
           />
@@ -272,9 +271,9 @@ const ProjectDetail = () => {
               <ProjectTeam project={project} onRemoveMember={handleRemoveMember} />
             </div>
           )}
-          {activeTab === 'calendar' && (
-            <div className="h-full overflow-hidden">
-              <ProjectCalendar projectId={id} />
+          {activeTab === 'assets' && (
+            <div className="h-full overflow-y-auto custom-scrollbar pr-2 pb-10">
+              <ProjectAssets projectId={id} />
             </div>
           )}
         </div>

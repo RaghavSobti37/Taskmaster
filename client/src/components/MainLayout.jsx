@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationTray from './NotificationTray';
+import CommandPalette from './CommandPalette';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
@@ -34,6 +35,7 @@ const MainLayout = () => {
     <div className="flex min-h-screen bg-[var(--color-bg-workspace)]">
       {/* Sidebar Navigation */}
       <OutletSidebar />
+      <CommandPalette />
 
       {/* Mobile Toggle Button */}
       {!isMobileOpen && (

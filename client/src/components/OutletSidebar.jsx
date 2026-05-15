@@ -29,10 +29,13 @@ import {
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationTray from './NotificationTray';
 import { Menu } from 'lucide-react';
+
+import { useTheme } from '../contexts/ThemeContext';
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -55,10 +58,12 @@ const useWindowSize = () => {
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count, todayCount }) => (
+const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count, todayCount, onMouseEnter, onFocus }) => (
   <NavLink
     to={to}
     onClick={onClick}
+    onMouseEnter={onMouseEnter}
+    onFocus={onFocus}
     className={({ isActive }) => `
       flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
       ${isActive
@@ -95,9 +100,54 @@ const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count, t
   </NavLink>
 );
 
+const ThemeToggle = ({ theme, toggleTheme }) => (
+  <button
+    onClick={toggleTheme}
+    className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-blue-500/50 transition-all group overflow-hidden"
+  >
+    <div className="flex items-center gap-3">
+      <AnimatePresence mode="wait">
+        {theme === 'light' ? (
+          <motion.div
+            key="sun"
+            initial={{ y: 20, opacity: 0, rotate: -90 }}
+            animate={{ y: 0, opacity: 1, rotate: 0 }}
+            exit={{ y: -20, opacity: 0, rotate: 90 }}
+            transition={{ type: 'spring', damping: 15 }}
+          >
+            <Sun size={18} className="text-amber-500" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="moon"
+            initial={{ y: 20, opacity: 0, rotate: -90 }}
+            animate={{ y: 0, opacity: 1, rotate: 0 }}
+            exit={{ y: -20, opacity: 0, rotate: 90 }}
+            transition={{ type: 'spring', damping: 15 }}
+          >
+            <Moon size={18} className="text-blue-400" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-secondary)]">
+        {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+      </span>
+    </div>
+    <div className={`w-8 h-4 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
+      <motion.div
+        animate={{ x: theme === 'light' ? 2 : 18 }}
+        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+        className="absolute top-1 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
+      />
+    </div>
+  </button>
+);
+
 const OutletSidebar = () => {
   const { isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
   const { logout, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
   const { width } = useWindowSize();
@@ -108,7 +158,6 @@ const OutletSidebar = () => {
     calendar: { today: 0 },
     notifications: { unread: 0 }
   });
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
   const fetchNotifications = async () => {
     try {
@@ -137,22 +186,6 @@ const OutletSidebar = () => {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   const isMobile = width < 1024;
 
@@ -214,10 +247,31 @@ const OutletSidebar = () => {
         </div>
 
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
-          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={false} isMobile={isMobile} />
-          <NavItem to="/projects" icon={Briefcase} label="Projects" collapsed={false} isMobile={isMobile} />
+          <NavItem 
+            to="/" 
+            icon={LayoutDashboard} 
+            label="Dashboard" 
+            collapsed={false} 
+            isMobile={isMobile} 
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
+          />
+          <NavItem 
+            to="/projects" 
+            icon={Briefcase} 
+            label="Projects" 
+            collapsed={false} 
+            isMobile={isMobile}
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
+          />
           {/* <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} /> */}
-          <NavItem to="/assets" icon={Layers} label="Assets" collapsed={false} isMobile={isMobile} />
+          <NavItem 
+            to="/assets" 
+            icon={Layers} 
+            label="Assets" 
+            collapsed={false} 
+            isMobile={isMobile} 
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
+          />
           <NavItem
             to="/calendar"
             icon={Calendar}
@@ -225,6 +279,10 @@ const OutletSidebar = () => {
             collapsed={false}
             isMobile={isMobile}
             todayCount={statusCounts.calendar?.today}
+            onMouseEnter={() => {
+              queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
+              queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
+            }}
           />
           <NavItem
             to="/todo"
@@ -234,12 +292,20 @@ const OutletSidebar = () => {
             isMobile={isMobile}
             count={statusCounts.tasks.overdue}
             todayCount={statusCounts.tasks.today}
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['tasks'], queryFn: async () => (await axios.get('/api/tasks')).data })}
           />
           <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={false} isMobile={isMobile} />
 
           {(user?.role === 'admin' || user?.role === 'sales') && (
             <div className="space-y-1">
-              <NavItem to="/leads" icon={Users} label="Leads" collapsed={false} isMobile={isMobile} />
+              <NavItem 
+                to="/leads" 
+                icon={Users} 
+                label="Leads" 
+                collapsed={false} 
+                isMobile={isMobile}
+                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
+              />
               <NavItem
                 to="/followups"
                 icon={UserCheck}
@@ -248,48 +314,34 @@ const OutletSidebar = () => {
                 isMobile={isMobile}
                 count={statusCounts.followups.overdue}
                 todayCount={statusCounts.followups.today}
+                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
               />
             </div>
           )}
 
           {user?.role === 'admin' && (
-            <NavItem to="/admin" icon={ShieldCheck} label="Admin Panel" collapsed={false} isMobile={isMobile} />
+            <NavItem 
+              to="/admin" 
+              icon={ShieldCheck} 
+              label="Admin Panel" 
+              collapsed={false} 
+              isMobile={isMobile} 
+              onMouseEnter={() => {
+                queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+                queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+              }}
+            />
           )}
 
-          <div className="pt-4 pb-2">
-            <NavItem
-              to="/notifications"
-              icon={Bell}
-              label="Notifications"
-              collapsed={!isOpen && !isMobileOpen}
-              isMobile={isMobile}
-              count={statusCounts.notifications?.unread}
-            />
-          </div>
+          {/* Notifications NavItem Removed */}
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-blue-500/50 transition-all group overflow-hidden"
-          >
-            <div className="flex items-center gap-3">
-              {theme === 'light' ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-blue-400" />}
-              <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-secondary)]">
-                {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
-              </span>
-            </div>
-            <div className={`w-8 h-4 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
-              <motion.div
-                animate={{ x: theme === 'light' ? 2 : 18 }}
-                className="absolute top-1 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full"
-              />
-            </div>
-          </button>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
-          <button
+          <div
             onClick={() => navigate('/settings')}
-            className="w-full text-left group"
+            className="w-full text-left group cursor-pointer"
           >
             <div className={`px-3 py-3 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
               <div className="flex items-center gap-3">
@@ -318,7 +370,7 @@ const OutletSidebar = () => {
                 </div>
               </div>
             </div>
-          </button>
+          </div>
           <NavItem to="/settings" icon={Settings} label="Settings" collapsed={!isOpen} isMobile={isMobile} />
           <button
             onClick={logout}

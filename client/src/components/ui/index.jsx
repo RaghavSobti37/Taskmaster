@@ -53,7 +53,7 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
         onClick={() => onChange(tab.id)}
         className={`px-5 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all rounded-lg whitespace-nowrap ${
           activeTab === tab.id
-            ? 'bg-white text-[var(--color-action-primary)] shadow-sm border border-[var(--color-bg-border)]'
+            ? 'bg-[var(--color-bg-surface)] text-[var(--color-action-primary)] shadow-sm border border-[var(--color-bg-border)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
         }`}
       >
@@ -91,15 +91,15 @@ export const Badge = ({ children, variant = 'todo' }) => {
   const v = variantMap[variant] || variant;
 
   const colors = {
-    todo: 'bg-gray-100 text-gray-700',
-    progress: 'bg-blue-100 text-blue-700',
-    review: 'bg-orange-100 text-orange-700',
-    done: 'bg-green-100 text-green-700',
-    critical: 'bg-red-100 text-red-700'
+    todo: 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border border-[var(--color-bg-border)]',
+    progress: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
+    review: 'bg-orange-500/10 text-orange-500 border border-orange-500/20',
+    done: 'bg-green-500/10 text-green-500 border border-green-500/20',
+    critical: 'bg-red-500/10 text-red-500 border border-red-500/20'
   };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${colors[v] || colors.todo}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${colors[v] || colors.todo}`}>
       {children}
     </span>
   );
@@ -120,3 +120,6 @@ export { default as NexusDropdown } from './NexusDropdown';
 export { default as PageHeader } from './PageHeader';
 export { NexusModal } from './NexusModal';
 export { default as NexusLoader } from './NexusLoader';
+export { default as VelocitySparkline } from './VelocitySparkline';
+export { default as ProgressRing } from './ProgressRing';
+export { default as ActivityHeatmap } from './ActivityHeatmap';

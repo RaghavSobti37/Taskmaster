@@ -49,7 +49,7 @@ const CalendarView = () => {
       // Deduplicate by _id
       const combined = [...dbEvents, ...googleEvents];
       const uniqueEvents = Array.from(new Map(combined.map(ev => [ev._id, ev])).values());
-      
+
       setCalendarEvents(uniqueEvents);
     } catch (err) {
       console.error('Error fetching calendar events:', err);
@@ -72,7 +72,7 @@ const CalendarView = () => {
         const res = await axios.get(`/api/google/holidays?year=${currentYear}`);
         // Deduplicate holidays by id
         const uniqueHolidays = Array.from(new Map(res.data.map(h => [h.id, h])).values());
-        
+
         setHolidays(uniqueHolidays.map(h => ({
           _id: h.id,
           title: h.summary,
@@ -170,26 +170,33 @@ const CalendarView = () => {
             <div key={d} className="text-center text-[8px] font-black text-[var(--color-text-muted)]">{d}</div>
           ))}
           {days.map(day => {
-            const hasEvents = allEvents.some(e => {
+            const hasHolidays = holidays.some(e => {
               const d = parseLocalDate(e.dueDate);
               return d && isSameDay(d, day);
             });
-            const hasPublicEvents = allEvents.some(e => {
+            const hasEvents = calendarEvents.some(e => {
+              const d = parseLocalDate(e.dueDate);
+              return d && isSameDay(d, day);
+            });
+            const hasPublicEvents = calendarEvents.some(e => {
               const d = parseLocalDate(e.dueDate);
               return d && isSameDay(d, day) && e.visibility === 'public';
             });
             return (
-              <div 
-                key={day.toString()} 
+              <div
+                key={day.toString()}
                 className={`relative text-center py-1.5 text-[9px] font-bold rounded-full transition-all cursor-pointer
                   ${!isSameMonth(day, monthStart) ? 'text-[var(--color-text-muted)] opacity-30' : 'text-[var(--color-text-primary)]'}
                   ${isSameDay(day, new Date()) ? 'bg-[var(--color-action-primary)] text-white' : 'hover:bg-[var(--color-bg-workspace)]'}
                 `}
-                onClick={() => setCurrentMonth(day)}
+                onClick={() => { setCurrentMonth(day); setSelectedDay(day); }}
               >
                 {format(day, 'd')}
-                {hasEvents && !isSameDay(day, new Date()) && (
-                  <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${hasPublicEvents ? 'bg-emerald-500' : 'bg-[var(--color-action-primary)]'}`} />
+                {(hasEvents || hasHolidays) && !isSameDay(day, new Date()) && (
+                  <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+                    {hasHolidays && <div className="w-1 h-1 rounded-full bg-rose-500" />}
+                    {hasEvents && <div className={`w-1 h-1 rounded-full ${hasPublicEvents ? 'bg-emerald-500' : 'bg-[var(--color-action-primary)]'}`} />}
+                  </div>
                 )}
               </div>
             );
@@ -232,8 +239,8 @@ const CalendarView = () => {
               <div className="space-y-2">
                 {dayEvents.map(event => {
                   const isOwner = event.createdBy && (
-                    typeof event.createdBy === 'string' 
-                      ? event.createdBy === user?._id 
+                    typeof event.createdBy === 'string'
+                      ? event.createdBy === user?._id
                       : event.createdBy._id === user?._id
                   );
                   const creatorName = event.createdBy?.name || '';
@@ -250,14 +257,14 @@ const CalendarView = () => {
                       }
                     `}>
                       <div className={`w-1.5 h-6 rounded-full flex-shrink-0
-                        ${event.type === 'holiday' 
-                          ? 'bg-rose-400' 
+                        ${event.type === 'holiday'
+                          ? 'bg-rose-400'
                           : event.type === 'google' ? 'bg-amber-400' : event.visibility === 'public' ? 'bg-emerald-500' : 'bg-blue-500'}
                       `} />
                       <div className="min-w-0 flex-1">
                         <p className={`text-[11px] font-bold truncate
-                          ${event.type === 'holiday' ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--color-text-primary)]'}
-                        `}>{event.title}</p>
+                          ${event.type === 'holiday' ? 'text-rose-950' : 'text-[var(--color-text-primary)]'}
+                        `} style={event.type === 'holiday' ? { color: 'black' } : {}}>{event.title}</p>
                         <div className="flex items-center gap-2">
                           <p className="text-[8px] text-[var(--color-text-muted)] uppercase tracking-widest font-black">
                             {event.type === 'holiday' ? '🇮🇳 Holiday' : (
@@ -273,14 +280,14 @@ const CalendarView = () => {
                       </div>
                       {event.type === 'event' && isOwner && (
                         <div className="flex items-center gap-1">
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleEditEvent(event); }}
                             className="p-1.5 hover:bg-blue-100 rounded-lg text-blue-400 hover:text-blue-600 transition-all"
                             title="Edit event"
                           >
                             <Plus size={12} className="rotate-45" />
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event._id); }}
                             className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 hover:text-red-600 transition-all"
                             title="Delete event"
@@ -327,25 +334,25 @@ const CalendarView = () => {
         {/* Sidebar */}
         <div className="w-full lg:w-72 flex-shrink-0">
           {renderMiniCalendar()}
-          
+
           <div className="bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] p-4">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">My Calendars</h4>
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative w-4 h-4 rounded border-2 border-[var(--color-action-primary)] flex items-center justify-center transition-all group-hover:scale-110">
-                   <div className="w-2 h-2 bg-[var(--color-action-primary)] rounded-sm" />
+                  <div className="w-2 h-2 bg-[var(--color-action-primary)] rounded-sm" />
                 </div>
                 <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Personal Events</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div className="relative w-4 h-4 rounded border-2 border-emerald-500 flex items-center justify-center transition-all group-hover:scale-110">
-                   <div className="w-2 h-2 bg-emerald-500 rounded-sm" />
+                  <div className="w-2 h-2 bg-emerald-500 rounded-sm" />
                 </div>
                 <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Public Workspace</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer group" onClick={() => setShowHolidays(!showHolidays)}>
                 <div className={`relative w-4 h-4 rounded border-2 flex items-center justify-center transition-all group-hover:scale-110 ${showHolidays ? 'border-rose-400 bg-rose-400' : 'border-[var(--color-bg-border)]'}`}>
-                   {showHolidays && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
+                  {showHolidays && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
                 </div>
                 <span className="text-[11px] font-bold text-[var(--color-text-primary)]">Indian Holidays</span>
               </label>
@@ -356,35 +363,35 @@ const CalendarView = () => {
         {/* Main Calendar Area */}
         <div className="flex-1 bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] overflow-hidden flex flex-col shadow-sm">
           <div className="p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between">
-             <div className="flex items-center gap-4">
-               <button 
-                 onClick={() => setCurrentMonth(new Date())}
-                 className="px-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-[var(--color-action-primary)] transition-all"
-               >
-                 Today
-               </button>
-               <div className="flex items-center gap-1">
-                 <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-[var(--color-text-muted)]"><ChevronLeft size={20} /></button>
-                 <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-[var(--color-text-muted)]"><ChevronRight size={20} /></button>
-               </div>
-               <h3 className="text-lg font-black text-[var(--color-text-primary)] ml-2 uppercase tracking-tight">
-                 {format(currentMonth, 'MMMM yyyy')}
-               </h3>
-             </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setCurrentMonth(new Date())}
+                className="px-4 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 hover:border-[var(--color-action-primary)] transition-all"
+              >
+                Today
+              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-slate-900"><ChevronLeft size={20} /></button>
+                <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-[var(--color-bg-workspace)] rounded-xl text-slate-900"><ChevronRight size={20} /></button>
+              </div>
+              <h3 className="text-lg font-black text-slate-900 ml-2 uppercase tracking-tight">
+                {format(currentMonth, 'MMMM yyyy')}
+              </h3>
+            </div>
           </div>
 
           <div className="grid grid-cols-7 border-b border-[var(--color-bg-border)]">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-r border-[var(--color-bg-border)] last:border-r-0 bg-[var(--color-bg-workspace)]/30">
+              <div key={d} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 border-r border-[var(--color-bg-border)] last:border-r-0 bg-[var(--color-bg-workspace)]/30">
                 {d}
               </div>
             ))}
           </div>
 
           <div className="flex-1 grid grid-cols-7 auto-rows-fr h-[700px] overflow-y-auto custom-scrollbar">
-            {eachDayOfInterval({ 
-              start: startOfWeek(startOfMonth(currentMonth)), 
-              end: endOfWeek(endOfMonth(currentMonth)) 
+            {eachDayOfInterval({
+              start: startOfWeek(startOfMonth(currentMonth)),
+              end: endOfWeek(endOfMonth(currentMonth))
             }).map((day, idx) => {
               const isToday = isSameDay(day, new Date());
               const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -394,7 +401,7 @@ const CalendarView = () => {
               });
 
               return (
-                <div 
+                <div
                   key={day.toString()}
                   className={`min-h-[140px] p-2 border-r border-b border-[var(--color-bg-border)] transition-all hover:bg-[var(--color-bg-workspace)]/30 
                     ${!isCurrentMonth ? 'bg-[var(--color-bg-workspace)]/20' : ''}
@@ -403,30 +410,28 @@ const CalendarView = () => {
                 >
                   <div className="flex justify-center mb-3">
                     <span className={`w-8 h-8 flex items-center justify-center text-[11px] font-black rounded-full transition-all relative
-                      ${isToday ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/30' : 
-                        isCurrentMonth ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] opacity-50'}
+                      ${isToday ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/30' :
+                        isCurrentMonth ? 'text-slate-900' : 'text-slate-400 opacity-50'}
                     `}>
                       {format(day, 'd')}
-                      {dayEvents.length > 0 && !isToday && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[var(--color-action-primary)] rounded-full" />
-                      )}
                     </span>
                   </div>
 
                   <div className="space-y-1">
-                    {dayEvents.map(event => (
-                      <div 
+                    {dayEvents.slice(0, 3).map(event => (
+                      <div
                         key={event._id}
                         className={`px-2 py-1 text-[9px] font-bold rounded-md truncate border leading-tight transition-all cursor-pointer hover:shadow-md flex items-center gap-1
-                          ${event.type === 'holiday' 
-                            ? 'bg-rose-100 text-rose-700 border-rose-200' 
+                          ${event.type === 'holiday'
+                            ? 'bg-rose-100 border-rose-200'
                             : event.type === 'google'
-                              ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              ? 'bg-amber-100 border-amber-200'
                               : event.visibility === 'public'
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                                : 'bg-blue-100 text-blue-700 border-blue-200'
+                                ? 'bg-emerald-100 border-emerald-200'
+                                : 'bg-blue-100 border-blue-200'
                           }
                         `}
+                        style={{ color: 'black' }}
                         title={event.title}
                         onClick={() => setSelectedDay(day)}
                       >
@@ -435,6 +440,14 @@ const CalendarView = () => {
                         <span className="truncate">{event.title}</span>
                       </div>
                     ))}
+                    {dayEvents.length > 3 && (
+                      <button
+                        onClick={() => setSelectedDay(day)}
+                        className="w-full py-1 text-[8px] font-black uppercase text-[var(--color-text-muted)] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-md hover:bg-[var(--color-action-primary)] hover:text-white transition-all"
+                      >
+                        + {dayEvents.length - 3} more
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -442,7 +455,7 @@ const CalendarView = () => {
           </div>
         </div>
       </div>
-      
+
       {renderDayDetail()}
     </PageContainer>
   );

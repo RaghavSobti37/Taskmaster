@@ -18,6 +18,7 @@ graph TD
         CRM_F[CRM]
         TV[Team Directory]
         CV[Calendar]
+        CP[Command Palette]
         RQ["React Query (Cache Layer)"]
     end
 
@@ -84,6 +85,14 @@ The system uses `@tanstack/react-query` to manage server state.
 - **Lean Queries**: All read-only database fetches use `.lean()`. This bypasses Mongoose hydration, making API responses significantly faster.
 - **Indexing**: Database fields used for filtering (`userId`, `projectId`, `createdAt`) are indexed for O(1) or O(log n) lookup speed.
 - **Compression**: Gzip/Brotli compression is applied to all JSON responses to minimize bandwidth usage.
+
+### Pro-Max Design System (UI/UX)
+The system implements a high-density "Pro-Max" design standard focusing on efficiency and visual excellence.
+- **Zero-Flash Theme Engine**: Injects a blocking script at the root level to sync theme preferences (localStorage/System) before hydration, preventing FOUC.
+- **Semantic Token System**: All components use a strict mapping of semantic tokens (`bg-primary`, `text-primary`, `border-primary`) rather than hardcoded colors.
+- **Global Command Palette**: A system-wide search and action hub (`Ctrl+K`) for rapid navigation and task execution.
+- **Micro-Animations**: Utilizes `framer-motion` for fluid transitions, spring-physics interactions, and high-performance layout shifts.
+- **High-Density Analytics**: Custom SVG-based components (`VelocitySparkline`, `ProgressRing`, `ActivityHeatmap`) provide at-a-glance performance metrics without bloat.
 
 ## Module Overview
 

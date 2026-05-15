@@ -45,32 +45,71 @@ exports.getProjects = async (req, res) => {
     .lean();
 
     const Task = require('../models/Task');
-    const projectsWithProgress = await Promise.all(projects.map(async (project) => {
-      const totalTasks = await Task.countDocuments({ projectId: project._id });
-      const completedTasks = await Task.countDocuments({ projectId: project._id, status: 'done' });
-      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-      return { ...project._doc, progress, totalTasks, completedTasks };
-    }));
+    
+    // Aggregation for counts is faster than individual countDocuments calls
+    const taskCounts = await Task.aggregate([
+      { $match: { projectId: { $in: projects.map(p => p._id) } } },
+      { $group: {
+        _id: '$projectId',
+        total: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } }
+      }}
+    ]);
+
+    const countMap = taskCounts.reduce((acc, curr) => {
+      acc[curr._id.toString()] = curr;
+      return acc;
+    }, {});
+
+    const projectsWithProgress = projects.map((project) => {
+      const counts = countMap[project._id.toString()] || { total: 0, completed: 0 };
+      const progress = counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0;
+      return { 
+        ...project, 
+        progress, 
+        totalTasks: counts.total, 
+        completedTasks: counts.completed 
+      };
+    });
 
     res.json(projectsWithProgress);
   } catch (error) {
+    console.error('Get Projects Error:', error);
     res.status(500).json({ error: 'Failed to fetch projects' });
   }
 };
 
 exports.getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id)
-      .populate('owner', 'name email avatar teams')
-      .populate('members', 'name email avatar teams online lastOnline')
-      .populate('memberRoles.user', 'name email avatar')
-      .lean();
+    const Phase = require('../models/Phase');
+    const Task = require('../models/Task');
+    const Asset = require('../models/Asset');
+
+    const projectId = req.params.id;
+
+    // Fetch everything in parallel
+    const [project, phases, tasks, assets] = await Promise.all([
+      Project.findById(projectId)
+        .populate('owner', 'name email avatar teams')
+        .populate('members', 'name email avatar teams online lastOnline')
+        .populate('memberRoles.user', 'name email avatar')
+        .lean(),
+      Phase.find({ projectId }).sort({ order: 1 }).lean(),
+      Task.find({ projectId }).lean(),
+      Asset.find({ projectId }).sort({ createdAt: -1 }).lean()
+    ]);
     
     if (!project) return res.status(404).json({ error: 'Project not found' });
     
-    res.json(project);
+    res.json({
+      ...project,
+      phases,
+      tasks,
+      assets
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch project' });
+    console.error('Get Project Detail Error:', error);
+    res.status(500).json({ error: 'Failed to fetch project details' });
   }
 };
 

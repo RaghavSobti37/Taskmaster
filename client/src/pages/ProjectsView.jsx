@@ -5,30 +5,19 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Briefcase, ChevronRight, Search, Tag } from 'lucide-react';
 import { Badge, ProgressBar, PageHeader, PageContainer, Card } from '../components/ui';
 
+import { useProjects } from '../hooks/useTaskmasterQueries';
+
 const ProjectsView = () => {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await axios.get('/api/projects');
-        setProjects(res.data || []);
-      } catch (err) {
-        console.error('Error fetching projects:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProjects();
-  }, []);
+  const { data: projects = [], isLoading: loading } = useProjects();
 
-  const filteredProjects = projects.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.tags?.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredProjects = projects.filter(p => {
+    const nameMatch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const tagMatch = p.tags?.some(t => t?.toLowerCase().includes(searchTerm.toLowerCase()));
+    return nameMatch || tagMatch;
+  });
 
   if (loading) return (
     <div className="space-y-8 px-4 py-8 max-w-7xl mx-auto animate-pulse">

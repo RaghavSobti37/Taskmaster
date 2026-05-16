@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
-import { Badge, PageHeader, PageContainer, Card } from '../components/ui';
+import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
 
 const ProjectCreate = () => {
   const [name, setName] = useState('');

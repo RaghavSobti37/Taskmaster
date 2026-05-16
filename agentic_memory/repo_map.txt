@@ -1,156 +1,182 @@
-client
-  public
-    favicon.svg
-    hnd-posing.jpeg
-    icons.svg
-  src
-    assets
-      hero.png
-      react.svg
-      vite.svg
-    components
-      crm
-        CRMLeadModal.jsx
-      project
-        ProjectGantt.jsx
-        ProjectKanban.jsx
-        ProjectList.jsx
-        ProjectTeam.jsx
-      ui
-        CKDropdown.jsx
-        index.jsx
-        NexusDropdown.jsx
-        NexusLoader.jsx
-        NexusModal.jsx
-        PageHeader.jsx
-      AdminRoute.jsx
-      CalendarEntryModal.jsx
-      MainLayout.jsx
-      OutletSidebar.jsx
-      PageLoader.jsx
-      ProjectSettingsModal.jsx
-      ProtectedRoute.jsx
-      TaskCreateModal.jsx
-      TaskDetailModal.jsx
-    contexts
-      AuthContext.jsx
-      SidebarContext.jsx
-      ThemeContext.jsx
-    hooks
-      useDebounce.js
-      useTaskmasterQueries.js
-    pages
-      AdminLogsPage.jsx
-      AdminPanel.jsx
-      ArtistDetail.jsx
-      ArtistsCollection.jsx
-      AssetsPage.jsx
-      CalendarView.jsx
-      ChatPage.jsx
-      DailyLogPage.jsx
-      Dashboard.jsx
-      FeaturesPage.jsx
-      FollowupsPage.jsx
-      LeadsPage.jsx
-      LoginPage.jsx
-      ProjectCreate.jsx
-      ProjectDetail.jsx
-      ProjectsView.jsx
-      RegisterPage.jsx
-      SettingsPage.jsx
-      TeamView.jsx
-      TodoPage.jsx
-    utils
-      crmUtils.js
-      notifications.js
-    App.css
-    App.jsx
-    index.css
-    main.jsx
-  .gitignore
-  eslint.config.js
-  index.html
-  package-lock.json
-  package.json
-  README.md
-  vercel.json
-  vite.config.js
+Taskmaster Repository Map
+
+client/src
+├── App.css
+├── App.jsx
+├── assets
+│   ├── hero.png
+│   ├── react.svg
+│   └── vite.svg
+├── components
+│   ├── admin
+│   │   └── TscDataContent.jsx
+│   ├── AdminRoute.jsx
+│   ├── CalendarEntryModal.jsx
+│   ├── CommandPalette.jsx
+│   ├── crm
+│   │   └── CRMLeadModal.jsx
+│   ├── MainLayout.jsx
+│   ├── NotificationTray.jsx
+│   ├── OutletSidebar.jsx
+│   ├── PageLoader.jsx
+│   ├── project
+│   │   ├── ProjectAssets.jsx
+│   │   ├── ProjectCalendar.jsx
+│   │   ├── ProjectGantt.jsx
+│   │   ├── ProjectKanban.jsx
+│   │   ├── ProjectList.jsx
+│   │   └── ProjectTeam.jsx
+│   ├── ProjectSettingsModal.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── TaskCreateModal.jsx
+│   ├── TaskDetailModal.jsx
+│   └── ui
+│       ├── ActivityHeatmap.jsx
+│       ├── button.jsx
+│       ├── CKDropdown.jsx
+│       ├── index.jsx
+│       ├── NexusDropdown.jsx
+│       ├── NexusLoader.jsx
+│       ├── NexusModal.jsx
+│       ├── PageHeader.jsx
+│       ├── plug-connected-icon.jsx
+│       ├── ProgressRing.jsx
+│       ├── types.js
+│       └── VelocitySparkline.jsx
+├── contexts
+│   ├── AuthContext.jsx
+│   ├── SidebarContext.jsx
+│   └── ThemeContext.jsx
+├── hooks
+│   ├── useDebounce.js
+│   └── useTaskmasterQueries.js
+├── index.css
+├── lib
+│   └── utils.js
+├── main.jsx
+├── pages
+│   ├── AdminLogsPage.jsx
+│   ├── AdminPanel.jsx
+│   ├── ArtistDetail.jsx
+│   ├── ArtistsCollection.jsx
+│   ├── AssetsPage.jsx
+│   ├── CalendarView.jsx
+│   ├── ChatPage.jsx
+│   ├── DailyLogPage.jsx
+│   ├── Dashboard.jsx
+│   ├── FeaturesPage.jsx
+│   ├── FollowupsPage.jsx
+│   ├── GoogleSuccessPage.jsx
+│   ├── LeadsPage.jsx
+│   ├── LoginPage.jsx
+│   ├── ProjectCreate.jsx
+│   ├── ProjectDetail.jsx
+│   ├── ProjectsView.jsx
+│   ├── RegisterPage.jsx
+│   ├── SettingsPage.jsx
+│   ├── TeamView.jsx
+│   └── TodoPage.jsx
+└── utils
+    ├── crmUtils.js
+    └── notifications.js
+
 server
-  controllers
-    artistController.js
-    assetController.js
-    authController.js
-    crmController.js
-    googleController.js
-    projectController.js
-    syncController.js
-    taskController.js
-    teamController.js
-    userController.js
-  crm
-    data
-      emis.csv
-      leads.csv
-    lib
-      csv-store.js
-      rep-assignment.js
-      schema.js
-  middleware
-    authMiddleware.js
-    lastOnline.js
-    loggerMiddleware.js
-  models
-    Artist.js
-    Asset.js
-    CalendarEvent.js
-    CRMAudit.js
-    CRMImport.js
-    EMI.js
-    Lead.js
-    Log.js
-    Message.js
-    Phase.js
-    Project.js
-    Task.js
-    Team.js
-    User.js
-  routes
-    artistRoutes.js
-    assetRoutes.js
-    authRoutes.js
-    calendarRoutes.js
-    chatRoutes.js
-    crmRoutes.js
-    googleRoutes.js
-    logRoutes.js
-    projectRoutes.js
-    taskRoutes.js
-    teamRoutes.js
-    userRoutes.js
-  scripts
-    importData.js
-    setupGoogle.js
-  uploads
-    1b8394e281cb0d06347ad0286efc6a75
-  utils
-    activityLogger.js
-    avatarGenerator.js
-    googleAuth.js
-    holySheet.js
-    rollup.js
-  .env
-  check_types.js
-  debug_leads.js
-  migrate_reps_temp.js
-  package-lock.json
-  package.json
-  seedArtist.js
-  seeder.js
-  server.js
-  updateAvatars.js
-  update_harshad.js
-.gitignore
-google_service_account.json
-leads_db_import.csv
-README.md
-STARTUP_GUIDE.md
+├── check_types.js
+├── controllers
+│   ├── artistController.js
+│   ├── assetController.js
+│   ├── authController.js
+│   ├── crmController.js
+│   ├── googleController.js
+│   ├── projectController.js
+│   ├── syncController.js
+│   ├── taskController.js
+│   ├── teamController.js
+│   ├── tscController.js
+│   └── userController.js
+├── crm
+│   ├── data
+│   │   ├── emis.csv
+│   │   └── leads.csv
+│   └── lib
+│       ├── csv-store.js
+│       ├── rep-assignment.js
+│       └── schema.js
+├── debug_leads.js
+├── middleware
+│   ├── authMiddleware.js
+│   ├── lastOnline.js
+│   └── loggerMiddleware.js
+├── migrate_reps_temp.js
+├── models
+│   ├── Artist.js
+│   ├── Asset.js
+│   ├── CalendarEvent.js
+│   ├── CRMAudit.js
+│   ├── CRMImport.js
+│   ├── EmailProfile.js
+│   ├── EMI.js
+│   ├── Lead.js
+│   ├── Log.js
+│   ├── MailCampaign.js
+│   ├── MailEvent.js
+│   ├── Message.js
+│   ├── Notification.js
+│   ├── Phase.js
+│   ├── Project.js
+│   ├── Task.js
+│   ├── Team.js
+│   ├── TscData.js
+│   └── User.js
+├── package-lock.json
+├── package.json
+├── routes
+│   ├── artistRoutes.js
+│   ├── assetRoutes.js
+│   ├── authRoutes.js
+│   ├── calendarRoutes.js
+│   ├── chatRoutes.js
+│   ├── crmRoutes.js
+│   ├── googleRoutes.js
+│   ├── logRoutes.js
+│   ├── mailRoutes.js
+│   ├── notificationRoutes.js
+│   ├── projectRoutes.js
+│   ├── sesRoutes.js
+│   ├── taskRoutes.js
+│   ├── teamRoutes.js
+│   ├── tscRoutes.js
+│   └── userRoutes.js
+├── scripts
+│   ├── fix_satyam_and_time.js
+│   ├── importData.js
+│   ├── import_leads.js
+│   ├── map_reps.js
+│   ├── setupGoogle.js
+│   ├── setup_sales_users.js
+│   └── test_email.js
+├── seedArtist.js
+├── seeder.js
+├── server.js
+├── services
+│   ├── mailService.js
+│   └── notificationService.js
+├── updateAvatars.js
+├── update_harshad.js
+├── uploads
+│   └── 1b8394e281cb0d06347ad0286efc6a75
+└── utils
+    ├── activityLogger.js
+    ├── avatarGenerator.js
+    ├── googleAuth.js
+    ├── holySheet.js
+    └── rollup.js
+
+agentic_memory
+├── architecture_map.md
+├── backend_frontend_linkage.md
+├── bug_report.md
+├── features_page.md
+├── memory_graph.md
+└── repo_map.txt
+

@@ -18,27 +18,23 @@ export const NexusModal = ({
   const typeConfig = {
     info: {
       icon: Info,
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/20'
+      color: 'var(--color-pastel-slate-text)',
+      bg: 'var(--color-pastel-slate-bg)',
     },
     success: {
       icon: CheckCircle2,
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/20'
+      color: 'var(--color-pastel-mint-text)',
+      bg: 'var(--color-pastel-mint-bg)',
     },
     warning: {
       icon: AlertTriangle,
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/20'
+      color: 'var(--color-pastel-apricot-text)',
+      bg: 'var(--color-pastel-apricot-bg)',
     },
     danger: {
       icon: Trash2,
-      color: 'text-rose-500',
-      bg: 'bg-rose-500/10',
-      border: 'border-rose-500/20'
+      color: 'var(--color-pastel-rose-text)',
+      bg: 'var(--color-pastel-rose-bg)',
     }
   };
 
@@ -48,79 +44,71 @@ export const NexusModal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 isolate">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
           />
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="relative bg-[var(--color-bg-surface)] w-full max-w-md rounded-[2.5rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden p-8 dark:shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative bg-[var(--color-bg-primary)] w-full max-w-sm rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
           >
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className={`p-5 rounded-[1.5rem] ${config.bg} ${config.color} border ${config.border} shadow-inner`}>
-                <Icon size={36} strokeWidth={2.5} />
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-[var(--radius-atomic)]" style={{ background: config.bg, color: config.color }}>
+                  <Icon size={14} />
+                </div>
+                <h2 className="text-xs font-bold uppercase tracking-wider">{title}</h2>
               </div>
-
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-[var(--color-text-primary)] uppercase tracking-tight italic">
-                  {title}
-                </h2>
-                <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed px-4">
-                  {message}
-                </p>
-              </div>
-
-              {children}
-
-              <div className="flex items-center gap-3 w-full pt-4">
-                {isConfirm ? (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      onClick={onClose} 
-                      className="flex-1 py-4 bg-[var(--color-bg-workspace)] border-[var(--color-bg-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-border)]"
-                    >
-                      {cancelLabel}
-                    </Button>
-                    <Button 
-                      variant={type === 'danger' ? 'danger' : 'primary'} 
-                      onClick={() => {
-                        onConfirm();
-                        onClose();
-                      }} 
-                      className={`flex-1 py-4 font-black uppercase tracking-widest text-[10px] shadow-xl ${type === 'danger' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20' : 'bg-[var(--color-action-primary)] hover:bg-[var(--color-action-hover)] shadow-blue-500/20'}`}
-                    >
-                      {confirmLabel}
-                    </Button>
-                  </>
-                ) : (
-                  <Button 
-                    variant="primary" 
-                    onClick={onClose} 
-                    className="w-full py-4 font-black uppercase tracking-widest text-[10px] shadow-xl bg-[var(--color-action-primary)] hover:bg-[var(--color-action-hover)]"
-                  >
-                    Acknowledged
-                  </Button>
-                )}
-              </div>
+              <button onClick={onClose} className="p-1 hover:bg-black/5 rounded transition-colors">
+                <X size={14} className="text-[var(--color-text-muted)]" />
+              </button>
             </div>
 
-            <button 
-              onClick={onClose}
-              className="absolute top-6 right-6 p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)] rounded-xl transition-all group"
-            >
-              <X size={20} className="group-hover:rotate-90 transition-transform" />
-            </button>
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {message && (
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                  {message}
+                </p>
+              )}
+              {children}
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2">
+              {isConfirm ? (
+                <>
+                  <Button size="sm" variant="ghost" onClick={onClose}>
+                    {cancelLabel}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant={type === 'danger' ? 'danger' : 'primary'} 
+                    onClick={() => {
+                      onConfirm();
+                      onClose();
+                    }}
+                  >
+                    {confirmLabel}
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="primary" onClick={onClose}>
+                  Acknowledged
+                </Button>
+              )}
+            </div>
           </motion.div>
         </div>
       )}
     </AnimatePresence>
   );
 };
+

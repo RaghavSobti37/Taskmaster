@@ -6,7 +6,8 @@ import {
   Users, Plus, TrendingUp, Search, Zap, BarChart3
 } from 'lucide-react';
 import { FaYoutube, FaInstagram, FaSpotify } from 'react-icons/fa';
-import { NexusModal, Badge, PageHeader, PageContainer, Card, NexusLoader } from '../components/ui';
+import { NexusModal, Badge, PageHeader, PageContainer, Card, PageSkeleton } from "../../components/ui";
+import { useAuth } from '../../contexts/AuthContext';
 
 const ArtistCard = ({ artist, onClick }) => (
   <motion.div

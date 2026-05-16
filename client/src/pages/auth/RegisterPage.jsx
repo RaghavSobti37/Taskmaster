@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "../../contexts/AuthContext";
 
 const RegisterPage = () => {
   const [name, setName] = useState('');

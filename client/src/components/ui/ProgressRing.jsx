@@ -7,7 +7,8 @@ const ProgressRing = ({
   strokeWidth = 8, 
   color = 'var(--color-action-primary)',
   label = '',
-  sublabel = ''
+  sublabel = '',
+  showLabel = true
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -43,20 +44,22 @@ const ProgressRing = ({
       </svg>
       
       {/* Center Labels */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <motion.span 
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-2xl font-black text-[var(--color-text-primary)] italic"
-        >
-          {Math.round(progress)}%
-        </motion.span>
-        {label && (
-          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest -mt-1">
-            {label}
-          </span>
-        )}
-      </div>
+      {showLabel && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-2xl font-black text-[var(--color-text-primary)] italic"
+          >
+            {Math.round(progress)}%
+          </motion.span>
+          {label && (
+            <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest -mt-1">
+              {label}
+            </span>
+          )}
+        </div>
+      )}
       
       {/* Decorative Outer Glow in Dark Mode */}
       <div className="absolute inset-0 rounded-full dark:shadow-[0_0_20px_-5px_var(--color-action-primary)] pointer-events-none opacity-20" />

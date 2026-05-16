@@ -4,3 +4,4 @@ node_modules
 server/uploads/
 *.log
 google_service_account.json
+.agents

@@ -83,15 +83,23 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
   </div>
 );
 
-export const Input = ({ label, icon: Icon, className = '', ...props }) => (
+export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', ...props }) => (
   <div className="space-y-1 w-full">
     {label && <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-0.5">{label}</label>}
     <div className="relative">
-      {Icon && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />}
-      <input 
-        className={`w-full ${Icon ? 'pl-9' : 'px-3'} pr-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${className}`}
-        {...props}
-      />
+      {Icon && !multiline && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />}
+      {multiline ? (
+        <textarea
+          rows={rows}
+          className={`w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-xs font-mono resize-y ${className}`}
+          {...props}
+        />
+      ) : (
+        <input 
+          className={`w-full ${Icon ? 'pl-9' : 'px-3'} pr-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${className}`}
+          {...props}
+        />
+      )}
     </div>
   </div>
 );

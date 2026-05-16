@@ -14,18 +14,17 @@ const fetchLiveAnalytics = async (artist) => {
     // 1. Spotify Web API 2026 Pipeline
     (async () => {
       const token = await getSpotifyAccessToken();
-      const searchQuery = isHarshadDuhita ? "artist:Harshad Duhita" : `artist:${artist.name}`;
-      const [artistInfo, searchTracks] = await Promise.all([
+      const [artistInfo, topTracksRes] = await Promise.all([
         axios.get(`https://api.spotify.com/v1/artists/${spotifyArtistId}`, {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000
         }),
-        axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=10`, {
+        axios.get(`https://api.spotify.com/v1/artists/${spotifyArtistId}/top-tracks?market=IN`, {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000
         })
       ]);
-      return { artistInfo: artistInfo.data, tracks: searchTracks.data?.tracks?.items || [] };
+      return { artistInfo: artistInfo.data, tracks: topTracksRes.data?.tracks || [] };
     })(),
 
     // 2. YouTube Data API v3 Pipeline

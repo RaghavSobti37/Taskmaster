@@ -36,6 +36,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Title and date are required' });
     }
 
+    const inputDate = new Date(date);
+    inputDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (inputDate < today) {
+      return res.status(400).json({ error: 'Cannot create calendar events for past dates' });
+    }
+
     const event = await CalendarEvent.create({
       title,
       description: description || '',
@@ -92,9 +101,18 @@ router.put('/:id', async (req, res) => {
     }
 
     const { title, description, date, visibility } = req.body;
+    if (date) {
+      const inputDate = new Date(date);
+      inputDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (inputDate < today) {
+        return res.status(400).json({ error: 'Cannot set calendar events to past dates' });
+      }
+      event.date = date;
+    }
     if (title) event.title = title;
     if (description !== undefined) event.description = description;
-    if (date) event.date = date;
     if (visibility) event.visibility = visibility;
 
     await event.save();

@@ -94,8 +94,9 @@
 - `/api/chat` — Channel-based messaging
 - `/api/crm` — Lead CRUD, CSV import, batch operations
 - `/api/assets` — Asset CRUD with project linking
-- `/api/calendar` — Persistent event CRUD with visibility controls
+- `/api/calendar` — Persistent event CRUD with visibility controls and past date prevention
 - `/api/artists` — Artist roster CRUD, live analytics syncing (`isSynced`), platform metric fetching
+- `/api/mail` — Admin broadcast mailer with open tracking pixel and click tracking
 
 ## Key Components
 - `OutletSidebar` — Main navigation sidebar
@@ -105,7 +106,9 @@
 - `ProjectList/Kanban/Gantt` — Project view modes
 - `ProjectTeam` — Team members within a project
 - `CRMLeadModal` — Create/edit CRM lead
-- `CalendarEntryModal` — Create persistent calendar event
+- `CalendarEntryModal` — Create persistent calendar event with past date prevention
+- `HarshadGolesarPage` / `YugmPage` / `MohitShankarPage` — Dedicated artist analytics views
+- `AdminMailContent` / `MailBroadcastModal` — Admin broadcast campaign management
 - `CKDropdown` — Custom accessibility-first dropdown with auto-focus search
 - `NexusModal` — High-fidelity reusable modal with backdrop blur
 - `CommandPalette` — Global `Ctrl+K` search and action hub

@@ -5,3 +5,4 @@ server/uploads/
 *.log
 google_service_account.json
 .agents
+graphify-out/

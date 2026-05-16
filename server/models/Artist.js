@@ -75,6 +75,30 @@ const ArtistSchema = new mongoose.Schema({
     followers: { type: Number }
   }],
   team: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  oauthCredentials: {
+    youtube: {
+      accessToken: { type: String, select: false },
+      refreshToken: { type: String, select: false },
+      channelId: { type: String },
+      tokenExpiry: { type: Date }
+    },
+    meta: {
+      accessToken: { type: String, select: false },
+      igAccountId: { type: String },
+      fbPageId: { type: String },
+      tokenExpiry: { type: Date }
+    },
+    spotify: {
+      artistId: { type: String },
+      chartmetricId: { type: String }
+    }
+  },
+  analyticsHistory: [{
+    timestamp: { type: Date, default: Date.now, index: true },
+    platform: { type: String, enum: ['spotify', 'youtube', 'meta', 'overall'] },
+    metrics: { type: mongoose.Schema.Types.Mixed }
+  }],
+  isSynced: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

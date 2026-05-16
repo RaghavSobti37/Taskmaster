@@ -73,6 +73,11 @@
 - **Components**: `LoginPage`, `RegisterPage`.
 - **Features**: JWT-based auth, Google OAuth integration, Role-based redirect logic.
 
+### 16. Artists Hub (`/artists`, `/artists/:id`)
+- **Components**: `ArtistCard`, `StatCard`, `DataTable`, `InfoButton`.
+- **Features**: Active roster management, multi-platform analytics (Spotify, YouTube, Meta), live API sync zap button, unlinked N/A defaults with layman linking instructions.
+- **Data Hooks**: `/api/artists` and sub-platform endpoints.
+
 ## Technical Foundation
 - **State Management**: `AuthContext`, `ThemeContext`, `SidebarContext`.
 - **API Client**: Axios with interceptors (JWT in localStorage).
@@ -90,6 +95,7 @@
 - `/api/crm` — Lead CRUD, CSV import, batch operations
 - `/api/assets` — Asset CRUD with project linking
 - `/api/calendar` — Persistent event CRUD with visibility controls
+- `/api/artists` — Artist roster CRUD, live analytics syncing (`isSynced`), platform metric fetching
 
 ## Key Components
 - `OutletSidebar` — Main navigation sidebar

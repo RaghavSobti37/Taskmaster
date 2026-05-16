@@ -32,7 +32,9 @@ export default function LeadsPage() {
     leadQuality: 'all',
     callStatus: 'all',
     leadStatus: 'all',
-    assignedRepId: 'all'
+    assignedRepId: 'all',
+    artistType: 'all',
+    primaryRole: 'all'
   });
 
   const queryParams = useMemo(() => ({
@@ -58,9 +60,21 @@ export default function LeadsPage() {
     {
       header: 'Customer Details',
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-bold text-xs tracking-tight">{row.name}</span>
-          <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{row.phone}</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-xs tracking-tight">{row.name}</span>
+            {row.artistType && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
+                {row.artistType.replace(' Artiste', '')}
+              </span>
+            )}
+            {row.primaryRole && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-action-primary)]/10 border border-[var(--color-action-primary)]/20 text-[var(--color-action-primary)] font-normal tracking-tight">
+                {row.primaryRole}
+              </span>
+            )}
+          </div>
+          <span className="text-[11px] text-[var(--color-text-muted)] font-mono">{row.email} {row.phone ? `• ${row.phone}` : ''} {row.city ? `• ${row.city}` : ''}</span>
         </div>
       )
     },
@@ -145,23 +159,57 @@ export default function LeadsPage() {
                  icon={Search}
                />
              </div>
-             <NexusDropdown 
-               placeholder="Quality"
-               options={[
-                 { value: 'all', label: 'All Quality' },
-                 { value: '5', label: 'Level 5' },
-                 { value: '4', label: 'Level 4' },
-                 { value: '3', label: 'Level 3' }
-               ]}
-               value={filters.leadQuality}
-               onChange={v => setFilters({...filters, leadQuality: v})}
-             />
-             <NexusDropdown 
-               placeholder="Agent"
-               options={[{ value: 'all', label: 'All Agents' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
-               value={filters.assignedRepId}
-               onChange={v => setFilters({...filters, assignedRepId: v})}
-             />
+             <div className="w-32">
+               <NexusDropdown 
+                 placeholder="Quality"
+                 options={[
+                   { value: 'all', label: 'All Quality' },
+                   { value: '5', label: 'Level 5' },
+                   { value: '4', label: 'Level 4' },
+                   { value: '3', label: 'Level 3' },
+                   { value: '2', label: 'Level 2' },
+                   { value: '1', label: 'Level 1' }
+                 ]}
+                 value={filters.leadQuality}
+                 onChange={v => setFilters({...filters, leadQuality: v})}
+               />
+             </div>
+             <div className="w-36">
+               <NexusDropdown 
+                 placeholder="Artist Type"
+                 options={[
+                   { value: 'all', label: 'All Artists' },
+                   { value: 'Full-time Artiste', label: 'Full-time' },
+                   { value: 'Part Time Artiste', label: 'Part-time' },
+                   { value: 'Hobbyist', label: 'Hobbyist' }
+                 ]}
+                 value={filters.artistType || 'all'}
+                 onChange={v => setFilters({...filters, artistType: v})}
+               />
+             </div>
+             <div className="w-36">
+               <NexusDropdown 
+                 placeholder="Role"
+                 options={[
+                   { value: 'all', label: 'All Roles' },
+                   { value: 'Vocalist', label: 'Vocalist' },
+                   { value: 'Music Producer', label: 'Producer' },
+                   { value: 'Singer Songwriter', label: 'Songwriter' },
+                   { value: 'Instrumentalist', label: 'Instrumentalist' },
+                   { value: 'Composer', label: 'Composer' }
+                 ]}
+                 value={filters.primaryRole || 'all'}
+                 onChange={v => setFilters({...filters, primaryRole: v})}
+               />
+             </div>
+             <div className="w-40">
+               <NexusDropdown 
+                 placeholder="Agent"
+                 options={[{ value: 'all', label: 'All Agents' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
+                 value={filters.assignedRepId}
+                 onChange={v => setFilters({...filters, assignedRepId: v})}
+               />
+             </div>
           </div>
         </div>
 

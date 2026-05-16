@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
 
 const ProjectCreate = () => {
+  const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [tags, setTags] = useState([]);
@@ -70,6 +72,7 @@ const ProjectCreate = () => {
         tags: tags.map(t => t.value),
         members: members.map(m => ({ userId: m.userId, role: m.role }))
       });
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');
     } catch (err) {
       console.error('Project creation error:', err);

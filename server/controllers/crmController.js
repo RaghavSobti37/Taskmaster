@@ -56,11 +56,31 @@ exports.getLeads = async (req, res) => {
     // Filters
     if (req.query.leadQuality && req.query.leadQuality !== 'all') query.leadQuality = req.query.leadQuality;
     if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
-    if (req.query.leadStatus && req.query.leadStatus !== 'all') query.leadStatus = req.query.leadStatus;
+    
+    if (req.query.leadStatus && req.query.leadStatus !== 'all') {
+      if (req.query.leadStatus === 'Fresh') {
+        query.$or = [
+          { leadStatus: null }, 
+          { leadStatus: '' }, 
+          { leadStatus: 'New' }, 
+          { leadStatus: 'Fresh' }, 
+          { leadStatus: 'DNP' },
+          { leadStatus: { $exists: false } }
+        ];
+      } else if (req.query.leadStatus === 'Contacted' || req.query.leadStatus === 'In Progress') {
+        query.leadStatus = { $in: ['Connected', 'Warm', 'Cold', 'Converted', 'Contacted', 'In Progress', 'Busy', 'Already Purchased'] };
+      } else {
+        query.leadStatus = req.query.leadStatus;
+      }
+    }
+
     if (req.query.assignedRepId && req.query.assignedRepId !== 'all') query.assignedRepId = req.query.assignedRepId;
     if (req.query.webinarDates && req.query.webinarDates !== 'all') query.webinarDates = req.query.webinarDates;
     if (req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') query.meaningfulConnect = req.query.meaningfulConnect;
+    if (req.query.artistType && req.query.artistType !== 'all') query.artistType = req.query.artistType;
+    if (req.query.primaryRole && req.query.primaryRole !== 'all') query.primaryRole = req.query.primaryRole;
     if (req.query.hasFollowup === 'true') query.nextFollowupDate = { $exists: true, $ne: '' };
+    if (req.query.hasEmail === 'true') query.email = { $type: 'string', $ne: '' };
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -93,8 +113,9 @@ exports.getLeads = async (req, res) => {
       {
         $project: {
           assignedRepId: 1,
-          name: 1, email: 1, phone: 1,
+          name: 1, email: 1, phone: 1, city: 1, source: 1,
           webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
+          artistType: 1, primaryRole: 1, metadata: 1,
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
           remarks: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,

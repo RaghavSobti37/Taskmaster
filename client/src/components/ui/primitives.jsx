@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save } from 'lucide-react';
 
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
@@ -42,14 +43,17 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
   );
 };
 
-export const Card = ({ children, className = '', hover = false, variant = 'surface' }) => {
+export const Card = ({ children, className = '', hover = false, variant = 'surface', ...props }) => {
   const variants = {
     surface: 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]',
     secondary: 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]',
   };
 
   return (
-    <div className={`rounded-[var(--radius-atomic)] border shadow-sm transition-all ${variants[variant]} ${hover ? 'hover:border-[var(--color-action-primary)]/50' : ''} ${className}`}>
+    <div 
+      className={`rounded-[var(--radius-atomic)] border shadow-sm transition-all ${variants[variant]} ${hover ? 'hover:border-[var(--color-action-primary)]/50 cursor-pointer' : ''} ${className}`}
+      {...props}
+    >
       {children}
     </div>
   );
@@ -118,36 +122,50 @@ export const Badge = ({ children, variant = 'info', className = '' }) => {
 
 export const InfoButton = ({ text }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.top + window.scrollY - 10,
+        left: rect.left + window.scrollX + rect.width / 2,
+      });
+      setIsOpen(true);
+    }
+  };
 
   return (
     <div 
-      className="relative inline-flex items-center ml-1.5"
-      onMouseEnter={() => setIsOpen(true)}
+      className="inline-flex items-center ml-1.5 align-middle"
+      onMouseEnter={handleOpen}
       onMouseLeave={() => setIsOpen(false)}
-      onFocus={() => setIsOpen(true)}
+      onFocus={handleOpen}
       onBlur={() => setIsOpen(false)}
     >
       <button 
+        ref={buttonRef}
         type="button"
-        className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-help focus:outline-none"
+        className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 hover:bg-blue-500 hover:text-white transition-colors cursor-help focus:outline-none"
       >
         i
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 4 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2.5 z-[1000] rounded bg-slate-900 dark:bg-black text-white text-[10px] font-normal leading-relaxed shadow-xl border border-slate-800 pointer-events-none text-center"
-          >
-            {text}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-black" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isOpen && createPortal(
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 4 }}
+          transition={{ duration: 0.1, ease: 'easeOut' }}
+          style={{ top: `${coords.top}px`, left: `${coords.left}px`, transform: 'translate(-50%, -100%)' }}
+          className="absolute z-[99999] w-64 p-3 rounded-2xl bg-slate-900 dark:bg-black text-white text-[10px] font-bold tracking-wide leading-relaxed shadow-2xl border border-white/20 pointer-events-none text-center"
+        >
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-black" />
+        </motion.div>,
+        document.body
+      )}
     </div>
   );
 };
@@ -189,7 +207,7 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
       <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
         <tr>
           {columns.map((col, i) => (
-            <th key={i} className="px-3 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+            <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
               {col.header}
               {col.info && <InfoButton text={col.info} />}
             </th>
@@ -201,10 +219,10 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
           <tr 
             key={i} 
             onClick={() => onRowClick?.(row)}
-            className="data-table-row cursor-pointer transition-colors relative group"
+            className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
           >
             {columns.map((col, j) => (
-              <td key={j} className="px-3 py-2 text-sm text-[var(--color-text-primary)]">
+              <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
                 {col.render ? col.render(row) : row[col.key]}
               </td>
             ))}
@@ -216,6 +234,18 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
 );
 
 export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave }) => {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -223,6 +253,7 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 350, damping: 30 }}
           className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col"
         >
           {/* Top Bar Navigation */}

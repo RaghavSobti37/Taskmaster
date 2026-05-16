@@ -110,11 +110,14 @@ const ProjectsView = () => {
                       <h3 className="text-xs font-black uppercase tracking-tight truncate group-hover:text-[var(--color-action-primary)] transition-colors">
                         {project.name}
                       </h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: project.color || 'var(--color-action-primary)' }} />
-                         <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase truncate">
-                           {project.tags?.[0] || 'Unlabeled'}
-                         </span>
+                      <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                        {project.tags?.length > 0 ? project.tags.map((tag, idx) => (
+                          <span key={idx} className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                            {tag}
+                          </span>
+                        )) : (
+                          <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Unlabeled</span>
+                        )}
                       </div>
                     </div>
                     <Badge variant={project.status === 'completed' ? 'success' : 'info'} className="!py-0 !px-1.5 !text-[8px]">

@@ -24,15 +24,20 @@ const sendCampaign = async (campaignId) => {
   campaign.status = 'Sending';
   await campaign.save();
 
+  const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
   const recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
   for (const recipient of recipients) {
     try {
+      const trackingUrl = `${baseUrl}/api/mail/track/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
+      const trackingPixel = `<img src="${trackingUrl}" width="1" height="1" style="display:none; width:1px; height:1px;" alt="" />`;
+      const htmlWithTracking = `${campaign.content}${trackingPixel}`;
+
       const mailOptions = {
         from: `"${profile.name}" <${profile.email}>`,
         to: recipient.email,
         subject: campaign.subject,
-        html: campaign.content,
+        html: htmlWithTracking,
         headers: {
           'X-Campaign-ID': campaign._id.toString()
         }
@@ -44,10 +49,25 @@ const sendCampaign = async (campaignId) => {
       recipient.messageId = info.messageId;
       
       campaign.stats.sent++;
+      await MailEvent.create({
+        messageId: info.messageId,
+        eventType: 'Send',
+        email: recipient.email,
+        timestamp: new Date(),
+        campaignId: campaign._id
+      });
     } catch (err) {
       console.error(`Failed to send to ${recipient.email}:`, err);
       recipient.status = 'Failed';
       recipient.error = err.message;
+
+      if (recipient.email) {
+        const lead = await Lead.findOne({ email: recipient.email.toLowerCase().trim() });
+        if (lead) {
+          lead.metadata = { ...lead.metadata, emailStatus: 'Inactive', sendError: err.message };
+          await lead.save();
+        }
+      }
     }
     await campaign.save();
   }
@@ -75,7 +95,7 @@ const scanBounces = async (profileId) => {
     const connection = await imaps.connect(config);
     await connection.openBox('INBOX');
     
-    const searchCriteria = ['UNSEEN', ['OR', ['SUBJECT', 'Delivery Status Notification'], ['SUBJECT', 'Undeliverable']]];
+    const searchCriteria = ['ALL', ['OR', ['SUBJECT', 'Delivery Status Notification'], ['OR', ['SUBJECT', 'Undeliverable'], ['OR', ['SUBJECT', 'Failure Notice'], ['SUBJECT', 'Delivery Failure']]]]];
     const fetchOptions = { bodies: ['HEADER', 'TEXT'], markSeen: true };
     
     const messages = await connection.search(searchCriteria, fetchOptions);
@@ -83,18 +103,18 @@ const scanBounces = async (profileId) => {
 
     for (const item of messages) {
       const all = item.parts.find(part => part.which === 'TEXT');
-      const id = item.attributes.uid;
-      const idHeader = `Imap-Id: ${id}`;
+      if (!all || !all.body) continue;
       
       const parsed = await simpleParser(all.body);
-      
-      // Heuristic for bounce parsing
       const body = parsed.text || '';
-      const match = body.match(/Final-Recipient: rfc822;\s*([^\s<>]+@[^\s<>]+)/i);
-      if (match) {
+      const match = body.match(/Final-Recipient: rfc822;\s*([^\s<>]+@[^\s<>]+)/i)
+        || body.match(/failed permanently:\s*([^\s<>]+@[^\s<>]+)/i)
+        || body.match(/550 5\.1\.1 <([^\s<>]+@[^\s<>]+)>/i)
+        || body.match(/<([^\s<>]+@[^\s<>]+)>:\s*Recipient address rejected/i);
+
+      if (match && match[1]) {
         bouncedEmails.push(match[1].toLowerCase().trim());
       } else {
-        // Fallback: look for emails in body
         const emails = body.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
         if (emails) {
           const target = emails.find(e => e.toLowerCase() !== profile.email.toLowerCase());
@@ -105,20 +125,39 @@ const scanBounces = async (profileId) => {
 
     connection.end();
 
-    // Mark as bounced in database
-    for (const email of bouncedEmails) {
-      await MailEvent.create({
-        email,
-        eventType: 'Bounce',
-        timestamp: new Date(),
-        metadata: { source: 'IMAP_SCAN' }
-      });
+    const uniqueBounced = Array.from(new Set(bouncedEmails));
+
+    for (const email of uniqueBounced) {
+      await MailEvent.findOneAndUpdate(
+        { email, eventType: 'Bounce' },
+        { email, eventType: 'Bounce', timestamp: new Date(), metadata: { source: 'IMAP_SCAN' } },
+        { upsert: true }
+      );
       
-      // Update leads
-      await Lead.updateMany({ email }, { $set: { leadStatus: 'Bounced' } });
+      const leads = await Lead.find({ email });
+      for (const lead of leads) {
+        lead.leadStatus = 'Bounced';
+        lead.metadata = { ...lead.metadata, emailStatus: 'Inactive', lastBouncedAt: new Date() };
+        await lead.save();
+      }
+
+      const campaigns = await MailCampaign.find({ 'recipients.email': email });
+      for (const camp of campaigns) {
+        let modified = false;
+        camp.recipients.forEach(r => {
+          if (r.email === email && r.status !== 'Bounced') {
+            r.status = 'Bounced';
+            modified = true;
+          }
+        });
+        if (modified) {
+          camp.stats.bounced = (camp.stats.bounced || 0) + 1;
+          await camp.save();
+        }
+      }
     }
 
-    return bouncedEmails;
+    return uniqueBounced;
   } catch (err) {
     console.error('IMAP Scan Error:', err);
     throw err;

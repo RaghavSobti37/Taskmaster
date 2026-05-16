@@ -13,6 +13,7 @@ export const NexusModal = ({
   confirmLabel = 'Confirm', 
   cancelLabel = 'Cancel',
   isConfirm = false,
+  showFooter = true,
   children
 }) => {
   const typeConfig = {
@@ -66,13 +67,13 @@ export const NexusModal = ({
                 </div>
                 <h2 className="text-xs font-bold uppercase tracking-wider">{title}</h2>
               </div>
-              <button onClick={onClose} className="p-1 hover:bg-black/5 rounded transition-colors">
+              <button type="button" onClick={onClose} className="p-1 hover:bg-black/5 rounded transition-colors">
                 <X size={14} className="text-[var(--color-text-muted)]" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
               {message && (
                 <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
                   {message}
@@ -82,33 +83,36 @@ export const NexusModal = ({
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2">
-              {isConfirm ? (
-                <>
-                  <Button size="sm" variant="ghost" onClick={onClose}>
-                    {cancelLabel}
+            {showFooter && (
+              <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2">
+                {isConfirm ? (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={onClose}>
+                      {cancelLabel}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={type === 'danger' ? 'danger' : 'primary'} 
+                      onClick={() => {
+                        onConfirm();
+                        onClose();
+                      }}
+                    >
+                      {confirmLabel}
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" variant="primary" onClick={onClose}>
+                    Acknowledged
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant={type === 'danger' ? 'danger' : 'primary'} 
-                    onClick={() => {
-                      onConfirm();
-                      onClose();
-                    }}
-                  >
-                    {confirmLabel}
-                  </Button>
-                </>
-              ) : (
-                <Button size="sm" variant="primary" onClick={onClose}>
-                  Acknowledged
-                </Button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       )}
     </AnimatePresence>
   );
 };
+
 

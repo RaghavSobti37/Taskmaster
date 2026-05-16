@@ -51,7 +51,10 @@ const ArtistSchema = new mongoose.Schema({
         organic: { type: Number, default: 0 },
         paid: { type: Number, default: 0 }
       }
-    }
+    },
+    tracks: [{ type: mongoose.Schema.Types.Mixed }],
+    videos: [{ type: mongoose.Schema.Types.Mixed }],
+    posts: [{ type: mongoose.Schema.Types.Mixed }]
   },
   events: [{
     date: { type: String },
@@ -100,6 +103,21 @@ const ArtistSchema = new mongoose.Schema({
   }],
   isSynced: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
+});
+
+// Input sanitization hook
+ArtistSchema.pre('save', function(next) {
+  if (this.name) this.name = this.name.trim().replace(/\s+/g, ' ');
+  if (this.oauthCredentials?.spotify?.artistId) {
+    this.oauthCredentials.spotify.artistId = this.oauthCredentials.spotify.artistId.trim();
+  }
+  if (this.oauthCredentials?.youtube?.channelId) {
+    this.oauthCredentials.youtube.channelId = this.oauthCredentials.youtube.channelId.trim();
+  }
+  if (this.oauthCredentials?.meta?.igAccountId) {
+    this.oauthCredentials.meta.igAccountId = this.oauthCredentials.meta.igAccountId.trim();
+  }
+  next();
 });
 
 module.exports = mongoose.model('Artist', ArtistSchema);

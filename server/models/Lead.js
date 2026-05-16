@@ -48,6 +48,9 @@ const LeadSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'CRMImport' },
   
+  // Tags
+  tags: [{ type: String }],
+
   // Flexible Metadata for future-proofing
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   

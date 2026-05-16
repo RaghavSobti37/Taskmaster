@@ -27,6 +27,9 @@ const TodoPage = lazy(() => import('./pages/productivity/TodoPage'));
 const GoogleSuccessPage = lazy(() => import('./pages/auth/GoogleSuccessPage'));
 const ArtistsCollection = lazy(() => import('./pages/artists/ArtistsCollection'));
 const ArtistDetail = lazy(() => import('./pages/artists/ArtistDetail'));
+const HarshadDuhitaPage = lazy(() => import('./pages/artists/HarshadDuhitaPage'));
+const YugmPage = lazy(() => import('./pages/artists/YugmPage'));
+const MohitShankarPage = lazy(() => import('./pages/artists/MohitShankarPage'));
 
 function App() {
   const { loading } = useAuth();
@@ -60,6 +63,9 @@ function App() {
                 <Route path="admin" element={<AdminPanel />} />
                 <Route path="admin/logs" element={<AdminLogsPage />} />
                 <Route path="artists" element={<ArtistsCollection />} />
+                <Route path="artists/harshad-duhita/:id/*" element={<HarshadDuhitaPage />} />
+                <Route path="artists/yugm/:id/*" element={<YugmPage />} />
+                <Route path="artists/mohit-shankar/:id/*" element={<MohitShankarPage />} />
                 <Route path="artists/:id/*" element={<ArtistDetail />} />
               </Route>
             </Route>

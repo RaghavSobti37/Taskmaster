@@ -228,7 +228,18 @@ export default function ArtistsCollection() {
           <DataTable
             columns={columns}
             data={filteredArtists}
-            onRowClick={(row) => navigate(`/artists/${row._id}`)}
+            onRowClick={(row) => {
+              const nameLower = row.name?.toLowerCase() || '';
+              if (nameLower.includes('harshad') || nameLower.includes('duhita')) {
+                navigate(`/artists/harshad-duhita/${row._id}`);
+              } else if (nameLower.includes('yugm')) {
+                navigate(`/artists/yugm/${row._id}`);
+              } else if (nameLower.includes('mohit')) {
+                navigate(`/artists/mohit-shankar/${row._id}`);
+              } else {
+                navigate(`/artists/${row._id}`);
+              }
+            }}
           />
           {filteredArtists.length === 0 && (
             <div className="p-16 text-center text-[var(--color-text-muted)]">

@@ -156,6 +156,7 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
       const leads = await Lead.find({ email: email.toLowerCase().trim() });
       for (const lead of leads) {
         lead.metadata = { ...lead.metadata, emailStatus: 'Active', lastOpenedAt: new Date() };
+        if (!lead.tags.includes('Active')) lead.tags.push('Active');
         await lead.save();
       }
     }
@@ -173,6 +174,44 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
     'Expires': '0'
   });
   res.end(buf);
+});
+
+// --- EMAIL UNSUBSCRIBE (Public endpoint) ---
+router.get('/unsubscribe/:campaignId/:recipientId', async (req, res) => {
+  const { campaignId, recipientId } = req.params;
+  const { email } = req.query;
+
+  try {
+    await MailEvent.create({
+      eventType: 'Unsubscribe',
+      email: email || 'unknown',
+      timestamp: new Date(),
+      campaignId: campaignId !== 'undefined' ? campaignId : null,
+      metadata: { recipientId }
+    });
+
+    if (email) {
+      const leads = await Lead.find({ email: email.toLowerCase().trim() });
+      for (const lead of leads) {
+        lead.metadata = { ...lead.metadata, emailStatus: 'Unsubscribed', unsubscribedAt: new Date() };
+        if (!lead.tags.includes('unsubscribed')) lead.tags.push('unsubscribed');
+        await lead.save();
+      }
+    }
+
+    res.send(`
+      <html>
+        <head><title>Unsubscribed</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h2 style="color: #333;">You have been unsubscribed</h2>
+          <p style="color: #666;">You will no longer receive emails from this campaign sender.</p>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error('Unsubscribe Error:', err);
+    res.status(500).send('An error occurred processing your request.');
+  }
 });
 
 module.exports = router;

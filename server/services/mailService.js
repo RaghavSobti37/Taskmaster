@@ -31,7 +31,8 @@ const sendCampaign = async (campaignId) => {
     try {
       const trackingUrl = `${baseUrl}/api/mail/track/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
       const trackingPixel = `<img src="${trackingUrl}" width="1" height="1" style="display:none; width:1px; height:1px;" alt="" />`;
-      const htmlWithTracking = `${campaign.content}${trackingPixel}`;
+      const unsubscribeUrl = `${baseUrl}/api/mail/unsubscribe/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
+      const htmlWithTracking = `${campaign.content}${trackingPixel}<br><br><p style="font-size: 11px; color: #666;"><a href="${unsubscribeUrl}">Unsubscribe</a></p>`;
 
       const mailOptions = {
         from: `"${profile.name}" <${profile.email}>`,
@@ -65,6 +66,7 @@ const sendCampaign = async (campaignId) => {
         const lead = await Lead.findOne({ email: recipient.email.toLowerCase().trim() });
         if (lead) {
           lead.metadata = { ...lead.metadata, emailStatus: 'Inactive', sendError: err.message };
+          if (!lead.tags.includes('Invalid')) lead.tags.push('Invalid');
           await lead.save();
         }
       }
@@ -138,6 +140,7 @@ const scanBounces = async (profileId) => {
       for (const lead of leads) {
         lead.leadStatus = 'Bounced';
         lead.metadata = { ...lead.metadata, emailStatus: 'Inactive', lastBouncedAt: new Date() };
+        if (!lead.tags.includes('Invalid')) lead.tags.push('Invalid');
         await lead.save();
       }
 

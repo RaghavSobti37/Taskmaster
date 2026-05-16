@@ -50,6 +50,8 @@ const LeadSchema = new mongoose.Schema({
   
   // Flexible Metadata for future-proofing
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  tags: [{ type: String, index: true }],
+  emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending', index: true },
   
   // Concurrency Locking
   lockedBy: { type: String }, // User ID holding the lock

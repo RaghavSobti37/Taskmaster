@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X
+  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus
 } from 'lucide-react';
 import { 
   Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton, TabSwitcher, NexusDropdown 
@@ -152,6 +152,59 @@ export default function AdminMailContent() {
     setMode('campaigns');
   };
 
+  const handleLoadReminderTemplate = () => {
+    setTitle('Shakti Session Reminder');
+    setSubject('Your Upcoming Session Alignment • The Shakti Collective');
+    setContent(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Reminder: The Shakti Collective</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0B0F19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F1F5F9; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #111827; border: 1px solid #1F2937; border-radius: 24px; padding: 48px 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          <tr>
+            <td align="center" style="padding-bottom: 32px; border-bottom: 1px solid #1F2937;">
+              <h1 style="font-size: 28px; font-weight: 800; color: #38BDF8; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 2px;">The Shakti Collective</h1>
+              <p style="font-size: 14px; font-weight: 600; color: #94A3B8; margin: 0; text-transform: uppercase; letter-spacing: 4px;">Exclusive Session Reminder</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 36px 0 28px 0; font-size: 16px; line-height: 1.6; color: #E2E8F0;">
+              <p style="margin: 0 0 20px 0;">Namaste <strong>Valued Member</strong>,</p>
+              <p style="margin: 0 0 24px 0;">Your upcoming immersive musical alignment and production session is fast approaching. We are preparing our studio environment for an extraordinary session of creative transcendence.</p>
+              
+              <div style="background-color: #1E293B; border-left: 4px solid #38BDF8; padding: 20px 24px; border-radius: 12px; margin-bottom: 32px;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; color: #94A3B8; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Session Details</p>
+                <p style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #F8FAFC;">Shakti Studio Alignment</p>
+                <p style="margin: 0; font-size: 14px; color: #CBD5E1;">Date: Tomorrow @ 4:00 PM IST | Location: Main Acoustic Hall</p>
+              </div>
+
+              <p style="margin: 0 0 36px 0; text-align: center;">Please confirm your attendance or review session prerequisites on our official collective portal.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom: 40px;">
+              <a href="https://theshakticollective.in" style="display: inline-block; background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%); color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 40px; border-radius: 16px; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.5);">Access Collective Portal</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="border-top: 1px solid #1F2937; padding-top: 24px; font-size: 12px; color: #64748B;">
+              <p style="margin: 0;">The Shakti Collective • Elevating Indigenously Rooted Music</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`);
+  };
+
   const campaignColumns = [
     {
       header: 'Campaign Information',
@@ -262,11 +315,12 @@ export default function AdminMailContent() {
       </div>
 
       {/* Analytics Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <StatCard label="Total Campaigns" value={stats?.totalCampaigns || campaigns.length} icon={Mail} variant="info" />
         <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
         <StatCard label="Bounced / Failed" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" />
         <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
+        <StatCard label="Unsubscribed" value={stats?.totalUnsubscribed || 0} icon={UserMinus} variant="warning" />
       </div>
 
       {/* Mode: Campaigns List */}
@@ -289,6 +343,9 @@ export default function AdminMailContent() {
              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
                <Mail size={16} /> Campaign Architect
              </h3>
+             <Button size="xs" variant="primary" onClick={handleLoadReminderTemplate}>
+               ⚡ Load Session Reminder Template
+             </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -321,10 +378,15 @@ export default function AdminMailContent() {
           <div className="space-y-3">
              <div className="flex items-center justify-between">
                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Email Content (HTML)</label>
-               <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
-                 <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
-                 <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
-               </label>
+               <div className="flex items-center gap-2">
+                 <Button size="xs" variant="secondary" onClick={handleLoadReminderTemplate}>
+                   ⚡ Use Session Reminder Template
+                 </Button>
+                 <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
+                   <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
+                   <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
+                 </label>
+               </div>
              </div>
              <textarea 
                rows={8} 
@@ -632,12 +694,13 @@ export default function AdminMailContent() {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
               {/* Analytics Stat Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <StatCard label="Total Target" value={selectedCampaign.stats?.total || 0} icon={Users} variant="slate" />
                 <StatCard label="Sent Success" value={selectedCampaign.stats?.sent || 0} icon={Send} variant="mint" />
                 <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
                 <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />
-                <StatCard label="Bounced / Fail" value={(selectedCampaign.stats?.bounced || 0) + (selectedCampaign.recipients?.filter(r => r.status === 'Failed')?.length || 0)} icon={AlertCircle} variant="rose" />
+                <StatCard label="Bounced / Fail" value={(selectedCampaign.stats?.bounced || selectedCampaign.stats?.invalid || 0) + (selectedCampaign.recipients?.filter(r => r.status === 'Failed' || r.status === 'Invalid')?.length || 0)} icon={AlertCircle} variant="rose" />
+                <StatCard label="Unsubscribed" value={selectedCampaign.stats?.unsubscribed || selectedCampaign.recipients?.filter(r => r.status === 'Unsubscribed')?.length || 0} icon={UserMinus} variant="warning" />
               </div>
 
               {/* Target Recipient Table */}
@@ -660,7 +723,7 @@ export default function AdminMailContent() {
                         <tr key={r._id || idx} className="hover:bg-[var(--color-bg-primary)]/50 transition-colors">
                           <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{r.email}</td>
                           <td className="px-4 py-3">
-                            <Badge variant={r.status === 'Opened' ? 'mint' : r.status === 'Sent' ? 'info' : r.status === 'Bounced' || r.status === 'Failed' ? 'rose' : 'slate'}>
+                            <Badge variant={r.status === 'Opened' ? 'mint' : r.status === 'Sent' ? 'info' : r.status === 'Unsubscribed' ? 'warning' : r.status === 'Bounced' || r.status === 'Failed' || r.status === 'Invalid' ? 'rose' : 'slate'}>
                               {r.status || 'Pending'}
                             </Badge>
                           </td>

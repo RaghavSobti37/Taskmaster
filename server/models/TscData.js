@@ -22,7 +22,9 @@ const TscDataSchema = new mongoose.Schema({
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'CRMImport' },
   
   // Custom metadata
-  metadata: { type: mongoose.Schema.Types.Mixed, default: {} }
+  metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  tags: [{ type: String, index: true }],
+  emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending', index: true }
 }, {
   timestamps: true
 });

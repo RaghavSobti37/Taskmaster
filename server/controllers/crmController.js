@@ -11,7 +11,8 @@ const ALLOWED_LEAD_FIELDS = [
   'meaningfulConnect', 'leadQuality', 'callStatus', 'leadStatus', 'remarks',
   'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
   'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
-  'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime'
+  'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime',
+  'emailStatus', 'tags'
 ];
 const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
 
@@ -79,6 +80,8 @@ exports.getLeads = async (req, res) => {
     if (req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') query.meaningfulConnect = req.query.meaningfulConnect;
     if (req.query.artistType && req.query.artistType !== 'all') query.artistType = req.query.artistType;
     if (req.query.primaryRole && req.query.primaryRole !== 'all') query.primaryRole = req.query.primaryRole;
+    if (req.query.emailStatus && req.query.emailStatus !== 'all') query.emailStatus = req.query.emailStatus;
+    if (req.query.tag && req.query.tag !== 'all') query.tags = req.query.tag;
     if (req.query.hasFollowup === 'true') query.nextFollowupDate = { $exists: true, $ne: '' };
     if (req.query.hasEmail === 'true') query.email = { $type: 'string', $ne: '' };
 
@@ -115,7 +118,7 @@ exports.getLeads = async (req, res) => {
           assignedRepId: 1,
           name: 1, email: 1, phone: 1, city: 1, source: 1,
           webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
-          artistType: 1, primaryRole: 1, metadata: 1,
+          artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
           remarks: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,

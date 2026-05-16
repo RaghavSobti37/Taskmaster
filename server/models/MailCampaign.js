@@ -9,7 +9,7 @@ const mailCampaignSchema = new mongoose.Schema({
   recipients: [{
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     email: String,
-    status: { type: String, enum: ['Pending', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid'], default: 'Pending' },
     sentAt: Date,
     error: String,
     messageId: String // SES Message ID
@@ -19,7 +19,9 @@ const mailCampaignSchema = new mongoose.Schema({
     sent: { type: Number, default: 0 },
     opened: { type: Number, default: 0 },
     clicked: { type: Number, default: 0 },
-    bounced: { type: Number, default: 0 }
+    bounced: { type: Number, default: 0 },
+    unsubscribed: { type: Number, default: 0 },
+    invalid: { type: Number, default: 0 }
   },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

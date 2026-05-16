@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { sanitizeName, sanitizeEmail, normalizePhone, validateDate } = require('../utils/sanitizer');
+const auditPlugin = require('./plugins/auditPlugin');
 
 /**
  * Lead Schema for TSC CRM.
@@ -57,6 +59,29 @@ const LeadSchema = new mongoose.Schema({
 }, { 
   timestamps: true // Automatically handles createdAt and updatedAt
 });
+
+// Sanitization Hook
+LeadSchema.pre('save', function(next) {
+  if (this.isModified('name')) this.name = sanitizeName(this.name);
+  if (this.isModified('email')) this.email = sanitizeEmail(this.email);
+  if (this.isModified('phone')) this.phone = normalizePhone(this.phone);
+  
+  // Date validation for followups
+  if (this.isModified('nextFollowupDate') && this.nextFollowupDate) {
+    if (!validateDate(this.nextFollowupDate)) {
+      this.nextFollowupDate = ''; // Reset or fallback
+    }
+  }
+  next();
+});
+
+// Apply Audit Plugin
+LeadSchema.plugin(auditPlugin);
+
+// Core Uniqueness Constraints
+LeadSchema.index({ phone: 1 }, { unique: true });
+LeadSchema.index({ email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
+LeadSchema.index({ phone: 1, email: 1 }, { unique: true }); // Compound index as requested
 
 // Indexes for common query patterns
 LeadSchema.index({ assignedRepId: 1, leadStatus: 1 });

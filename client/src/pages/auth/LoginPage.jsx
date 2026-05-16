@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "../../contexts/AuthContext";
 
 
 

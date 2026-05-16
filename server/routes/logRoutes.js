@@ -63,4 +63,31 @@ router.delete('/clear', protect, async (req, res) => {
   }
 });
 
+router.get('/activity-grid', protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const stats = await Log.aggregate([
+      { $match: { userId, action: 'DAILY_LOG' } },
+      { $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 },
+        totalMinutes: {
+          $sum: {
+            $convert: {
+              input: { $arrayElemAt: [{ $split: ['$details.timeSpent', 'h'] }, 0] },
+              to: 'double',
+              onError: 60.0, // Default to 60 min if "h" missing
+              onNull: 60.0
+            }
+          }
+        }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

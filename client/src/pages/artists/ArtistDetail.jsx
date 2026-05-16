@@ -8,9 +8,8 @@ import {
   ChevronRight, ExternalLink, Zap, Target
 } from 'lucide-react';
 import { FaYoutube, FaInstagram, FaSpotify, FaStar } from 'react-icons/fa';
-import NexusLoader from '../components/ui/NexusLoader';
-import { Badge, NexusModal } from '../components/ui';
-import { useAuth } from '../contexts/AuthContext';
+import { Badge, NexusModal, PageSkeleton } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
 
 const StatCard = ({ label, value, icon: Icon, color, trend }) => (
   <motion.div 

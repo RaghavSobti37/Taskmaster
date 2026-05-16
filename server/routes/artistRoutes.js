@@ -12,5 +12,6 @@ router.put('/:id', artistController.updateArtist);
 router.delete('/:id', artistController.deleteArtist);
 router.post('/:id/inject-event', artistController.injectEvent);
 router.post('/:id/sync-stats', artistController.syncArtistStats);
+router.get('/:id/analytics/:platform', artistController.getPlatformAnalytics);
 
 module.exports = router;

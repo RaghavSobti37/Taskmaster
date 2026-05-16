@@ -20,6 +20,7 @@ graph TD
         AS[Assets Page]
         TP[Todo Page]
         FE[Features Page]
+        ART[Artists Hub]
         AUTH[Auth System]
         RQ["React Query (Cache Layer)"]
     end
@@ -35,6 +36,7 @@ graph TD
         AS_API["/api/assets"]
         CAL_API["/api/calendar"]
         M_API["/api/mail"]
+        ART_API["/api/artists"]
     end
 
     subgraph Models ["Database (MongoDB/Mongoose)"]
@@ -47,10 +49,11 @@ graph TD
         M_Asset[(Asset)]
         M_Event[(CalendarEvent)]
         M_Batch[(CRMImport)]
+        M_Artist[(Artist)]
     end
 
-    D & PL & PD & AP & DL & AL & LP & FP & ST & CV & AS & TP & FE & AUTH --> RQ
-    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & CR_API & AS_API & CAL_API & M_API
+    D & PL & PD & AP & DL & AL & LP & FP & ST & CV & AS & TP & FE & ART & AUTH --> RQ
+    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & CR_API & AS_API & CAL_API & M_API & ART_API
 
     T_API --> M_Task
     P_API --> M_Project
@@ -61,6 +64,7 @@ graph TD
     CR_API --> M_Lead & M_Batch
     AS_API --> M_Asset
     CAL_API --> M_Event
+    ART_API --> M_Artist
 
     M_Project -- "contains" --> M_Task
     M_Task -- "assigned to" --> M_User
@@ -105,6 +109,7 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 | **CRM (Followups)** | Scheduled sales calls | Tabbed view of Today, Overdue, and Upcoming followups |
 | **Assets** | Project resource links | Document management and categorized asset grid |
 | **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |
+| **Artists Hub** | Roster & Live Analytics | Tracks multi-platform API feeds (Spotify, YouTube, Meta) with `isSynced` linking model |
 
 ## Data Relationships
 
@@ -128,3 +133,6 @@ Assets store important links for a project.
 
 ### CalendarEvent → User
 Calendar events are owned by users. Public events are visible to everyone; private events only to the owner.
+
+### Artist → Live Analytics
+Artists store profile information, events, and a linked `isSynced` status. Live analytics feeds are hydrated dynamically from Spotify, YouTube, and Meta.

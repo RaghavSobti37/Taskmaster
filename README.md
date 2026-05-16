@@ -22,6 +22,7 @@
 | **💬 Team Chat** | Real-time messaging with channel-based organization and task referencing. |
 | **🛠️ Admin Panel** | Root-level system oversight, user role management (Admin/User), and deep activity audits. |
 | **📎 Assets** | Project-scoped resource management supporting multiple external links per entry. |
+| **🎵 Artists Hub** | Multi-platform analytics (Spotify, YouTube, Meta) tracking reach trajectory with live API sync zapping and layman ID linking tooltips. |
 
 ---
 
@@ -55,10 +56,11 @@ graph TD
         RQ --> P_API["/api/projects"]
         RQ --> C_API["/api/crm"]
         RQ --> L_API["/api/logs"]
+        RQ --> ART_API["/api/artists"]
     end
 
     subgraph Storage ["Database (MongoDB)"]
-        A_API & T_API & P_API & C_API & L_API --> DB[(MongoDB)]
+        A_API & T_API & P_API & C_API & L_API & ART_API --> DB[(MongoDB)]
     end
 ```
 

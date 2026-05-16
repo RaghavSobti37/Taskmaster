@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.1.0
+# ⚡ Taskmaster v1.2.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -16,13 +16,14 @@
 | :--- | :--- |
 | **🚀 Dashboard** | Real-time task tracking, productivity metrics, and one-click completion with 10s undo. |
 | **📁 Projects** | Multi-view management (List, Kanban, Gantt) with automated progress rollups and phases. |
-| **📅 Smart Calendar** | Persistent MongoDB-backed calendar with Public/Private visibility and project integration. |
+| **📅 Smart Calendar** | Persistent MongoDB-backed calendar with Public/Private visibility, past date entry prevention, and project integration. |
 | **📈 Advanced CRM** | Lead tracking (New/Hot/Warm), CSV imports with deduplication, and automated follow-ups. |
+| **📧 Admin Mailer** | Complete broadcast campaign management with automated open pixel tracking (GIF) and click tracking with deduplicated bounce handling. |
 | **📝 Daily Logs** | Precision work logging with project tagging and automated performance reporting. |
 | **💬 Team Chat** | Real-time messaging with channel-based organization and task referencing. |
 | **🛠️ Admin Panel** | Root-level system oversight, user role management (Admin/User), and deep activity audits. |
 | **📎 Assets** | Project-scoped resource management supporting multiple external links per entry. |
-| **🎵 Artists Hub** | Multi-platform analytics (Spotify, YouTube, Meta) tracking reach trajectory with live API sync zapping and layman ID linking tooltips. |
+| **🎵 Artists Hub** | Multi-platform analytics (Spotify, YouTube, Meta) featuring dedicated dynamic sub-pages (`HarshadGolesarPage`, `YugmPage`, `MohitShankarPage`) with zero hardcoded metrics, real retention rates, live API sync, and step-by-step ID retrieval tooltips. |
 
 ---
 

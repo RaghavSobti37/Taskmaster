@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle2, Circle, Plus, Trash2, AlertCircle, Clock,

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus
 } from 'lucide-react';
@@ -12,8 +13,9 @@ import {
 import { format } from 'date-fns';
 
 export default function AdminMailContent() {
-  const { data: profiles = [], isLoading: profilesLoading } = useMailProfiles();
-  const { data: campaigns = [], isLoading: campaignsLoading } = useMailCampaigns();
+  const queryClient = useQueryClient();
+  const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useMailProfiles();
+  const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useMailCampaigns();
   const { data: stats, refetch: refetchStats } = useMailStats();
   const { data: team = [] } = useUserDirectory();
 
@@ -294,7 +296,7 @@ export default function AdminMailContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => refetchStats()}>
+          <Button variant="secondary" size="sm" onClick={() => { refetchStats(); refetchCampaigns(); refetchProfiles(); queryClient.invalidateQueries({ queryKey: ['mail'] }); }}>
             <RefreshCw size={14} /> Refresh Stats
           </Button>
           <Button 
@@ -699,8 +701,8 @@ export default function AdminMailContent() {
                 <StatCard label="Sent Success" value={selectedCampaign.stats?.sent || 0} icon={Send} variant="mint" />
                 <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
                 <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />
-                <StatCard label="Bounced / Fail" value={(selectedCampaign.stats?.bounced || selectedCampaign.stats?.invalid || 0) + (selectedCampaign.recipients?.filter(r => r.status === 'Failed' || r.status === 'Invalid')?.length || 0)} icon={AlertCircle} variant="rose" />
-                <StatCard label="Unsubscribed" value={selectedCampaign.stats?.unsubscribed || selectedCampaign.recipients?.filter(r => r.status === 'Unsubscribed')?.length || 0} icon={UserMinus} variant="warning" />
+                <StatCard label="Bounced / Fail" value={selectedCampaign.stats?.bounced || 0} icon={AlertCircle} variant="rose" />
+                <StatCard label="Unsubscribed" value={selectedCampaign.stats?.unsubscribed || 0} icon={UserMinus} variant="warning" />
               </div>
 
               {/* Target Recipient Table */}

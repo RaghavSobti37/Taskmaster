@@ -47,6 +47,19 @@ router.delete('/profiles/:id', protect, async (req, res) => {
 router.get('/campaigns', protect, async (req, res) => {
   try {
     const campaigns = await MailCampaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
+    for (const camp of campaigns) {
+      let total = camp.recipients?.length || 0;
+      let sent = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, invalid = 0;
+      camp.recipients?.forEach(r => {
+        if (r.status === 'Sent') sent++;
+        if (r.status === 'Opened') { sent++; opened++; }
+        if (r.status === 'Clicked') { sent++; opened++; clicked++; }
+        if (r.status === 'Bounced' || r.status === 'Failed') bounced++;
+        if (r.status === 'Invalid') { bounced++; invalid++; }
+        if (r.status === 'Unsubscribed') unsubscribed++;
+      });
+      camp.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
+    }
     res.json(campaigns);
   } catch (err) {
     console.error('Get campaigns error:', err);
@@ -100,12 +113,18 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
 // --- EVENTS & ANALYTICS ---
 router.get('/stats', protect, async (req, res) => {
   try {
-    const totalCampaigns = await MailCampaign.countDocuments({ createdBy: req.user._id });
-    const totalSent = await MailEvent.countDocuments({ eventType: 'Send' });
-    const totalBounced = await MailEvent.countDocuments({ eventType: 'Bounce' });
-    const totalOpened = await MailEvent.countDocuments({ eventType: 'Open' });
-    const totalClicked = await MailEvent.countDocuments({ eventType: 'Click' });
-    const totalUnsubscribed = await MailEvent.countDocuments({ eventType: 'Unsubscribe' });
+    const campaigns = await MailCampaign.find({ createdBy: req.user._id }).lean();
+    let totalCampaigns = campaigns.length;
+    let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsubscribed = 0;
+    campaigns.forEach(camp => {
+      camp.recipients?.forEach(r => {
+        if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) totalSent++;
+        if (['Opened', 'Clicked'].includes(r.status)) totalOpened++;
+        if (r.status === 'Clicked') totalClicked++;
+        if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) totalBounced++;
+        if (r.status === 'Unsubscribed') totalUnsubscribed++;
+      });
+    });
 
     res.json({ totalCampaigns, totalSent, totalBounced, totalOpened, totalClicked, totalUnsubscribed });
   } catch (err) {
@@ -177,7 +196,7 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
 router.get('/click/:campaignId/:recipientId', async (req, res) => {
   const { campaignId, recipientId } = req.params;
   const { email, url } = req.query;
-  const targetUrl = url || 'https://theshakticollective.in';
+  const targetUrl = url && url !== '#' && url !== 'undefined' ? url : 'https://theshakticollective.in';
 
   try {
     // 1. Record Click event

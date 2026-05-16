@@ -42,6 +42,8 @@ exports.getTscData = async (req, res) => {
         query.role = { $regex: `(^|,)\\s*${req.query.role}\\s*(,|$)`, $options: 'i' };
       }
     }
+    if (req.query.emailStatus && req.query.emailStatus !== 'all') query.emailStatus = req.query.emailStatus;
+    if (req.query.tag && req.query.tag !== 'all') query.tags = req.query.tag;
 
     const total = await TscData.countDocuments(query);
     const data = await TscData.find(query)

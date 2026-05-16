@@ -34,7 +34,8 @@ export default function LeadsPage() {
     leadStatus: 'all',
     assignedRepId: 'all',
     artistType: 'all',
-    primaryRole: 'all'
+    primaryRole: 'all',
+    emailStatus: 'all'
   });
 
   const queryParams = useMemo(() => ({
@@ -60,8 +61,8 @@ export default function LeadsPage() {
     {
       header: 'Customer Details',
       render: (row) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-bold text-xs tracking-tight">{row.name}</span>
             {row.artistType && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
@@ -73,6 +74,16 @@ export default function LeadsPage() {
                 {row.primaryRole}
               </span>
             )}
+            {row.emailStatus && row.emailStatus !== 'Pending' && (
+              <Badge variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Unsubscribed' ? 'warning' : 'rose'}>
+                {row.emailStatus}
+              </Badge>
+            )}
+            {row.tags && row.tags.map((t, idx) => (
+              <span key={idx} className="text-[9px] px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full font-bold uppercase tracking-wider">
+                #{t}
+              </span>
+            ))}
           </div>
           <span className="text-[11px] text-[var(--color-text-muted)] font-mono">{row.email} {row.phone ? `• ${row.phone}` : ''} {row.city ? `• ${row.city}` : ''}</span>
         </div>
@@ -200,6 +211,20 @@ export default function LeadsPage() {
                  ]}
                  value={filters.primaryRole || 'all'}
                  onChange={v => setFilters({...filters, primaryRole: v})}
+               />
+             </div>
+             <div className="w-36">
+               <NexusDropdown 
+                 placeholder="Email Status"
+                 options={[
+                   { value: 'all', label: 'All Emails' },
+                   { value: 'Active', label: 'Active (Opened)' },
+                   { value: 'Unsubscribed', label: 'Unsubscribed' },
+                   { value: 'Invalid', label: 'Bounced / Invalid' },
+                   { value: 'Pending', label: 'Pending Status' }
+                 ]}
+                 value={filters.emailStatus || 'all'}
+                 onChange={v => setFilters({...filters, emailStatus: v})}
                />
              </div>
              <div className="w-40">

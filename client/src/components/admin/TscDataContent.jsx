@@ -34,7 +34,8 @@ const TscDataContent = () => {
     campaign: 'all',
     originSource: 'all',
     role: 'all',
-    syncStatus: 'all'
+    syncStatus: 'all',
+    emailStatus: 'all'
   });
 
   const [showImportModal, setShowImportModal] = useState(false);
@@ -154,8 +155,20 @@ const TscDataContent = () => {
             {item.name?.substring(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-tight truncate">{item.name}</p>
-            <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">{item.email || 'No contact link'}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[11px] font-black uppercase tracking-tight truncate">{item.name}</p>
+              {item.emailStatus && item.emailStatus !== 'Pending' && (
+                <Badge variant={item.emailStatus === 'Active' ? 'mint' : item.emailStatus === 'Unsubscribed' ? 'warning' : 'rose'}>
+                  {item.emailStatus}
+                </Badge>
+              )}
+              {item.tags && item.tags.map((t, idx) => (
+                <span key={idx} className="text-[9px] px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full font-bold uppercase tracking-wider">
+                  #{t}
+                </span>
+              ))}
+            </div>
+            <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">{item.email || 'No contact link'} {item.phone ? `• ${item.phone}` : ''}</p>
           </div>
         </div>
       )
@@ -257,7 +270,7 @@ const TscDataContent = () => {
          </div>
 
          {/* Filter Matrix */}
-         <div className="grid grid-cols-4 gap-3 mt-4">
+         <div className="grid grid-cols-5 gap-3 mt-4">
              <NexusDropdown
                placeholder="Campaign"
                options={[{ value: 'all', label: 'All Campaigns' }, ...(stats?.filters.campaigns.map(c => ({ value: c, label: c.toUpperCase() })) || [])]}
@@ -285,6 +298,18 @@ const TscDataContent = () => {
                ]}
                value={filters.syncStatus}
                onChange={v => setFilters({...filters, syncStatus: v})}
+             />
+             <NexusDropdown
+               placeholder="Email Status"
+               options={[
+                 { value: 'all', label: 'All Emails' },
+                 { value: 'Active', label: 'Active (Opened)' },
+                 { value: 'Unsubscribed', label: 'Unsubscribed' },
+                 { value: 'Invalid', label: 'Bounced / Invalid' },
+                 { value: 'Pending', label: 'Pending Status' }
+               ]}
+               value={filters.emailStatus || 'all'}
+               onChange={v => setFilters({...filters, emailStatus: v})}
              />
          </div>
       </Card>

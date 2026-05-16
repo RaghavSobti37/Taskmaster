@@ -20,6 +20,13 @@ const getArtistEmoji = (name = '') => {
   return '✨';
 };
 
+const getArtistTheme = (name = '') => {
+  if (name.includes('Yugm')) return { bg: 'from-amber-950/40 via-amber-900/20 to-slate-950', border: 'border-amber-500/30', text: 'text-amber-400', badge: 'warning' };
+  if (name.includes('Mohit')) return { bg: 'from-indigo-950/40 via-purple-900/20 to-slate-950', border: 'border-indigo-500/30', text: 'text-indigo-400', badge: 'info' };
+  if (name.includes('Harshad')) return { bg: 'from-cyan-950/40 via-teal-900/20 to-slate-950', border: 'border-cyan-500/30', text: 'text-cyan-400', badge: 'success' };
+  return { bg: 'from-slate-900 via-slate-800/50 to-slate-950', border: 'border-slate-700', text: 'text-blue-400', badge: 'slate' };
+};
+
 const formatNumber = (num) => {
   if (num == null || isNaN(num)) return 'N/A';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -135,6 +142,7 @@ export default function ArtistDetail({ isPreview = false }) {
   const ytSubs = artist.analytics?.youtube?.subscribers || 0;
   const igFollowers = artist.analytics?.instagram?.followers || 0;
   const totalReach = spFollowers + ytSubs + igFollowers;
+  const theme = getArtistTheme(artist.name);
 
   const currentStats = analyticsData?.current || {};
   const tracks = analyticsData?.tracks || [];
@@ -325,6 +333,39 @@ export default function ArtistDetail({ isPreview = false }) {
           </div>
         }
       />
+
+      {/* Bespoke Artist Hero Banner */}
+      <div className={`p-8 rounded-3xl bg-gradient-to-r ${theme.bg} border ${theme.border} relative overflow-hidden shadow-2xl backdrop-blur-xl mb-8`}>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="w-24 h-24 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center justify-center text-5xl shadow-inner shrink-0">
+              {getArtistEmoji(artist.name)}
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-black tracking-tight text-white">{artist.name}</h1>
+                <Badge variant={theme.badge}>{artist.genre || (artist.name?.includes('Yugm') ? 'Folk Fusion' : artist.name?.includes('Mohit') ? 'Classical Crossover' : 'Devotional Harmony')}</Badge>
+                <Badge variant="mint">Verified Roster</Badge>
+              </div>
+              <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                {artist.bio || (artist.name?.includes('Yugm') ? 'Acclaimed acoustic folk-fusion ensemble weaving traditional storytelling with contemporary rhythm.' : artist.name?.includes('Mohit') ? 'Classical crossover virtuoso fusing Hindustani ragas with global ambient soundscapes.' : 'Divine collective bringing soul-stirring devotional chants and abhangs to modern audiences.')}
+              </p>
+              <div className="flex items-center gap-4 text-xs font-mono text-slate-400 pt-2">
+                <span>📍 Base: {artist.location || 'Mumbai / Jaipur'}</span>
+                <span>📅 Management: Exclusive Taskmaster Roster</span>
+                <span>🎧 Monthly Reach: {formatNumber(totalReach)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
+            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center space-y-1">
+              <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Next Live Tour</span>
+              <p className="text-xs font-bold text-white tracking-tight">{artist.name?.includes('Yugm') ? 'Jaipur Heritage Fest (Oct 24)' : artist.name?.includes('Mohit') ? 'NCPA Raga Series (Nov 12)' : 'Prithvi Theatre Jam (Dec 05)'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 3-Column Analytics Graphs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

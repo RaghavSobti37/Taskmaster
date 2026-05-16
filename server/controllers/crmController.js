@@ -3,6 +3,7 @@ const EMI = require('../models/EMI');
 const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
+const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -69,12 +70,40 @@ exports.getLeads = async (req, res) => {
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
 
     const total = await Lead.countDocuments(query);
-    const leads = await Lead.find(query)
-      .populate('assignedRepId', 'name email avatar')
-      .sort({ [sortField]: sortOrder })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    
+    const pipeline = [
+      { $match: query },
+      { $sort: { [sortField]: sortOrder } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'assignedRepId',
+          foreignField: '_id',
+          as: 'assignedRep'
+        }
+      },
+      {
+        $unwind: {
+          path: '$assignedRep',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          assignedRepId: 1,
+          name: 1, email: 1, phone: 1,
+          webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
+          meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
+          remarks: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
+          createdAt: 1, updatedAt: 1,
+          'assignedRep.name': 1, 'assignedRep.email': 1, 'assignedRep.avatar': 1
+        }
+      }
+    ];
+
+    const leads = await Lead.aggregate(pipeline);
 
     res.json({
       leads,
@@ -133,29 +162,17 @@ exports.updateLead = async (req, res) => {
     }
 
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
-    const auditEntries = [];
-    for (const key in updates) {
-      if (updates[key] !== oldLead[key] && key !== 'lockedBy' && key !== 'lockedAt') {
-        auditEntries.push({
-          userId: req.user._id,
-          userRole: req.user.role,
-          leadId: id,
-          fieldChanged: key,
-          oldValue: String(oldLead[key] || ''),
-          newValue: String(updates[key] || '')
-        });
-      }
-    }
-
+    
+    // The audit plugin handles the delta calculation and logging automatically
     const lead = await Lead.findByIdAndUpdate(id, { 
       ...updates, 
       lockedBy: req.user._id, 
       lockedAt: new Date() 
-    }, { new: true });
-
-    if (auditEntries.length > 0) {
-      await CRMAudit.insertMany(auditEntries);
-    }
+    }, { 
+      new: true,
+      userId: req.user._id, // Pass to audit plugin
+      userRole: req.user.role 
+    });
 
     res.json(lead);
   } catch (error) {
@@ -343,6 +360,11 @@ exports.uploadLeads = async (req, res) => {
           if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
           if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
 
+          // Apply sanitization
+          leadDoc.name = sanitizeName(leadDoc.name);
+          leadDoc.email = sanitizeEmail(leadDoc.email);
+          leadDoc.phone = normalizePhone(leadDoc.phone);
+
           leadDocs.push(leadDoc);
         }
 
@@ -484,11 +506,17 @@ exports.getCRMStats = async (req, res) => {
     ]);
 
     const result = stats[0];
+    const totalLeads = result.total[0]?.count || 0;
+    const convertedLeads = result.converted[0]?.count || 0;
+    const activeReach = result.meaningful[0]?.count || 0;
+    const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
+
     res.json({
-      total: result.total[0]?.count || 0,
+      totalLeads,
+      activeReach,
+      convertedLeads,
+      conversionRate,
       connected: result.connected[0]?.count || 0,
-      meaningful: result.meaningful[0]?.count || 0,
-      converted: result.converted[0]?.count || 0,
       totalReps: result.totalReps[0]?.count || 0
     });
   } catch (error) {

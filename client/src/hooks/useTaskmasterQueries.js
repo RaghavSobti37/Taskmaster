@@ -257,6 +257,101 @@ export const useMailProfiles = (enabled = true) => {
     enabled,
     staleTime: 1000 * 60 * 10,
   });
+};export const useDashboardSummary = () => {
+  return useQuery({
+    queryKey: ['dashboard', 'summary'],
+    queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
 };
 
+export const useActivityGrid = () => {
+  return useQuery({
+    queryKey: ['logs', 'activityGrid'],
+    queryFn: async () => (await axios.get('/api/logs/activity-grid')).data,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+};
 
+export const useLiveLeads = (params, enabled = true) => {
+  return useQuery({
+    queryKey: ['leads', params],
+    queryFn: async () => (await axios.get('/api/crm/leads', { params })).data,
+    enabled,
+    staleTime: 1000 * 60, // 1 minute
+  });
+};
+
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/users/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
+  });
+};
+
+export const useCreateTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/teams', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
+  });
+};
+
+export const useCreateMailProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/mail/profiles', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useDeleteMailProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/mail/profiles/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useCreateCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/mail/campaigns', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+    }
+  });
+};
+
+export const useSendCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.post(`/api/mail/campaigns/${id}/send`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+    }
+  });
+};
+
+export const useScanBounces = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId) => axios.post('/api/mail/scan-bounces', { profileId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+    }
+  });
+};

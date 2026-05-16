@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import NexusLoader from '../components/ui/NexusLoader';
+import { useAuth } from "../../contexts/AuthContext";
+import { DashboardSkeleton } from "../../components/ui";
 
 const GoogleSuccessPage = () => {
   const navigate = useNavigate();
@@ -33,14 +33,7 @@ const GoogleSuccessPage = () => {
     }
   }, [location.search, login, navigate]);
 
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-[var(--color-bg-workspace)]">
-      <div className="text-center">
-        <NexusLoader />
-        <p className="mt-4 text-[var(--color-text-secondary)] font-medium">Completing Google authentication...</p>
-      </div>
-    </div>
-  );
+  return <DashboardSkeleton />;
 };
 
 export default GoogleSuccessPage;

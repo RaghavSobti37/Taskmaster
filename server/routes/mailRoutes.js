@@ -30,8 +30,8 @@ router.get('/campaigns', protect, async (req, res) => {
 });
 
 router.post('/campaigns', protect, async (req, res) => {
-  const { leadIds, ...rest } = req.body;
-  const leads = await Lead.find({ _id: { $in: leadIds } });
+  const { leadIds, customRecipients, ...rest } = req.body;
+  const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds } }) : [];
   
   const recipients = leads.map(l => ({
     leadId: l._id,
@@ -39,10 +39,17 @@ router.post('/campaigns', protect, async (req, res) => {
     status: 'Pending'
   }));
 
+  const custom = (customRecipients || []).map(r => ({
+    email: r.email.toLowerCase().trim(),
+    status: 'Pending'
+  }));
+
+  const allRecipients = [...recipients, ...custom];
+
   const campaign = await MailCampaign.create({
     ...rest,
-    recipients,
-    stats: { total: recipients.length },
+    recipients: allRecipients,
+    stats: { total: allRecipients.length },
     createdBy: req.user._id
   });
   res.json(campaign);

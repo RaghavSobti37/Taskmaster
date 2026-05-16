@@ -1,35 +1,83 @@
-# Taskmaster Memory Graph
+# Taskmaster: Architectural Memory Graph
 
-## Architecture
-- **Frontend**: React 18 (Vite), Tailwind CSS v4 (Zero-flash theme engine), Framer Motion, Lucide Icons, **React Query (TanStack)**
-- **Backend**: Node.js, Express, JWT Authentication, Compression
-- **Database**: MongoDB with Mongoose ODM (.lean() optimized)
-- **Core Entities**: User, Team, Project, Phase, Task, Log, Message, Lead, Asset, CalendarEvent, Notification
+## Core System Overview
+- **Type**: High-Density Agentic CRM & Project Management Suite
+- **Design Standard**: Pro-Max (Glassmorphism, High Spacing Density, Lucide Icons, Framer Motion)
+- **Primary Data Flow**: TanStack Query (Hooks) ↔ Express/Node.js API ↔ MongoDB
 
-## Data Hooks (React Query)
-- `useTasks` — Managed task fetching with caching
-- `useLogs` — Managed activity log fetching
-- `useProjects` — Managed project fetching
-- `useUserDirectory` — Centralized user data
-- `useCreateLog` — Optimistic work entry creation
-- `useDebounce` — Input stabilization hook
+## Frontend Registry (Active Pages: 15)
 
-## Pages (12 total)
-1. Dashboard — Task overview + completion tracking
-2. ProjectsView — List all projects
-3. ProjectCreate — Create new project with team members
-4. ProjectDetail — List/Kanban/Gantt/Team views per project
-5. TeamView — Browse team members with filters
-6. DailyLogPage — Log daily work entries + time tracking
-7. AdminLogsPage — Admin view of all user logs
-8. ChatPage — Channel-based team messaging
-9. CRMPage — Lead/contact management
-10. AssetsPage — Project resources and links
-11. AdminPanel — User/team/role management + activity feed
-12. SettingsPage — Profile, avatar, preferences
-13. LoginPage — Authentication
-14. RegisterPage — Account creation
-15. CalendarView — Calendar overview
+### 1. Dashboard (`/`)
+- **Components**: `MainLayout`, `OutletSidebar`, `PageHeader`, `Card`, `Badge`.
+- **Features**: Real-time KPI cards, Activity Feed, Next Follow-up alerts.
+- **Data Hooks**: `useCRMStats`, `useLogs`.
+
+### 2. Leads Page (`/leads`)
+- **Components**: `NexusModal`, `NexusDropdown`, `CRMLeadModal`, `Badge`.
+- **Features**: Tabbed lead management (All, Fresh, Contacted), Status filters, Manual lead creation.
+- **State**: Local filter state, Modal visibility.
+
+### 3. Followups Page (`/followups`)
+- **Components**: `TabSwitcher`, `Card`, `Badge`.
+- **Features**: Priority-sorted lead follow-ups, Tabbed views (Today, Overdue, Upcoming), One-click status updates.
+- **Logic**: Dynamic filtering based on `nextFollowup` date.
+
+### 4. Projects Overview (`/projects`)
+- **Components**: `ProgressBar`, `Card`, `Search`.
+- **Features**: Project grid, Progress tracking, Tag-based searching.
+- **Hook**: `useProjects`.
+
+### 5. Project Creation (`/projects/new`)
+- **Components**: `Select` (react-select), `Card`, `Badge`.
+- **Features**: Tag management, Member assignment with role selection.
+
+### 6. Project Detail (`/projects/:id`)
+- **Components**: `ProjectList`, `ProjectKanban`, `ProjectTeam`, `ProjectAssets`, `TabSwitcher`.
+- **Features**: Multi-tab view (List, Kanban, Team, Assets), Task detail modals, Real-time status sync.
+
+### 7. Workspace Calendar (`/calendar`)
+- **Components**: `CalendarEntryModal`, `PageHeader`, `MiniCalendar` (Internal).
+- **Features**: Sync with Google Calendar, Public/Private event visibility, Indian Holiday integration.
+- **Persistence**: MongoDB `CalendarEvent` model.
+
+### 8. Daily Log Page (`/logs`)
+- **Components**: `PlugConnectedIcon`, `Trophy`, `Timer`.
+- **Features**: Work logging with project association, Goal progress bar (480m target).
+
+### 9. Assets & Links (`/assets`)
+- **Components**: `NexusModal`, `PageHeader`.
+- **Features**: Drive folder links, Document management, Categorized asset grid.
+
+### 10. Admin Panel (`/admin`)
+- **Components**: `UserDetailModal`, `EmailMarketingContent`, `TscDataContent`, `AdminLogsContent`.
+- **Features**: Multi-tab management (Users, CRM, Tsc Data, Mail, Logs).
+- **Admin Specific**: Bulk delete (Tsc Data), User role management, SMTP profile config.
+
+### 11. System Logs (`/admin/logs`)
+- **Components**: `TabSwitcher`, `CalIcon`.
+- **Features**: Detailed audit trails, User-specific activity feeds, Time-tracked duration analytics.
+
+### 12. App Settings (`/settings`)
+- **Components**: `CKDropdown`, `NexusModal`, `AvatarGallery`.
+- **Features**: Profile updates, Theme toggle (Light/Dark), Password management, Avatar selection gallery.
+
+### 13. Features Overview (`/features`)
+- **Components**: `PageHeader`, `Card`.
+- **Features**: Documentation of system modules and current functional status.
+
+### 14. Personal Todo (`/todo`)
+- **Components**: `Badge`, `Card`.
+- **Features**: Quick task management, Status toggles, Project linking.
+
+### 15. Authentication (`/login`, `/register`)
+- **Components**: `LoginPage`, `RegisterPage`.
+- **Features**: JWT-based auth, Google OAuth integration, Role-based redirect logic.
+
+## Technical Foundation
+- **State Management**: `AuthContext`, `ThemeContext`, `SidebarContext`.
+- **API Client**: Axios with interceptors (JWT in localStorage).
+- **Hooks Library**: `client/src/hooks/useTaskmasterQueries.js` (Centralized TanStack Query).
+- **Navigation**: React Router v6 (Lazy Loading).
 
 ## API Routes
 - `/api/auth` — Login, register, token validation

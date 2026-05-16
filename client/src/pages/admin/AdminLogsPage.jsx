@@ -32,7 +32,7 @@ import {
   ArrowUpRight,
   ShieldCheck
 } from 'lucide-react';
-import { Badge, PageHeader, PageContainer, Card, TabSwitcher } from '../components/ui';
+import { Badge, PageHeader, PageContainer, Card, TabSwitcher, PageSkeleton } from '../../components/ui';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -141,15 +141,7 @@ const AdminLogsPage = () => {
     ? eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() })
     : eachDayOfInterval({ start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) });
 
-  if (loading && logs.length === 0) return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse space-y-8">
-      <div className="h-12 bg-slate-100 rounded-2xl w-full" />
-      <div className="grid grid-cols-4 gap-6">
-        {[1,2,3,4].map(i => <div key={i} className="h-32 bg-slate-50 rounded-3xl" />)}
-      </div>
-      <div className="h-[600px] bg-slate-50 rounded-[3rem]" />
-    </div>
-  );
+  if (loading && logs.length === 0) return <PageSkeleton />;
 
   const filteredLogs = selectedFeedLogs ? selectedFeedLogs.filter(log => {
     if (activeTab === 'manual') return log.action === 'DAILY_LOG';

@@ -1,56 +1,41 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
   Clock,
   AlertCircle,
   TrendingUp,
-  Database,
   LayoutDashboard,
   Briefcase,
-  ChevronRight,
-  Filter,
-  ArrowUpRight,
   RotateCcw,
   Plus,
   Calendar as CalendarIcon,
-  Globe,
-  Lock
+  FileText,
+  Shield,
+  Users
 } from 'lucide-react';
 import axios from 'axios';
-import { Badge, ProgressBar, PageHeader, NexusLoader, Card, PageContainer } from '../components/ui';
+import { 
+  Badge, 
+  ProgressBar, 
+  PageHeader, 
+  Card, 
+  PageContainer, 
+  DataTable, 
+  VelocitySparkline,
+  StatCard,
+  Button,
+  DashboardSkeleton,
+  FullScreenWorkspace,
+  Input
+} from '../components/ui';
 
 import { useQueryClient } from '@tanstack/react-query';
 import TaskCreateModal from '../components/TaskCreateModal';
-import { format, isToday } from 'date-fns';
+import { format, subDays, isSameDay } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTasks, useLogs, useProjects, useUserDirectory } from '../hooks/useTaskmasterQueries';
-
-const StatCard = ({ icon: Icon, label, value, color, delay, isActive, onClick }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay }}
-    onClick={onClick}
-    className={`p-4 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${isActive
-      ? 'bg-[var(--color-bg-surface)] border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/20'
-      : 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]'
-      }`}
-  >
-    <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${color}`}>
-        <Icon size={20} className="text-white" />
-      </div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] leading-none mb-1">{label}</p>
-        <p className="text-xl font-black text-[var(--color-text-primary)] leading-none">{value}</p>
-      </div>
-    </div>
-  </motion.div>
-);
-
-
+import { useTasks, useProjects, useUserDirectory, useDashboardSummary } from '../hooks/useTaskmasterQueries';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -58,368 +43,315 @@ const Dashboard = () => {
   const [undoTask, setUndoTask] = useState(null);
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const undoTimer = useRef(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  // Optimized Data Fetching with Polling (optional, React Query handles stale/refetch)
+  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
-  const { data: logs = [], isLoading: logsLoading } = useLogs(user?._id, 10);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: teamMembers = [] } = useUserDirectory();
-  const [calendarEvents, setCalendarEvents] = useState([]);
-  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  const queryClient = useQueryClient();
-  const loading = tasksLoading || logsLoading || projectsLoading;
+  const loading = summaryLoading || tasksLoading || projectsLoading;
 
-  useEffect(() => {
-    const fetchTodayEvents = async () => {
-      try {
-        const [dbRes, holidayRes] = await Promise.all([
-          axios.get('/api/calendar'),
-          axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)
-        ]);
-        
-        const today = new Date();
-        const parseDate = (d) => {
-          if (!d) return null;
-          const [y, m, d_] = d.split('T')[0].split('-').map(Number);
-          return new Date(y, m - 1, d_);
-        };
+  const handleCompleteTask = async (task) => {
+    setCompletingIds(prev => new Set(prev).add(task._id));
+    try {
+      await axios.put(`/api/tasks/${task._id}`, { status: 'done' });
+      setUndoTask(task);
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      undoTimer.current = setTimeout(() => setUndoTask(null), 5000);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    } catch (err) {
+      console.error('Task completion failed:', err);
+    } finally {
+      setCompletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(task._id);
+        return next;
+      });
+    }
+  };
 
-        const dbEvents = dbRes.data.map(e => ({ ...e, type: 'event', dueDate: e.date }));
-        const holidays = holidayRes.data.map(h => ({ ...h, type: 'holiday', dueDate: h.start.date || h.start.dateTime, title: h.summary }));
-        
-        const combined = [...dbEvents, ...holidays].filter(e => {
-          const d = parseDate(e.dueDate);
-          return d && isSameDay(d, today);
-        });
+  const handleUndo = async () => {
+    if (!undoTask) return;
+    try {
+      await axios.put(`/api/tasks/${undoTask._id}`, { status: 'todo' });
+      setUndoTask(null);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    } catch (err) {
+      console.error('Task undo failed:', err);
+    }
+  };
 
-        setCalendarEvents(combined);
-      } catch (err) {
-        console.error('Dashboard calendar fetch failed:', err);
-      } finally {
-        setLoadingEvents(false);
-      }
-    };
-    fetchTodayEvents();
-  }, []);
-
-  const stats = useMemo(() => {
-    const counts = tasks.reduce((acc, task) => {
-      acc[task.status] = (acc[task.status] || 0) + 1;
-      return acc;
-    }, {});
-
-    return {
-      'done': counts['done'] || 0,
-      'in-progress': counts['in-progress'] || 0,
-      'todo': counts['todo'] || 0,
-      'in-review': counts['in-review'] || 0
-    };
+  const sparklineData = useMemo(() => {
+     return Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      return {
+        date: format(date, 'MMM d'),
+        count: tasks.filter(t => t.status === 'done' && t.updatedAt && isSameDay(new Date(t.updatedAt), date)).length
+      };
+    });
   }, [tasks]);
 
-  const handleCompleteTask = (task) => {
-    if (undoTask) {
-      finalizeCompletion(undoTask._id);
+  const taskColumns = [
+    {
+      header: 'Task Detail',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={(e) => { e.stopPropagation(); handleCompleteTask(row); }}
+            disabled={completingIds.has(row._id)}
+            className="w-5 h-5 rounded-full border-2 border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)] flex items-center justify-center transition-all group"
+          >
+            {completingIds.has(row._id) ? (
+              <div className="w-2 h-2 rounded-full bg-[var(--color-action-primary)] animate-pulse" />
+            ) : (
+              <CheckCircle2 size={12} className="opacity-0 group-hover:opacity-100 text-[var(--color-action-primary)]" />
+            )}
+          </button>
+          <div className="flex flex-col">
+            <span className="font-bold text-[11px] uppercase tracking-tight">{row.title}</span>
+            <span className="text-[9px] text-[var(--color-text-muted)] font-bold">{projects.find(p => p._id === row.projectId)?.name || 'General'}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'Priority',
+      render: (row) => (
+        <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : 'info'}>
+          {row.priority}
+        </Badge>
+      )
     }
-
-    setUndoTask(task);
-    setCompletingIds(prev => new Set(prev).add(task._id));
-    // Note: Local state update for immediate feedback, React Query will refetch on settle
-    if (undoTimer.current) clearTimeout(undoTimer.current);
-    undoTimer.current = setTimeout(() => {
-      finalizeCompletion(task._id);
-    }, 10000);
-  };
-
-  const finalizeCompletion = async (taskId) => {
-    try {
-      await axios.put(`/api/tasks/${taskId}`, { status: 'done' });
-      setCompletingIds(prev => {
-        const next = new Set(prev);
-        next.delete(taskId);
-        return next;
-      });
-      setUndoTask(null);
-    } catch (err) {
-      console.error('Failed to complete task:', err);
-      setCompletingIds(prev => {
-        const next = new Set(prev);
-        next.delete(taskId);
-        return next;
-      });
-      setUndoTask(null);
-    }
-  };
-
-  const handleUndo = () => {
-    if (!undoTask) return;
-    clearTimeout(undoTimer.current);
-    const restoredTask = undoTask;
-    setCompletingIds(prev => {
-      const next = new Set(prev);
-      next.delete(restoredTask._id);
-      return next;
-    });
-    setUndoTask(null);
-  };
-
-  const filteredTasks = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
-
-  const activeLoadPercent = stats.todo + stats['in-progress'] + stats['in-review'] + stats.done === 0
-    ? 0
-    : Math.round((stats['in-progress'] / (stats.todo + stats['in-progress'] + stats['in-review'] + stats.done)) * 100);
-
-  const DashboardSkeleton = () => (
-    <div className="space-y-8 animate-pulse">
-      <div className="flex justify-between items-center h-16">
-        <div className="h-8 w-48 bg-slate-200 rounded" />
-        <div className="h-10 w-32 bg-slate-200 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-8">
-        <div className="col-span-2 h-[500px] bg-slate-100 rounded-3xl" />
-        <div className="h-[500px] bg-slate-100 rounded-3xl" />
-      </div>
-    </div>
-  );
+  ];
 
   if (loading && tasks.length === 0) return <DashboardSkeleton />;
 
+  const { metrics = {}, calendar = [], velocity = 'Stable' } = summary || {};
 
   return (
-    <PageContainer>
-      <PageHeader
+    <PageContainer className="!py-4 !space-y-6">
+      <PageHeader 
+        title="Operational Overview" 
+        subtitle={`Welcome back, ${user?.name?.split(' ')[0]}. Here is your current mission status.`}
         icon={LayoutDashboard}
-        title="Dashboard"
-        subtitle="Check your projects and tasks."
         actions={
-          <button
-            onClick={() => setIsTaskModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-[var(--color-action-primary)] text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-[var(--color-action-hover)] transition-all shadow-lg shadow-blue-500/20"
-          >
-            <Plus size={16} /> Add New Task
-          </button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
+              <Plus size={16} /> New Work Item
+            </Button>
+          </div>
         }
       />
 
-      <TaskCreateModal
-        isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
-        projects={projects}
-        members={teamMembers}
-        onTaskCreated={(newTask) => setTasks(prev => [newTask, ...prev])}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={CheckCircle2}
-          label="Completed"
-          value={stats.done}
-          color="bg-[var(--color-status-done)]"
-          delay={0.1}
-          isActive={filter === 'done'}
-          onClick={() => setFilter(filter === 'done' ? 'all' : 'done')}
-        />
-        <StatCard
-          icon={Clock}
-          label="Working"
-          value={stats['in-progress']}
-          color="bg-[var(--color-status-progress)]"
-          delay={0.2}
-          isActive={filter === 'in-progress'}
-          onClick={() => setFilter(filter === 'in-progress' ? 'all' : 'in-progress')}
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="Review"
-          value={stats['in-review']}
-          color="bg-[var(--color-status-review)]"
-          delay={0.3}
-          isActive={filter === 'in-review'}
-          onClick={() => setFilter(filter === 'in-review' ? 'all' : 'in-review')}
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Backlog"
-          value={stats.todo}
-          color="bg-[var(--color-status-todo)]"
-          delay={0.4}
-          isActive={filter === 'todo'}
-          onClick={() => setFilter(filter === 'todo' ? 'all' : 'todo')}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <StatCard label="Work Completed" value={`${metrics.completionRate}%`} icon={CheckCircle2} variant="mint" info="The percentage of assigned tasks you have finished." />
+        <StatCard label="Urgent Tasks" value={metrics.criticalTasks} icon={AlertCircle} variant="rose" info="Important work items that need your attention immediately." />
+        <StatCard label="Overdue Items" value={metrics.overdueTasks} icon={Clock} variant="apricot" info="Tasks that have passed their planned completion date." />
+        <StatCard label="Focus Time Today" value={`${metrics.focusHours}h`} icon={TrendingUp} variant="info" info="Total time logged on tasks within the last 24 hours." />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Panel - Filtered Tasks */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="overflow-hidden">
-            <div className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
-              <h3 className="font-bold flex items-center gap-2">
-                <Database size={18} className="text-[var(--color-action-primary)]" />
-                Tasks: {filter.toUpperCase()}
-              </h3>
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{filteredTasks.length} Tasks</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="flex flex-col">
+            <div className="p-3 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
+               <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                 <Briefcase size={14} className="text-[var(--color-action-primary)]" />
+                 Active Workflow
+               </h3>
+               <div className="flex items-center gap-2">
+                  <button onClick={() => setFilter('all')} className={`text-[10px] font-black uppercase px-2 py-1 rounded-md transition-all ${filter === 'all' ? 'bg-[var(--color-bg-primary)] shadow-sm text-[var(--color-action-primary)]' : 'text-[var(--color-text-muted)]'}`}>All Items</button>
+               </div>
             </div>
-            <div className="divide-y divide-[var(--color-bg-border)] max-h-[500px] overflow-y-auto">
-              {filteredTasks.length === 0 ? (
-                <div className="p-20 text-center text-[var(--color-text-muted)] italic">No tasks match current filter.</div>
-              ) : filteredTasks.map(task => {
-                const isDone = task.status === 'done';
-                const isFinalizing = completingIds.has(task._id);
+            <div className="p-0">
+               <DataTable 
+                 columns={taskColumns} 
+                 data={tasks.filter(t => t.status !== 'done')} 
+                 onRowClick={(task) => setSelectedTask(task)}
+               />
+            </div>
+          </Card>
+        </div>
 
-                return (
-                  <div key={task._id} className={`p-4 flex items-center justify-between hover:bg-[var(--color-bg-workspace)] transition-all group ${isDone ? 'opacity-60' : ''}`}>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => !isDone && handleCompleteTask(task)}
-                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isDone
-                          ? 'bg-[var(--color-status-done)] border-[var(--color-status-done)] text-white cursor-default'
-                          : 'border-[var(--color-bg-border)] text-transparent hover:border-[var(--color-status-done)] hover:bg-[var(--color-status-done)]/10 hover:text-[var(--color-status-done)]'
-                          }`}
-                      >
-                        <CheckCircle2 size={14} />
-                      </button>
-                      <div>
-                        <p className={`text-sm font-bold text-[var(--color-text-primary)] ${isDone ? 'line-through decoration-2 decoration-green-500/50' : ''}`}>{task.title}</p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[10px] text-[var(--color-text-muted)] uppercase font-bold tracking-tighter">Project: {projects.find(p => p._id === task.projectId)?.name || 'NONE'}</p>
-                          {isFinalizing && (
-                            <span className="text-[9px] text-[var(--color-action-primary)] font-black animate-pulse">● SAVING...</span>
-                          )}
-                        </div>
+        <aside className="lg:col-span-4 space-y-6">
+           <Card className="p-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] overflow-hidden relative">
+              <div className="relative z-10 space-y-4">
+                 <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Mission Velocity</h4>
+                    <Badge variant={velocity === 'Optimal' ? 'success' : 'warning'}>{velocity}</Badge>
+                 </div>
+                 <VelocitySparkline data={sparklineData} />
+              </div>
+           </Card>
+
+           <Card className="p-0 flex flex-col">
+              <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <CalendarIcon size={14} className="text-blue-500" /> Today's Schedule
+                 </h4>
+                 <Badge variant="info">{calendar.length}</Badge>
+              </div>
+              <div className="p-4 space-y-3">
+                 {calendar.length === 0 ? (
+                   <p className="text-[10px] text-[var(--color-text-muted)] font-bold italic text-center py-4">No events planned for today</p>
+                 ) : calendar.map(event => (
+                   <div key={event._id} className="flex flex-col p-2.5 rounded-lg bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] gap-1">
+                      <div className="flex justify-between items-start">
+                         <span className="text-[10px] font-black uppercase tracking-tight">{event.title}</span>
+                         <span className="text-[8px] font-bold text-blue-500 bg-blue-500/5 px-1.5 rounded uppercase">{event.visibility}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {isDone ? (
-                        <span className="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-lg">DONE</span>
-                      ) : (
-                        <Badge variant={task.priority === 'critical' || task.priority === 'high' ? 'critical' : 'todo'}>{task.priority}</Badge>
-                      )}
-                      <button
-                        onClick={() => navigate(`/projects/${task.projectId}`)}
-                        className="p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
-                      >
-                        <ArrowUpRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
+                      <div className="flex items-center gap-2 text-[9px] text-[var(--color-text-muted)] font-bold">
+                         <Clock size={10} /> {event.time || 'All Day'}
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </Card>
 
-        {/* Sidebar Panel - Projects Progress */}
-        <div className="space-y-6">
-          {/* Calendar Preview */}
-          <Card className="p-6">
-            <h3 className="font-bold mb-6 flex items-center gap-2">
-              <CalendarIcon size={18} className="text-blue-500" /> Today's Schedule
-            </h3>
-            <div className="space-y-4">
-              {loadingEvents ? (
-                <div className="space-y-3">
-                  <div className="h-10 bg-slate-50 animate-pulse rounded-xl" />
-                  <div className="h-10 bg-slate-50 animate-pulse rounded-xl" />
-                </div>
-              ) : calendarEvents.length === 0 ? (
-                <div className="py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-300">No events today</p>
-                </div>
-              ) : calendarEvents.map((event, i) => (
-                <div key={i} className={`p-3 rounded-xl border flex items-center gap-3 transition-all hover:border-blue-500/30 cursor-default
-                  ${event.type === 'holiday' ? 'bg-rose-50 border-rose-100' : 'bg-blue-50/50 border-blue-100'}
-                `}>
-                  <div className={`w-1 h-6 rounded-full ${event.type === 'holiday' ? 'bg-rose-400' : 'bg-blue-500'}`} />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold truncate text-slate-900">{event.title}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">
-                      {event.type === 'holiday' ? '🇮🇳 Holiday' : (event.visibility === 'public' ? 'Public Event' : 'Private Event')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => navigate('/calendar')}
-                className="w-full py-2.5 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 rounded-xl border border-slate-100 hover:bg-slate-100 transition-all"
-              >
-                Open Calendar
-              </button>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="font-bold mb-6 flex items-center gap-2">
-              <Briefcase size={18} className="text-orange-500" /> Project Progress
-            </h3>
-            <div className="space-y-4">
-              {projects.slice(0, 4).map(project => (
-                <div key={project._id} className="space-y-1.5 cursor-pointer group" onClick={() => navigate(`/projects/${project._id}`)}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">{project.name}</span>
-                    <span className="text-[10px] font-bold text-[var(--color-action-primary)]">{project.progress}%</span>
-                  </div>
-                  <ProgressBar progress={project.progress} />
-                  <div className="flex items-center gap-1 overflow-hidden">
-                    {project.tags?.map(tag => (
-                      <span key={tag} className="text-[8px] bg-[var(--color-bg-workspace)] px-1.5 py-0.5 rounded text-[var(--color-text-muted)] font-bold">#{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => navigate('/projects')}
-                className="w-full py-2 rounded-xl border border-dashed border-[var(--color-bg-border)] text-[10px] font-bold text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)] hover:text-[var(--color-action-primary)] transition-all"
-              >
-                View All Projects
-              </button>
-            </div>
-          </Card>
-        </div>
+           <Card className="p-4 space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                 <Users size={14} /> My Squad
+              </h4>
+              <div className="space-y-4">
+                 {teamMembers.slice(0, 4).map(member => {
+                    const memberTasks = tasks.filter(t => t.assignees?.includes(member._id));
+                    const progress = memberTasks.length ? Math.round((memberTasks.filter(t => t.status === 'done').length / memberTasks.length) * 100) : 0;
+                    return (
+                      <div key={member._id} className="space-y-1.5">
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                               <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] overflow-hidden">
+                                  {member.avatar ? <img src={member.avatar} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center text-[8px] font-black">{member.name?.substring(0, 2)}</div>}
+                               </div>
+                               <span className="text-[10px] font-bold">{member.name}</span>
+                            </div>
+                            <span className="text-[9px] font-black text-[var(--color-text-muted)]">{progress}%</span>
+                         </div>
+                         <ProgressBar progress={progress} />
+                      </div>
+                    );
+                 })}
+              </div>
+           </Card>
+        </aside>
       </div>
 
-      {/* Undo Notification */}
       <AnimatePresence>
         {undoTask && (
-          <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            className="fixed bottom-4 left-4 right-4 md:left-auto md:bottom-8 md:right-8 z-[200] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl shadow-2xl p-4 flex items-center gap-4 min-w-[280px] md:min-w-[300px]"
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900 text-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-4 border border-slate-800"
           >
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
-              <CheckCircle2 size={20} className="md:size-24" />
+            <div className="flex items-center gap-2">
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+               <span className="text-[11px] font-bold uppercase tracking-tight">Work item finished</span>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-[var(--color-text-primary)]">Task Done</p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">"{undoTask.title}" has been completed.</p>
-            </div>
-            <button
-              onClick={handleUndo}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-workspace)] hover:bg-[var(--color-bg-border)] rounded-xl text-xs font-bold transition-all"
-            >
-              <RotateCcw size={14} /> UNDO
+            <button onClick={handleUndo} className="text-[10px] font-black uppercase text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+               <RotateCcw size={12} /> Undo
             </button>
-            <button onClick={() => setUndoTask(null)} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
-              <X size={16} />
-            </button>
-            <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-action-primary)] rounded-full overflow-hidden w-full">
-              <motion.div
-                initial={{ width: "100%" }}
-                animate={{ width: 0 }}
-                transition={{ duration: 10, ease: "linear" }}
-                className="h-full bg-blue-400"
-              />
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <FullScreenWorkspace
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        title={selectedTask?.title || 'Item Details'}
+        subtitle={`Project: ${projects.find(p => p._id === selectedTask?.projectId)?.name || 'Unlinked'} • Status: ${selectedTask?.status?.toUpperCase()}`}
+        onSave={() => setSelectedTask(null)}
+        sidebar={
+          <div className="space-y-4">
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Configuration</h4>
+               <div className="space-y-3">
+                  <div className="flex justify-between">
+                     <span className="text-[10px] font-bold">Priority Level</span>
+                     <Badge variant={selectedTask?.priority === 'critical' ? 'danger' : 'info'}>{selectedTask?.priority}</Badge>
+                  </div>
+               </div>
+            </Card>
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Team Members</h4>
+               <div className="flex -space-x-2">
+                  {selectedTask?.assignees?.map((a, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[var(--color-bg-primary)] bg-[var(--color-bg-secondary)] flex items-center justify-center text-[10px] font-black overflow-hidden">
+                       {/* This assumes assignees are objects with name/avatar. If IDs, would need mapping */}
+                       {typeof a === 'object' ? (a.avatar ? <img src={a.avatar} className="w-full h-full object-cover" alt="" /> : a.name?.substring(0, 2)) : '..'}
+                    </div>
+                  ))}
+               </div>
+            </Card>
+          </div>
+        }
+      >
+        <div className="space-y-8">
+           <section>
+              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+                 <FileText size={14} /> Description
+              </h3>
+              <div className="p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
+                 <p className="text-sm font-medium leading-relaxed">
+                   {selectedTask?.description || 'No detailed instructions provided for this work item.'}
+                 </p>
+              </div>
+           </section>
+
+           <section>
+              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+                 <Shield size={14} /> Data Update
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <Input label="Task Title" defaultValue={selectedTask?.title} />
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Associated Project</label>
+                    <select 
+                      className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
+                      defaultValue={selectedTask?.projectId}
+                    >
+                       {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                    </select>
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Deadline</label>
+                    <input 
+                      type="date" 
+                      defaultValue={selectedTask?.dueDate ? format(new Date(selectedTask.dueDate), 'yyyy-MM-dd') : ''}
+                      className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
+                    />
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Priority Status</label>
+                    <select 
+                      className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
+                      defaultValue={selectedTask?.priority}
+                    >
+                       <option value="low">low</option>
+                       <option value="medium">medium</option>
+                       <option value="high">high</option>
+                       <option value="critical">critical</option>
+                    </select>
+                 </div>
+              </div>
+           </section>
+        </div>
+      </FullScreenWorkspace>
+
+      <TaskCreateModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+        onTaskCreated={() => {
+          setIsTaskModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+        }}
+      />
     </PageContainer>
   );
 };

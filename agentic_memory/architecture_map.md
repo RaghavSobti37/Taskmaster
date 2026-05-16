@@ -13,12 +13,14 @@ graph TD
         AP[Admin Panel]
         DL[Daily Logs]
         AL[Admin Logs]
-        CH[Team Chat]
+        LP[Leads Page]
+        FP[Followups Page]
         ST[Settings]
-        CRM_F[CRM]
-        TV[Team Directory]
         CV[Calendar]
-        CP[Command Palette]
+        AS[Assets Page]
+        TP[Todo Page]
+        FE[Features Page]
+        AUTH[Auth System]
         RQ["React Query (Cache Layer)"]
     end
 
@@ -29,10 +31,10 @@ graph TD
         L_API["/api/logs"]
         A_API["/api/auth"]
         TM_API["/api/teams"]
-        C_API["/api/chat"]
         CR_API["/api/crm"]
         AS_API["/api/assets"]
         CAL_API["/api/calendar"]
+        M_API["/api/mail"]
     end
 
     subgraph Models ["Database (MongoDB/Mongoose)"]
@@ -40,16 +42,15 @@ graph TD
         M_Project[(Project)]
         M_User[(User)]
         M_Log[(Log)]
-        M_Phase[(Phase)]
         M_Team[(Team)]
-        M_Message[(Message)]
         M_Lead[(Lead)]
         M_Asset[(Asset)]
         M_Event[(CalendarEvent)]
+        M_Batch[(CRMImport)]
     end
 
-    D & PL & PD & AP & DL & AL & CH & ST & CRM_F & TV & CV --> RQ
-    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & C_API & CR_API & AS_API & CAL_API
+    D & PL & PD & AP & DL & AL & LP & FP & ST & CV & AS & TP & FE & AUTH --> RQ
+    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & CR_API & AS_API & CAL_API & M_API
 
     T_API --> M_Task
     P_API --> M_Project
@@ -57,13 +58,11 @@ graph TD
     L_API --> M_Log
     A_API --> M_User
     TM_API --> M_Team
-    C_API --> M_Message
-    CR_API --> M_Lead
+    CR_API --> M_Lead & M_Batch
     AS_API --> M_Asset
     CAL_API --> M_Event
 
-    M_Project -- "has" --> M_Phase
-    M_Phase -- "contains" --> M_Task
+    M_Project -- "contains" --> M_Task
     M_Task -- "assigned to" --> M_User
     M_User -- "member of" --> M_Team
     M_Project -- "assigned to" --> M_Team
@@ -77,42 +76,40 @@ graph TD
 
 ### Caching Layer (React Query)
 The system uses `@tanstack/react-query` to manage server state.
-- **Deduplication**: Multiple components can request the same data (e.g., current user) but only one network request is made.
+- **Deduplication**: Multiple components can request the same data but only one network request is made.
 - **Caching**: Data is cached for 5 minutes (`staleTime: 5m`). Navigating between pages is instantaneous.
-- **Optimistic Updates**: Changes (like adding a log) appear in the UI immediately while the server syncs in the background.
+- **Optimistic Updates**: Changes appear in the UI immediately while the server syncs in the background.
 
 ### Backend Optimization
 - **Lean Queries**: All read-only database fetches use `.lean()`. This bypasses Mongoose hydration, making API responses significantly faster.
-- **Indexing**: Database fields used for filtering (`userId`, `projectId`, `createdAt`) are indexed for O(1) or O(log n) lookup speed.
+- **Indexing**: Database fields used for filtering (`userId`, `projectId`, `createdAt`) are indexed for fast lookup speed.
 - **Compression**: Gzip/Brotli compression is applied to all JSON responses to minimize bandwidth usage.
 
 ### Pro-Max Design System (UI/UX)
 The system implements a high-density "Pro-Max" design standard focusing on efficiency and visual excellence.
-- **Zero-Flash Theme Engine**: Injects a blocking script at the root level to sync theme preferences (localStorage/System) before hydration, preventing FOUC.
-- **Semantic Token System**: All components use a strict mapping of semantic tokens (`bg-primary`, `text-primary`, `border-primary`) rather than hardcoded colors.
-- **Global Command Palette**: A system-wide search and action hub (`Ctrl+K`) for rapid navigation and task execution.
+- **Zero-Flash Theme Engine**: Injects a blocking script at the root level to sync theme preferences (localStorage/System) before hydration.
+- **Semantic Token System**: All components use a strict mapping of semantic tokens (`var(--color-bg-workspace)`, `var(--color-text-primary)`).
 - **Micro-Animations**: Utilizes `framer-motion` for fluid transitions, spring-physics interactions, and high-performance layout shifts.
-- **High-Density Analytics**: Custom SVG-based components (`VelocitySparkline`, `ProgressRing`, `ActivityHeatmap`) provide at-a-glance performance metrics without bloat.
 
 ## Module Overview
 
 | Module | What It Does | Key Interactions |
 |---|---|---|
 | **Frontend** | Renders the UI, manages local state | Uses React Query hooks for optimized data fetching |
-| **Auth** | JWT-based login/register | Protects all `/api/*` routes except login/register |
+| **Auth** | JWT-based login/register | Protects all `/api/*` routes except login/register/success |
 | **Tasks** | Create, update, complete tasks | Status transitions trigger progress rollups + auto-logging |
-| **Projects** | Organize work into projects | Contains phases, tasks, members, and teams |
-| **Admin Panel** | Manage users, teams, roles | User directory, team creation, activity feed |
-| **Daily Logs** | Time tracking + work entries | Managed via optimistic React Query mutations |
-| **Team Chat** | Channel-based messaging | Mentions, file references, task creation from chat |
-| **CRM** | Lead/contact management | CSV import, status tracking, rep assignment |
-| **Assets** | Project resource links | Up to 3 links per asset, project-scoped |
-| **Calendar** | Event scheduling | DB persistence, Public/Private visibility |
+| **Projects** | Organize work into projects | Contains tasks, members, and teams |
+| **Admin Panel** | Manage users, teams, CRM, and mail | Multi-tab UI for root administration |
+| **Daily Logs** | Time tracking + work entries | Manual work entries with goal progress tracking |
+| **CRM (Leads)** | Lead/contact management | CSV import, status tracking, representative assignment |
+| **CRM (Followups)** | Scheduled sales calls | Tabbed view of Today, Overdue, and Upcoming followups |
+| **Assets** | Project resource links | Document management and categorized asset grid |
+| **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |
 
 ## Data Relationships
 
-### Project → Phase → Task
-Projects contain Phases (stages), which contain Tasks. Completing tasks auto-updates Phase and Project progress percentages.
+### Project → Task
+Projects contain Tasks. Completing tasks updates Project progress percentages.
 
 ### User → Team → Project
 Users belong to Teams. Projects are assigned to Teams, giving all members access to the project's tasks.
@@ -121,14 +118,13 @@ Users belong to Teams. Projects are assigned to Teams, giving all members access
 The Log model records all system activity:
 - `TASK_COMPLETION` — when a task status changes
 - `DAILY_LOG` — manual work entries from users
-- `CHAT_MESSAGE` — messages sent in chat
-- `USER_LOGIN` — authentication events
+- `CRM_IMPORT` — history of lead uploads
 
 ### Lead → User
-CRM leads are assigned to users (reps) for follow-up. Leads track status (New/Hot/Warm/Cold/Converted) and quality rating (1-5).
+CRM leads are assigned to users (reps) for follow-up. Leads track status and next follow-up dates.
 
 ### Asset → Project
-Assets store important links for a project. Each asset can hold up to 3 URLs.
+Assets store important links for a project.
 
 ### CalendarEvent → User
 Calendar events are owned by users. Public events are visible to everyone; private events only to the owner.

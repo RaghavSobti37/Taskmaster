@@ -178,3 +178,37 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete user' });
   }
 };
+
+exports.updateUserAdmin = async (req, res) => {
+  try {
+    const { name, email, phone, role, teams } = req.body;
+    
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    if (role && role !== targetUser.role) {
+      const validRoles = ['user', 'admin', 'sales'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+      }
+      if (req.params.id === req.user._id.toString() && role !== 'admin') {
+        return res.status(403).json({ error: 'Cannot demote yourself.' });
+      }
+      if (targetUser.email === 'raghavraj@theshakticollective.in' && role !== 'admin') {
+        return res.status(403).json({ error: 'Root Admin must retain administrative clearance.' });
+      }
+    }
+
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name;
+    if (email !== undefined) updateFields.email = email.toLowerCase().trim();
+    if (phone !== undefined) updateFields.phone = phone;
+    if (role !== undefined) updateFields.role = role;
+    if (teams !== undefined) updateFields.teams = Array.isArray(teams) ? teams.map(t => t.toUpperCase()) : [];
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, { $set: updateFields }, { new: true }).select('-password');
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

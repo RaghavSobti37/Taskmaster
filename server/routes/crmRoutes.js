@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const crmController = require('../controllers/crmController');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { checkLock } = require('../middleware/concurrencyMiddleware');
+const Lead = require('../models/Lead');
 
 const multer = require('multer');
 const path = require('path');
@@ -37,7 +39,7 @@ router.route('/leads')
   .post(crmController.createLead);
 
 router.route('/leads/:id')
-  .put(crmController.updateLead);
+  .put(checkLock(Lead), crmController.updateLead);
 
 router.route('/leads/:leadId/emis')
   .get(crmController.getEmis)

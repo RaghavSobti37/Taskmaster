@@ -2,21 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, Search } from 'lucide-react';
 
-/**
- * NexusDropdown — Universal scrollable dropdown.
- * Replaces all native <select> elements for consistent design language.
- *
- * @param {Array} options       - [{ value, label }]
- * @param {string|number} value - Current selected value
- * @param {function} onChange   - Callback with selected value
- * @param {string} placeholder  - Placeholder text
- * @param {string} label        - Optional label text
- * @param {string} className    - Additional wrapper classes
- * @param {boolean} disabled    - Disable interaction
- * @param {boolean} searchable  - Show search input for long lists
- * @param {string} variant      - 'default' | 'compact' (for tables)
- * @param {boolean} required    - Visual required indicator
- */
 const NexusDropdown = ({
   options = [],
   value,
@@ -69,7 +54,7 @@ const NexusDropdown = ({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1 mb-1.5">
+        <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-0.5 mb-1">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
@@ -80,15 +65,17 @@ const NexusDropdown = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
           w-full flex items-center justify-between transition-all outline-none
+          bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]
+          rounded-[var(--radius-atomic)]
           ${isCompact
-            ? 'px-3 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]'
-            : 'px-4 py-3 text-xs font-bold rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] shadow-inner'
+            ? 'px-2 py-1 text-[11px]'
+            : 'px-3 py-1.5 text-sm'
           }
           ${disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:border-[var(--color-action-primary)] focus:ring-2 focus:ring-[var(--color-action-primary)]/20 cursor-pointer'
+            : 'hover:border-[var(--color-action-primary)] cursor-pointer'
           }
-          ${isOpen ? 'border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/20' : ''}
+          ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
         `}
       >
         <span className={`truncate ${!selectedLabel ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
@@ -103,38 +90,32 @@ const NexusDropdown = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className={`
-              absolute top-full left-0 right-0 mt-1.5 z-[300]
-              bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]
-              rounded-xl shadow-2xl overflow-hidden
-            `}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.1 }}
+            className="absolute top-full left-0 right-0 mt-1 z-[300] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-xl overflow-hidden"
           >
-            {/* Search */}
             {searchable && (
-              <div className="p-2 border-b border-[var(--color-bg-border)]">
+              <div className="p-1 border-b border-[var(--color-bg-border)]">
                 <div className="relative">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                  <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                   <input
                     ref={searchRef}
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-8 pr-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-bold outline-none"
+                    className="w-full pl-7 pr-2 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-[11px] outline-none"
                   />
                 </div>
               </div>
             )}
 
-            {/* Options */}
-            <div className={`overflow-y-auto custom-scrollbar ${isCompact ? 'max-h-48 py-1' : 'max-h-60 py-1.5'}`}>
+            <div className={`overflow-y-auto max-h-60 py-1 ${isCompact ? 'text-[11px]' : 'text-sm'}`}>
               {filteredOptions.length === 0 ? (
-                <div className="px-4 py-3 text-[10px] text-[var(--color-text-muted)] italic text-center">
-                  No options found
+                <div className="px-3 py-2 text-[10px] text-[var(--color-text-muted)] italic text-center">
+                  No matches
                 </div>
               ) : (
                 filteredOptions.map(option => {
@@ -145,24 +126,16 @@ const NexusDropdown = ({
                       type="button"
                       onClick={() => handleSelect(option)}
                       className={`
-                        w-full flex items-center justify-between transition-all
-                        ${isCompact
-                          ? 'px-3 py-2 text-[10px] font-black'
-                          : 'px-4 py-2.5 text-xs font-bold'
-                        }
-                        hover:bg-[var(--color-bg-workspace)]
+                        w-full flex items-center justify-between px-3 py-1.5 transition-all
+                        hover:bg-[var(--color-bg-secondary)]
                         ${isSelected
-                          ? 'text-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5'
+                          ? 'text-[var(--color-action-primary)] font-bold'
                           : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                         }
                       `}
                     >
                       <span className="truncate">{option.label}</span>
-                      {isSelected && (
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                          <Check size={12} className="text-[var(--color-action-primary)] shrink-0 ml-2" />
-                        </motion.div>
-                      )}
+                      {isSelected && <Check size={12} className="text-[var(--color-action-primary)] shrink-0 ml-2" />}
                     </button>
                   );
                 })

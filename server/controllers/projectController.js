@@ -34,12 +34,13 @@ exports.createProject = async (req, res) => {
 
 exports.getProjects = async (req, res) => {
   try {
-    const projects = await Project.find({
+    const filter = req.user.role === 'admin' ? {} : {
       $or: [
         { owner: req.user._id },
         { members: req.user._id }
       ]
-    })
+    };
+    const projects = await Project.find(filter)
     .populate('members', 'name avatar teams')
     .sort({ createdAt: -1 })
     .lean();

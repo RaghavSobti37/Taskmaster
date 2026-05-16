@@ -257,7 +257,9 @@ export const useMailProfiles = (enabled = true) => {
     enabled,
     staleTime: 1000 * 60 * 10,
   });
-};export const useDashboardSummary = () => {
+};
+
+export const useDashboardSummary = () => {
   return useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
@@ -355,3 +357,85 @@ export const useScanBounces = () => {
     }
   });
 };
+
+// Global Fallback Sanitization Engine
+export const sanitizeValue = (value, suffix = '') => {
+  if (value === undefined || value === null || value === '' || value === 'Unavailable' || Number.isNaN(value)) {
+    return 'N/A';
+  }
+  return `${value}${suffix}`;
+};
+
+// Artist Analytics Queries & Mutations
+export const useArtists = () => {
+  return useQuery({
+    queryKey: ['artists'],
+    queryFn: async () => (await axios.get('/api/artists')).data,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useArtist = (id) => {
+  return useQuery({
+    queryKey: ['artist', id],
+    queryFn: async () => (await axios.get(`/api/artists/${id}`)).data,
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useArtistAnalytics = (id, platform, timeframe = '30d') => {
+  return useQuery({
+    queryKey: [`artist-${platform}`, id, timeframe],
+    queryFn: async () => (await axios.get(`/api/artists/${id}/analytics/${platform}?timeframe=${timeframe}`)).data,
+    enabled: !!id && !!platform,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useCreateArtist = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newArtist) => axios.post('/api/artists', newArtist),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    }
+  });
+};
+
+export const useUpdateArtist = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/artists/${id}`, data),
+    onSuccess: (res, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', id] });
+    }
+  });
+};
+
+export const useDeleteArtist = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/artists/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    }
+  });
+};
+
+export const useSyncArtistStats = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.post(`/api/artists/${id}/sync-stats`),
+    onSuccess: (res, id) => {
+      queryClient.setQueryData(['artist', id], res.data);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-spotify', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-youtube', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-meta', id] });
+    }
+  });
+};
+

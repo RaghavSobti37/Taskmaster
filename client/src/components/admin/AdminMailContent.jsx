@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check
+  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X
 } from 'lucide-react';
 import { 
-  Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton 
+  Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton, TabSwitcher, NexusDropdown 
 } from '../ui';
 import { 
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile, 
-  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useLiveLeads 
+  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useLiveLeads, useUserDirectory, useScanBounces 
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
 
@@ -15,16 +15,42 @@ export default function AdminMailContent() {
   const { data: profiles = [], isLoading: profilesLoading } = useMailProfiles();
   const { data: campaigns = [], isLoading: campaignsLoading } = useMailCampaigns();
   const { data: stats, refetch: refetchStats } = useMailStats();
-  const { data: leadsData } = useLiveLeads({ limit: 1000, hasEmail: 'true' });
+  const { data: team = [] } = useUserDirectory();
+
+  // Filter state for CRM leads
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [filters, setFilters] = useState({
+    leadQuality: 'all',
+    callStatus: 'all',
+    leadStatus: 'all',
+    assignedRepId: 'all',
+    artistType: 'all',
+    primaryRole: 'all'
+  });
+
+  const queryParams = useMemo(() => ({
+    limit: 1000,
+    hasEmail: 'true',
+    search: searchTerm,
+    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all')),
+    ...(activeTab === 'fresh' ? { leadStatus: 'Fresh' } : {}),
+    ...(activeTab === 'contacted' ? { leadStatus: 'Contacted' } : {})
+  }), [searchTerm, filters, activeTab]);
+
+  const { data: leadsData, isLoading: leadsLoading } = useLiveLeads(queryParams);
   const leads = leadsData?.leads || [];
+  const totalLeads = leadsData?.total || 0;
 
   const createProfileMutation = useCreateMailProfile();
   const deleteProfileMutation = useDeleteMailProfile();
   const createCampaignMutation = useCreateCampaign();
   const sendCampaignMutation = useSendCampaign();
+  const scanBouncesMutation = useScanBounces();
 
   // Navigation within Mail tab
   const [mode, setMode] = useState('campaigns'); // 'campaigns', 'new_campaign', 'profiles'
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
 
   // New Profile State
   const [newProfile, setNewProfile] = useState({
@@ -173,7 +199,7 @@ export default function AdminMailContent() {
             <Button 
               size="sm" 
               variant="primary" 
-              onClick={() => sendCampaignMutation.mutate(row._id)}
+              onClick={(e) => { e.stopPropagation(); sendCampaignMutation.mutate(row._id); }}
               disabled={sendCampaignMutation.isPending}
             >
               <Play size={12} /> Dispatch Now
@@ -214,9 +240,25 @@ export default function AdminMailContent() {
           </Button>
         </div>
 
-        <Button variant="secondary" size="sm" onClick={() => refetchStats()}>
-          <RefreshCw size={14} /> Refresh Stats
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => refetchStats()}>
+            <RefreshCw size={14} /> Refresh Stats
+          </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={() => {
+              if (profiles.length === 0) {
+                alert('Please configure an SMTP Profile first');
+                return;
+              }
+              scanBouncesMutation.mutate(profiles[0]?._id);
+            }} 
+            disabled={scanBouncesMutation.isPending || profiles.length === 0}
+          >
+            <RefreshCw size={14} className={scanBouncesMutation.isPending ? 'animate-spin' : ''} /> Scan Bounces
+          </Button>
+        </div>
       </div>
 
       {/* Analytics Summary */}
@@ -230,7 +272,7 @@ export default function AdminMailContent() {
       {/* Mode: Campaigns List */}
       {mode === 'campaigns' && (
         <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-          <DataTable columns={campaignColumns} data={campaigns} />
+          <DataTable columns={campaignColumns} data={campaigns} onRowClick={(row) => setSelectedCampaign(row)} />
           {campaigns.length === 0 && (
             <div className="p-16 text-center opacity-30">
               <Mail size={48} className="mx-auto mb-4" />
@@ -299,44 +341,206 @@ export default function AdminMailContent() {
                <Users size={14} /> Target Audience ({selectedLeadIds.length + csvRecipients.length} Selected)
              </h4>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {/* CSV Upload Card */}
+             <div className="space-y-4">
+               {/* CSV Upload Card & Preview */}
                <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3">
                  <div className="flex items-center justify-between">
                    <span className="text-xs font-bold uppercase tracking-tight">CSV Direct Upload</span>
-                   <Badge variant="info">{csvRecipients.length} Loaded</Badge>
+                   <div className="flex items-center gap-2">
+                     {csvRecipients.length > 0 && (
+                       <button 
+                         type="button"
+                         onClick={() => { setCsvRecipients([]); setCsvFileName(''); }}
+                         className="text-[10px] text-rose-500 font-bold hover:underline flex items-center gap-1"
+                       >
+                         <X size={12} /> Clear
+                       </button>
+                     )}
+                     <Badge variant="info">{csvRecipients.length} Loaded</Badge>
+                   </div>
                  </div>
                  <p className="text-[10px] text-[var(--color-text-muted)]">Upload a CSV containing "name" and "email" headers for direct mailing.</p>
-                 <label className="w-full cursor-pointer flex items-center justify-center gap-2 py-2.5 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-bg-border)] rounded-xl text-xs font-bold hover:border-[var(--color-action-primary)] transition-all">
+                 <label className="w-full cursor-pointer flex items-center justify-center gap-2 py-2 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-bg-border)] rounded-xl text-xs font-bold hover:border-[var(--color-action-primary)] transition-all">
                    <Upload size={14} /> {csvFileName ? csvFileName : 'Select CSV File'}
                    <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
                  </label>
+
+                 {/* Top 5 Emails Preview */}
+                 {csvRecipients.length > 0 && (
+                   <div className="mt-3 space-y-1.5 border-t border-[var(--color-bg-border)] pt-3">
+                     <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-bold uppercase">
+                       <span>Loaded Preview (Top 5)</span>
+                       <span>{Math.min(5, csvRecipients.length)} of {csvRecipients.length}</span>
+                     </div>
+                     <div className="space-y-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl p-2 max-h-40 overflow-y-auto font-mono">
+                       {csvRecipients.slice(0, 5).map((rec, i) => (
+                         <div key={i} className="flex items-center justify-between text-[11px] py-1 px-2 hover:bg-[var(--color-bg-secondary)] rounded-md">
+                           <span className="font-bold truncate max-w-[140px]">{rec.name || 'No Name'}</span>
+                           <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[160px]">{rec.email}</span>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
                </div>
 
                {/* CRM Leads Selection Card */}
-               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3">
-                 <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold uppercase tracking-tight">Select CRM Leads</span>
-                   <Badge variant="mint">{selectedLeadIds.length} Selected</Badge>
+               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-4">
+                 <div className="flex items-center justify-between flex-wrap gap-2">
+                   <div className="flex items-center gap-3">
+                     <span className="text-xs font-bold uppercase tracking-tight">Select CRM Leads</span>
+                     <Badge variant="mint">{selectedLeadIds.length} Selected</Badge>
+                     <span className="text-[10px] text-[var(--color-text-muted)]">({totalLeads} Total Available with Email)</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Button 
+                       size="xs" 
+                       variant="secondary"
+                       type="button"
+                       onClick={() => {
+                         const filteredIds = leads.map(l => l._id);
+                         const newSelected = Array.from(new Set([...selectedLeadIds, ...filteredIds]));
+                         setSelectedLeadIds(newSelected);
+                       }}
+                     >
+                       Select All Filtered ({leads.length})
+                     </Button>
+                     <Button 
+                       size="xs" 
+                       variant="ghost"
+                       type="button"
+                       onClick={() => {
+                         const filteredSet = new Set(leads.map(l => l._id));
+                         setSelectedLeadIds(selectedLeadIds.filter(id => !filteredSet.has(id)));
+                       }}
+                       className="text-rose-500 hover:bg-rose-500/10"
+                     >
+                       Deselect All Filtered
+                     </Button>
+                   </div>
                  </div>
-                 <p className="text-[10px] text-[var(--color-text-muted)]">Pick active leads from your master CRM directory with verified emails.</p>
-                 <div className="max-h-28 overflow-y-auto space-y-1 pr-1 border border-[var(--color-bg-border)] rounded-xl p-2 bg-[var(--color-bg-primary)]">
-                   {leads.map(l => {
-                     const isSel = selectedLeadIds.includes(l._id);
-                     return (
-                       <div 
-                         key={l._id} 
-                         onClick={() => {
-                           if (isSel) setSelectedLeadIds(selectedLeadIds.filter(id => id !== l._id));
-                           else setSelectedLeadIds([...selectedLeadIds, l._id]);
-                         }}
-                         className={`p-1.5 rounded-lg text-[11px] font-bold cursor-pointer flex items-center justify-between transition-all ${isSel ? 'bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]' : 'hover:bg-[var(--color-bg-secondary)]'}`}
-                       >
-                         <span>{l.name} ({l.email})</span>
-                         {isSel && <Check size={12} />}
-                       </div>
-                     );
-                   })}
+
+                 {/* Filters Bar */}
+                 <div className="flex items-center gap-3 flex-wrap bg-[var(--color-bg-primary)] p-3 rounded-xl border border-[var(--color-bg-border)]">
+                   <TabSwitcher
+                     activeTab={activeTab}
+                     onChange={setActiveTab}
+                     tabs={[
+                       { id: 'all', label: 'All' },
+                       { id: 'fresh', label: 'Fresh' },
+                       { id: 'contacted', label: 'In Progress' }
+                     ]}
+                   />
+                   <div className="w-52">
+                     <Input 
+                       placeholder="Search name, phone, email..." 
+                       value={searchTerm}
+                       onChange={e => setSearchTerm(e.target.value)}
+                       icon={Search}
+                     />
+                   </div>
+                   <div className="w-36">
+                     <NexusDropdown 
+                       placeholder="Quality"
+                       options={[
+                         { value: 'all', label: 'All Quality' },
+                         { value: '5', label: 'Level 5' },
+                         { value: '4', label: 'Level 4' },
+                         { value: '3', label: 'Level 3' },
+                         { value: '2', label: 'Level 2' },
+                         { value: '1', label: 'Level 1' }
+                       ]}
+                       value={filters.leadQuality}
+                       onChange={v => setFilters({...filters, leadQuality: v})}
+                     />
+                   </div>
+                   <div className="w-36">
+                     <NexusDropdown 
+                       placeholder="Artist Type"
+                       options={[
+                         { value: 'all', label: 'All Artists' },
+                         { value: 'Full-time Artiste', label: 'Full-time' },
+                         { value: 'Part Time Artiste', label: 'Part-time' },
+                         { value: 'Hobbyist', label: 'Hobbyist' }
+                       ]}
+                       value={filters.artistType || 'all'}
+                       onChange={v => setFilters({...filters, artistType: v})}
+                     />
+                   </div>
+                   <div className="w-36">
+                     <NexusDropdown 
+                       placeholder="Role"
+                       options={[
+                         { value: 'all', label: 'All Roles' },
+                         { value: 'Vocalist', label: 'Vocalist' },
+                         { value: 'Music Producer', label: 'Producer' },
+                         { value: 'Singer Songwriter', label: 'Songwriter' },
+                         { value: 'Instrumentalist', label: 'Instrumentalist' },
+                         { value: 'Composer', label: 'Composer' }
+                       ]}
+                       value={filters.primaryRole || 'all'}
+                       onChange={v => setFilters({...filters, primaryRole: v})}
+                     />
+                   </div>
+                   <div className="w-40">
+                     <NexusDropdown 
+                       placeholder="Agent"
+                       options={[{ value: 'all', label: 'All Agents' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
+                       value={filters.assignedRepId}
+                       onChange={v => setFilters({...filters, assignedRepId: v})}
+                     />
+                   </div>
+                 </div>
+
+                 {/* Leads List */}
+                 <div className="max-h-60 overflow-y-auto space-y-1 pr-1 border border-[var(--color-bg-border)] rounded-xl p-2 bg-[var(--color-bg-primary)] custom-scrollbar">
+                   {leads.length === 0 ? (
+                     <div className="p-8 text-center text-xs text-[var(--color-text-muted)] italic font-mono">
+                       {leadsLoading ? 'Loading leads...' : 'No CRM leads match the selected filters.'}
+                     </div>
+                   ) : (
+                     leads.map(l => {
+                       const isSel = selectedLeadIds.includes(l._id);
+                       const repName = team.find(r => r._id === (typeof l.assignedRep === 'object' ? l.assignedRep?._id : l.assignedRep))?.name || l.assignedRep?.name || 'Unassigned';
+                       return (
+                         <div 
+                           key={l._id} 
+                           onClick={() => {
+                             if (isSel) setSelectedLeadIds(selectedLeadIds.filter(id => id !== l._id));
+                             else setSelectedLeadIds([...selectedLeadIds, l._id]);
+                           }}
+                           className={`p-2 rounded-lg text-xs cursor-pointer flex items-center justify-between transition-all border ${isSel ? 'bg-[var(--color-action-primary)]/10 border-[var(--color-action-primary)]/30 text-[var(--color-action-primary)] font-bold' : 'border-transparent hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]'}`}
+                         >
+                           <div className="flex items-center gap-3">
+                             <div className={`w-4 h-4 rounded flex items-center justify-center border ${isSel ? 'bg-[var(--color-action-primary)] border-[var(--color-action-primary)] text-white' : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]'}`}>
+                               {isSel && <Check size={12} />}
+                             </div>
+                             <div>
+                               <div className="flex items-center gap-2">
+                                 <span className="font-bold">{l.name}</span>
+                                 {l.artistType && (
+                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
+                                     {l.artistType.replace(' Artiste', '')}
+                                   </span>
+                                 )}
+                                 {l.primaryRole && (
+                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-action-primary)]/10 border border-[var(--color-action-primary)]/20 text-[var(--color-action-primary)] font-normal tracking-tight">
+                                     {l.primaryRole}
+                                   </span>
+                                 )}
+                               </div>
+                               <span className="text-[11px] text-[var(--color-text-muted)] font-mono font-normal block">{l.email} {l.phone ? `• ${l.phone}` : ''} {l.city ? `• ${l.city}` : ''}</span>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant={l.leadQuality >= 4 ? 'mint' : 'info'}>L{l.leadQuality || 1}</Badge>
+                             <Badge variant={l.leadStatus === 'Converted' ? 'mint' : 'slate'}>{l.leadStatus || 'Fresh'}</Badge>
+                             <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[80px]">{repName}</span>
+                           </div>
+                         </div>
+                       );
+                     })
+                   )}
                  </div>
                </div>
              </div>
@@ -401,6 +605,78 @@ export default function AdminMailContent() {
                  <p className="text-[10px] font-black uppercase tracking-widest">No profiles configured</p>
                </div>
              )}
+          </div>
+        </div>
+      )}
+
+      {/* Selected Campaign Detail Modal */}
+      {selectedCampaign && (
+        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-black uppercase tracking-tight">{selectedCampaign.title}</h2>
+                  <Badge variant={selectedCampaign.status === 'Completed' ? 'mint' : selectedCampaign.status === 'Sending' ? 'warning' : 'info'}>
+                    {selectedCampaign.status}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">{selectedCampaign.subject}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCampaign(null)}>
+                <X size={18} />
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+              {/* Analytics Stat Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <StatCard label="Total Target" value={selectedCampaign.stats?.total || 0} icon={Users} variant="slate" />
+                <StatCard label="Sent Success" value={selectedCampaign.stats?.sent || 0} icon={Send} variant="mint" />
+                <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
+                <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />
+                <StatCard label="Bounced / Fail" value={(selectedCampaign.stats?.bounced || 0) + (selectedCampaign.recipients?.filter(r => r.status === 'Failed')?.length || 0)} icon={AlertCircle} variant="rose" />
+              </div>
+
+              {/* Target Recipient Table */}
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
+                  <Users size={14} /> Campaign Recipient Analytics ({selectedCampaign.recipients?.length || 0})
+                </h3>
+                <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden bg-[var(--color-bg-secondary)]">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)]">
+                      <tr>
+                        <th className="px-4 py-2.5 font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Recipient Email</th>
+                        <th className="px-4 py-2.5 font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-2.5 font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Sent At</th>
+                        <th className="px-4 py-2.5 font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Diagnostic Info</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-bg-border)] font-mono">
+                      {selectedCampaign.recipients?.map((r, idx) => (
+                        <tr key={r._id || idx} className="hover:bg-[var(--color-bg-primary)]/50 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{r.email}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant={r.status === 'Opened' ? 'mint' : r.status === 'Sent' ? 'info' : r.status === 'Bounced' || r.status === 'Failed' ? 'rose' : 'slate'}>
+                              {r.status || 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)]">
+                            {r.sentAt ? format(new Date(r.sentAt), 'MMM dd, HH:mm:ss') : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] truncate max-w-xs">
+                            {r.error || r.messageId || 'Normal Target Dispatch'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

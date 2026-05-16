@@ -40,6 +40,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
+          <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>

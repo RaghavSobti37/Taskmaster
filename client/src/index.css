@@ -7,10 +7,10 @@
 
 @theme {
   /* Scannable Pastel Precision - Core Tokens (Light Mode) */
-  --color-bg-primary: #FFFFFF;
-  --color-bg-secondary: #F8F9FA;
+  --color-bg-primary: #F8FAFC;
+  --color-bg-secondary: #F1F5F9;
   --color-bg-surface: #FFFFFF;
-  --color-bg-border: #E8EAED;
+  --color-bg-border: #E2E8F0;
   
   --color-text-primary: #202124;
   --color-text-secondary: #5F6368;
@@ -48,10 +48,10 @@
 }
 
 :root {
-  --background: #FFFFFF;
-  --foreground: #202124;
+  --background: #F8FAFC;
+  --foreground: #0F172A;
   --card: #FFFFFF;
-  --border: #E8EAED;
+  --border: #E2E8F0;
   --ring: rgba(26, 115, 232, 0.2);
 }
 
@@ -61,7 +61,7 @@
   --color-bg-secondary: #0F1320;
   --color-bg-surface: #111827; /* Card / Surface */
   --color-bg-floating: #1F2937; /* Floating Elements */
-  --color-bg-border: rgba(255, 255, 255, 0.05); /* Low-opacity ambient stroke */
+  --color-bg-border: #1F2937; /* Structural divider */
   
   --color-text-primary: #F8F9FA;
   --color-text-secondary: #BDC1C6;
@@ -82,7 +82,7 @@
   --background: #0B0F19;
   --foreground: #F8F9FA;
   --card: #111827;
-  --border: rgba(255, 255, 255, 0.05);
+  --border: #1F2937;
   --input: #1F2937;
 }
 

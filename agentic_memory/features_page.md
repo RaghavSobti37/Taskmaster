@@ -14,7 +14,7 @@
 - [x] **Assets**: Project-scoped links (max 3), add/delete with modal confirmations
 - [x] **Calendar**: Monthly view, internal event persistence, visibility toggles (Public/Private), holiday integration
 - [x] **Follow-ups**: Tabbed CRM follow-up view (Today, Overdue, Upcoming), automated reminders, and lead modal integration.
-- [x] **Artists**: High-fidelity profiles (Harshad & Duhita), collective numbers, discography, and mission timelines.
+- [x] **Artists**: High-fidelity profiles (Harshad & Duhita, Yugm, Mohit Shankar), live API syncing (`isSynced` linking model), default N/A states with step-by-step layman ID linking tooltips across Spotify, YouTube, and Meta.
 - [x] **Todo/Task Management**: Synchronized Protocol Log (TodoPage) with backend Task model and Project associations.
 - [x] **Settings**: Profile editing, avatar upload, theme toggle, and 30% scaled-down high-density UI components.
 

@@ -55,7 +55,12 @@ const update = async () => {
           description: 'A grand performance featuring new compositions.',
           status: 'planned'
         }
-      ]
+      ],
+      oauthCredentials: {
+        youtube: { channelId: 'UC_x5XG1OV2P6uZZ5FSM9Ttw' },
+        meta: { igAccountId: '17841458291029102', fbPageId: '109281928391029' },
+        spotify: { artistId: '6L88xirodmbWYoZuvseUnc', chartmetricId: '291028' }
+      }
     };
 
     const artist = await Artist.findOneAndUpdate(

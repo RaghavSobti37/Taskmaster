@@ -320,17 +320,27 @@ const OutletSidebar = () => {
           )}
 
           {user?.role === 'admin' && (
-            <NavItem 
-              to="/admin" 
-              icon={ShieldCheck} 
-              label="Admin Panel" 
-              collapsed={false} 
-              isMobile={isMobile} 
-              onMouseEnter={() => {
-                queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-                queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-              }}
-            />
+            <div className="space-y-1">
+              <NavItem 
+                to="/admin" 
+                icon={ShieldCheck} 
+                label="Admin Panel" 
+                collapsed={false} 
+                isMobile={isMobile} 
+                onMouseEnter={() => {
+                  queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+                  queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+                }}
+              />
+              <NavItem 
+                to="/artists" 
+                icon={Users} 
+                label="Artists" 
+                collapsed={false} 
+                isMobile={isMobile} 
+                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
+              />
+            </div>
           )}
 
           {/* Notifications NavItem Removed */}

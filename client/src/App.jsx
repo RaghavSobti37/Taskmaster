@@ -25,6 +25,8 @@ const FollowupsPage = lazy(() => import('./pages/crm/FollowupsPage'));
 const FeaturesPage = lazy(() => import('./pages/marketing/FeaturesPage'));
 const TodoPage = lazy(() => import('./pages/productivity/TodoPage'));
 const GoogleSuccessPage = lazy(() => import('./pages/auth/GoogleSuccessPage'));
+const ArtistsCollection = lazy(() => import('./pages/artists/ArtistsCollection'));
+const ArtistDetail = lazy(() => import('./pages/artists/ArtistDetail'));
 
 function App() {
   const { loading } = useAuth();
@@ -53,10 +55,11 @@ function App() {
               <Route path="followups" element={<FollowupsPage />} />
               <Route path="features" element={<FeaturesPage />} />
               <Route path="todo" element={<TodoPage />} />
-              
               <Route element={<AdminRoute />}>
                 <Route path="admin" element={<AdminPanel />} />
                 <Route path="admin/logs" element={<AdminLogsPage />} />
+                <Route path="artists" element={<ArtistsCollection />} />
+                <Route path="artists/:id/*" element={<ArtistDetail />} />
               </Route>
             </Route>
           </Route>

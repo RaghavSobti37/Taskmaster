@@ -136,8 +136,8 @@ const CalendarView = () => {
           </div>
         </div>
         <div className="grid grid-cols-7 gap-y-1">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-            <div key={d} className="text-center text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">{d}</div>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, index) => (
+            <div key={index} className="text-center text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-tighter">{d}</div>
           ))}
           {days.map(day => {
             const isToday = isSameDay(day, new Date());

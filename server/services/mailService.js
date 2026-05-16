@@ -89,7 +89,7 @@ const sendCampaign = async (campaignId) => {
 
       let personalizedContent = campaign.content || '';
       // Automatically wrap all external links in click tracker
-      personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["'](https?:\/\/[^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
+      personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
         if (url.includes('/api/mail/')) return match;
         const clickTrackerUrl = `${baseUrl}/api/mail/click/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}&url=${encodeURIComponent(url)}`;
         return `<a ${before}href="${clickTrackerUrl}"${after}>`;

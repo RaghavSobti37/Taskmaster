@@ -27,6 +27,16 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      alert("Cannot create calendar events for past dates.");
+      return;
+    }
+
     setLoading(true);
     try {
       if (initialData?._id) {
@@ -85,6 +95,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
             <input 
               type="date" 
+              min={new Date().toISOString().split('T')[0]}
               value={date}
               onChange={e => setDate(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"

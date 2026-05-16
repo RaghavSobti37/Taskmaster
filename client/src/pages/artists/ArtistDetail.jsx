@@ -12,6 +12,9 @@ import {
   TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input
 } from '../../components/ui';
 import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, useDeleteArtist } from '../../hooks/useTaskmasterQueries';
+import HarshadGolesarPage from './HarshadGolesarPage';
+import YugmPage from './YugmPage';
+import MohitShankarPage from './MohitShankarPage';
 
 const getArtistEmoji = (name = '') => {
   if (name.includes('Yugm')) return '🎸';
@@ -137,8 +140,20 @@ export default function ArtistDetail({ isPreview = false }) {
     );
   }
 
+  const artistName = artist?.name || '';
+  if (artistName.includes('Harshad') || artistName.includes('Duhita')) {
+    return <HarshadGolesarPage artist={artist} analyticsData={analyticsData} activeTab={activeTab} setActiveTab={setActiveTab} isPreview={isPreview} handleOpenEdit={handleOpenEdit} handleDeleteArtist={handleDeleteArtist} handleSync={handleSync} handleShare={handleShare} syncing={syncing} isEditing={isEditing} setIsEditing={setIsEditing} editedArtist={editedArtist} setEditedArtist={setEditedArtist} handleSaveArtist={handleSaveArtist} />;
+  }
+  if (artistName.includes('Yugm')) {
+    return <YugmPage artist={artist} analyticsData={analyticsData} activeTab={activeTab} setActiveTab={setActiveTab} isPreview={isPreview} handleOpenEdit={handleOpenEdit} handleDeleteArtist={handleDeleteArtist} handleSync={handleSync} handleShare={handleShare} syncing={syncing} isEditing={isEditing} setIsEditing={setIsEditing} editedArtist={editedArtist} setEditedArtist={setEditedArtist} handleSaveArtist={handleSaveArtist} />;
+  }
+  if (artistName.includes('Mohit')) {
+    return <MohitShankarPage artist={artist} analyticsData={analyticsData} activeTab={activeTab} setActiveTab={setActiveTab} isPreview={isPreview} handleOpenEdit={handleOpenEdit} handleDeleteArtist={handleDeleteArtist} handleSync={handleSync} handleShare={handleShare} syncing={syncing} isEditing={isEditing} setIsEditing={setIsEditing} editedArtist={editedArtist} setEditedArtist={setEditedArtist} handleSaveArtist={handleSaveArtist} />;
+  }
+
   const isSynced = artist.isSynced;
   const spFollowers = artist.analytics?.spotify?.followers || 0;
+  const spListeners = artist.analytics?.spotify?.monthlyListeners || null;
   const ytSubs = artist.analytics?.youtube?.subscribers || 0;
   const igFollowers = artist.analytics?.instagram?.followers || 0;
   const totalReach = spFollowers + ytSubs + igFollowers;
@@ -148,34 +163,27 @@ export default function ArtistDetail({ isPreview = false }) {
   const tracks = analyticsData?.tracks || [];
   const videos = analyticsData?.videos || [];
   const posts = analyticsData?.posts || [];
+  const historyMap = analyticsData?.history || {};
 
-  const spotifyChartData = [
-    { month: 'Jan', streams: Math.round((spFollowers || 18400) * 4.2) },
-    { month: 'Feb', streams: Math.round((spFollowers || 18400) * 4.8) },
-    { month: 'Mar', streams: Math.round((spFollowers || 18400) * 5.5) },
-    { month: 'Apr', streams: Math.round((spFollowers || 18400) * 6.8) },
-    { month: 'May', streams: Math.round((spFollowers || 18400) * 8.4) },
-    { month: 'Jun', streams: Math.round((spFollowers || 18400) * 10.5) },
-  ];
-
-  const youtubeChartData = (videos && videos.length > 0 ? videos.slice(0, 5) : [
-    { videoTitle: 'Gananayaka', views: 53512, likes: 4800 },
-    { videoTitle: 'Bhole Bhandari', views: 34200, likes: 2950 },
-    { videoTitle: 'Param Gahan', views: 28900, likes: 2620 },
-    { videoTitle: 'IGT Audition', views: 89000, likes: 8100 },
-    { videoTitle: 'Krishna Govind', views: 25200, likes: 2340 },
-  ]).map(v => ({
-    title: v.videoTitle ? v.videoTitle.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') : 'Video',
-    views: v.views || 0,
-    likes: v.likes || 0
+  const spotifyChartData = (historyMap.spotify || []).map(h => ({
+    month: new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short' }),
+    streams: Number(h.metrics?.streams) || 0,
+    monthlyListeners: Number(h.metrics?.monthlyListeners) || 0,
+    followers: Number(h.metrics?.followers) || 0
   }));
 
-  const metaChartData = [
-    { week: 'Wk 1', reach: Math.round((igFollowers || 34900) * 3.1), interactions: Math.round((igFollowers || 34900) * 0.4) },
-    { week: 'Wk 2', reach: Math.round((igFollowers || 34900) * 3.8), interactions: Math.round((igFollowers || 34900) * 0.5) },
-    { week: 'Wk 3', reach: Math.round((igFollowers || 34900) * 4.6), interactions: Math.round((igFollowers || 34900) * 0.7) },
-    { week: 'Wk 4', reach: Math.round((igFollowers || 34900) * 5.8), interactions: Math.round((igFollowers || 34900) * 0.9) },
-  ];
+  const youtubeChartData = (videos || []).map(v => ({
+    title: v.videoTitle ? v.videoTitle.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') : 'Video',
+    views: Number(v.views) || 0,
+    likes: Number(v.likes) || 0
+  }));
+
+  const metaChartData = (historyMap.meta || []).map(h => ({
+    week: new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    reach: Number(h.metrics?.reach) || 0,
+    interactions: Number(h.metrics?.interactions) || 0,
+    followers: Number(h.metrics?.followers) || 0
+  }));
 
   const spotifyColumns = [
     {
@@ -335,37 +343,7 @@ export default function ArtistDetail({ isPreview = false }) {
       />
 
       {/* Bespoke Artist Hero Banner */}
-      <div className={`p-8 rounded-3xl bg-gradient-to-r ${theme.bg} border ${theme.border} relative overflow-hidden shadow-2xl backdrop-blur-xl mb-8`}>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center justify-center text-5xl shadow-inner shrink-0">
-              {getArtistEmoji(artist.name)}
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-3xl font-black tracking-tight text-white">{artist.name}</h1>
-                <Badge variant={theme.badge}>{artist.genre || (artist.name?.includes('Yugm') ? 'Folk Fusion' : artist.name?.includes('Mohit') ? 'Classical Crossover' : 'Devotional Harmony')}</Badge>
-                <Badge variant="mint">Verified Roster</Badge>
-              </div>
-              <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                {artist.bio || (artist.name?.includes('Yugm') ? 'Acclaimed acoustic folk-fusion ensemble weaving traditional storytelling with contemporary rhythm.' : artist.name?.includes('Mohit') ? 'Classical crossover virtuoso fusing Hindustani ragas with global ambient soundscapes.' : 'Divine collective bringing soul-stirring devotional chants and abhangs to modern audiences.')}
-              </p>
-              <div className="flex items-center gap-4 text-xs font-mono text-slate-400 pt-2">
-                <span>📍 Base: {artist.location || 'Mumbai / Jaipur'}</span>
-                <span>📅 Management: Exclusive Taskmaster Roster</span>
-                <span>🎧 Monthly Reach: {formatNumber(totalReach)}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto">
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-center space-y-1">
-              <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Next Live Tour</span>
-              <p className="text-xs font-bold text-white tracking-tight">{artist.name?.includes('Yugm') ? 'Jaipur Heritage Fest (Oct 24)' : artist.name?.includes('Mohit') ? 'NCPA Raga Series (Nov 12)' : 'Prithvi Theatre Jam (Dec 05)'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* 3-Column Analytics Graphs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -382,8 +360,8 @@ export default function ArtistDetail({ isPreview = false }) {
               <AreaChart data={spotifyChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="spotifyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} vertical={false} />
@@ -442,7 +420,7 @@ export default function ArtistDetail({ isPreview = false }) {
 
       {/* Dedicated Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Spotify Followers" value={formatNumber(spFollowers)} icon={FaSpotify} variant="info" info="Total followers on Spotify platform." />
+        <StatCard label="Spotify Listeners / Followers" value={`${spListeners != null ? formatNumber(spListeners) + ' / ' : ''}${formatNumber(spFollowers)}`} icon={FaSpotify} variant="info" info="Monthly listeners and total followers on Spotify platform." />
         <StatCard label="YouTube Subscribers" value={formatNumber(ytSubs)} icon={FaYoutube} variant="rose" info="Subscribers on Verified YouTube Channel." />
         <StatCard label="Instagram Audience" value={formatNumber(igFollowers)} icon={FaInstagram} variant="apricot" info="Followers on Instagram Professional account." />
         <StatCard label="Aggregate Reach" value={formatNumber(totalReach)} icon={TrendingUp} variant="mint" info="Total cumulative audience across all monitored networks." />
@@ -480,11 +458,11 @@ export default function ArtistDetail({ isPreview = false }) {
           {((activeTab === 'spotify' && tracks.length === 0) ||
             (activeTab === 'youtube' && videos.length === 0) ||
             (activeTab === 'meta' && posts.length === 0)) && (
-            <div className="p-16 text-center text-[var(--color-text-muted)]">
-              <Disc size={36} className="mx-auto mb-3 opacity-30 animate-spin" />
-              <p className="text-xs font-black uppercase tracking-widest">No analytics items available for this stream</p>
-            </div>
-          )}
+              <div className="p-16 text-center text-[var(--color-text-muted)]">
+                <Disc size={36} className="mx-auto mb-3 opacity-30 animate-spin" />
+                <p className="text-xs font-black uppercase tracking-widest">No analytics items available for this stream</p>
+              </div>
+            )}
         </Card>
       </div>
 
@@ -534,6 +512,8 @@ export default function ArtistDetail({ isPreview = false }) {
               <div className="col-span-2">
                 <Input
                   label="Bio / Description"
+                  multiline
+                  rows={6}
                   value={editedArtist?.bio || ''}
                   onChange={e => setEditedArtist({ ...editedArtist, bio: e.target.value })}
                 />

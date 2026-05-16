@@ -9,6 +9,7 @@ client/src
 │   └── vite.svg
 ├── components
 │   ├── admin
+│   │   ├── AdminMailContent.jsx
 │   │   └── TscDataContent.jsx
 │   ├── AdminRoute.jsx
 │   ├── CalendarEntryModal.jsx
@@ -18,7 +19,6 @@ client/src
 │   ├── MainLayout.jsx
 │   ├── NotificationTray.jsx
 │   ├── OutletSidebar.jsx
-│   ├── PageLoader.jsx
 │   ├── project
 │   │   ├── ProjectAssets.jsx
 │   │   ├── ProjectCalendar.jsx
@@ -34,12 +34,14 @@ client/src
 │       ├── ActivityHeatmap.jsx
 │       ├── button.jsx
 │       ├── CKDropdown.jsx
+│       ├── DashboardSkeleton.jsx
 │       ├── index.jsx
 │       ├── NexusDropdown.jsx
-│       ├── NexusLoader.jsx
 │       ├── NexusModal.jsx
 │       ├── PageHeader.jsx
+│       ├── PageSkeleton.jsx
 │       ├── plug-connected-icon.jsx
+│       ├── primitives.jsx
 │       ├── ProgressRing.jsx
 │       ├── types.js
 │       └── VelocitySparkline.jsx
@@ -55,38 +57,56 @@ client/src
 │   └── utils.js
 ├── main.jsx
 ├── pages
-│   ├── AdminLogsPage.jsx
-│   ├── AdminPanel.jsx
-│   ├── ArtistDetail.jsx
-│   ├── ArtistsCollection.jsx
-│   ├── AssetsPage.jsx
-│   ├── CalendarView.jsx
-│   ├── ChatPage.jsx
-│   ├── DailyLogPage.jsx
+│   ├── admin
+│   │   ├── AdminLogsPage.jsx
+│   │   └── AdminPanel.jsx
+│   ├── artists
+│   │   ├── ArtistDetail.jsx
+│   │   ├── ArtistsCollection.jsx
+│   │   ├── HarshadGolesarPage.jsx
+│   │   ├── MohitShankarPage.jsx
+│   │   └── YugmPage.jsx
+│   ├── assets
+│   │   └── AssetsPage.jsx
+│   ├── auth
+│   │   ├── GoogleSuccessPage.jsx
+│   │   ├── LoginPage.jsx
+│   │   └── RegisterPage.jsx
+│   ├── calendar
+│   │   └── CalendarView.jsx
+│   ├── collaboration
+│   │   ├── ChatPage.jsx
+│   │   └── TeamView.jsx
+│   ├── crm
+│   │   ├── FollowupsPage.jsx
+│   │   └── LeadsPage.jsx
 │   ├── Dashboard.jsx
-│   ├── FeaturesPage.jsx
-│   ├── FollowupsPage.jsx
-│   ├── GoogleSuccessPage.jsx
-│   ├── LeadsPage.jsx
-│   ├── LoginPage.jsx
-│   ├── ProjectCreate.jsx
-│   ├── ProjectDetail.jsx
-│   ├── ProjectsView.jsx
-│   ├── RegisterPage.jsx
-│   ├── SettingsPage.jsx
-│   ├── TeamView.jsx
-│   └── TodoPage.jsx
+│   ├── marketing
+│   │   └── FeaturesPage.jsx
+│   ├── productivity
+│   │   ├── DailyLogPage.jsx
+│   │   └── TodoPage.jsx
+│   ├── projects
+│   │   ├── ProjectCreate.jsx
+│   │   ├── ProjectDetail.jsx
+│   │   └── ProjectsView.jsx
+│   └── settings
+│       └── SettingsPage.jsx
 └── utils
     ├── crmUtils.js
     └── notifications.js
 
 server
 ├── check_types.js
+├── config
+│   └── spotifyTokenManager.js
 ├── controllers
+│   ├── artistAnalyticsController.js
 │   ├── artistController.js
 │   ├── assetController.js
 │   ├── authController.js
 │   ├── crmController.js
+│   ├── dashboardController.js
 │   ├── googleController.js
 │   ├── projectController.js
 │   ├── syncController.js
@@ -105,6 +125,7 @@ server
 ├── debug_leads.js
 ├── middleware
 │   ├── authMiddleware.js
+│   ├── concurrencyMiddleware.js
 │   ├── lastOnline.js
 │   └── loggerMiddleware.js
 ├── migrate_reps_temp.js
@@ -123,6 +144,8 @@ server
 │   ├── Message.js
 │   ├── Notification.js
 │   ├── Phase.js
+│   ├── plugins
+│   │   └── auditPlugin.js
 │   ├── Project.js
 │   ├── Task.js
 │   ├── Team.js
@@ -137,6 +160,7 @@ server
 │   ├── calendarRoutes.js
 │   ├── chatRoutes.js
 │   ├── crmRoutes.js
+│   ├── dashboardRoutes.js
 │   ├── googleRoutes.js
 │   ├── logRoutes.js
 │   ├── mailRoutes.js
@@ -147,7 +171,9 @@ server
 │   ├── teamRoutes.js
 │   ├── tscRoutes.js
 │   └── userRoutes.js
+├── scratch
 ├── scripts
+│   ├── cleanData.js
 │   ├── fix_satyam_and_time.js
 │   ├── importData.js
 │   ├── import_leads.js
@@ -155,12 +181,15 @@ server
 │   ├── setupGoogle.js
 │   ├── setup_sales_users.js
 │   └── test_email.js
+├── seedAdditionalArtists.js
 ├── seedArtist.js
 ├── seeder.js
 ├── server.js
 ├── services
+│   ├── analyticsService.js
 │   ├── mailService.js
 │   └── notificationService.js
+├── test_mail_api.js
 ├── updateAvatars.js
 ├── update_harshad.js
 ├── uploads
@@ -170,13 +199,16 @@ server
     ├── avatarGenerator.js
     ├── googleAuth.js
     ├── holySheet.js
-    └── rollup.js
+    ├── rollup.js
+    └── sanitizer.js
 
 agentic_memory
 ├── architecture_map.md
+├── backend.md
 ├── backend_frontend_linkage.md
 ├── bug_report.md
 ├── features_page.md
+├── generate_map.js
 ├── memory_graph.md
 └── repo_map.txt
 

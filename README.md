@@ -4,142 +4,169 @@
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+[![Tailwind CSS v4](https://img.shields.io/badge/Styling-Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![React Query](https://img.shields.io/badge/State-React_Query-FF4154?style=flat-square&logo=react-query)](https://tanstack.com/query/v3/)
+[![Supabase](https://img.shields.io/badge/Edge_Sync-Supabase-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
+[![Trigger.dev](https://img.shields.io/badge/Background_Jobs-Trigger.dev-000000?style=flat-square)](https://trigger.dev/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 **Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It combines project management, real-time communication, and advanced CRM capabilities into a single, optimized workspace.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features & Ecosystem
 
-| Feature | Capabilities |
-| :--- | :--- |
-| **🚀 Dashboard** | Real-time task tracking, productivity metrics, and one-click completion with 10s undo. |
-| **📁 Projects** | Multi-view management (List, Kanban, Gantt) with automated progress rollups and phases. |
-| **🧠 Workflow Canvas** | Node-based visual process architecting tool for mapping complex logic via drag-and-drop. |
-| **📅 Smart Calendar** | Persistent MongoDB-backed calendar with Public/Private visibility, past date entry prevention, and project integration. |
-| **📈 Advanced CRM** | Lead tracking (New/Hot/Warm), CSV imports with deduplication, and automated follow-ups. |
-| **📧 Admin Mailer** | Complete broadcast campaign management with Resend Webhooks (Svix-verified) for native analytics sync (Opens, Clicks, Bounces, Delivery) and robust queue recovery mechanisms. |
-| **📝 Daily Logs** | Precision work logging with project tagging and automated performance reporting. |
-| **💬 Team Chat** | Real-time messaging with channel-based organization and task referencing. |
-| **🛠️ Admin Panel** | Root-level system oversight, user role management (Admin/User), and deep activity audits. |
-| **📎 Assets** | Project-scoped resource management supporting multiple external links per entry and direct file storage (via UploadThing). |
-| **🎵 Artists Hub** | Multi-platform analytics (Spotify, YouTube, Meta) featuring dedicated dynamic sub-pages (`HarshadGolesarPage`, `YugmPage`, `MohitShankarPage`) with zero hardcoded metrics, real retention rates, live API sync, and step-by-step ID retrieval tooltips. |
+Taskmaster is designed as a fully integrated ecosystem replacing disjointed tools (Jira, Salesforce, Slack) with a singular source of truth.
+
+### 💼 Work & Project Management
+- **🚀 Real-Time Dashboard**: Live task tracking, productivity metrics, and one-click completion with a 10s undo buffer.
+- **📁 Multi-View Projects**: Manage complex initiatives using List, Kanban, and Gantt views. Features automated progress rollups and hierarchical task architectures (Project > Phase > Task).
+- **🧠 Workflow Canvas**: A node-based visual process architecting tool for mapping complex business logic via drag-and-drop mechanics (Powered by React Flow).
+- **📝 Daily Logs & Auditing**: Precision work logging with project tagging and automated performance reporting. 
+
+### 📈 Customer Relationship Management (CRM)
+- **Advanced Lead Routing**: Comprehensive lead tracking (New/Hot/Warm), bulk CSV imports with checksum deduplication, and automated follow-ups.
+- **Team-Based Assignment**: Automatic "Least-Loaded" representative assignment distributing leads evenly across active sales teams.
+- **CRM Audit Trails**: Immutable tracking of lead modifications via the `CRMAudit` collection, ensuring accountability and full data provenance.
+
+### 📧 Marketing & Communications
+- **Admin Auto-Mailer**: Complete broadcast campaign management engine.
+- **Native Analytics Sync**: Deep integration with Resend Webhooks (Svix-verified) for native analytics sync (Opens, Clicks, Bounces, Delivery).
+- **💬 Team Chat**: Real-time internal messaging with channel-based organization, user mentions, and task referencing.
+
+### 📊 Integrations & Extensibility
+- **📅 Smart Calendar**: Persistent MongoDB-backed calendar with Public/Private visibility scopes and two-way Google Calendar OAuth2 synchronization.
+- **🎵 Artists Hub**: Multi-platform analytics dashboard hydrating live feeds from Spotify, YouTube, and Meta.
+- **📎 Edge Assets**: Project-scoped resource management utilizing UploadThing for direct edge-based file storage.
+
+---
+
+## 🏗️ System Architecture & Data Flow
+
+Taskmaster operates on a highly optimized MERN stack tailored for real-time responsiveness and enterprise-grade concurrency.
+
+### Full System Map
+
+```mermaid
+graph TD
+    subgraph Frontend ["Frontend (React/Vite)"]
+        D[Dashboard]
+        PL[Projects List]
+        AP[Admin Panel]
+        CRM[CRM & Followups]
+        WF[Workflow Canvas]
+        CV[Smart Calendar]
+        RQ["React Query (Global Cache)"]
+    end
+
+    subgraph API ["Backend API (Node/Express)"]
+        T_API["/api/tasks"]
+        P_API["/api/projects"]
+        U_API["/api/users"]
+        CR_API["/api/crm"]
+        M_API["/api/mail"]
+    end
+
+    subgraph Storage ["Database (MongoDB)"]
+        M_Task[(Task)]
+        M_Project[(Project)]
+        M_User[(User)]
+        M_Lead[(Lead)]
+    end
+
+    D & PL & AP & CRM & WF & CV --> RQ
+    RQ --> T_API & P_API & U_API & CR_API & M_API
+    T_API --> M_Task
+    P_API --> M_Project
+    U_API --> M_User
+    CR_API --> M_Lead
+```
+
+### Data Linkage Logic
+- **Project Hierarchy**: `Project` -> `Phase` -> `Task`. Sub-task relationships enable deep dependency trees.
+- **Role-Based Access Control (RBAC)**: Users are strictly isolated into `admin`, `sales`, and `user` privileges. Sales reps only access leads matching their `assignedRepId`.
+- **Concurrency Locks**: Distributed locking (`lockedBy`, `lockedAt`) on CRM entities prevents race conditions during simultaneous editing by multiple reps.
 
 ---
 
 ## ⚡ Performance Optimization Layer
 
-Taskmaster is engineered for speed and efficiency using a multi-layer optimization framework:
+Taskmaster is engineered for speed, prioritizing minimal Time to Interactive (TTI) and zero layout shifts.
 
 ### 1. Smart Data Caching (React Query & Supabase)
-- **Zero-Flicker Navigation**: Server state is cached globally using `@tanstack/react-query`.
-- **Real-Time Edge**: Supabase pipelines ensure real-time push events and high-performance edge sync.
-- **Optimistic UI**: Mutations (like adding logs or completing tasks) update the UI **instantly** before the server responds.
-- **Background Sync**: Automatic background refetching ensures data remains current without manual refreshes.
+- **Zero-Flicker Navigation**: All server state is cached globally using `@tanstack/react-query` with a 5-minute `staleTime`.
+- **Optimistic UI**: Mutations (e.g., creating a task, logging work) update the UI **instantly** via `queryClient.setQueryData()` before the network request resolves, providing a perceived latency of 0ms.
+- **Real-Time Edge**: Supabase Realtime channels (`subscribeToChannel`) emit push events for instant, cross-client synchronization.
 
 ### 2. Backend Efficiency
-- **Trigger.dev Automation**: Durable background job execution (mailing, rollups) runs reliably outside the main Express loop.
-- **Lean Queries**: All read-only API endpoints utilize Mongoose `.lean()` to bypass hydration, resulting in ~3-5x faster response times.
-- **Indexed Lookups**: Strategic indexing on `userId`, `projectId`, and `createdAt` ensures O(1) retrieval for core operations.
-- **Response Compression**: Gzip/Brotli compression applied to all JSON payloads to minimize latency.
+- **Trigger.dev Automation**: Long-running processes (mail dispatches, daily metric rollups) are offloaded to Trigger.dev, keeping the Express event loop free for high-throughput CRUD operations.
+- **Lean Queries**: All read-only database fetches employ Mongoose `.lean()`. Bypassing document hydration speeds up API responses by ~3-5x.
+- **Strategic Indexing**: Highly queried paths (`userId`, `projectId`, `phone`, `email`) are explicitly indexed in MongoDB, ensuring O(1) read efficiency even at scale.
+- **Response Compression**: Gzip/Brotli compression is actively applied to all JSON payloads to minimize bandwidth utilization.
 
----
-
-## 🏗️ System Architecture
-
-```mermaid
-graph TD
-    subgraph Frontend ["Frontend (React/Vite)"]
-        UI[UI Components] --> RQ["React Query (Cache Layer)"]
-        UI --> SB["Supabase (Edge Auth/Sync)"]
-        UI --> UT["UploadThing (File Uploads)"]
-    end
-
-    subgraph API ["Backend API (Node/Express)"]
-        RQ --> A_API["/api/auth"]
-        RQ --> T_API["/api/tasks"]
-        RQ --> P_API["/api/projects"]
-        RQ --> C_API["/api/crm"]
-        RQ --> L_API["/api/logs"]
-        RQ --> ART_API["/api/artists"]
-        TRG["Trigger.dev (Background Jobs)"] -.-> API
-    end
-
-    subgraph Storage ["Database (MongoDB)"]
-        A_API & T_API & P_API & C_API & L_API & ART_API --> DB[(MongoDB)]
-    end
-```
+### 3. Pro-Max Design Aesthetics
+- **4px Hard Grid System**: All spatial dimensions in the Tailwind CSS configuration strictly adhere to a 4px modular scale for mathematical perfection.
+- **Zero-Flash Theme Engine**: A blocking script at the root level evaluates user OS preferences (`prefers-color-scheme`) prior to React hydration to prevent dark-mode flickering.
+- **High-Density Semantics**: Uses pastel color-encoding matrices (Success/Warning/Danger/Info) exclusively for data representation, avoiding purely decorative styling.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js** v18+
-- **MongoDB** (Local or Atlas)
-- **Google OAuth Credentials** (Optional, for calendar sync)
-- **Resend API Key** (Optional, for mail campaigns)
-- **Supabase / UploadThing / Trigger.dev** keys (for full feature parity)
+- **Node.js** (v18+)
+- **MongoDB** (Local instance or MongoDB Atlas)
+- **Google OAuth Credentials** (Required for Calendar sync)
+- **Resend API Key** (Required for mailing functionality)
+- **Supabase / UploadThing / Trigger.dev Keys** (For full feature parity)
 
 ### Installation
 
 1. **Clone & Setup Server**
    ```bash
-   cd server
+   git clone https://github.com/RaghavSobti37/Taskmaster.git
+   cd Taskmaster/server
    npm install
-   cp .env.example .env # Configure your MONGO_URI, JWT_SECRET, RESEND, etc.
+   cp .env.example .env # Configure MONGO_URI, JWT_SECRET, RESEND, etc.
    npm run dev
    ```
 
 2. **Setup Client**
    ```bash
-   cd client
+   cd ../client
    npm install
    npm run dev
    ```
 
-3. **Initialize Database (Optional)**
+3. **Initialize Database Sandbox (Optional)**
    ```bash
-   cd server
+   cd ../server
    node seeder.js
    ```
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Tech Stack & Tooling
 
-```text
-├── client/
-│   ├── src/
-│   │   ├── hooks/          # Centralized React Query hooks & logic
-│   │   ├── contexts/       # Auth, Theme, and Sidebar state
-│   │   ├── pages/          # 15+ high-density functional pages (incl. WorkflowCanvas)
-│   │   └── components/     # Atomic UI primitives & complex modals (incl. VisualExplainerModal)
-├── server/
-│   ├── config/         # Supabase & UploadThing configurations
-│   ├── controllers/    # Optimized .lean() business logic
-│   ├── models/         # Mongoose schemas with strategic indexing
-│   ├── routes/         # Express API routing with JWT protection
-│   └── services/       # Trigger.dev jobs, mail drivers, and notifications
-└── agentic_memory/     # Comprehensive project architecture docs
-```
+We built Taskmaster standing on the shoulders of incredible open-source and commercial tools:
 
----
-
-## 🛠️ Tech Stack
-
-- **Frontend**: React 18, Vite, Tailwind CSS v4, Framer Motion, Lucide Icons, React Query, React Flow.
-- **Infrastructure**: Supabase (Realtime/Edge), UploadThing (Asset Storage).
-- **Backend**: Node.js, Express, Trigger.dev (Background Jobs), JWT, Compression, Rate-Limiting.
-- **Database**: MongoDB, Mongoose ODM.
-- **Tooling**: ESLint, PostCSS, Axios.
+- **Frontend Core**: [React 18](https://react.dev/), [Vite](https://vitejs.dev/)
+- **Styling & Motion**: [Tailwind CSS v4](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/), [Lucide React](https://lucide.dev/)
+- **State & Data Fetching**: [React Query (TanStack)](https://tanstack.com/query/latest)
+- **Backend Core**: [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)
+- **Database Layer**: [MongoDB](https://www.mongodb.com/), [Mongoose ODM](https://mongoosejs.com/)
+- **Infrastructure & Automation**:
+  - [Supabase](https://supabase.com/) (Realtime WebSockets)
+  - [Trigger.dev](https://trigger.dev/) (Background Job Orchestration)
+  - [UploadThing](https://uploadthing.com/) (Asset & File Storage)
+  - [Resend](https://resend.com/) & [Svix](https://www.svix.com/) (Email Delivery & Webhook Verification)
+- **Visuals & Graphs**: [React Flow](https://reactflow.dev/), [Recharts](https://recharts.org/)
 
 ---
 
 ## ⚖️ License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
 
 ---
-*Built for excellence by CoreKnot.*
+*Architected and developed for extreme efficiency by CoreKnot.*

@@ -3,18 +3,22 @@ const router = express.Router();
 
 // GET route to handle Meta Webhook Verification handshake
 router.get('/instagram', (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
+  const mode = req.query['hub.mode'] || req.query.hub?.mode;
+  const token = req.query['hub.verify_token'] || req.query.hub?.verify_token;
+  const challenge = req.query['hub.challenge'] || req.query.hub?.challenge;
 
-  console.log(`⚡ Received webhook verification request token: ${token}`);
+  const expectedToken = (process.env.META_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'verify_tsc').replace(/['"]/g, '').trim();
+  const receivedToken = (token || '').replace(/['"]/g, '').trim();
+  const receivedMode = (mode || '').trim();
 
-  if (mode === 'subscribe' && token === (process.env.META_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'verify_tsc')) {
+  console.log('⚡ Received webhook verification request token:', receivedToken, 'Expected:', expectedToken, 'Mode:', receivedMode, 'Query:', JSON.stringify(req.query));
+
+  if (receivedMode === 'subscribe' && receivedToken === expectedToken) {
     console.log('✅ Handshake validated successfully. Sending challenge code back.');
     res.setHeader('Content-Type', 'text/plain');
     return res.status(200).send(challenge);
   } else {
-    console.error('❌ Meta Webhook Token Validation Failed.', { mode, token });
+    console.error('❌ Meta Webhook Token Validation Failed.', { receivedMode, receivedToken, expectedToken });
     return res.status(403).send('Validation Failed');
   }
 });

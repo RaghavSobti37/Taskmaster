@@ -77,6 +77,20 @@ YOUTUBE_REDIRECT_URI_PROD="https://tsccoreknot.com/login"
 4. Request the following scopes during OAuth flow:
    * `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`
 5. Configure Webhooks: In the Meta App Dashboard -> Webhooks -> Select **Instagram** -> Subscribe to the `mentions` topic to receive real-time updates when external accounts tag your artist in posts or videos.
+6. **Production Nginx Routing Configuration**: To prevent frontend React Router from intercepting webhook verification requests on single-domain deployments, configure Nginx proxy forwarding for API endpoints before frontend static fallback:
+   ```nginx
+   location /api/ {
+       proxy_pass http://127.0.0.1:5000;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection 'upgrade';
+       proxy_set_header Host $host;
+       proxy_cache_bypass $http_upgrade;
+       proxy_set_header X-Real-IP $remote_addr;
+       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+       proxy_pass_request_arguments on;
+   }
+   ```
 
 ### 3. Open-Source Metabase UI Setup
 1. Ensure Docker is installed on your local host or server infrastructure.

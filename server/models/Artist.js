@@ -56,6 +56,19 @@ const ArtistSchema = new mongoose.Schema({
     videos: [{ type: mongoose.Schema.Types.Mixed }],
     posts: [{ type: mongoose.Schema.Types.Mixed }]
   },
+  trackedVideos: [{
+    videoId: { type: String },
+    title: { type: String },
+    channelName: { type: String },
+    isNative: { type: Boolean, default: true },
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+    comments: { type: Number, default: 0 },
+    watchTimeMinutes: { type: Number, default: 0 },
+    thumbnailCtr: { type: Number, default: 0 },
+    url: { type: String },
+    addedAt: { type: Date, default: Date.now }
+  }],
   events: [{
     date: { type: String },
     venue: { type: String },

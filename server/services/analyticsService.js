@@ -52,6 +52,8 @@ const fetchLiveAnalytics = async (artist) => {
       const channel = data.items[0];
       const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
       let videoList = [];
+      let externalVideoList = [];
+
       if (uploadsPlaylistId) {
         try {
           const playlistItems = await axios.get(
@@ -70,7 +72,23 @@ const fetchLiveAnalytics = async (artist) => {
           console.error("YouTube playlist items/videos error:", vidErr.message);
         }
       }
-      return { channel, videoList };
+
+      // Batch fetch for tracked external videos
+      const externalVidIds = (artist.trackedVideos || []).filter(v => !v.isNative).map(v => v.videoId).filter(Boolean);
+      if (externalVidIds.length) {
+        try {
+          const batchIds = externalVidIds.slice(0, 50).join(',');
+          const extVids = await axios.get(
+            `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${batchIds}&key=${youtubeApiKey}`,
+            { timeout: 10000 }
+          );
+          externalVideoList = extVids.data?.items || [];
+        } catch (extErr) {
+          console.error("YouTube external videos batch fetch error:", extErr.message);
+        }
+      }
+
+      return { channel, videoList, externalVideoList };
     })(),
 
     // 3. Meta Graph API Pipeline

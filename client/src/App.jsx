@@ -27,6 +27,8 @@ const TodoPage = lazy(() => import('./pages/productivity/TodoPage'));
 const GoogleSuccessPage = lazy(() => import('./pages/auth/GoogleSuccessPage'));
 const ArtistsCollection = lazy(() => import('./pages/artists/ArtistsCollection'));
 const ArtistDetail = lazy(() => import('./pages/artists/ArtistDetail'));
+const UnsubscribePage = lazy(() => import('./pages/Unsubscribe'));
+const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
 
 function App() {
   const { loading } = useAuth();
@@ -41,6 +43,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<MainLayout />}>
@@ -61,6 +64,7 @@ function App() {
                 <Route path="admin/logs" element={<AdminLogsPage />} />
                 <Route path="artists" element={<ArtistsCollection />} />
                 <Route path="artists/:id/*" element={<ArtistDetail />} />
+                <Route path="campaign/:campaignId" element={<CampaignDetails />} />
               </Route>
             </Route>
           </Route>

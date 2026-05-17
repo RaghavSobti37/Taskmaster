@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Share2, Zap, RefreshCw, Music, Video, TrendingUp,
   ExternalLink, Clock, Heart, MessageSquare, Share, Play, Disc, Globe,
-  Edit2, Trash2, Link as LinkIcon, Info, CheckCircle
+  Edit2, Trash2, Link as LinkIcon, Info, CheckCircle, Plus, Filter
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -11,7 +11,7 @@ import {
   Badge, PageHeader, Card, PageContainer, DataTable, Button,
   TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input, InfoButton
 } from '../../components/ui';
-import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, useDeleteArtist } from '../../hooks/useTaskmasterQueries';
+import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, useDeleteArtist, useAddTrackedVideo } from '../../hooks/useTaskmasterQueries';
 
 const formatNumber = (num) => {
   if (num == null || isNaN(num) || num === 'N/A') return 'N/A';
@@ -46,12 +46,18 @@ export default function ArtistDetail({ isPreview = false }) {
   const [editedArtist, setEditedArtist] = useState(null);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const [assetNotes, setAssetNotes] = useState('');
+  const [videoFilter, setVideoFilter] = useState('all');
+  const [showAddVideoModal, setShowAddVideoModal] = useState(false);
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newVideoTitle, setNewVideoTitle] = useState('');
+  const [newVideoChannel, setNewVideoChannel] = useState('');
 
   const { data: artist, isLoading: isArtistLoading } = useArtist(id);
   const { data: analyticsData, isLoading: isAnalyticsLoading } = useArtistAnalytics(id, activeTab);
   const syncMutation = useSyncArtistStats();
   const updateMutation = useUpdateArtist();
   const deleteMutation = useDeleteArtist();
+  const addVideoMutation = useAddTrackedVideo();
 
   const handleOpenEdit = () => {
     if (!artist) return;
@@ -137,6 +143,11 @@ export default function ArtistDetail({ isPreview = false }) {
 
   const tracks = analyticsData?.tracks || [];
   const videos = analyticsData?.videos || [];
+  const filteredVideos = videos.filter(v => {
+    if (videoFilter === 'native') return v.isNative !== false;
+    if (videoFilter === 'external') return v.isNative === false;
+    return true;
+  });
   const posts = analyticsData?.posts || [];
   const historyMap = analyticsData?.history || {};
 
@@ -198,13 +209,20 @@ export default function ArtistDetail({ isPreview = false }) {
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">{row.videoTitle}</span>
+              {row.isNative !== false ? (
+                <Badge variant="success" className="!text-[10px]">Native</Badge>
+              ) : (
+                <Badge variant="apricot" className="!text-[10px]">Featured</Badge>
+              )}
               {row.url && (
                 <a href={row.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-slate-400 hover:text-red-500">
                   <ExternalLink size={12} />
                 </a>
               )}
             </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">Retention: {row.retention || 'N/A'}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+              {row.channelName || artist.name} • Retention: {row.retention || 'N/A'}
+            </span>
           </div>
         </div>
       )
@@ -458,9 +476,38 @@ export default function ArtistDetail({ isPreview = false }) {
             <InfoButton text="Switch between live platform ingestion feeds to inspect sub-assets." />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              Individual Performance Tracking: {activeTab.toUpperCase()}
-            </span>
+            {activeTab === 'youtube' && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-lg p-1 bg-slate-100 dark:bg-slate-800 text-xs font-bold border border-slate-200 dark:border-slate-700">
+                  <button
+                    className={`px-2.5 py-1 rounded-md transition ${videoFilter === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                    onClick={() => setVideoFilter('all')}
+                  >
+                    All
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 rounded-md transition ${videoFilter === 'native' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                    onClick={() => setVideoFilter('native')}
+                  >
+                    Native
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 rounded-md transition ${videoFilter === 'external' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                    onClick={() => setVideoFilter('external')}
+                  >
+                    Featured Collabs
+                  </button>
+                </div>
+                <Button size="sm" variant="primary" onClick={() => setShowAddVideoModal(true)}>
+                  <Plus size={14} /> Add Featured Video
+                </Button>
+              </div>
+            )}
+            {activeTab !== 'youtube' && (
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Individual Performance Tracking: {activeTab.toUpperCase()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -470,7 +517,7 @@ export default function ArtistDetail({ isPreview = false }) {
           ) : activeTab === 'spotify' ? (
             <DataTable columns={spotifyColumns} data={tracks} onRowClick={setSelectedAsset} />
           ) : activeTab === 'youtube' ? (
-            <DataTable columns={youtubeColumns} data={videos} onRowClick={setSelectedAsset} />
+            <DataTable columns={youtubeColumns} data={filteredVideos} onRowClick={setSelectedAsset} />
           ) : (
             <DataTable columns={metaColumns} data={posts} onRowClick={setSelectedAsset} />
           )}
@@ -672,6 +719,50 @@ export default function ArtistDetail({ isPreview = false }) {
               </div>
             </div>
           </section>
+        </div>
+      </FullScreenWorkspace>
+
+      <FullScreenWorkspace
+        isOpen={showAddVideoModal}
+        onClose={() => { setShowAddVideoModal(false); setNewVideoUrl(''); setNewVideoTitle(''); setNewVideoChannel(''); }}
+        title="Add Tracked Featured Video"
+        subtitle="Track public stats for guest appearances & collabs on external channels"
+        onSave={async () => {
+          if (!newVideoUrl) { alert('Please enter a YouTube URL'); return; }
+          try {
+            await addVideoMutation.mutateAsync({
+              id,
+              data: { url: newVideoUrl, title: newVideoTitle, channelName: newVideoChannel }
+            });
+            setShowAddVideoModal(false);
+            setNewVideoUrl('');
+            setNewVideoTitle('');
+            setNewVideoChannel('');
+            alert('Featured video successfully added and stats tracked.');
+          } catch (err) {
+            alert('Error adding video: ' + (err.response?.data?.message || err.message));
+          }
+        }}
+      >
+        <div className="space-y-6 max-w-xl mx-auto p-4">
+          <Input
+            label="YouTube Video URL *"
+            placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            value={newVideoUrl}
+            onChange={e => setNewVideoUrl(e.target.value)}
+          />
+          <Input
+            label="Custom Title (Optional)"
+            placeholder="Collab Track feat. Artist"
+            value={newVideoTitle}
+            onChange={e => setNewVideoTitle(e.target.value)}
+          />
+          <Input
+            label="Channel Name (Optional)"
+            placeholder="Producer Channel"
+            value={newVideoChannel}
+            onChange={e => setNewVideoChannel(e.target.value)}
+          />
         </div>
       </FullScreenWorkspace>
     </PageContainer>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus
 } from 'lucide-react';
@@ -8,16 +9,19 @@ import {
 } from '../ui';
 import { 
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile, 
-  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useLiveLeads, useUserDirectory, useScanBounces 
+  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics 
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
+import CsvImporter from '../CsvImporter';
 
 export default function AdminMailContent() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useMailProfiles();
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useMailCampaigns();
   const { data: stats, refetch: refetchStats } = useMailStats();
   const { data: team = [] } = useUserDirectory();
+  const { data: cumulativeAnalytics } = useCumulativeAnalytics();
 
   // Filter state for CRM leads
   const [searchTerm, setSearchTerm] = useState('');
@@ -287,6 +291,20 @@ export default function AdminMailContent() {
             <Plus size={14} /> Create Campaign
           </Button>
           <Button 
+            variant={mode === 'csv_import' ? 'primary' : 'secondary'} 
+            size="sm" 
+            onClick={() => setMode('csv_import')}
+          >
+            <Upload size={14} /> Import Leads CSV
+          </Button>
+          <Button 
+            variant={mode === 'analytics' ? 'primary' : 'secondary'} 
+            size="sm" 
+            onClick={() => setMode('analytics')}
+          >
+            <BarChart2 size={14} /> Aggregate Analytics
+          </Button>
+          <Button 
             variant={mode === 'profiles' ? 'primary' : 'secondary'} 
             size="sm" 
             onClick={() => setMode('profiles')}
@@ -328,7 +346,7 @@ export default function AdminMailContent() {
       {/* Mode: Campaigns List */}
       {mode === 'campaigns' && (
         <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-          <DataTable columns={campaignColumns} data={campaigns} onRowClick={(row) => setSelectedCampaign(row)} />
+          <DataTable columns={campaignColumns} data={campaigns} onRowClick={(row) => navigate(`/campaign/${row.campaignId || row._id}`)} />
           {campaigns.length === 0 && (
             <div className="p-16 text-center opacity-30">
               <Mail size={48} className="mx-auto mb-4" />
@@ -673,6 +691,73 @@ export default function AdminMailContent() {
         </div>
       )}
 
+      {/* Mode: CSV Import */}
+      {mode === 'csv_import' && (
+        <CsvImporter onImportComplete={() => { alert('Import complete!'); queryClient.invalidateQueries({ queryKey: ['leads'] }); }} />
+      )}
+
+      {/* Mode: Cumulative Analytics */}
+      {mode === 'analytics' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+              <BarChart2 size={14} /> Cumulative Campaign Performance (By Event Tag)
+            </h3>
+            <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-secondary)] custom-scrollbar">
+              <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
+                <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)]">
+                  <tr>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Event Tag</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Sent</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Opens</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Clicks</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Open Rate</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">CTR</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {(cumulativeAnalytics?.aggregateData || []).map((row, idx) => (
+                    <tr key={idx} className="hover:bg-[var(--color-bg-primary)]/50">
+                      <td className="px-4 py-3 font-bold text-[var(--color-action-primary)]">{row.eventTag}</td>
+                      <td className="px-4 py-3">{row.totalSent}</td>
+                      <td className="px-4 py-3">{row.totalOpens}</td>
+                      <td className="px-4 py-3">{row.totalClicks}</td>
+                      <td className="px-4 py-3"><Badge variant="mint">{row.openRate}%</Badge></td>
+                      <td className="px-4 py-3"><Badge variant="info">{row.ctr}%</Badge></td>
+                    </tr>
+                  ))}
+                  {(!cumulativeAnalytics?.aggregateData || cumulativeAnalytics.aggregateData.length === 0) && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic font-mono">No cumulative campaign analytics recorded yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+              <Users size={14} /> Engaged Lead Distribution (Location & Artist Type)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(cumulativeAnalytics?.dynamicBreakdown || []).map((item, idx) => (
+                <div key={idx} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-xs block">{item.location}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{item.artistType}</span>
+                  </div>
+                  <Badge variant="mint">{item.count} Engaged</Badge>
+                </div>
+              ))}
+              {(!cumulativeAnalytics?.dynamicBreakdown || cumulativeAnalytics.dynamicBreakdown.length === 0) && (
+                <div className="col-span-3 p-8 text-center text-[var(--color-text-muted)] italic font-mono border border-dashed rounded-xl">No engaged lead demographics recorded yet.</div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Selected Campaign Detail Modal */}
       {selectedCampaign && (
         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -695,23 +780,21 @@ export default function AdminMailContent() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
-              {/* Analytics Stat Grid */}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <StatCard label="Total Target" value={selectedCampaign.stats?.total || 0} icon={Users} variant="slate" />
                 <StatCard label="Sent Success" value={selectedCampaign.stats?.sent || 0} icon={Send} variant="mint" />
                 <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
                 <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />
                 <StatCard label="Bounced / Fail" value={selectedCampaign.stats?.bounced || 0} icon={AlertCircle} variant="rose" />
-                <StatCard label="Unsubscribed" value={selectedCampaign.stats?.unsubscribed || 0} icon={UserMinus} variant="warning" />
+                <StatCard label="User Unsub" value={selectedCampaign.stats?.unsubscribed || 0} icon={UserMinus} variant="warning" />
               </div>
 
-              {/* Target Recipient Table */}
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <Users size={14} /> Campaign Recipient Analytics ({selectedCampaign.recipients?.length || 0})
                 </h3>
                 <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden bg-[var(--color-bg-secondary)]">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
                     <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)]">
                       <tr>
                         <th className="px-4 py-2.5 font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Recipient Email</th>

@@ -4,7 +4,9 @@ const artistController = require('../controllers/artistController');
 const artistAnalyticsController = require('../controllers/artistAnalyticsController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Public endpoints for preview
+// Public endpoints for preview & webhooks
+router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
+router.post('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.get('/:id', artistController.getArtistById);
 router.get('/:id/analytics/:platform', artistAnalyticsController.getPlatformAnalytics);
 
@@ -16,5 +18,6 @@ router.put('/:id', artistController.updateArtist);
 router.delete('/:id', artistController.deleteArtist);
 router.post('/:id/inject-event', artistController.injectEvent);
 router.post('/:id/sync-stats', artistAnalyticsController.syncArtistStats);
+router.post('/:id/tracked-video', artistAnalyticsController.addTrackedVideo);
 
 module.exports = router;

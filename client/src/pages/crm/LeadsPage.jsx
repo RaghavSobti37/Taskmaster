@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Search, Filter, Download, Plus, ChevronLeft, ChevronRight,
+  Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2,
   Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe
 } from 'lucide-react';
-import { 
-  Badge, 
-  PageHeader, 
-  Card, 
-  PageContainer, 
-  DataTable, 
-  Button, 
+import {
+  Badge,
+  PageHeader,
+  Card,
+  PageContainer,
+  DataTable,
+  Button,
   TabSwitcher,
   StatCard,
   PageSkeleton,
@@ -18,7 +18,9 @@ import {
   NexusDropdown
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLiveLeads, useUserDirectory, useCRMStats } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useCRMStats } from '../../hooks/useTaskmasterQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 
 export default function LeadsPage() {
   const { user } = useAuth();
@@ -27,6 +29,10 @@ export default function LeadsPage() {
   const [pageSize] = useState(25);
   const [activeTab, setActiveTab] = useState('all');
   const [selectedLead, setSelectedLead] = useState(null);
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [isPurging, setIsPurging] = useState(false);
+  const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState({
     leadQuality: 'all',
@@ -42,14 +48,32 @@ export default function LeadsPage() {
     page,
     limit: pageSize,
     search: searchTerm,
+    sort: sortField,
+    order: sortOrder,
     ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all')),
     ...(activeTab === 'fresh' ? { leadStatus: 'Fresh' } : {}),
     ...(activeTab === 'contacted' ? { leadStatus: 'Contacted' } : {})
-  }), [page, pageSize, searchTerm, filters, activeTab]);
+  }), [page, pageSize, searchTerm, filters, activeTab, sortField, sortOrder]);
+
+  const handlePurgeTestData = async () => {
+    if (!window.confirm("Are you sure you want to remove all testing, dummy, and invalid records from CRM?")) return;
+    setIsPurging(true);
+    try {
+      const res = await axios.delete('/api/crm/leads/cleanup-test-data');
+      alert(res.data.message);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to purge test data');
+    } finally {
+      setIsPurging(false);
+    }
+  };
 
   const { data, isLoading } = useLiveLeads(queryParams);
   const { data: statsData } = useCRMStats();
-  const { data: team = [] } = useUserDirectory();
+  const { data: team = [] } = useSalesReps();
 
   const leads = data?.leads || [];
   const totalLeads = data?.total || 0;
@@ -111,7 +135,7 @@ export default function LeadsPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
-             {row.assignedRep?.avatar ? <img src={row.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={12} className="text-[var(--color-text-muted)]" />}
+            {row.assignedRep?.avatar ? <img src={row.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={12} className="text-[var(--color-text-muted)]" />}
           </div>
           <span className="text-[10px] font-black uppercase tracking-tight truncate">{row.assignedRep?.name || 'Unassigned'}</span>
         </div>
@@ -131,7 +155,10 @@ export default function LeadsPage() {
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => {}}>
+            <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
+              <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => { }}>
               <Download size={14} /> Export List
             </Button>
             <Button size="sm">
@@ -162,79 +189,97 @@ export default function LeadsPage() {
             />
           </div>
           <div className="flex items-center gap-3">
-             <div className="w-64">
-               <Input 
-                 placeholder="Search by name or phone..." 
-                 value={searchTerm}
-                 onChange={e => setSearchTerm(e.target.value)}
-                 icon={Search}
-               />
-             </div>
-             <div className="w-32">
-               <NexusDropdown 
-                 placeholder="Quality"
-                 options={[
-                   { value: 'all', label: 'All Quality' },
-                   { value: '5', label: 'Level 5' },
-                   { value: '4', label: 'Level 4' },
-                   { value: '3', label: 'Level 3' },
-                   { value: '2', label: 'Level 2' },
-                   { value: '1', label: 'Level 1' }
-                 ]}
-                 value={filters.leadQuality}
-                 onChange={v => setFilters({...filters, leadQuality: v})}
-               />
-             </div>
-             <div className="w-36">
-               <NexusDropdown 
-                 placeholder="Artist Type"
-                 options={[
-                   { value: 'all', label: 'All Artists' },
-                   { value: 'Full-time Artiste', label: 'Full-time' },
-                   { value: 'Part Time Artiste', label: 'Part-time' },
-                   { value: 'Hobbyist', label: 'Hobbyist' }
-                 ]}
-                 value={filters.artistType || 'all'}
-                 onChange={v => setFilters({...filters, artistType: v})}
-               />
-             </div>
-             <div className="w-36">
-               <NexusDropdown 
-                 placeholder="Role"
-                 options={[
-                   { value: 'all', label: 'All Roles' },
-                   { value: 'Vocalist', label: 'Vocalist' },
-                   { value: 'Music Producer', label: 'Producer' },
-                   { value: 'Singer Songwriter', label: 'Songwriter' },
-                   { value: 'Instrumentalist', label: 'Instrumentalist' },
-                   { value: 'Composer', label: 'Composer' }
-                 ]}
-                 value={filters.primaryRole || 'all'}
-                 onChange={v => setFilters({...filters, primaryRole: v})}
-               />
-             </div>
-             <div className="w-36">
-               <NexusDropdown 
-                 placeholder="Email Status"
-                 options={[
-                   { value: 'all', label: 'All Emails' },
-                   { value: 'Active', label: 'Active (Opened)' },
-                   { value: 'Unsubscribed', label: 'Unsubscribed' },
-                   { value: 'Invalid', label: 'Bounced / Invalid' },
-                   { value: 'Pending', label: 'Pending Status' }
-                 ]}
-                 value={filters.emailStatus || 'all'}
-                 onChange={v => setFilters({...filters, emailStatus: v})}
-               />
-             </div>
-             <div className="w-40">
-               <NexusDropdown 
-                 placeholder="Agent"
-                 options={[{ value: 'all', label: 'All Agents' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
-                 value={filters.assignedRepId}
-                 onChange={v => setFilters({...filters, assignedRepId: v})}
-               />
-             </div>
+            <div className="w-64">
+              <Input
+                placeholder="Search by name or phone..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                icon={Search}
+              />
+            </div>
+            <div className="w-32">
+              <NexusDropdown
+                placeholder="Quality"
+                options={[
+                  { value: 'all', label: 'All Quality' },
+                  { value: '5', label: 'Level 5' },
+                  { value: '4', label: 'Level 4' },
+                  { value: '3', label: 'Level 3' },
+                  { value: '2', label: 'Level 2' },
+                  { value: '1', label: 'Level 1' }
+                ]}
+                value={filters.leadQuality}
+                onChange={v => setFilters({ ...filters, leadQuality: v })}
+              />
+            </div>
+            <div className="w-36">
+              <NexusDropdown
+                placeholder="Artist Type"
+                options={[
+                  { value: 'all', label: 'All Artists' },
+                  { value: 'Full-time Artiste', label: 'Full-time' },
+                  { value: 'Part Time Artiste', label: 'Part-time' },
+                  { value: 'Hobbyist', label: 'Hobbyist' }
+                ]}
+                value={filters.artistType || 'all'}
+                onChange={v => setFilters({ ...filters, artistType: v })}
+              />
+            </div>
+            <div className="w-36">
+              <NexusDropdown
+                placeholder="Role"
+                options={[
+                  { value: 'all', label: 'All Roles' },
+                  { value: 'Vocalist', label: 'Vocalist' },
+                  { value: 'Music Producer', label: 'Producer' },
+                  { value: 'Singer Songwriter', label: 'Songwriter' },
+                  { value: 'Instrumentalist', label: 'Instrumentalist' },
+                  { value: 'Composer', label: 'Composer' }
+                ]}
+                value={filters.primaryRole || 'all'}
+                onChange={v => setFilters({ ...filters, primaryRole: v })}
+              />
+            </div>
+            <div className="w-36">
+              <NexusDropdown
+                placeholder="Email Status"
+                options={[
+                  { value: 'all', label: 'All Emails' },
+                  { value: 'Active', label: 'Active (Opened)' },
+                  { value: 'Unsubscribed', label: 'Unsubscribed' },
+                  { value: 'Invalid', label: 'Bounced / Invalid' },
+                  { value: 'Pending', label: 'Pending Status' }
+                ]}
+                value={filters.emailStatus || 'all'}
+                onChange={v => setFilters({ ...filters, emailStatus: v })}
+              />
+            </div>
+            <div className="w-40">
+              <NexusDropdown
+                placeholder="Agent"
+                options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
+                value={filters.assignedRepId}
+                onChange={v => setFilters({ ...filters, assignedRepId: v })}
+              />
+            </div>
+            <div className="w-44">
+              <NexusDropdown
+                placeholder="Sort By"
+                options={[
+                  { value: 'createdAt-desc', label: 'Newest First' },
+                  { value: 'createdAt-asc', label: 'Oldest First' },
+                  { value: 'leadQuality-desc', label: 'Quality Score (High-Low)' },
+                  { value: 'nextFollowupDate-asc', label: 'Followup Date (Earliest)' },
+                  { value: 'name-asc', label: 'Name (A-Z)' }
+                ]}
+                value={`${sortField}-${sortOrder}`}
+                onChange={v => {
+                  const [field, order] = v.split('-');
+                  setSortField(field);
+                  setSortOrder(order);
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -247,14 +292,14 @@ export default function LeadsPage() {
         </Card>
 
         <div className="flex items-center justify-between pt-4">
-           <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
-             Showing {leads.length} of {totalLeads} leads
-           </p>
-           <div className="flex items-center gap-2">
-              <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={12} /></Button>
-              <span className="text-[10px] font-black px-2">{page} / {totalPages}</span>
-              <Button variant="secondary" size="xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={12} /></Button>
-           </div>
+          <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
+            Showing {leads.length} of {totalLeads} leads
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={12} /></Button>
+            <span className="text-[10px] font-black px-2">{page} / {totalPages}</span>
+            <Button variant="secondary" size="xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={12} /></Button>
+          </div>
         </div>
       </div>
 
@@ -267,66 +312,66 @@ export default function LeadsPage() {
         sidebar={
           <div className="space-y-4">
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
-               <div className="space-y-3">
-                  <div className="flex justify-between">
-                     <span className="text-[10px] font-bold">Progress</span>
-                     <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'success' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                     <span className="text-[10px] font-bold">Call History</span>
-                     <Badge variant="neutral">{selectedLead?.callStatus || 'No Record'}</Badge>
-                  </div>
-               </div>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-[10px] font-bold">Progress</span>
+                  <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'success' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[10px] font-bold">Call History</span>
+                  <Badge variant="neutral">{selectedLead?.callStatus || 'No Record'}</Badge>
+                </div>
+              </div>
             </Card>
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Assigned Agent</h4>
-               <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden">
-                     {selectedLead?.assignedRep?.avatar ? <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={18} className="text-[var(--color-text-muted)]" />}
-                  </div>
-                  <div>
-                     <p className="text-[11px] font-bold">{selectedLead?.assignedRep?.name || 'Unassigned'}</p>
-                     <p className="text-[9px] text-[var(--color-text-muted)] uppercase">Sales Professional</p>
-                  </div>
-               </div>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Assigned Agent</h4>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden">
+                  {selectedLead?.assignedRep?.avatar ? <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={18} className="text-[var(--color-text-muted)]" />}
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold">{selectedLead?.assignedRep?.name || 'Unassigned'}</p>
+                  <p className="text-[9px] text-[var(--color-text-muted)] uppercase">Sales Professional</p>
+                </div>
+              </div>
             </Card>
           </div>
         }
       >
         <div className="space-y-8">
-           <section>
-              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                 <UserCheck size={14} /> Contact Information
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                 <Input label="Customer Name" defaultValue={selectedLead?.name} />
-                 <Input label="Phone Number" defaultValue={selectedLead?.phone} />
-                 <Input label="Location" defaultValue={selectedLead?.city || 'Not Specified'} icon={MapPin} />
-                 <Input label="Original Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
-              </div>
-           </section>
+          <section>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+              <UserCheck size={14} /> Contact Information
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              <Input label="Customer Name" defaultValue={selectedLead?.name} />
+              <Input label="Phone Number" defaultValue={selectedLead?.phone} />
+              <Input label="Location" defaultValue={selectedLead?.city || 'Not Specified'} icon={MapPin} />
+              <Input label="Original Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
+            </div>
+          </section>
 
-           <section>
-              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                 <Briefcase size={14} /> Interaction Details
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Interest Level</label>
-                    <select 
-                      className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
-                      defaultValue={selectedLead?.leadQuality}
-                    >
-                       {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>{q}</option>)}
-                    </select>
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action</label>
-                    <Input placeholder="E.g., Call tomorrow" icon={Clock} />
-                 </div>
+          <section>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+              <Briefcase size={14} /> Interaction Details
+            </h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Interest Level</label>
+                <select
+                  className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+                  defaultValue={selectedLead?.leadQuality}
+                >
+                  {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>{q}</option>)}
+                </select>
               </div>
-           </section>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action</label>
+                <Input placeholder="E.g., Call tomorrow" icon={Clock} />
+              </div>
+            </div>
+          </section>
         </div>
       </FullScreenWorkspace>
     </PageContainer>

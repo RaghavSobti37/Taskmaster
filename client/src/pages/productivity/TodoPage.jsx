@@ -14,51 +14,27 @@ import {
   Button, StatCard, NexusModal 
 } from '../../components/ui';
 
+import { useAuth } from '../../contexts/AuthContext';
+import { useTasks, useProjects, useUserDirectory, useUpdateTask, useDeleteTask } from '../../hooks/useTaskmasterQueries';
+
 const TodoPage = () => {
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { data: tasks = [] } = useTasks();
+  const { data: projects = [] } = useProjects();
+  const { data: members = [] } = useUserDirectory();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
   const [filter, setFilter] = useState('pending');
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const fetchData = async () => {
-    try {
-      const [tasksRes, projectsRes, membersRes] = await Promise.all([
-        axios.get('/api/tasks'),
-        axios.get('/api/projects'),
-        axios.get('/api/users/team')
-      ]);
-      setTasks(tasksRes.data);
-      setProjects(projectsRes.data);
-      setMembers(membersRes.data.team || []);
-    } catch (err) {
-      console.error('Error fetching tasks:', err);
-    } finally {
-      setLoading(false);
-    }
+  const toggleTask = (task) => {
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    updateTaskMutation.mutate({ id: task._id, data: { status: newStatus } });
   };
 
-  useEffect(() => { fetchData(); }, []);
-
-  const toggleTask = async (task) => {
-    try {
-      const newStatus = task.status === 'done' ? 'todo' : 'done';
-      const res = await axios.put(`/api/tasks/${task._id}`, { status: newStatus });
-      setTasks(tasks.map(t => t._id === task._id ? res.data : t));
-    } catch (err) {
-      console.error('Error toggling task:', err);
-    }
-  };
-
-  const deleteTask = async (id) => {
-    try {
-      await axios.delete(`/api/tasks/${id}`);
-      setTasks(tasks.filter(t => t._id !== id));
-    } catch (err) {
-      console.error('Error deleting task:', err);
-    }
+  const deleteTask = (id) => {
+    deleteTaskMutation.mutate(id);
   };
 
   const filteredTasks = useMemo(() => tasks.filter(t => {
@@ -216,7 +192,6 @@ const TodoPage = () => {
         onClose={() => setIsTaskModalOpen(false)}
         projects={projects}
         members={members}
-        onTaskCreated={(newTask) => setTasks([newTask, ...tasks])}
       />
     </PageContainer>
   );

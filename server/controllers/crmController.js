@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
 const EMI = require('../models/EMI');
 const CRMAudit = require('../models/CRMAudit');
@@ -41,7 +42,7 @@ exports.getLeads = async (req, res) => {
     let query = {};
     // Security: Non-admins can only see their own assigned leads
     if (req.user.role !== 'admin') {
-      query.assignedRepId = req.user._id;
+      query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
     }
 
     // Search
@@ -75,7 +76,15 @@ exports.getLeads = async (req, res) => {
       }
     }
 
-    if (req.query.assignedRepId && req.query.assignedRepId !== 'all') query.assignedRepId = req.query.assignedRepId;
+    if (req.query.assignedRepId && req.query.assignedRepId !== 'all') {
+      if (req.query.assignedRepId === 'unassigned' || req.query.assignedRepId === 'null') {
+        query.assignedRepId = null;
+      } else if (mongoose.Types.ObjectId.isValid(req.query.assignedRepId)) {
+        query.assignedRepId = new mongoose.Types.ObjectId(req.query.assignedRepId);
+      } else {
+        query.assignedRepId = req.query.assignedRepId;
+      }
+    }
     if (req.query.webinarDates && req.query.webinarDates !== 'all') query.webinarDates = req.query.webinarDates;
     if (req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') query.meaningfulConnect = req.query.meaningfulConnect;
     if (req.query.artistType && req.query.artistType !== 'all') query.artistType = req.query.artistType;
@@ -352,7 +361,11 @@ exports.uploadLeads = async (req, res) => {
             assignedRepId = repMap[rawRepName];
           } else if (reps.length > 0 && rawRepName !== '') {
             // Round-robin only if we have a rep name that didn't match known sales reps
-            // If repName is empty, it stays unassigned
+            assignedRepId = reps[repIndex % reps.length]._id;
+            repIndex++;
+          }
+
+          if (!assignedRepId && reps.length > 0) {
             assignedRepId = reps[repIndex % reps.length]._id;
             repIndex++;
           }
@@ -624,5 +637,22 @@ exports.getRepSummary = async (req, res) => {
   } catch (error) {
     console.error('Rep summary error:', error);
     res.status(500).json({ error: 'Failed to fetch rep summary' });
+  }
+};
+
+exports.cleanupTestData = async (req, res) => {
+  try {
+    const filter = {
+      $or: [
+        { name: { $regex: /test|demo|dummy|invalid/i } },
+        { email: { $regex: /test|demo|dummy|invalid/i } },
+        { emailStatus: { $in: ['Invalid', 'Bounced'] } }
+      ]
+    };
+    const result = await Lead.deleteMany(filter);
+    res.json({ message: `Purged ${result.deletedCount} testing/invalid records.` });
+  } catch (error) {
+    console.error('Cleanup test data error:', error);
+    res.status(500).json({ error: 'Failed to cleanup test data' });
   }
 };

@@ -3,9 +3,10 @@ const router = express.Router();
 const User = require('../models/User');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-const { getTeam, updateProfile, getDirectory, updateUserRole, updateUserTeams, deleteUser, updateUserAdmin } = require('../controllers/userController');
+const { getTeam, updateProfile, getDirectory, updateUserRole, updateUserTeams, deleteUser, updateUserAdmin, getSalesReps } = require('../controllers/userController');
 
 router.get('/team', protect, getTeam);
+router.get('/sales-reps', protect, getSalesReps);
 router.put('/profile', protect, updateProfile);
 router.get('/directory', protect, admin, getDirectory);
 router.put('/:id/role', protect, admin, updateUserRole);

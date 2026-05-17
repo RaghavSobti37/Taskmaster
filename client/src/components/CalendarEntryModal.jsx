@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
@@ -46,7 +48,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
           description,
           visibility
         });
-        onEntryCreated(res.data, true); // true indicates update
+        if (onEntryCreated) onEntryCreated(res.data, true);
       } else {
         const res = await axios.post('/api/calendar', {
           title,
@@ -54,8 +56,12 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
           description,
           visibility
         });
-        onEntryCreated(res.data, false); // false indicates new entry
+        if (onEntryCreated) onEntryCreated(res.data, false);
       }
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       onClose();
     } catch (err) {
       console.error('Error saving calendar entry:', err);

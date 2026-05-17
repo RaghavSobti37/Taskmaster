@@ -212,3 +212,12 @@ exports.updateUserAdmin = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getSalesReps = async (req, res) => {
+  try {
+    const reps = await User.find({ role: 'sales' }).select('_id name email avatar role online lastOnline phone');
+    res.json(reps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch sales representatives' });
+  }
+};

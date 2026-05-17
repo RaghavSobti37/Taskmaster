@@ -14,60 +14,19 @@ import {
 } from '../../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
 
 const CalendarView = () => {
   const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [calendarEvents, setCalendarEvents] = useState([]);
+  const { data: calendarEvents = [], isLoading: eventsLoading, refetch: refetchAllEvents } = useCalendarEvents();
   const [holidays, setHolidays] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showHolidays, setShowHolidays] = useState(true);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const fetchAllEvents = async () => {
-    try {
-      const [dbRes, googleRes] = await Promise.all([
-        axios.get('/api/calendar'),
-        user.googleRefreshToken ? axios.get('/api/google/calendar/events') : Promise.resolve({ data: [] })
-      ]);
-
-      const dbEvents = dbRes.data.map(ev => ({
-        _id: ev._id,
-        title: ev.title,
-        description: ev.description,
-        dueDate: ev.date,
-        visibility: ev.visibility,
-        createdBy: ev.createdBy,
-        type: 'event'
-      }));
-
-      const googleEvents = googleRes.data.map(ev => ({
-        _id: ev.id,
-        title: ev.summary,
-        description: '',
-        dueDate: ev.start.dateTime || ev.start.date,
-        visibility: 'private',
-        type: 'google',
-        source: 'google_calendar'
-      }));
-
-      const combined = [...dbEvents, ...googleEvents];
-      const uniqueEvents = Array.from(new Map(combined.map(ev => [ev._id, ev])).values());
-      setCalendarEvents(uniqueEvents);
-    } catch (err) {
-      console.error('Error fetching calendar events:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllEvents();
-    const interval = setInterval(fetchAllEvents, 60000);
-    return () => clearInterval(interval);
-  }, [user.googleRefreshToken]);
+  const loading = eventsLoading && calendarEvents.length === 0;
 
   useEffect(() => {
     const fetchHolidays = async () => {
@@ -167,7 +126,7 @@ const CalendarView = () => {
         subtitle="Universal scheduling matrix and event synchronization."
         actions={
           <div className="flex items-center gap-2">
-             <Button variant="secondary" size="sm" onClick={fetchAllEvents}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Roots</Button>
+             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Roots</Button>
              <Button size="sm" onClick={() => setIsModalOpen(true)}><Plus size={14} /> Create Event</Button>
           </div>
         }
@@ -293,7 +252,7 @@ const CalendarView = () => {
       <CalendarEntryModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingEvent(null); }}
-        onEntryCreated={() => fetchAllEvents()}
+        onEntryCreated={() => refetchAllEvents()}
         initialData={editingEvent}
       />
     </PageContainer>

@@ -149,11 +149,12 @@ const Dashboard = () => {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <StatCard label="Work Completed" value={`${metrics.completionRate}%`} icon={CheckCircle2} variant="mint" info="The percentage of assigned tasks you have finished." />
         <StatCard label="Urgent Tasks" value={metrics.criticalTasks} icon={AlertCircle} variant="rose" info="Important work items that need your attention immediately." />
         <StatCard label="Overdue Items" value={metrics.overdueTasks} icon={Clock} variant="apricot" info="Tasks that have passed their planned completion date." />
         <StatCard label="Focus Time Today" value={`${metrics.focusHours}h`} icon={TrendingUp} variant="info" info="Total time logged on tasks within the last 24 hours." />
+        <StatCard label="Bounced Emails" value={metrics.bouncedEmails || 0} icon={AlertCircle} variant="rose" info="Bounces managed via instant Resend webhooks. Skipping manual IMAP polling." />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

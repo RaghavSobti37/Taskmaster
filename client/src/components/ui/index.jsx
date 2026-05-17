@@ -9,3 +9,4 @@ export { default as ProgressRing } from './ProgressRing';
 export { default as ActivityHeatmap } from './ActivityHeatmap';
 export { default as DashboardSkeleton } from './DashboardSkeleton';
 export { default as PageSkeleton } from './PageSkeleton';
+export { VisualExplainerModal } from './VisualExplainerModal';

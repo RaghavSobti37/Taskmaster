@@ -110,13 +110,30 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
   }
 });
 
+router.delete('/campaigns/:id', protect, async (req, res) => {
+  try {
+    const campaignId = req.params.id;
+    await MailCampaign.findByIdAndDelete(campaignId);
+    await MailEvent.deleteMany({ campaignId: campaignId });
+    res.json({ message: 'Campaign and related tracking data deleted successfully' });
+  } catch (err) {
+    console.error('Delete campaign error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- EVENTS & ANALYTICS ---
 router.get('/stats', protect, async (req, res) => {
   try {
-    const campaigns = await MailCampaign.find({ createdBy: req.user._id }).lean();
-    let totalCampaigns = campaigns.length;
+    const Campaign = require('../models/Campaign');
+    const mailCampaigns = await MailCampaign.find({ createdBy: req.user._id }).lean();
+    const coreCampaigns = await Campaign.find({ createdBy: req.user._id }).lean();
+    const allCampaigns = [...mailCampaigns, ...coreCampaigns];
+
+    let totalCampaigns = allCampaigns.length;
     let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsubscribed = 0;
-    campaigns.forEach(camp => {
+
+    allCampaigns.forEach(camp => {
       camp.recipients?.forEach(r => {
         if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) totalSent++;
         if (['Opened', 'Clicked'].includes(r.status)) totalOpened++;
@@ -161,12 +178,23 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
 
     // 2. Update campaign recipient status and stats
     if (campaignId && campaignId !== 'undefined') {
-      const campaign = await MailCampaign.findById(campaignId);
+      const Campaign = require('../models/Campaign');
+      let campaign = await MailCampaign.findById(campaignId);
+      let isCore = false;
+      if (!campaign) {
+        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
+        isCore = true;
+      }
       if (campaign) {
-        const recipient = campaign.recipients.id(recipientId) || campaign.recipients.find(r => r.email === email);
+        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
         if (recipient && recipient.status !== 'Opened' && recipient.status !== 'Clicked') {
           recipient.status = 'Opened';
-          campaign.stats.opened = (campaign.stats.opened || 0) + 1;
+          if (isCore) {
+            campaign.metrics.opened = (campaign.metrics.opened || 0) + 1;
+            campaign.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+          } else {
+            campaign.stats.opened = (campaign.stats.opened || 0) + 1;
+          }
           await campaign.save();
         }
       }
@@ -210,12 +238,23 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
 
     // 2. Update campaign recipient status and stats
     if (campaignId && campaignId !== 'undefined') {
-      const campaign = await MailCampaign.findById(campaignId);
+      const Campaign = require('../models/Campaign');
+      let campaign = await MailCampaign.findById(campaignId);
+      let isCore = false;
+      if (!campaign) {
+        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
+        isCore = true;
+      }
       if (campaign) {
-        const recipient = campaign.recipients.id(recipientId) || campaign.recipients.find(r => r.email === email);
+        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
         if (recipient && recipient.status !== 'Clicked') {
           recipient.status = 'Clicked';
-          campaign.stats.clicked = (campaign.stats.clicked || 0) + 1;
+          if (isCore) {
+            campaign.metrics.clicked = (campaign.metrics.clicked || 0) + 1;
+            campaign.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
+          } else {
+            campaign.stats.clicked = (campaign.stats.clicked || 0) + 1;
+          }
           await campaign.save();
         }
       }
@@ -251,12 +290,20 @@ router.get('/unsubscribe/:campaignId/:recipientId', async (req, res) => {
     }
 
     if (campaignId && campaignId !== 'undefined') {
-      const campaign = await MailCampaign.findById(campaignId);
+      const Campaign = require('../models/Campaign');
+      let campaign = await MailCampaign.findById(campaignId);
+      let isCore = false;
+      if (!campaign) {
+        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
+        isCore = true;
+      }
       if (campaign) {
-        const recipient = campaign.recipients.id(recipientId) || campaign.recipients.find(r => r.email === email);
+        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
         if (recipient && recipient.status !== 'Unsubscribed') {
           recipient.status = 'Unsubscribed';
-          campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
+          if (!isCore) {
+            campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
+          }
           await campaign.save();
         }
       }

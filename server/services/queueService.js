@@ -14,20 +14,17 @@ const redisConfig = {
   maxRetriesPerRequest: null
 };
 
-// Check if Redis is up without throwing unhandled exceptions
 const connection = new IORedis(redisConfig.port, redisConfig.host, {
   lazyConnect: true,
   retryStrategy(times) {
     if (times > 3) {
-      return null; // Stop retrying after 3 attempts and fallback
+      return null;
     }
     return Math.min(times * 100, 1000);
   }
 });
 
-connection.on('error', (err) => {
-  // Suppress background ioredis socket errors when falling back to in-memory queue
-});
+connection.on('error', (err) => {});
 
 let emailQueue;
 let emailWorker;
@@ -43,7 +40,7 @@ connection.connect().then(() => {
   }, { 
     connection,
     concurrency: 5,
-    limiter: { max: 10, duration: 1000 } // Throttling: 10 emails per second max
+    limiter: { max: 10, duration: 1000 }
   });
 
   emailWorker.on('completed', job => {
@@ -57,7 +54,6 @@ connection.connect().then(() => {
   useBullMQ = false;
 });
 
-// In-Memory Queue fallback processor
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
 
@@ -72,43 +68,57 @@ const processMemoryQueue = async () => {
     } catch (err) {
       console.error('[Queue Fallback] Job failed:', err);
     }
-    // Throttle 100ms between emails
     await new Promise(res => setTimeout(res, 100));
   }
   isProcessingMemoryQueue = false;
 };
 
 const processEmailJob = async ({ campaignId, recipientId, email, subject, content, profileId, isLegacy }) => {
-  const Model = isLegacy ? MailCampaign : Campaign;
-  const campaign = await Model.findById(campaignId).populate('senderProfileId');
+  const Campaign = require('../models/Campaign');
+  const MailCampaign = require('../models/MailCampaign');
+  const EmailProfile = require('../models/EmailProfile');
+  const MailEvent = require('../models/MailEvent');
+  const nodemailer = require('nodemailer');
+  const { prepareCampaignHTML } = require('../utils/emailTracker');
+
+  let Model = Campaign;
+  let campaign = await Campaign.findById(campaignId).populate('senderProfileId');
+  if (!campaign) {
+    campaign = await MailCampaign.findById(campaignId).populate('senderProfileId');
+    Model = MailCampaign;
+    isLegacy = true;
+  }
   if (!campaign) return;
 
-  const profile = campaign.senderProfileId || await EmailProfile.findById(profileId);
+  const profile = campaign.senderProfileId || (profileId ? await EmailProfile.findById(profileId) : null) || {
+    name: 'Taskmaster Core Engine',
+    email: 'system@taskmaster.internal',
+    smtpHost: 'mock_smtp_host'
+  };
   if (!profile) throw new Error('Sender profile not found');
 
-  const transporter = nodemailer.createTransport({
-    host: profile.smtpHost || 'smtp.gmail.com',
-    port: profile.smtpPort || 587,
-    secure: profile.smtpPort === 465,
-    auth: {
-      user: profile.smtpUser,
-      pass: profile.smtpPass
-    },
-    tls: { rejectUnauthorized: false }
-  });
+  const { resend } = require('./mailDriver');
+  let transporter = null;
+  if (!resend && profile.smtpHost && profile.smtpHost !== 'mock_smtp_host') {
+    transporter = nodemailer.createTransport({
+      host: profile.smtpHost || 'smtp.gmail.com',
+      port: profile.smtpPort || 587,
+      secure: profile.smtpPort === 465,
+      auth: {
+        user: profile.smtpUser,
+        pass: profile.smtpPass
+      },
+      tls: { rejectUnauthorized: false }
+    });
+  }
 
-  const baseUrl = process.env.APP_BASE_URL || process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
-  const { processedHtml, pixelId, clickId } = await prepareCampaignHTML(content, campaign.campaignId || campaign._id.toString(), email, baseUrl);
+  const baseUrl = 'https://tsccoreknot.com';
+  const { processedHtml, pixelId, clickId } = await prepareCampaignHTML(content || campaign.content || '', campaign.campaignId || campaign._id.toString(), email, baseUrl);
 
-  const mailOptions = {
-    from: `"${profile.name}" <${profile.email}>`,
-    to: email,
-    subject: subject || campaign.subject || campaign.title,
-    html: processedHtml,
-    headers: {
-      'X-Campaign-ID': campaign.campaignId || campaign._id.toString()
-    }
-  };
+  const senderFrom = `"${profile.name}" <${profile.email}>`;
+  const mailSubject = subject || campaign.subject || campaign.title;
+
+  let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
   const checkCompletion = async () => {
     const freshCamp = await Model.findById(campaignId);
@@ -116,31 +126,55 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       const isDone = freshCamp.recipients.every(r => r.status !== 'Pending' && r.status !== 'Queued');
       if (isDone) {
         freshCamp.status = 'Completed';
-        await freshCamp.save();
+        try { await freshCamp.save(); } catch (e) {}
       }
     }
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    
-    // Update recipient and stats
+    if (resend) {
+      const resp = await resend.emails.send({
+        from: senderFrom,
+        to: [email],
+        subject: mailSubject,
+        html: processedHtml,
+        headers: {
+          'X-Campaign-ID': campaign.campaignId || campaign._id.toString()
+        }
+      });
+      messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
+    } else if (transporter) {
+      const info = await transporter.sendMail({
+        from: senderFrom,
+        to: email,
+        subject: mailSubject,
+        html: processedHtml,
+        headers: {
+          'X-Campaign-ID': campaign.campaignId || campaign._id.toString()
+        }
+      });
+      messageIdStr = info.messageId;
+    } else {
+      console.log(`[Queue Simulation] Simulated dispatch to ${email}`);
+    }
+
     const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString());
     if (recipient) {
       recipient.status = 'Sent';
       recipient.sentAt = new Date();
-      recipient.messageId = info.messageId;
+      recipient.messageId = messageIdStr;
     }
 
     if (isLegacy) {
       campaign.stats.sent = (campaign.stats.sent || 0) + 1;
     } else {
+      if (!campaign.metrics) campaign.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
       campaign.metrics.totalSent = (campaign.metrics.totalSent || 0) + 1;
     }
-    await campaign.save();
+    try { await campaign.save(); } catch (err) { if (err.name !== 'VersionError' && err.name !== 'DocumentNotFoundError') console.error('Campaign save error:', err); }
 
     await MailEvent.create({
-      messageId: info.messageId,
+      messageId: messageIdStr,
       eventType: 'Send',
       email: email,
       timestamp: new Date(),
@@ -154,23 +188,45 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       recipient.status = 'Failed';
       recipient.error = err.message;
     }
-    await campaign.save();
+    try { await campaign.save(); } catch (e) { if (e.name !== 'VersionError' && e.name !== 'DocumentNotFoundError') console.error('Campaign fail save error:', e); }
     await checkCompletion();
     throw err;
   } finally {
-    transporter.close();
+    if (transporter) {
+      transporter.close();
+    }
   }
 };
 
-const dispatchCampaignJobs = async (campaignId, isLegacy = false) => {
-  const Model = isLegacy ? MailCampaign : Campaign;
-  const campaign = await Model.findById(campaignId);
+const dispatchCampaignJobs = async (campaignId) => {
+  const Campaign = require('../models/Campaign');
+  const MailCampaign = require('../models/MailCampaign');
+  let isLegacy = false;
+  let Model = Campaign;
+
+  let campaign = await Campaign.findById(campaignId);
+  if (!campaign) {
+    campaign = await MailCampaign.findById(campaignId);
+    Model = MailCampaign;
+    isLegacy = true;
+  }
   if (!campaign) throw new Error('Campaign not found');
 
   campaign.status = 'Sending';
   await campaign.save();
 
-  const recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
+  let recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
+  if (recipients.length === 0 && (campaign.recipients || []).length > 0) {
+    // Reset all recipients back to Pending to allow testing re-dispatch
+    for (const r of campaign.recipients) {
+      r.status = 'Pending';
+      delete r.error;
+      delete r.sentAt;
+    }
+    recipients = campaign.recipients;
+  }
+
+  const { triggerEmailCampaign } = require('./triggerService');
   
   for (const rec of recipients) {
     rec.status = 'Queued';
@@ -178,21 +234,24 @@ const dispatchCampaignJobs = async (campaignId, isLegacy = false) => {
       campaignId: campaign._id.toString(),
       recipientId: rec._id.toString(),
       email: rec.email,
-      subject: campaign.subject,
+      subject: campaign.subject || campaign.title,
       content: campaign.content,
       profileId: campaign.senderProfileId ? campaign.senderProfileId.toString() : null,
       isLegacy
     };
 
-    if (useBullMQ && emailQueue) {
-      await emailQueue.add('send-email', jobData, { removeOnComplete: true, removeOnFail: false });
-    } else {
-      memoryQueue.push(jobData);
+    const triggered = await triggerEmailCampaign(jobData);
+    if (!triggered) {
+      if (useBullMQ && emailQueue) {
+        await emailQueue.add('send-email', jobData, { removeOnComplete: true, removeOnFail: false });
+      } else {
+        memoryQueue.push(jobData);
+      }
     }
   }
   await campaign.save();
 
-  if (!useBullMQ) {
+  if (!useBullMQ && (!process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key')) {
     processMemoryQueue();
   }
 

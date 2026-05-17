@@ -29,6 +29,7 @@ const ArtistsCollection = lazy(() => import('./pages/artists/ArtistsCollection')
 const ArtistDetail = lazy(() => import('./pages/artists/ArtistDetail'));
 const UnsubscribePage = lazy(() => import('./pages/Unsubscribe'));
 const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
+const WorkflowCanvas = lazy(() => import('./pages/productivity/WorkflowCanvas'));
 
 function App() {
   const { loading } = useAuth();
@@ -59,6 +60,7 @@ function App() {
               <Route path="followups" element={<FollowupsPage />} />
               <Route path="features" element={<FeaturesPage />} />
               <Route path="todo" element={<TodoPage />} />
+              <Route path="workflows" element={<WorkflowCanvas />} />
               <Route element={<AdminRoute />}>
                 <Route path="admin" element={<AdminPanel />} />
                 <Route path="admin/logs" element={<AdminLogsPage />} />

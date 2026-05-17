@@ -40,7 +40,12 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ 
+  limit: '50mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(mongoSanitize({ allowDots: true }));
 
@@ -127,6 +132,19 @@ app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
+
+const { createRouteHandler } = require("uploadthing/express");
+const { uploadRouter } = require("./config/uploadthing");
+app.use(
+  "/api/uploadthing",
+  createRouteHandler({
+    router: uploadRouter,
+    config: {
+      uploadthingSecret: process.env.UPLOADTHING_SECRET || process.env.UPLOADTHING_TOKEN,
+      uploadthingId: process.env.UPLOADTHING_APP_ID || "app_id",
+    },
+  })
+);
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 

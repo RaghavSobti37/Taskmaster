@@ -263,7 +263,6 @@ const OutletSidebar = () => {
             isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
           />
-          {/* <NavItem to="/team" icon={Users} label="Team" collapsed={false} isMobile={isMobile} /> */}
           <NavItem 
             to="/assets" 
             icon={Layers} 
@@ -272,6 +271,7 @@ const OutletSidebar = () => {
             isMobile={isMobile} 
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
           />
+
           <NavItem
             to="/calendar"
             icon={Calendar}
@@ -342,8 +342,6 @@ const OutletSidebar = () => {
               />
             </div>
           )}
-
-          {/* Notifications NavItem Removed */}
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">

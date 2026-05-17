@@ -5,7 +5,7 @@ import axios from 'axios';
 import {
   ShieldCheck, Send, XCircle, Eye, Zap, Play, Settings, Plus, Users, 
   Search, PlusCircle, Database, Phone, UserCheck, TrendingUp, FileBarChart,
-  X, Trash2, MoreVertical, Edit2, ShieldAlert, Activity, Clock, Shield, LogIn
+  X, Trash2, MoreVertical, Edit2, ShieldAlert, Activity, Clock, Shield, LogIn, Layers
 } from 'lucide-react';
 import { 
   Badge, 
@@ -27,17 +27,23 @@ import { format, isToday } from 'date-fns';
 import { AdminLogsContent } from './AdminLogsPage';
 import TscDataContent from '../../components/admin/TscDataContent';
 import AdminMailContent from '../../components/admin/AdminMailContent';
+import WorkflowCanvas from '../productivity/WorkflowCanvas';
 import { 
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useCreateTeam 
 } from '../../hooks/useTaskmasterQueries';
 
 const AdminPanel = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'users');
   const [searchTerm, setSearchTerm] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
   
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: teams = [] } = useTeams();
@@ -54,9 +60,8 @@ const AdminPanel = () => {
       setEditUserData({
         name: selectedUser.name || '',
         email: selectedUser.email || '',
-        phone: selectedUser.phone || '',
         role: selectedUser.role || 'user',
-        teams: selectedUser.teams || []
+        team: selectedUser.team?._id || ''
       });
     }
   }, [selectedUser]);
@@ -70,17 +75,17 @@ const AdminPanel = () => {
       });
       setSelectedUser(null);
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      alert('Failed to update user: ' + err.message);
     }
   };
 
   const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) return;
+    if (!newTeamName) return;
     try {
-      await createTeamMutation.mutateAsync({ name: newTeamName.trim(), description: 'Workgroup' });
+      await createTeamMutation.mutateAsync({ name: newTeamName });
       setNewTeamName('');
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      alert('Failed to create team: ' + err.message);
     }
   };
 
@@ -92,64 +97,66 @@ const AdminPanel = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.role.toLowerCase().includes(searchTerm.toLowerCase())
+      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [users, searchTerm]);
 
   const userColumns = [
-    { 
-      header: 'User', 
+    {
+      header: 'User & Security Profile',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] overflow-hidden shrink-0">
-            {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-black uppercase">{u.name.substring(0, 2)}</div>}
+          <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold text-xs select-none">
+            {u.avatar ? <img src={u.avatar} className="w-full h-full rounded-full object-cover" alt="" /> : u.name?.substring(0, 2).toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-tight truncate">{u.name}</p>
-            <p className="text-[9px] text-[var(--color-text-muted)] font-bold truncate">{u.email}</p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs">{u.name}</span>
+              <Badge variant={u.role === 'admin' ? 'rose' : 'info'} className="!text-[9px] uppercase font-mono">
+                {u.role}
+              </Badge>
+            </div>
+            <span className="text-[10px] text-[var(--color-text-muted)]">{u.email}</span>
           </div>
         </div>
       )
     },
-    { 
-      header: 'Role', 
-      info: 'Privilege levels define what system areas this user can modify.',
+    {
+      header: 'Assigned Team',
       render: (u) => (
-        <Badge variant={u.role === 'admin' ? 'danger' : u.role === 'sales' ? 'warning' : 'info'}>
-          {u.role}
-        </Badge>
+        <span className="text-xs font-bold uppercase text-[var(--color-text-secondary)]">
+          {u.team?.name || 'Unassigned'}
+        </span>
       )
     },
-    { 
-      header: 'Activity', 
-      info: 'Status is tracked in real-time based on session signals.',
+    {
+      header: 'Last Activity',
       render: (u) => (
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-          <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Active</span>
-        </div>
+        <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
+          {u.lastActive ? format(new Date(u.lastActive), 'MMM dd, yyyy') : 'No record'}
+        </span>
       )
     }
   ];
 
-  if (usersLoading && users.length === 0) return <PageSkeleton />;
+  if (usersLoading) return <PageSkeleton />;
 
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader 
          title="Admin Panel" 
-         subtitle="Manage users, teams, and system data."
+         subtitle="Manage users, teams, automation workflows, and system data."
          icon={ShieldCheck}
          actions={
            <div className="flex items-center gap-2">
              <TabSwitcher 
                activeTab={activeTab} 
-               onChange={setActiveTab} 
+               onChange={handleTabChange} 
                tabs={[
                  { id: 'users', label: 'Users' }, 
                  { id: 'teams', label: 'Teams' },
+                 { id: 'workflows', label: 'Workflows' },
                  { id: 'crm', label: 'All Data' },
                  { id: 'logs', label: 'Logs' },
                  { id: 'mail', label: 'Emails' }
@@ -233,6 +240,11 @@ const AdminPanel = () => {
                       className="!border-none"
                       onRowClick={(u) => setSelectedUser(u)}
                     />
+                  )}
+                  {activeTab === 'workflows' && (
+                    <div className="min-h-[700px] p-2">
+                      <WorkflowCanvas />
+                    </div>
                   )}
                   {activeTab === 'crm' && <TscDataContent />}
                   {activeTab === 'logs' && <AdminLogsContent />}

@@ -9,7 +9,7 @@ import {
 } from '../ui';
 import { 
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile, 
-  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics 
+  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useDeleteCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics 
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
 import CsvImporter from '../CsvImporter';
@@ -52,6 +52,7 @@ export default function AdminMailContent() {
   const deleteProfileMutation = useDeleteMailProfile();
   const createCampaignMutation = useCreateCampaign();
   const sendCampaignMutation = useSendCampaign();
+  const deleteCampaignMutation = useDeleteCampaign();
   const scanBouncesMutation = useScanBounces();
 
   // Navigation within Mail tab
@@ -264,6 +265,26 @@ export default function AdminMailContent() {
               <Play size={12} /> Dispatch Now
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-rose-500 hover:bg-rose-500/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm('Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.')) {
+                deleteCampaignMutation.mutate(row._id, {
+                  onSuccess: () => {
+                    if (selectedCampaign?._id === row._id) setSelectedCampaign(null);
+                    window.location.reload();
+                  }
+                });
+              }
+            }}
+            disabled={deleteCampaignMutation.isPending}
+            title="Delete Campaign & Data"
+          >
+            <Trash2 size={14} />
+          </Button>
         </div>
       )
     }
@@ -773,9 +794,30 @@ export default function AdminMailContent() {
                 </div>
                 <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">{selectedCampaign.subject}</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedCampaign(null)}>
-                <X size={18} />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-rose-500 hover:bg-rose-500/10"
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.')) {
+                      deleteCampaignMutation.mutate(selectedCampaign._id, {
+                        onSuccess: () => {
+                          setSelectedCampaign(null);
+                          window.location.reload();
+                        }
+                      });
+                    }
+                  }}
+                  disabled={deleteCampaignMutation.isPending}
+                  title="Delete Campaign & Data"
+                >
+                  <Trash2 size={16} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCampaign(null)}>
+                  <X size={18} />
+                </Button>
+              </div>
             </div>
 
             {/* Modal Body */}

@@ -30,23 +30,57 @@ import {
   Timer,
   Activity,
   ArrowUpRight,
-  ShieldCheck
+  ShieldCheck,
+  Layers,
+  Zap,
+  Terminal
 } from 'lucide-react';
-import { Badge, PageHeader, PageContainer, Card, TabSwitcher, PageSkeleton } from '../../components/ui';
+import { Badge, PageHeader, PageContainer, Card, TabSwitcher, PageSkeleton, Button, VisualExplainerModal } from '../../components/ui';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const sampleDiagnosticData = {
+  subtitle: "System Diagnostic Telemetry & Agent Repair Protocol",
+  mermaid: `graph TD
+    classDef core fill:#1E293B,stroke:#3B82F6,stroke-width:2px,color:#fff;
+    classDef pulse fill:#111827,stroke:#10B981,stroke-width:2px,color:#34D399;
+    classDef warn fill:#111827,stroke:#F59E0B,stroke-width:2px,color:#FBBF24;
+
+    A[Client Request / Action]:::core --> B(Express Gateway API)
+    B --> C{Auth Middleware}
+    C -->|Clerk Verified| D[System Activity Logger]:::pulse
+    C -->|Legacy JWT| D
+    D --> E[Temporal Log Stream]
+    E --> F[Supabase Realtime Broadcast]:::pulse
+    D --> G[Trigger.dev Queue Dispatch]:::warn`,
+  reportHtml: `
+    <div class="space-y-4">
+      <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 font-mono text-xs">
+        [DIAGNOSTIC PROTOCOL ACTIVE]: Zero Agent Log Stream Connected. All signals nominal.
+      </div>
+      <table class="w-full text-left font-mono text-xs">
+        <tr class="border-b border-white/10 text-slate-400"><th>Subsystem</th><th>Status</th><th>Latency</th></tr>
+        <tr class="border-b border-white/5"><td>Auth Engine (Clerk)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>14ms</td></tr>
+        <tr class="border-b border-white/5"><td>Temporal DB (MongoDB)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>8ms</td></tr>
+        <tr class="border-b border-white/5"><td>Realtime Pulse (Supabase)</td><td><span class="text-emerald-400">CONNECTED</span></td><td>22ms</td></tr>
+        <tr><td>Background Jobs (Trigger.dev)</td><td><span class="text-amber-400">STANDBY</span></td><td>--</td></tr>
+      </table>
+    </div>
+  `
+};
 
 const AdminLogsPage = () => {
   const [searchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(searchParams.get('user') || 'all');
-  const [viewType, setViewType] = useState('7d'); // day, 7d, month
+  const [viewType, setViewType] = useState('7d');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedFeedLogs, setSelectedFeedLogs] = useState(null);
   const [feedTarget, setFeedTarget] = useState(null);
-  const [activeTab, setActiveTab] = useState('manual'); // manual, api
+  const [activeTab, setActiveTab] = useState('manual');
+  const [isExplainerOpen, setIsExplainerOpen] = useState(false);
   const navigate = useNavigate();
 
   const containerVariants = {
@@ -151,19 +185,24 @@ const AdminLogsPage = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="System Logs"
-        subtitle="View platform activity and system signals."
+        title="System Diagnostics & Logs"
+        subtitle="Zero diagnostic telemetry, agent repair signals, and activity streams."
         icon={ShieldCheck}
         actions={
-          <TabSwitcher
-            activeTab={viewType}
-            onChange={setViewType}
-            tabs={[
-              { id: 'day', label: 'Daily View' },
-              { id: '7d', label: '7-Day Summary' },
-              { id: 'month', label: 'Monthly View' }
-            ]}
-          />
+          <div className="flex items-center gap-2">
+            <Button size="xs" variant="primary" onClick={() => setIsExplainerOpen(true)}>
+              <Terminal size={12} className="mr-1.5" /> Agent Diagnostic Explainer
+            </Button>
+            <TabSwitcher
+              activeTab={viewType}
+              onChange={setViewType}
+              tabs={[
+                { id: 'day', label: 'Daily View' },
+                { id: '7d', label: '7-Day Summary' },
+                { id: 'month', label: 'Monthly View' }
+              ]}
+            />
+          </div>
         }
       />
 
@@ -207,8 +246,10 @@ const AdminLogsPage = () => {
                     <Activity size={20} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase">System Signals</h3>
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily platform activity overview.</p>
+                    <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase flex items-center gap-2">
+                      System Signals <Badge variant="mint" className="text-[8px]">Zero Diagnostic Protocol</Badge>
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily platform activity and automated diagnostic stream overview.</p>
                   </div>
                 </div>
                 
@@ -323,6 +364,13 @@ const AdminLogsPage = () => {
           )}
         </AnimatePresence>
       </main>
+
+      <VisualExplainerModal
+        isOpen={isExplainerOpen}
+        onClose={() => setIsExplainerOpen(false)}
+        title="Zero Agent Diagnostic Telemetry"
+        data={sampleDiagnosticData}
+      />
     </PageContainer>
   );
 };

@@ -1,33 +1,34 @@
 const Campaign = require('../models/Campaign');
+const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
 
 exports.getCumulativeMetrics = async (req, res) => {
   try {
-    const aggregateData = await Campaign.aggregate([
-      {
-        $group: {
-          _id: "$eventTag",
-          totalSent: { $sum: "$metrics.totalSent" },
-          totalOpens: { $sum: "$metrics.opened" },
-          totalClicks: { $sum: "$metrics.clicked" }
-        }
-      },
-      {
-        $project: {
-          eventTag: { $ifNull: ["$_id", "General"] },
-          totalSent: 1,
-          totalOpens: 1,
-          totalClicks: 1,
-          ctr: { 
-            $cond: [ { $eq: ["$totalSent", 0] }, 0, { $round: [{ $multiply: [{ $divide: ["$totalClicks", "$totalSent"] }, 100] }, 1] } ] 
-          },
-          openRate: { 
-            $cond: [ { $eq: ["$totalSent", 0] }, 0, { $round: [{ $multiply: [{ $divide: ["$totalOpens", "$totalSent"] }, 100] }, 1] } ] 
-          }
-        }
-      },
-      { $sort: { ctr: -1 } }
-    ]);
+    const userId = req.user._id;
+    const coreCamps = await Campaign.find({ createdBy: userId }).lean();
+    const mailCamps = await MailCampaign.find({ createdBy: userId }).lean();
+    const allCamps = [...coreCamps, ...mailCamps];
+
+    const tagMap = {};
+    for (const c of allCamps) {
+      const tag = c.eventTag || 'General';
+      if (!tagMap[tag]) {
+        tagMap[tag] = { eventTag: tag, totalSent: 0, totalOpens: 0, totalClicks: 0 };
+      }
+      const sent = c.metrics?.totalSent || c.stats?.sent || 0;
+      const opened = c.metrics?.opened || c.stats?.opened || 0;
+      const clicked = c.metrics?.clicked || c.stats?.clicked || 0;
+
+      tagMap[tag].totalSent += sent;
+      tagMap[tag].totalOpens += opened;
+      tagMap[tag].totalClicks += clicked;
+    }
+
+    const aggregateData = Object.values(tagMap).map(item => {
+      const openRate = item.totalSent > 0 ? Math.round((item.totalOpens / item.totalSent) * 100) : (item.totalOpens > 0 ? 100 : 0);
+      const ctr = item.totalSent > 0 ? Math.round((item.totalClicks / item.totalSent) * 100) : (item.totalClicks > 0 ? 100 : 0);
+      return { ...item, openRate, ctr };
+    }).sort((a, b) => b.totalSent - a.totalSent);
 
     const dynamicBreakdown = await Lead.aggregate([
       { $match: { status: { $in: ['engaged', 'active'] } } },

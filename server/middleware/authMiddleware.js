@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
 
 const protect = async (req, res, next) => {
@@ -13,7 +14,6 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    // SECURITY: Debug bypass only in development AND only from localhost
     const isBypassEnabled = process.env.NODE_ENV === 'development' 
       && String(process.env.DEBUG_BYPASS).trim() === 'true';
     const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
@@ -28,9 +28,40 @@ const protect = async (req, res, next) => {
       return next();
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
-    
+    let userId = null;
+    let email = null;
+
+    // Dual Authentication Pipeline: Attempt Clerk Verification First
+    if (process.env.CLERK_SECRET_KEY && process.env.CLERK_SECRET_KEY !== 'mock_clerk_secret') {
+      try {
+        const verified = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
+        if (verified && verified.sub) {
+          const clerkUser = await clerkClient.users.getUser(verified.sub);
+          email = clerkUser.emailAddresses?.[0]?.emailAddress?.toLowerCase().trim();
+        }
+      } catch (clerkErr) {
+        // Fallthrough to standard JWT if Clerk verification fails (e.g., standard login token)
+      }
+    }
+
+    if (email) {
+      // Find or synchronize user with database
+      let dbUser = await User.findOne({ email });
+      if (!dbUser) {
+        dbUser = await User.create({
+          name: email.split('@')[0],
+          email: email,
+          password: 'clerk-managed-password',
+          role: 'user',
+        });
+      }
+      req.user = dbUser;
+    } else {
+      // Standard JWT Verification
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+    }
+
     if (!req.user) {
       return res.status(401).json({ error: 'User no longer exists' });
     }

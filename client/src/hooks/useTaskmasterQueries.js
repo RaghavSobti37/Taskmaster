@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { subscribeToChannel } from '../lib/supabase';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -27,8 +29,15 @@ const fetchUserDirectory = async () => {
   return data.users;
 };
 
-// Hooks
+// Hooks with Supabase Realtime Sync
 export const useLogs = (userId, limit = 200, enabled = true) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('logs', 'log_update', (newLog) => {
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+    });
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['logs', userId, limit],
     queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, limit),
@@ -37,11 +46,19 @@ export const useLogs = (userId, limit = 200, enabled = true) => {
 };
 
 export const useProjects = () => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('projects', 'project_change', (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    });
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['projects'],
     queryFn: fetchProjects,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 };
 
@@ -55,6 +72,14 @@ export const useProject = (id) => {
 };
 
 export const useTasks = (userId) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('tasks', 'task_change', (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    });
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -71,8 +96,8 @@ export const useUserDirectory = () => {
   return useQuery({
     queryKey: ['userDirectory'],
     queryFn: fetchUserDirectory,
-    staleTime: 1000 * 60 * 30, // 30 minutes (Static Data)
-    gcTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
   });
 };
 
@@ -129,12 +154,28 @@ export const useProjectTasks = (projectId) => {
   });
 };
 
-// Mutations
+// Mutations with Zero-Latency Optimistic Updates
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (newTask) => axios.post('/api/tasks', newTask),
-    onSuccess: () => {
+    onMutate: async (newTask) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previousTasks = queryClient.getQueryData(['tasks']);
+      if (previousTasks) {
+        queryClient.setQueryData(['tasks'], (old) => [
+          { _id: `temp-${Date.now()}`, createdAt: new Date().toISOString(), status: 'Todo', priority: 'Medium', ...newTask },
+          ...(old || [])
+        ]);
+      }
+      return { previousTasks };
+    },
+    onError: (err, newTask, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -147,7 +188,20 @@ export const useDeleteTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => axios.delete(`/api/tasks/${id}`),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previousTasks = queryClient.getQueryData(['tasks']);
+      if (previousTasks) {
+        queryClient.setQueryData(['tasks'], (old) => (old || []).filter(t => t._id !== id));
+      }
+      return { previousTasks };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -205,7 +259,7 @@ export const useCreateLog = () => {
       if (previousLogs) {
         queryClient.setQueryData(['logs', newLog.userId], (old) => [
           { _id: 'temp-id-' + Date.now(), createdAt: new Date().toISOString(), ...newLog },
-          ...old
+          ...(old || [])
         ]);
       }
       return { previousLogs };
@@ -215,7 +269,7 @@ export const useCreateLog = () => {
         queryClient.setQueryData(['logs', newLog.userId], context.previousLogs);
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     },
   });
@@ -234,7 +288,7 @@ export const useUpdateProject = () => {
       }
       if (previousProjects) {
         queryClient.setQueryData(['projects'], (old) => 
-          old.map(p => p._id === id ? { ...p, ...data } : p)
+          (old || []).map(p => p._id === id ? { ...p, ...data } : p)
         );
       }
       return { previousProjects, previousProject };
@@ -263,7 +317,7 @@ export const useUpdateTask = () => {
       const previousTasks = queryClient.getQueryData(['tasks']);
       if (previousTasks) {
         queryClient.setQueryData(['tasks'], (old) => 
-          old.map(t => t._id === id ? { ...t, ...data } : t)
+          (old || []).map(t => t._id === id ? { ...t, ...data } : t)
         );
       }
       return { previousTasks };
@@ -291,7 +345,7 @@ export const useUpdateLead = () => {
       const previousLeads = queryClient.getQueryData(['leads']);
       if (previousLeads) {
         queryClient.setQueryData(['leads'], (old) => 
-          old.map(l => l._id === id ? { ...l, ...data } : l)
+          (old || []).map(l => l._id === id ? { ...l, ...data } : l)
         );
       }
       return { previousLeads };
@@ -392,7 +446,7 @@ export const useDashboardSummary = () => {
   return useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2,
   });
 };
 
@@ -400,16 +454,23 @@ export const useActivityGrid = () => {
   return useQuery({
     queryKey: ['logs', 'activityGrid'],
     queryFn: async () => (await axios.get('/api/logs/activity-grid')).data,
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 10,
   });
 };
 
 export const useLiveLeads = (params, enabled = true) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('leads', 'lead_change', () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    });
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['leads', params],
     queryFn: async () => (await axios.get('/api/crm/leads', { params })).data,
     enabled,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60,
   });
 };
 
@@ -478,6 +539,18 @@ export const useSendCampaign = () => {
   });
 };
 
+export const useDeleteCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/campaigns/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
+    }
+  });
+};
+
 export const useScanBounces = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -489,7 +562,6 @@ export const useScanBounces = () => {
   });
 };
 
-// Global Fallback Sanitization Engine
 export const sanitizeValue = (value, suffix = '') => {
   if (value === undefined || value === null || value === '' || value === 'Unavailable' || Number.isNaN(value)) {
     return 'N/A';
@@ -497,7 +569,6 @@ export const sanitizeValue = (value, suffix = '') => {
   return `${value}${suffix}`;
 };
 
-// Artist Analytics Queries & Mutations
 export const useArtists = () => {
   return useQuery({
     queryKey: ['artists'],
@@ -582,4 +653,3 @@ export const useAddTrackedVideo = () => {
     }
   });
 };
-

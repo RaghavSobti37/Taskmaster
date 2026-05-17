@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe
+  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers
 } from 'lucide-react';
 import {
   Badge,
@@ -18,7 +18,7 @@ import {
   NexusDropdown
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLiveLeads, useSalesReps, useCRMStats } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
@@ -33,6 +33,36 @@ export default function LeadsPage() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [isPurging, setIsPurging] = useState(false);
   const queryClient = useQueryClient();
+
+  const updateMutation = useUpdateLead();
+  const [editLeadData, setEditLeadData] = useState({
+    name: '', phone: '', city: '', leadQuality: 3, notes: ''
+  });
+
+  React.useEffect(() => {
+    if (selectedLead) {
+      setEditLeadData({
+        name: selectedLead.name || '',
+        phone: selectedLead.phone || '',
+        city: selectedLead.city || '',
+        leadQuality: selectedLead.leadQuality || 3,
+        notes: selectedLead.notes || ''
+      });
+    }
+  }, [selectedLead]);
+
+  const handleSaveLead = async () => {
+    if (!selectedLead) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: selectedLead._id,
+        data: editLeadData
+      });
+      setSelectedLead(null);
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+  };
 
   const [filters, setFilters] = useState({
     leadQuality: 'all',
@@ -151,7 +181,7 @@ export default function LeadsPage() {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Customer Leads"
-        subtitle="Manage and track potential members in your sales pipeline."
+        subtitle="Manage and track potential members in your sales pipeline with Overflow.io journey mapping."
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
@@ -308,7 +338,7 @@ export default function LeadsPage() {
         onClose={() => setSelectedLead(null)}
         title={selectedLead?.name || 'Customer Details'}
         subtitle={`ID: ${selectedLead?._id?.substring(0, 8)} • Source: ${selectedLead?.source || 'Direct'}`}
-        onSave={() => setSelectedLead(null)}
+        onSave={handleSaveLead}
         sidebar={
           <div className="space-y-4">
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
@@ -340,14 +370,60 @@ export default function LeadsPage() {
         }
       >
         <div className="space-y-8">
+          {/* Overflow.io Interactive User Journey Funnel */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
+              <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                <Layers size={14} /> Overflow.io Conversion Funnel
+              </h3>
+              <Badge variant="mint" className="font-mono text-[9px]">overflow.io map</Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[var(--color-bg-secondary)]/30 p-4 rounded-2xl border border-[var(--color-bg-border)]">
+              {[
+                { stage: '1. Discovery', desc: 'Lead Captured via Realtime / Webhook', status: 'Passed', color: 'border-blue-500 text-blue-400 bg-blue-500/10' },
+                { stage: '2. Enrichment', desc: `Quality Scored: Level ${selectedLead?.leadQuality || 3}`, status: 'Passed', color: 'border-amber-500 text-amber-400 bg-amber-500/10' },
+                { stage: '3. Engagement', desc: `Call / Email Touchpoint: ${selectedLead?.callStatus || 'Pending'}`, status: selectedLead?.callStatus && selectedLead?.callStatus !== 'No Record' ? 'Passed' : 'Active', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
+                { stage: '4. Conversion', desc: 'Member Onboarded & Subscribed', status: selectedLead?.leadStatus === 'Converted' ? 'Passed' : 'Pending', color: selectedLead?.leadStatus === 'Converted' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-500 bg-slate-900/40' },
+              ].map((step, index) => (
+                <div key={index} className={`p-3 rounded-xl border relative flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer ${step.color}`}>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase">{step.stage}</span>
+                      <span className="text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-black/40 font-mono">{step.status}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-300 font-medium leading-tight">{step.desc}</p>
+                  </div>
+                  <div className="pt-2 mt-2 border-t border-current/20 flex items-center justify-between text-[9px] font-mono opacity-80">
+                    <span>Pulse {index + 1}</span>
+                    <GitCommit size={12} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
               <UserCheck size={14} /> Contact Information
             </h3>
             <div className="grid grid-cols-2 gap-6">
-              <Input label="Customer Name" defaultValue={selectedLead?.name} />
-              <Input label="Phone Number" defaultValue={selectedLead?.phone} />
-              <Input label="Location" defaultValue={selectedLead?.city || 'Not Specified'} icon={MapPin} />
+              <Input 
+                label="Customer Name" 
+                value={editLeadData.name} 
+                onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })} 
+              />
+              <Input 
+                label="Phone Number" 
+                value={editLeadData.phone} 
+                onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })} 
+              />
+              <Input 
+                label="Location" 
+                value={editLeadData.city} 
+                onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })} 
+                icon={MapPin} 
+              />
               <Input label="Original Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
             </div>
           </section>
@@ -361,14 +437,20 @@ export default function LeadsPage() {
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Interest Level</label>
                 <select
                   className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
-                  defaultValue={selectedLead?.leadQuality}
+                  value={editLeadData.leadQuality}
+                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: Number(e.target.value) })}
                 >
                   {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action</label>
-                <Input placeholder="E.g., Call tomorrow" icon={Clock} />
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action / Notes</label>
+                <Input 
+                  placeholder="E.g., Call tomorrow" 
+                  value={editLeadData.notes} 
+                  onChange={e => setEditLeadData({ ...editLeadData, notes: e.target.value })} 
+                  icon={Clock} 
+                />
               </div>
             </div>
           </section>

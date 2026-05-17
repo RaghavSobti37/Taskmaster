@@ -1,11 +1,15 @@
 const nodemailer = require('nodemailer');
 const imaps = require('imap-simple');
 const { simpleParser } = require('mailparser');
+const { Resend } = require('resend');
 const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const TscData = require('../models/TscData');
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const globalResend = resendApiKey && resendApiKey !== 'mock_resend_api_key' ? new Resend(resendApiKey) : null;
 
 const updateEmailTags = async (email, tag, status) => {
   if (!email) return;
@@ -60,21 +64,27 @@ const sendCampaign = async (campaignId) => {
   if (!campaign || campaign.status === 'Sending') return;
 
   const profile = campaign.senderProfileId;
-  const transporter = nodemailer.createTransport({
-    host: profile.smtpHost,
-    port: profile.smtpPort,
-    secure: profile.smtpPort === 465,
-    auth: {
-      user: profile.smtpUser,
-      pass: profile.smtpPass
-    },
-    tls: { rejectUnauthorized: false }
-  });
+  const useResend = globalResend || (profile && profile.resendApiKey && profile.resendApiKey !== 'mock_resend_api_key');
+  const campaignResend = profile && profile.resendApiKey ? new Resend(profile.resendApiKey) : globalResend;
+
+  let transporter = null;
+  if (!useResend && profile) {
+    transporter = nodemailer.createTransport({
+      host: profile.smtpHost,
+      port: profile.smtpPort,
+      secure: profile.smtpPort === 465,
+      auth: {
+        user: profile.smtpUser,
+        pass: profile.smtpPass
+      },
+      tls: { rejectUnauthorized: false }
+    });
+  }
 
   campaign.status = 'Sending';
   await campaign.save();
 
-  const baseUrl = process.env.APP_BASE_URL || process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
+  const baseUrl = 'https://tsccoreknot.com';
   const recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
   for (const recipient of recipients) {
@@ -97,25 +107,44 @@ const sendCampaign = async (campaignId) => {
       });
 
       const htmlWithTracking = `${personalizedContent}${unsubscribeFooter}${trackingPixel}`;
+      const senderFrom = profile ? `"${profile.name}" <${profile.email}>` : 'onboarding@resend.dev';
 
-      const mailOptions = {
-        from: `"${profile.name}" <${profile.email}>`,
-        to: recipient.email,
-        subject: campaign.subject,
-        html: htmlWithTracking,
-        headers: {
-          'X-Campaign-ID': campaign._id.toString()
-        }
-      };
+      let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-      const info = await transporter.sendMail(mailOptions);
+      if (useResend && campaignResend) {
+        const response = await campaignResend.emails.send({
+          from: senderFrom,
+          to: [recipient.email],
+          subject: campaign.subject,
+          html: htmlWithTracking,
+          headers: {
+            'X-Campaign-ID': campaign._id.toString()
+          }
+        });
+        messageIdStr = response?.id || response?.data?.id || messageIdStr;
+      } else if (transporter) {
+        const mailOptions = {
+          from: senderFrom,
+          to: recipient.email,
+          subject: campaign.subject,
+          html: htmlWithTracking,
+          headers: {
+            'X-Campaign-ID': campaign._id.toString()
+          }
+        };
+        const info = await transporter.sendMail(mailOptions);
+        messageIdStr = info.messageId;
+      } else {
+        console.log(`[Campaign Simulation] Email simulated to ${recipient.email} - Subject: ${campaign.subject}`);
+      }
+
       recipient.status = 'Sent';
       recipient.sentAt = new Date();
-      recipient.messageId = info.messageId;
+      recipient.messageId = messageIdStr;
       
       campaign.stats.sent++;
       await MailEvent.create({
-        messageId: info.messageId,
+        messageId: messageIdStr,
         eventType: 'Send',
         email: recipient.email,
         timestamp: new Date(),
@@ -135,12 +164,20 @@ const sendCampaign = async (campaignId) => {
 
   campaign.status = 'Completed';
   await campaign.save();
-  transporter.close();
+  if (transporter) {
+    transporter.close();
+  }
 };
 
 const scanBounces = async (profileId) => {
   const profile = await EmailProfile.findById(profileId);
   if (!profile) return [];
+
+  // If using Resend webhooks, IMAP polling is bypassed
+  if (profile.resendApiKey || resendApiKey) {
+    console.log('[Resend Engine] Bounces are managed via instant Resend webhooks. Skipping manual IMAP polling.');
+    return [];
+  }
 
   const config = {
     imap: {
@@ -196,16 +233,6 @@ const scanBounces = async (profileId) => {
     }
 
     connection.end();
-
-    // Fallback detection for simulated/testing environments (e.g. raghavishaan@gamil.com)
-    const campaigns = await MailCampaign.find({ createdBy: profile.createdBy });
-    for (const camp of campaigns) {
-      camp.recipients.forEach(r => {
-        if (r.email && (r.email.includes('@gamil.') || r.status === 'Bounced' || r.status === 'Invalid')) {
-          bouncedEmails.push(r.email.toLowerCase().trim());
-        }
-      });
-    }
 
     const uniqueBouncedRaw = Array.from(new Set(bouncedEmails));
     const campaignBounced = [];

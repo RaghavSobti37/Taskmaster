@@ -2,6 +2,8 @@ const Task = require('../models/Task');
 const Lead = require('../models/Lead');
 const Log = require('../models/Log');
 const Project = require('../models/Project');
+const Campaign = require('../models/Campaign');
+const MailCampaign = require('../models/MailCampaign');
 const mongoose = require('mongoose');
 
 exports.getDashboardSummary = async (req, res) => {
@@ -10,7 +12,7 @@ exports.getDashboardSummary = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [taskStats, leadStats, logStats, projectStats, calendarRes] = await Promise.all([
+    const [taskStats, leadStats, logStats, projectStats, calendarRes, coreCamps, mailCamps] = await Promise.all([
       // 1. Task Statistics
       Task.aggregate([
         { $match: { createdBy: userId } },
@@ -69,8 +71,19 @@ exports.getDashboardSummary = async (req, res) => {
           { createdBy: userId }
         ],
         date: { $gte: today, $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
-      }).lean()
+      }).lean(),
+
+      // 6. Campaign Data for Bounces
+      Campaign.find({ createdBy: userId }, 'recipients').lean(),
+      MailCampaign.find({ createdBy: userId }, 'recipients').lean()
     ]);
+
+    let bouncedEmails = 0;
+    for (const c of [...(coreCamps || []), ...(mailCamps || [])]) {
+      (c.recipients || []).forEach(r => {
+        if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) bouncedEmails++;
+      });
+    }
 
     const tasks = taskStats[0] || { total: 0, completed: 0, critical: 0, overdue: 0 };
     const leads = leadStats[0] || { total: 0, converted: 0, highQuality: 0 };
@@ -90,7 +103,8 @@ exports.getDashboardSummary = async (req, res) => {
         totalLeads: leads.total,
         conversionRate,
         highQualityLeads: leads.highQuality,
-        projectCount: projects.count
+        projectCount: projects.count,
+        bouncedEmails
       },
       calendar,
       velocity: completionRate > 75 ? 'Optimal' : completionRate > 50 ? 'Stable' : 'Critical'

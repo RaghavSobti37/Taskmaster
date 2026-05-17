@@ -109,6 +109,12 @@ Data flows from **TSC Data** (Raw) to **Lead** (Active) via a cross-collection l
 *   **Project** > **Phase** > **Task**.
 *   Tasks can also have a `parentTaskId` for recursive sub-task structures.
 
+### Email Analytics & Webhooks
+*   **Provider**: Resend API integration.
+*   **Tracking Domain**: Custom tracking domain (`mail.theshakticollective.in`) rewrites URLs for native analytics.
+*   **Event Pipeline**: Resend pushes events (`email.opened`, `email.clicked`, `email.bounced`, `email.delivered`) via webhooks.
+*   **Security**: Express `req.rawBody` buffer capture combined with `svix` cryptographic signature verification ensures webhook payload authenticity.
+
 ---
 
 ## 🔒 Security Architecture

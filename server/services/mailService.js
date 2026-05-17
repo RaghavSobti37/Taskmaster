@@ -67,13 +67,14 @@ const sendCampaign = async (campaignId) => {
     auth: {
       user: profile.smtpUser,
       pass: profile.smtpPass
-    }
+    },
+    tls: { rejectUnauthorized: false }
   });
 
   campaign.status = 'Sending';
   await campaign.save();
 
-  const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
+  const baseUrl = process.env.APP_BASE_URL || process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
   const recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
   for (const recipient of recipients) {
@@ -134,6 +135,7 @@ const sendCampaign = async (campaignId) => {
 
   campaign.status = 'Completed';
   await campaign.save();
+  transporter.close();
 };
 
 const scanBounces = async (profileId) => {

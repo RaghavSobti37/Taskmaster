@@ -76,7 +76,125 @@ export const useUserDirectory = () => {
   });
 };
 
+export const useSalesReps = () => {
+  return useQuery({
+    queryKey: ['salesReps'],
+    queryFn: async () => (await axios.get('/api/users/sales-reps')).data,
+    staleTime: 1000 * 60 * 10,
+  });
+};
+
+export const useCalendarEvents = () => {
+  return useQuery({
+    queryKey: ['calendarEvents'],
+    queryFn: async () => {
+      const [dbRes, googleRes] = await Promise.all([
+        axios.get('/api/calendar'),
+        axios.get('/api/google/calendar/events').catch(() => ({ data: [] }))
+      ]);
+      const dbEvents = dbRes.data.map(ev => ({
+        _id: ev._id,
+        title: ev.title,
+        description: ev.description,
+        dueDate: ev.date,
+        visibility: ev.visibility,
+        createdBy: ev.createdBy,
+        type: ev.type || 'event',
+        status: ev.status,
+        priority: ev.priority,
+        projectId: ev.projectId
+      }));
+      const googleEvents = googleRes.data.map(ev => ({
+        _id: ev.id,
+        title: ev.summary,
+        description: '',
+        dueDate: ev.start.dateTime || ev.start.date,
+        visibility: 'private',
+        type: 'google',
+        source: 'google_calendar'
+      }));
+      const combined = [...dbEvents, ...googleEvents];
+      return Array.from(new Map(combined.map(ev => [ev._id, ev])).values());
+    },
+    staleTime: 1000 * 60,
+  });
+};
+
+export const useProjectTasks = (projectId) => {
+  return useQuery({
+    queryKey: ['tasks', { projectId }],
+    queryFn: async () => (await axios.get(`/api/tasks?projectId=${projectId}`)).data,
+    enabled: !!projectId,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
 // Mutations
+export const useCreateTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newTask) => axios.post('/api/tasks', newTask),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/tasks/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
+export const useCreateCalendarEvent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (event) => axios.post('/api/calendar', event),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
+export const useUpdateCalendarEvent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/calendar/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
+export const useDeleteCalendarEvent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/calendar/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
 export const useCreateLog = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -108,25 +226,17 @@ export const useUpdateProject = () => {
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/projects/${id}`, data),
     onMutate: async ({ id, data }) => {
-      // Cancel outgoing refetches for both list and detail
       await queryClient.cancelQueries({ queryKey: ['projects'] });
-      
-      // Snapshot list and detail
       const previousProjects = queryClient.getQueryData(['projects']);
       const previousProject = queryClient.getQueryData(['projects', id]);
-
-      // Optimistically update Detail
       if (previousProject) {
         queryClient.setQueryData(['projects', id], { ...previousProject, ...data });
       }
-
-      // Optimistically update List (Cache Normalization)
       if (previousProjects) {
         queryClient.setQueryData(['projects'], (old) => 
           old.map(p => p._id === id ? { ...p, ...data } : p)
         );
       }
-
       return { previousProjects, previousProject };
     },
     onError: (err, variables, context) => {
@@ -139,8 +249,6 @@ export const useUpdateProject = () => {
     },
     onSettled: (data, error, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
-      // We don't necessarily need to invalidate the whole list if we trust our local update,
-      // but it's safer for eventual consistency.
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     }
   });
@@ -167,6 +275,9 @@ export const useUpdateTask = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
   });
 };

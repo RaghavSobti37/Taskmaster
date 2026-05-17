@@ -244,9 +244,27 @@ export const useMailStats = (enabled = true) => {
 export const useMailCampaigns = (enabled = true) => {
   return useQuery({
     queryKey: ['mail', 'campaigns'],
-    queryFn: async () => (await axios.get('/api/mail/campaigns')).data,
+    queryFn: async () => (await axios.get('/api/campaigns')).data,
     enabled,
     staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useCampaignDetails = (id) => {
+  return useQuery({
+    queryKey: ['campaign', id],
+    queryFn: async () => (await axios.get(`/api/campaigns/${id}`)).data,
+    enabled: !!id,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useCumulativeAnalytics = (enabled = true) => {
+  return useQuery({
+    queryKey: ['analytics', 'cumulative'],
+    queryFn: async () => (await axios.get('/api/analytics/cumulative')).data,
+    enabled,
+    staleTime: 1000 * 60,
   });
 };
 
@@ -328,10 +346,11 @@ export const useDeleteMailProfile = () => {
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data) => axios.post('/api/mail/campaigns', data),
+    mutationFn: (data) => axios.post('/api/campaigns', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
     }
   });
 };
@@ -339,10 +358,11 @@ export const useCreateCampaign = () => {
 export const useSendCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => axios.post(`/api/mail/campaigns/${id}/send`),
+    mutationFn: (id) => axios.post(`/api/campaigns/${id}/dispatch`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
     }
   });
 };
@@ -435,6 +455,19 @@ export const useSyncArtistStats = () => {
       queryClient.invalidateQueries({ queryKey: ['artist-spotify', id] });
       queryClient.invalidateQueries({ queryKey: ['artist-youtube', id] });
       queryClient.invalidateQueries({ queryKey: ['artist-meta', id] });
+    }
+  });
+};
+
+export const useAddTrackedVideo = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.post(`/api/artists/${id}/tracked-video`, data),
+    onSuccess: (res, { id }) => {
+      queryClient.setQueryData(['artist', id], res.data);
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+      queryClient.invalidateQueries({ queryKey: ['artist', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-youtube', id] });
     }
   });
 };

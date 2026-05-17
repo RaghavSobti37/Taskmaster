@@ -52,6 +52,11 @@ const LeadSchema = new mongoose.Schema({
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   tags: [{ type: String, index: true }],
   emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending', index: true },
+  status: { type: String, enum: ['active', 'inactive', 'engaged'], default: 'active' },
+  location: { type: String },
+  bounceCount: { type: Number, default: 0, index: true },
+  unsubscribed: { type: Boolean, default: false, index: true },
+  unsubscribeReason: { type: String },
   
   // Concurrency Locking
   lockedBy: { type: String }, // User ID holding the lock
@@ -84,6 +89,7 @@ LeadSchema.plugin(auditPlugin);
 LeadSchema.index({ phone: 1 }, { unique: true });
 LeadSchema.index({ email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
 LeadSchema.index({ phone: 1, email: 1 }, { unique: true }); // Compound index as requested
+LeadSchema.index({ email: 1, unsubscribed: 1, bounceCount: 1 });
 
 // Indexes for common query patterns
 LeadSchema.index({ assignedRepId: 1, leadStatus: 1 });

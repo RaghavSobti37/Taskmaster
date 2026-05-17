@@ -95,6 +95,24 @@ app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
+
+// Public tracking webhooks & unsubscribe endpoints
+app.use(require('./routes/track')); // Mounts /webhooks/bounces and /unsubscribe at root
+app.post('/api/crm/unsubscribe', async (req, res) => {
+  const { email, reason } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const Lead = require('./models/Lead');
+    await Lead.updateMany(
+      { email: email.toLowerCase().trim() },
+      { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use('/api/crm', crmRoutes);
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
@@ -105,6 +123,9 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/mail', require('./routes/mailRoutes'));
 app.use('/api/ses', require('./routes/sesRoutes'));
 app.use('/api/tsc', require('./routes/tscRoutes'));
+app.use('/api/track', require('./routes/track'));
+app.use('/api/campaigns', require('./routes/campaignRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 

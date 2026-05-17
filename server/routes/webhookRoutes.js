@@ -7,8 +7,11 @@ router.get('/instagram', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  console.log(`⚡ Received webhook verification request token: ${token}`);
+
   if (mode === 'subscribe' && token === (process.env.META_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || 'verify_tsc')) {
-    console.log('✅ Meta Webhook Validation Successful!');
+    console.log('✅ Handshake validated successfully. Sending challenge code back.');
+    res.setHeader('Content-Type', 'text/plain');
     return res.status(200).send(challenge);
   } else {
     console.error('❌ Meta Webhook Token Validation Failed.', { mode, token });

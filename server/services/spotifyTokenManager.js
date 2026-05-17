@@ -9,11 +9,11 @@ const getSpotifyAccessToken = async () => {
     return cachedToken;
   }
 
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  const clientId = process.env.SPOTIFY_CLIENT_ID || "a00df9460cd5450b9e5fa6b672ddd458";
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || "6960f8bf9fa74f069b78d3719c9ce433";
 
   if (!clientId || !clientSecret) {
-    throw new Error('Spotify API credentials (SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET) unconfigured in environment.');
+    throw new Error('Spotify API credentials unconfigured.');
   }
 
   const authBuffer = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
@@ -25,11 +25,12 @@ const getSpotifyAccessToken = async () => {
       headers: {
         'Authorization': `Basic ${authBuffer}`,
         'Content-Type': 'application/x-www-form-urlencoded'
-      }
+      },
+      timeout: 10000
     });
 
     cachedToken = res.data.access_token;
-    // Cache exactly 50 minutes (3000 seconds = 50 * 60 * 1000 ms)
+    // Cache for 50 minutes (50 * 60 * 1000 ms)
     tokenExpiry = now + (50 * 60 * 1000);
     return cachedToken;
   } catch (err) {

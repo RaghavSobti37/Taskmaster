@@ -29,7 +29,8 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       setAssignees(user ? [{ value: user._id, label: user.name }] : []);
       setDueDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
     }
-  }, [isOpen, user, initialProjectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const priorityOptions = [
     { value: 'low', label: 'Low' },

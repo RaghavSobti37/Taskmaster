@@ -1,4 +1,4 @@
-# Taskmaster: Architectural Memory Graph
+## v1.2.1 (Sync & Sanitize)\n- Realigned local and production DB sync (restored default test DB mapping).\n- Purged Clerk hooks causing crash loops in JWT AuthContext.\n- Scrubbed CRM Data (Locations & Special Characters).\n- Fixed Admin Panel team assignment schema mismatch (String[] vs ObjectId).\n\n# Taskmaster: Architectural Memory Graph
 
 ## Core System Overview
 - **Type**: High-Density Agentic CRM & Project Management Suite

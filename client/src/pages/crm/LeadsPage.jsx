@@ -188,9 +188,6 @@ export default function LeadsPage() {
             <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
               <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => { }}>
-              <Download size={14} /> Export List
-            </Button>
             <Button size="sm">
               <Plus size={14} /> Add Lead
             </Button>
@@ -408,21 +405,21 @@ export default function LeadsPage() {
               <UserCheck size={14} /> Contact Information
             </h3>
             <div className="grid grid-cols-2 gap-6">
-              <Input 
-                label="Customer Name" 
-                value={editLeadData.name} 
-                onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })} 
+              <Input
+                label="Customer Name"
+                value={editLeadData.name}
+                onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })}
               />
-              <Input 
-                label="Phone Number" 
-                value={editLeadData.phone} 
-                onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })} 
+              <Input
+                label="Phone Number"
+                value={editLeadData.phone}
+                onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })}
               />
-              <Input 
-                label="Location" 
-                value={editLeadData.city} 
-                onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })} 
-                icon={MapPin} 
+              <Input
+                label="Location"
+                value={editLeadData.city}
+                onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })}
+                icon={MapPin}
               />
               <Input label="Original Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
             </div>
@@ -445,11 +442,11 @@ export default function LeadsPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action / Notes</label>
-                <Input 
-                  placeholder="E.g., Call tomorrow" 
-                  value={editLeadData.notes} 
-                  onChange={e => setEditLeadData({ ...editLeadData, notes: e.target.value })} 
-                  icon={Clock} 
+                <Input
+                  placeholder="E.g., Call tomorrow"
+                  value={editLeadData.notes}
+                  onChange={e => setEditLeadData({ ...editLeadData, notes: e.target.value })}
+                  icon={Clock}
                 />
               </div>
             </div>

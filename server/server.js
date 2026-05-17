@@ -126,6 +126,7 @@ app.use('/api/tsc', require('./routes/tscRoutes'));
 app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 

@@ -5,27 +5,28 @@ const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
 
-const getClientIpAndGeo = (req) => {
+const parseClientNetworkLocation = (req) => {
+  // In production, extract the first IP address from the x-forwarded-for header chain
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  
   if (ip && ip.includes(',')) {
     ip = ip.split(',')[0].trim();
   }
 
-  if (ip === '127.0.0.1' || ip === '::1' || !ip) {
-    const testPublicIp = '103.241.12.1'; // Mumbai, India
-    return { ip: testPublicIp, geo: geoip.lookup(testPublicIp) || { city: 'Mumbai', country: 'IN' } };
+  // Handle local development network loops cleanly
+  if (!ip || ip === '127.0.0.1' || ip === '::1') {
+    return { city: 'Mumbai', country: 'IN', region: 'MH' }; // Mock target location for local testing
   }
 
-  return { ip, geo: geoip.lookup(ip) || { city: 'Unknown', country: 'Global' } };
+  const geo = geoip.lookup(ip);
+  return geo ? { city: geo.city || 'Unknown', country: geo.country } : { city: 'Unknown', country: 'Global' };
 };
 
-// Pixel Tracker Route
+// Open Tracking Pixel Endpoint
 router.get('/open/:pixelId.gif', async (req, res) => {
   try {
     const { pixelId } = req.params;
-    const { geo } = getClientIpAndGeo(req);
-    const city = geo.city || 'Unknown';
+    const location = parseClientNetworkLocation(req);
+    const city = location.city || 'Unknown';
 
     const log = await EmailLog.findOne({ pixelId });
     if (log && !log.opened) {
@@ -33,14 +34,17 @@ router.get('/open/:pixelId.gif', async (req, res) => {
       await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'active', emailStatus: 'Active' } });
       
       await Campaign.updateOne(
-        { campaignId: log.campaignId },
+        { campaignId: String(log.campaignId) },
         { 
-          $inc: { 'metrics.opened': 1, [`locationBreakdown.${city}.opens`]: 1 },
+          $inc: { 
+            'metrics.opened': 1, 
+            [`locationBreakdown.${city}.opens`]: 1 
+          },
           $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
         }
       );
 
-      const camp = await Campaign.findOne({ $or: [{ campaignId: log.campaignId }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+      const camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
       if (camp && camp.recipients) {
         const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
         if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
@@ -50,17 +54,18 @@ router.get('/open/:pixelId.gif', async (req, res) => {
       }
     }
 
+    // Deliver a genuine, non-cached 1x1 transparent tracking pixel
     const buffer = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
     res.writeHead(200, {
       'Content-Type': 'image/gif',
       'Content-Length': buffer.length,
-      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0, private',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       'Pragma': 'no-cache'
     });
-    res.end(buffer);
+    return res.end(buffer);
   } catch (err) {
-    console.error('Tracking Pixel Error:', err);
-    res.status(500).end();
+    console.error('Pixel Tracking Interruption:', err);
+    return res.status(500).end();
   }
 });
 
@@ -69,8 +74,8 @@ router.get('/click/:clickId', async (req, res) => {
   try {
     const { clickId } = req.params;
     const destinationUrl = req.query.redirect;
-    const { geo } = getClientIpAndGeo(req);
-    const city = geo.city || 'Unknown';
+    const location = parseClientNetworkLocation(req);
+    const city = location.city || 'Unknown';
 
     const log = await EmailLog.findOne({ clickId });
     if (log && !log.clicked) {
@@ -78,14 +83,14 @@ router.get('/click/:clickId', async (req, res) => {
       await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'engaged', emailStatus: 'Active' } });
 
       await Campaign.updateOne(
-        { campaignId: log.campaignId },
+        { campaignId: String(log.campaignId) },
         { 
           $inc: { 'metrics.clicked': 1, [`locationBreakdown.${city}.clicks`]: 1 },
           $push: { timeSeries: { time: new Date(), opens: 0, clicks: 1 } }
         }
       );
 
-      const camp = await Campaign.findOne({ $or: [{ campaignId: log.campaignId }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+      const camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
       if (camp && camp.recipients) {
         const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
         if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {

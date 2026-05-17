@@ -61,14 +61,12 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
   useEffect(() => {
     const fetchSalesRepsAndConfig = async () => {
       try {
-        const [teamRes, configRes] = await Promise.all([
-          axios.get('/api/users/team'),
+        const [repsRes, configRes] = await Promise.all([
+          axios.get('/api/users/sales-reps'),
           axios.get('/api/crm/config')
         ]);
-        const team = teamRes.data.team || [];
-        const filtered = team
-          .filter(u => u.role === 'sales')
-          .map(u => ({ value: u._id, label: u.name.toUpperCase(), avatar: u.avatar }));
+        const reps = repsRes.data || [];
+        const filtered = reps.map(u => ({ value: u._id, label: u.name.toUpperCase(), avatar: u.avatar }));
         setSalesReps(filtered);
         setConfig(configRes.data);
       } catch (err) {

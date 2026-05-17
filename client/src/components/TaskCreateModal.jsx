@@ -5,9 +5,11 @@ import Select from 'react-select';
 import CKDropdown from './ui/CKDropdown';
 import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members, projects, onTaskCreated }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState('medium');
@@ -40,18 +42,24 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!title.trim()) return;
+
     setLoading(true);
     try {
       const res = await axios.post('/api/tasks', {
         title,
         description: desc,
         priority,
-        projectId,
+        projectId: projectId || null,
         assignees: assignees.map(a => a.value),
         dueDate: dueDate || null,
         status: 'todo'
       });
-      onTaskCreated(res.data);
+      if (onTaskCreated) onTaskCreated(res.data);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       onClose();
     } catch (err) {
       console.error('Error creating task:', err);

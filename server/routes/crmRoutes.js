@@ -34,6 +34,8 @@ router.get('/debug/columns', crmController.getDebugColumns);
 router.post('/debug/save-mapping', crmController.saveMapping);
 router.post('/sync-bookings', require('../controllers/syncController').syncBookings);
 
+router.delete('/leads/cleanup-test-data', crmController.cleanupTestData);
+
 router.route('/leads')
   .get(crmController.getLeads)
   .post(crmController.createLead);

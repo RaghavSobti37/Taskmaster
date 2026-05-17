@@ -35,14 +35,20 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../../components/TaskCreateModal';
 import ProjectSettingsModal from '../../components/ProjectSettingsModal';
+import { useQueryClient } from '@tanstack/react-query';
 import TaskDetailModal from '../../components/TaskDetailModal';
+import { useProject, useProjectTasks, useUpdateTask, useDeleteTask } from '../../hooks/useTaskmasterQueries';
 
 const ProjectDetail = () => {
+  const queryClient = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
-  const [project, setProject] = useState(null);
-  const [tasks, setTableTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: project, isLoading: projectLoading } = useProject(id);
+  const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+  const loading = projectLoading || tasksLoading;
+
   const [activeTab, setActiveTab] = useState('list');
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -51,24 +57,6 @@ const ProjectDetail = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [projRes, tasksRes] = await Promise.all([
-          axios.get(`/api/projects/${id}`),
-          axios.get(`/api/tasks?projectId=${id}`)
-        ]);
-        setProject(projRes.data);
-        setTableTasks(tasksRes.data);
-      } catch (err) {
-        console.error('Error fetching project data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
-
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -76,27 +64,20 @@ const ProjectDetail = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleTaskCreated = (newTask) => {
-    setTableTasks([newTask, ...tasks]);
-  };
+  const handleTaskCreated = () => {};
 
-  const handleTaskUpdate = async (taskId, updates) => {
-    const originalTasks = [...tasks];
-    const optimisticTasks = tasks.map(t => t._id === taskId ? { ...t, ...updates } : t);
-    setTableTasks(optimisticTasks);
-
-    try {
-      const res = await axios.put(`/api/tasks/${taskId}`, updates);
-      setTableTasks(prev => prev.map(t => t._id === taskId ? res.data : t));
-      if (selectedTask?._id === taskId) setSelectedTask(res.data);
-    } catch (err) {
-      console.error('Error updating task:', err);
-      setTableTasks(originalTasks);
+  const handleTaskUpdate = (taskId, updates) => {
+    updateTaskMutation.mutate({ id: taskId, data: updates });
+    if (selectedTask?._id === taskId) {
+      setSelectedTask(prev => ({ ...prev, ...updates }));
     }
   };
 
   const handleTaskDelete = (taskId) => {
-    setTableTasks(tasks.filter(t => t._id !== taskId));
+    deleteTaskMutation.mutate(taskId);
+    if (selectedTask?._id === taskId) {
+      setIsDetailModalOpen(false);
+    }
   };
 
   const handleOpenDetail = (task) => {
@@ -106,8 +87,9 @@ const ProjectDetail = () => {
 
   const handleRemoveMember = async (userId) => {
     try {
-      const res = await axios.put(`/api/projects/${id}/remove-member`, { userId });
-      setProject(res.data);
+      await axios.put(`/api/projects/${id}/remove-member`, { userId });
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     } catch (err) {
       console.error('Error removing member:', err);
     }
@@ -164,7 +146,10 @@ const ProjectDetail = () => {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         project={project}
-        onProjectUpdated={setProject}
+        onProjectUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ['projects', id] });
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
+        }}
       />
 
       <TaskDetailModal

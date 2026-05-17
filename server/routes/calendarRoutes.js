@@ -18,9 +18,31 @@ router.get('/', async (req, res) => {
       ]
     })
     .populate('createdBy', 'name avatar')
-    .sort({ date: 1 });
+    .lean();
 
-    res.json(events);
+    const tasks = await Task.find({
+      dueDate: { $ne: null },
+      $or: [
+        { createdBy: req.user._id },
+        { assignees: req.user._id }
+      ]
+    }).populate('createdBy', 'name avatar').lean();
+
+    const taskEvents = tasks.map(t => ({
+      _id: t._id,
+      title: `[Task] ${t.title}`,
+      description: t.description || '',
+      date: t.dueDate,
+      visibility: 'private',
+      createdBy: t.createdBy,
+      type: 'task',
+      status: t.status,
+      priority: t.priority,
+      projectId: t.projectId
+    }));
+
+    const combined = [...events, ...taskEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+    res.json(combined);
   } catch (err) {
     console.error('Error fetching calendar events:', err);
     res.status(500).json({ error: 'Failed to fetch calendar events' });

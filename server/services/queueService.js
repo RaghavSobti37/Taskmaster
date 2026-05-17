@@ -157,6 +157,8 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     await campaign.save();
     await checkCompletion();
     throw err;
+  } finally {
+    transporter.close();
   }
 };
 

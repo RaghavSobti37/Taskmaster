@@ -61,7 +61,7 @@ const AdminPanel = () => {
         name: selectedUser.name || '',
         email: selectedUser.email || '',
         role: selectedUser.role || 'user',
-        team: selectedUser.team?._id || ''
+        teams: selectedUser.teams || []
       });
     }
   }, [selectedUser]);
@@ -126,7 +126,7 @@ const AdminPanel = () => {
       header: 'Assigned Team',
       render: (u) => (
         <span className="text-xs font-bold uppercase text-[var(--color-text-secondary)]">
-          {u.team?.name || 'Unassigned'}
+          {u.teams?.length > 0 ? u.teams.join(', ') : 'Unassigned'}
         </span>
       )
     },

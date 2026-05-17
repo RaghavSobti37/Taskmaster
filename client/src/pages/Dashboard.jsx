@@ -149,12 +149,11 @@ const Dashboard = () => {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <StatCard label="Work Completed" value={`${metrics.completionRate}%`} icon={CheckCircle2} variant="mint" info="The percentage of assigned tasks you have finished." />
         <StatCard label="Urgent Tasks" value={metrics.criticalTasks} icon={AlertCircle} variant="rose" info="Important work items that need your attention immediately." />
         <StatCard label="Overdue Items" value={metrics.overdueTasks} icon={Clock} variant="apricot" info="Tasks that have passed their planned completion date." />
         <StatCard label="Focus Time Today" value={`${metrics.focusHours}h`} icon={TrendingUp} variant="info" info="Total time logged on tasks within the last 24 hours." />
-        <StatCard label="Bounced Emails" value={metrics.bouncedEmails || 0} icon={AlertCircle} variant="rose" info="Bounces managed via instant Resend webhooks. Skipping manual IMAP polling." />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -183,10 +182,10 @@ const Dashboard = () => {
            <Card className="p-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] overflow-hidden relative">
               <div className="relative z-10 space-y-4">
                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Mission Velocity</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Daily Progress Speed</h4>
                     <Badge variant={velocity === 'Optimal' ? 'success' : 'warning'}>{velocity}</Badge>
                  </div>
-                 <VelocitySparkline data={sparklineData} />
+                 <VelocitySparkline data={sparklineData.map(d => d.count)} />
               </div>
            </Card>
 

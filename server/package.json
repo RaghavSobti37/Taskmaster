@@ -8,7 +8,10 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@sendgrid/mail": "^8.1.6",
+    "@supabase/supabase-js": "^2.105.4",
+    "@trigger.dev/sdk": "^4.4.6",
     "axios": "^1.16.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.76.9",
@@ -33,7 +36,9 @@
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "node-ical": "^0.26.1",
-    "nodemailer": "^8.0.7"
+    "nodemailer": "^8.0.7",
+    "resend": "^6.12.3",
+    "uploadthing": "^7.7.4"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

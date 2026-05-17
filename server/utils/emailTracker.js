@@ -8,7 +8,7 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl) => {
   // Create matching logs
   await EmailLog.create({ campaignId, leadEmail, pixelId, clickId });
 
-  const cleanBaseUrl = (process.env.APP_BASE_URL || baseUrl || 'http://localhost:5000').replace(/\/+$/, '');
+  const cleanBaseUrl = 'https://tsccoreknot.com';
 
   // Inject transparent 1x1 base64 layout tracker before closing body tag
   const trackingPixel = `<img src="${cleanBaseUrl}/api/track/open/${pixelId}.gif" width="1" height="1" alt="" style="display:none;" />`;

@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { BrowserRouter } from 'react-router-dom'
+import { ClerkProvider } from '@clerk/clerk-react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -14,30 +15,33 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
   },
 })
 
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_bW9jay1jbGVyay1wdWJsaXNoYWJsZS1rZXkuY2xlcmsuYWNjb3VudHMuZGV2JA';
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "PLACEHOLDER_CLIENT_ID"}>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <ThemeProvider>
-              <SidebarProvider>
-                <App />
-              </SidebarProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={clerkPubKey}>
+      <QueryClientProvider client={queryClient}>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "PLACEHOLDER_CLIENT_ID"}>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AuthProvider>
+              <ThemeProvider>
+                <SidebarProvider>
+                  <App />
+                </SidebarProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </GoogleOAuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </ClerkProvider>
   </React.StrictMode>,
 )
-

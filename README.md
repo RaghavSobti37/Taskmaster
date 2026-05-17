@@ -18,7 +18,7 @@
 | **📁 Projects** | Multi-view management (List, Kanban, Gantt) with automated progress rollups and phases. |
 | **📅 Smart Calendar** | Persistent MongoDB-backed calendar with Public/Private visibility, past date entry prevention, and project integration. |
 | **📈 Advanced CRM** | Lead tracking (New/Hot/Warm), CSV imports with deduplication, and automated follow-ups. |
-| **📧 Admin Mailer** | Complete broadcast campaign management with automated open pixel tracking (GIF) and click tracking with deduplicated bounce handling. |
+| **📧 Admin Mailer** | Complete broadcast campaign management with Resend Webhooks (Svix-verified) for native analytics sync (Opens, Clicks, Bounces, Delivery) and robust queue recovery mechanisms. |
 | **📝 Daily Logs** | Precision work logging with project tagging and automated performance reporting. |
 | **💬 Team Chat** | Real-time messaging with channel-based organization and task referencing. |
 | **🛠️ Admin Panel** | Root-level system oversight, user role management (Admin/User), and deep activity audits. |

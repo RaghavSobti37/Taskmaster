@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Link2, ExternalLink, Plus, Trash2, Search, Database, X,
   Shield, Briefcase, Pencil, Check, XCircle, HardDrive, 
-  RefreshCw, Cloud, Lock, Globe, FileText, Layout
+  RefreshCw, Cloud, Lock, Globe, FileText, Layout, UploadCloud, Download, Eye
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -13,6 +13,7 @@ import {
   DataTable, InputFormDrawer, PageSkeleton
 } from '../../components/ui';
 import { format } from 'date-fns';
+import { UploadDropzone } from '../../utils/uploadthing';
 
 const AssetsPage = () => {
   const { user } = useAuth();
@@ -21,10 +22,12 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [driveFiles, setDriveFiles] = useState([]);
+  const [previewAsset, setPreviewAsset] = useState(null);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newAsset, setNewAsset] = useState({ projectId: '', name: '', link: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadMode, setUploadMode] = useState(false);
 
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({ name: '', link: '', projectId: '' });
@@ -112,7 +115,7 @@ const AssetsPage = () => {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Asset Repository"
-        subtitle="Operational infrastructure and resource synchronization."
+        subtitle="Operational infrastructure and resource synchronization via UploadThing."
         actions={
           <div className="flex items-center gap-2">
              <div className="relative">
@@ -124,16 +127,15 @@ const AssetsPage = () => {
                    className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
                 />
              </div>
-             <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Register Asset</Button>
+             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setUploadMode(true); }}><Plus size={14} /> Register Asset</Button>
           </div>
         }
       />
 
-      {/* Analytical Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Internal Assets" value={assets.length} icon={Database} variant="info" />
         <StatCard label="Synced Volumes" value={driveFolders.length} icon={Cloud} variant="mint" />
-        <StatCard label="Redundancy" value="OPTIONAL" icon={Shield} variant="apricot" />
+        <StatCard label="UploadThing Backend" value="CONNECTED" icon={UploadCloud} variant="apricot" />
         <StatCard label="Storage Status" value="ACTIVE" icon={HardDrive} variant="slate" />
       </div>
 
@@ -175,22 +177,29 @@ const AssetsPage = () => {
                             </td>
                             <td className="px-6 py-4">
                                {asset.link ? (
-                                 <a 
-                                   href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`} 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   className="inline-flex items-center gap-2 text-[10px] font-bold text-blue-500 hover:underline"
-                                 >
-                                    <ExternalLink size={10} /> Link
-                                 </a>
+                                 <div className="flex items-center gap-2">
+                                   <Button 
+                                     size="xs" 
+                                     variant="ghost" 
+                                     className="text-blue-400 hover:bg-blue-500/10 flex items-center gap-1.5 py-1 px-2.5 rounded-lg border border-blue-500/20"
+                                     onClick={() => setPreviewAsset(asset)}
+                                   >
+                                     <Eye size={12} /> Preview
+                                   </Button>
+                                   <a 
+                                     href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`} 
+                                     download={asset.name}
+                                     target="_blank" 
+                                     rel="noopener noreferrer"
+                                     className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
+                                   >
+                                     <Download size={12} /> Download
+                                   </a>
+                                 </div>
                                ) : <span className="text-[9px] italic opacity-30">N/A</span>}
                             </td>
                             <td className="px-6 py-4 text-right">
                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="xs" onClick={() => {
-                                     setEditingId(asset._id);
-                                     setEditData({ name: asset.name, link: asset.link || '', projectId: asset.projectId?._id || '' });
-                                  }}><Pencil size={12} /></Button>
                                   <Button variant="ghost" size="xs" className="text-rose-500 hover:bg-rose-500/10" onClick={() => setDeleteModal({ open: true, assetId: asset._id })}><Trash2 size={12} /></Button>
                                </div>
                             </td>
@@ -238,7 +247,7 @@ const AssetsPage = () => {
                     <Shield size={14} className="text-emerald-500" />
                  </div>
                  <div className="p-2.5 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-[10px] font-bold italic text-slate-300">All registered assets are encrypted at rest and audited via Temporal Log Stream.</p>
+                    <p className="text-[10px] font-bold italic text-slate-300">All registered assets are encrypted at rest and hosted securely via UploadThing cloud infrastructure.</p>
                  </div>
               </div>
            </Card>
@@ -250,25 +259,54 @@ const AssetsPage = () => {
         onClose={() => setIsDrawerOpen(false)}
         title="Asset Registration"
       >
-        <form onSubmit={handleAddAsset} className="space-y-6 p-6">
-           <div className="space-y-4">
-              <Input label="Asset Identifier" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key" icon={Database} required />
-              <Input label="Access Endpoint (URL)" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} />
-              <div className="space-y-1.5">
-                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Parent Context</label>
-                 <NexusDropdown 
-                   options={[{ value: '', label: 'Root / No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]} 
-                   value={newAsset.projectId} 
-                   onChange={(val) => setNewAsset({ ...newAsset, projectId: val })} 
-                   placeholder="Select Project"
-                   searchable
-                 />
-              </div>
+        <div className="p-6 space-y-6">
+           <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-1 rounded-lg">
+              <Button size="xs" variant={uploadMode ? 'primary' : 'ghost'} className="flex-1" onClick={() => setUploadMode(true)}>
+                <UploadCloud size={12} className="mr-1.5" /> Upload File (UploadThing)
+              </Button>
+              <Button size="xs" variant={!uploadMode ? 'primary' : 'ghost'} className="flex-1" onClick={() => setUploadMode(false)}>
+                <Link2 size={12} className="mr-1.5" /> Direct URL Link
+              </Button>
            </div>
-           <Button type="submit" className="w-full" disabled={submitting || !newAsset.name}>
-              {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Register Asset</>}
-           </Button>
-        </form>
+
+           {uploadMode ? (
+             <div className="border border-dashed border-[var(--color-bg-border)] rounded-xl p-8 text-center bg-[var(--color-bg-secondary)]/30 space-y-4">
+                <UploadDropzone
+                  endpoint="documentUploader"
+                  onClientUploadComplete={(res) => {
+                    if (res && res.length > 0) {
+                      setNewAsset({ ...newAsset, link: res[0].url, name: res[0].name || 'Uploaded File' });
+                      setUploadMode(false);
+                    }
+                  }}
+                  onUploadError={(error) => {
+                    console.error("Upload error:", error);
+                  }}
+                />
+                <p className="text-[10px] text-[var(--color-text-muted)] italic">Drag & drop files or click to upload securely via UploadThing.</p>
+             </div>
+           ) : null}
+
+           <form onSubmit={handleAddAsset} className="space-y-6">
+              <div className="space-y-4">
+                 <Input label="Asset Identifier" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
+                 <Input label="Access Endpoint (URL)" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} />
+                 <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Parent Context</label>
+                    <NexusDropdown 
+                      options={[{ value: '', label: 'Root / No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]} 
+                      value={newAsset.projectId} 
+                      onChange={(val) => setNewAsset({ ...newAsset, projectId: val })} 
+                      placeholder="Select Project"
+                      searchable
+                    />
+                 </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name}>
+                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Register Asset</>}
+              </Button>
+           </form>
+        </div>
       </InputFormDrawer>
 
       <NexusModal
@@ -281,6 +319,56 @@ const AssetsPage = () => {
         confirmLabel="Destroy entry"
         onConfirm={handleDeleteAsset}
       />
+
+      {previewAsset && (
+        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewAsset(null)}>
+          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText size={18} className="text-blue-500" />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-tight">{previewAsset.name}</h3>
+                  <p className="text-[10px] text-[var(--color-text-muted)] font-mono">{previewAsset.link}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`}
+                  download={previewAsset.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  <Download size={14} /> Direct Download
+                </a>
+                <Button variant="ghost" size="sm" onClick={() => setPreviewAsset(null)}>
+                  <X size={18} />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 flex-1 flex items-center justify-center overflow-auto bg-slate-950/60 min-h-[400px]">
+              {previewAsset.link.match(/\.(jpeg|jpg|gif|png|webp)$/i) || previewAsset.link.includes('utfs.io/f/') ? (
+                <img src={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`} alt={previewAsset.name} className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl border border-white/10" />
+              ) : previewAsset.link.match(/\.(pdf)$/i) ? (
+                <iframe src={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`} title={previewAsset.name} className="w-full h-[70vh] rounded-lg border border-white/10" />
+              ) : (
+                <div className="text-center space-y-3">
+                  <FileText size={64} className="mx-auto text-blue-500 animate-pulse" />
+                  <p className="text-xs font-mono text-[var(--color-text-muted)]">Document preview unavailable in browser frame.</p>
+                  <a 
+                    href={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl hover:bg-blue-600 transition-colors"
+                  >
+                    <ExternalLink size={14} /> Open Document in New Tab
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 };

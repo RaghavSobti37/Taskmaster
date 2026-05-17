@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Campaign = require('../models/Campaign');
+const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
 const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
@@ -10,8 +11,11 @@ router.use(protect);
 
 router.get('/', async (req, res) => {
   try {
-    const campaigns = await Campaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
-    for (const camp of campaigns) {
+    const coreCampaigns = await Campaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
+    const mailCampaigns = await MailCampaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
+    const allCampaigns = [...coreCampaigns, ...mailCampaigns].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    for (const camp of allCampaigns) {
       let total = camp.recipients?.length || 0;
       let sent = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, invalid = 0;
       camp.recipients?.forEach(r => {
@@ -24,7 +28,7 @@ router.get('/', async (req, res) => {
       });
       camp.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
     }
-    res.json(campaigns);
+    res.json(allCampaigns);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -33,10 +37,18 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] })
+    const MailEvent = require('../models/MailEvent');
+    let campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] })
       .populate('recipients.leadId', 'name email location phone status artistType')
       .populate('senderProfileId')
       .lean();
+    
+    if (!campaign && id.match(/^[0-9a-fA-F]{24}$/)) {
+      campaign = await MailCampaign.findById(id)
+        .populate('recipients.leadId', 'name email location phone status artistType')
+        .populate('senderProfileId')
+        .lean();
+    }
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
     
     let total = campaign.recipients?.length || 0;
@@ -50,6 +62,9 @@ router.get('/:id', async (req, res) => {
       if (r.status === 'Unsubscribed') unsubscribed++;
     });
     campaign.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
+
+    const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
+    campaign.events = events;
 
     res.json(campaign);
   } catch (err) {
@@ -103,6 +118,34 @@ router.post('/:id/dispatch', async (req, res) => {
   try {
     const result = await dispatchCampaignJobs(req.params.id);
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const MailEvent = require('../models/MailEvent');
+    const EmailLog = require('../models/EmailLog');
+
+    const campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] });
+    if (campaign) {
+      await Campaign.findByIdAndDelete(campaign._id);
+      await EmailLog.deleteMany({ campaignId: { $in: [String(campaign.campaignId), String(campaign._id)] } });
+      await MailEvent.deleteMany({ campaignId: campaign._id });
+    }
+
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      const mailCamp = await MailCampaign.findById(id);
+      if (mailCamp) {
+        await MailCampaign.findByIdAndDelete(id);
+        await EmailLog.deleteMany({ campaignId: id });
+        await MailEvent.deleteMany({ campaignId: id });
+      }
+    }
+
+    res.json({ success: true, message: 'Campaign and all associated tracking data deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

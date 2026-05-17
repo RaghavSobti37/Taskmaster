@@ -16,6 +16,18 @@ export const NexusModal = ({
   showFooter = true,
   children
 }) => {
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown, true);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose]);
+
   const typeConfig = {
     info: {
       icon: Info,

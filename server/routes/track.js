@@ -44,12 +44,33 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         }
       );
 
-      const camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
-      if (camp && camp.recipients) {
-        const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-        if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
-          rec.status = 'Opened';
-          await camp.save();
+      const MailCampaign = require('../models/MailCampaign');
+      const MailEvent = require('../models/MailEvent');
+
+      let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+      let isCore = true;
+      if (!camp) {
+        camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
+        isCore = false;
+      }
+
+      if (camp) {
+        await MailEvent.create({
+          eventType: 'Open',
+          email: log.leadEmail,
+          timestamp: new Date(),
+          campaignId: camp._id
+        });
+
+        if (camp.recipients) {
+          const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
+          if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
+            rec.status = 'Opened';
+            if (!isCore) {
+              camp.stats.opened = (camp.stats.opened || 0) + 1;
+            }
+            await camp.save();
+          }
         }
       }
     }
@@ -90,12 +111,34 @@ router.get('/click/:clickId', async (req, res) => {
         }
       );
 
-      const camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
-      if (camp && camp.recipients) {
-        const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-        if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
-          rec.status = 'Clicked';
-          await camp.save();
+      const MailCampaign = require('../models/MailCampaign');
+      const MailEvent = require('../models/MailEvent');
+
+      let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+      let isCore = true;
+      if (!camp) {
+        camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
+        isCore = false;
+      }
+
+      if (camp) {
+        await MailEvent.create({
+          eventType: 'Click',
+          email: log.leadEmail,
+          timestamp: new Date(),
+          campaignId: camp._id,
+          metadata: { url: destinationUrl }
+        });
+
+        if (camp.recipients) {
+          const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
+          if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
+            rec.status = 'Clicked';
+            if (!isCore) {
+              camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+            }
+            await camp.save();
+          }
         }
       }
     }
@@ -108,41 +151,92 @@ router.get('/click/:clickId', async (req, res) => {
   }
 });
 
-// Automated Bounce Webhook Callback Handler
-router.post('/webhooks/bounces', async (req, res) => {
-  const { email, type } = req.body;
+// Unified Resend Webhook Handler (Opens, Clicks, Bounces, Delivered)
+router.post('/webhooks/resend', async (req, res) => {
+  try {
+    const { Webhook } = require('svix');
+    const secret = process.env.RESEND_WEBHOOK_SECRET || 'whsec_uYreGAA3KPz0NausaTTe0KffKRcLyOVr';
+    const wh = new Webhook(secret);
 
-  if (type === 'bounce' && email) {
+    let payload;
     try {
-      const cleanEmail = email.toLowerCase().trim();
-      const updatedLead = await Lead.findOneAndUpdate(
-        { email: cleanEmail },
-        { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced' } },
-        { new: true, lean: true }
-      );
-
-      if (updatedLead && updatedLead.bounceCount >= 3) {
-        await Lead.deleteOne({ email: updatedLead.email });
-        await EmailLog.deleteMany({ leadEmail: updatedLead.email });
-      } else if (updatedLead) {
-        await Lead.updateOne({ email: updatedLead.email }, { $set: { status: 'inactive' } });
-      }
-
-      const camps = await Campaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
-      for (const camp of camps) {
-        const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === cleanEmail);
-        if (rec && rec.status !== 'Bounced') {
-          rec.status = 'Bounced';
-          camp.metrics.bounced = (camp.metrics.bounced || 0) + 1;
-          await camp.save();
-        }
-      }
+      const rawBodyStr = req.rawBody ? req.rawBody.toString('utf8') : '';
+      payload = wh.verify(rawBodyStr, req.headers);
     } catch (err) {
-      console.error('Bounce webhook error:', err);
+      console.error('Resend Webhook Signature Verification Failed:', err.message);
+      return res.status(400).send('Invalid webhook signature');
     }
+
+    if (!payload || !payload.type || !payload.data) {
+      return res.status(400).send('Invalid payload');
+    }
+
+    const eventType = payload.type;
+    const emailId = payload.data.email_id;
+    if (!emailId) return res.status(200).send('No email_id');
+
+    const MailEvent = require('../models/MailEvent');
+    
+    // Find campaign by recipient's messageId (which stores Resend's email_id)
+    let camp = await Campaign.findOne({ 'recipients.messageId': emailId });
+    let isCore = true;
+    if (!camp) {
+      const MailCampaign = require('../models/MailCampaign');
+      camp = await MailCampaign.findOne({ 'recipients.messageId': emailId });
+      isCore = false;
+    }
+
+    if (camp) {
+      const recipient = camp.recipients.find(r => r.messageId === emailId);
+      if (recipient) {
+        let statusUpdated = false;
+        
+        if (eventType === 'email.delivered' && !['Opened', 'Clicked', 'Bounced'].includes(recipient.status)) {
+          recipient.status = 'Sent';
+          statusUpdated = true;
+        } else if (eventType === 'email.opened' && !['Clicked', 'Bounced'].includes(recipient.status)) {
+          recipient.status = 'Opened';
+          if (!isCore) camp.stats.opened = (camp.stats.opened || 0) + 1;
+          else camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+          statusUpdated = true;
+          
+          await Lead.updateOne({ _id: recipient.leadId || recipient.email }, { $set: { status: 'active', emailStatus: 'Active' } });
+        } else if (eventType === 'email.clicked' && recipient.status !== 'Bounced') {
+          recipient.status = 'Clicked';
+          if (!isCore) camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+          else camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+          statusUpdated = true;
+          
+          await Lead.updateOne({ _id: recipient.leadId || recipient.email }, { $set: { status: 'engaged', emailStatus: 'Active' } });
+        } else if (eventType === 'email.bounced') {
+          recipient.status = 'Bounced';
+          if (!isCore) camp.stats.bounced = (camp.stats.bounced || 0) + 1;
+          else camp.metrics.bounced = (camp.metrics.bounced || 0) + 1;
+          statusUpdated = true;
+          
+          await Lead.updateOne({ email: recipient.email }, { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced' } });
+        }
+
+        if (statusUpdated) {
+          try { await camp.save(); } catch (e) {}
+        }
+
+        await MailEvent.create({
+          eventType: eventType === 'email.opened' ? 'Open' : eventType === 'email.clicked' ? 'Click' : eventType === 'email.bounced' ? 'Bounce' : 'Delivery',
+          email: recipient.email,
+          timestamp: payload.created_at || new Date(),
+          campaignId: camp._id,
+          messageId: emailId
+        });
+      }
+    }
+    res.status(200).send('Webhook processed');
+  } catch (err) {
+    console.error('Resend Webhook Error:', err);
+    res.status(500).send('Server Error');
   }
-  res.status(200).send('Webhook processed');
 });
+
 
 // Unsubscribe Handler
 router.post('/unsubscribe', async (req, res) => {

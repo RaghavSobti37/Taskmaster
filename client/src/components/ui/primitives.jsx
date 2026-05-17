@@ -226,7 +226,10 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
         {data.map((row, i) => (
           <tr 
             key={i} 
-            onClick={() => onRowClick?.(row)}
+            onClick={(e) => {
+              if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+              onRowClick?.(row);
+            }}
             className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
           >
             {columns.map((col, j) => (
@@ -249,9 +252,9 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
       }
     };
     if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keydown', handleKeyDown, true);
     }
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [isOpen, onClose]);
 
   return (
@@ -305,38 +308,52 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
   );
 };
 
-export const InputFormDrawer = ({ isOpen, onClose, title, children }) => (
-  <AnimatePresence>
-    {isOpen && (
-      <>
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100]"
-        />
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl z-[101] overflow-y-auto"
-        >
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
-              <h2 className="text-lg font-bold">{title}</h2>
-              <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded-md transition-colors">
-                <X size={20} />
-              </button>
+export const InputFormDrawer = ({ isOpen, onClose, title, children }) => {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown, true);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100]"
+          />
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl z-[101] overflow-y-auto"
+          >
+            <div className="p-6 space-y-6">
+              <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
+                <h2 className="text-lg font-bold">{title}</h2>
+                <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded-md transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              {children}
             </div>
-            {children}
-          </div>
-        </motion.div>
-      </>
-    )}
-  </AnimatePresence>
-);
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
 
 export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)]' }) => (
   <div className="w-full h-1 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">

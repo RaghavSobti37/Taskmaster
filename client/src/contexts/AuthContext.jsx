@@ -1,42 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/clerk-react';
 
 const AuthContext = createContext();
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const AuthProvider = ({ children }) => {
-  const clerkAuth = useClerkAuth();
-  const clerkUser = useClerkUser();
-
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('coreknot_user');
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('coreknot_token'));
-
-  // Clerk Synchronization Pipeline
-  useEffect(() => {
-    const syncClerk = async () => {
-      if (clerkAuth.isLoaded && clerkAuth.isSignedIn) {
-        try {
-          const clerkToken = await clerkAuth.getToken();
-          if (clerkToken) {
-            localStorage.setItem('coreknot_token', clerkToken);
-            setToken(clerkToken);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${clerkToken}`;
-            await fetchUser();
-          }
-        } catch (err) {
-          console.warn('Clerk sync warning:', err.message);
-        }
-      } else if (clerkAuth.isLoaded && !clerkAuth.isSignedIn && token?.startsWith('clerk_')) {
-        logout();
-      }
-    };
-    syncClerk();
-  }, [clerkAuth.isLoaded, clerkAuth.isSignedIn]);
 
   useEffect(() => {
     if (token) {
@@ -76,9 +50,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    if (clerkAuth.isSignedIn) {
-      await clerkAuth.signOut();
-    }
     localStorage.removeItem('coreknot_token');
     localStorage.removeItem('coreknot_user');
     setToken(null);
@@ -87,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, clerk: { auth: clerkAuth, user: clerkUser } }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

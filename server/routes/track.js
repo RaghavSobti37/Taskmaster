@@ -161,7 +161,15 @@ router.post('/webhooks/resend', async (req, res) => {
     let payload;
     try {
       const rawBodyStr = req.rawBody ? req.rawBody.toString('utf8') : '';
-      payload = wh.verify(rawBodyStr, req.headers);
+      
+      // Fallback for Resend's custom header names
+      const svixHeaders = {
+        'svix-id': req.headers['svix-id'] || req.headers['resend-webhook-id'],
+        'svix-timestamp': req.headers['svix-timestamp'] || req.headers['resend-webhook-timestamp'],
+        'svix-signature': req.headers['svix-signature'] || req.headers['resend-signature'] || req.headers['resend-webhook-signature']
+      };
+
+      payload = wh.verify(rawBodyStr, svixHeaders);
     } catch (err) {
       console.error('Resend Webhook Signature Verification Failed:', err.message);
       return res.status(400).send('Invalid webhook signature');

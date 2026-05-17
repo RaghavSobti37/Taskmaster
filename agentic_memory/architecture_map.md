@@ -95,6 +95,11 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 - **Semantic Token System**: All components use a strict mapping of semantic tokens (`var(--color-bg-workspace)`, `var(--color-text-primary)`).
 - **Micro-Animations**: Utilizes `framer-motion` for fluid transitions, spring-physics interactions, and high-performance layout shifts.
 
+### Infrastructure Services
+- **Trigger.dev**: Durable background job execution (e.g., long-running mail dispatches, data rollups) without tying up the Express event loop.
+- **Supabase**: Real-time data synchronization edge networks and potential SSR/cookie-based integration.
+- **UploadThing**: High-performance, edge-based file storage and asset management for documents and attachments.
+
 ## Module Overview
 
 | Module | What It Does | Key Interactions |
@@ -103,11 +108,12 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 | **Auth** | JWT-based login/register | Protects all `/api/*` routes except login/register/success |
 | **Tasks** | Create, update, complete tasks | Status transitions trigger progress rollups + auto-logging |
 | **Projects** | Organize work into projects | Contains tasks, members, and teams |
+| **Workflow Canvas**| Node-based visual process builder | High-density drag-and-drop workflow architecting |
 | **Admin Panel** | Manage users, teams, CRM, and mail | Multi-tab UI for root administration |
 | **Daily Logs** | Time tracking + work entries | Manual work entries with goal progress tracking |
 | **CRM (Leads)** | Lead/contact management | CSV import, status tracking, representative assignment |
 | **CRM (Followups)** | Scheduled sales calls | Tabbed view of Today, Overdue, and Upcoming followups |
-| **Assets** | Project resource links | Document management and categorized asset grid |
+| **Assets** | Project resource links & files | UploadThing integration for direct file storage |
 | **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |
 | **Artists Hub** | Roster & Live Analytics | Tracks multi-platform API feeds (Spotify, YouTube, Meta) with `isSynced` linking model |
 

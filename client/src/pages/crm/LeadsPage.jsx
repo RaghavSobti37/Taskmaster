@@ -208,7 +208,7 @@ export default function LeadsPage() {
     }
   ];
 
-  if (isLoading && page === 1) return <PageSkeleton />;
+  if (isLoading && page === 1 && !searchTerm) return <PageSkeleton />;
 
   const stats = statsData || { totalLeads: 0, convertedLeads: 0, conversionRate: 0, activeReach: 0 };
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 import { subscribeToChannel } from '../lib/supabase';
 
@@ -42,6 +42,7 @@ export const useLogs = (userId, limit = 200, enabled = true) => {
     queryKey: ['logs', userId, limit],
     queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, limit),
     enabled: enabled,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -499,6 +500,7 @@ export const useLiveLeads = (params, enabled = true) => {
     queryFn: async () => (await axios.get('/api/crm/leads', { params })).data,
     enabled,
     staleTime: 1000 * 60,
+    placeholderData: keepPreviousData,
   });
 };
 

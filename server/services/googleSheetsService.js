@@ -76,17 +76,39 @@ exports.syncLeadToSheet = async (leadDoc) => {
       return;
     }
 
-    // Check if phone or _id matches
-    const idIndex = HEADERS.indexOf('_id');
+    const emailIndex = HEADERS.indexOf('email');
     const phoneIndex = HEADERS.indexOf('phone');
+    const rowIdIndex = HEADERS.indexOf('rowId');
+    const idIndex = HEADERS.indexOf('_id');
 
     let targetIndex = -1;
+    
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      if ((row[idIndex] && String(row[idIndex]) === String(leadDoc._id)) ||
-          (row[phoneIndex] && String(row[phoneIndex]) === String(leadDoc.phone))) {
-        targetIndex = i;
-        break;
+      const sheetEmail = row[emailIndex] ? String(row[emailIndex]).trim().toLowerCase() : '';
+      const sheetPhone = row[phoneIndex] ? String(row[phoneIndex]).trim() : '';
+      const sheetRowId = row[rowIdIndex] ? String(row[rowIdIndex]).trim() : '';
+      const sheetId = row[idIndex] ? String(row[idIndex]).trim() : '';
+      
+      const docEmail = leadDoc.email ? String(leadDoc.email).trim().toLowerCase() : '';
+      const docPhone = leadDoc.phone ? String(leadDoc.phone).trim() : '';
+      const docRowId = leadDoc.rowId ? String(leadDoc.rowId).trim() : '';
+      const docId = leadDoc._id ? String(leadDoc._id).trim() : '';
+
+      // Primary: Match by _id if both have it
+      if (sheetId && docId && sheetId === docId) {
+        targetIndex = i; break;
+      }
+      
+      // Hierarchy requested: email -> phone -> rowId
+      if (docEmail && sheetEmail === docEmail) {
+        targetIndex = i; break;
+      }
+      if (!docEmail && docPhone && sheetPhone === docPhone) {
+        targetIndex = i; break;
+      }
+      if (!docEmail && !docPhone && docRowId && sheetRowId === docRowId) {
+        targetIndex = i; break;
       }
     }
 

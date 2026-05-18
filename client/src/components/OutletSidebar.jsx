@@ -25,7 +25,9 @@ import {
   RefreshCw,
   Bell,
   Moon,
-  Sun
+  Sun,
+  Building2,
+  Contact
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -263,10 +265,26 @@ const OutletSidebar = () => {
           <NavItem
             to="/assets"
             icon={Layers}
-            label="Assets"
+            label="Digital Assets"
             collapsed={false}
             isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
+          />
+          <NavItem
+            to="/office-assets"
+            icon={Building2}
+            label="Office Assets"
+            collapsed={false}
+            isMobile={isMobile}
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data })}
+          />
+          <NavItem
+            to="/contacts"
+            icon={Contact}
+            label="Contacts"
+            collapsed={false}
+            isMobile={isMobile}
+            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data })}
           />
 
           <NavItem

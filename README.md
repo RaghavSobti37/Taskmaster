@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.4.0
+# ⚡ Taskmaster v1.5.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -23,6 +23,8 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **📁 Multi-View Projects**: Manage complex initiatives using List, Kanban, and Gantt views. Features automated progress rollups and hierarchical task architectures (Project > Phase > Task).
 - **🧠 Workflow Canvas**: A node-based visual process architecting tool for mapping complex business logic via drag-and-drop mechanics (Powered by React Flow).
 - **📝 Daily Logs & Same-Day Editing**: Precision work logging with project tagging and strict same-day editing/deleting security rules.
+- **🏢 Office Asset Tracker**: Centralized registry for managing physical office hardware, software licenses, and physical items with real-time assignment and tracking.
+- **📇 Important Contacts Directory**: Dedicated Rolodex for managing external personnel, VIPs, and business contacts globally available across the platform.
 
 ### 📈 Customer Relationship Management (CRM)
 - **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports, and real-time bidirectional synchronization with Google Sheets Service Account.

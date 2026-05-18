@@ -174,8 +174,8 @@ const CalendarView = () => {
            </Card>
         </aside>
 
-        <main className="flex-1">
-           <Card className="overflow-hidden min-h-[700px] flex flex-col">
+        <main className="flex-1 min-w-0">
+           <Card className="overflow-hidden min-h-fit flex flex-col">
               <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                  <div className="flex items-center gap-4">
                     <Button variant="secondary" size="xs" onClick={() => setCurrentMonth(new Date())}>Current Epoch</Button>
@@ -213,7 +213,7 @@ const CalendarView = () => {
                     return (
                       <div 
                         key={day.toString()}
-                        className={`min-h-[120px] p-1.5 border-r border-b border-[var(--color-bg-border)] transition-all hover:bg-[var(--color-bg-secondary)]/10
+                        className={`min-h-[80px] sm:min-h-[120px] p-1.5 border-r border-b border-[var(--color-bg-border)] transition-all hover:bg-[var(--color-bg-secondary)]/10
                           ${!isCurrentMonth ? 'bg-[var(--color-bg-secondary)]/20' : ''}
                           ${isToday ? 'bg-blue-500/5' : ''}
                         `}

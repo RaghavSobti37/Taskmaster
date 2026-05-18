@@ -192,7 +192,7 @@ const ProjectDetail = () => {
           </div>
         </div>
 
-        <div className="p-0 min-h-[500px]">
+        <div className="p-0 min-h-fit">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

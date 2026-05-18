@@ -242,7 +242,7 @@ const AdminPanel = () => {
                     />
                   )}
                   {activeTab === 'workflows' && (
-                    <div className="min-h-[700px] p-2">
+                    <div className="min-h-fit p-2">
                       <WorkflowCanvas />
                     </div>
                   )}

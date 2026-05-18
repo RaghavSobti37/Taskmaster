@@ -438,13 +438,16 @@ exports.metaOAuthCallback = async (req, res) => {
     const artist = await Artist.findById(id);
     if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
 
-    console.log(`⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name}...`);
+    const clientId = (process.env.META_APP_ID || '733417183164639').replace(/['"]/g, '').trim();
+    const clientSecret = (process.env.META_APP_SECRET || '38dd5d9fbf952919532575704da019dd').replace(/['"]/g, '').trim();
+
+    console.log(`⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...`);
 
     // 1. Exchange auth code for short-lived token
     const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
       params: {
-        client_id: process.env.META_APP_ID,
-        client_secret: process.env.META_APP_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: redirectUri,
         code
       }
@@ -459,8 +462,8 @@ exports.metaOAuthCallback = async (req, res) => {
     const longTokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
       params: {
         grant_type: 'fb_exchange_token',
-        client_id: process.env.META_APP_ID,
-        client_secret: process.env.META_APP_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         fb_exchange_token: shortToken
       }
     });

@@ -530,7 +530,7 @@ exports.exportLeads = async (req, res) => {
       return res.json(leads);
     }
 
-    const fields = ['name', 'email', 'phone', 'leadStatus', 'callStatus', 'leadQuality', 'remarks', 'assignedRep', 'createdAt'];
+    const fields = ['name', 'email', 'phone', 'city', 'leadStatus', 'callStatus', 'leadQuality', 'remarks', 'assignedRep', 'createdAt'];
     
     let csv = fields.join(',') + '\n';
     
@@ -539,6 +539,7 @@ exports.exportLeads = async (req, res) => {
         `"${(l.name || '').replace(/"/g, '""')}"`,
         `"${(l.email || '').replace(/"/g, '""')}"`,
         `"${(l.phone || '').replace(/"/g, '""')}"`,
+        `"${(l.city || '').replace(/"/g, '""')}"`,
         `"${(l.leadStatus || '').replace(/"/g, '""')}"`,
         `"${(l.callStatus || '').replace(/"/g, '""')}"`,
         `"${(l.leadQuality || '').replace(/"/g, '""')}"`,

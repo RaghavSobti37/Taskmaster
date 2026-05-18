@@ -20,7 +20,16 @@ const triggerCsvBackup = () => {
   setTimeout(async () => {
     try {
       const Lead = require('../models/Lead');
-      const leads = await Lead.find({}).lean();
+      const rawLeads = await Lead.find({}).lean();
+      
+      const leads = rawLeads.map(l => {
+        const flat = { ...l };
+        if (flat.remarks) flat.remarks = String(flat.remarks).replace(/[\r\n]+/g, ' • ');
+        if (flat.learningGoal) flat.learningGoal = String(flat.learningGoal).replace(/[\r\n]+/g, ' ');
+        if (flat.currentJourney) flat.currentJourney = String(flat.currentJourney).replace(/[\r\n]+/g, ' ');
+        if (flat.city) flat.city = String(flat.city).toLowerCase().trim();
+        return flat;
+      });
       
       const fields = [
         'rowId', 'customerIdExly', 'transactionIdExly', 'name', 'email', 'phone', 'city',

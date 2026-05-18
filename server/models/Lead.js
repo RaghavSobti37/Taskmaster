@@ -92,6 +92,31 @@ LeadSchema.pre('save', function(next) {
   next();
 });
 
+const sanitizeUpdate = (update) => {
+  if (!update) return;
+  const set = update.$set || update;
+  if (set.name && typeof set.name === 'string') set.name = sanitizeName(set.name);
+  if (set.email && typeof set.email === 'string') set.email = sanitizeEmail(set.email);
+  if (set.phone && typeof set.phone === 'string') set.phone = normalizePhone(set.phone);
+  if (set.city && typeof set.city === 'string') set.city = sanitizeLocation(set.city);
+  if (set.location && typeof set.location === 'string') set.location = sanitizeLocation(set.location);
+};
+
+LeadSchema.pre('findOneAndUpdate', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
+LeadSchema.pre('updateOne', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
+LeadSchema.pre('updateMany', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);
 

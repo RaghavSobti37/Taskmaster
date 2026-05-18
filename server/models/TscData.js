@@ -39,6 +39,31 @@ TscDataSchema.pre('save', function(next) {
   next();
 });
 
+const sanitizeUpdate = (update) => {
+  if (!update) return;
+  const set = update.$set || update;
+  if (set.name && typeof set.name === 'string') set.name = sanitizeName(set.name);
+  if (set.email && typeof set.email === 'string') set.email = sanitizeEmail(set.email);
+  if (set.phone && typeof set.phone === 'string') set.phone = normalizePhone(set.phone);
+  if (set.city && typeof set.city === 'string') set.city = sanitizeLocation(set.city);
+  if (set.state && typeof set.state === 'string') set.state = sanitizeLocation(set.state);
+};
+
+TscDataSchema.pre('findOneAndUpdate', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
+TscDataSchema.pre('updateOne', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
+TscDataSchema.pre('updateMany', function(next) {
+  sanitizeUpdate(this.getUpdate());
+  next();
+});
+
 // Uniqueness Constraints
 TscDataSchema.index({ phone: 1, email: 1 }, { unique: true });
 

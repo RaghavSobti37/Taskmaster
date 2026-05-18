@@ -70,18 +70,45 @@ YOUTUBE_REDIRECT_URI_DEV="http://localhost:5000/api/artists/auth/callback/youtub
 YOUTUBE_REDIRECT_URI_PROD="https://tsccoreknot.com/login"
 ```
 
-### 2. Meta Developer Portal Setup (Instagram Graph API)
-1. Go to the Meta for Developers Portal and create a **Business** App.
-2. In the App Dashboard, add **Facebook Login for Business** and **Instagram Graph API**.
-3. In App Settings > Basic, retrieve your **App ID** and **App Secret**.
-4. Request the following scopes during OAuth flow:
-   * `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`
-5. Configure Webhooks: In the Meta App Dashboard -> Webhooks -> Select **Instagram** -> Subscribe to the `mentions` topic to receive real-time updates when external accounts tag your artist in posts or videos.
-6. **Render Production Deployment & Webhook Configuration**:
-   * **Direct Backend Callback**: To avoid SPA routing conflicts on Render, enter your direct Render Web Service URL in the Meta portal exactly as: `https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram`.
-   * **Manual Sync**: If Render auto-deploy is off, go to your Render dashboard -> Select your backend web service -> Click **"Manual Deploy > Deploy latest commit"**. Once Render finishes building the latest commit, Meta verification will succeed instantly.
+### 2. Meta Developer Portal Setup (Instagram Graph API & Webhooks)
+For Meta App ID `733417183164639` in the modern Meta App Dashboard (Graph API v19.0+ / v20.0+):
+
+#### A. Enabling the Right Use Cases
+In the new Meta portal UI, permissions and features are structured around **Use cases**:
+1. In the left navigation menu, click **Use cases**.
+2. Locate **Manage messaging & content on Instagram** and click **Customize**. Under Permissions, add `instagram_basic` and `instagram_manage_insights`.
+3. Locate **Manage everything on your Page** and click **Customize**. Under Permissions, add `pages_show_list` and `pages_read_engagement`.
+4. *(Optional)* If you need comment/mention tracking, also ensure `instagram_manage_comments` is requested.
+
+#### B. Finding and Configuring Webhooks (For Real-Time `mentions`)
+If "Webhooks" is not visible in the left sidebar:
+1. Click **Add use cases** (top right on the Use cases page) or go to **Dashboard > Add Product** and select **Webhooks**.
+2. Once added, click **Webhooks** in the left sidebar (or access via **App settings > Advanced** or inside your Use case customization -> Configuration).
+3. In the Webhooks dropdown menu at the top, select **Instagram** (or **Page** if tracking page events).
+4. Click **Subscribe to this object** (or **Edit Subscription**).
+5. **Callback URL**: Enter your live HTTPS endpoint.
+   * For Render production: `https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram`
+   * For local testing via Ngrok: `https://<your-ngrok-subdomain>.ngrok-free.app/api/webhooks/instagram`
+6. **Verify Token**: Enter exactly `verify_tsc` (matching `META_VERIFY_TOKEN` in your server `.env`).
+7. Click **Verify and save**. Meta will immediately send a `GET` handshake request. The Node server (`webhookRoutes.js`) will validate `verify_tsc` and return the challenge code.
+8. Once verified, a list of subscription fields will appear. Scroll down to `mentions` and click **Subscribe** to receive real-time POST payloads whenever external accounts tag Harshad/Duhita.
+
+#### C. Connecting Harshad / Duhita Account Credentials
+1. **Professional Account**: Open Instagram mobile app -> Settings -> Account -> Switch to Professional/Creator Account.
+2. **Link to Facebook Page**: Open Facebook Page -> Settings -> Linked Accounts -> Connect Instagram Professional Account.
+3. Use the **Graph API Explorer** tool in Meta Developers to generate a User Access Token with the scopes listed above.
+4. Update `server/.env` with your permanent token:
+```env
+META_APP_ID="733417183164639"
+META_APP_SECRET="38dd5d9fbf952919532575704da019dd"
+META_USER_TOKEN="your_generated_long_lived_user_token"
+META_VERIFY_TOKEN="verify_tsc"
+META_WEBHOOK_VERIFY_TOKEN="verify_tsc"
+```
+5. Ensure Harshad Golesar's MongoDB document (`oauthCredentials.meta.igAccountId`) matches his actual Instagram Graph Account ID (obtained via `GET /me/accounts?fields=instagram_business_account`).
 
 ---
+
 
 ## 💾 Module 3: Database Models & Data Pipeline Engineering
 

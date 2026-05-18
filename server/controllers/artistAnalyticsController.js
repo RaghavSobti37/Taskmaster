@@ -1,3 +1,4 @@
+const axios = require('axios');
 const Artist = require('../models/Artist');
 const { fetchLiveAnalytics } = require('../services/analyticsService');
 const { validateMetric } = require('../utils/nullishValidator');
@@ -378,3 +379,164 @@ exports.metaMentionsWebhook = async (req, res) => {
     res.status(500).send('SERVER_ERROR');
   }
 };
+
+exports.enableInstagramWebhooks = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subscribed_fields } = req.body;
+    const fields = subscribed_fields || 'mentions,comments,messages,story_insights';
+
+    const artist = await Artist.findById(id);
+    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+
+    const accountId = artist.oauthCredentials?.meta?.igAccountId || artist.oauthCredentials?.meta?.fbPageId;
+    const token = process.env.META_USER_TOKEN;
+
+    if (!accountId || !token) {
+      return res.status(400).json({ message: 'Missing Meta Account ID or access token in configuration' });
+    }
+
+    console.log(`⚡ [Meta API] Enabling webhook subscriptions for account ID: ${accountId} on fields: ${fields}`);
+
+    const response = await axios.post(
+      `https://graph.instagram.com/v20.0/${accountId}/subscribed_apps`,
+      null,
+      {
+        params: {
+          subscribed_fields: fields,
+          access_token: token
+        }
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Webhook subscriptions enabled successfully for account',
+      data: response.data,
+      account: accountId,
+      fields: fields.split(',')
+    });
+  } catch (err) {
+    console.error('❌ Error enabling Instagram webhooks:', err?.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      message: err?.response?.data?.error?.message || err.message,
+      details: err?.response?.data || null
+    });
+  }
+};
+
+exports.metaOAuthCallback = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code, redirectUri } = req.body;
+
+    if (!code || !redirectUri) {
+      return res.status(400).json({ success: false, message: 'Missing OAuth authorization code or redirect URI' });
+    }
+
+    const artist = await Artist.findById(id);
+    if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
+
+    console.log(`⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name}...`);
+
+    // 1. Exchange auth code for short-lived token
+    const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
+      params: {
+        client_id: process.env.META_APP_ID,
+        client_secret: process.env.META_APP_SECRET,
+        redirect_uri: redirectUri,
+        code
+      }
+    });
+
+    const shortToken = tokenRes.data.access_token;
+    if (!shortToken) throw new Error("Failed to retrieve short-lived access token from Meta");
+
+    console.log(`⚡ [OAuth] Exchanging short-lived token for 60-day permanent token...`);
+
+    // 2. Exchange for long-lived user token
+    const longTokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
+      params: {
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.META_APP_ID,
+        client_secret: process.env.META_APP_SECRET,
+        fb_exchange_token: shortToken
+      }
+    });
+
+    const longToken = longTokenRes.data.access_token || shortToken;
+
+    console.log(`⚡ [OAuth] Fetching connected Facebook Pages for user...`);
+
+    // 3. Fetch connected Facebook pages
+    const accountsRes = await axios.get(`https://graph.facebook.com/v20.0/me/accounts`, {
+      params: { access_token: longToken }
+    });
+
+    const pages = accountsRes.data?.data || [];
+    if (pages.length === 0) {
+      return res.status(400).json({ success: false, message: 'No Facebook Pages linked to this Meta account. Please create or link a Facebook Page.' });
+    }
+
+    let igAccountId = null;
+    let fbPageId = pages[0].id; // Default to first page
+
+    // 4. For each page, query connected Instagram Professional Account
+    for (const page of pages) {
+      try {
+        const pageDetail = await axios.get(`https://graph.facebook.com/v20.0/${page.id}?fields=instagram_business_account`, {
+          params: { access_token: longToken }
+        });
+        if (pageDetail.data?.instagram_business_account?.id) {
+          igAccountId = pageDetail.data.instagram_business_account.id;
+          fbPageId = page.id;
+          console.log(`✅ [OAuth] Found connected Instagram Professional Account ID: ${igAccountId} on Page ID: ${fbPageId}`);
+          break;
+        }
+      } catch (e) {
+        console.warn(`[OAuth] Inspecting page ${page.id} failed:`, e?.response?.data || e.message);
+      }
+    }
+
+    // 5. Update Artist Profile with permanent credentials
+    if (!artist.oauthCredentials) artist.oauthCredentials = {};
+    artist.oauthCredentials.meta = {
+      accessToken: longToken,
+      igAccountId: igAccountId || '',
+      fbPageId: fbPageId,
+      tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days
+    };
+
+    artist.markModified('oauthCredentials');
+    await artist.save();
+
+    console.log(`🎉 [OAuth] Harshad/Duhita Meta credentials updated successfully! Triggering live stats sync...`);
+
+    // 6. Auto-trigger live analytics sync
+    try {
+      req.params.id = id;
+      await exports.syncArtistStats(req, { json: () => {}, status: () => ({ json: () => {} }) });
+    } catch(syncErr) {
+      console.error('[OAuth] Auto-sync stats after login warning:', syncErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Instagram / Facebook account connected successfully!',
+      credentials: {
+        igAccountId,
+        fbPageId,
+        tokenExpiry: artist.oauthCredentials.meta.tokenExpiry
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error in metaOAuthCallback:', err?.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      message: err?.response?.data?.error?.message || err.message,
+      details: err?.response?.data || null
+    });
+  }
+};
+

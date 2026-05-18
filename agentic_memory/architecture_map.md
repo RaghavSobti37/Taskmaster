@@ -122,6 +122,7 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 | **Assets** | Project resource links & files | UploadThing integration for direct file storage |
 | **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |
 | **Artists Hub** | Roster & Live Analytics | Tracks multi-platform API feeds (Spotify, YouTube, Meta) with `isSynced` linking model |
+| **Legal & Compliance** | Official Privacy Policy & Data Deletion | Accessible publicly without authentication at `/privacy` and `/userdata` |
 
 ## Data Relationships
 

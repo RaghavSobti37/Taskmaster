@@ -38,7 +38,7 @@ export default function LeadsPage() {
 
   const updateMutation = useUpdateLead();
   const [editLeadData, setEditLeadData] = useState({
-    name: '', phone: '', city: '', leadQuality: 3, leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false
+    name: '', phone: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: ''
   });
 
   React.useEffect(() => {
@@ -47,13 +47,14 @@ export default function LeadsPage() {
         name: selectedLead.name || '',
         phone: selectedLead.phone || '',
         city: selectedLead.city || '',
-        leadQuality: selectedLead.leadQuality || 3,
+        leadQuality: selectedLead.leadQuality ? String(selectedLead.leadQuality) : '3',
         leadStatus: selectedLead.leadStatus || 'New',
         callStatus: selectedLead.callStatus || 'Pending',
         remarks: selectedLead.remarks || '',
         nextFollowupDate: selectedLead.nextFollowupDate || '',
         nextFollowupTime: selectedLead.nextFollowupTime || '',
-        setReminder: selectedLead.setReminder || false
+        setReminder: selectedLead.setReminder || false,
+        planOption: selectedLead.planOption || ''
       });
     }
   }, [selectedLead]);
@@ -138,6 +139,7 @@ export default function LeadsPage() {
   const sourcesList = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
+  const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
 
   const columns = [
     {
@@ -180,7 +182,7 @@ export default function LeadsPage() {
       header: 'Quality Score',
       info: 'How likely this person is to join based on their recent interactions.',
       render: (row) => (
-        <Badge variant={row.leadQuality >= 4 ? 'mint' : row.leadQuality >= 2 ? 'info' : 'apricot'}>
+        <Badge variant={Number(row.leadQuality) >= 4 || row.leadQuality === 'Future 4' ? 'mint' : Number(row.leadQuality) >= 2 ? 'info' : 'apricot'}>
           LEVEL {row.leadQuality}
         </Badge>
       )
@@ -233,8 +235,8 @@ export default function LeadsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Leads" value={stats.totalLeads} icon={Users} variant="slate" />
         <StatCard label="Active Reach" value={stats.activeReach} icon={Zap} variant="info" />
-        <StatCard label="Joined" value={stats.convertedLeads} icon={TrendingUp} variant="mint" />
-        <StatCard label="Success Rate" value={`${stats.conversionRate}%`} icon={Target} variant="apricot" />
+        <StatCard label="Converted" value={stats.convertedLeads} icon={TrendingUp} variant="mint" />
+        <StatCard label="Success Rate" value={`${Number(stats.conversionRate).toFixed(1)}%`} icon={Target} variant="apricot" />
       </div>
 
       <div className="space-y-4">
@@ -272,16 +274,13 @@ export default function LeadsPage() {
                 placeholder="Quality"
                 options={[
                   { value: 'all', label: 'All Quality' },
-                  { value: '5', label: 'Level 5' },
-                  { value: '4', label: 'Level 4' },
-                  { value: '3', label: 'Level 3' },
-                  { value: '2', label: 'Level 2' },
-                  { value: '1', label: 'Level 1' }
+                  ...qualitiesList.map(q => ({ value: q, label: `Level ${q}` }))
                 ]}
                 value={filters.leadQuality}
                 onChange={v => setFilters({ ...filters, leadQuality: v })}
               />
             </div>
+            {/* Artist Type and Role filters temporarily commented out as requested
             <div className="w-32">
               <NexusDropdown
                 placeholder="Artist Type"
@@ -310,6 +309,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, primaryRole: v })}
               />
             </div>
+            */}
             <div className="w-36">
               <NexusDropdown
                 placeholder="Agent"
@@ -348,14 +348,14 @@ export default function LeadsPage() {
         </Card>
 
         <div className="flex items-center justify-between pt-4">
-          <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
-            Showing {leads.length} of {totalLeads} leads
-          </p>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={12} /></Button>
             <span className="text-[10px] font-black px-2">{page} / {totalPages}</span>
             <Button variant="secondary" size="xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={12} /></Button>
           </div>
+          <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
+            Showing {leads.length} of {totalLeads} leads
+          </p>
         </div>
       </div>
 
@@ -440,7 +440,7 @@ export default function LeadsPage() {
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
               <Briefcase size={14} /> Mission & Pipeline Status
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
                 <select
@@ -466,9 +466,23 @@ export default function LeadsPage() {
                 <select
                   className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
                   value={editLeadData.leadQuality}
-                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: Number(e.target.value) })}
+                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
                 >
-                  {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>Level {q}</option>)}
+                  {qualitiesList.map(q => <option key={q} value={q}>Level {q}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Conversion Plan / Status</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.planOption || ''}
+                  onChange={e => setEditLeadData({ ...editLeadData, planOption: e.target.value, ...(e.target.value ? { leadStatus: 'Converted' } : {}) })}
+                >
+                  <option value="">Select Plan (None)</option>
+                  <option value="One-Time">One-Time Payment</option>
+                  <option value="3 Mo">3 Months Plan</option>
+                  <option value="6 Mo">6 Months Plan</option>
+                  <option value="9 Mo">9 Months Plan</option>
                 </select>
               </div>
             </div>

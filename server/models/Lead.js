@@ -92,6 +92,37 @@ LeadSchema.pre('save', function(next) {
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);
 
+// Google Sheets Service Account Live Sync Middleware
+const googleSheetsService = require('../services/googleSheetsService');
+
+LeadSchema.post('save', function(doc) {
+  if (doc) googleSheetsService.syncLeadToSheet(doc);
+});
+
+LeadSchema.post('findOneAndUpdate', function(doc) {
+  if (doc) googleSheetsService.syncLeadToSheet(doc);
+});
+
+LeadSchema.post('updateOne', async function() {
+  try {
+    const doc = await this.model.findOne(this.getQuery());
+    if (doc) googleSheetsService.syncLeadToSheet(doc);
+  } catch (err) {
+    console.error('[GoogleSheets Hook Error]', err.message);
+  }
+});
+
+LeadSchema.post('updateMany', async function() {
+  try {
+    const docs = await this.model.find(this.getQuery());
+    for (const doc of docs) {
+      googleSheetsService.syncLeadToSheet(doc);
+    }
+  } catch (err) {
+    console.error('[GoogleSheets Hook Error]', err.message);
+  }
+});
+
 // Core Uniqueness Constraints
 LeadSchema.index({ phone: 1 }, { unique: true });
 LeadSchema.index({ email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty

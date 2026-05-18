@@ -132,6 +132,8 @@ app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
+app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
+app.use('/api/contacts', require('./routes/contactRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");

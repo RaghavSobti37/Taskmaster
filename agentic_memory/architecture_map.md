@@ -34,6 +34,8 @@ graph TD
         TM_API["/api/teams"]
         CR_API["/api/crm"]
         AS_API["/api/assets"]
+        OA_API["/api/office-assets"]
+        CN_API["/api/contacts"]
         CAL_API["/api/calendar"]
         M_API["/api/mail"]
         ART_API["/api/artists"]
@@ -47,17 +49,21 @@ graph TD
         M_Team[(Team)]
         M_Lead[(Lead)]
         M_Asset[(Asset)]
+        M_Office[(OfficeAsset)]
+        M_Contact[(Contact)]
         M_Event[(CalendarEvent)]
         M_Batch[(CRMImport)]
         M_Artist[(Artist)]
     end
 
     D & PL & PD & AP & DL & AL & LP & FP & ST & CV & AS & TP & FE & ART & AUTH --> RQ
-    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & CR_API & AS_API & CAL_API & M_API & ART_API
+    RQ --> T_API & P_API & U_API & L_API & A_API & TM_API & CR_API & AS_API & OA_API & CN_API & CAL_API & M_API & ART_API
 
     T_API --> M_Task
     P_API --> M_Project
     U_API --> M_User
+    OA_API --> M_Office
+    CN_API --> M_Contact
     L_API --> M_Log
     A_API --> M_User
     TM_API --> M_Team

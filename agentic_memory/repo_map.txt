@@ -206,6 +206,7 @@ server
 ├── scripts
 │   ├── cleanData.js
 │   ├── cleanTscData.js
+│   ├── clean_locations.js
 │   ├── enrichCity.js
 │   ├── fix_satyam_and_time.js
 │   ├── importData.js

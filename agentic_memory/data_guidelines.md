@@ -168,3 +168,56 @@ When building UI forms and modals for data submission:
    * `Submit Payload` ➔ **Save Changes**
    * `Personnel Assignment` ➔ **Assigned Member**
    * `Execution Target` ➔ **Due Date**
+
+---
+
+## 6. 🎨 Domain-Specific Entity Specification (Example: Artists Form)
+
+Whenever creating a structured onboarding form or CSV import schema for multi-dimensional entities like **Artists**, data must be captured across structured, typed parameters.
+
+### Form Field Parameter Blueprint for Artists
+
+When building the `<ArtistCreateForm />` or `POST /api/artists`, enforce these precise inputs:
+
+| UI Label / Input Name | DB Field Name | Data Type & UI Control | Required / Rules | Sanitization / Normalization |
+| :--- | :--- | :--- | :--- | :--- |
+| **Artist Full Name** | `name` | `String` (Input Text) | **Required**. Single primary key. | Strip HTML, collapse double spaces (`.replace(/\s+/g, ' ')`). |
+| **Biography / Intro** | `bio` | `String` (Textarea) | Optional. Max 1000 characters. | Markdown or plain text. Strip malicious `<script>` tags. |
+| **Profile Photo URL** | `profileImage` | `String` (Upload / URL) | Optional. Direct CDN or UploadThing URL. | Verify `https://` prefix. Default to standard avatar placeholder if missing. |
+| **Official Website** | `website` | `String` (Input URL) | Optional. | Auto-prepend `https://` if user types `www.domain.com`. |
+| **YouTube Channel Link** | `socials.youtube` | `String` (Input URL) | Optional. | Extract channel handle `@handle` or full URL. |
+| **Instagram Handle** | `socials.instagram` | `String` (Input Text) | Optional. | Strip leading `@` or URL prefix before storage. |
+| **Spotify Artist Link** | `socials.spotify` | `String` (Input URL) | Optional. | Validate Spotify URL format (`open.spotify.com/artist/...`). |
+| **YouTube Channel ID** | `oauthCredentials.youtube.channelId` | `String` (Input Text) | Optional. Used for API tracking. | Exact 24-character ID (starts with `UC...`). |
+| **Instagram Account ID** | `oauthCredentials.meta.igAccountId` | `String` (Input Numeric) | Optional. Used for Meta API sync. | Numeric ID. Trim whitespace. |
+| **Spotify Artist ID** | `oauthCredentials.spotify.artistId` | `String` (Input Alphanumeric) | Optional. Used for Spotify API sync. | Extract 22-character ID from Spotify URI/URL. |
+| **Live Sync Active** | `isSynced` | `Boolean` (Toggle Switch) | Default: `false`. | When enabled, triggers background automated analytics hydration. |
+| **Managing Team** | `team` | `Array<ObjectId>` (Multi-Select) | References `User` model. | Array of representative ObjectIds. |
+
+### Sample JSON Payload (`POST /api/artists`)
+
+```json
+{
+  "name": "Yugm Folk Band",
+  "bio": "Contemporary folk fusion band bringing roots music to modern stages.",
+  "profileImage": "https://utfs.io/f/sample-artist-avatar.jpg",
+  "website": "https://yugmfolk.com",
+  "socials": {
+    "youtube": "https://youtube.com/@yugmfolk",
+    "instagram": "yugmofficial",
+    "spotify": "https://open.spotify.com/artist/4X9z68u43p57912"
+  },
+  "oauthCredentials": {
+    "youtube": { "channelId": "UCk2X9z68u43p57912" },
+    "spotify": { "artistId": "4X9z68u43p57912" },
+    "meta": { "igAccountId": "1784140981294821" }
+  },
+  "isSynced": true,
+  "team": ["6538a1b2c3d4e5f600112233"]
+}
+```
+
+### UI Implementation Best Practices for Complex Forms
+1. **Categorized Accordions/Tabs**: Separate Core Details, Social Handles, and API Keys into distinct collapsible sections to prevent cognitive overload.
+2. **Layman Tooltips**: Next to technical fields (like `YouTube Channel ID` or `Spotify Artist ID`), add an inline `(i)` popover button showing a 2-sentence visual guide on how to find that exact identifier.
+3. **Optimistic Preview**: As the user inputs social handles, render live social badge previews in the sidebar so they instantly verify correct formatting.

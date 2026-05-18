@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 const TscDataSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -34,6 +34,8 @@ TscDataSchema.pre('save', function(next) {
   if (this.isModified('name')) this.name = sanitizeName(this.name);
   if (this.isModified('email')) this.email = sanitizeEmail(this.email);
   if (this.isModified('phone')) this.phone = normalizePhone(this.phone);
+  if (this.isModified('city') && this.city) this.city = sanitizeLocation(this.city);
+  if (this.isModified('state') && this.state) this.state = sanitizeLocation(this.state);
   next();
 });
 

@@ -41,9 +41,20 @@ const validateDate = (dateStr) => {
   return isNaN(date.getTime()) ? null : date;
 };
 
+const sanitizeLocation = (loc) => {
+  if (!loc) return '';
+  return loc
+    .toLowerCase()
+    .replace(/[().,]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 module.exports = {
   sanitizeName,
   sanitizeEmail,
   normalizePhone,
-  validateDate
+  validateDate,
+  sanitizeLocation
 };
+

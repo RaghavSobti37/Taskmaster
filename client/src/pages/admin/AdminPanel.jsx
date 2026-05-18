@@ -151,13 +151,24 @@ const AdminPanel = () => {
     }
   ];
 
+  const pageMeta = {
+    users: { title: "Users", subtitle: "Manage system access credentials, security profiles, and registered personnel." },
+    teams: { title: "Teams", subtitle: "Organize personnel into functional task forces and operational teams." },
+    workflows: { title: "Workflows", subtitle: "Configure intelligent triggers, automated sequences, and system logic." },
+    crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
+    logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." },
+    mail: { title: "Email Campaigns", subtitle: "Manage SMTP profiles, email campaigns, and delivery analytics." }
+  };
+
+  const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, automation workflows, and system data." };
+
   if (usersLoading) return <PageSkeleton />;
 
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader 
-         title="Admin Panel" 
-         subtitle="Manage users, teams, automation workflows, and system data."
+         title={currentMeta.title} 
+         subtitle={currentMeta.subtitle}
          icon={ShieldCheck}
          actions={
            <div className="flex items-center gap-2">
@@ -177,41 +188,43 @@ const AdminPanel = () => {
          }
       />
 
-      {/* Analytical Ribbon */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <StatCard 
-          label="Total Users" 
-          value={users.length} 
-          icon={Users} 
-          variant="info" 
-          subValue="Active" 
-          info="Total number of registered user accounts."
-        />
-        <StatCard 
-          label="Total Data" 
-          value={crmStats?.totalLeads || 0} 
-          icon={Database} 
-          variant="mint" 
-          subValue="Records" 
-          info="Count of all entries in the master data archive."
-        />
-        <StatCard 
-          label="Conversion" 
-          value={`${repSummary?.avgConversion || 0}%`} 
-          icon={TrendingUp} 
-          variant="apricot" 
-          subValue="Team Avg" 
-          info="The percentage of data entries successfully processed into closed business."
-        />
-        <StatCard 
-          label="Emails Sent" 
-          value={mailStats?.totalSent || 0} 
-          icon={Zap} 
-          variant="slate" 
-          subValue="System" 
-          info="Total number of automated emails sent."
-        />
-      </div>
+      {/* Analytical Ribbon - Only on users and teams subpage */}
+      {(activeTab === 'users' || activeTab === 'teams') && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <StatCard 
+            label="Total Users" 
+            value={users.length} 
+            icon={Users} 
+            variant="info" 
+            subValue="Active" 
+            info="Total number of registered user accounts."
+          />
+          <StatCard 
+            label="Total Data" 
+            value={crmStats?.totalLeads || 0} 
+            icon={Database} 
+            variant="mint" 
+            subValue="Records" 
+            info="Count of all entries in the master data archive."
+          />
+          <StatCard 
+            label="Conversion" 
+            value={`${repSummary?.avgConversion || 0}%`} 
+            icon={TrendingUp} 
+            variant="apricot" 
+            subValue="Team Avg" 
+            info="The percentage of data entries successfully processed into closed business."
+          />
+          <StatCard 
+            label="Emails Sent" 
+            value={mailStats?.totalSent || 0} 
+            icon={Zap} 
+            variant="slate" 
+            subValue="System" 
+            info="Total number of automated emails sent."
+          />
+        </div>
+      )}
 
       {/* Main Surface */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

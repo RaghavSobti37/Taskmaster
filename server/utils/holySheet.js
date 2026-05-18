@@ -18,6 +18,15 @@ class HolySheet {
     return response.data.data;
   }
 
+  async getRowsCustomKey(sheetName, customKey) {
+    const key = customKey || this.apiKey;
+    if (!key) throw new Error('HolySheet API Key missing');
+    const response = await axios.get(`${BASE_URL}/${key}/rows`, {
+      params: { sheet: sheetName }
+    });
+    return response.data.data || [];
+  }
+
   async appendRows(sheetName, rows) {
     if (!this.apiKey) throw new Error('HOLYSHEET_API_KEY missing');
     const response = await axios.post(`${BASE_URL}/${this.apiKey}/rows`, {

@@ -152,6 +152,23 @@ export default function LeadsPage() {
     }
   };
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncBookedCalls = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      alert(res.data.message);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to sync booked calls');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const { data, isLoading } = useLiveLeads(queryParams);
   const { data: statsData } = useCRMStats();
   const { data: team = [] } = useSalesReps();
@@ -244,6 +261,9 @@ export default function LeadsPage() {
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
+              <Zap size={14} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            </Button>
             {user?.role === 'admin' && (
               <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
                 <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}

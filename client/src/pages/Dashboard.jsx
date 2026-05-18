@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Plus, FileText, Shield } from 'lucide-react';
+import { LayoutDashboard, Plus, FileText, Shield, Zap } from 'lucide-react';
 import axios from 'axios';
 import { 
   Badge, 
@@ -33,9 +33,36 @@ const Dashboard = () => {
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+
+  const handleSyncBookedCalls = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      addToast({
+        title: 'Sync Success',
+        message: res.data.message,
+        type: 'success',
+        duration: 5000
+      });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    } catch (err) {
+      addToast({
+        title: 'Sync Failed',
+        message: err.response?.data?.error || 'Failed to sync booked calls',
+        type: 'error'
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
@@ -101,6 +128,9 @@ const Dashboard = () => {
         icon={LayoutDashboard}
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
+              <Zap size={16} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            </Button>
             <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
               <Plus size={16} /> New Work Item
             </Button>

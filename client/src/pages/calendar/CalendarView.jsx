@@ -122,11 +122,11 @@ const CalendarView = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title="Temporal Workspace"
-        subtitle="Universal scheduling matrix and event synchronization."
+        title="Calendar"
+        subtitle="Schedule meetings, follow-ups, and track holidays."
         actions={
           <div className="flex items-center gap-2">
-             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Roots</Button>
+             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>
              <Button size="sm" onClick={() => setIsModalOpen(true)}><Plus size={14} /> Create Event</Button>
           </div>
         }
@@ -134,17 +134,17 @@ const CalendarView = () => {
 
       {/* Analytical Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Monthly Load" value={stats.events} icon={Zap} variant="info" />
+        <StatCard label="Monthly Events" value={stats.events} icon={Zap} variant="info" />
         <StatCard label="Indian Holidays" value={stats.holidays} icon={Star} variant="rose" />
         <StatCard label="Sync Status" value={user.googleRefreshToken ? 'CONNECTED' : 'LOCAL'} icon={ShieldCheck} variant="mint" />
-        <StatCard label="Operational Buffer" value="82%" icon={CalendarIcon} variant="slate" />
+        <StatCard label="Available Time" value="82%" icon={CalendarIcon} variant="slate" />
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="w-full lg:w-72 space-y-6">
            {renderMiniCalendar()}
            <Card className="p-4 space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Matrix Filters</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Calendar Filters</h4>
               <div className="space-y-2">
                  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer">
                     <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ const CalendarView = () => {
            <Card className="overflow-hidden min-h-fit flex flex-col">
               <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                  <div className="flex items-center gap-4">
-                    <Button variant="secondary" size="xs" onClick={() => setCurrentMonth(new Date())}>Current Epoch</Button>
+                    <Button variant="secondary" size="xs" onClick={() => setCurrentMonth(new Date())}>Today</Button>
                     <div className="flex items-center gap-1">
                        <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={16} /></Button>
                        <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></Button>

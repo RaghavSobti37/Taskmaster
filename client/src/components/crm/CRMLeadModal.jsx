@@ -150,11 +150,11 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
   if (!isOpen) return null;
 
   const tabs = [
-    { id: 'identity', label: 'Identity', icon: User },
-    { id: 'profile', label: 'Profile', icon: Briefcase },
-    { id: 'protocols', label: 'Schedule', icon: Clock },
-    { id: 'logic', label: 'Logic', icon: Zap },
-    { id: 'intel', label: 'Intel', icon: FileText },
+    { id: 'identity', label: 'Basic Info', icon: User },
+    { id: 'profile', label: 'Music Profile', icon: Briefcase },
+    { id: 'protocols', label: 'Follow-ups', icon: Clock },
+    { id: 'logic', label: 'Status & Plan', icon: Zap },
+    { id: 'intel', label: 'Notes & Stream', icon: FileText },
   ];
 
   return (
@@ -303,7 +303,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <Briefcase size={14} /> Artist Profile
+                      <Briefcase size={14} /> Music Profile
                     </h3>
                     <div className="space-y-4">
                       <CKDropdown 
@@ -327,7 +327,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                   </div>
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <Zap size={14} /> Offering
+                      <Zap size={14} /> Subscription Plan
                     </h3>
                     <div className="space-y-4">
                       <CKDropdown 
@@ -384,7 +384,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                      <Zap size={14} /> Status & Assignment
+                      <Zap size={14} /> Status & Sales Rep
                     </h3>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -418,7 +418,7 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
               {activeTab === 'intel' && (
                 <div className="space-y-6">
                   <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-500 flex items-center gap-2">
-                    <FileText size={14} /> Intelligence & Discovery
+                    <FileText size={14} /> Notes & Background
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">

@@ -261,7 +261,7 @@ export default function LeadsPage() {
                 icon={Search}
               />
             </div>
-            <div className="w-32">
+            <div className="w-56">
               <NexusDropdown
                 placeholder="Source"
                 options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map(s => ({ value: s, label: s }))]}
@@ -269,7 +269,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, source: v })}
               />
             </div>
-            <div className="w-28">
+            <div className="w-36">
               <NexusDropdown
                 placeholder="Quality"
                 options={[
@@ -280,37 +280,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, leadQuality: v })}
               />
             </div>
-            {/* Artist Type and Role filters temporarily commented out as requested
-            <div className="w-32">
-              <NexusDropdown
-                placeholder="Artist Type"
-                options={[
-                  { value: 'all', label: 'All Artists' },
-                  { value: 'Full-time Artiste', label: 'Full-time' },
-                  { value: 'Part Time Artiste', label: 'Part-time' },
-                  { value: 'Hobbyist', label: 'Hobbyist' }
-                ]}
-                value={filters.artistType || 'all'}
-                onChange={v => setFilters({ ...filters, artistType: v })}
-              />
-            </div>
-            <div className="w-32">
-              <NexusDropdown
-                placeholder="Role"
-                options={[
-                  { value: 'all', label: 'All Roles' },
-                  { value: 'Vocalist', label: 'Vocalist' },
-                  { value: 'Music Producer', label: 'Producer' },
-                  { value: 'Singer Songwriter', label: 'Songwriter' },
-                  { value: 'Instrumentalist', label: 'Instrumentalist' },
-                  { value: 'Composer', label: 'Composer' }
-                ]}
-                value={filters.primaryRole || 'all'}
-                onChange={v => setFilters({ ...filters, primaryRole: v })}
-              />
-            </div>
-            */}
-            <div className="w-36">
+            <div className="w-44">
               <NexusDropdown
                 placeholder="Agent"
                 options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
@@ -318,7 +288,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, assignedRepId: v })}
               />
             </div>
-            <div className="w-40">
+            <div className="w-56">
               <NexusDropdown
                 placeholder="Sort By"
                 options={[

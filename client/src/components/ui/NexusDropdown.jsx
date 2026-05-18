@@ -94,7 +94,7 @@ const NexusDropdown = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.1 }}
-            className="absolute top-full left-0 right-0 mt-1 z-[300] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-xl overflow-hidden"
+            className="absolute top-full left-0 min-w-full max-w-md mt-1 z-[300] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-xl overflow-hidden"
           >
             {searchable && (
               <div className="p-1 border-b border-[var(--color-bg-border)]">

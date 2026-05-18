@@ -4,9 +4,10 @@ const artistController = require('../controllers/artistController');
 const artistAnalyticsController = require('../controllers/artistAnalyticsController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Public endpoints for preview & webhooks
+// Public endpoints for preview, webhooks & OAuth callbacks
 router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.post('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
+router.post('/:id/auth/meta/callback', artistAnalyticsController.metaOAuthCallback);
 router.get('/:id', artistController.getArtistById);
 router.get('/:id/analytics/:platform', artistAnalyticsController.getPlatformAnalytics);
 
@@ -20,6 +21,5 @@ router.post('/:id/inject-event', artistController.injectEvent);
 router.post('/:id/sync-stats', artistAnalyticsController.syncArtistStats);
 router.post('/:id/tracked-video', artistAnalyticsController.addTrackedVideo);
 router.post('/:id/webhooks/subscribe', artistAnalyticsController.enableInstagramWebhooks);
-router.post('/:id/auth/meta/callback', artistAnalyticsController.metaOAuthCallback);
 
 module.exports = router;

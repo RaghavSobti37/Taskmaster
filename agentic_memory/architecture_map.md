@@ -153,3 +153,7 @@ Artists store profile information, events, and a linked `isSynced` status. Live 
 ## Data Guidelines Reference
 For precise formatting rules, sanitization pipelines, and endpoint design specifications, see [data_guidelines.md](file:///c:/Users/ragha/OneDrive/Desktop/Taskmaster/agentic_memory/data_guidelines.md).
 
+## Version History
+- **v1.7.1** — Enhanced Meta OAuth callback security, sanitized Render environment credential strings, and added robust static build fallback for production cloud deployments.
+- **v1.7.0** — Introduced production Legal & Compliance module (`/privacy`, `/userdata`) for Meta App Review and public SPA routing.
+

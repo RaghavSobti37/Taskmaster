@@ -194,7 +194,10 @@ const Dashboard = () => {
                     <input 
                       type="date" 
                       defaultValue={selectedTask?.dueDate ? format(new Date(selectedTask.dueDate), 'yyyy-MM-dd') : ''}
-                      className="w-full px-3.5 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none font-medium"
+                      onClick={e => e.target.showPicker && e.target.showPicker()}
+                      onFocus={e => e.target.showPicker && e.target.showPicker()}
+                      onKeyDown={e => e.preventDefault()}
+                      className="w-full px-3.5 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none font-medium cursor-pointer"
                     />
                  </div>
                  <div className="space-y-1.5">

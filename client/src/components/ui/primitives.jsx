@@ -23,7 +23,8 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
     primary: 'bg-[var(--color-action-primary)] text-white hover:opacity-90 active:scale-[0.98]',
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
-    danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10'
+    danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
+    mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10'
   };
 
   const sizes = {
@@ -270,7 +271,7 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
   </div>
 );
 
-export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave }) => {
+export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, extraActions }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -305,6 +306,7 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
                 </div>
              </div>
              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                {extraActions}
                 <Button variant="ghost" size="sm" onClick={onClose} className="hidden sm:inline-flex">Cancel</Button>
                 <Button size="sm" onClick={onSave} className="shadow-lg shadow-[var(--color-action-primary)]/20">
                    <Save size={16} /> <span className="hidden sm:inline">Save Changes</span>

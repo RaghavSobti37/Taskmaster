@@ -142,6 +142,37 @@ export default function FollowupsPage() {
 
   const columns = [
     {
+      header: 'Done',
+      render: (row) => (
+        <input
+          type="checkbox"
+          className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+          checked={false}
+          onClick={(e) => e.stopPropagation()}
+          onChange={async (e) => {
+            e.stopPropagation();
+            if (window.confirm(`Mark follow-up completed for ${row.name}?`)) {
+              try {
+                await updateMutation.mutateAsync({
+                  id: row._id,
+                  data: {
+                    callStatus: 'Connected',
+                    nextFollowupDate: '',
+                    nextFollowupTime: '',
+                    remarks: (row.remarks ? row.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                  }
+                });
+                queryClient.invalidateQueries({ queryKey: ['leads'] });
+                queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+              } catch (err) {
+                alert(err.response?.data?.error || err.message);
+              }
+            }
+          }}
+        />
+      )
+    },
+    {
       header: 'Customer Details',
       render: (row) => (
         <div className="flex flex-col gap-1">
@@ -249,6 +280,36 @@ export default function FollowupsPage() {
         title={selectedLead?.name || 'Customer Details'}
         subtitle={`ID: ${selectedLead?._id?.substring(0, 8)} • Source: ${selectedLead?.source || 'Direct'}`}
         onSave={handleSaveLead}
+        extraActions={
+          <Button
+            variant="mint"
+            size="sm"
+            onClick={async () => {
+              if (!selectedLead) return;
+              try {
+                const updatedData = {
+                  ...editLeadData,
+                  callStatus: editLeadData.callStatus === 'Pending' ? 'Connected' : editLeadData.callStatus,
+                  nextFollowupDate: '',
+                  nextFollowupTime: '',
+                  remarks: (editLeadData.remarks ? editLeadData.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                };
+                await updateMutation.mutateAsync({
+                  id: selectedLead._id,
+                  data: updatedData
+                });
+                setSelectedLead(null);
+                queryClient.invalidateQueries({ queryKey: ['leads'] });
+                queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+              } catch (err) {
+                alert(err.response?.data?.error || err.message);
+              }
+            }}
+            className="flex items-center gap-1.5"
+          >
+            <CheckCircle2 size={16} /> <span className="hidden sm:inline">Mark as Done</span>
+          </Button>
+        }
         sidebar={
           <div className="space-y-4">
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
@@ -382,8 +443,11 @@ export default function FollowupsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Date</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
                   value={editLeadData.nextFollowupDate}
+                  onClick={e => e.target.showPicker && e.target.showPicker()}
+                  onFocus={e => e.target.showPicker && e.target.showPicker()}
+                  onKeyDown={e => e.preventDefault()}
                   onChange={e => setEditLeadData({ ...editLeadData, nextFollowupDate: e.target.value })}
                 />
               </div>
@@ -391,8 +455,11 @@ export default function FollowupsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Time</label>
                 <input
                   type="time"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
                   value={editLeadData.nextFollowupTime}
+                  onClick={e => e.target.showPicker && e.target.showPicker()}
+                  onFocus={e => e.target.showPicker && e.target.showPicker()}
+                  onKeyDown={e => e.preventDefault()}
                   onChange={e => setEditLeadData({ ...editLeadData, nextFollowupTime: e.target.value })}
                 />
               </div>

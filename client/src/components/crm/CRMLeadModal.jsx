@@ -356,12 +356,15 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                       <div className="space-y-1.5">
                         <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Follow-up Date</label>
                         <div className="relative">
-                          <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
+                          <Clock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 pointer-events-none" />
                           <input 
                             type="datetime-local" 
                             value={formData.nextFollowupDate} 
+                            onClick={e => e.target.showPicker && e.target.showPicker()}
+                            onFocus={e => e.target.showPicker && e.target.showPicker()}
+                            onKeyDown={e => e.preventDefault()}
                             onChange={e => setFormData({...formData, nextFollowupDate: e.target.value})}
-                            className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl pl-12 pr-5 py-3 text-xs font-bold outline-none shadow-sm"
+                            className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl pl-12 pr-5 py-3 text-xs font-bold outline-none shadow-sm cursor-pointer"
                           />
                         </div>
                       </div>

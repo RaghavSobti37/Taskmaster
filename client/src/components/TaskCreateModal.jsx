@@ -145,8 +145,11 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
               <input 
                 type="date"
                 value={dueDate}
+                onClick={e => e.target.showPicker && e.target.showPicker()}
+                onFocus={e => e.target.showPicker && e.target.showPicker()}
+                onKeyDown={e => e.preventDefault()}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full px-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none text-sm font-medium"
+                className="w-full px-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none text-sm font-medium cursor-pointer"
               />
             </div>
           </div>

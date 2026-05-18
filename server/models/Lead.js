@@ -92,20 +92,20 @@ LeadSchema.pre('save', function(next) {
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);
 
-// Google Sheets Service Account Live Sync Middleware
-const googleSheetsService = require('../services/googleSheetsService');
+// HolySheet Service Live Sync Middleware
+const holySheetService = require('../services/holySheetService');
 const csvBackupService = require('../services/csvBackupService');
 
 LeadSchema.post('save', function(doc) {
   if (doc) {
-    googleSheetsService.syncLeadToSheet(doc);
+    holySheetService.syncLeadToSheet(doc);
     csvBackupService.backupAllLeadsToCsv();
   }
 });
 
 LeadSchema.post('findOneAndUpdate', function(doc) {
   if (doc) {
-    googleSheetsService.syncLeadToSheet(doc);
+    holySheetService.syncLeadToSheet(doc);
     csvBackupService.backupAllLeadsToCsv();
   }
 });
@@ -114,11 +114,11 @@ LeadSchema.post('updateOne', async function() {
   try {
     const doc = await this.model.findOne(this.getQuery());
     if (doc) {
-      googleSheetsService.syncLeadToSheet(doc);
+      holySheetService.syncLeadToSheet(doc);
       csvBackupService.backupAllLeadsToCsv();
     }
   } catch (err) {
-    console.error('[GoogleSheets Hook Error]', err.message);
+    console.error('[HolySheet Hook Error]', err.message);
   }
 });
 
@@ -126,13 +126,13 @@ LeadSchema.post('updateMany', async function() {
   try {
     const docs = await this.model.find(this.getQuery());
     for (const doc of docs) {
-      googleSheetsService.syncLeadToSheet(doc);
+      holySheetService.syncLeadToSheet(doc);
     }
     if (docs.length > 0) {
       csvBackupService.backupAllLeadsToCsv();
     }
   } catch (err) {
-    console.error('[GoogleSheets Hook Error]', err.message);
+    console.error('[HolySheet Hook Error]', err.message);
   }
 });
 

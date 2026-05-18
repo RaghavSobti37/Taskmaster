@@ -223,9 +223,9 @@ export default function FollowupsPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <StatCard label="Calls Today" value={stats.today} icon={PhoneCall} variant="info" info="Interactions planned for the current day." />
-        <StatCard label="Overdue Tasks" value={stats.overdue} icon={AlertCircle} variant="rose" info="Scheduled calls that were missed." />
-        <StatCard label="Next Commitments" value={stats.upcoming} icon={Calendar} variant="mint" info="Future interactions scheduled in your pipeline." />
+        <StatCard onClick={() => setActiveTab('today')} label="Calls Today" value={stats.today} icon={PhoneCall} variant="info" info="Interactions planned for the current day." />
+        <StatCard onClick={() => setActiveTab('overdue')} label="Overdue Tasks" value={stats.overdue} icon={AlertCircle} variant="rose" info="Scheduled calls that were missed." />
+        <StatCard onClick={() => setActiveTab('upcoming')} label="Next Commitments" value={stats.upcoming} icon={Calendar} variant="mint" info="Future interactions scheduled in your pipeline." />
         <StatCard label="Daily Goal" value="100%" icon={CheckCircle2} variant="slate" info="The percentage of today's calls you have finished." />
       </div>
 

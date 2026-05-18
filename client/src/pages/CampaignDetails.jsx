@@ -67,13 +67,13 @@ export default function CampaignDetails() {
 
       <PageHeader 
         title={campaign.title} 
-        subtitle={`System ID: ${campaign.campaignId || campaign._id} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}`}
+        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}`}
         icon={Mail}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Total Target Audience" value={totalRecipients} icon={Users} variant="info" />
-        <StatCard label="Dispatched Success" value={metrics.totalSent || 0} icon={CheckCircle2} variant="mint" />
+        <StatCard label="Total Recipients" value={totalRecipients} icon={Users} variant="info" />
+        <StatCard label="Sent Successfully" value={metrics.totalSent || 0} icon={CheckCircle2} variant="mint" />
         <StatCard label="Unique Open Rate" value={`${openRate}%`} subValue={`${metrics.opened || 0} Opens`} icon={Clock} variant="apricot" />
         <StatCard label="Click-Through Rate" value={`${clickRate}%`} subValue={`${metrics.clicked || 0} Clicks`} icon={Play} variant="slate" />
       </div>
@@ -81,7 +81,7 @@ export default function CampaignDetails() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
           <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-            <Clock size={14} /> Time Series Engagement Activity
+            <Clock size={14} /> Engagement Over Time
           </h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -99,7 +99,7 @@ export default function CampaignDetails() {
 
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
           <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-            <Globe size={14} /> Geographic Location Breakdown
+            <Globe size={14} /> Location Breakdown
           </h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -128,7 +128,7 @@ export default function CampaignDetails() {
             </div>
             <Terminal size={16} className="text-blue-400" />
             <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 font-mono">
-              Campaign Execution Terminal Stream [LIVE]
+              Live Activity Stream
             </h3>
           </div>
           <div className="flex items-center gap-2 font-mono text-[10px]">
@@ -139,11 +139,11 @@ export default function CampaignDetails() {
 
         <div className="bg-black/60 rounded-xl p-4 font-mono text-xs text-slate-300 h-64 overflow-y-auto space-y-2.5 border border-white/5 custom-scrollbar select-text">
           <div className="text-slate-500 text-[10px] pb-1 border-b border-white/5">
-            [SYS_INIT] Realtime socket connection established. Subscribed to campaign stream: {campaign.campaignId || campaign._id}
+            Connected to campaign stream: {campaign.campaignId || campaign._id}
           </div>
           {(!campaign.events || campaign.events.length === 0) ? (
             <div className="text-slate-400 italic py-4 flex items-center gap-2">
-              <Zap size={14} className="text-amber-400 animate-bounce" /> Awaiting live SMTP dispatch and tracking signals...
+              <Zap size={14} className="text-amber-400 animate-bounce" /> Waiting for live email activity...
             </div>
           ) : (
             campaign.events.map((evt, idx) => (
@@ -163,7 +163,7 @@ export default function CampaignDetails() {
                   {evt.email}
                 </span>
                 <span className="text-slate-400 text-[11px]">
-                  {evt.metadata?.url ? `→ Clicked link: ${evt.metadata.url}` : evt.eventType === 'Open' ? '• Triggered 1x1 tracking pixel' : '• Outbound envelope dispatched'}
+                  {evt.metadata?.url ? `→ Clicked link: ${evt.metadata.url}` : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
                 </span>
               </div>
             ))
@@ -186,7 +186,7 @@ export default function CampaignDetails() {
                 <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Recipient</th>
                 <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Delivery Status</th>
                 <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Timestamp</th>
-                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Diagnostic Note</th>
+                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-bg-border)]">

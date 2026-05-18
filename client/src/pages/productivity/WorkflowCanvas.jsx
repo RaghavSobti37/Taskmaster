@@ -8,7 +8,7 @@ const initialNodes = [
   {
     id: '1',
     type: 'input',
-    data: { label: 'Event: Lead Captured (Supabase Realtime)' },
+    data: { label: 'Event: New Lead Captured' },
     position: { x: 250, y: 50 },
     style: { background: '#111827', color: '#60A5FA', border: '1px solid #3B82F6', borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
   },
@@ -21,7 +21,7 @@ const initialNodes = [
   {
     id: '3',
     type: 'output',
-    data: { label: 'Action: Trigger.dev Campaign Dispatch' },
+    data: { label: 'Action: Send Email Campaign' },
     position: { x: 250, y: 300 },
     style: { background: '#111827', color: '#34D399', border: '1px solid #10B981', borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
   }
@@ -63,12 +63,12 @@ const WorkflowCanvas = () => {
   return (
     <PageContainer className="!py-4 !space-y-4 !h-[90vh] flex flex-col">
       <PageHeader
-        title="xyOps Visual Workflow Canvas"
-        subtitle="Autonomous pipeline orchestration, background task mapping, and event-driven Trigger.dev automation."
+        title="Workflow Builder"
+        subtitle="Build automated background workflows and email campaigns."
         actions={
           <div className="flex items-center gap-2">
             <Button size="xs" variant="ghost" onClick={handleSave} disabled={saving}>
-              {saving ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Save size={12} className="mr-1" />} Save Pipeline
+              {saving ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Save size={12} className="mr-1" />} Save Workflow
             </Button>
             <Button size="xs" variant="primary" onClick={handleRunPipeline} disabled={running}>
               {running ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Play size={12} className="mr-1" />} Execute Workflow
@@ -81,13 +81,13 @@ const WorkflowCanvas = () => {
         <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-wider px-2 flex items-center gap-1.5">
           <Layers size={14} className="text-blue-500" /> Toolbox:
         </span>
-        <Button size="xs" variant="ghost" className="text-blue-400 hover:bg-blue-500/10" onClick={() => addNode('input', 'Event: Webhook / Realtime Pulse', '#60A5FA', '#3B82F6')}>
+        <Button size="xs" variant="ghost" className="text-blue-400 hover:bg-blue-500/10" onClick={() => addNode('input', 'Event: Webhook / Realtime Trigger', '#60A5FA', '#3B82F6')}>
           <Zap size={12} className="mr-1" /> Add Trigger
         </Button>
         <Button size="xs" variant="ghost" className="text-amber-400 hover:bg-amber-500/10" onClick={() => addNode('default', 'Condition: Attribute Match', '#FBBF24', '#F59E0B')}>
           <Filter size={12} className="mr-1" /> Add Filter
         </Button>
-        <Button size="xs" variant="ghost" className="text-emerald-400 hover:bg-emerald-500/10" onClick={() => addNode('output', 'Action: Trigger.dev Background Task', '#34D399', '#10B981')}>
+        <Button size="xs" variant="ghost" className="text-emerald-400 hover:bg-emerald-500/10" onClick={() => addNode('output', 'Action: Run Background Task', '#34D399', '#10B981')}>
           <Send size={12} className="mr-1" /> Add Action
         </Button>
       </div>
@@ -108,7 +108,7 @@ const WorkflowCanvas = () => {
         </ReactFlow>
 
         <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-lg text-[10px] font-mono text-slate-400 backdrop-blur-sm">
-          <Badge variant="slate" className="text-[9px]">xyOps Protocol</Badge>
+          <Badge variant="slate" className="text-[9px]">Active Canvas</Badge>
           <span>Nodes: {nodes.length}</span>
           <span>•</span>
           <span>Edges: {edges.length}</span>

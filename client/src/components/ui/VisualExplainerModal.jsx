@@ -45,18 +45,18 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
             </div>
             <div>
               <h2 className="text-sm font-black text-white tracking-wide flex items-center gap-2">{title}</h2>
-              <p className="text-[10px] text-[var(--color-text-muted)] tracking-wider uppercase font-mono">{data?.subtitle || 'System Architecture & Journey Map'}</p>
+              <p className="text-[10px] text-[var(--color-text-muted)] tracking-wider uppercase font-mono">{data?.subtitle || 'System Diagram & Overview'}</p>
             </div>
-            <Badge variant="mint" className="ml-2 font-mono">nicobailon/visual-explainer</Badge>
+            <Badge variant="mint" className="ml-2 font-mono">System Flow</Badge>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="bg-white/5 p-1 rounded-lg flex items-center gap-1 border border-white/10 mr-2">
               <Button size="xs" variant={activeTab === 'diagram' ? 'primary' : 'ghost'} onClick={() => setActiveTab('diagram')}>
-                Diagram View
+                Diagram
               </Button>
               <Button size="xs" variant={activeTab === 'report' ? 'primary' : 'ghost'} onClick={() => setActiveTab('report')}>
-                Structured Report
+                Overview
               </Button>
             </div>
 
@@ -86,7 +86,7 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
             <div className="max-w-3xl w-full space-y-6 text-slate-200 text-xs self-start my-auto">
               <div className="p-6 bg-slate-900/80 rounded-xl border border-white/10 space-y-4 shadow-xl">
                 <h3 className="text-sm font-black text-white border-b border-white/10 pb-2 flex items-center gap-2">
-                  <FileText size={16} className="text-blue-400" /> Operational Overview
+                  <FileText size={16} className="text-blue-400" /> System Overview
                 </h3>
                 <div className="space-y-2 leading-relaxed text-slate-300" dangerouslySetInnerHTML={{ __html: data?.reportHtml || '<p>No structured report available.</p>' }} />
               </div>
@@ -96,9 +96,9 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-white/10 bg-[var(--color-bg-secondary)]/50 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-          <span>Powered by AI Agent Diagnostic Protocol & Mermaid Render Engine</span>
+          <span>System Flow & Activity Visualizer</span>
           <Button size="xs" variant="ghost" className="hover:text-white" onClick={() => navigator.clipboard.writeText(data?.mermaid || '')}>
-            <Share2 size={12} className="mr-1.5" /> Export Source Definition
+            <Share2 size={12} className="mr-1.5" /> Copy Diagram Code
           </Button>
         </div>
       </Card>

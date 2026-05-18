@@ -58,8 +58,8 @@ const SettingsPage = () => {
   );
 
   const roleOptions = [
-    { value: 'user', label: 'Standard Operative' },
-    { value: 'admin', label: 'Root Administrator' },
+    { value: 'user', label: 'Member' },
+    { value: 'admin', label: 'Administrator' },
   ];
 
   const categories = [
@@ -141,15 +141,15 @@ const SettingsPage = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title="Configuration Matrix"
-        subtitle="Universal parameter adjustment and entity synchronization."
+        title="Account Settings"
+        subtitle="Manage your personal profile and preferences."
       />
 
       {/* Analytical Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatusCard label="Account Health" value="OPTIMAL" icon={Zap} variant="mint" />
-        <StatusCard label="Security Layer" value="LEVEL 4" icon={ShieldCheck} variant="info" />
-        <StatusCard label="Workgroups" value={teams.length} icon={Users} variant="apricot" />
+        <StatusCard label="Status" value="ACTIVE" icon={Zap} variant="mint" />
+        <StatusCard label="Security" value="SECURE" icon={ShieldCheck} variant="info" />
+        <StatusCard label="Teams" value={teams.length} icon={Users} variant="apricot" />
         <StatusCard label="Last Sync" value="REALTIME" icon={Globe} variant="slate" />
       </div>
 
@@ -158,7 +158,7 @@ const SettingsPage = () => {
           <Card className="overflow-hidden">
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                 <User size={14} className="text-blue-500" /> Identity Profile
+                 <User size={14} className="text-blue-500" /> User Profile
                </h3>
             </div>
             <div className="p-6 space-y-8">
@@ -172,19 +172,19 @@ const SettingsPage = () => {
                     </div>
                  </div>
                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-tight">{name || 'Unidentified Entity'}</h4>
+                    <h4 className="text-xs font-black uppercase tracking-tight">{name || 'User'}</h4>
                     <p className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-widest">{user?.email}</p>
-                    <Button variant="ghost" size="xs" className="mt-2" onClick={() => setIsAvatarModalOpen(true)}>Update Visual Identity</Button>
+                    <Button variant="ghost" size="xs" className="mt-2" onClick={() => setIsAvatarModalOpen(true)}>Change Avatar</Button>
                  </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <Input label="Identity Label" value={name} onChange={e => setName(e.target.value)} icon={User} className="!text-xs" />
-                 <Input label="Primary Comms" value={phone} onChange={e => setPhone(e.target.value)} icon={Smartphone} className="!text-xs" />
+                 <Input label="Full Name" value={name} onChange={e => setName(e.target.value)} icon={User} className="!text-xs" />
+                 <Input label="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} icon={Smartphone} className="!text-xs" />
               </div>
 
               <div className="pt-4 border-t border-[var(--color-bg-border)]">
-                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-3 block">Authorized Workgroups</label>
+                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-3 block">Assigned Teams</label>
                  <div className="flex flex-wrap gap-2">
                     {allTeams.map(team => {
                        const isSelected = teams.some(t => (typeof t === 'object' ? t.value : t) === team.name);
@@ -229,7 +229,7 @@ const SettingsPage = () => {
                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                   <div className="flex items-center gap-3">
                      <Bell size={14} />
-                     <span className="text-[10px] font-bold uppercase tracking-wider">Signals</span>
+                     <span className="text-[10px] font-bold uppercase tracking-wider">Notifications</span>
                   </div>
                   <button className="w-8 h-4 rounded-full bg-emerald-500 relative">
                      <div className="w-4 h-4 bg-white rounded-full shadow-lg ml-4" />
@@ -240,11 +240,11 @@ const SettingsPage = () => {
 
           <Card className="p-4 space-y-4">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 flex items-center gap-2">
-               <Lock size={14} /> Security Protocol
+               <Lock size={14} /> Password & Security
             </h4>
             <div className="space-y-3">
-               <Input type="password" label="Current Access Key" value={password} onChange={e => setPassword(e.target.value)} icon={Key} className="!text-[10px]" />
-               <Input type="password" label="New Access Key" value={newPassword} onChange={e => setNewPassword(e.target.value)} icon={Shield} className="!text-[10px]" />
+               <Input type="password" label="Current Password" value={password} onChange={e => setPassword(e.target.value)} icon={Key} className="!text-[10px]" />
+               <Input type="password" label="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} icon={Shield} className="!text-[10px]" />
             </div>
           </Card>
         </aside>
@@ -265,12 +265,12 @@ const SettingsPage = () => {
                      <Target size={16} />
                   </div>
                   <div>
-                     <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none">Unsynced Configuration</p>
-                     <p className="text-[8px] text-white/40 font-bold uppercase mt-1">Entity state has drifted from root</p>
+                     <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none">Unsaved Changes</p>
+                     <p className="text-[8px] text-white/40 font-bold uppercase mt-1">You have uncommitted edits to your profile</p>
                   </div>
                </div>
                <Button size="sm" onClick={handleUpdateProfile} disabled={loading}>
-                  {loading ? 'Syncing...' : 'Commit Changes'}
+                  {loading ? 'Saving...' : 'Save Changes'}
                </Button>
             </div>
           </motion.div>
@@ -285,7 +285,7 @@ const SettingsPage = () => {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-4xl bg-[var(--color-bg-surface)] rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
               <header className="p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
                  <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
-                   <Sparkles size={18} className="text-blue-500" /> Visual Identity Registry
+                   <Sparkles size={18} className="text-blue-500" /> Choose an Avatar
                  </h3>
                  <Button variant="ghost" size="xs" onClick={() => setIsAvatarModalOpen(false)}><X size={18} /></Button>
               </header>

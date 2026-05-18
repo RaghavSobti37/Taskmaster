@@ -102,7 +102,7 @@ export default function ArtistsCollection() {
 
   const columns = [
     {
-      header: 'Artist Roster Profile',
+      header: 'Artist',
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center text-lg shadow-inner shrink-0 select-none">
@@ -157,11 +157,11 @@ export default function ArtistsCollection() {
       )
     },
     {
-      header: 'Sync Status',
+      header: 'Data Sync',
       render: (row) => (
         <div className="flex items-center gap-2">
           <Badge variant={row.isSynced ? 'success' : 'warning'}>
-            {row.isSynced ? 'LIVE SYNC' : 'NEEDS SYNC'}
+            {row.isSynced ? 'SYNCED' : 'PENDING'}
           </Badge>
           <button
             onClick={(e) => handleSyncArtist(e, row._id)}
@@ -181,13 +181,13 @@ export default function ArtistsCollection() {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title="Artists Roster"
-        subtitle="Manage artist profiles, OAuth keys, and real-time multi-platform data feeds."
+        title="Artists"
+        subtitle="Manage your artists and track their social media growth."
         icon={Users}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
-              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh Feeds
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh Stats
             </Button>
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus size={14} /> Add Artist
@@ -197,7 +197,7 @@ export default function ArtistsCollection() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Roster" value={stats.totalArtists} icon={Users} variant="slate" />
+        <StatCard label="Total Artists" value={stats.totalArtists} icon={Users} variant="slate" />
         <StatCard label="Collective Reach" value={formatNumber(stats.totalReach)} icon={TrendingUp} variant="mint" info="Aggregated followers across Spotify, YouTube, and Instagram." />
         <StatCard label="Spotify Followers" value={formatNumber(stats.totalSpotify)} icon={FaSpotify} variant="info" />
         <StatCard label="YouTube Views" value={formatNumber(stats.totalViews)} icon={FaYoutube} variant="rose" />
@@ -210,7 +210,7 @@ export default function ArtistsCollection() {
             onChange={setActiveTab}
             tabs={[
               { id: 'all', label: 'All Artists' },
-              { id: 'synced', label: 'Synced Feeds' },
+              { id: 'synced', label: 'Synced' },
               { id: 'pending', label: 'Needs API Key' }
             ]}
           />
@@ -249,7 +249,7 @@ export default function ArtistsCollection() {
       <NexusModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New Artist Profile"
+        title="Add Artist"
         showFooter={false}
       >
         <form onSubmit={handleAddArtistSubmit} className="space-y-6">
@@ -303,7 +303,7 @@ export default function ArtistsCollection() {
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-bg-border)]">
             <Button variant="secondary" type="button" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" type="submit">Create Roster Profile</Button>
+            <Button variant="primary" type="submit">Add Artist</Button>
           </div>
         </form>
       </NexusModal>

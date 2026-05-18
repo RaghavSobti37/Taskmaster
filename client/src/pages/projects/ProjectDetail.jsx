@@ -96,14 +96,14 @@ const ProjectDetail = () => {
   };
 
   const tabs = [
-    { id: 'list', label: 'Structured List' },
-    { id: 'kanban', label: 'Kanban Matrix' },
-    { id: 'team', label: 'Personnel' },
-    { id: 'assets', label: 'Resource Assets' },
+    { id: 'list', label: 'Task List' },
+    { id: 'kanban', label: 'Kanban Board' },
+    { id: 'team', label: 'Team Members' },
+    { id: 'assets', label: 'Project Files' },
   ];
 
   if (loading && !project) return <PageSkeleton />;
-  if (!project) return <div className="p-20 text-center">Protocol Error: Entity Not Found.</div>;
+  if (!project) return <div className="p-20 text-center">Project not found.</div>;
 
   return (
     <PageContainer className="!py-4 !space-y-4">
@@ -119,7 +119,7 @@ const ProjectDetail = () => {
               <h1 className="text-lg font-bold tracking-tight uppercase">{project.name}</h1>
             </div>
             <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-              Project Registry: {project._id.substring(0, 8)} • {project.progress}% Complete
+              Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
             </span>
           </div>
         </div>
@@ -172,7 +172,7 @@ const ProjectDetail = () => {
           <div className="flex items-center gap-2 flex-1 max-w-sm">
             <Input 
               icon={Search} 
-              placeholder="Search workflow..." 
+              placeholder="Search tasks..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="!py-1.5 !text-xs"

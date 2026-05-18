@@ -115,7 +115,7 @@ const AdminPanel = () => {
 
   const userColumns = [
     {
-      header: 'User & Security Profile',
+      header: 'User',
       render: (u) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold text-xs select-none">
@@ -185,7 +185,7 @@ const AdminPanel = () => {
           icon={Users} 
           variant="info" 
           subValue="Active" 
-          info="Current total of registered system personnel across all roles."
+          info="Total number of registered user accounts."
         />
         <StatCard 
           label="Total Data" 
@@ -209,7 +209,7 @@ const AdminPanel = () => {
           icon={Zap} 
           variant="slate" 
           subValue="System" 
-          info="Total signals dispatched by the platform communication engine."
+          info="Total number of automated emails sent."
         />
       </div>
 
@@ -379,35 +379,35 @@ const AdminPanel = () => {
         <div className="space-y-8">
            <section>
               <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                 <UserCheck size={14} /> Personnel Data
+                 <UserCheck size={14} /> User Details
               </h3>
               <div className="grid grid-cols-2 gap-6">
                  <Input 
-                   label="Full Identity" 
+                   label="Full Name" 
                    value={editUserData.name || ''} 
                    onChange={e => setEditUserData({...editUserData, name: e.target.value})} 
                  />
                  <Input 
-                   label="Communication Link (Email)" 
+                   label="Email Address" 
                    value={editUserData.email || ''} 
                    onChange={e => setEditUserData({...editUserData, email: e.target.value})} 
                  />
                  <Input 
-                   label="Direct Line (Phone)" 
+                   label="Phone Number" 
                    placeholder="No phone listed" 
                    value={editUserData.phone || ''} 
                    onChange={e => setEditUserData({...editUserData, phone: e.target.value})} 
                  />
                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Access Privilege</label>
+                    <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Role</label>
                     <select 
                       value={editUserData.role || 'user'}
                       onChange={e => setEditUserData({...editUserData, role: e.target.value})}
                       className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
                     >
                        <option value="admin">Administrator</option>
-                       <option value="sales">Sales Executive</option>
-                       <option value="user">General Staff</option>
+                       <option value="sales">Sales Rep</option>
+                       <option value="user">Standard User</option>
                     </select>
                  </div>
               </div>

@@ -165,7 +165,7 @@ const CommandPalette = () => {
                     <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Navigate</span>
                   </div>
                </div>
-               <div className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] italic opacity-50">CoreKnot Nexus Engine</div>
+               <div className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] italic opacity-50">Navigation Menu</div>
             </div>
           </motion.div>
         </div>

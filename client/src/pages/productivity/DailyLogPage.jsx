@@ -206,7 +206,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
            {/* Activity Grid */}
            <Card className="p-4">
               <div className="flex items-center justify-between mb-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Yearly Activity</h4>
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Grid</h4>
                  <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Less</span>
                     <div className="flex gap-1">
@@ -234,7 +234,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                 <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                   <Activity size={14} className="text-blue-500" /> Work History
                 </h3>
-                <Badge variant="slate">{dailyLogs.length} ENTRIES</Badge>
+                <Badge variant="slate">{dailyLogs.length} LOGS</Badge>
              </div>
              
              <div className="p-6 space-y-4">
@@ -387,7 +387,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </form>
       </InputFormDrawer>
 
-      <NexusModal isOpen={createLogMutation.isSuccess} onClose={() => createLogMutation.reset()} title="Logged Successfully" message="Your work has been recorded." type="success" />
+      <NexusModal isOpen={createLogMutation.isSuccess} onClose={() => createLogMutation.reset()} title="Work Logged" message="Your work has been saved successfully." type="success" />
     </PageContainer>
   );
 };

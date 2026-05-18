@@ -9,6 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationTray from './NotificationTray';
 import CommandPalette from './CommandPalette';
+import HelpBugButton from './HelpBugButton';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
@@ -41,11 +42,13 @@ const MainLayout = () => {
       {!isMobileOpen && (
         <button 
           onClick={toggleMobileSidebar}
-          className="fixed bottom-6 right-6 z-50 p-4 bg-[var(--color-action-primary)] text-white rounded-2xl shadow-2xl shadow-blue-500/40 lg:hidden active:scale-95 transition-transform"
+          className="fixed bottom-6 right-24 z-50 p-4 bg-[var(--color-action-primary)] text-white rounded-2xl shadow-2xl shadow-blue-500/40 lg:hidden active:scale-95 transition-transform"
         >
           <Menu size={24} />
         </button>
       )}
+
+      <HelpBugButton />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[180px]">

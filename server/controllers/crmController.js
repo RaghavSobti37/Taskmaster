@@ -14,7 +14,7 @@ const ALLOWED_LEAD_FIELDS = [
   'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
   'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
   'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime',
-  'emailStatus', 'tags'
+  'emailStatus', 'tags', 'source', 'notes', 'setReminder'
 ];
 const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
 
@@ -56,12 +56,10 @@ const assignLeadToRep = async () => {
 exports.getLeads = async (req, res) => {
   try {
     let query = {};
-    // Security: Non-admins can only see their own assigned leads
     if (req.user.role !== 'admin') {
       query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
     }
 
-    // Search
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search, 'i');
       query.$or = [
@@ -71,9 +69,9 @@ exports.getLeads = async (req, res) => {
       ];
     }
 
-    // Filters
     if (req.query.leadQuality && req.query.leadQuality !== 'all') query.leadQuality = req.query.leadQuality;
     if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
+    if (req.query.source && req.query.source !== 'all') query.source = req.query.source;
     
     if (req.query.leadStatus && req.query.leadStatus !== 'all') {
       if (req.query.leadStatus === 'Fresh') {
@@ -145,7 +143,7 @@ exports.getLeads = async (req, res) => {
           webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
           artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
-          remarks: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
+          remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,
           'assignedRep.name': 1, 'assignedRep.email': 1, 'assignedRep.avatar': 1
         }
@@ -560,7 +558,12 @@ exports.exportLeads = async (req, res) => {
 
 exports.getCRMStats = async (req, res) => {
   try {
+    const matchStage = req.user.role !== 'admin' 
+      ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) } 
+      : {};
+
     const stats = await Lead.aggregate([
+      { $match: matchStage },
       {
         $facet: {
           total: [{ $count: "count" }],
@@ -605,6 +608,48 @@ exports.getCRMStats = async (req, res) => {
   }
 };
 
+exports.getFollowups = async (req, res) => {
+  try {
+    const query = { nextFollowupDate: { $exists: true, $ne: '' } };
+    if (req.user.role !== 'admin') {
+      query.assignedRepId = req.user._id;
+    }
+    const leads = await Lead.find(query).populate('assignedRepId', 'name avatar').sort({ nextFollowupDate: 1 }).lean();
+    const followups = leads.map(l => ({
+      ...l,
+      date: l.nextFollowupDate,
+      time: l.nextFollowupTime,
+      status: l.callStatus === 'Connected' || l.leadStatus === 'Converted' ? 'Completed' : 'Pending',
+      assignedRep: l.assignedRepId
+    }));
+    res.json(followups);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch followups' });
+  }
+};
+
+exports.addNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: 'Note text is required' });
+
+    const lead = await Lead.findByIdAndUpdate(id, {
+      $push: {
+        notes: {
+          text: text.trim(),
+          author: req.user.name || req.user.email,
+          date: new Date()
+        }
+      }
+    }, { new: true });
+
+    res.json(lead);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add note' });
+  }
+};
+
 /**
  * Retrieves CRM configurations dynamically from database distinct fields and CRMConfig schema.
  * @param {Object} req - Express request object
@@ -612,12 +657,13 @@ exports.getCRMStats = async (req, res) => {
  */
 exports.getCRMConfig = async (req, res) => {
   try {
-    const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses] = await Promise.all([
+    const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses, sources] = await Promise.all([
       Lead.distinct('callStatus'),
       Lead.distinct('leadStatus'),
       Lead.distinct('artistType'),
       Lead.distinct('webinarDates'),
-      Lead.distinct('meaningfulConnect')
+      Lead.distinct('meaningfulConnect'),
+      Lead.distinct('source')
     ]);
 
     let configDoc = await CRMConfig.findOne({ configKey: 'default' });
@@ -638,6 +684,7 @@ exports.getCRMConfig = async (req, res) => {
       artistTypes: Array.from(new Set([...artistTypes.filter(Boolean), ...configDoc.artistTypes])),
       webinarDates: webinarDates.filter(Boolean),
       meaningfulConnectStatuses: Array.from(new Set([...meaningfulConnectStatuses.filter(Boolean), ...configDoc.meaningfulConnectStatuses])),
+      sources: Array.from(new Set([...sources.filter(Boolean), 'Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'])),
       qualities: configDoc.qualities
     };
 

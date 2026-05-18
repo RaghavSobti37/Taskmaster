@@ -39,31 +39,28 @@ import { useTheme } from '../contexts/ThemeContext';
 
 const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: undefined,
+    height: undefined,
   });
 
   useEffect(() => {
-    const handleResize = () => {
+    function handleResize() {
       setWindowSize({
         width: window.innerWidth,
         height: window.innerHeight,
       });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    }
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
-
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, collapsed, onClick, isMobile, count, todayCount, onMouseEnter, onFocus }) => (
+const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick }) => (
   <NavLink
     to={to}
     onClick={onClick}
-    onMouseEnter={onMouseEnter}
-    onFocus={onFocus}
     className={({ isActive }) => `
       flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
       ${isActive
@@ -247,28 +244,28 @@ const OutletSidebar = () => {
         </div>
 
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
-          <NavItem 
-            to="/" 
-            icon={LayoutDashboard} 
-            label="Dashboard" 
-            collapsed={false} 
-            isMobile={isMobile} 
+          <NavItem
+            to="/"
+            icon={LayoutDashboard}
+            label="Dashboard"
+            collapsed={false}
+            isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
           />
-          <NavItem 
-            to="/projects" 
-            icon={Briefcase} 
-            label="Projects" 
-            collapsed={false} 
+          <NavItem
+            to="/projects"
+            icon={Briefcase}
+            label="Projects"
+            collapsed={false}
             isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
           />
-          <NavItem 
-            to="/assets" 
-            icon={Layers} 
-            label="Assets" 
-            collapsed={false} 
-            isMobile={isMobile} 
+          <NavItem
+            to="/assets"
+            icon={Layers}
+            label="Assets"
+            collapsed={false}
+            isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
           />
 
@@ -298,11 +295,11 @@ const OutletSidebar = () => {
 
           {(user?.role === 'admin' || user?.role === 'sales') && (
             <div className="space-y-1">
-              <NavItem 
-                to="/leads" 
-                icon={Users} 
-                label="Leads" 
-                collapsed={false} 
+              <NavItem
+                to="/leads"
+                icon={Users}
+                label="Leads"
+                collapsed={false}
                 isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
               />
@@ -321,23 +318,23 @@ const OutletSidebar = () => {
 
           {user?.role === 'admin' && (
             <div className="space-y-1">
-              <NavItem 
-                to="/admin" 
-                icon={ShieldCheck} 
-                label="Admin Panel" 
-                collapsed={false} 
-                isMobile={isMobile} 
+              <NavItem
+                to="/admin"
+                icon={ShieldCheck}
+                label="Admin Panel"
+                collapsed={false}
+                isMobile={isMobile}
                 onMouseEnter={() => {
                   queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
                   queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
                 }}
               />
-              <NavItem 
-                to="/artists" 
-                icon={Users} 
-                label="Artists" 
-                collapsed={false} 
-                isMobile={isMobile} 
+              <NavItem
+                to="/artists"
+                icon={Users}
+                label="Artists"
+                collapsed={false}
+                isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
               />
             </div>

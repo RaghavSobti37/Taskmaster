@@ -143,6 +143,8 @@ sequenceDiagram
 | `/api/crm/leads` | POST | CRMLeadModal | Create a new lead |
 | `/api/crm/leads/:id` | PUT | CRMPage, CRMLeadModal | Update lead status/priority |
 | `/api/crm/leads/upload` | POST | CRMPage | Import leads from CSV |
+| `/api/crm/followups` | GET | FollowupsPage, Sidebar | Fetch follow-ups schedule |
+| `/api/crm/leads/:id/notes` | POST | LeadsPage | Add interaction note / timeline entry |
 | `/api/crm/imports` | GET | AdminPanel | List CRM import history |
 | `/api/crm/imports/:id` | DELETE | AdminPanel | Delete an import batch |
 

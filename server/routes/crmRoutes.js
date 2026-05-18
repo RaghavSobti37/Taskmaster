@@ -36,12 +36,16 @@ router.post('/sync-bookings', require('../controllers/syncController').syncBooki
 
 router.delete('/leads/cleanup-test-data', crmController.cleanupTestData);
 
+router.get('/followups', crmController.getFollowups);
+
 router.route('/leads')
   .get(crmController.getLeads)
   .post(crmController.createLead);
 
 router.route('/leads/:id')
   .put(checkLock(Lead), crmController.updateLead);
+
+router.post('/leads/:id/notes', crmController.addNote);
 
 router.route('/leads/:leadId/emis')
   .get(crmController.getEmis)

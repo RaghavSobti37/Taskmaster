@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.2.1
+# ⚡ Taskmaster v1.3.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -25,7 +25,10 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **📝 Daily Logs & Auditing**: Precision work logging with project tagging and automated performance reporting. 
 
 ### 📈 Customer Relationship Management (CRM)
-- **Advanced Lead Routing**: Comprehensive lead tracking (New/Hot/Warm), bulk CSV imports with checksum deduplication, and automated follow-ups.
+- **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports with checksum deduplication, and automated follow-ups.
+- **Interactive Interaction & Notes Stream**: Persistent timeline tracking of sales remarks, custom touchpoint notes, and planned action items.
+- **Overdue Alerts & Follow-up Reminders**: Scheduled reminders with overdue visual indicators and rep-specific schedule views.
+- **Role-Based Data Isolation**: Automatic user-level data segregation where sales professionals view their specific assigned leads and performance analytics, while administrators oversee full organizational metrics.
 - **Team-Based Assignment**: Automatic "Least-Loaded" representative assignment distributing leads evenly across active sales teams.
 - **CRM Audit Trails**: Immutable tracking of lead modifications via the `CRMAudit` collection, ensuring accountability and full data provenance.
 

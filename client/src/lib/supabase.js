@@ -9,6 +9,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Subscribe to realtime broadcast events on a channel
  */
 export const subscribeToChannel = (channelName, event, callback) => {
+  if (supabaseUrl.includes('xyzcompany')) {
+    return () => {};
+  }
+
   const channel = supabase.channel(channelName)
     .on('broadcast', { event }, (message) => {
       callback(message.payload);

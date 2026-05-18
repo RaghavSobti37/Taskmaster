@@ -37,11 +37,18 @@ const LeadSchema = new mongoose.Schema({
   callStatus: { type: String, default: 'Pending' }, // Connected, Busy, DNP, etc.
   leadStatus: { type: String, default: 'New' }, // Cold, Warm, Hot, Converted, etc.
   remarks: { type: String },
+  notes: [{
+    text: { type: String, required: true },
+    author: { type: String, required: true },
+    date: { type: Date, default: Date.now }
+  }],
+  source: { type: String, default: 'Organic / Direct', index: true },
   planOption: { type: String }, // One-Time, 3 Mo, 6 Mo, 9 Mo
   
   // Followup Protocols
   nextFollowupDate: { type: String },
   nextFollowupTime: { type: String },
+  setReminder: { type: Boolean, default: false },
   
   // Internal Assignment & Metadata
   assignedRepId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }, // Ref to User model

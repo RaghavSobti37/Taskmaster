@@ -52,6 +52,7 @@
   --card: #FFFFFF;
   --border: #E2E8F0;
   --ring: rgba(26, 115, 232, 0.2);
+  color-scheme: light;
 }
 
 .dark {
@@ -83,6 +84,12 @@
   --card: #111827;
   --border: #1F2937;
   --input: #1F2937;
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 @layer base {

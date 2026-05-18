@@ -1,58 +1,10 @@
 const nodemailer = require('nodemailer');
-const { Queue, Worker } = require('bullmq');
-const IORedis = require('ioredis');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
 const Lead = require('../models/Lead');
 const MailEvent = require('../models/MailEvent');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
-
-const redisConfig = {
-  host: process.env.REDIS_HOST || '127.0.0.1',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null
-};
-
-const connection = new IORedis(redisConfig.port, redisConfig.host, {
-  lazyConnect: true,
-  retryStrategy(times) {
-    if (times > 3) {
-      return null;
-    }
-    return Math.min(times * 100, 1000);
-  }
-});
-
-connection.on('error', (err) => {});
-
-let emailQueue;
-let emailWorker;
-let useBullMQ = false;
-
-connection.connect().then(() => {
-  useBullMQ = true;
-  console.log('[Queue] Redis connected successfully. Initializing BullMQ.');
-  emailQueue = new Queue('mail-dispatch-queue', { connection });
-  
-  emailWorker = new Worker('mail-dispatch-queue', async job => {
-    return await processEmailJob(job.data);
-  }, { 
-    connection,
-    concurrency: 5,
-    limiter: { max: 10, duration: 1000 }
-  });
-
-  emailWorker.on('completed', job => {
-    console.log(`[Queue] Job ${job.id} completed.`);
-  });
-  emailWorker.on('failed', (job, err) => {
-    console.error(`[Queue] Job ${job?.id} failed:`, err);
-  });
-}).catch(err => {
-  console.log('[Queue] Redis not reachable on Windows host. Using robust async In-Memory Queue fallback.');
-  useBullMQ = false;
-});
 
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
@@ -66,7 +18,7 @@ const processMemoryQueue = async () => {
     try {
       await processEmailJob(jobData);
     } catch (err) {
-      console.error('[Queue Fallback] Job failed:', err);
+      console.error('[Memory Queue] Job failed:', err);
     }
     await new Promise(res => setTimeout(res, 100));
   }
@@ -155,7 +107,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       });
       messageIdStr = info.messageId;
     } else {
-      console.log(`[Queue Simulation] Simulated dispatch to ${email}`);
+      console.log(`[Memory Queue] Simulated dispatch to ${email}`);
     }
 
     const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString());
@@ -217,7 +169,6 @@ const dispatchCampaignJobs = async (campaignId) => {
 
   let recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
   if (recipients.length === 0 && (campaign.recipients || []).length > 0) {
-    // Reset all recipients back to Pending to allow testing re-dispatch
     for (const r of campaign.recipients) {
       r.status = 'Pending';
       delete r.error;
@@ -242,16 +193,12 @@ const dispatchCampaignJobs = async (campaignId) => {
 
     const triggered = await triggerEmailCampaign(jobData);
     if (!triggered) {
-      if (useBullMQ && emailQueue) {
-        await emailQueue.add('send-email', jobData, { removeOnComplete: true, removeOnFail: false });
-      } else {
-        memoryQueue.push(jobData);
-      }
+      memoryQueue.push(jobData);
     }
   }
   await campaign.save();
 
-  if (!useBullMQ && (!process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key')) {
+  if (!process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key') {
     processMemoryQueue();
   }
 

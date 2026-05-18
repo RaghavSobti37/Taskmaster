@@ -80,8 +80,18 @@ exports.createTask = async (req, res, next) => {
 exports.getTasks = async (req, res, next) => {
   try {
     const { projectId } = req.query;
-    const filter = { createdBy: req.user._id };
-    if (projectId) filter.projectId = projectId;
+    const filter = {};
+
+    if (projectId) {
+      filter.projectId = projectId;
+    } else {
+      if (req.user.role !== 'admin') {
+        filter.$or = [
+          { createdBy: req.user._id },
+          { assignees: req.user._id }
+        ];
+      }
+    }
 
     const tasks = await Task.find(filter)
       .select('title status priority projectId assignees progress dueDate')

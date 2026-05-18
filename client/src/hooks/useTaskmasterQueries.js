@@ -275,6 +275,26 @@ export const useCreateLog = () => {
   });
 };
 
+export const useUpdateLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/logs/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+    }
+  });
+};
+
+export const useDeleteLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/logs/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+    }
+  });
+};
+
 export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -486,6 +506,17 @@ export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/users/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });

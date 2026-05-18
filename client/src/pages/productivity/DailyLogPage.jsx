@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  useLogs, useProjects, useTasks, useUserDirectory, useCreateLog, useActivityGrid 
+  useLogs, useProjects, useTasks, useUserDirectory, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
 
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
@@ -26,6 +26,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [timeSpent, setTimeSpent] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const [editingLogId, setEditingLogId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editMessage, setEditMessage] = useState('');
+  const [editTimeSpent, setEditTimeSpent] = useState('');
+  const [editProject, setEditProject] = useState('');
 
   const targetUserId = adminViewUserId || searchParams.get('user') || user?._id;
 
@@ -41,6 +47,44 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const targetUserName = adminViewUserName || targetUser?.name || '';
 
   const createLogMutation = useCreateLog();
+  const updateLogMutation = useUpdateLog();
+  const deleteLogMutation = useDeleteLog();
+
+  const handleStartEdit = (log) => {
+    setEditingLogId(log._id);
+    setEditTitle(log.details?.title || '');
+    setEditMessage(log.details?.message || '');
+    setEditTimeSpent(log.details?.timeSpent || '');
+    setEditProject(log.details?.project || '');
+  };
+
+  const handleSaveEdit = async (logId) => {
+    try {
+      await updateLogMutation.mutateAsync({
+        id: logId,
+        data: {
+          details: {
+            title: editTitle,
+            message: editMessage,
+            timeSpent: editTimeSpent,
+            project: editProject
+          }
+        }
+      });
+      setEditingLogId(null);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update log');
+    }
+  };
+
+  const handleDeleteLog = async (logId) => {
+    if (!window.confirm('Are you sure you want to delete this log?')) return;
+    try {
+      await deleteLogMutation.mutateAsync(logId);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete log');
+    }
+  };
 
   const handleDateChange = (days) => {
     const nextDate = new Date(selectedDate);
@@ -200,31 +244,66 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                      <p className="text-xs font-black uppercase tracking-widest">No activity recorded for this date</p>
                   </div>
                 ) : (
-                  dailyLogs.map((log, idx) => (
-                    <motion.div 
-                      key={log._id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="group p-4 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-[var(--color-action-primary)]/30 transition-all flex gap-4"
-                    >
-                       <div className="flex-1 space-y-2">
-                          <div className="flex items-center justify-between">
-                             <div className="flex items-center gap-3">
-                                <span className="text-xs font-black uppercase tracking-tight">{log.details?.title}</span>
-                                <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
-                             </div>
-                             <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
-                                <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
-                                <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 ml-2">
-                                   {log.details?.timeSpent || '0m'}
-                                </span>
-                             </div>
-                          </div>
-                          <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{log.details?.message}</p>
-                       </div>
-                    </motion.div>
-                  ))
+                  dailyLogs.map((log, idx) => {
+                    const isEditable = isSameDay(new Date(log.createdAt), new Date()) || user?.role === 'admin';
+                    if (editingLogId === log._id) {
+                      return (
+                        <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-2xl space-y-4">
+                           <div className="grid grid-cols-2 gap-4">
+                              <Input label="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} size="sm" />
+                              <div className="space-y-1">
+                                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Time</label>
+                                 <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={editTimeSpent} onChange={setEditTimeSpent} placeholder="Time" />
+                              </div>
+                           </div>
+                           <textarea 
+                             value={editMessage} 
+                             onChange={e => setEditMessage(e.target.value)}
+                             className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[80px]"
+                           />
+                           <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="xs" onClick={() => setEditingLogId(null)}>Cancel</Button>
+                              <Button size="xs" onClick={() => handleSaveEdit(log._id)} disabled={updateLogMutation.isPending}>Save</Button>
+                           </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <motion.div 
+                        key={log._id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="group p-4 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-[var(--color-action-primary)]/30 transition-all flex gap-4 relative overflow-hidden"
+                      >
+                         <div className="flex-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <span className="text-xs font-black uppercase tracking-tight">{log.details?.title}</span>
+                                  <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
+                               </div>
+                               <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
+                                  <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
+                                  <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 ml-2">
+                                     {log.details?.timeSpent || '0m'}
+                                  </span>
+                                  {isEditable && (
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-2">
+                                      <Button variant="ghost" size="xs" className="!p-1 text-blue-400 hover:bg-blue-500/10" onClick={() => handleStartEdit(log)}>
+                                        <Edit2 size={12} />
+                                      </Button>
+                                      <Button variant="ghost" size="xs" className="!p-1 text-rose-400 hover:bg-rose-500/10" onClick={() => handleDeleteLog(log._id)}>
+                                        <Trash2 size={12} />
+                                      </Button>
+                                    </div>
+                                  )}
+                               </div>
+                            </div>
+                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{log.details?.message}</p>
+                         </div>
+                      </motion.div>
+                    );
+                  })
                 )}
              </div>
           </Card>

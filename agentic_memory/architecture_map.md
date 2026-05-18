@@ -110,8 +110,8 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 | **Projects** | Organize work into projects | Contains tasks, members, and teams |
 | **Workflow Canvas**| Node-based visual process builder | High-density drag-and-drop workflow architecting |
 | **Admin Panel** | Manage users, teams, CRM, and mail | Multi-tab UI for root administration |
-| **Daily Logs** | Time tracking + work entries | Manual work entries with goal progress tracking |
-| **CRM (Leads)** | Lead/contact management | CSV import, status tracking, representative assignment |
+| **Daily Logs** | Time tracking + work entries | Manual work entries with same-day edit/delete constraints |
+| **CRM (Leads)** | Lead/contact management | CSV import, status tracking, representative assignment, Google Sheets Service Account sync |
 | **CRM (Followups)** | Scheduled sales calls | Tabbed view of Today, Overdue, and Upcoming followups |
 | **Assets** | Project resource links & files | UploadThing integration for direct file storage |
 | **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |

@@ -4,7 +4,7 @@ const path = require('path');
 const csv = require('csv-parser');
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Models
 const User = require('../models/User');
@@ -75,6 +75,7 @@ const importLeads = async () => {
           callStatus: row.callStatus,
           leadStatus: row.leadStatus,
           remarks: row.remarks,
+          source: row.webinarDates ? `Webinar - ${row.webinarDates}` : 'Organic / Direct',
           planOption: row.planOption,
           nextFollowupDate: row.nextFollowupDate,
           nextFollowupTime: row.nextFollowupTime,

@@ -4,11 +4,11 @@ const { getSpotifyAccessToken } = require('./spotifyTokenManager');
 const fetchLiveAnalytics = async (artist) => {
   const spotifyArtistId = artist.oauthCredentials?.spotify?.artistId || '6L88xirodmbWYoZuvseUnc';
   const youtubeChannelId = artist.oauthCredentials?.youtube?.channelId || 'UCgRciTp6cVLeuHWe3jte_aQ';
-  const metaAccountId = artist.oauthCredentials?.meta?.igAccountId || '78345277076';
+  const metaAccountId = artist.oauthCredentials?.meta?.igAccountId || process.env.META_DEFAULT_IG_ID || '17841405536118240';
 
   const spotifyClientId = process.env.SPOTIFY_CLIENT_ID || "a00df9460cd5450b9e5fa6b672ddd458";
   const youtubeApiKey = process.env.YOUTUBE_API_KEY || "AIzaSyBT6YIoVSa0HKdHn9s3ZyYgMlutT2dzrGc";
-  const metaUserToken = artist.oauthCredentials?.meta?.accessToken || process.env.META_USER_TOKEN || "1681483182978051|THl2_o8w5ZadHDCpYBJDO2UsOrE";
+  const metaUserToken = artist.oauthCredentials?.meta?.accessToken || process.env.META_USER_TOKEN;
 
   const [spotifyRes, youtubeRes, metaRes] = await Promise.allSettled([
     // 1. Spotify Web API Pipeline
@@ -99,7 +99,7 @@ const fetchLiveAnalytics = async (artist) => {
 
       try {
         const mediaRes = await axios.get(
-          `https://graph.facebook.com/v19.0/${metaAccountId}/media?fields=id,caption,media_type,like_count,comments_count,shares,saves,permalink&access_token=${metaUserToken}`,
+          `https://graph.facebook.com/v20.0/${metaAccountId}/media?fields=id,caption,media_type,like_count,comments_count,permalink&access_token=${metaUserToken}`,
           { timeout: 10000 }
         );
         mediaData = mediaRes.data;
@@ -109,7 +109,7 @@ const fetchLiveAnalytics = async (artist) => {
 
       try {
         const infoRes = await axios.get(
-          `https://graph.facebook.com/v19.0/${metaAccountId}?fields=followers_count&access_token=${metaUserToken}`,
+          `https://graph.facebook.com/v20.0/${metaAccountId}?fields=followers_count&access_token=${metaUserToken}`,
           { timeout: 5000 }
         );
         if (infoRes.data?.followers_count != null) followersCount = infoRes.data.followers_count;

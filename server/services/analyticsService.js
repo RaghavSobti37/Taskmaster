@@ -8,7 +8,7 @@ const fetchLiveAnalytics = async (artist) => {
 
   const spotifyClientId = process.env.SPOTIFY_CLIENT_ID || "a00df9460cd5450b9e5fa6b672ddd458";
   const youtubeApiKey = process.env.YOUTUBE_API_KEY || "AIzaSyBT6YIoVSa0HKdHn9s3ZyYgMlutT2dzrGc";
-  const metaUserToken = process.env.META_USER_TOKEN || "1681483182978051|THl2_o8w5ZadHDCpYBJDO2UsOrE";
+  const metaUserToken = artist.oauthCredentials?.meta?.accessToken || process.env.META_USER_TOKEN || "1681483182978051|THl2_o8w5ZadHDCpYBJDO2UsOrE";
 
   const [spotifyRes, youtubeRes, metaRes] = await Promise.allSettled([
     // 1. Spotify Web API Pipeline

@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.6.0
+# ⚡ Taskmaster v1.7.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -44,6 +44,7 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **📅 Smart Calendar**: Persistent MongoDB-backed calendar with Public/Private visibility scopes and two-way Google Calendar OAuth2 synchronization.
 - **🎵 Artists Hub**: Multi-platform analytics dashboard hydrating live feeds from Spotify, YouTube, and Meta.
 - **📎 Edge Assets**: Project-scoped resource management utilizing UploadThing for direct edge-based file storage.
+- **🛡️ Legal & Compliance**: Automated public compliance pages (`/privacy` and `/userdata`) fulfilling Meta, Google, and GDPR data sovereignty mandates.
 
 ---
 

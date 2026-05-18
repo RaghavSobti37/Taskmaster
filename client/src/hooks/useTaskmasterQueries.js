@@ -382,6 +382,17 @@ export const useUpdateLead = () => {
   });
 };
 
+export const useCreateLead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newLead) => axios.post('/api/crm/leads', newLead),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+    }
+  });
+};
+
 // Admin Queries
 export const useTeams = () => {
   return useQuery({

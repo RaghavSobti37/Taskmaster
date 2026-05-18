@@ -35,6 +35,7 @@
 - [x] **CRM batch import/delete with audit trail**
 - [x] **Asset CRUD with project linking**
 - [x] **Persistent Calendar system** with role-based visibility (Public/Private)
+- [x] **Master Data Cleaning & Purge Engine**: High-performance in-memory deduplication and nameless/emailless automated purge tools (`import_ultimate_master.js`, `purge_nameless_emailless.js`).
 
 ## UI Language Cleanup — Status
 

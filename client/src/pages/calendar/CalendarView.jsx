@@ -226,9 +226,9 @@ const CalendarView = () => {
                             </span>
                          </div>
                          <div className="space-y-1">
-                            {dayEvents.map(event => (
+                            {dayEvents.map((event, eIdx) => (
                               <div 
-                                key={event._id}
+                                key={`${event._id}_${eIdx}`}
                                 className={`px-1.5 py-0.5 text-[8px] font-black uppercase truncate border rounded-sm flex items-center gap-1 cursor-pointer hover:scale-[1.02] transition-transform
                                   ${event.type === 'holiday' ? 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border-[var(--color-pastel-rose-text)]/20' :
                                     event.visibility === 'public' ? 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border-[var(--color-pastel-mint-text)]/20' :

@@ -31,7 +31,6 @@ const UnsubscribePage = lazy(() => import('./pages/Unsubscribe'));
 const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
 const WorkflowCanvas = lazy(() => import('./pages/productivity/WorkflowCanvas'));
 const OfficeAssetsPage = lazy(() => import('./pages/office/OfficeAssetsPage'));
-const ContactsPage = lazy(() => import('./pages/office/ContactsPage'));
 
 function App() {
   const { loading } = useAuth();
@@ -59,7 +58,6 @@ function App() {
               <Route path="logs" element={<DailyLogPage />} />
               <Route path="assets" element={<AssetsPage />} />
               <Route path="office-assets" element={<OfficeAssetsPage />} />
-              <Route path="contacts" element={<ContactsPage />} />
               <Route path="leads" element={<LeadsPage />} />
               <Route path="followups" element={<FollowupsPage />} />
               <Route path="features" element={<FeaturesPage />} />

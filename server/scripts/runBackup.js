@@ -3,7 +3,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const googleSheetsService = require('../services/googleSheetsService');
+const holySheetService = require('../services/holySheetService');
 const csvBackupService = require('../services/csvBackupService');
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -12,8 +12,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(async () => {
   console.log('Connected to MongoDB. Starting manual backup...');
   
-  console.log('Backing up to Google Sheets...');
-  await googleSheetsService.backupAllLeads();
+  console.log('Backing up to HolySheet...');
+  await holySheetService.backupAllLeads();
   
   console.log('Backing up to leads.csv...');
   csvBackupService.backupAllLeadsToCsv();

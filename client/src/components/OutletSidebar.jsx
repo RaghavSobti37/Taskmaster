@@ -273,18 +273,13 @@ const OutletSidebar = () => {
           <NavItem
             to="/office-assets"
             icon={Building2}
-            label="Office Assets"
+            label="Office & Contacts"
             collapsed={false}
             isMobile={isMobile}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data })}
-          />
-          <NavItem
-            to="/contacts"
-            icon={Contact}
-            label="Contacts"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data })}
+            onMouseEnter={() => {
+              queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
+              queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
+            }}
           />
 
           <NavItem

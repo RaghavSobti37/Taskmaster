@@ -178,7 +178,7 @@ export const InfoButton = ({ text }) => {
   );
 };
 
-export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, children }) => {
+export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, children, onClick, className = '' }) => {
   const variants = {
     info: 'border-[var(--color-pastel-blue-text)]/20 bg-[var(--color-pastel-blue-bg)] text-[var(--color-pastel-blue-text)]',
     mint: 'border-[var(--color-pastel-mint-text)]/20 bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)]',
@@ -188,7 +188,10 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
   };
 
   return (
-    <Card className={`p-3 flex flex-col gap-2 !rounded-[var(--radius-atomic)] border-l-2 ${variants[variant]} h-full`}>
+    <Card 
+      onClick={onClick} 
+      className={`p-3 flex flex-col gap-2 !rounded-[var(--radius-atomic)] border-l-2 ${variants[variant]} ${onClick ? 'cursor-pointer hover:border-[var(--color-action-primary)]/50 active:scale-[0.99] transition-transform' : ''} h-full ${className}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 opacity-70">
           <Icon size={12} strokeWidth={2.5} />

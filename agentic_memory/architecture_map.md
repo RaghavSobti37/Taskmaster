@@ -118,7 +118,7 @@ The system implements a high-density "Pro-Max" design standard focusing on effic
 | **Admin Panel** | Manage users, teams, CRM, and mail | Multi-tab UI for root administration |
 | **Daily Logs** | Time tracking + work entries | Manual work entries with same-day edit/delete constraints |
 | **CRM (Leads)** | Lead/contact management | CSV import, status tracking, representative assignment, Google Sheets Service Account sync |
-| **CRM (Followups)** | Scheduled sales calls | Tabbed view of Today, Overdue, and Upcoming followups |
+| **CRM (Followups)** | Scheduled sales calls | Tabbed view (Today, Overdue, Upcoming), instant checkbox completion, native date/time pickers |
 | **Assets** | Project resource links & files | UploadThing integration for direct file storage |
 | **Calendar** | Event scheduling | Internal DB persistence + Google Calendar sync |
 | **Artists Hub** | Roster & Live Analytics | Tracks multi-platform API feeds (Spotify, YouTube, Meta) with `isSynced` linking model |

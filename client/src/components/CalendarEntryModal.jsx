@@ -103,8 +103,11 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
               type="date" 
               min={new Date().toISOString().split('T')[0]}
               value={date}
+              onClick={e => e.target.showPicker && e.target.showPicker()}
+              onFocus={e => e.target.showPicker && e.target.showPicker()}
+              onKeyDown={e => e.preventDefault()}
               onChange={e => setDate(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
               required
             />
           </div>

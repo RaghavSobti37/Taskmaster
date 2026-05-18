@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.5.1
+# ⚡ Taskmaster v1.5.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -27,6 +27,7 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 
 ### 📈 Customer Relationship Management (CRM)
 - **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports, and real-time bidirectional synchronization with HolySheet API.
+- **Interactive Follow-up Schedule & Mark as Done**: Checkbox-driven instant follow-up completion from table or modal view with automatic timestamp logging and pipeline advancement. Native date/time picker enforcement across all schedule entry fields.
 - **Interactive Interaction & Notes Stream**: Persistent timeline tracking of sales remarks, custom touchpoint notes, and planned action items.
 - **Overdue Alerts & Follow-up Reminders**: Scheduled reminders with overdue visual indicators and rep-specific schedule views.
 - **Role-Based Data Isolation**: Automatic user-level data segregation where sales professionals view their specific assigned leads and performance analytics, while administrators oversee full organizational metrics.

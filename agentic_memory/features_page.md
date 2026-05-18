@@ -10,10 +10,10 @@
 - [x] **Daily Logs**: Time tracking, project tagging, quick test fill, daily goal progress
 - [x] **Admin Logs**: Filter by user + date range, activity matrix visualization
 - [x] **Team Chat**: Channels, mentions, file attach, task creation from messages
-- [x] **CRM**: Lead table, CSV import, priority dots, status badges, lead modal
+- [x] **CRM**: Lead table, CSV import, priority dots, status badges, lead modal, native date/time pickers
 - [x] **Assets**: Project-scoped links (max 3), add/delete with modal confirmations
-- [x] **Calendar**: Monthly view, internal event persistence, visibility toggles (Public/Private), holiday integration
-- [x] **Follow-ups**: Tabbed CRM follow-up view (Today, Overdue, Upcoming), automated reminders, clickable stat cards, and lead modal integration.
+- [x] **Calendar**: Monthly view, internal event persistence, visibility toggles (Public/Private), holiday integration, native date picker
+- [x] **Follow-ups**: Checkbox-driven instant follow-up completion from table or modal view, automated reminders, clickable stat cards, and lead modal integration with native date/time pickers.
 - [x] **Artists**: High-fidelity profiles (Harshad & Duhita, Yugm, Mohit Shankar), live API syncing (`isSynced` linking model), default N/A states with step-by-step layman ID linking tooltips across Spotify, YouTube, and Meta.
 - [x] **Todo/Task Management**: Synchronized Protocol Log (TodoPage) with backend Task model and Project associations.
 - [x] **Settings**: Profile editing, avatar upload, theme toggle, and 30% scaled-down high-density UI components.

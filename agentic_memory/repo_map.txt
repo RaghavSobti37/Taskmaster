@@ -16,6 +16,15 @@ client/src
 │   ├── CommandPalette.jsx
 │   ├── crm
 │   │   └── CRMLeadModal.jsx
+│   ├── CsvImporter.jsx
+│   ├── dashboard
+│   │   ├── DailyVelocityCard.jsx
+│   │   ├── index.js
+│   │   ├── ScheduleCard.jsx
+│   │   ├── SquadCard.jsx
+│   │   ├── StatCards.jsx
+│   │   └── TaskTable.jsx
+│   ├── HelpBugButton.jsx
 │   ├── MainLayout.jsx
 │   ├── NotificationTray.jsx
 │   ├── OutletSidebar.jsx
@@ -44,16 +53,19 @@ client/src
 │       ├── primitives.jsx
 │       ├── ProgressRing.jsx
 │       ├── types.js
-│       └── VelocitySparkline.jsx
+│       ├── VelocitySparkline.jsx
+│       └── VisualExplainerModal.jsx
 ├── contexts
 │   ├── AuthContext.jsx
 │   ├── SidebarContext.jsx
-│   └── ThemeContext.jsx
+│   ├── ThemeContext.jsx
+│   └── ToastContext.jsx
 ├── hooks
 │   ├── useDebounce.js
 │   └── useTaskmasterQueries.js
 ├── index.css
 ├── lib
+│   ├── supabase.js
 │   └── utils.js
 ├── main.jsx
 ├── pages
@@ -62,10 +74,7 @@ client/src
 │   │   └── AdminPanel.jsx
 │   ├── artists
 │   │   ├── ArtistDetail.jsx
-│   │   ├── ArtistsCollection.jsx
-│   │   ├── HarshadGolesarPage.jsx
-│   │   ├── MohitShankarPage.jsx
-│   │   └── YugmPage.jsx
+│   │   └── ArtistsCollection.jsx
 │   ├── assets
 │   │   └── AssetsPage.jsx
 │   ├── auth
@@ -74,6 +83,7 @@ client/src
 │   │   └── RegisterPage.jsx
 │   ├── calendar
 │   │   └── CalendarView.jsx
+│   ├── CampaignDetails.jsx
 │   ├── collaboration
 │   │   ├── ChatPage.jsx
 │   │   └── TeamView.jsx
@@ -83,24 +93,32 @@ client/src
 │   ├── Dashboard.jsx
 │   ├── marketing
 │   │   └── FeaturesPage.jsx
+│   ├── office
+│   │   └── OfficeAssetsPage.jsx
 │   ├── productivity
 │   │   ├── DailyLogPage.jsx
-│   │   └── TodoPage.jsx
+│   │   ├── TodoPage.jsx
+│   │   └── WorkflowCanvas.jsx
 │   ├── projects
 │   │   ├── ProjectCreate.jsx
 │   │   ├── ProjectDetail.jsx
 │   │   └── ProjectsView.jsx
-│   └── settings
-│       └── SettingsPage.jsx
+│   ├── settings
+│   │   └── SettingsPage.jsx
+│   └── Unsubscribe.jsx
 └── utils
     ├── crmUtils.js
-    └── notifications.js
+    ├── notifications.js
+    └── uploadthing.js
 
 server
 ├── check_types.js
 ├── config
-│   └── spotifyTokenManager.js
+│   ├── environment.js
+│   ├── supabase.js
+│   └── uploadthing.js
 ├── controllers
+│   ├── analyticsController.js
 │   ├── artistAnalyticsController.js
 │   ├── artistController.js
 │   ├── assetController.js
@@ -109,6 +127,7 @@ server
 │   ├── dashboardController.js
 │   ├── googleController.js
 │   ├── projectController.js
+│   ├── sheetController.js
 │   ├── syncController.js
 │   ├── taskController.js
 │   ├── teamController.js
@@ -126,6 +145,7 @@ server
 ├── middleware
 │   ├── authMiddleware.js
 │   ├── concurrencyMiddleware.js
+│   ├── errorMiddleware.js
 │   ├── lastOnline.js
 │   └── loggerMiddleware.js
 ├── migrate_reps_temp.js
@@ -133,8 +153,12 @@ server
 │   ├── Artist.js
 │   ├── Asset.js
 │   ├── CalendarEvent.js
+│   ├── Campaign.js
+│   ├── Contact.js
 │   ├── CRMAudit.js
+│   ├── CRMConfig.js
 │   ├── CRMImport.js
+│   ├── EmailLog.js
 │   ├── EmailProfile.js
 │   ├── EMI.js
 │   ├── Lead.js
@@ -143,6 +167,7 @@ server
 │   ├── MailEvent.js
 │   ├── Message.js
 │   ├── Notification.js
+│   ├── OfficeAsset.js
 │   ├── Phase.js
 │   ├── plugins
 │   │   └── auditPlugin.js
@@ -154,32 +179,42 @@ server
 ├── package-lock.json
 ├── package.json
 ├── routes
+│   ├── analyticsRoutes.js
 │   ├── artistRoutes.js
 │   ├── assetRoutes.js
 │   ├── authRoutes.js
 │   ├── calendarRoutes.js
+│   ├── campaignRoutes.js
 │   ├── chatRoutes.js
+│   ├── contactRoutes.js
 │   ├── crmRoutes.js
 │   ├── dashboardRoutes.js
 │   ├── googleRoutes.js
 │   ├── logRoutes.js
 │   ├── mailRoutes.js
 │   ├── notificationRoutes.js
+│   ├── officeAssetRoutes.js
 │   ├── projectRoutes.js
 │   ├── sesRoutes.js
 │   ├── taskRoutes.js
 │   ├── teamRoutes.js
+│   ├── track.js
 │   ├── tscRoutes.js
-│   └── userRoutes.js
+│   ├── userRoutes.js
+│   └── webhookRoutes.js
 ├── scratch
 ├── scripts
 │   ├── cleanData.js
+│   ├── cleanTscData.js
+│   ├── enrichCity.js
 │   ├── fix_satyam_and_time.js
 │   ├── importData.js
 │   ├── import_leads.js
 │   ├── map_reps.js
+│   ├── runBackup.js
 │   ├── setupGoogle.js
 │   ├── setup_sales_users.js
+│   ├── testAutomailerAgent.js
 │   └── test_email.js
 ├── seedAdditionalArtists.js
 ├── seedArtist.js
@@ -187,8 +222,14 @@ server
 ├── server.js
 ├── services
 │   ├── analyticsService.js
+│   ├── csvBackupService.js
+│   ├── holySheetService.js
+│   ├── mailDriver.js
 │   ├── mailService.js
-│   └── notificationService.js
+│   ├── notificationService.js
+│   ├── queueService.js
+│   ├── spotifyTokenManager.js
+│   └── triggerService.js
 ├── test_mail_api.js
 ├── updateAvatars.js
 ├── update_harshad.js
@@ -197,8 +238,10 @@ server
 └── utils
     ├── activityLogger.js
     ├── avatarGenerator.js
+    ├── emailTracker.js
     ├── googleAuth.js
     ├── holySheet.js
+    ├── nullishValidator.js
     ├── rollup.js
     └── sanitizer.js
 

@@ -12,18 +12,22 @@ const HEADERS = [
 ];
 
 function getAuthClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   let key = process.env.GOOGLE_PRIVATE_KEY;
   if (!email || !key || email.includes('your-service-account')) {
     return null;
   }
+  if (email.startsWith('"') && email.endsWith('"')) email = email.slice(1, -1);
+  if (key.startsWith('"') && key.endsWith('"')) key = key.slice(1, -1);
   key = key.replace(/\\n/g, '\n');
-  return new google.auth.JWT(
-    email,
-    null,
-    key,
-    ['https://www.googleapis.com/auth/spreadsheets']
-  );
+
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: email,
+      private_key: key
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+  });
 }
 
 const extractCell = (doc, key) => {
@@ -43,7 +47,10 @@ exports.syncLeadToSheet = async (leadDoc) => {
     const auth = getAuthClient();
     if (!auth) return;
 
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    let spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    if (spreadsheetId && spreadsheetId.startsWith('"') && spreadsheetId.endsWith('"')) {
+      spreadsheetId = spreadsheetId.slice(1, -1);
+    }
     if (!spreadsheetId) return;
 
     const sheets = google.sheets({ version: 'v4', auth });
@@ -117,7 +124,10 @@ exports.backupAllLeads = async () => {
       return;
     }
 
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    let spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    if (spreadsheetId && spreadsheetId.startsWith('"') && spreadsheetId.endsWith('"')) {
+      spreadsheetId = spreadsheetId.slice(1, -1);
+    }
     if (!spreadsheetId) return;
 
     const sheets = google.sheets({ version: 'v4', auth });

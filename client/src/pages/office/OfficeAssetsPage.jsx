@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Plus, Edit2, Trash2, Search, Contact, Phone, Mail, Layers } from 'lucide-react';
 import { Modal } from '../../components/ui';
+import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 
 const OfficeAssetsPage = () => {
   const [activeTab, setActiveTab] = useState('assets'); // 'assets' or 'contacts'
@@ -16,6 +17,8 @@ const OfficeAssetsPage = () => {
   const [search, setSearch] = useState('');
   
   const queryClient = useQueryClient();
+
+  const { data: users = [] } = useUserDirectory();
 
   // Queries
   const { data: assets = [], isLoading: assetsLoading } = useQuery({
@@ -256,7 +259,10 @@ const OfficeAssetsPage = () => {
           </div>
           <div>
             <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Currently With</label>
-            <input type="text" value={assetFormData.currentlyWith} onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
+            <select value={assetFormData.currentlyWith} onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500">
+              <option value="Office">Office (In Storage / Available)</option>
+              {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.role})</option>)}
+            </select>
           </div>
           {editingAsset && (
             <div>

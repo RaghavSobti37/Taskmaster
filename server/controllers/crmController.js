@@ -9,7 +9,7 @@ const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/saniti
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
-  'name', 'email', 'phone', 'webinarDates', 'attended', 'attendanceDurationMin',
+  'name', 'email', 'phone', 'city', 'webinarDates', 'attended', 'attendanceDurationMin',
   'meaningfulConnect', 'leadQuality', 'callStatus', 'leadStatus', 'remarks',
   'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
   'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
@@ -65,7 +65,8 @@ exports.getLeads = async (req, res) => {
       query.$or = [
         { name: searchRegex },
         { email: searchRegex },
-        { phone: searchRegex }
+        { phone: searchRegex },
+        { city: searchRegex }
       ];
     }
 
@@ -409,6 +410,7 @@ exports.uploadLeads = async (req, res) => {
         if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
         if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
         if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
+        if (!leadDoc.city) leadDoc.city = row.city || row.City || row.location || row.Location || '';
 
         leadDoc.name = sanitizeName(leadDoc.name);
         leadDoc.email = sanitizeEmail(leadDoc.email);

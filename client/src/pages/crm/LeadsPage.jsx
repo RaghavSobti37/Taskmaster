@@ -15,10 +15,11 @@ import {
   PageSkeleton,
   FullScreenWorkspace,
   Input,
-  NexusDropdown
+  NexusDropdown,
+  Modal
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
@@ -36,7 +37,13 @@ export default function LeadsPage() {
   const [addingNote, setAddingNote] = useState(false);
   const queryClient = useQueryClient();
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newLeadData, setNewLeadData] = useState({
+    name: '', phone: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: ''
+  });
+
   const updateMutation = useUpdateLead();
+  const createMutation = useCreateLead();
   const [editLeadData, setEditLeadData] = useState({
     name: '', phone: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: ''
   });
@@ -87,6 +94,23 @@ export default function LeadsPage() {
       alert('Failed to add note');
     } finally {
       setAddingNote(false);
+    }
+  };
+
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    if (!newLeadData.name || (!newLeadData.phone && !newLeadData.email)) {
+      alert('Please provide a Customer Name and either a Phone or Email.');
+      return;
+    }
+    try {
+      await createMutation.mutateAsync(newLeadData);
+      setIsAddModalOpen(false);
+      setNewLeadData({ name: '', phone: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: '' });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
     }
   };
 
@@ -188,7 +212,7 @@ export default function LeadsPage() {
       )
     },
     {
-      header: 'Mission Status',
+      header: 'Interest Level',
       render: (row) => (
         <Badge variant={row.leadStatus === 'Converted' ? 'mint' : row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'slate'}>
           {row.leadStatus?.toUpperCase() || 'NEW'}
@@ -225,7 +249,7 @@ export default function LeadsPage() {
                 <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
               </Button>
             )}
-            <Button size="sm">
+            <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus size={14} /> Add Lead
             </Button>
           </div>
@@ -259,6 +283,17 @@ export default function LeadsPage() {
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 icon={Search}
+              />
+            </div>
+            <div className="w-44">
+              <NexusDropdown
+                placeholder="Interest Level"
+                options={[
+                  { value: 'all', label: 'All Interest Levels' },
+                  ...leadStatusesList.map(s => ({ value: s, label: s }))
+                ]}
+                value={filters.leadStatus}
+                onChange={v => setFilters({ ...filters, leadStatus: v })}
               />
             </div>
             <div className="w-56">
@@ -579,6 +614,79 @@ export default function LeadsPage() {
           </section>
         </div>
       </FullScreenWorkspace>
+
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Lead"
+        showFooter={false}
+      >
+        <form onSubmit={handleCreateLead} className="space-y-4">
+          <Input
+            label="Customer Name *"
+            placeholder="John Doe"
+            value={newLeadData.name}
+            onChange={e => setNewLeadData({ ...newLeadData, name: e.target.value })}
+            required
+          />
+          <Input
+            label="Phone Number"
+            placeholder="+91 9876543210"
+            value={newLeadData.phone}
+            onChange={e => setNewLeadData({ ...newLeadData, phone: e.target.value })}
+          />
+          <Input
+            label="Email Address"
+            placeholder="john@example.com"
+            value={newLeadData.email}
+            onChange={e => setNewLeadData({ ...newLeadData, email: e.target.value })}
+          />
+          <Input
+            label="City / Location"
+            placeholder="Mumbai"
+            value={newLeadData.city}
+            onChange={e => setNewLeadData({ ...newLeadData, city: e.target.value })}
+          />
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">Interest Level</label>
+            <select
+              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+              value={newLeadData.leadStatus}
+              onChange={e => setNewLeadData({ ...newLeadData, leadStatus: e.target.value })}
+            >
+              {leadStatusesList.map(st => <option key={st} value={st}>{st}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">Lead Quality Score</label>
+            <select
+              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+              value={newLeadData.leadQuality}
+              onChange={e => setNewLeadData({ ...newLeadData, leadQuality: e.target.value })}
+            >
+              <option value="1">Level 1 - Unlikely</option>
+              <option value="2">Level 2 - Mild Interest</option>
+              <option value="3">Level 3 - Strong Candidate</option>
+              <option value="4">Level 4 - Very High Interest</option>
+              <option value="5">Level 5 - Imminent Conversion</option>
+            </select>
+          </div>
+          <Input
+            label="Initial Remarks / Notes"
+            placeholder="Interested in weekend music production batch..."
+            value={newLeadData.remarks}
+            onChange={e => setNewLeadData({ ...newLeadData, remarks: e.target.value })}
+          />
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button size="sm" variant="ghost" type="button" onClick={() => setIsAddModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Creating...' : 'Create Lead'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </PageContainer>
   );
 }

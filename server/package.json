@@ -30,6 +30,7 @@
     "helmet": "^6.0.1",
     "imap-simple": "^5.1.0",
     "ioredis": "^5.10.1",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.0",
     "mailparser": "^3.9.8",
     "mongoose": "^7.0.3",

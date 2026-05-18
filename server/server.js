@@ -149,11 +149,17 @@ app.use(
 );
 
 const path = require('path');
+const fs = require('fs');
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
-  });
+  const distPath = path.join(__dirname, '../client/dist');
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.resolve(distPath, 'index.html'));
+    });
+  } else {
+    app.get('/', (req, res) => res.send('CoreKnot API Active (Production backend online. Frontend build pending at: ' + distPath + ')'));
+  }
 } else {
   app.get('/', (req, res) => res.send('CoreKnot API Active (Development Mode)'));
 }

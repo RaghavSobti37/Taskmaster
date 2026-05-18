@@ -4,6 +4,7 @@ const EMI = require('../models/EMI');
 const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
+const CRMConfig = require('../models/CRMConfig');
 const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
 
 // Whitelists for mass-assignment protection
@@ -17,13 +18,23 @@ const ALLOWED_LEAD_FIELDS = [
 ];
 const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
 
+/**
+ * Helper utility to pick specific keys from an object.
+ * @param {Object} src - Source object
+ * @param {Array<String>} keys - Whitelisted keys to extract
+ * @returns {Object} Filtered object containing only whitelisted keys
+ */
 const pick = (src, keys) => {
   const r = {};
   for (const k of keys) { if (src[k] !== undefined) r[k] = src[k]; }
   return r;
 };
 
-// Helper for auto-assignment (Least-Loaded strategy)
+/**
+ * Least-Loaded strategy for automatic lead assignment.
+ * Finds the sales rep with the fewest active (non-converted) leads.
+ * @returns {Promise<mongoose.Types.ObjectId|null>} ObjectId of the assigned sales rep
+ */
 const assignLeadToRep = async () => {
   const reps = await User.find({ role: 'sales' });
   if (reps.length === 0) return null;
@@ -37,6 +48,11 @@ const assignLeadToRep = async () => {
   return leadCounts[0].repId;
 };
 
+/**
+ * Retrieves leads with advanced filtering, searching, and pagination.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 exports.getLeads = async (req, res) => {
   try {
     let query = {};
@@ -324,8 +340,7 @@ exports.saveMapping = async (req, res) => {
 exports.uploadLeads = async (req, res) => {
   const csv = require('csv-parser');
   const fs = require('fs');
-  const results = [];
-  
+
   if (!req.file) {
     return res.status(400).json({ error: 'No CSV file provided' });
   }
@@ -333,109 +348,137 @@ exports.uploadLeads = async (req, res) => {
   try {
     const reps = await User.find({ role: 'sales' });
     const repMap = {};
-    reps.forEach(r => repMap[r.name.toLowerCase().trim()] = r._id);
+    reps.forEach(r => {
+      if (r.name) {
+        repMap[r.name.toLowerCase().trim()] = r._id;
+      }
+    });
 
     const mapping = global.crmMapping || {};
 
-    fs.createReadStream(req.file.path)
-      .pipe(csv())
-      .on('data', (data) => results.push(data))
-      .on('end', async () => {
-        const leadDocs = [];
-        let repIndex = 0;
+    const importSession = await CRMImport.create({
+      filename: req.file.originalname,
+      leadCount: 0,
+      createdBy: req.user._id
+    });
 
-        for (const row of results) {
-          const rawRepName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
-          let assignedRepId = null;
-          
-          // Explicitly unassign Shivam or unknown
-          if (rawRepName === 'shivam') {
-            assignedRepId = null;
-          } else if (rawRepName.includes('vicky')) {
-            assignedRepId = repMap['vicky'] || null;
-          } else if (rawRepName.includes('aryaman')) {
-            assignedRepId = repMap['aryaman'] || null;
-          } else if (rawRepName.includes('satyam')) {
-            assignedRepId = repMap['satyam'] || null;
-          } else if (rawRepName && repMap[rawRepName]) {
-            assignedRepId = repMap[rawRepName];
-          } else if (reps.length > 0 && rawRepName !== '') {
-            // Round-robin only if we have a rep name that didn't match known sales reps
-            assignedRepId = reps[repIndex % reps.length]._id;
-            repIndex++;
+    let totalProcessed = 0;
+    let batch = [];
+    const BATCH_SIZE = 500;
+    let repIndex = 0;
+
+    const stream = fs.createReadStream(req.file.path).pipe(csv());
+
+    const processBatch = async (rows) => {
+      const leadDocs = [];
+      for (const row of rows) {
+        const rawRepName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
+        let assignedRepId = null;
+
+        if (rawRepName) {
+          const matchedKey = Object.keys(repMap).find(key => rawRepName.includes(key));
+          if (matchedKey) {
+            assignedRepId = repMap[matchedKey];
           }
-
-          if (!assignedRepId && reps.length > 0) {
-            assignedRepId = reps[repIndex % reps.length]._id;
-            repIndex++;
-          }
-
-          const leadDoc = {
-            assignedRepId,
-            createdBy: req.user._id,
-            leadStatus: 'New',
-            callStatus: 'Pending',
-            metadata: {}
-          };
-
-          // Apply mapping
-          for (const [csvCol, dbField] of Object.entries(mapping)) {
-            const value = row[csvCol];
-            if (!value || dbField === 'IGNORE') continue;
-
-            if (dbField === 'metadata') {
-              leadDoc.metadata[csvCol] = value;
-            } else if (ALLOWED_LEAD_FIELDS.includes(dbField)) {
-              leadDoc[dbField] = value;
-            } else {
-              leadDoc.metadata[dbField || csvCol] = value;
-            }
-          }
-
-          // Fallback for basic fields if not mapped
-          if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
-          if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
-          if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
-
-          // Apply sanitization
-          leadDoc.name = sanitizeName(leadDoc.name);
-          leadDoc.email = sanitizeEmail(leadDoc.email);
-          leadDoc.phone = normalizePhone(leadDoc.phone);
-
-          leadDocs.push(leadDoc);
         }
 
-        const importSession = await CRMImport.create({
-          filename: req.file.originalname,
-          leadCount: leadDocs.length,
-          createdBy: req.user._id
-        });
+        if (!assignedRepId && reps.length > 0) {
+          assignedRepId = reps[repIndex % reps.length]._id;
+          repIndex++;
+        }
 
-        const bulkOps = leadDocs.map(doc => {
-          const filter = { $or: [] };
-          if (doc.rowId) filter.$or.push({ rowId: doc.rowId });
-          if (doc.phone) filter.$or.push({ phone: doc.phone });
-          if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
-          
-          if (filter.$or.length === 0) {
-            // If no unique fields, skip duplicate check and insert (should not happen with defaults)
-            return { insertOne: { document: { ...doc, importId: importSession._id } } };
+        const leadDoc = {
+          assignedRepId,
+          createdBy: req.user._id,
+          leadStatus: 'New',
+          callStatus: 'Pending',
+          metadata: {}
+        };
+
+        for (const [csvCol, dbField] of Object.entries(mapping)) {
+          const value = row[csvCol];
+          if (!value || dbField === 'IGNORE') continue;
+
+          if (dbField === 'metadata') {
+            leadDoc.metadata[csvCol] = value;
+          } else if (ALLOWED_LEAD_FIELDS.includes(dbField)) {
+            leadDoc[dbField] = value;
+          } else {
+            leadDoc.metadata[dbField || csvCol] = value;
           }
+        }
 
-          return {
-            updateOne: {
-              filter,
-              update: { $set: { ...doc, importId: importSession._id } },
-              upsert: true
-            }
-          };
-        });
+        if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
+        if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
+        if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
 
-        await Lead.bulkWrite(bulkOps);
+        leadDoc.name = sanitizeName(leadDoc.name);
+        leadDoc.email = sanitizeEmail(leadDoc.email);
+        leadDoc.phone = normalizePhone(leadDoc.phone);
+
+        leadDocs.push(leadDoc);
+      }
+
+      const bulkOps = leadDocs.map(doc => {
+        const filter = { $or: [] };
+        if (doc.rowId) filter.$or.push({ rowId: doc.rowId });
+        if (doc.phone) filter.$or.push({ phone: doc.phone });
+        if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
         
-        fs.unlinkSync(req.file.path);
-        res.status(201).json({ message: `${leadDocs.length} leads processed with duplicate checking.` });
+        if (filter.$or.length === 0) {
+          return { insertOne: { document: { ...doc, importId: importSession._id } } };
+        }
+
+        return {
+          updateOne: {
+            filter,
+            update: { $set: { ...doc, importId: importSession._id } },
+            upsert: true
+          }
+        };
       });
+
+      if (bulkOps.length > 0) {
+        await Lead.bulkWrite(bulkOps);
+      }
+      totalProcessed += leadDocs.length;
+    };
+
+    stream.on('data', async (data) => {
+      batch.push(data);
+      if (batch.length >= BATCH_SIZE) {
+        stream.pause();
+        const rowsToProcess = [...batch];
+        batch = [];
+        try {
+          await processBatch(rowsToProcess);
+        } catch (err) {
+          console.error('Batch processing error:', err);
+        } finally {
+          stream.resume();
+        }
+      }
+    });
+
+    stream.on('end', async () => {
+      if (batch.length > 0) {
+        try {
+          await processBatch(batch);
+        } catch (err) {
+          console.error('Final batch processing error:', err);
+        }
+      }
+
+      await CRMImport.findByIdAndUpdate(importSession._id, { leadCount: totalProcessed });
+      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      res.status(201).json({ message: `${totalProcessed} leads successfully processed via memory-efficient stream.` });
+    });
+
+    stream.on('error', (error) => {
+      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      res.status(500).json({ error: 'Stream reading error occurred during CSV import' });
+    });
+
   } catch (error) {
     const fs = require('fs');
     if (req.file) try { fs.unlinkSync(req.file.path); } catch(e) {}
@@ -562,6 +605,11 @@ exports.getCRMStats = async (req, res) => {
   }
 };
 
+/**
+ * Retrieves CRM configurations dynamically from database distinct fields and CRMConfig schema.
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 exports.getCRMConfig = async (req, res) => {
   try {
     const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses] = await Promise.all([
@@ -572,17 +620,28 @@ exports.getCRMConfig = async (req, res) => {
       Lead.distinct('meaningfulConnect')
     ]);
 
-    // Ensure some defaults if DB is empty
-    const defaults = {
-      callStatuses: callStatuses.length ? callStatuses : ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'],
-      leadStatuses: leadStatuses.length ? leadStatuses : ['New', 'Interested', 'Not Interested', 'Followup', 'Converted'],
-      artistTypes: artistTypes.length ? artistTypes : ['Full Time', 'Part Time', 'Hobbyist'],
+    let configDoc = await CRMConfig.findOne({ configKey: 'default' });
+    if (!configDoc) {
+      configDoc = await CRMConfig.create({
+        configKey: 'default',
+        callStatuses: ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'],
+        leadStatuses: ['New', 'Interested', 'Not Interested', 'Followup', 'Converted'],
+        artistTypes: ['Full Time', 'Part Time', 'Hobbyist'],
+        meaningfulConnectStatuses: ['YES', 'NO', 'PENDING'],
+        qualities: ['1', '2', '3', '4', '5']
+      });
+    }
+
+    const mergedConfig = {
+      callStatuses: Array.from(new Set([...callStatuses.filter(Boolean), ...configDoc.callStatuses])),
+      leadStatuses: Array.from(new Set([...leadStatuses.filter(Boolean), ...configDoc.leadStatuses])),
+      artistTypes: Array.from(new Set([...artistTypes.filter(Boolean), ...configDoc.artistTypes])),
       webinarDates: webinarDates.filter(Boolean),
-      meaningfulConnectStatuses: meaningfulConnectStatuses.length ? meaningfulConnectStatuses : ['YES', 'NO', 'PENDING'],
-      qualities: ['1', '2', '3', '4', '5']
+      meaningfulConnectStatuses: Array.from(new Set([...meaningfulConnectStatuses.filter(Boolean), ...configDoc.meaningfulConnectStatuses])),
+      qualities: configDoc.qualities
     };
 
-    res.json(defaults);
+    res.json(mergedConfig);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch CRM config' });
   }

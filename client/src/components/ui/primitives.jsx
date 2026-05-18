@@ -210,12 +210,12 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
 };
 
 export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
-  <div className={`w-full overflow-hidden border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] ${className}`}>
-    <table className="w-full text-left border-collapse">
+  <div className={`w-full overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] custom-scrollbar ${className}`}>
+    <table className="w-full text-left border-collapse min-w-[540px] hidden sm:table">
       <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
         <tr>
           {columns.map((col, i) => (
-            <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+            <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap">
               {col.header}
               {col.info && <InfoButton text={col.info} />}
             </th>
@@ -241,6 +241,29 @@ export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
         ))}
       </tbody>
     </table>
+
+    {/* Mobile Responsive Card Stack */}
+    <div className="grid grid-cols-1 gap-3 p-3 sm:hidden">
+      {data.map((row, i) => (
+        <div
+          key={i}
+          onClick={(e) => {
+            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+            onRowClick?.(row);
+          }}
+          className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3 cursor-pointer shadow-sm active:scale-[0.99] transition-transform"
+        >
+          {columns.map((col, j) => (
+            <div key={j} className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</span>
+              <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                {col.render ? col.render(row) : row[col.key]}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
   </div>
 );
 
@@ -268,35 +291,35 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
           className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col"
         >
           {/* Top Bar Navigation */}
-          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between px-6 shrink-0">
-             <div className="flex items-center gap-4">
-                <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
+          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between px-4 sm:px-6 shrink-0">
+             <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
+                <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors shrink-0">
                    <X size={20} />
                 </button>
-                <div>
-                   <h2 className="text-sm font-black uppercase tracking-tight leading-none">{title}</h2>
-                   {subtitle && <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-1">{subtitle}</p>}
+                <div className="min-w-0">
+                   <h2 className="text-xs sm:text-sm font-black uppercase tracking-tight leading-none truncate">{title}</h2>
+                   {subtitle && <p className="text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-1 truncate">{subtitle}</p>}
                 </div>
              </div>
-             <div className="flex items-center gap-3">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                <Button onClick={onSave} className="shadow-lg shadow-[var(--color-action-primary)]/20">
-                   <Save size={16} /> Save Changes
+             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                <Button variant="ghost" size="sm" onClick={onClose} className="hidden sm:inline-flex">Cancel</Button>
+                <Button size="sm" onClick={onSave} className="shadow-lg shadow-[var(--color-action-primary)]/20">
+                   <Save size={16} /> <span className="hidden sm:inline">Save Changes</span>
                 </Button>
              </div>
           </div>
 
           {/* Main Layout Partition */}
-          <div className="flex-1 flex overflow-hidden">
-             {/* Left Column: 70% Canvas */}
-             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                <div className="max-w-4xl mx-auto space-y-8">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+             {/* Left Column: Canvas */}
+             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
+                <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8">
                    {children}
                 </div>
              </div>
 
-             {/* Right Column: 30% Utility Drawer */}
-             <aside className="w-[30%] border-l border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-y-auto p-6 custom-scrollbar">
+             {/* Right Column: Utility Drawer */}
+             <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-y-auto p-4 sm:p-6 custom-scrollbar">
                 <div className="space-y-6">
                    {sidebar}
                 </div>

@@ -148,12 +148,9 @@ app.use(
 
 app.get('/', (req, res) => res.send('CoreKnot API Active'));
 
-// Error handling
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;
-  res.status(500).json({ error: message });
-});
+// Centralized structured error handling middleware
+const errorHandler = require('./middleware/errorMiddleware');
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {

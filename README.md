@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.5.0
+# ⚡ Taskmaster v1.6.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -26,6 +26,7 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **🏢 Office & Contacts Registry**: Centralized registry for managing physical office hardware, software licenses, physical items, and important VIP contacts globally available across the platform.
 
 ### 📈 Customer Relationship Management (CRM)
+- **Master Data Cleaning Pipeline**: Automated in-memory deduplication and sanitization engine (`import_ultimate_master.js` and `purge_nameless_emailless.js`) ensuring zero duplicate key index collisions and pristine database integrity across 46,000+ lead records.
 - **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports, and real-time bidirectional synchronization with HolySheet API.
 - **Interactive Follow-up Schedule & Mark as Done**: Checkbox-driven instant follow-up completion from table or modal view with automatic timestamp logging and pipeline advancement. Native date/time picker enforcement across all schedule entry fields.
 - **Interactive Interaction & Notes Stream**: Persistent timeline tracking of sales remarks, custom touchpoint notes, and planned action items.

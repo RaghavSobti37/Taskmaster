@@ -30,6 +30,7 @@ const triggerCsvBackup = () => {
         { label: 'name', value: 'name' },
         { label: 'email', value: 'email' },
         { label: 'phone', value: 'phone' },
+        { label: 'city', value: 'city' },
         { label: 'webinar_dates', value: 'webinarDates' },
         { label: 'attended', value: 'attended' },
         { label: 'attendance_duration_min', value: 'attendanceDurationMin' },

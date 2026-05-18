@@ -2,7 +2,7 @@ const axios = require('axios');
 const BASE_URL = 'https://holysheet.soneshjain.com/api/v1';
 
 const HEADERS = [
-  'rowId', 'customerIdExly', 'transactionIdExly', 'name', 'email', 'phone', 
+  'rowId', 'customerIdExly', 'transactionIdExly', 'name', 'email', 'phone', 'city',
   'webinarDates', 'attended', 'attendanceDurationMin', 'qnaAnswered', 
   'artistType', 'fullTimeWillingness', 'primaryRole', 'learningGoal', 
   'learnedMusic', 'currentJourney', 'meaningfulConnect', 'leadQuality', 

@@ -16,6 +16,7 @@ const LeadSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, index: true },
   phone: { type: String, required: true, index: true },
+  city: { type: String, index: true },
   
   // Webinar & Engagement (Source Data)
   webinarDates: { type: String },

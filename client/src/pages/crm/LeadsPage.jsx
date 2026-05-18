@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers
+  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell
 } from 'lucide-react';
 import {
   Badge,
@@ -18,7 +18,7 @@ import {
   NexusDropdown
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
@@ -32,11 +32,13 @@ export default function LeadsPage() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [isPurging, setIsPurging] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
   const queryClient = useQueryClient();
 
   const updateMutation = useUpdateLead();
   const [editLeadData, setEditLeadData] = useState({
-    name: '', phone: '', city: '', leadQuality: 3, notes: ''
+    name: '', phone: '', city: '', leadQuality: 3, leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false
   });
 
   React.useEffect(() => {
@@ -46,7 +48,12 @@ export default function LeadsPage() {
         phone: selectedLead.phone || '',
         city: selectedLead.city || '',
         leadQuality: selectedLead.leadQuality || 3,
-        notes: selectedLead.notes || ''
+        leadStatus: selectedLead.leadStatus || 'New',
+        callStatus: selectedLead.callStatus || 'Pending',
+        remarks: selectedLead.remarks || '',
+        nextFollowupDate: selectedLead.nextFollowupDate || '',
+        nextFollowupTime: selectedLead.nextFollowupTime || '',
+        setReminder: selectedLead.setReminder || false
       });
     }
   }, [selectedLead]);
@@ -59,8 +66,26 @@ export default function LeadsPage() {
         data: editLeadData
       });
       setSelectedLead(null);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
     } catch (err) {
       alert(err.response?.data?.error || err.message);
+    }
+  };
+
+  const handleAddNote = async (e) => {
+    e.preventDefault();
+    if (!newNoteText.trim() || !selectedLead) return;
+    setAddingNote(true);
+    try {
+      const res = await axios.post(`/api/crm/leads/${selectedLead._id}/notes`, { text: newNoteText });
+      setSelectedLead(res.data);
+      setNewNoteText('');
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    } catch (err) {
+      alert('Failed to add note');
+    } finally {
+      setAddingNote(false);
     }
   };
 
@@ -68,6 +93,7 @@ export default function LeadsPage() {
     leadQuality: 'all',
     callStatus: 'all',
     leadStatus: 'all',
+    source: 'all',
     assignedRepId: 'all',
     artistType: 'all',
     primaryRole: 'all',
@@ -104,12 +130,14 @@ export default function LeadsPage() {
   const { data, isLoading } = useLiveLeads(queryParams);
   const { data: statsData } = useCRMStats();
   const { data: team = [] } = useSalesReps();
+  const { data: crmConfig } = useCRMConfig();
 
   const leads = data?.leads || [];
   const totalLeads = data?.total || 0;
   const totalPages = data?.pages || 1;
-
-  const getRepName = (id) => team.find(r => r._id === id)?.name || 'Unknown';
+  const sourcesList = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
+  const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
+  const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
 
   const columns = [
     {
@@ -128,16 +156,21 @@ export default function LeadsPage() {
                 {row.primaryRole}
               </span>
             )}
+            {row.source && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
+                {row.source}
+              </span>
+            )}
             {row.emailStatus && row.emailStatus !== 'Pending' && (
               <Badge variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Unsubscribed' ? 'warning' : 'rose'}>
                 {row.emailStatus}
               </Badge>
             )}
-            {row.tags && row.tags.map((t, idx) => (
-              <span key={idx} className="text-[9px] px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full font-bold uppercase tracking-wider">
-                #{t}
+            {row.nextFollowupDate && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full font-bold uppercase flex items-center gap-1">
+                <Clock size={10} /> {row.nextFollowupDate}
               </span>
-            ))}
+            )}
           </div>
           <span className="text-[11px] text-[var(--color-text-muted)] font-mono">{row.email} {row.phone ? `• ${row.phone}` : ''} {row.city ? `• ${row.city}` : ''}</span>
         </div>
@@ -155,8 +188,8 @@ export default function LeadsPage() {
     {
       header: 'Mission Status',
       render: (row) => (
-        <Badge variant={row.leadStatus === 'Converted' ? 'mint' : 'slate'}>
-          {row.leadStatus?.toUpperCase()}
+        <Badge variant={row.leadStatus === 'Converted' ? 'mint' : row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'slate'}>
+          {row.leadStatus?.toUpperCase() || 'NEW'}
         </Badge>
       )
     },
@@ -185,9 +218,11 @@ export default function LeadsPage() {
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
-              <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
-            </Button>
+            {user?.role === 'admin' && (
+              <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
+                <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
+              </Button>
+            )}
             <Button size="sm">
               <Plus size={14} /> Add Lead
             </Button>
@@ -216,15 +251,23 @@ export default function LeadsPage() {
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-64">
+            <div className="w-56">
               <Input
-                placeholder="Search by name or phone..."
+                placeholder="Search name or phone..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 icon={Search}
               />
             </div>
             <div className="w-32">
+              <NexusDropdown
+                placeholder="Source"
+                options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map(s => ({ value: s, label: s }))]}
+                value={filters.source}
+                onChange={v => setFilters({ ...filters, source: v })}
+              />
+            </div>
+            <div className="w-28">
               <NexusDropdown
                 placeholder="Quality"
                 options={[
@@ -239,7 +282,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, leadQuality: v })}
               />
             </div>
-            <div className="w-36">
+            <div className="w-32">
               <NexusDropdown
                 placeholder="Artist Type"
                 options={[
@@ -252,7 +295,7 @@ export default function LeadsPage() {
                 onChange={v => setFilters({ ...filters, artistType: v })}
               />
             </div>
-            <div className="w-36">
+            <div className="w-32">
               <NexusDropdown
                 placeholder="Role"
                 options={[
@@ -269,27 +312,13 @@ export default function LeadsPage() {
             </div>
             <div className="w-36">
               <NexusDropdown
-                placeholder="Email Status"
-                options={[
-                  { value: 'all', label: 'All Emails' },
-                  { value: 'Active', label: 'Active (Opened)' },
-                  { value: 'Unsubscribed', label: 'Unsubscribed' },
-                  { value: 'Invalid', label: 'Bounced / Invalid' },
-                  { value: 'Pending', label: 'Pending Status' }
-                ]}
-                value={filters.emailStatus || 'all'}
-                onChange={v => setFilters({ ...filters, emailStatus: v })}
-              />
-            </div>
-            <div className="w-40">
-              <NexusDropdown
                 placeholder="Agent"
                 options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
                 value={filters.assignedRepId}
                 onChange={v => setFilters({ ...filters, assignedRepId: v })}
               />
             </div>
-            <div className="w-44">
+            <div className="w-40">
               <NexusDropdown
                 placeholder="Sort By"
                 options={[
@@ -341,14 +370,20 @@ export default function LeadsPage() {
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-[10px] font-bold">Progress</span>
-                  <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'success' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold">Stage</span>
+                  <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'mint' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[10px] font-bold">Call History</span>
-                  <Badge variant="neutral">{selectedLead?.callStatus || 'No Record'}</Badge>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold">Call Status</span>
+                  <Badge variant="neutral">{selectedLead?.callStatus || 'Pending'}</Badge>
                 </div>
+                {selectedLead?.nextFollowupDate && (
+                  <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">
+                    <span className="font-bold flex items-center gap-1 text-blue-400"><Clock size={12} /> Follow-up</span>
+                    <span className="font-mono">{selectedLead.nextFollowupDate} {selectedLead.nextFollowupTime}</span>
+                  </div>
+                )}
               </div>
             </Card>
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
@@ -367,7 +402,7 @@ export default function LeadsPage() {
         }
       >
         <div className="space-y-8">
-          {/* Overflow.io Interactive User Journey Funnel */}
+          {/* Funnel Mapping */}
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
               <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
@@ -378,10 +413,10 @@ export default function LeadsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[var(--color-bg-secondary)]/30 p-4 rounded-2xl border border-[var(--color-bg-border)]">
               {[
-                { stage: '1. Discovery', desc: 'Lead Captured via Realtime / Webhook', status: 'Passed', color: 'border-blue-500 text-blue-400 bg-blue-500/10' },
-                { stage: '2. Enrichment', desc: `Quality Scored: Level ${selectedLead?.leadQuality || 3}`, status: 'Passed', color: 'border-amber-500 text-amber-400 bg-amber-500/10' },
-                { stage: '3. Engagement', desc: `Call / Email Touchpoint: ${selectedLead?.callStatus || 'Pending'}`, status: selectedLead?.callStatus && selectedLead?.callStatus !== 'No Record' ? 'Passed' : 'Active', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
-                { stage: '4. Conversion', desc: 'Member Onboarded & Subscribed', status: selectedLead?.leadStatus === 'Converted' ? 'Passed' : 'Pending', color: selectedLead?.leadStatus === 'Converted' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-500 bg-slate-900/40' },
+                { stage: '1. Discovery', desc: `Captured via ${selectedLead?.source || 'Direct'}`, status: 'Passed', color: 'border-blue-500 text-blue-400 bg-blue-500/10' },
+                { stage: '2. Enrichment', desc: `Quality Scored: Level ${editLeadData.leadQuality}`, status: 'Passed', color: 'border-amber-500 text-amber-400 bg-amber-500/10' },
+                { stage: '3. Engagement', desc: `Call Touchpoint: ${editLeadData.callStatus}`, status: editLeadData.callStatus && editLeadData.callStatus !== 'Pending' ? 'Passed' : 'Active', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
+                { stage: '4. Conversion', desc: 'Member Onboarded & Subscribed', status: editLeadData.leadStatus === 'Converted' ? 'Passed' : 'Pending', color: editLeadData.leadStatus === 'Converted' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-500 bg-slate-900/40' },
               ].map((step, index) => (
                 <div key={index} className={`p-3 rounded-xl border relative flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer ${step.color}`}>
                   <div className="space-y-1">
@@ -400,6 +435,86 @@ export default function LeadsPage() {
             </div>
           </section>
 
+          {/* Lead Stages & Interaction Updates */}
+          <section>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+              <Briefcase size={14} /> Mission & Pipeline Status
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.leadStatus}
+                  onChange={e => setEditLeadData({ ...editLeadData, leadStatus: e.target.value })}
+                >
+                  {leadStatusesList.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Call Outcome Status</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.callStatus}
+                  onChange={e => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
+                >
+                  {callStatusesList.map(cs => <option key={cs} value={cs}>{cs}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Quality Score</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.leadQuality}
+                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: Number(e.target.value) })}
+                >
+                  {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>Level {q}</option>)}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Followup & Reminder Schedule */}
+          <section>
+            <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
+              <Calendar size={14} /> Schedule Follow-up & Reminder
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-blue-500/5 rounded-2xl border border-blue-500/20">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Date</label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.nextFollowupDate}
+                  onChange={e => setEditLeadData({ ...editLeadData, nextFollowupDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Time</label>
+                <input
+                  type="time"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.nextFollowupTime}
+                  onChange={e => setEditLeadData({ ...editLeadData, nextFollowupTime: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center justify-start pt-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-blue-500 rounded cursor-pointer"
+                    checked={editLeadData.setReminder}
+                    onChange={e => setEditLeadData({ ...editLeadData, setReminder: e.target.checked })}
+                  />
+                  <span className="text-xs font-bold flex items-center gap-1.5 text-blue-200">
+                    <Bell size={14} className="text-blue-400" /> Enable Overdue Alerts / Reminders
+                  </span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          {/* Contact Details */}
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
               <UserCheck size={14} /> Contact Information
@@ -416,39 +531,66 @@ export default function LeadsPage() {
                 onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })}
               />
               <Input
-                label="Location"
+                label="Location / City"
                 value={editLeadData.city}
                 onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })}
                 icon={MapPin}
               />
-              <Input label="Original Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
+              <Input label="Original Lead Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-              <Briefcase size={14} /> Interaction Details
+          {/* Remarks & Notes Timeline */}
+          <section className="space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+              <MessageSquare size={14} /> Interaction Activity & Notes Stream
             </h3>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Interest Level</label>
-                <select
-                  className="w-full px-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
-                  value={editLeadData.leadQuality}
-                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: Number(e.target.value) })}
-                >
-                  {[1, 2, 3, 4, 5].map(q => <option key={q} value={q}>{q}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Planned Action / Notes</label>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">General Remarks / Brief</label>
                 <Input
-                  placeholder="E.g., Call tomorrow"
-                  value={editLeadData.notes}
-                  onChange={e => setEditLeadData({ ...editLeadData, notes: e.target.value })}
-                  icon={Clock}
+                  placeholder="General remarks or notes..."
+                  value={editLeadData.remarks}
+                  onChange={e => setEditLeadData({ ...editLeadData, remarks: e.target.value })}
                 />
               </div>
+
+              {/* Notes List */}
+              <div className="space-y-3 pt-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Notes History</label>
+                {selectedLead?.notes && selectedLead.notes.length > 0 ? (
+                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-2">
+                    {selectedLead.notes.map((note, index) => (
+                      <div key={index} className="p-3.5 bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-bg-border)] space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-mono">
+                          <span className="font-bold text-[var(--color-text-primary)]">{note.author}</span>
+                          <span>{new Date(note.date).toLocaleString()}</span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-200">{note.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-bg-border)] opacity-60">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">No notes recorded yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Note Form */}
+              <form onSubmit={handleAddNote} className="flex gap-2 pt-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Type an update or interaction note here..."
+                    value={newNoteText}
+                    onChange={e => setNewNoteText(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" variant="primary" disabled={addingNote || !newNoteText.trim()}>
+                  <Send size={14} /> {addingNote ? 'Adding...' : 'Add Note'}
+                </Button>
+              </form>
             </div>
           </section>
         </div>

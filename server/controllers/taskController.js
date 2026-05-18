@@ -240,3 +240,66 @@ exports.deleteTask = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Reports a platform bug or issue, automatically assigning it as a task under the Tech Stack project for Raghav.
+ * @async
+ */
+exports.reportBug = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { page, title, description, severity } = req.body;
+    if (!title || !description) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+
+    const User = require('../models/User');
+    const raghavUser = await User.findOne({ email: 'raghavraj@theshakticollective.in' }).session(session) || req.user;
+
+    // Find or create Tech Project
+    let techProject = await Project.findOne({ name: /tech|maintenance/i }).session(session);
+    if (!techProject) {
+      techProject = await Project.create([{
+        name: 'Tech Stack & Maintenance',
+        description: 'Core application infrastructure, bug tracking, and continuous refactoring pipeline.',
+        status: 'active',
+        priority: 'high',
+        owner: raghavUser._id,
+        members: [{ user: raghavUser._id, role: 'manager' }]
+      }], { session });
+      techProject = techProject[0];
+    }
+
+    const taskData = {
+      title: `[BUG] ${title} (${page || 'General'})`,
+      description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${description}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
+      status: 'todo',
+      priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
+      projectId: techProject._id,
+      assignees: [raghavUser._id],
+      createdBy: req.user._id
+    };
+
+    const [task] = await Task.create([taskData], { session });
+
+    await Project.findByIdAndUpdate(
+      techProject._id,
+      { $inc: { totalTasksCount: 1 } },
+      { session }
+    );
+
+    await logActivity(req.user._id, 'REPORT_BUG', task._id, 'Task', { title: task.title, severity }, session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json(task);
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    next(error);
+  }
+};

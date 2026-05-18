@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { createTask, getTasks, updateTask, deleteTask } = require('../controllers/taskController');
+const { createTask, getTasks, updateTask, deleteTask, reportBug } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
+
+router.post('/bug', reportBug);
 
 router.route('/')
   .post(createTask)

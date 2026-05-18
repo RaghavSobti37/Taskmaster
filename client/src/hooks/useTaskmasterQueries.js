@@ -379,6 +379,14 @@ export const useCRMImports = (enabled = true) => {
   });
 };
 
+export const useCRMConfig = () => {
+  return useQuery({
+    queryKey: ['crm', 'config'],
+    queryFn: async () => (await axios.get('/api/crm/config')).data,
+    staleTime: 1000 * 60 * 10,
+  });
+};
+
 export const useCRMStats = (enabled = true) => {
   return useQuery({
     queryKey: ['crm', 'stats'],

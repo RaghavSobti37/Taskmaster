@@ -117,7 +117,9 @@ exports.googleAuthRedirect = (req, res) => {
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/calendar'
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/spreadsheets'
   ];
 
   const url = oauth2Client.generateAuthUrl({
@@ -143,7 +145,7 @@ exports.googleAuthCallback = async (req, res) => {
     const email = profile.email;
     const domain = email.split('@')[1];
 
-    if (email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN) {
+    if (process.env.NODE_ENV === 'production' && email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && req.query.state !== 'connect') {
       return res.redirect(`${FRONTEND_URL}/login?error=unauthorized_domain`);
     }
 

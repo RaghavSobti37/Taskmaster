@@ -148,3 +148,7 @@ Calendar events are owned by users. Public events are visible to everyone; priva
 
 ### Artist → Live Analytics
 Artists store profile information, events, and a linked `isSynced` status. Live analytics feeds are hydrated dynamically from Spotify, YouTube, and Meta.
+
+## Data Guidelines Reference
+For precise formatting rules, sanitization pipelines, and endpoint design specifications, see [data_guidelines.md](file:///c:/Users/ragha/OneDrive/Desktop/Taskmaster/agentic_memory/data_guidelines.md).
+

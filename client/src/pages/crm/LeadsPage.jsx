@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2,
+  Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2,
   Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell
 } from 'lucide-react';
 import {

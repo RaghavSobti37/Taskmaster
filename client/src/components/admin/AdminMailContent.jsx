@@ -759,15 +759,12 @@ export default function AdminMailContent() {
 
           <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-              <Users size={14} /> Engaged Lead Distribution (Location & Artist Type)
+              <Users size={14} /> Engaged Lead Distribution (By Location)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(cumulativeAnalytics?.dynamicBreakdown || []).map((item, idx) => (
                 <div key={idx} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-xs block">{item.location}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{item.artistType}</span>
-                  </div>
+                  <span className="font-bold text-xs block">{item.location}</span>
                   <Badge variant="mint">{item.count} Engaged</Badge>
                 </div>
               ))}

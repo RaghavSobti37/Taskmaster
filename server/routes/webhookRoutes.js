@@ -43,4 +43,120 @@ router.post('/instagram', (req, res) => {
   }
 });
 
+// POST route to handle real-time Resend webhooks (Bounces, Clicks, Opens, Delivered)
+router.post('/resend', async (req, res) => {
+  try {
+    const { type, data } = req.body;
+    if (!type || !data) {
+      return res.status(400).send('INVALID_PAYLOAD');
+    }
+
+    const email = Array.isArray(data.to) ? data.to[0] : (data.to || data.email);
+    if (!email) {
+      return res.status(200).send('NO_EMAIL_FOUND');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const MailCampaign = require('../models/MailCampaign');
+    const MailEvent = require('../models/MailEvent');
+    const { updateEmailTags } = require('../services/mailService');
+
+    console.log(`⚡ [Resend Webhook] Event received: ${type} for ${cleanEmail}`);
+
+    if (type === 'email.bounced' || type === 'email.complained') {
+      await MailEvent.create({
+        eventType: 'Bounce',
+        email: cleanEmail,
+        timestamp: new Date(),
+        metadata: { source: 'RESEND_WEBHOOK', type, error: data.error || data.reason || 'Bounced' }
+      });
+
+      await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+
+      const campaigns = await MailCampaign.find({ 'recipients.email': cleanEmail });
+      for (const camp of campaigns) {
+        let modified = false;
+        camp.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status !== 'Bounced' && r.status !== 'Invalid') {
+            r.status = 'Bounced';
+            r.error = data.error?.message || 'Bounced via webhook';
+            modified = true;
+          }
+        });
+        if (modified) {
+          camp.stats.bounced = (camp.stats.bounced || 0) + 1;
+          await camp.save();
+        }
+      }
+    } else if (type === 'email.clicked') {
+      await MailEvent.create({
+        eventType: 'Click',
+        email: cleanEmail,
+        timestamp: new Date(),
+        metadata: { source: 'RESEND_WEBHOOK', url: data.click?.url || data.url || '' }
+      });
+
+      await updateEmailTags(cleanEmail, 'Active', 'Active');
+
+      const campaigns = await MailCampaign.find({ 'recipients.email': cleanEmail });
+      for (const camp of campaigns) {
+        let modified = false;
+        camp.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status !== 'Clicked') {
+            r.status = 'Clicked';
+            modified = true;
+          }
+        });
+        if (modified) {
+          camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+          await camp.save();
+        }
+      }
+    } else if (type === 'email.opened') {
+      await MailEvent.create({
+        eventType: 'Open',
+        email: cleanEmail,
+        timestamp: new Date(),
+        metadata: { source: 'RESEND_WEBHOOK' }
+      });
+
+      await updateEmailTags(cleanEmail, 'Active', 'Active');
+
+      const campaigns = await MailCampaign.find({ 'recipients.email': cleanEmail });
+      for (const camp of campaigns) {
+        let modified = false;
+        camp.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status !== 'Opened' && r.status !== 'Clicked') {
+            r.status = 'Opened';
+            modified = true;
+          }
+        });
+        if (modified) {
+          camp.stats.opened = (camp.stats.opened || 0) + 1;
+          await camp.save();
+        }
+      }
+    } else if (type === 'email.delivered') {
+      const campaigns = await MailCampaign.find({ 'recipients.email': cleanEmail });
+      for (const camp of campaigns) {
+        let modified = false;
+        camp.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status === 'Pending') {
+            r.status = 'Sent';
+            modified = true;
+          }
+        });
+        if (modified) {
+          await camp.save();
+        }
+      }
+    }
+
+    res.status(200).send('SUCCESS');
+  } catch (err) {
+    console.error('Error in Resend webhook processing:', err);
+    res.status(500).send('SERVER_ERROR');
+  }
+});
+
 module.exports = router;

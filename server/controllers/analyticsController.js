@@ -30,24 +30,40 @@ exports.getCumulativeMetrics = async (req, res) => {
       return { ...item, openRate, ctr };
     }).sort((a, b) => b.totalSent - a.totalSent);
 
-    const dynamicBreakdown = await Lead.aggregate([
-      { $match: { status: { $in: ['engaged', 'active'] } } },
-      {
-        $group: {
-          _id: { location: { $ifNull: ["$location", { $ifNull: ["$city", "Unknown"] }] }, artistType: { $ifNull: ["$artistType", "Full Time"] } },
-          count: { $sum: 1 }
+    const MailEvent = require('../models/MailEvent');
+    const camps = await MailCampaign.find({}, 'recipients.email recipients.status').lean();
+    const engagedEmailsSet = new Set();
+    camps.forEach(c => {
+      c.recipients?.forEach(r => {
+        if (r.status === 'Opened' || r.status === 'Clicked' || r.status === 'Sent') {
+          if (r.email) engagedEmailsSet.add(r.email.toLowerCase().trim());
         }
-      },
-      {
-        $project: {
-          location: "$_id.location",
-          artistType: "$_id.artistType",
-          count: 1,
-          _id: 0
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+      });
+    });
+
+    const events = await MailEvent.find({ eventType: { $in: ['Open', 'Click', 'Send'] } }, 'email').lean();
+    events.forEach(e => {
+      if (e.email) engagedEmailsSet.add(e.email.toLowerCase().trim());
+    });
+
+    const engagedEmails = Array.from(engagedEmailsSet);
+    const matchQuery = engagedEmails.length > 0 
+      ? { email: { $in: engagedEmails } }
+      : { emailStatus: 'Active' };
+
+    const engagedLeads = await Lead.find(matchQuery, 'location city').lean();
+    const locMap = {};
+    for (const l of engagedLeads) {
+      let rawLoc = l.location || l.city || 'unknown';
+      let loc = rawLoc.toLowerCase().replace(/[().,]/g, '').replace(/\s+/g, ' ').trim();
+      if (!locMap[loc]) locMap[loc] = 0;
+      locMap[loc]++;
+    }
+
+    const dynamicBreakdown = Object.entries(locMap).map(([location, count]) => ({
+      location: location.charAt(0).toUpperCase() + location.slice(1),
+      count
+    })).sort((a, b) => b.count - a.count);
 
     res.status(200).json({ aggregateData, dynamicBreakdown });
   } catch (error) {
@@ -55,3 +71,4 @@ exports.getCumulativeMetrics = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+

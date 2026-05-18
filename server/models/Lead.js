@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { sanitizeName, sanitizeEmail, normalizePhone, validateDate } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 const auditPlugin = require('./plugins/auditPlugin');
 
 /**
@@ -80,6 +80,8 @@ LeadSchema.pre('save', function(next) {
   if (this.isModified('name')) this.name = sanitizeName(this.name);
   if (this.isModified('email')) this.email = sanitizeEmail(this.email);
   if (this.isModified('phone')) this.phone = normalizePhone(this.phone);
+  if (this.isModified('city') && this.city) this.city = sanitizeLocation(this.city);
+  if (this.isModified('location') && this.location) this.location = sanitizeLocation(this.location);
   
   // Date validation for followups
   if (this.isModified('nextFollowupDate') && this.nextFollowupDate) {

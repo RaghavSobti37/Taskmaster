@@ -32,6 +32,11 @@ Whenever defining a Mongoose schema or validating an Express API request body, a
 * **Standardization**: Enforce E.164 international format. If exactly 10 digits without country code, prefix with `+91` automatically.
 * **Storage Example**: `"+917828693987"`
 
+### 🗺️ Location / City (`city`, `state`, `location`)
+* **Type**: `String`
+* **Sanitization**: Store strictly in lowercase only (`.toLowerCase()`). Remove any special characters like `(`, `)`, `.`, `,` (`.replace(/[().,]/g, '')`). Collapse multiple spaces into a single space and trim (`.replace(/\s+/g, ' ').trim()`).
+* **Storage Example**: `"prayagraj"`, `"joginder nagar"`, `"delhi"`
+
 ### 👤 Identity / Names (`name`, `title`)
 * **Type**: `String`
 * **Sanitization**: Strip all HTML/script tags (`<script>`, `<div>`). Collapse multiple inner whitespaces into a single space (`.replace(/\s+/g, ' ')`). Trim leading and trailing spaces.

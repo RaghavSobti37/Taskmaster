@@ -21,10 +21,10 @@ const extractCell = (doc, key) => {
 
 exports.syncLeadToSheet = async (leadDoc) => {
   try {
-    const apiKey = process.env.HOLYSHEET_API_KEY || process.env.HOLY_SHEET_API_KEY || 'AVuhnREAcyFAr8sURBUikgVAzuTyjffi';
+    const apiKey = process.env.HOLYSHEET_API_KEY || process.env.HOLY_SHEET_API_KEY || 'A4NWMO7Hr9zJGlf1epJAOGzp0mzBfLMH';
     if (!apiKey) return;
 
-    const sheetName = 'Sheet1';
+    const sheetName = 'All Data Backup';
 
     // 1. Construct values object
     const values = {};
@@ -70,8 +70,9 @@ exports.syncLeadToSheet = async (leadDoc) => {
       });
       console.log(`[HolySheet Backup] Successfully updated lead ${leadDoc.name} on row ${rowIndex}`);
     } else {
-      // Append new row
-      await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [values] }, { params: { sheet: sheetName } });
+      // Append new row as pure values array to avoid pushing column names
+      const rowValues = HEADERS.map(h => extractCell(leadDoc, h));
+      await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [rowValues] }, { params: { sheet: sheetName } });
       console.log(`[HolySheet Backup] Successfully appended new lead ${leadDoc.name} to HolySheet`);
     }
 
@@ -82,11 +83,54 @@ exports.syncLeadToSheet = async (leadDoc) => {
 
 exports.backupAllLeads = async () => {
   try {
+    const apiKey = process.env.HOLYSHEET_API_KEY || process.env.HOLY_SHEET_API_KEY || 'A4NWMO7Hr9zJGlf1epJAOGzp0mzBfLMH';
+    if (!apiKey) return;
+    const sheetName = 'All Data Backup';
     const Lead = require('../models/Lead');
     const leads = await Lead.find({}).lean();
     console.log(`[HolySheet Backup] Found ${leads.length} leads in database. Starting batch sync...`);
-    for (const lead of leads) {
-      await exports.syncLeadToSheet(lead);
+
+    // Fetch existing rows
+    let existingRows = [];
+    try {
+      const getRes = await axios.get(`${BASE_URL}/${apiKey}/rows`, { params: { sheet: sheetName } });
+      existingRows = getRes.data?.data || [];
+      if (existingRows.length === 0 && (getRes.data?.count === 0 || !getRes.data)) {
+        await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [HEADERS] }, { params: { sheet: sheetName } });
+        console.log('[HolySheet Backup] Initialized header row on empty sheet.');
+      }
+    } catch (err) {
+      console.warn('[HolySheet Backup Warn] Check header error:', err.message);
+    }
+
+    const existingCount = existingRows.length;
+    console.log(`[HolySheet Backup] Existing rows count: ${existingCount}`);
+
+    for (let i = 0; i < leads.length; i++) {
+      const lead = leads[i];
+      if (i < existingCount) {
+        const values = {};
+        for (const h of HEADERS) values[h] = extractCell(lead, h);
+        await axios.patch(`${BASE_URL}/${apiKey}/rows`, {
+          sheet: sheetName,
+          rowIndex: i + 2,
+          values
+        });
+      } else {
+        const remainingLeads = leads.slice(i);
+        console.log(`[HolySheet Backup] Batch posting remaining ${remainingLeads.length} leads...`);
+        const batches = [];
+        for (let j = 0; j < remainingLeads.length; j += 100) {
+          batches.push(remainingLeads.slice(j, j + 100));
+        }
+        for (let k = 0; k < batches.length; k++) {
+          const batch = batches[k];
+          const rowsToAppend = batch.map(l => HEADERS.map(h => extractCell(l, h)));
+          await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: rowsToAppend }, { params: { sheet: sheetName } });
+          console.log(`[HolySheet Backup] Batch ${k + 1}/${batches.length} successfully appended.`);
+        }
+        break;
+      }
     }
     console.log('[HolySheet Backup] Batch sync complete.');
   } catch (err) {

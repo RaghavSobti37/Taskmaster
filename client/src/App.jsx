@@ -31,6 +31,9 @@ const UnsubscribePage = lazy(() => import('./pages/Unsubscribe'));
 const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
 const WorkflowCanvas = lazy(() => import('./pages/productivity/WorkflowCanvas'));
 const OfficeAssetsPage = lazy(() => import('./pages/office/OfficeAssetsPage'));
+const MetaOAuthCallback = lazy(() => import('./pages/auth/MetaOAuthCallback'));
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const UserDataDeletion = lazy(() => import('./pages/legal/UserDataDeletion'));
 
 function App() {
   const { loading } = useAuth();
@@ -44,6 +47,9 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
+          <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/userdata" element={<UserDataDeletion />} />
           <Route path="/preview/artist/:id/*" element={<ArtistDetail isPreview={true} />} />
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
 

@@ -19,5 +19,7 @@ router.delete('/:id', artistController.deleteArtist);
 router.post('/:id/inject-event', artistController.injectEvent);
 router.post('/:id/sync-stats', artistAnalyticsController.syncArtistStats);
 router.post('/:id/tracked-video', artistAnalyticsController.addTrackedVideo);
+router.post('/:id/webhooks/subscribe', artistAnalyticsController.enableInstagramWebhooks);
+router.post('/:id/auth/meta/callback', artistAnalyticsController.metaOAuthCallback);
 
 module.exports = router;

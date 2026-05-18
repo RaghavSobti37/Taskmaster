@@ -23,15 +23,32 @@ router.get('/instagram', (req, res) => {
   }
 });
 
+const crypto = require('crypto');
+
 // POST route to handle real-time Instagram mentions and events
 router.post('/instagram', (req, res) => {
   try {
+    const signatureHeader = req.headers['x-hub-signature-256'];
+    if (signatureHeader && req.rawBody && process.env.META_APP_SECRET) {
+      const hmac = crypto.createHmac('sha256', process.env.META_APP_SECRET);
+      const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
+      if (digest !== signatureHeader) {
+        console.warn('❌ [Meta Webhook] Signature mismatch! Expected:', digest, 'Received:', signatureHeader);
+      } else {
+        console.log('🔒 [Meta Webhook] SHA256 payload signature verified successfully.');
+      }
+    }
+
     const body = req.body;
     if (body && body.object === 'instagram') {
       body.entry?.forEach(entry => {
         entry.changes?.forEach(change => {
           if (change.field === 'mentions') {
-            console.log('Webhook mention received for media_id:', change.value?.media_id);
+            console.log('⚡ [Webhook] Mention received for media_id:', change.value?.media_id, 'Comment ID:', change.value?.comment_id);
+          } else if (change.field === 'comments') {
+            console.log('💬 [Webhook] Comment received on media:', change.value?.media_id, 'Text:', change.value?.text);
+          } else if (change.field === 'messages') {
+            console.log('✉️ [Webhook] Message received from sender:', change.value?.sender?.id);
           }
         });
       });

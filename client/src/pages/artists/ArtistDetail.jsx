@@ -119,6 +119,14 @@ export default function ArtistDetail({ isPreview = false }) {
     alert(`Public preview link copied to clipboard:\n${previewUrl}`);
   };
 
+  const handleConnectMeta = () => {
+    const appId = '733417183164639';
+    const redirectUri = `${window.location.origin}/oauth/meta/callback`;
+    const scope = 'instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement';
+    const authUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${artist._id}`;
+    window.location.href = authUrl;
+  };
+
   if (isArtistLoading) return <PageSkeleton />;
   if (!artist) {
     return (
@@ -717,6 +725,24 @@ export default function ArtistDetail({ isPreview = false }) {
                   className="font-mono text-xs"
                 />
               </div>
+            </div>
+
+            <div className="mt-6 p-6 rounded-2xl bg-slate-50 dark:bg-[#1F2937] border border-slate-200 dark:border-[#374151] flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Zap size={14} className="text-pink-500" /> Automated Meta / Instagram Login
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Connect securely via Facebook. Automatically extracts Graph IDs and enables real-time webhook mentions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectMeta}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-xs shadow-lg shadow-pink-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
+              >
+                <FaInstagram size={16} /> Connect Instagram / Facebook
+              </button>
             </div>
           </section>
         </div>

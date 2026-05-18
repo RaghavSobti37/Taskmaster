@@ -227,6 +227,24 @@ export default function FollowupsPage() {
     }
   ];
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncBookedCalls = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      alert(res.data.message);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
+      refetch();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to sync booked calls');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (isLoading && leads.length === 0) return <PageSkeleton />;
 
   return (
@@ -246,6 +264,9 @@ export default function FollowupsPage() {
                 { id: 'upcoming', label: `Upcoming (${stats.upcoming})` }
               ]}
             />
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
+              <Zap size={14} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh
             </Button>

@@ -1,74 +1,121 @@
 const holySheet = require('../utils/holySheet');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
+const CRMAudit = require('../models/CRMAudit');
+const { assignLeadToRep } = require('./crmController');
+const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 
 /**
- * Sync Call Bookings from HolySheet
- */
+  * Sync Call Bookings from HolySheet BookedCalls sheet
+  */
 exports.syncBookings = async (req, res) => {
   try {
-    const sheetName = req.query.sheet || 'Bookings'; // User needs to confirm sheet name
-    const rows = await holySheet.getRows(sheetName);
+    const sheetName = req.query.sheet || 'BookedCalls';
+    const apiKey = process.env.HOLYSHEET_BOOKED_CALLS_API_KEY || 'z6aMUsJwG8rEnYNKEAPSdbGHq0oreVFV';
+    
+    let rows = [];
+    try {
+      rows = await holySheet.getRowsCustomKey(sheetName, apiKey);
+    } catch (err) {
+      console.warn('[HOLYSHEET SYNC WARN]', err.message);
+      // If sheet not linked or empty, return friendly message
+      if (err.message.includes('404') || err.message.includes('No sheet linked')) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'No sheet linked to this API key in HolySheet dashboard. Please open https://holysheet.soneshjain.com and link your BookedCalls sheet URL.' 
+        });
+      }
+      throw err;
+    }
     
     let addedCount = 0;
+    let updatedCount = 0;
     let duplicateCount = 0;
 
     for (const row of rows) {
-      // Basic check for existence (e.g., by phone or email)
-      const phone = row.phone || row.Phone || row['Mobile Number'];
-      const email = row.email || row.Email;
+      const rawPhone = row.phone || row.Phone || row['Mobile Number'] || row['Phone Number'] || '';
+      const rawEmail = row.email || row.Email || row['Email Address'] || '';
+
+      const phone = normalizePhone(rawPhone);
+      const email = sanitizeEmail(rawEmail);
 
       if (!phone && !email) continue;
 
-      const existing = await Lead.findOne({ 
-        $or: [
-          { phone: phone || '___' },
-          { email: email || '___' }
-        ]
-      });
+      const name = sanitizeName(row.name || row.Name || row['Full Name'] || row.full_name || 'Booked Discovery Lead');
+      
+      const rawDate = row.date || row.Date || row.booking_date || row.bookingDate || row.event_date || row.call_date || '';
+      const date = rawDate.trim() ? new Date(rawDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      
+      const rawTime = row.time || row.Time || row.booking_time || row.bookingTime || row.event_time || row.call_time || '';
+      const time = rawTime.trim() ? rawTime.trim() : '14:00';
+
+      const source = row.source || row.Source || 'Booked Call';
+      const remarks = row.remarks || row.Remarks || row.notes || row.Notes || `Booked a discovery call for ${date} at ${time}.`;
+
+      const filter = { $or: [] };
+      if (phone) filter.$or.push({ phone });
+      if (email) filter.$or.push({ email });
+
+      const existing = await Lead.findOne(filter);
 
       if (existing) {
-        duplicateCount++;
-        continue;
+        let assignedRepId = existing.assignedRepId;
+        if (!assignedRepId) {
+          assignedRepId = await assignLeadToRep();
+        }
+
+        existing.assignedRepId = assignedRepId;
+        existing.nextFollowupDate = date;
+        existing.nextFollowupTime = time;
+        existing.callStatus = 'Scheduled';
+        existing.leadStatus = 'Warm';
+        existing.remarks = `${existing.remarks ? existing.remarks + ' • ' : ''}${remarks}`;
+        await existing.save();
+
+        updatedCount++;
+      } else {
+        const assignedRepId = await assignLeadToRep();
+
+        await Lead.create({
+          name,
+          email,
+          phone: phone || '0000000000',
+          city: row.city || row.City || row.location || row.Location || '',
+          leadStatus: 'Warm',
+          callStatus: 'Scheduled',
+          nextFollowupDate: date,
+          nextFollowupTime: time,
+          source,
+          remarks,
+          assignedRepId
+        });
+
+        addedCount++;
       }
-
-      // Create new lead (unassigned as requested)
-      await Lead.create({
-        name: row.name || row.Name || row['Full Name'] || 'New Booking',
-        email: email || '',
-        phone: phone || '0000000000',
-        leadStatus: 'New',
-        callStatus: 'Pending',
-        webinarDates: row.webinar_dates || row.webinarDates || 'Booking Sync',
-        remarks: `AUTO-SYNC: Booking received from ${sheetName}`,
-        assignedRepId: null // Allow reps to assign themselves
-      });
-
-      addedCount++;
     }
 
-    if (addedCount > 0) {
-      const CRMAudit = require('../models/CRMAudit');
+    if (addedCount > 0 || updatedCount > 0) {
       await CRMAudit.create({
         userId: req.user._id,
         userRole: req.user.role,
         action: 'BOOKING_SYNC',
         fieldChanged: 'leads',
-        oldValue: 'external',
-        newValue: `sync_${addedCount}`,
-        notes: `Successfully ingested ${addedCount} new bookings from HolySheet.`
+        oldValue: 'holysheet_booked_calls',
+        newValue: `added_${addedCount}_updated_${updatedCount}`,
+        notes: `Ingested ${addedCount} new bookings and updated ${updatedCount} existing leads with scheduled followups.`
       });
     }
 
     res.json({
       success: true,
-      message: `${addedCount} new bookings ingested. ${duplicateCount} duplicates skipped.`,
+      message: `Successfully synchronized booked calls. ${addedCount} new leads created, ${updatedCount} existing leads updated with follow-up appointments.`,
       addedCount,
+      updatedCount,
       duplicateCount
     });
 
   } catch (error) {
     console.error('[SYNC ERROR]', error.message);
-    res.status(500).json({ error: error.message || 'Sync failed' });
+    res.status(500).json({ success: false, error: error.message || 'Sync failed' });
   }
 };

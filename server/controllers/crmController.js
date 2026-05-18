@@ -47,6 +47,7 @@ const assignLeadToRep = async () => {
   leadCounts.sort((a, b) => a.count - b.count);
   return leadCounts[0].repId;
 };
+exports.assignLeadToRep = assignLeadToRep;
 
 /**
  * Retrieves leads with advanced filtering, searching, and pagination.

@@ -63,6 +63,60 @@ router.delete('/clear', protect, async (req, res) => {
   }
 });
 
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const log = await Log.findById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'Log not found' });
+    
+    const now = new Date();
+    const logDate = new Date(log.createdAt);
+    const isSameDay = logDate.getFullYear() === now.getFullYear() && 
+                      logDate.getMonth() === now.getMonth() && 
+                      logDate.getDate() === now.getDate();
+                      
+    if (!isSameDay && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Logs are only editable on the day they were created.' });
+    }
+
+    if (log.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to edit this log.' });
+    }
+
+    const { details } = req.body;
+    log.details = { ...log.details, ...details };
+    await log.save();
+    res.json(log);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const log = await Log.findById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'Log not found' });
+
+    const now = new Date();
+    const logDate = new Date(log.createdAt);
+    const isSameDay = logDate.getFullYear() === now.getFullYear() && 
+                      logDate.getMonth() === now.getMonth() && 
+                      logDate.getDate() === now.getDate();
+                      
+    if (!isSameDay && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Logs can only be deleted on the day they were created.' });
+    }
+
+    if (log.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to delete this log.' });
+    }
+
+    await Log.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Log deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/activity-grid', protect, async (req, res) => {
   try {
     const userId = req.user._id;

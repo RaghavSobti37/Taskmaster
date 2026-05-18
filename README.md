@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.3.0
+# ⚡ Taskmaster v1.4.0
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -22,10 +22,10 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **🚀 Real-Time Dashboard**: Live task tracking, productivity metrics, and one-click completion with a 10s undo buffer.
 - **📁 Multi-View Projects**: Manage complex initiatives using List, Kanban, and Gantt views. Features automated progress rollups and hierarchical task architectures (Project > Phase > Task).
 - **🧠 Workflow Canvas**: A node-based visual process architecting tool for mapping complex business logic via drag-and-drop mechanics (Powered by React Flow).
-- **📝 Daily Logs & Auditing**: Precision work logging with project tagging and automated performance reporting. 
+- **📝 Daily Logs & Same-Day Editing**: Precision work logging with project tagging and strict same-day editing/deleting security rules.
 
 ### 📈 Customer Relationship Management (CRM)
-- **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports with checksum deduplication, and automated follow-ups.
+- **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports, and real-time bidirectional synchronization with Google Sheets Service Account.
 - **Interactive Interaction & Notes Stream**: Persistent timeline tracking of sales remarks, custom touchpoint notes, and planned action items.
 - **Overdue Alerts & Follow-up Reminders**: Scheduled reminders with overdue visual indicators and rep-specific schedule views.
 - **Role-Based Data Isolation**: Automatic user-level data segregation where sales professionals view their specific assigned leads and performance analytics, while administrators oversee full organizational metrics.

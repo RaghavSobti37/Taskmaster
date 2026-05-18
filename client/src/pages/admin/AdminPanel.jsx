@@ -29,7 +29,7 @@ import TscDataContent from '../../components/admin/TscDataContent';
 import AdminMailContent from '../../components/admin/AdminMailContent';
 import WorkflowCanvas from '../productivity/WorkflowCanvas';
 import { 
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useCreateTeam 
+  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam 
 } from '../../hooks/useTaskmasterQueries';
 
 const AdminPanel = () => {
@@ -53,6 +53,7 @@ const AdminPanel = () => {
   const { data: allLogs = [] } = useLogs('all', 100);
 
   const updateUserMutation = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
   const createTeamMutation = useCreateTeam();
 
   useEffect(() => {
@@ -76,6 +77,16 @@ const AdminPanel = () => {
       setSelectedUser(null);
     } catch (err) {
       alert('Failed to update user: ' + err.message);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to permanently remove this user account?")) return;
+    try {
+      await deleteUserMutation.mutateAsync(userId);
+      setSelectedUser(null);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete user');
     }
   };
 
@@ -134,7 +145,7 @@ const AdminPanel = () => {
       header: 'Last Activity',
       render: (u) => (
         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-          {u.lastActive ? format(new Date(u.lastActive), 'MMM dd, yyyy') : 'No record'}
+          {u.lastOnline ? format(new Date(u.lastOnline), 'MMM dd, yyyy h:mm a') : 'No record'}
         </span>
       )
     }
@@ -348,6 +359,19 @@ const AdminPanel = () => {
                      <span className="text-[9px] font-mono opacity-50">••••••••</span>
                   </div>
                </div>
+            </Card>
+            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
+               <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Danger Zone</h4>
+               <Button 
+                 variant="danger" 
+                 size="sm" 
+                 className="w-full justify-center !py-2" 
+                 onClick={() => handleDeleteUser(selectedUser._id)}
+                 disabled={deleteUserMutation.isPending}
+               >
+                 <Trash2 size={14} className="mr-2" /> 
+                 {deleteUserMutation.isPending ? 'Removing...' : 'Remove User Account'}
+               </Button>
             </Card>
           </>
         }

@@ -119,7 +119,7 @@ exports.getLeads = async (req, res) => {
     
     const pipeline = [
       { $match: query },
-      { $sort: { [sortField]: sortOrder } },
+      { $sort: { [sortField]: sortOrder, _id: 1 } },
       { $skip: skip },
       { $limit: limit },
       {
@@ -592,7 +592,7 @@ exports.getCRMStats = async (req, res) => {
     const totalLeads = result.total[0]?.count || 0;
     const convertedLeads = result.converted[0]?.count || 0;
     const activeReach = result.meaningful[0]?.count || 0;
-    const conversionRate = totalLeads > 0 ? Math.round((convertedLeads / totalLeads) * 100) : 0;
+    const conversionRate = totalLeads > 0 ? Number(((convertedLeads / totalLeads) * 100).toFixed(1)) : 0;
 
     res.json({
       totalLeads,
@@ -657,13 +657,14 @@ exports.addNote = async (req, res) => {
  */
 exports.getCRMConfig = async (req, res) => {
   try {
-    const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses, sources] = await Promise.all([
+    const [callStatuses, leadStatuses, artistTypes, webinarDates, meaningfulConnectStatuses, sources, qualities] = await Promise.all([
       Lead.distinct('callStatus'),
       Lead.distinct('leadStatus'),
       Lead.distinct('artistType'),
       Lead.distinct('webinarDates'),
       Lead.distinct('meaningfulConnect'),
-      Lead.distinct('source')
+      Lead.distinct('source'),
+      Lead.distinct('leadQuality')
     ]);
 
     let configDoc = await CRMConfig.findOne({ configKey: 'default' });
@@ -685,7 +686,7 @@ exports.getCRMConfig = async (req, res) => {
       webinarDates: webinarDates.filter(Boolean),
       meaningfulConnectStatuses: Array.from(new Set([...meaningfulConnectStatuses.filter(Boolean), ...configDoc.meaningfulConnectStatuses])),
       sources: Array.from(new Set([...sources.filter(Boolean), 'Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'])),
-      qualities: configDoc.qualities
+      qualities: Array.from(new Set([...qualities.filter(Boolean), ...configDoc.qualities, '1', '2', '3', '4', '5', 'Future 4']))
     };
 
     res.json(mergedConfig);

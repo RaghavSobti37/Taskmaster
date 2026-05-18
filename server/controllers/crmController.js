@@ -5,7 +5,7 @@ const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 const CRMConfig = require('../models/CRMConfig');
-const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -168,6 +168,7 @@ exports.getLeads = async (req, res) => {
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
+    if (leadData.city && typeof leadData.city === 'string') leadData.city = sanitizeLocation(leadData.city);
     
     // Duplicate check
     const filter = { $or: [] };
@@ -210,6 +211,7 @@ exports.updateLead = async (req, res) => {
     }
 
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
+    if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
     
     // The audit plugin handles the delta calculation and logging automatically
     const lead = await Lead.findByIdAndUpdate(id, { 
@@ -415,6 +417,7 @@ exports.uploadLeads = async (req, res) => {
         leadDoc.name = sanitizeName(leadDoc.name);
         leadDoc.email = sanitizeEmail(leadDoc.email);
         leadDoc.phone = normalizePhone(leadDoc.phone);
+        leadDoc.city = sanitizeLocation(leadDoc.city);
 
         leadDocs.push(leadDoc);
       }
@@ -536,14 +539,14 @@ exports.exportLeads = async (req, res) => {
     
     leads.forEach(l => {
       const row = [
-        `"${(l.name || '').replace(/"/g, '""')}"`,
+        `"${(l.name || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
         `"${(l.email || '').replace(/"/g, '""')}"`,
         `"${(l.phone || '').replace(/"/g, '""')}"`,
-        `"${(l.city || '').replace(/"/g, '""')}"`,
+        `"${(l.city || '').toLowerCase().replace(/"/g, '""')}"`,
         `"${(l.leadStatus || '').replace(/"/g, '""')}"`,
         `"${(l.callStatus || '').replace(/"/g, '""')}"`,
         `"${(l.leadQuality || '').replace(/"/g, '""')}"`,
-        `"${(l.remarks || '').replace(/"/g, '""')}"`,
+        `"${(l.remarks || '').replace(/[\r\n]+/g, ' • ').replace(/"/g, '""')}"`,
         `"${(l.assignedRepId?.name || 'Unassigned').replace(/"/g, '""')}"`,
         `"${l.createdAt ? l.createdAt.toISOString() : ''}"`
       ];

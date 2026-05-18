@@ -3,7 +3,7 @@ const Lead = require('../models/Lead');
 const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
 const fs = require('fs');
-const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 exports.getTscData = async (req, res) => {
   try {
@@ -277,6 +277,8 @@ exports.importTscData = async (req, res) => {
           doc.name = sanitizeName(doc.name);
           doc.email = sanitizeEmail(doc.email);
           doc.phone = normalizePhone(doc.phone);
+          doc.city = sanitizeLocation(doc.city);
+          doc.state = sanitizeLocation(doc.state);
 
           return doc;
         });

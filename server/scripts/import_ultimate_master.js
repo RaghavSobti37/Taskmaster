@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const TscData = require('../models/TscData');
-const { sanitizeName, sanitizeEmail, normalizePhone } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 const CSV_PATH = path.join(__dirname, '../../ULTIMATE_MASTER_DATA_CLEANED.csv');
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmaster';
@@ -59,6 +59,8 @@ async function importUltimateMaster() {
         const name = sanitizeName(row.Name || row.name || 'Unknown');
         const email = sanitizeEmail(row.Email || row.email);
         const phone = normalizePhone(row.Phone || row.phone);
+        const city = sanitizeLocation(row.City || row.city || '');
+        const state = sanitizeLocation(row.State || row.state || '');
 
         if (!isValidEmail(email) && !isValidPhone(phone)) {
           skippedRows++;
@@ -76,8 +78,8 @@ async function importUltimateMaster() {
                 filter: { _id: id },
                 update: {
                   $set: {
-                    city: row.City || '',
-                    state: row.State || '',
+                    city: city,
+                    state: state,
                     role: row.Role || '',
                     mediaUrl: row.Media_URL || '',
                     timestamp: row.Timestamp || '',
@@ -114,8 +116,8 @@ async function importUltimateMaster() {
               filter: { _id: existingId },
               update: {
                 $set: {
-                  city: row.City || '',
-                  state: row.State || '',
+                  city: city,
+                  state: state,
                   role: row.Role || '',
                   mediaUrl: row.Media_URL || '',
                   timestamp: row.Timestamp || '',
@@ -141,8 +143,8 @@ async function importUltimateMaster() {
             name,
             email,
             phone,
-            city: row.City || '',
-            state: row.State || '',
+            city: city,
+            state: state,
             role: row.Role || '',
             mediaUrl: row.Media_URL || '',
             timestamp: row.Timestamp || '',

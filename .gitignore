@@ -6,3 +6,4 @@ server/uploads/
 google_service_account.json
 .agents
 graphify-out/
+*backups

@@ -39,8 +39,8 @@ import { Badge, PageHeader, PageContainer, Card, TabSwitcher, PageSkeleton, Butt
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const sampleDiagnosticData = {
-  subtitle: "System Diagnostic Telemetry & Agent Repair Protocol",
+const systemFlowData = {
+  subtitle: "System Activity & Audit Logs",
   mermaid: `graph TD
     classDef core fill:#1E293B,stroke:#3B82F6,stroke-width:2px,color:#fff;
     classDef pulse fill:#111827,stroke:#10B981,stroke-width:2px,color:#34D399;
@@ -50,19 +50,19 @@ const sampleDiagnosticData = {
     B --> C{Auth Middleware}
     C -->|Clerk Verified| D[System Activity Logger]:::pulse
     C -->|Legacy JWT| D
-    D --> E[Temporal Log Stream]
+    D --> E[Activity Log Stream]
     E --> F[Supabase Realtime Broadcast]:::pulse
     D --> G[Trigger.dev Queue Dispatch]:::warn`,
   reportHtml: `
     <div class="space-y-4">
       <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 font-mono text-xs">
-        [DIAGNOSTIC PROTOCOL ACTIVE]: Zero Agent Log Stream Connected. All signals nominal.
+        [SYSTEM LOGS ACTIVE]: Connected to live activity stream.
       </div>
       <table class="w-full text-left font-mono text-xs">
         <tr class="border-b border-white/10 text-slate-400"><th>Subsystem</th><th>Status</th><th>Latency</th></tr>
         <tr class="border-b border-white/5"><td>Auth Engine (Clerk)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>14ms</td></tr>
-        <tr class="border-b border-white/5"><td>Temporal DB (MongoDB)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>8ms</td></tr>
-        <tr class="border-b border-white/5"><td>Realtime Pulse (Supabase)</td><td><span class="text-emerald-400">CONNECTED</span></td><td>22ms</td></tr>
+        <tr class="border-b border-white/5"><td>Database (MongoDB)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>8ms</td></tr>
+        <tr class="border-b border-white/5"><td>Realtime Updates (Supabase)</td><td><span class="text-emerald-400">CONNECTED</span></td><td>22ms</td></tr>
         <tr><td>Background Jobs (Trigger.dev)</td><td><span class="text-amber-400">STANDBY</span></td><td>--</td></tr>
       </table>
     </div>
@@ -185,13 +185,13 @@ const AdminLogsPage = () => {
   return (
     <PageContainer>
       <PageHeader
-        title="System Diagnostics & Logs"
-        subtitle="Zero diagnostic telemetry, agent repair signals, and activity streams."
+        title="Activity & System Logs"
+        subtitle="Track user actions, logins, and database activity."
         icon={ShieldCheck}
         actions={
           <div className="flex items-center gap-2">
             <Button size="xs" variant="primary" onClick={() => setIsExplainerOpen(true)}>
-              <Terminal size={12} className="mr-1.5" /> Agent Diagnostic Explainer
+              <Terminal size={12} className="mr-1.5" /> System Flow Diagram
             </Button>
             <TabSwitcher
               activeTab={viewType}
@@ -247,9 +247,9 @@ const AdminLogsPage = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-black tracking-tight text-[var(--color-text-primary)] uppercase flex items-center gap-2">
-                      System Signals <Badge variant="mint" className="text-[8px]">Zero Diagnostic Protocol</Badge>
+                      System Activity <Badge variant="mint" className="text-[8px]">Live Stream</Badge>
                     </h3>
-                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Daily platform activity and automated diagnostic stream overview.</p>
+                    <p className="text-xs text-[var(--color-text-muted)] font-medium">Overview of user actions and automated background tasks.</p>
                   </div>
                 </div>
                 
@@ -368,8 +368,8 @@ const AdminLogsPage = () => {
       <VisualExplainerModal
         isOpen={isExplainerOpen}
         onClose={() => setIsExplainerOpen(false)}
-        title="Zero Agent Diagnostic Telemetry"
-        data={sampleDiagnosticData}
+        title="System Activity Flow"
+        data={systemFlowData}
       />
     </PageContainer>
   );

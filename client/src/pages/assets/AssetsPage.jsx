@@ -114,8 +114,8 @@ const AssetsPage = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title="Asset Repository"
-        subtitle="Operational infrastructure and resource synchronization via UploadThing."
+        title="Files & Assets"
+        subtitle="Store and manage project files, links, and documents."
         actions={
           <div className="flex items-center gap-2">
              <div className="relative">
@@ -127,16 +127,16 @@ const AssetsPage = () => {
                    className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
                 />
              </div>
-             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setUploadMode(true); }}><Plus size={14} /> Register Asset</Button>
+             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setUploadMode(true); }}><Plus size={14} /> Add File</Button>
           </div>
         }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Internal Assets" value={assets.length} icon={Database} variant="info" />
-        <StatCard label="Synced Volumes" value={driveFolders.length} icon={Cloud} variant="mint" />
-        <StatCard label="UploadThing Backend" value="CONNECTED" icon={UploadCloud} variant="apricot" />
-        <StatCard label="Storage Status" value="ACTIVE" icon={HardDrive} variant="slate" />
+        <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
+        <StatCard label="Google Drive Folders" value={driveFolders.length} icon={Cloud} variant="mint" />
+        <StatCard label="Cloud Storage" value="CONNECTED" icon={UploadCloud} variant="apricot" />
+        <StatCard label="Status" value="ACTIVE" icon={HardDrive} variant="slate" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -144,18 +144,18 @@ const AssetsPage = () => {
            <Card className="overflow-hidden">
               <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                  <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                    <FileText size={14} className="text-blue-500" /> Operational Matrix
+                    <FileText size={14} className="text-blue-500" /> File Directory
                  </h3>
-                 <Badge variant="slate">{filteredAssets.length} REGISTERED</Badge>
+                 <Badge variant="slate">{filteredAssets.length} FILES</Badge>
               </div>
               <div className="overflow-x-auto">
                  <table className="w-full text-left">
                     <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                        <tr>
-                          <th className="px-6 py-4">Context</th>
-                          <th className="px-6 py-4">Identifier</th>
-                          <th className="px-6 py-4">Endpoint</th>
-                          <th className="px-6 py-4 text-right">Ops</th>
+                          <th className="px-6 py-4">Project</th>
+                          <th className="px-6 py-4">File Name</th>
+                          <th className="px-6 py-4">Link / URL</th>
+                          <th className="px-6 py-4 text-right">Actions</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -163,7 +163,7 @@ const AssetsPage = () => {
                          <tr>
                             <td colSpan="4" className="py-20 text-center opacity-20">
                                <Database size={48} className="mx-auto mb-4" />
-                               <p className="text-[10px] font-black uppercase tracking-widest">Repository Vacant</p>
+                               <p className="text-[10px] font-black uppercase tracking-widest">No files uploaded yet</p>
                             </td>
                          </tr>
                        ) : filteredAssets.map((asset) => (
@@ -214,7 +214,7 @@ const AssetsPage = () => {
         <aside className="lg:col-span-4 space-y-6">
            <Card className="p-4 space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                 <Cloud size={14} /> Drive Synchronization
+                 <Cloud size={14} /> Google Drive Sync
               </h4>
               <div className="space-y-2">
                  {driveFolders.length === 0 ? (
@@ -232,7 +232,7 @@ const AssetsPage = () => {
                       </div>
                       <div className="min-w-0">
                          <p className="text-[10px] font-black uppercase truncate leading-tight">{folder.name}</p>
-                         <p className="text-[8px] text-[var(--color-text-muted)] font-black italic">Cloud Volume</p>
+                         <p className="text-[8px] text-[var(--color-text-muted)] font-black italic">Cloud Folder</p>
                       </div>
                    </a>
                  ))}
@@ -243,7 +243,7 @@ const AssetsPage = () => {
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-3xl rounded-full" />
               <div className="relative z-10 space-y-3">
                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Security Index</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Storage Security</h4>
                     <Shield size={14} className="text-emerald-500" />
                  </div>
                  <div className="p-2.5 bg-white/5 rounded-lg border border-white/10">
@@ -257,7 +257,7 @@ const AssetsPage = () => {
       <InputFormDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Asset Registration"
+        title="Add File or Link"
       >
         <div className="p-6 space-y-6">
            <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-1 rounded-lg">
@@ -289,10 +289,10 @@ const AssetsPage = () => {
 
            <form onSubmit={handleAddAsset} className="space-y-6">
               <div className="space-y-4">
-                 <Input label="Asset Identifier" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
-                 <Input label="Access Endpoint (URL)" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} />
+                 <Input label="File Name / Title" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
+                 <Input label="File Link (URL)" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} />
                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Parent Context</label>
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
                     <NexusDropdown 
                       options={[{ value: '', label: 'Root / No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]} 
                       value={newAsset.projectId} 
@@ -303,7 +303,7 @@ const AssetsPage = () => {
                  </div>
               </div>
               <Button type="submit" className="w-full" disabled={submitting || !newAsset.name}>
-                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Register Asset</>}
+                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add File</>}
               </Button>
            </form>
         </div>
@@ -312,11 +312,11 @@ const AssetsPage = () => {
       <NexusModal
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, assetId: null })}
-        title="Destroy Asset"
-        message="Irreversible deletion of resource registry entry. Proceed with caution."
+        title="Delete File"
+        message="Are you sure you want to delete this file? This cannot be undone."
         type="danger"
         isConfirm
-        confirmLabel="Destroy entry"
+        confirmLabel="Delete"
         onConfirm={handleDeleteAsset}
       />
 

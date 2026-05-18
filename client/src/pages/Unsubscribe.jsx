@@ -44,7 +44,7 @@ export default function UnsubscribePage() {
           <div className="space-y-2">
             <h1 className="text-xl font-black uppercase tracking-tight text-white">Unsubscription Confirmed</h1>
             <p className="text-xs text-[#94a3b8] font-mono leading-relaxed">
-              Your email <strong className="text-white">{email}</strong> has been cleanly removed and marked inactive across our entire event tracking and notification ecosystem.
+              Your email <strong className="text-white">{email}</strong> has been successfully unsubscribed from all our mailing lists.
             </p>
           </div>
           <div className="pt-4 border-t border-[#1f2937]">
@@ -113,13 +113,13 @@ export default function UnsubscribePage() {
             disabled={loading || !email}
             className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50"
           >
-            {loading ? 'Processing...' : 'Confirm Clean Unsubscribe'}
+            {loading ? 'Processing...' : 'Confirm Unsubscribe'}
           </button>
         </form>
 
         <div className="pt-6 border-t border-[#1f2937] text-center">
           <p className="text-[10px] font-mono text-[#64748b]">
-            Secure unsubscription protocol. Opt-out requests are processed instantly across all distributed nodes.
+            You will be unsubscribed immediately.
           </p>
         </div>
       </div>

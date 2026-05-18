@@ -71,8 +71,8 @@ const FeaturesPage = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title="Platform Capabilities"
-        subtitle="Operational infrastructure and integrated feature matrix."
+        title="Features"
+        subtitle="Everything you need to manage your team, projects, and leads."
         icon={Rocket}
         actions={
            <Button size="sm" variant="ghost" className="!text-[10px]"><Sparkles size={14} /> SYSTEM V.4.0</Button>
@@ -81,10 +81,10 @@ const FeaturesPage = () => {
 
       {/* Analytical Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Active Modules" value="24" icon={Box} variant="info" />
-        <StatCard label="Integration Index" value="98%" icon={Zap} variant="mint" />
-        <StatCard label="Security Layer" value="AES-256" icon={Shield} variant="rose" />
-        <StatCard label="Response Pulse" value="12ms" icon={Activity} variant="slate" />
+        <StatCard label="Features" value="24" icon={Box} variant="info" />
+        <StatCard label="Cloud Uptime" value="99.9%" icon={Zap} variant="mint" />
+        <StatCard label="Encryption" value="AES-256" icon={Shield} variant="rose" />
+        <StatCard label="Speed" value="Fast" icon={Activity} variant="slate" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -100,11 +100,11 @@ const FeaturesPage = () => {
              <CheckCircle2 className="text-emerald-500" size={24} /> Mission Ready
           </h2>
           <p className="text-[11px] font-bold text-white/60 leading-relaxed uppercase tracking-[0.1em]">
-            The Taskmaster ecosystem is fully synchronized with the Google Cloud backbone. Real-time data persistence and multi-layer encryption are active across all operational zones.
+            Taskmaster is fully synced with your Google account. All your data is saved securely and updated in real time across all devices.
           </p>
           <div className="flex gap-3">
-             <Badge variant="info" className="!bg-blue-500/20 !text-blue-400 !border-blue-500/30 py-2 px-4">CORE ACTIVE</Badge>
-             <Badge variant="mint" className="!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30 py-2 px-4">DATA SYNCED</Badge>
+             <Badge variant="info" className="!bg-blue-500/20 !text-blue-400 !border-blue-500/30 py-2 px-4">ONLINE</Badge>
+             <Badge variant="mint" className="!bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30 py-2 px-4">SYNCED</Badge>
           </div>
         </div>
         

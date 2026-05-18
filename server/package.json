@@ -4,6 +4,7 @@
   "description": "Enterprise Work Management API",
   "main": "server.js",
   "scripts": {
+    "build": "cd ../client && npm install && npm run build",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

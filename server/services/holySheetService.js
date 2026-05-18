@@ -116,6 +116,10 @@ exports.backupAllLeads = async () => {
           rowIndex: i + 2,
           values
         });
+        if ((i + 1) % 50 === 0) {
+          console.log(`[HolySheet Backup] Updated ${i + 1}/${existingCount} existing rows...`);
+        }
+        await new Promise(r => setTimeout(r, 60)); // 60ms delay to prevent server 500 rate limit
       } else {
         const remainingLeads = leads.slice(i);
         console.log(`[HolySheet Backup] Batch posting remaining ${remainingLeads.length} leads...`);
@@ -128,6 +132,7 @@ exports.backupAllLeads = async () => {
           const rowsToAppend = batch.map(l => HEADERS.map(h => extractCell(l, h)));
           await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: rowsToAppend }, { params: { sheet: sheetName } });
           console.log(`[HolySheet Backup] Batch ${k + 1}/${batches.length} successfully appended.`);
+          await new Promise(r => setTimeout(r, 500));
         }
         break;
       }

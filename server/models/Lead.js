@@ -94,19 +94,29 @@ LeadSchema.plugin(auditPlugin);
 
 // Google Sheets Service Account Live Sync Middleware
 const googleSheetsService = require('../services/googleSheetsService');
+const csvBackupService = require('../services/csvBackupService');
 
 LeadSchema.post('save', function(doc) {
-  if (doc) googleSheetsService.syncLeadToSheet(doc);
+  if (doc) {
+    googleSheetsService.syncLeadToSheet(doc);
+    csvBackupService.backupAllLeadsToCsv();
+  }
 });
 
 LeadSchema.post('findOneAndUpdate', function(doc) {
-  if (doc) googleSheetsService.syncLeadToSheet(doc);
+  if (doc) {
+    googleSheetsService.syncLeadToSheet(doc);
+    csvBackupService.backupAllLeadsToCsv();
+  }
 });
 
 LeadSchema.post('updateOne', async function() {
   try {
     const doc = await this.model.findOne(this.getQuery());
-    if (doc) googleSheetsService.syncLeadToSheet(doc);
+    if (doc) {
+      googleSheetsService.syncLeadToSheet(doc);
+      csvBackupService.backupAllLeadsToCsv();
+    }
   } catch (err) {
     console.error('[GoogleSheets Hook Error]', err.message);
   }
@@ -117,6 +127,9 @@ LeadSchema.post('updateMany', async function() {
     const docs = await this.model.find(this.getQuery());
     for (const doc of docs) {
       googleSheetsService.syncLeadToSheet(doc);
+    }
+    if (docs.length > 0) {
+      csvBackupService.backupAllLeadsToCsv();
     }
   } catch (err) {
     console.error('[GoogleSheets Hook Error]', err.message);

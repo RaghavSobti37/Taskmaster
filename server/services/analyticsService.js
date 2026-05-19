@@ -237,36 +237,70 @@ const fetchLiveAnalytics = async (artist) => {
     (async () => {
       const activeMetaId = metaAccountId || process.env.META_DEFAULT_IG_ID;
       const activeMetaToken = metaUserToken || process.env.META_USER_TOKEN;
+      const fbPageId = artist.oauthCredentials?.meta?.fbPageId || process.env.META_DEFAULT_PAGE_ID;
 
-      if (!activeMetaId || !activeMetaToken) {
-        console.log(`⚠️ [Meta] No IG account ID or token configured for ${artist.name} — skipping`);
+      if (!activeMetaToken) {
+        console.log(`⚠️ [Meta] No accessToken configured for ${artist.name} — skipping`);
         return null;
       }
 
       let mediaData = [];
       let followersCount = null;
+      let facebookData = null;
 
-      try {
-        const r = await axios.get(
-          `https://graph.facebook.com/v20.0/${activeMetaId}/media?fields=id,caption,media_type,like_count,comments_count,permalink&access_token=${activeMetaToken}`,
-          { timeout: 10000 }
-        );
-        mediaData = r.data;
-      } catch (err) {
-        console.error('❌ [Meta] Media error:', err?.response?.data?.error || err.message);
+      // 3a. Fetch Instagram followers & profile details
+      if (activeMetaId) {
+        try {
+          const r = await axios.get(
+            `https://graph.facebook.com/v20.0/${activeMetaId}?fields=followers_count&access_token=${activeMetaToken}`,
+            { timeout: 5000 }
+          );
+          if (r.data?.followers_count != null) followersCount = r.data.followers_count;
+        } catch (err) {
+          console.error('❌ [Meta] Instagram followers error:', err?.response?.data?.error || err.message);
+        }
+
+        // 3b. Fetch Instagram media with nested reach insights
+        try {
+          const r = await axios.get(
+            `https://graph.facebook.com/v20.0/${activeMetaId}/media?fields=id,caption,media_type,like_count,comments_count,permalink,insights.metric(reach)&access_token=${activeMetaToken}`,
+            { timeout: 10000 }
+          );
+          mediaData = r.data;
+        } catch (err) {
+          console.error('❌ [Meta] Instagram media error:', err?.response?.data?.error || err.message);
+          // Fallback to basic media if insights query fails due to permission blocks
+          try {
+            const rFallback = await axios.get(
+              `https://graph.facebook.com/v20.0/${activeMetaId}/media?fields=id,caption,media_type,like_count,comments_count,permalink&access_token=${activeMetaToken}`,
+              { timeout: 10000 }
+            );
+            mediaData = rFallback.data;
+          } catch (fbErr) {
+            console.error('❌ [Meta] Instagram media fallback error:', fbErr.message);
+          }
+        }
       }
 
-      try {
-        const r = await axios.get(
-          `https://graph.facebook.com/v20.0/${activeMetaId}?fields=followers_count&access_token=${activeMetaToken}`,
-          { timeout: 5000 }
-        );
-        if (r.data?.followers_count != null) followersCount = r.data.followers_count;
-      } catch (err) {
-        console.error('❌ [Meta] Followers error:', err?.response?.data?.error || err.message);
+      // 3c. Fetch Facebook Page stats
+      if (fbPageId) {
+        try {
+          const r = await axios.get(
+            `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,followers_count,name&access_token=${activeMetaToken}`,
+            { timeout: 5000 }
+          );
+          facebookData = {
+            likes: r.data?.fan_count ?? 0,
+            followers: r.data?.followers_count ?? 0,
+            name: r.data?.name || ''
+          };
+          console.log(`✅ [Meta] Facebook Page stats fetched: ${facebookData.name} | Followers: ${facebookData.followers}`);
+        } catch (err) {
+          console.error('❌ [Meta] Facebook Page stats error:', err?.response?.data?.error || err.message);
+        }
       }
 
-      return { media: mediaData, followers: followersCount };
+      return { media: mediaData, followers: followersCount, facebook: facebookData };
     })()
   ]);
 

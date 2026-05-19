@@ -72,7 +72,8 @@ exports.handleExlyWebhook = async (req, res) => {
     const offeringTitle = payload.offeringTitle || payload.programName || payload.program || 'Exly Offering';
     const txnId = payload.transactionId || payload.transactionIdExly || '';
     const custId = payload.customerId || payload.customerIdExly || '';
-    const price = Number(payload.price || payload.amount || 0);
+    const priceRaw = payload.price || payload.amount || 0;
+    const price = isNaN(Number(priceRaw)) ? 0 : Number(priceRaw);
 
     // 1. Sync or Create Exly Offering
     if (offeringTitle) {

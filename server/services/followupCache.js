@@ -1,14 +1,30 @@
 const Redis = require('ioredis');
 const path = require('path');
 
-const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+
+if (process.platform === 'win32' && (!process.env.REDIS_URL || process.env.REDIS_URL.includes('127.0.0.1') || process.env.REDIS_URL.includes('localhost'))) {
+  try {
+    const { execSync } = require('child_process');
+    const wslIp = execSync('wsl hostname -I').toString().trim().split(' ')[0];
+    if (wslIp) {
+      redisUrl = `redis://${wslIp}:6379`;
+      console.log(`[SYSTEM] Windows detected. Using WSL Redis IP: ${redisUrl}`);
+    }
+  } catch (err) {
+    // Silent fallback
+  }
+}
+
 let redisConnection = null;
 let redisAvailable = false;
 
 try {
   redisConnection = new Redis(redisUrl, {
+    maxRetriesPerRequest: null,
     connectTimeout: 2000,
-    lazyConnect: true
+    lazyConnect: true,
+    retryStrategy: () => null
   });
   
   redisConnection.connect()
@@ -19,12 +35,18 @@ try {
     .catch((err) => {
       console.warn('[Followup Cache Warning] Redis connection failed, bypassing cache layer:', err.message);
       redisAvailable = false;
+      if (redisConnection) {
+        try { redisConnection.disconnect(); } catch (e) {}
+      }
     });
 
   redisConnection.on('error', (err) => {
     if (redisAvailable) {
       console.warn('[Followup Cache Warning] Redis disconnected.');
       redisAvailable = false;
+      if (redisConnection) {
+        try { redisConnection.disconnect(); } catch (e) {}
+      }
     }
   });
 } catch (err) {

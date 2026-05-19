@@ -179,3 +179,9 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information
 
 ---
 Architected and developed for extreme efficiency by CoreKnot.
+
+
+### v1.7.6
+- Fixed email duplicate sends with array deduplication
+- Integrated Google Sheets (HolySheet) for unsubscribed list management
+- Fixed race condition in background queue dispatch

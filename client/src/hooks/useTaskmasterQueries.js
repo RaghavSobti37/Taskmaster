@@ -624,6 +624,30 @@ export const useScanBounces = () => {
   });
 };
 
+export const useSyncUnsubscribed = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.post('/api/crm/sync-unsubscribed'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    }
+  });
+};
+
+export const useLocationLeads = (location, enabled = false) => {
+  return useQuery({
+    queryKey: ['leads', 'location', location],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/analytics/location-leads', {
+        params: { location }
+      });
+      return data;
+    },
+    enabled: enabled && !!location
+  });
+};
+
 export const sanitizeValue = (value, suffix = '') => {
   if (value === undefined || value === null || value === '' || value === 'Unavailable' || Number.isNaN(value)) {
     return 'N/A';
@@ -722,5 +746,34 @@ export const useLeadAudits = (params, enabled = true) => {
     queryFn: async () => (await axios.get('/api/crm/leads/audit-logs', { params })).data,
     enabled,
     staleTime: 1000 * 30,
+  });
+};
+
+export const useMailTemplates = (enabled = true) => {
+  return useQuery({
+    queryKey: ['mail', 'templates'],
+    queryFn: async () => (await axios.get('/api/mail/templates')).data,
+    enabled,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useSaveMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/mail/templates', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
+  });
+};
+
+export const useDeleteMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name) => axios.delete(`/api/mail/templates/${name}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
   });
 };

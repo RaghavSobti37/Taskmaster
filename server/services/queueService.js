@@ -42,6 +42,44 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   }
   if (!campaign) return;
 
+  const checkCompletion = async () => {
+    const freshCamp = await Model.findById(campaignId);
+    if (freshCamp && freshCamp.recipients) {
+      const isDone = freshCamp.recipients.every(r => r.status !== 'Pending' && r.status !== 'Queued');
+      if (isDone) {
+        freshCamp.status = 'Completed';
+        try { await freshCamp.save(); } catch (e) {}
+      }
+    }
+  };
+
+  const Lead = require('../models/Lead');
+  const cleanEmail = email.toLowerCase().trim();
+  const leadDoc = await Lead.findOne({ email: cleanEmail });
+  if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed' || leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid')) {
+    console.log(`[Queue Service] Skipping bad/unsubscribed recipient: ${email}`);
+    const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
+    if (recipient) {
+      recipient.status = (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) ? 'Unsubscribed' : 'Bounced';
+      recipient.error = 'Unsubscribed or Bounced recipient';
+    }
+    if (isLegacy) {
+      if (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) {
+        campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
+      } else {
+        campaign.stats.bounced = (campaign.stats.bounced || 0) + 1;
+      }
+    } else {
+      if (!campaign.metrics) campaign.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
+      if (leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid') {
+        campaign.metrics.bounced = (campaign.metrics.bounced || 0) + 1;
+      }
+    }
+    try { await campaign.save(); } catch (e) {}
+    await checkCompletion();
+    return;
+  }
+
   const profile = campaign.senderProfileId || (profileId ? await EmailProfile.findById(profileId) : null) || {
     name: 'Taskmaster Core Engine',
     email: 'system@taskmaster.internal',
@@ -64,24 +102,16 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     });
   }
 
-  const baseUrl = 'https://tsccoreknot.com';
+  let baseUrl = process.env.APP_BASE_URL || 'https://tsccoreknot.com';
+  if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+    baseUrl = 'https://tsccoreknot.com';
+  }
   const { processedHtml, pixelId, clickId } = await prepareCampaignHTML(content || campaign.content || '', campaign.campaignId || campaign._id.toString(), email, baseUrl);
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;
   const mailSubject = subject || campaign.subject || campaign.title;
 
   let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-
-  const checkCompletion = async () => {
-    const freshCamp = await Model.findById(campaignId);
-    if (freshCamp && freshCamp.recipients) {
-      const isDone = freshCamp.recipients.every(r => r.status !== 'Pending' && r.status !== 'Queued');
-      if (isDone) {
-        freshCamp.status = 'Completed';
-        try { await freshCamp.save(); } catch (e) {}
-      }
-    }
-  };
 
   try {
     if (resend) {
@@ -151,6 +181,14 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 };
 
 const dispatchCampaignJobs = async (campaignId) => {
+  // Pull unsubscribed leads from Google Sheets first
+  try {
+    const { pullUnsubscribedFromSheet } = require('./holySheetService');
+    await pullUnsubscribedFromSheet();
+  } catch (err) {
+    console.error('[Queue Service] Pull unsubscribed warn:', err.message);
+  }
+
   const Campaign = require('../models/Campaign');
   const MailCampaign = require('../models/MailCampaign');
   let isLegacy = false;
@@ -168,19 +206,18 @@ const dispatchCampaignJobs = async (campaignId) => {
   await campaign.save();
 
   let recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
-  if (recipients.length === 0 && (campaign.recipients || []).length > 0) {
-    for (const r of campaign.recipients) {
-      r.status = 'Pending';
-      delete r.error;
-      delete r.sentAt;
-    }
-    recipients = campaign.recipients;
+  if (recipients.length === 0) {
+    return { success: true, queuedCount: 0, message: 'All recipients are already processed or queued' };
   }
 
   const { triggerEmailCampaign } = require('./triggerService');
   
   for (const rec of recipients) {
     rec.status = 'Queued';
+  }
+  await campaign.save();
+
+  for (const rec of recipients) {
     const jobData = {
       campaignId: campaign._id.toString(),
       recipientId: rec._id.toString(),
@@ -196,7 +233,6 @@ const dispatchCampaignJobs = async (campaignId) => {
       memoryQueue.push(jobData);
     }
   }
-  await campaign.save();
 
   if (!process.env.TRIGGER_API_KEY || process.env.TRIGGER_API_KEY === 'tr_mock_api_key') {
     processMemoryQueue();

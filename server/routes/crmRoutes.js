@@ -33,6 +33,15 @@ router.post('/reset', crmController.resetCRM);
 router.get('/debug/columns', crmController.getDebugColumns);
 router.post('/debug/save-mapping', crmController.saveMapping);
 router.post('/sync-bookings', require('../controllers/syncController').syncBookings);
+router.post('/sync-unsubscribed', async (req, res) => {
+  try {
+    const { syncAndCleanUnsubscribeSheet } = require('../services/holySheetService');
+    const result = await syncAndCleanUnsubscribeSheet();
+    res.json({ success: true, count: result.length, data: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.delete('/leads/cleanup-test-data', crmController.cleanupTestData);
 

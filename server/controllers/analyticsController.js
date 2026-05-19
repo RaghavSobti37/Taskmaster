@@ -72,3 +72,52 @@ exports.getCumulativeMetrics = async (req, res) => {
   }
 };
 
+exports.getLocationLeads = async (req, res) => {
+  try {
+    const { location } = req.query;
+    if (!location) return res.status(400).json({ error: 'Location query parameter required' });
+
+    const userId = req.user._id;
+    const Campaign = require('../models/Campaign');
+    const MailCampaign = require('../models/MailCampaign');
+    const MailEvent = require('../models/MailEvent');
+
+    const coreCamps = await Campaign.find({ createdBy: userId }).lean();
+    const mailCamps = await MailCampaign.find({ createdBy: userId }).lean();
+    const allCamps = [...coreCamps, ...mailCamps];
+
+    const engagedEmailsSet = new Set();
+    allCamps.forEach(c => {
+      c.recipients?.forEach(r => {
+        if (r.status === 'Opened' || r.status === 'Clicked' || r.status === 'Sent') {
+          if (r.email) engagedEmailsSet.add(r.email.toLowerCase().trim());
+        }
+      });
+    });
+
+    const events = await MailEvent.find({ eventType: { $in: ['Open', 'Click', 'Send'] } }, 'email').lean();
+    events.forEach(e => {
+      if (e.email) engagedEmailsSet.add(e.email.toLowerCase().trim());
+    });
+
+    const engagedEmails = Array.from(engagedEmailsSet);
+    const matchQuery = engagedEmails.length > 0 
+      ? { email: { $in: engagedEmails } }
+      : { emailStatus: 'Active' };
+
+    const engagedLeads = await Lead.find(matchQuery).lean();
+    
+    // Filter matching location
+    const matchedLeads = engagedLeads.filter(l => {
+      let rawLoc = l.location || l.city || 'unknown';
+      let loc = rawLoc.toLowerCase().replace(/[().,]/g, '').replace(/\s+/g, ' ').trim();
+      return loc === location.toLowerCase().trim();
+    });
+
+    res.status(200).json(matchedLeads);
+  } catch (error) {
+    console.error('Get location leads error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

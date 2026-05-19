@@ -6,6 +6,8 @@ import { ShieldCheck, CheckCircle2, UserX } from 'lucide-react';
 export default function UnsubscribePage() {
   const [searchParams] = useSearchParams();
   const emailParam = searchParams.get('email') || '';
+  const campaignId = searchParams.get('campaignId') || '';
+  const recipientId = searchParams.get('recipientId') || '';
   const [email, setEmail] = useState(emailParam);
   const [reason, setReason] = useState('Too frequent');
   const [status, setStatus] = useState(null);
@@ -24,7 +26,7 @@ export default function UnsubscribePage() {
     setStatus(null);
 
     try {
-      await axios.post('/api/track/unsubscribe', { email, reason });
+      await axios.post('/api/track/unsubscribe', { email, reason, campaignId, recipientId });
       setStatus({ success: true });
     } catch (err) {
       console.error('Unsubscribe error:', err);
@@ -48,7 +50,7 @@ export default function UnsubscribePage() {
             </p>
           </div>
           <div className="pt-4 border-t border-[#1f2937]">
-            <a href="/" className="inline-block text-xs font-black uppercase tracking-widest text-[#38bdf8] hover:underline">
+            <a href="https://theshakticollective.in" className="inline-block text-xs font-black uppercase tracking-widest text-[#38bdf8] hover:underline">
               Return to Website
             </a>
           </div>

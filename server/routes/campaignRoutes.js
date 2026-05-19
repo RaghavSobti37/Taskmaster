@@ -66,6 +66,68 @@ router.get('/:id', async (req, res) => {
     const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
     campaign.events = events;
 
+    // Fetch all events for this campaign to calculate dynamic, unified aggregates
+    const allEvents = await MailEvent.find({ campaignId: campaign._id }).lean();
+    
+    const locationBreakdown = {};
+    const timeSeriesMap = {};
+    
+    allEvents.forEach(evt => {
+      // 1. Resolve Location
+      let city = 'Unknown';
+      if (evt.metadata) {
+        if (evt.metadata.city) {
+          city = evt.metadata.city;
+        } else if (evt.metadata.location) {
+          city = evt.metadata.location.split(',')[0].trim();
+        }
+      }
+      if (city === 'Unknown City' || city === 'Unknown Location') {
+        city = 'Unknown';
+      }
+      
+      if (!locationBreakdown[city]) {
+        locationBreakdown[city] = { opens: 0, clicks: 0 };
+      }
+      if (evt.eventType === 'Open') {
+        locationBreakdown[city].opens++;
+      } else if (evt.eventType === 'Click') {
+        locationBreakdown[city].clicks++;
+      }
+      
+      // 2. Resolve Time Series
+      if (evt.eventType === 'Open' || evt.eventType === 'Click') {
+        const date = new Date(evt.timestamp);
+        const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
+        if (!timeSeriesMap[hourStr]) {
+          timeSeriesMap[hourStr] = { time: date, opens: 0, clicks: 0 };
+        }
+        if (evt.eventType === 'Open') {
+          timeSeriesMap[hourStr].opens++;
+        } else if (evt.eventType === 'Click') {
+          timeSeriesMap[hourStr].clicks++;
+        }
+      }
+    });
+    
+    campaign.locationBreakdown = locationBreakdown;
+    campaign.timeSeries = Object.entries(timeSeriesMap)
+      .map(([hourStr, data]) => ({
+        time: data.time,
+        opens: data.opens,
+        clicks: data.clicks
+      }))
+      .sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    // Normalize campaign.metrics for both core and legacy campaigns in the frontend
+    const statsObj = campaign.stats || { total, sent, opened, clicked, bounced, unsubscribed, invalid };
+    campaign.metrics = {
+      totalSent: statsObj.sent || 0,
+      opened: statsObj.opened || 0,
+      clicked: statsObj.clicked || 0,
+      bounced: statsObj.bounced || 0
+    };
+
     res.json(campaign);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -76,6 +138,10 @@ router.post('/', async (req, res) => {
   try {
     const { title, subject, content, senderProfileId, eventTag, leadIds, customRecipients } = req.body;
     const campaignId = crypto.randomBytes(12).toString('hex');
+
+    // Pull unsubscribed leads from Google Sheets
+    const { pullUnsubscribedFromSheet } = require('../services/holySheetService');
+    await pullUnsubscribedFromSheet().catch(err => console.error('[Campaign Route] Pull unsubscribed warn:', err.message));
 
     const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds }, unsubscribed: { $ne: true }, emailStatus: { $ne: 'Bounced' } }) : [];
     const recipients = leads.map(l => ({
@@ -89,7 +155,12 @@ router.post('/', async (req, res) => {
       status: 'Pending'
     })).filter(r => r.email);
 
-    const allRecipients = [...recipients, ...custom];
+    const uniqueEmails = new Set();
+    const allRecipients = [...recipients, ...custom].filter(r => {
+      if (uniqueEmails.has(r.email)) return false;
+      uniqueEmails.add(r.email);
+      return true;
+    });
 
     const campaign = await Campaign.create({
       campaignId,

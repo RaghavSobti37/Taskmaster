@@ -494,3 +494,9 @@ To prevent duplicate booking records during webhook triggers or manual synchroni
 The mailing platform enables unified collaboration by adjusting routing access parameters:
 1. **Role-Based Query Aggregation**: For endpoints `/api/mail/profiles`, `/api/mail/campaigns`, and `/api/mail/stats`, the Express middleware verifies `req.user.role`.
 2. **Logic Override**: If the user is an `admin`, the router bypasses the `{ createdBy: req.user._id }` query filter (setting `filter = {}`). This allows admins to collectively view, send, manage, and delete all SMTP profiles and campaign metrics across the organization, while normal representatives remain restricted to their own creations.
+
+
+### v1.7.6
+- Fixed email duplicate sends with array deduplication
+- Integrated Google Sheets (HolySheet) for unsubscribed list management
+- Fixed race condition in background queue dispatch

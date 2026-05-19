@@ -451,6 +451,18 @@ export default function LeadsPage() {
                   <span className="text-[10px] font-bold">Call Status</span>
                   <Badge variant="neutral">{selectedLead?.callStatus || 'Pending'}</Badge>
                 </div>
+                {selectedLead?.unsubscribed && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-rose-400">Preference</span>
+                    <Badge variant="rose">Unsubscribed</Badge>
+                  </div>
+                )}
+                {selectedLead?.unsubscribeReason && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-rose-400">Opt-out Reason</span>
+                    <span className="text-[10px] font-mono text-rose-400">{selectedLead.unsubscribeReason}</span>
+                  </div>
+                )}
                 {selectedLead?.nextFollowupDate && (
                   <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">
                     <span className="font-bold flex items-center gap-1 text-blue-400"><Clock size={12} /> Follow-up</span>

@@ -6,19 +6,28 @@ const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
 
 const parseClientNetworkLocation = (req) => {
-  // In production, extract the first IP address from the x-forwarded-for header chain
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   if (ip && ip.includes(',')) {
     ip = ip.split(',')[0].trim();
   }
 
+  // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
+  if (ip && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
   // Handle local development network loops cleanly
-  if (!ip || ip === '127.0.0.1' || ip === '::1') {
-    return { city: 'Mumbai', country: 'IN', region: 'MH' }; // Mock target location for local testing
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1')) {
+    return { city: 'Mumbai', region: 'MH', country: 'IN', ip: '127.0.0.1' };
   }
 
   const geo = geoip.lookup(ip);
-  return geo ? { city: geo.city || 'Unknown', country: geo.country } : { city: 'Unknown', country: 'Global' };
+  return {
+    city: geo ? (geo.city || 'Unknown City') : 'Unknown City',
+    region: geo ? (geo.region || 'Unknown Region') : 'Unknown Region',
+    country: geo ? (geo.country || 'Unknown Country') : 'Unknown Country',
+    ip
+  };
 };
 
 // Open Tracking Pixel Endpoint
@@ -32,17 +41,6 @@ router.get('/open/:pixelId.gif', async (req, res) => {
     if (log && !log.opened) {
       await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
       await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'active', emailStatus: 'Active' } });
-      
-      await Campaign.updateOne(
-        { campaignId: String(log.campaignId) },
-        { 
-          $inc: { 
-            'metrics.opened': 1, 
-            [`locationBreakdown.${city}.opens`]: 1 
-          },
-          $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
-        }
-      );
 
       const MailCampaign = require('../models/MailCampaign');
       const MailEvent = require('../models/MailEvent');
@@ -55,23 +53,39 @@ router.get('/open/:pixelId.gif', async (req, res) => {
       }
 
       if (camp) {
-        await MailEvent.create({
-          eventType: 'Open',
-          email: log.leadEmail,
-          timestamp: new Date(),
-          campaignId: camp._id
-        });
+        if (isCore) {
+          camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+          camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+        } else {
+          camp.stats.opened = (camp.stats.opened || 0) + 1;
+        }
 
         if (camp.recipients) {
           const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
           if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
             rec.status = 'Opened';
-            if (!isCore) {
-              camp.stats.opened = (camp.stats.opened || 0) + 1;
-            }
+            await camp.save();
+          } else {
             await camp.save();
           }
+        } else {
+          await camp.save();
         }
+
+        await MailEvent.create({
+          eventType: 'Open',
+          email: log.leadEmail,
+          timestamp: new Date(),
+          campaignId: camp._id,
+          metadata: {
+            ip: location.ip || '127.0.0.1',
+            location: `${location.city}, ${location.region}, ${location.country}`,
+            city: location.city,
+            region: location.region,
+            country: location.country,
+            userAgent: req.headers['user-agent'] || 'Unknown'
+          }
+        });
       }
     }
 
@@ -103,14 +117,6 @@ router.get('/click/:clickId', async (req, res) => {
       await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
       await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'engaged', emailStatus: 'Active' } });
 
-      await Campaign.updateOne(
-        { campaignId: String(log.campaignId) },
-        { 
-          $inc: { 'metrics.clicked': 1, [`locationBreakdown.${city}.clicks`]: 1 },
-          $push: { timeSeries: { time: new Date(), opens: 0, clicks: 1 } }
-        }
-      );
-
       const MailCampaign = require('../models/MailCampaign');
       const MailEvent = require('../models/MailEvent');
 
@@ -122,24 +128,49 @@ router.get('/click/:clickId', async (req, res) => {
       }
 
       if (camp) {
-        await MailEvent.create({
-          eventType: 'Click',
-          email: log.leadEmail,
-          timestamp: new Date(),
-          campaignId: camp._id,
-          metadata: { url: destinationUrl }
-        });
+        if (isCore) {
+          camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+          if (!camp.locationBreakdown) {
+            camp.locationBreakdown = new Map();
+          }
+          const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+          camp.locationBreakdown.set(city, {
+            opens: locData.opens || 0,
+            clicks: (locData.clicks || 0) + 1
+          });
+          camp.markModified('locationBreakdown');
+          camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
+        } else {
+          camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+        }
 
         if (camp.recipients) {
           const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
           if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
             rec.status = 'Clicked';
-            if (!isCore) {
-              camp.stats.clicked = (camp.stats.clicked || 0) + 1;
-            }
+            await camp.save();
+          } else {
             await camp.save();
           }
+        } else {
+          await camp.save();
         }
+
+        await MailEvent.create({
+          eventType: 'Click',
+          email: log.leadEmail,
+          timestamp: new Date(),
+          campaignId: camp._id,
+          metadata: {
+            url: destinationUrl,
+            ip: location.ip || '127.0.0.1',
+            location: `${location.city}, ${location.region}, ${location.country}`,
+            city: location.city,
+            region: location.region,
+            country: location.country,
+            userAgent: req.headers['user-agent'] || 'Unknown'
+          }
+        });
       }
     }
 
@@ -159,20 +190,27 @@ router.post('/webhooks/resend', async (req, res) => {
     const wh = new Webhook(secret);
 
     let payload;
-    try {
-      const rawBodyStr = req.rawBody ? req.rawBody.toString('utf8') : '';
-      
-      // Fallback for Resend's custom header names
-      const svixHeaders = {
-        'svix-id': req.headers['svix-id'] || req.headers['resend-webhook-id'],
-        'svix-timestamp': req.headers['svix-timestamp'] || req.headers['resend-webhook-timestamp'],
-        'svix-signature': req.headers['svix-signature'] || req.headers['resend-signature'] || req.headers['resend-webhook-signature']
-      };
-
-      payload = wh.verify(rawBodyStr, svixHeaders);
-    } catch (err) {
-      console.error('Resend Webhook Signature Verification Failed:', err.message);
-      return res.status(400).send('Invalid webhook signature');
+    const isProd = process.env.NODE_ENV === 'production';
+    const hasSvixHeaders = (req.headers['svix-signature'] || req.headers['resend-signature'] || req.headers['resend-webhook-signature']);
+    
+    if (isProd || hasSvixHeaders) {
+      try {
+        const rawBodyStr = req.rawBody ? req.rawBody.toString('utf8') : '';
+        const svixHeaders = {
+          'svix-id': req.headers['svix-id'] || req.headers['resend-webhook-id'],
+          'svix-timestamp': req.headers['svix-timestamp'] || req.headers['resend-webhook-timestamp'],
+          'svix-signature': req.headers['svix-signature'] || req.headers['resend-signature'] || req.headers['resend-webhook-signature']
+        };
+        payload = wh.verify(rawBodyStr, svixHeaders);
+      } catch (err) {
+        console.error('Resend Webhook Signature Verification Failed:', err.message);
+        if (isProd) {
+          return res.status(400).send('Invalid webhook signature');
+        }
+        payload = req.body;
+      }
+    } else {
+      payload = req.body;
     }
 
     if (!payload || !payload.type || !payload.data) {
@@ -181,63 +219,256 @@ router.post('/webhooks/resend', async (req, res) => {
 
     const eventType = payload.type;
     const emailId = payload.data.email_id;
-    if (!emailId) return res.status(200).send('No email_id');
-
-    const MailEvent = require('../models/MailEvent');
+    const email = Array.isArray(payload.data.to) ? payload.data.to[0] : (payload.data.to || payload.data.email);
     
-    // Find campaign by recipient's messageId (which stores Resend's email_id)
-    let camp = await Campaign.findOne({ 'recipients.messageId': emailId });
-    let isCore = true;
-    if (!camp) {
-      const MailCampaign = require('../models/MailCampaign');
-      camp = await MailCampaign.findOne({ 'recipients.messageId': emailId });
-      isCore = false;
+    if (!email) {
+      return res.status(200).send('No recipient email found');
     }
 
-    if (camp) {
-      const recipient = camp.recipients.find(r => r.messageId === emailId);
-      if (recipient) {
-        let statusUpdated = false;
-        
-        if (eventType === 'email.delivered' && !['Opened', 'Clicked', 'Bounced'].includes(recipient.status)) {
-          recipient.status = 'Sent';
-          statusUpdated = true;
-        } else if (eventType === 'email.opened' && !['Clicked', 'Bounced'].includes(recipient.status)) {
-          recipient.status = 'Opened';
-          if (!isCore) camp.stats.opened = (camp.stats.opened || 0) + 1;
-          else camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-          statusUpdated = true;
-          
-          await Lead.updateOne({ _id: recipient.leadId || recipient.email }, { $set: { status: 'active', emailStatus: 'Active' } });
-        } else if (eventType === 'email.clicked' && recipient.status !== 'Bounced') {
-          recipient.status = 'Clicked';
-          if (!isCore) camp.stats.clicked = (camp.stats.clicked || 0) + 1;
-          else camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-          statusUpdated = true;
-          
-          await Lead.updateOne({ _id: recipient.leadId || recipient.email }, { $set: { status: 'engaged', emailStatus: 'Active' } });
-        } else if (eventType === 'email.bounced') {
-          recipient.status = 'Bounced';
-          if (!isCore) camp.stats.bounced = (camp.stats.bounced || 0) + 1;
-          else camp.metrics.bounced = (camp.metrics.bounced || 0) + 1;
-          statusUpdated = true;
-          
-          await Lead.updateOne({ email: recipient.email }, { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced' } });
-        }
+    const cleanEmail = email.toLowerCase().trim();
+    const MailCampaign = require('../models/MailCampaign');
+    const MailEvent = require('../models/MailEvent');
+    const { updateEmailTags } = require('../services/mailService');
 
-        if (statusUpdated) {
-          try { await camp.save(); } catch (e) {}
-        }
+    console.log(`⚡ [Resend Webhook] Processing event: ${eventType} for ${cleanEmail} (Email ID: ${emailId || 'N/A'})`);
 
-        await MailEvent.create({
-          eventType: eventType === 'email.opened' ? 'Open' : eventType === 'email.clicked' ? 'Click' : eventType === 'email.bounced' ? 'Bounce' : 'Delivery',
-          email: recipient.email,
-          timestamp: payload.created_at || new Date(),
-          campaignId: camp._id,
-          messageId: emailId
-        });
+    // 1. Locate Campaign and Recipient
+    let camp = null;
+    let isCore = true;
+    let recipient = null;
+
+    if (emailId) {
+      camp = await Campaign.findOne({ 'recipients.messageId': emailId });
+      if (camp) {
+        recipient = camp.recipients.find(r => r.messageId === emailId);
+      }
+      if (!camp) {
+        camp = await MailCampaign.findOne({ 'recipients.messageId': emailId });
+        if (camp) {
+          isCore = false;
+          recipient = camp.recipients.find(r => r.messageId === emailId);
+        }
       }
     }
+
+    // Fallback: search by recipient email in the most recent campaign
+    if (!recipient) {
+      camp = await Campaign.findOne({ 'recipients.email': cleanEmail }).sort({ updatedAt: -1 });
+      if (camp) {
+        isCore = true;
+        recipient = camp.recipients.find(r => r.email && r.email.toLowerCase() === cleanEmail);
+      } else {
+        camp = await MailCampaign.findOne({ 'recipients.email': cleanEmail }).sort({ updatedAt: -1 });
+        if (camp) {
+          isCore = false;
+          recipient = camp.recipients.find(r => r.email && r.email.toLowerCase() === cleanEmail);
+        }
+      }
+    }
+
+    // 2. Geolocation parsing for open/click events
+    let locationObj = { city: 'Mumbai', region: 'MH', country: 'IN', ip: '127.0.0.1', userAgent: 'Unknown' };
+    let locationString = 'Mumbai, MH, IN';
+    let url = '';
+
+    if (eventType === 'email.opened' || eventType === 'email.clicked') {
+      let ip = '';
+      let userAgent = 'Unknown';
+      
+      if (eventType === 'email.clicked') {
+        ip = payload.data.click?.ipAddress || payload.data.ipAddress || '';
+        userAgent = payload.data.click?.userAgent || payload.data.userAgent || 'Unknown';
+        url = payload.data.click?.link || payload.data.url || '';
+      } else if (eventType === 'email.opened') {
+        ip = payload.data.open?.ipAddress || payload.data.ipAddress || '';
+        userAgent = payload.data.open?.userAgent || payload.data.userAgent || 'Unknown';
+      }
+
+      if (ip && ip.includes(',')) {
+        ip = ip.split(',')[0].trim();
+      }
+
+      // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
+      if (ip && ip.startsWith('::ffff:')) {
+        ip = ip.substring(7);
+      }
+
+      const geo = ip && ip !== '127.0.0.1' && ip !== '::1' ? geoip.lookup(ip) : null;
+      locationObj = {
+        city: geo ? (geo.city || 'Unknown City') : (ip ? 'Unknown City' : 'Mumbai'),
+        region: geo ? (geo.region || 'Unknown Region') : (ip ? 'Unknown Region' : 'MH'),
+        country: geo ? (geo.country || 'Unknown Country') : (ip ? 'Unknown Country' : 'IN'),
+        ip: ip || '127.0.0.1',
+        userAgent
+      };
+      locationString = `${locationObj.city}, ${locationObj.region}, ${locationObj.country}`;
+    }
+
+    // 3. Process State Mutations based on eventType
+    if (eventType === 'email.bounced' || eventType === 'email.complained') {
+      if (recipient) {
+        recipient.status = 'Bounced';
+        recipient.error = payload.data.error?.message || payload.data.error || 'Bounced via webhook';
+        if (isCore) {
+          camp.metrics.bounced = (camp.metrics.bounced || 0) + 1;
+        } else {
+          camp.stats.bounced = (camp.stats.bounced || 0) + 1;
+        }
+        await camp.save();
+      }
+
+      // Propagate bounce to all campaigns for this email
+      const coreCamps = await Campaign.find({ 'recipients.email': cleanEmail });
+      for (const c of coreCamps) {
+        let changed = false;
+        c.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status !== 'Bounced') {
+            r.status = 'Bounced';
+            changed = true;
+          }
+        });
+        if (changed) {
+          if (!c.metrics) c.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
+          c.metrics.bounced = (c.metrics.bounced || 0) + 1;
+          await c.save();
+        }
+      }
+
+      const mailCamps = await MailCampaign.find({ 'recipients.email': cleanEmail });
+      for (const mc of mailCamps) {
+        let changed = false;
+        mc.recipients?.forEach(r => {
+          if (r.email === cleanEmail && r.status !== 'Bounced') {
+            r.status = 'Bounced';
+            changed = true;
+          }
+        });
+        if (changed) {
+          mc.stats.bounced = (mc.stats.bounced || 0) + 1;
+          await mc.save();
+        }
+      }
+
+      await Lead.updateOne(
+        { email: cleanEmail },
+        { $inc: { bounceCount: 1 }, $set: { emailStatus: 'Bounced', status: 'inactive' } }
+      );
+      await updateEmailTags(cleanEmail, 'Invalid', 'Invalid');
+
+      await MailEvent.create({
+        eventType: 'Bounce',
+        email: cleanEmail,
+        timestamp: payload.created_at || new Date(),
+        campaignId: camp?._id,
+        messageId: emailId,
+        metadata: {
+          source: 'RESEND_WEBHOOK',
+          error: payload.data.error?.message || payload.data.error || 'Bounced'
+        }
+      });
+
+    } else if (eventType === 'email.opened') {
+      if (recipient) {
+        if (!['Clicked', 'Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
+          recipient.status = 'Opened';
+          
+          if (isCore) {
+            camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+            camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+          } else {
+            camp.stats.opened = (camp.stats.opened || 0) + 1;
+          }
+          await camp.save();
+        }
+      }
+
+      await Lead.updateOne(
+        { email: cleanEmail },
+        { $set: { status: 'active', emailStatus: 'Active' } }
+      );
+      await updateEmailTags(cleanEmail, 'Active', 'Active');
+
+      await MailEvent.create({
+        eventType: 'Open',
+        email: cleanEmail,
+        timestamp: payload.created_at || new Date(),
+        campaignId: camp?._id,
+        messageId: emailId,
+        metadata: {
+          ip: locationObj.ip,
+          location: locationString,
+          city: locationObj.city,
+          region: locationObj.region,
+          country: locationObj.country,
+          userAgent: locationObj.userAgent
+        }
+      });
+
+    } else if (eventType === 'email.clicked') {
+      if (recipient) {
+        if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
+          recipient.status = 'Clicked';
+          
+          if (isCore) {
+            camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+            const city = locationObj.city || 'Unknown City';
+            if (!camp.locationBreakdown) {
+              camp.locationBreakdown = new Map();
+            }
+            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+            camp.locationBreakdown.set(city, {
+              opens: locData.opens || 0,
+              clicks: (locData.clicks || 0) + 1
+            });
+            camp.markModified('locationBreakdown');
+            camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
+          } else {
+            camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+          }
+          await camp.save();
+        }
+      }
+
+      await Lead.updateOne(
+        { email: cleanEmail },
+        { $set: { status: 'engaged', emailStatus: 'Active' } }
+      );
+      await updateEmailTags(cleanEmail, 'Active', 'Active');
+
+      await MailEvent.create({
+        eventType: 'Click',
+        email: cleanEmail,
+        timestamp: payload.created_at || new Date(),
+        campaignId: camp?._id,
+        messageId: emailId,
+        metadata: {
+          url,
+          ip: locationObj.ip,
+          location: locationString,
+          city: locationObj.city,
+          region: locationObj.region,
+          country: locationObj.country,
+          userAgent: locationObj.userAgent
+        }
+      });
+
+    } else if (eventType === 'email.delivered') {
+      if (recipient) {
+        if (recipient.status === 'Pending') {
+          recipient.status = 'Sent';
+          await camp.save();
+        }
+      }
+
+      await MailEvent.create({
+        eventType: 'Delivery',
+        email: cleanEmail,
+        timestamp: payload.created_at || new Date(),
+        campaignId: camp?._id,
+        messageId: emailId
+      });
+    }
+
     res.status(200).send('Webhook processed');
   } catch (err) {
     console.error('Resend Webhook Error:', err);
@@ -248,21 +479,95 @@ router.post('/webhooks/resend', async (req, res) => {
 
 // Unsubscribe Handler
 router.post('/unsubscribe', async (req, res) => {
-  const { email, reason } = req.body;
+  const { email, reason, campaignId, recipientId } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   try {
     const cleanEmail = email.toLowerCase().trim();
+    
+    // Find lead details to get name
+    const leadDoc = await Lead.findOne({ email: cleanEmail });
+    const leadName = leadDoc ? leadDoc.name : '';
+
+    // 1. Update Lead Status
     await Lead.updateMany(
       { email: cleanEmail }, 
       { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } }
     );
 
+    // Sync to HolySheet
+    const { syncUnsubscribeToSheet } = require('../services/holySheetService');
+    await syncUnsubscribeToSheet({
+      email: cleanEmail,
+      name: leadName,
+      campaignId: campaignId || 'N/A',
+      reason: reason || 'Opt-out',
+      unsubscribedAt: new Date()
+    });
+
+    const Campaign = require('../models/Campaign');
+    const MailCampaign = require('../models/MailCampaign');
+    const MailEvent = require('../models/MailEvent');
+
+    // 2. Track MailEvent for Campaign if campaignId exists
+    if (campaignId && campaignId !== 'undefined' && campaignId !== 'null') {
+      await MailEvent.create({
+        eventType: 'Unsubscribe',
+        email: cleanEmail,
+        timestamp: new Date(),
+        campaignId: campaignId,
+        metadata: { recipientId, reason }
+      });
+
+      // Update specific campaign recipient status
+      let campaign = await MailCampaign.findById(campaignId);
+      let isCore = false;
+      if (!campaign) {
+        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
+        isCore = true;
+      }
+
+      if (campaign) {
+        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === cleanEmail);
+        if (recipient && recipient.status !== 'Unsubscribed') {
+          recipient.status = 'Unsubscribed';
+          if (!isCore) {
+            campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
+          }
+          await campaign.save();
+        }
+      }
+    }
+
+    // 3. Mark this email as Unsubscribed in all other Campaign/MailCampaign recipients
     const camps = await Campaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
     for (const camp of camps) {
-      const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === cleanEmail);
-      if (rec && rec.status !== 'Unsubscribed') {
-        rec.status = 'Unsubscribed';
+      let changed = false;
+      camp.recipients.forEach(r => {
+        if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
+          r.status = 'Unsubscribed';
+          changed = true;
+        }
+      });
+      if (changed) await camp.save();
+    }
+
+    const mailCamps = await MailCampaign.find({ 'recipients.email': new RegExp(`^${cleanEmail}$`, 'i') });
+    for (const camp of mailCamps) {
+      let changed = false;
+      camp.recipients.forEach(r => {
+        if (r.email && r.email.toLowerCase() === cleanEmail && r.status !== 'Unsubscribed') {
+          r.status = 'Unsubscribed';
+          changed = true;
+        }
+      });
+      if (changed) {
+        // Recalculate stats
+        let uns = 0;
+        camp.recipients.forEach(r => {
+          if (r.status === 'Unsubscribed') uns++;
+        });
+        camp.stats.unsubscribed = uns;
         await camp.save();
       }
     }

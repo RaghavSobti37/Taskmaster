@@ -142,10 +142,25 @@ app.post('/api/crm/unsubscribe', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email required' });
   try {
     const Lead = require('./models/Lead');
+    const cleanEmail = email.toLowerCase().trim();
+    const leadDoc = await Lead.findOne({ email: cleanEmail });
+    const leadName = leadDoc ? leadDoc.name : '';
+
     await Lead.updateMany(
-      { email: email.toLowerCase().trim() },
+      { email: cleanEmail },
       { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } }
     );
+
+    // Sync to HolySheet
+    const { syncUnsubscribeToSheet } = require('./services/holySheetService');
+    await syncUnsubscribeToSheet({
+      email: cleanEmail,
+      name: leadName,
+      campaignId: 'CRM_MANUAL',
+      reason: reason || 'Opt-out',
+      unsubscribedAt: new Date()
+    });
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -210,4 +225,8 @@ const server = app.listen(PORT, () => {
   // Initialize Reminder Service
   const notificationService = require('./services/notificationService');
   notificationService.init();
+
+  // Pull unsubscribed leads from Google Sheets
+  const { pullUnsubscribedFromSheet } = require('./services/holySheetService');
+  pullUnsubscribedFromSheet().catch(err => console.error('[SYSTEM] Initial unsubscribe pull failed:', err.message));
 });

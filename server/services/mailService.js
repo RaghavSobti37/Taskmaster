@@ -84,11 +84,25 @@ const sendCampaign = async (campaignId) => {
   campaign.status = 'Sending';
   await campaign.save();
 
-  const baseUrl = 'https://tsccoreknot.com';
+  let baseUrl = process.env.APP_BASE_URL || 'https://tsccoreknot.com';
+  if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
+    baseUrl = 'https://tsccoreknot.com';
+  }
   const recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
   for (const recipient of recipients) {
     try {
+      // Check if lead is unsubscribed
+      const leadDoc = await Lead.findOne({ email: recipient.email.toLowerCase().trim() });
+      if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed')) {
+        console.log(`[Campaign Dispatch] Skipping unsubscribed recipient: ${recipient.email}`);
+        recipient.status = 'Unsubscribed';
+        recipient.error = 'User Unsubscribed';
+        campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
+        await campaign.save();
+        continue;
+      }
+
       const trackingUrl = `${baseUrl}/api/mail/track/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
       const trackingPixel = `<img src="${trackingUrl}" width="1" height="1" style="display:none; width:1px; height:1px;" alt="" />`;
       
@@ -173,17 +187,41 @@ const scanBounces = async (profileId) => {
   const profile = await EmailProfile.findById(profileId);
   if (!profile) return [];
 
-  // If using Resend webhooks, IMAP polling is bypassed
-  if (profile.resendApiKey || resendApiKey) {
-    console.log('[Resend Engine] Bounces are managed via instant Resend webhooks. Skipping manual IMAP polling.');
+  // Ensure IMAP/SMTP credentials are present before connecting
+  if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPass) {
+    console.log('[IMAP Scan] Missing SMTP/IMAP credentials. Skipping IMAP polling.');
     return [];
   }
+
+
+  const getImapHost = (smtpHost) => {
+    if (!smtpHost) return '';
+    const lower = smtpHost.toLowerCase().trim();
+    if (lower.includes('gmail')) return 'imap.gmail.com';
+    if (lower.includes('zoho')) return 'imap.zoho.com';
+    if (lower.includes('hostinger')) return 'imap.hostinger.com';
+    if (lower.includes('outlook') || lower.includes('office365')) return 'outlook.office365.com';
+    if (lower.includes('yahoo')) return 'imap.mail.yahoo.com';
+    if (lower.includes('secureserver')) return 'imap.secureserver.net';
+    
+    let host = lower;
+    if (host.startsWith('smtp.')) {
+      host = host.replace('smtp.', 'imap.');
+    } else if (host.startsWith('mail.')) {
+      host = host.replace('mail.', 'imap.');
+    } else if (host.startsWith('relay.')) {
+      host = host.replace('relay.', 'imap.');
+    } else if (!host.includes('imap')) {
+      host = 'imap.' + host;
+    }
+    return host;
+  };
 
   const config = {
     imap: {
       user: profile.smtpUser,
       password: profile.smtpPass,
-      host: profile.smtpHost.toLowerCase().includes('gmail') ? 'imap.gmail.com' : profile.smtpHost.replace('smtp', 'imap'),
+      host: getImapHost(profile.smtpHost),
       port: 993,
       tls: true,
       tlsOptions: { rejectUnauthorized: false },
@@ -195,12 +233,15 @@ const scanBounces = async (profileId) => {
     const connection = await imaps.connect(config);
     await connection.openBox('INBOX');
     
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    const searchCriteria = ['ALL', ['SINCE', d.toISOString().split('T')[0]]];
+    const imapDateStr = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+    const searchCriteria = ['ALL', ['SINCE', imapDateStr]];
     const fetchOptions = { bodies: [''], markSeen: true };
     
     const messages = await connection.search(searchCriteria, fetchOptions);
+
     const bouncedEmails = [];
 
     for (const item of messages) {
@@ -214,20 +255,29 @@ const scanBounces = async (profileId) => {
       if (!isBounceSubject) continue;
 
       const body = (parsed.text || parsed.html || '').toString();
-      const match = body.match(/Final-Recipient: rfc822;\s*([^\s<>]+@[^\s<>]+)/i)
-        || body.match(/failed permanently:\s*([^\s<>]+@[^\s<>]+)/i)
-        || body.match(/wasn't delivered to\s*([^\s<>]+@[^\s<>]+)/i)
-        || body.match(/not delivered to\s*([^\s<>]+@[^\s<>]+)/i)
-        || body.match(/550 5\.1\.1 <([^\s<>]+@[^\s<>]+)>/i)
-        || body.match(/<([^\s<>]+@[^\s<>]+)>:\s*Recipient address rejected/i);
+      
+      // Clean HTML tags to make text matches reliable
+      const cleanBodyText = body.replace(/<[^>]*>/g, ' ');
+
+      const match = cleanBodyText.match(/Final-Recipient: rfc822;\s*([^\s<>]+@[^\s<>]+)/i)
+        || cleanBodyText.match(/failed permanently:\s*([^\s<>]+@[^\s<>]+)/i)
+        || cleanBodyText.match(/wasn't delivered to\s*([^\s<>]+@[^\s<>]+)/i)
+        || cleanBodyText.match(/not delivered to\s*([^\s<>]+@[^\s<>]+)/i)
+        || cleanBodyText.match(/550 5\.1\.1 <([^\s<>]+@[^\s<>]+)>/i)
+        || cleanBodyText.match(/<([^\s<>]+@[^\s<>]+)>:\s*Recipient address rejected/i);
 
       if (match && match[1]) {
         bouncedEmails.push(match[1].toLowerCase().trim());
       } else {
-        const emails = body.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+        const emails = cleanBodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
         if (emails) {
-          const target = emails.find(e => e.toLowerCase() !== profile.email.toLowerCase());
-          if (target) bouncedEmails.push(target.toLowerCase().trim());
+          const systemPattern = /mailer-daemon|postmaster|googlemail|smtp|noreply|no-reply/i;
+          for (const email of emails) {
+            const clean = email.toLowerCase().trim();
+            if (clean !== profile.email.toLowerCase() && !systemPattern.test(clean)) {
+              bouncedEmails.push(clean);
+            }
+          }
         }
       }
     }
@@ -238,8 +288,10 @@ const scanBounces = async (profileId) => {
     const campaignBounced = [];
 
     for (const email of uniqueBouncedRaw) {
-      const isCampaignRecipient = await MailCampaign.exists({ createdBy: profile.createdBy, 'recipients.email': email });
-      if (isCampaignRecipient) {
+      const existsInMailCamp = await MailCampaign.exists({ 'recipients.email': email });
+      const existsInCoreCamp = await MailCampaign.db.model('Campaign').exists({ 'recipients.email': email });
+      
+      if (existsInMailCamp || existsInCoreCamp) {
         campaignBounced.push(email);
       }
     }
@@ -253,17 +305,34 @@ const scanBounces = async (profileId) => {
       
       await updateEmailTags(email, 'Invalid', 'Invalid');
 
-      const allCampaigns = await MailCampaign.find({ createdBy: profile.createdBy, 'recipients.email': email });
+      const allCampaigns = await MailCampaign.find({ 'recipients.email': email });
       for (const camp of allCampaigns) {
         let modified = false;
         camp.recipients.forEach(r => {
           if (r.email === email && r.status !== 'Bounced' && r.status !== 'Invalid') {
-            r.status = 'Invalid';
+            r.status = 'Bounced';
             modified = true;
           }
         });
         if (modified) {
           camp.stats.invalid = (camp.stats.invalid || 0) + 1;
+          camp.stats.bounced = (camp.stats.bounced || 0) + 1;
+          await camp.save();
+        }
+      }
+
+      const allCoreCampaigns = await MailCampaign.db.model('Campaign').find({ 'recipients.email': email });
+      for (const camp of allCoreCampaigns) {
+        let modified = false;
+        camp.recipients.forEach(r => {
+          if (r.email === email && r.status !== 'Bounced' && r.status !== 'Invalid') {
+            r.status = 'Bounced';
+            modified = true;
+          }
+        });
+        if (modified) {
+          if (!camp.metrics) camp.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
+          camp.metrics.bounced = (camp.metrics.bounced || 0) + 1;
           await camp.save();
         }
       }

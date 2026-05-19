@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const ExlyOffering = require('../models/ExlyOffering');
 const ExlyBooking = require('../models/ExlyBooking');
 const exlyService = require('../services/exlyService');
@@ -239,25 +240,63 @@ exports.handleExlyWebhook = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 2. Sync lead into CRM (Check-then-write / Update or Create)
-    const filter = { $or: [] };
-    if (phone) filter.$or.push({ phone });
-    if (email) filter.$or.push({ email });
-
+    // 2. Sync lead into CRM using transaction (race condition safe)
     let lead = null;
-    if (filter.$or.length > 0) {
-      lead = await Lead.findOne(filter);
-      if (lead) {
-        lead.name = name || lead.name;
-        if (email) lead.email = email;
-        if (phone) lead.phone = phone;
-        lead.customerIdExly = custId || lead.customerIdExly;
-        lead.transactionIdExly = txnId || lead.transactionIdExly;
-        lead.exlyOfferingId = offId || lead.exlyOfferingId;
-        lead.exlyOfferingTitle = cleanTitle || lead.exlyOfferingTitle;
-        await lead.save();
+    const filterConditions = [];
+    if (email) filterConditions.push({ email });
+    if (phone) filterConditions.push({ phone });
+
+    if (filterConditions.length > 0) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        let assignedRepId = null;
+        
+        // 1. Check for existing document inside the transaction session
+        const existing = await Lead.findOne({ $or: filterConditions })
+          .select('assignedRepId')
+          .session(session);
+
+        if (!existing) {
+          // 2. Safely calculate least-loaded rep without race conditions
+          assignedRepId = await assignLeadToRep(session);
+        }
+
+        const updatePayload = {
+          customerIdExly: custId,
+          transactionIdExly: txnId,
+          exlyOfferingId: offId,
+          exlyOfferingTitle: cleanTitle,
+          $setOnInsert: {
+            name: name || 'Exly Lead',
+            source: cleanTitle || 'Exly Offering',
+            leadStatus: 'Fresh',
+            callStatus: 'Fresh',
+            ...(email ? { email } : {}),
+            ...(phone ? { phone } : {}),
+            ...(assignedRepId ? { assignedRepId } : {})
+          }
+        };
+
+        // 3. Execute upsert within the same transaction scope
+        lead = await Lead.findOneAndUpdate(
+          { $or: filterConditions },
+          updatePayload,
+          { upsert: true, new: true, runValidators: true, session }
+        );
+
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        throw error;
+      } finally {
+        session.endSession();
       }
     }
+
+
+
 
     // 3. Create/update individual ExlyBooking record with secure query
     const bookingQuery = txnId 

@@ -1,4 +1,10 @@
-## v1.2.1 (Sync & Sanitize)\n- Realigned local and production DB sync (restored default test DB mapping).\n- Purged Clerk hooks causing crash loops in JWT AuthContext.\n- Scrubbed CRM Data (Locations & Special Characters).\n- Fixed Admin Panel team assignment schema mismatch (String[] vs ObjectId).\n\n# Taskmaster: Architectural Memory Graph
+## v1.7.5 (HolySheet Header & Webhook Parse Fix)
+- Corrected HolySheet column 8 header to `webinarDates` in spreadsheet (fixing duplicate `city` column bug).
+- Upgraded webhook parser to handle case-insensitive payload fields and sanitize out invalid placeholder values (`"-"`, `"N/A"`, etc.).
+- Refactored server sanitizer to globally convert placeholder values to empty strings.
+
+# Taskmaster: Architectural Memory Graph
+
 
 ## Core System Overview
 - **Type**: High-Density Agentic CRM & Project Management Suite

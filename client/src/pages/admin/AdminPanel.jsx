@@ -443,6 +443,7 @@ const AdminPanel = () => {
                       className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
                     >
                        <option value="admin">Administrator</option>
+                       <option value="artist_management">Artist Management</option>
                        <option value="sales">Sales Rep</option>
                        <option value="user">Standard User</option>
                     </select>

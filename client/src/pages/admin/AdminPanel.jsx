@@ -27,9 +27,9 @@ import { format, isToday } from 'date-fns';
 import { AdminLogsContent } from './AdminLogsPage';
 import TscDataContent from '../../components/admin/TscDataContent';
 import AdminMailContent from '../../components/admin/AdminMailContent';
-import WorkflowCanvas from '../productivity/WorkflowCanvas';
+import ExlyDataContent from '../../components/admin/ExlyDataContent';
 import { 
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam 
+  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam 
 } from '../../hooks/useTaskmasterQueries';
 
 const AdminPanel = () => {
@@ -55,6 +55,7 @@ const AdminPanel = () => {
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
   const createTeamMutation = useCreateTeam();
+  const deleteTeamMutation = useDeleteTeam();
 
   useEffect(() => {
     if (selectedUser) {
@@ -152,15 +153,14 @@ const AdminPanel = () => {
   ];
 
   const pageMeta = {
-    users: { title: "Users", subtitle: "Manage system access credentials, security profiles, and registered personnel." },
-    teams: { title: "Teams", subtitle: "Organize personnel into functional task forces and operational teams." },
-    workflows: { title: "Workflows", subtitle: "Configure intelligent triggers, automated sequences, and system logic." },
+    users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
     crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
+    exly: { title: "Exly Integration", subtitle: "Track offerings performance, client conversions, and dynamic revenue analytics." },
     logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." },
     mail: { title: "Email Campaigns", subtitle: "Manage SMTP profiles, email campaigns, and delivery analytics." }
   };
 
-  const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, automation workflows, and system data." };
+  const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, and system data." };
 
   if (usersLoading) return <PageSkeleton />;
 
@@ -177,9 +177,8 @@ const AdminPanel = () => {
                onChange={handleTabChange} 
                tabs={[
                  { id: 'users', label: 'Users' }, 
-                 { id: 'teams', label: 'Teams' },
-                 { id: 'workflows', label: 'Workflows' },
                  { id: 'crm', label: 'All Data' },
+                 { id: 'exly', label: 'Exly' },
                  { id: 'logs', label: 'Logs' },
                  { id: 'mail', label: 'Emails' }
                ]} 
@@ -265,39 +264,10 @@ const AdminPanel = () => {
                       onRowClick={(u) => setSelectedUser(u)}
                     />
                   )}
-                  {activeTab === 'workflows' && (
-                    <div className="min-h-fit p-2">
-                      <WorkflowCanvas />
-                    </div>
-                  )}
                   {activeTab === 'crm' && <TscDataContent />}
+                  {activeTab === 'exly' && <ExlyDataContent />}
                   {activeTab === 'logs' && <AdminLogsContent />}
                   {activeTab === 'mail' && <AdminMailContent />}
-                  {activeTab === 'teams' && (
-                    <div className="p-8 space-y-6">
-                       <div className="flex gap-4 items-end">
-                          <div className="flex-1">
-                            <Input 
-                              placeholder="New team name..." 
-                              value={newTeamName} 
-                              onChange={e => setNewTeamName(e.target.value)} 
-                            />
-                          </div>
-                          <Button onClick={handleCreateTeam} disabled={createTeamMutation.isPending || !newTeamName.trim()}>Create Team</Button>
-                       </div>
-                       <div className="grid grid-cols-1 gap-3">
-                          {teams.map(team => {
-                            const memberCount = users.filter(u => u.teams?.includes(team.name)).length;
-                            return (
-                              <div key={team._id} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between">
-                                 <span className="font-bold uppercase tracking-tight text-xs">{team.name}</span>
-                                 <Badge variant="info">{memberCount} Members</Badge>
-                              </div>
-                            );
-                          })}
-                       </div>
-                    </div>
-                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -306,6 +276,60 @@ const AdminPanel = () => {
 
         {activeTab === 'users' && (
           <aside className="lg:col-span-4 space-y-6">
+            <Card className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-4">
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                    <Users size={14} className="text-[var(--color-action-primary)]" />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Teams & Workgroups</h4>
+                 </div>
+              </div>
+              <div className="flex gap-2">
+                 <Input 
+                   placeholder="New team name..." 
+                   value={newTeamName} 
+                   onChange={e => setNewTeamName(e.target.value)} 
+                   className="!py-1 !text-[11px]"
+                 />
+                 <Button 
+                   onClick={handleCreateTeam} 
+                   disabled={createTeamMutation.isPending || !newTeamName.trim()}
+                   size="sm"
+                   className="whitespace-nowrap font-black uppercase text-[10px]"
+                 >
+                   Add
+                 </Button>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                 {teams.map(team => {
+                   const memberCount = users.filter(u => u.teams?.includes(team.name)).length;
+                   return (
+                     <div key={team._id} className="p-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-lg flex items-center justify-between">
+                        <span className="font-bold uppercase tracking-tight text-[10px]">{team.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="info" className="!text-[9px]">{memberCount} Members</Badge>
+                          <button 
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to decommission this workgroup/team?")) {
+                                try {
+                                  await deleteTeamMutation.mutateAsync(team._id);
+                                } catch (err) {
+                                  alert('Failed to delete team: ' + err.message);
+                                }
+                              }
+                            }}
+                            disabled={deleteTeamMutation.isPending}
+                            className="text-rose-500 hover:text-rose-600 transition-colors p-1"
+                            title="Delete Team"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                     </div>
+                   );
+                 })}
+              </div>
+            </Card>
+
             <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed h-fit">
               <div className="flex items-center gap-2 mb-4">
                  <ShieldAlert size={14} className="text-rose-500" />

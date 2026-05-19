@@ -147,6 +147,10 @@ sequenceDiagram
 | `/api/crm/leads/:id/notes` | POST | LeadsPage | Add interaction note / timeline entry |
 | `/api/crm/imports` | GET | AdminPanel | List CRM import history |
 | `/api/crm/imports/:id` | DELETE | AdminPanel | Delete an import batch |
+| `/api/exly/offerings` | GET | ExlyPanel | Fetch Exly offerings & metrics |
+| `/api/exly/config` | GET | ExlyPanel | Check Exly credentials status |
+| `/api/exly/sync` | POST | ExlyPanel | Manually trigger sync with Exly API |
+| `/api/exly/webhook` | POST | External (Pabbly/Zapier) | Receive real-time lead and transaction webhooks |
 
 ### Assets
 

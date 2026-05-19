@@ -106,7 +106,13 @@ const ArtistSchema = new mongoose.Schema({
     },
     spotify: {
       artistId: { type: String },
-      chartmetricId: { type: String }
+      chartmetricId: { type: String },
+      accessToken: { type: String, select: false },
+      refreshToken: { type: String, select: false },
+      tokenExpiry: { type: Date },
+      spotifyUserId: { type: String },
+      displayName: { type: String },
+      connectedAt: { type: Date }
     }
   },
   analyticsHistory: [{

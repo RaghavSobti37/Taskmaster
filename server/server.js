@@ -68,7 +68,41 @@ mongoose.connect(dbUri, {
   socketTimeoutMS: 60000,
   heartbeatFrequencyMS: 10000,
 })
-  .then(() => console.log('[SUCCESS] MongoDB Connected'))
+  .then(() => {
+    console.log('[SUCCESS] MongoDB Connected');
+    
+    // Auto-repair zero-dipped history snapshots on startup
+    (async () => {
+      try {
+        const Artist = require('./models/Artist');
+        const artists = await Artist.find();
+        for (const artist of artists) {
+          if (artist.analyticsHistory && artist.analyticsHistory.length > 0) {
+            const currentIg = artist.analytics?.instagram?.followers || 0;
+            const currentSp = artist.analytics?.spotify?.followers || 0;
+            
+            const cleanHistory = artist.analyticsHistory.filter(h => {
+              const ig = h.metrics?.instagram?.followers;
+              const sp = h.metrics?.spotify?.followers;
+              if (currentIg > 0 && ig === 0) return false;
+              if (currentSp > 0 && sp === 0) return false;
+              return true;
+            });
+            
+            if (cleanHistory.length !== artist.analyticsHistory.length) {
+              const removedCount = artist.analyticsHistory.length - cleanHistory.length;
+              artist.analyticsHistory = cleanHistory;
+              artist.markModified('analyticsHistory');
+              await artist.save();
+              console.log(`🧹 [Database Repair] Cleaned ${removedCount} corrupted snapshots for ${artist.name}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('❌ [Database Repair] Error during startup scan:', err.message);
+      }
+    })();
+  })
   .catch(err => {
     console.error('[ERROR] Initial MongoDB connection failed:', err.message);
     console.log('[SYSTEM] Server will remain active but DB operations will fail until connection is established.');
@@ -134,6 +168,7 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
+app.use('/api/exly', require('./routes/exlyRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");

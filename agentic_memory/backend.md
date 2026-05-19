@@ -29,6 +29,7 @@ erDiagram
     CRM_IMPORT ||--o{ LEAD : "batch source"
     CRM_IMPORT ||--o{ TSC_DATA : "batch source"
     MAIL_CAMPAIGN ||--o{ MAIL_EVENT : "triggers"
+    EXLY_OFFERING ||--o{ LEAD : "conversion tracking"
 ```
 
 ---
@@ -90,6 +91,17 @@ Immutable trail of lead modifications.
 | `fieldChanged` | `String` | The attribute that was updated. |
 | `oldValue` | `String` | Previous state. |
 | `newValue` | `String` | Current state. |
+
+### 6. Exly Offering (`ExlyOffering.js`)
+Stores metadata and performance statistics for offerings created on Exly.
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `offeringId` | `String` | Unique offering slug. |
+| `title` | `String` | Display name of the program. |
+| `price` | `Number` | Configured offering fee. |
+| `totalBookings` | `Number` | Total lead bookings recorded. |
+| `totalRevenue` | `Number` | Aggregated monetary bookings value. |
+| `conversionRate` | `Number` | Ratio of converted leads to total bookings. |
 
 ---
 

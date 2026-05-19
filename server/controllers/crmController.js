@@ -12,6 +12,7 @@ const ALLOWED_LEAD_FIELDS = [
   'name', 'email', 'phone', 'city', 'webinarDates', 'attended', 'attendanceDurationMin',
   'meaningfulConnect', 'leadQuality', 'callStatus', 'leadStatus', 'remarks',
   'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
+  'exlyOfferingId', 'exlyOfferingTitle',
   'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
   'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime',
   'emailStatus', 'tags', 'source', 'notes', 'setReminder'

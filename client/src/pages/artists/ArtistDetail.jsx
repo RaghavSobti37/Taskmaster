@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Share2, Zap, RefreshCw, Music, Video, TrendingUp,
   ExternalLink, Clock, Heart, MessageSquare, Share, Play, Disc, Globe,
-  Edit2, Trash2, Link as LinkIcon, Info, CheckCircle, Plus, Filter
+  Edit2, Trash2, Link as LinkIcon, Info, CheckCircle, Plus, Filter,
+  Radio, Headphones, Activity, BarChart2
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   Badge, PageHeader, Card, PageContainer, DataTable, Button,
   TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input, InfoButton
@@ -140,14 +141,15 @@ export default function ArtistDetail({ isPreview = false }) {
     );
   }
 
-  const spFollowers = artist.analytics?.spotify?.followers || 'N/A';
-  const spPopularity = artist.analytics?.spotify?.popularity || 'N/A';
-  const ytSubs = artist.analytics?.youtube?.subscribers || 'N/A';
-  const ytViews = artist.analytics?.youtube?.views || 'N/A';
-  const ytVideos = artist.analytics?.youtube?.videoCount || 'N/A';
-  const igFollowers = artist.analytics?.instagram?.followers || 'N/A';
-  const igEngagement = artist.analytics?.instagram?.engagementRate || 'N/A';
-  const igShares = artist.analytics?.instagram?.totalShares || 'N/A';
+  // Use ?? not || so 0 values don't fall through to 'N/A'
+  const spFollowers = artist.analytics?.spotify?.followers ?? 'N/A';
+  const spPopularity = artist.analytics?.spotify?.popularity ?? 'N/A';
+  const ytSubs = artist.analytics?.youtube?.subscribers ?? 'N/A';
+  const ytViews = artist.analytics?.youtube?.views ?? 'N/A';
+  const ytVideos = artist.analytics?.youtube?.videoCount ?? 'N/A';
+  const igFollowers = artist.analytics?.instagram?.followers ?? 'N/A';
+  const igEngagement = artist.analytics?.instagram?.engagementRate ?? 'N/A';
+  const igShares = artist.analytics?.instagram?.totalShares ?? 'N/A';
 
   const tracks = analyticsData?.tracks || [];
   const videos = analyticsData?.videos || [];
@@ -158,6 +160,10 @@ export default function ArtistDetail({ isPreview = false }) {
   });
   const posts = analyticsData?.posts || [];
   const historyMap = analyticsData?.history || {};
+  const discography = analyticsData?.discography || [];
+  const relatedArtists = analyticsData?.relatedArtists || [];
+  const spotifyGenres = artist.analytics?.spotify?.genres || [];
+  const spotifyProfileImage = artist.analytics?.spotify?.profileImage || null;
 
   const currentHistory = historyMap[activeTab] || [];
   const chartData = currentHistory.map((h, idx) => ({
@@ -167,41 +173,75 @@ export default function ArtistDetail({ isPreview = false }) {
 
   const spotifyColumns = [
     {
-      header: 'Track Title & Album',
-      info: 'Title of track and its associated release album.',
+      header: 'Track',
+      info: 'Track title, album, and release info.',
       render: (row) => (
         <div className="flex items-center gap-3 py-1">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
-            <Disc size={16} />
-          </div>
+          {row.albumImage ? (
+            <img src={row.albumImage} alt={row.albumName} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+              <Disc size={16} />
+            </div>
+          )}
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs text-slate-900 dark:text-white">{row.trackName}</span>
+              {row.explicit && <span className="text-[9px] font-black uppercase bg-slate-200 dark:bg-slate-700 text-slate-500 px-1 rounded">E</span>}
               {row.url && (
                 <a href={row.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="text-slate-400 hover:text-emerald-500">
                   <ExternalLink size={12} />
                 </a>
               )}
             </div>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">{row.albumName || 'Single'}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">{row.albumName || 'Single'} {row.releaseDate ? `• ${row.releaseDate.slice(0,4)}` : ''}</span>
           </div>
         </div>
       )
     },
     {
-      header: 'Streams',
-      info: 'Total cumulative playback count on Spotify.',
-      render: (row) => <span className="text-xs font-bold tabular-nums text-slate-900 dark:text-white">{formatNumber(row.streams)}</span>
+      header: 'Popularity',
+      info: 'Spotify popularity score (0–100). Updates daily.',
+      render: (row) => (
+        <div className="flex items-center gap-2 min-w-[80px]">
+          <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${row.popularity || 0}%` }} />
+          </div>
+          <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-300 w-7 text-right">{row.popularity ?? 'N/A'}</span>
+        </div>
+      )
     },
     {
-      header: 'Save Rate',
-      info: 'Percentage of listeners who saved the track to their library.',
-      render: (row) => <Badge variant="success">{row.saveRate || 'N/A'}</Badge>
+      header: 'Energy',
+      info: 'Perceptual measure of intensity and activity (0–100).',
+      render: (row) => row.energy != null ? (
+        <div className="flex items-center gap-1.5">
+          <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${row.energy}%` }} />
+          </div>
+          <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">{row.energy}%</span>
+        </div>
+      ) : <span className="text-xs text-slate-400">—</span>
     },
     {
-      header: 'Playlists Inclusions',
-      info: 'Number of editorial and algorithmic playlists featuring the track.',
-      render: (row) => <span className="text-xs text-slate-500 dark:text-slate-400">{row.playlists || 'N/A'}</span>
+      header: 'Vibe',
+      info: 'Danceability & Valence — how danceable and positive the track sounds.',
+      render: (row) => (
+        <div className="flex flex-col gap-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+          <span>💃 {row.danceability != null ? `${row.danceability}%` : '—'}</span>
+          <span>😊 {row.valence != null ? `${row.valence}%` : '—'}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Key / BPM',
+      info: 'Musical key, mode (Major/Minor), and tempo in beats per minute.',
+      render: (row) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{row.key || '—'} {row.mode || ''}</span>
+          <span className="text-[10px] text-slate-500">{row.tempo ? `${row.tempo} BPM` : '—'}</span>
+        </div>
+      )
     }
   ];
 
@@ -344,97 +384,239 @@ export default function ArtistDetail({ isPreview = false }) {
       {/* Tier A: The Macro Strategic Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Spotify Card */}
-        <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              <FaSpotify size={16} /> Spotify Summary
-            </div>
-            <Badge variant="success">Connected</Badge>
-          </div>
-          <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Followers <InfoButton text="Total verified followers on Spotify platform." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(spFollowers)}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Popularity <InfoButton text="Spotify algorithmic popularity ranking (0-100)." />
-              </span>
-              <span className="text-lg font-black mt-1">{spPopularity}{spPopularity !== 'N/A' ? '/100' : ''}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Category Rank <InfoButton text="Regional category performance rank threshold." />
-              </span>
-              <span className="text-lg font-black mt-1">Top 10%</span>
-            </div>
-          </div>
-        </Card>
+        {(() => {
+          const isConnected = !!(artist.oauthCredentials?.spotify?.artistId || artist.oauthCredentials?.spotify?.accessToken);
+          return (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                  <FaSpotify size={16} /> Spotify Summary
+                </div>
+                <Badge variant={isConnected ? 'success' : 'info'}>{isConnected ? 'Connected' : 'Not Connected'}</Badge>
+              </div>
+              {isConnected ? (
+                <div className="grid grid-cols-2 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Followers <InfoButton text="Total verified followers on Spotify platform." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(spFollowers)}</span>
+                  </div>
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Popularity <InfoButton text="Spotify algorithmic popularity ranking (0-100). Updates daily." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{spPopularity !== 'N/A' ? `${spPopularity}/100` : '—'}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-3 gap-2">
+                  <p className="text-[11px] text-slate-400 text-center">Connect Spotify to see follower count, popularity score, and full discography.</p>
+                  <button
+                    onClick={() => { handleOpenEdit(); }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 hover:bg-emerald-500/20 transition flex items-center gap-1.5"
+                  >
+                    <FaSpotify size={12} /> Connect Spotify
+                  </button>
+                </div>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* YouTube Card */}
-        <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs uppercase tracking-wider">
-              <FaYoutube size={16} /> YouTube Summary
-            </div>
-            <Badge variant="rose">Verified</Badge>
-          </div>
-          <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Subscribers <InfoButton text="Total active subscribed audience members." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(ytSubs)}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Total Views <InfoButton text="Cumulative channel video view iterations." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(ytViews)}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Catalog Items <InfoButton text="Total uploaded and indexed videos in channel." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(ytVideos)}</span>
-            </div>
-          </div>
-        </Card>
+        {(() => {
+          const isConnected = !!(artist.oauthCredentials?.youtube?.channelId);
+          return (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs uppercase tracking-wider">
+                  <FaYoutube size={16} /> YouTube Summary
+                </div>
+                <Badge variant={isConnected ? 'rose' : 'info'}>{isConnected ? 'Connected' : 'Not Connected'}</Badge>
+              </div>
+              {isConnected ? (
+                <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Subscribers <InfoButton text="Total active subscribed audience members." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(ytSubs)}</span>
+                  </div>
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Total Views <InfoButton text="Cumulative channel video view iterations." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(ytViews)}</span>
+                  </div>
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Videos <InfoButton text="Total uploaded and indexed videos in channel." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(ytVideos)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-3 gap-2">
+                  <p className="text-[11px] text-slate-400 text-center">Connect YouTube to track subscribers, views, and video performance.</p>
+                  <button
+                    onClick={() => window.location.href = `http://127.0.0.1:5000/api/artists/${artist._id}/auth/youtube`}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold border border-red-500/20 hover:bg-red-500/20 transition flex items-center gap-1.5"
+                  >
+                    <FaYoutube size={12} /> Connect YouTube
+                  </button>
+                </div>
+              )}
+            </Card>
+          );
+        })()}
 
         {/* Meta Card */}
-        <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider">
-              <FaInstagram size={16} /> Meta Summary
-            </div>
-            <Badge variant="apricot">Active</Badge>
-          </div>
-          <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Followers <InfoButton text="Instagram professional account audience reach." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(igFollowers)}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Engagement <InfoButton text="Ratio of total profile interactions over audience." />
-              </span>
-              <span className="text-lg font-black mt-1">{igEngagement !== 'N/A' ? `${igEngagement}%` : 'N/A'}</span>
-            </div>
-            <div className="flex flex-col px-2">
-              <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                Post Shares <InfoButton text="Total cumulative user reshares across media items." />
-              </span>
-              <span className="text-lg font-black mt-1">{formatNumber(igShares)}</span>
-            </div>
-          </div>
-        </Card>
+        {(() => {
+          const isConnected = !!(artist.oauthCredentials?.meta?.igAccountId && artist.oauthCredentials?.meta?.accessToken);
+          return (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider">
+                  <FaInstagram size={16} /> Meta Summary
+                </div>
+                <Badge variant={isConnected ? 'apricot' : 'info'}>{isConnected ? 'Active' : 'Not Connected'}</Badge>
+              </div>
+              {isConnected ? (
+                <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Followers <InfoButton text="Instagram professional account audience reach." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(igFollowers)}</span>
+                  </div>
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Engagement <InfoButton text="Ratio of total profile interactions over audience." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{igEngagement !== 'N/A' ? `${igEngagement}%` : '—'}</span>
+                  </div>
+                  <div className="flex flex-col px-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
+                      Post Shares <InfoButton text="Total cumulative user reshares across media items." />
+                    </span>
+                    <span className="text-lg font-black mt-1">{formatNumber(igShares)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-3 gap-2">
+                  <p className="text-[11px] text-slate-400 text-center">Connect Instagram via Facebook to track followers and post engagement.</p>
+                  <button
+                    onClick={handleConnectMeta}
+                    className="px-3 py-1.5 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[11px] font-bold border border-pink-500/20 hover:bg-pink-500/20 transition flex items-center gap-1.5"
+                  >
+                    <FaInstagram size={12} /> Connect Instagram
+                  </button>
+                </div>
+              )}
+            </Card>
+          );
+        })()}
       </div>
 
-      {/* Tier B: The Area Trajectory Graph (Subscriber History) */}
+      {/* Tier B: Spotify Deep Dive — only shows after sync */}
+      {activeTab === 'spotify' && (spotifyGenres.length > 0 || discography.length > 0 || relatedArtists.length > 0) && (
+        <div className="space-y-4">
+          {/* Genre Badges + Artist Image */}
+          {(spotifyGenres.length > 0 || spotifyProfileImage) && (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] rounded-2xl shadow-sm">
+              <div className="flex items-center gap-4 flex-wrap">
+                {spotifyProfileImage && (
+                  <img src={spotifyProfileImage} alt={artist.name} className="w-14 h-14 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
+                )}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Radio size={12} className="text-emerald-500" /> Spotify Genres
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {spotifyGenres.length > 0 ? spotifyGenres.map(g => (
+                      <span key={g} className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 capitalize">
+                        {g}
+                      </span>
+                    )) : (
+                      <span className="text-xs text-slate-400 italic">No genres tagged by Spotify yet</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Discography Grid */}
+          {discography.length > 0 && (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] rounded-2xl shadow-sm space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <Disc size={14} className="text-emerald-500" /> Discography
+                <Badge variant="info">{discography.length} Releases</Badge>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {discography.map(a => (
+                  <a
+                    key={a.albumId}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex flex-col gap-1.5 group cursor-pointer"
+                  >
+                    <div className="aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-emerald-500/50 transition">
+                      {a.image ? (
+                        <img src={a.image} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
+                          <Disc size={28} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-white line-clamp-1 group-hover:text-emerald-500 transition">{a.title}</span>
+                      <span className="text-[10px] text-slate-500 capitalize">{a.type} · {a.releaseDate?.slice(0, 4) || '—'}</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Related Artists */}
+          {relatedArtists.length > 0 && (
+            <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] rounded-2xl shadow-sm space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <Headphones size={14} className="text-emerald-500" /> Related Artists on Spotify
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {relatedArtists.map(r => (
+                  <a
+                    key={r.name}
+                    href={r.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#1F2937] border border-slate-200 dark:border-[#374151] hover:border-emerald-500/50 transition group"
+                  >
+                    {r.image ? (
+                      <img src={r.image} alt={r.name} className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                        <FaSpotify size={12} />
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-800 dark:text-white group-hover:text-emerald-500 transition">{r.name}</span>
+                      <span className="text-[10px] text-slate-500">{r.popularity}/100 pop</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+
       <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] space-y-4 rounded-2xl shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-2">
@@ -744,9 +926,59 @@ export default function ArtistDetail({ isPreview = false }) {
                 <FaInstagram size={16} /> Connect Instagram / Facebook
               </button>
             </div>
+
+            {/* Spotify OAuth Login */}
+            <div className="mt-4 p-6 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FaSpotify size={14} className="text-emerald-500" /> Connect Artist Spotify Account
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Log in as the artist on Spotify to unlock top tracks, listening history, and audio features via OAuth.
+                  {artist.oauthCredentials?.spotify?.connectedAt && (
+                    <span className="ml-1 text-emerald-500 font-bold">
+                      ✓ Connected as {artist.oauthCredentials.spotify.displayName || 'Spotify User'}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.location.href = `http://127.0.0.1:5000/api/artists/${artist._id}/auth/spotify`}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
+              >
+                <FaSpotify size={16} /> {artist.oauthCredentials?.spotify?.connectedAt ? 'Reconnect Spotify' : 'Connect Spotify'}
+              </button>
+            </div>
+
+            {/* YouTube OAuth Login */}
+            <div className="mt-4 p-6 rounded-2xl bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FaYoutube size={14} className="text-red-500" /> Connect Artist YouTube Channel
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Log in with the artist's Google account to auto-discover their YouTube channel and sync subscriber/view data.
+                  {artist.oauthCredentials?.youtube?.connectedAt && (
+                    <span className="ml-1 text-red-500 font-bold">
+                      ✓ Connected: {artist.oauthCredentials.youtube.channelTitle || 'YouTube Channel'}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => window.location.href = `http://127.0.0.1:5000/api/artists/${artist._id}/auth/youtube`}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
+              >
+                <FaYoutube size={16} /> {artist.oauthCredentials?.youtube?.connectedAt ? 'Reconnect YouTube' : 'Connect YouTube'}
+              </button>
+            </div>
           </section>
         </div>
       </FullScreenWorkspace>
+
+
 
       <FullScreenWorkspace
         isOpen={showAddVideoModal}

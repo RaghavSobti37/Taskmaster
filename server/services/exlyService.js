@@ -69,7 +69,7 @@ class ExlyService {
           $set: {
             title: off.title || off.name,
             type: off.type || 'program',
-            price: Number(off.price || 0),
+            price: isNaN(Number(off.price)) ? 0 : Number(off.price || 0),
             currency: off.currency || 'INR',
             status: off.status || 'active'
           }

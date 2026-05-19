@@ -715,3 +715,12 @@ export const useAddTrackedVideo = () => {
     }
   });
 };
+
+export const useLeadAudits = (params, enabled = true) => {
+  return useQuery({
+    queryKey: ['leadAudits', params],
+    queryFn: async () => (await axios.get('/api/crm/leads/audit-logs', { params })).data,
+    enabled,
+    staleTime: 1000 * 30,
+  });
+};

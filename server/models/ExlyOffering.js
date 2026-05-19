@@ -4,7 +4,9 @@ const { sanitizeName } = require('../utils/sanitizer');
 const ExlyOfferingSchema = new mongoose.Schema({
   offeringId: { type: String, required: true, unique: true, index: true },
   title: { type: String, required: true },
-  type: { type: String, enum: ['program', 'masterclass', 'workshop', 'session', 'other'], default: 'program' },
+  eventDate: { type: String, default: '' },
+  eventTime: { type: String, default: '' },
+  type: { type: String, default: 'program' },
   price: { type: Number, default: 0 },
   currency: { type: String, default: 'INR' },
   status: { type: String, enum: ['active', 'paused', 'draft'], default: 'active' },

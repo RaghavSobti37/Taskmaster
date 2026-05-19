@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const AuditSchema = new mongoose.Schema({
   leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', index: true },
   leadRowId: { type: String, index: true }, // Legacy link
-  userId: { type: String, required: true, index: true }, // ID of user who made the change (e.g. sr01)
+  userId: { type: mongoose.Schema.Types.Mixed, ref: 'User', required: true, index: true }, // ID of user who made the change (e.g. sr01 or ObjectId)
   userRole: { type: String },
   fieldChanged: { type: String, required: true },
   oldValue: { type: String },

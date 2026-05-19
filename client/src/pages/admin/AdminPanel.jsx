@@ -28,8 +28,9 @@ import { AdminLogsContent } from './AdminLogsPage';
 import TscDataContent from '../../components/admin/TscDataContent';
 import AdminMailContent from '../../components/admin/AdminMailContent';
 import ExlyDataContent from '../../components/admin/ExlyDataContent';
+import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam 
+  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits 
 } from '../../hooks/useTaskmasterQueries';
 
 const AdminPanel = () => {
@@ -51,6 +52,12 @@ const AdminPanel = () => {
   const { data: repSummary } = useRepSummary();
   const { data: mailStats } = useMailStats();
   const { data: allLogs = [] } = useLogs('all', 100);
+
+  const { data: userAuditsData } = useLeadAudits(
+    { userId: selectedUser?._id, limit: 50 },
+    !!selectedUser?._id
+  );
+  const userAudits = userAuditsData?.logs || [];
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -156,6 +163,7 @@ const AdminPanel = () => {
     users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
     crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
     exly: { title: "Exly Integration", subtitle: "Track offerings performance, client conversions, and dynamic revenue analytics." },
+    audits: { title: "Lead Logs", subtitle: "Track edits made to leads, including what changed, by whom, and when." },
     logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." },
     mail: { title: "Email Campaigns", subtitle: "Manage SMTP profiles, email campaigns, and delivery analytics." }
   };
@@ -179,6 +187,7 @@ const AdminPanel = () => {
                  { id: 'users', label: 'Users' }, 
                  { id: 'crm', label: 'All Data' },
                  { id: 'exly', label: 'Exly' },
+                 { id: 'audits', label: 'Lead Logs' },
                  { id: 'logs', label: 'Logs' },
                  { id: 'mail', label: 'Emails' }
                ]} 
@@ -266,6 +275,7 @@ const AdminPanel = () => {
                   )}
                   {activeTab === 'crm' && <TscDataContent />}
                   {activeTab === 'exly' && <ExlyDataContent />}
+                  {activeTab === 'audits' && <LeadAuditsContent />}
                   {activeTab === 'logs' && <AdminLogsContent />}
                   {activeTab === 'mail' && <AdminMailContent />}
                 </motion.div>
@@ -477,6 +487,34 @@ const AdminPanel = () => {
                  })}
               </div>
            </section>
+
+           {userAudits.length > 0 && (
+             <section>
+                <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
+                   <History size={14} /> CRM Lead Audit Trail
+                </h3>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                   {userAudits.map(log => (
+                      <div key={log._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between text-xs">
+                         <div>
+                            <p className="font-bold">
+                               Lead: <span className="text-[var(--color-text-primary)]">{log.leadId?.name || 'Unknown'}</span>
+                            </p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                               Field <span className="font-mono text-blue-400">{log.fieldChanged}</span> modified: 
+                               <span className="line-through mx-1">{log.oldValue || '(empty)'}</span> 
+                               &rarr; 
+                               <span className="text-emerald-400 ml-1">{log.newValue || '(empty)'}</span>
+                            </p>
+                         </div>
+                         <span className="text-[9px] font-mono text-[var(--color-text-muted)] shrink-0 pl-2">
+                            {log.timestamp ? format(new Date(log.timestamp), 'dd-MM-yyyy HH:mm') : ''}
+                         </span>
+                      </div>
+                   ))}
+                </div>
+             </section>
+           )}
         </div>
       </FullScreenWorkspace>
     </PageContainer>

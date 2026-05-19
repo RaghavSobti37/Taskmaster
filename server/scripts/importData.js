@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 
-const CSV_PATH = path.join(__dirname, '../../leads_db_import.csv');
+const CSV_PATH = path.join(__dirname, '../../leads.csv');
 
 async function importData() {
   try {

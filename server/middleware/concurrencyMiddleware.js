@@ -13,7 +13,7 @@ const checkLock = (Model) => async (req, res, next) => {
     // If locked by someone else and lock is fresh (less than 15 mins)
     const LOCK_EXPIRY_MS = 15 * 60 * 1000;
     const isLocked = doc.lockedBy && 
-                     doc.lockedBy !== userId && 
+                     doc.lockedBy.toString() !== userId.toString() && 
                      (new Date() - new Date(doc.lockedAt)) < LOCK_EXPIRY_MS;
 
     if (isLocked) {

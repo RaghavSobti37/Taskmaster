@@ -314,11 +314,11 @@ const TscDataContent = () => {
          </div>
       </Card>
 
-      {/* Data Table */}
       <DataTable 
         columns={columns} 
         data={data} 
         onRowClick={(item) => setSelectedItem(item)}
+        paginated={false}
       />
 
       {/* Pagination Controls */}

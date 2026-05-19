@@ -4,9 +4,9 @@ import {
   ArrowLeft, Share2, Zap, RefreshCw, Music, Video, TrendingUp,
   ExternalLink, Clock, Heart, MessageSquare, Share, Play, Disc, Globe,
   Edit2, Trash2, Link as LinkIcon, Info, CheckCircle, Plus, Filter,
-  Radio, Headphones, Activity, BarChart2
+  Radio, Headphones, Activity, BarChart2, Settings
 } from 'lucide-react';
-import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
+import { FaSpotify, FaYoutube, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   Badge, PageHeader, Card, PageContainer, DataTable, Button,
@@ -151,6 +151,10 @@ export default function ArtistDetail({ isPreview = false }) {
   const igEngagement = artist.analytics?.instagram?.engagementRate ?? 'N/A';
   const igShares = artist.analytics?.instagram?.totalShares ?? 'N/A';
 
+  const fbFollowers = artist.analytics?.facebook?.followers ?? 'N/A';
+  const fbLikes = artist.analytics?.facebook?.likes ?? 'N/A';
+  const fbPageName = artist.analytics?.facebook?.name ?? 'Page';
+
   const tracks = analyticsData?.tracks || [];
   const videos = analyticsData?.videos || [];
   const filteredVideos = videos.filter(v => {
@@ -164,6 +168,60 @@ export default function ArtistDetail({ isPreview = false }) {
   const relatedArtists = analyticsData?.relatedArtists || [];
   const spotifyGenres = artist.analytics?.spotify?.genres || [];
   const spotifyProfileImage = artist.analytics?.spotify?.profileImage || null;
+
+  // ─── Dynamic In-depth Analytics Calculations ──────────────────────────────
+  // Spotify Calculations
+  const totalPopularity = tracks.reduce((acc, t) => acc + (Number(t.popularity) || 0), 0);
+  const avgPopularity = tracks.length > 0 ? (totalPopularity / tracks.length).toFixed(1) : 0;
+  const explicitCount = tracks.filter(t => t.explicit).length;
+  const explicitPercentage = tracks.length > 0 ? ((explicitCount / tracks.length) * 100).toFixed(0) : 0;
+
+  // YouTube Calculations
+  const totalYtViews = filteredVideos.reduce((acc, v) => acc + (Number(v.views) || 0), 0);
+  const avgYtViews = filteredVideos.length > 0 ? Math.round(totalYtViews / filteredVideos.length) : 0;
+  const totalYtLikes = filteredVideos.reduce((acc, v) => acc + (Number(v.likes) || 0), 0);
+  const avgYtLikes = filteredVideos.length > 0 ? Math.round(totalYtLikes / filteredVideos.length) : 0;
+  const totalYtComments = filteredVideos.reduce((acc, v) => acc + (Number(v.comments) || 0), 0);
+  const avgYtComments = filteredVideos.length > 0 ? Math.round(totalYtComments / filteredVideos.length) : 0;
+  const avgYtEngagement = totalYtViews > 0
+    ? ((totalYtLikes + totalYtComments) / totalYtViews * 100).toFixed(2)
+    : 0;
+
+  // Instagram/Facebook Calculations
+  const totalIgLikes = posts.reduce((acc, p) => acc + (Number(p.like_count) || 0), 0);
+  const avgIgLikes = posts.length > 0 ? Math.round(totalIgLikes / posts.length) : 0;
+  const totalIgComments = posts.reduce((acc, p) => acc + (Number(p.comments_count) || 0), 0);
+  const avgIgComments = posts.length > 0 ? Math.round(totalIgComments / posts.length) : 0;
+  const postsWithReach = posts.filter(p => p.reach && p.reach !== 'N/A');
+  const avgIgReach = postsWithReach.length > 0
+    ? Math.round(postsWithReach.reduce((acc, p) => acc + Number(p.reach), 0) / postsWithReach.length)
+    : 0;
+  const avgIgPostEngagement = posts.length > 0
+    ? Math.round((totalIgLikes + totalIgComments) / posts.length)
+    : 0;
+
+  // Dynamic Tabs Resolution based on connected states
+  const spotifyConnected = !!(artist.oauthCredentials?.spotify?.artistId || artist.oauthCredentials?.spotify?.accessToken);
+  const youtubeConnected = !!artist.oauthCredentials?.youtube?.channelId;
+  const metaConnected = !!(artist.oauthCredentials?.meta?.igAccountId || artist.oauthCredentials?.meta?.fbPageId);
+
+  const availableTabs = [];
+  if (spotifyConnected) availableTabs.push({ id: 'spotify', label: 'Spotify Catalog' });
+  if (youtubeConnected) availableTabs.push({ id: 'youtube', label: 'YouTube Videos' });
+  if (metaConnected) availableTabs.push({ id: 'meta', label: 'Instagram Media' });
+
+  const tabsToRender = availableTabs.length > 0 ? availableTabs : [
+    { id: 'spotify', label: 'Spotify Catalog' },
+    { id: 'youtube', label: 'YouTube Videos' },
+    { id: 'meta', label: 'Instagram Media' }
+  ];
+
+  // Auto-switch tabs if active tab becomes unavailable
+  React.useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.some(t => t.id === activeTab)) {
+      setActiveTab(availableTabs[0].id);
+    }
+  }, [artist]);
 
   const currentHistory = historyMap[activeTab] || [];
   const chartData = currentHistory.map((h, idx) => ({
@@ -473,7 +531,10 @@ export default function ArtistDetail({ isPreview = false }) {
 
         {/* Meta Card */}
         {(() => {
-          const isConnected = !!(artist.oauthCredentials?.meta?.igAccountId && artist.oauthCredentials?.meta?.accessToken);
+          const isConnected = !!(artist.oauthCredentials?.meta?.igAccountId || artist.oauthCredentials?.meta?.fbPageId);
+          const availableAccounts = artist.oauthCredentials?.meta?.availableAccounts || [];
+          const activeIgId = artist.oauthCredentials?.meta?.igAccountId || '';
+          const activeFbId = artist.oauthCredentials?.meta?.fbPageId || '';
           return (
             <Card className="p-4 bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] shadow-sm flex flex-col gap-3 rounded-2xl">
               <div className="flex items-center justify-between">
@@ -483,25 +544,73 @@ export default function ArtistDetail({ isPreview = false }) {
                 <Badge variant={isConnected ? 'apricot' : 'info'}>{isConnected ? 'Active' : 'Not Connected'}</Badge>
               </div>
               {isConnected ? (
-                <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100 dark:divide-[#374151]/60">
-                  <div className="flex flex-col px-2">
-                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                      Followers <InfoButton text="Instagram professional account audience reach." />
-                    </span>
-                    <span className="text-lg font-black mt-1">{formatNumber(igFollowers)}</span>
+                <div className="flex flex-col gap-2">
+                  {/* Instagram Stats Row */}
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1"><FaInstagram className="text-pink-500" /> Instagram</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold">{formatNumber(igFollowers)} Followers</span>
                   </div>
-                  <div className="flex flex-col px-2">
-                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                      Engagement <InfoButton text="Ratio of total profile interactions over audience." />
-                    </span>
-                    <span className="text-lg font-black mt-1">{igEngagement !== 'N/A' ? `${igEngagement}%` : '—'}</span>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-slate-400">Engagement:</span> <span className="font-bold text-slate-700 dark:text-slate-300">{igEngagement !== 'N/A' ? `${igEngagement}%` : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Post Shares:</span> <span className="font-bold text-slate-700 dark:text-slate-300">{formatNumber(igShares)}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col px-2">
-                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center">
-                      Post Shares <InfoButton text="Total cumulative user reshares across media items." />
-                    </span>
-                    <span className="text-lg font-black mt-1">{formatNumber(igShares)}</span>
+
+                  {/* Facebook Stats Row */}
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mt-1">
+                    <span className="flex items-center gap-1"><FaFacebook className="text-blue-600" /> Facebook</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold">{formatNumber(fbFollowers)} Followers</span>
                   </div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-slate-400">Page Likes:</span> <span className="font-bold text-slate-700 dark:text-slate-300">{formatNumber(fbLikes)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Active Page:</span> <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[80px]" title={fbPageName}>{fbPageName}</span>
+                    </div>
+                  </div>
+
+                  {/* Account Selector */}
+                  {availableAccounts.length > 1 && (
+                    <div className="mt-1 pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
+                      <span className="text-[9px] font-black uppercase text-slate-400 flex items-center gap-1">
+                        <Settings size={10} /> Switch Account
+                      </span>
+                      <select
+                        value={`${activeFbId}|${activeIgId}`}
+                        onChange={async (e) => {
+                          const [fbId, igId] = e.target.value.split('|');
+                          try {
+                            await updateMutation.mutateAsync({
+                              id: artist._id,
+                              data: {
+                                oauthCredentials: {
+                                  meta: {
+                                    fbPageId: fbId,
+                                    igAccountId: igId
+                                  }
+                                }
+                              }
+                            });
+                            // Trigger sync stats right after change
+                            handleSync();
+                          } catch(err) {
+                            alert('Failed to switch Meta account: ' + err.message);
+                          }
+                        }}
+                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1 py-0.5 text-[9px] font-bold text-slate-700 dark:text-slate-200 focus:outline-none max-w-[120px]"
+                      >
+                        {availableAccounts.map(acc => (
+                          <option key={`${acc.fbPageId}|${acc.igAccountId}`} value={`${acc.fbPageId}|${acc.igAccountId}`}>
+                            {acc.igUsername ? `@${acc.igUsername}` : `${acc.fbPageName}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-3 gap-2">
@@ -657,11 +766,7 @@ export default function ArtistDetail({ isPreview = false }) {
             <TabSwitcher
               activeTab={activeTab}
               onChange={setActiveTab}
-              tabs={[
-                { id: 'spotify', label: 'Spotify Catalog' },
-                { id: 'youtube', label: 'YouTube Videos' },
-                { id: 'meta', label: 'Instagram Media' }
-              ]}
+              tabs={tabsToRender}
             />
             <InfoButton text="Switch between live platform ingestion feeds to inspect sub-assets." />
           </div>
@@ -700,6 +805,112 @@ export default function ArtistDetail({ isPreview = false }) {
             )}
           </div>
         </div>
+
+        {/* Deep Performance Insights Grid */}
+        {!isAnalyticsLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {activeTab === 'spotify' && tracks.length > 0 && (
+              <>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <TrendingUp size={10} className="text-emerald-500" /> Avg Popularity
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{avgPopularity} / 100</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Algorithmic authority score</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Disc size={10} className="text-emerald-500" /> Total Tracks
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{tracks.length}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Indexed in active catalog</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Zap size={10} className="text-emerald-500" /> Explicit Rate
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{explicitPercentage}%</span>
+                  <span className="text-[9px] text-slate-400 mt-1">{explicitCount} explicit releases</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Globe size={10} className="text-emerald-500" /> Spotify ID
+                  </span>
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300 mt-1 truncate select-all">{artist.oauthCredentials?.spotify?.artistId || 'N/A'}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Unique target resource ID</span>
+                </Card>
+              </>
+            )}
+
+            {activeTab === 'youtube' && filteredVideos.length > 0 && (
+              <>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Play size={10} className="text-red-500" /> Avg Video Views
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgYtViews)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Views per uploaded asset</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Heart size={10} className="text-red-500" /> Avg Video Likes
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgYtLikes)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Positive reactions per video</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Activity size={10} className="text-red-500" /> Interaction Rate
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{avgYtEngagement}%</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Likes + Comments over views</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <MessageSquare size={10} className="text-red-500" /> Avg Comments
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgYtComments)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">User discussion comments</span>
+                </Card>
+              </>
+            )}
+
+            {activeTab === 'meta' && posts.length > 0 && (
+              <>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Radio size={10} className="text-pink-500" /> Avg Post Reach
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">
+                    {avgIgReach !== 0 ? formatNumber(avgIgReach) : 'N/A'}
+                  </span>
+                  <span className="text-[9px] text-slate-400 mt-1">Unique accounts reached</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Heart size={10} className="text-pink-500" /> Avg Post Likes
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgIgLikes)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Likes per Instagram post</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <Activity size={10} className="text-pink-500" /> Avg Post Engages
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgIgPostEngagement)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Likes + Comments per post</span>
+                </Card>
+                <Card className="p-3 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 flex flex-col justify-between rounded-xl shadow-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+                    <MessageSquare size={10} className="text-pink-500" /> Avg Comments
+                  </span>
+                  <span className="text-lg font-black text-slate-800 dark:text-white mt-1">{formatNumber(avgIgComments)}</span>
+                  <span className="text-[9px] text-slate-400 mt-1">Replies per Instagram post</span>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
 
         <Card className="p-0 overflow-hidden bg-white dark:bg-[#111827] border-[#E2E8F0] dark:border-[#1F2937] rounded-2xl shadow-sm">
           {isAnalyticsLoading ? (

@@ -60,6 +60,23 @@ export default function ArtistDetail({ isPreview = false }) {
   const deleteMutation = useDeleteArtist();
   const addVideoMutation = useAddTrackedVideo();
 
+  // Dynamic Tabs Resolution based on connected states
+  const spotifyConnected = !!(artist?.oauthCredentials?.spotify?.artistId || artist?.oauthCredentials?.spotify?.accessToken);
+  const youtubeConnected = !!artist?.oauthCredentials?.youtube?.channelId;
+  const metaConnected = !!(artist?.oauthCredentials?.meta?.igAccountId || artist?.oauthCredentials?.meta?.fbPageId);
+
+  const availableTabs = [];
+  if (spotifyConnected) availableTabs.push({ id: 'spotify', label: 'Spotify Catalog' });
+  if (youtubeConnected) availableTabs.push({ id: 'youtube', label: 'YouTube Videos' });
+  if (metaConnected) availableTabs.push({ id: 'meta', label: 'Instagram Media' });
+
+  // Auto-switch tabs if active tab becomes unavailable
+  React.useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.some(t => t.id === activeTab)) {
+      setActiveTab(availableTabs[0].id);
+    }
+  }, [artist]);
+
   const handleOpenEdit = () => {
     if (!artist) return;
     setEditedArtist({
@@ -200,28 +217,11 @@ export default function ArtistDetail({ isPreview = false }) {
     ? Math.round((totalIgLikes + totalIgComments) / posts.length)
     : 0;
 
-  // Dynamic Tabs Resolution based on connected states
-  const spotifyConnected = !!(artist.oauthCredentials?.spotify?.artistId || artist.oauthCredentials?.spotify?.accessToken);
-  const youtubeConnected = !!artist.oauthCredentials?.youtube?.channelId;
-  const metaConnected = !!(artist.oauthCredentials?.meta?.igAccountId || artist.oauthCredentials?.meta?.fbPageId);
-
-  const availableTabs = [];
-  if (spotifyConnected) availableTabs.push({ id: 'spotify', label: 'Spotify Catalog' });
-  if (youtubeConnected) availableTabs.push({ id: 'youtube', label: 'YouTube Videos' });
-  if (metaConnected) availableTabs.push({ id: 'meta', label: 'Instagram Media' });
-
   const tabsToRender = availableTabs.length > 0 ? availableTabs : [
     { id: 'spotify', label: 'Spotify Catalog' },
     { id: 'youtube', label: 'YouTube Videos' },
     { id: 'meta', label: 'Instagram Media' }
   ];
-
-  // Auto-switch tabs if active tab becomes unavailable
-  React.useEffect(() => {
-    if (availableTabs.length > 0 && !availableTabs.some(t => t.id === activeTab)) {
-      setActiveTab(availableTabs[0].id);
-    }
-  }, [artist]);
 
   const currentHistory = historyMap[activeTab] || [];
   const chartData = currentHistory.map((h, idx) => ({

@@ -25,7 +25,7 @@ const fetchTasks = async () => {
 };
 
 const fetchUserDirectory = async () => {
-  const { data } = await axios.get('/api/users/directory');
+  const { data } = await axios.get('/api/users/directory?limit=1000');
   return data.users;
 };
 

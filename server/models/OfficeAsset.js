@@ -6,6 +6,8 @@ const officeAssetSchema = new mongoose.Schema({
   category: { type: String, default: 'Hardware' },
   currentlyWith: { type: String, default: 'Office' },
   status: { type: String, default: 'Available', enum: ['Available', 'In Use', 'Maintenance', 'Lost', 'Damaged'] },
+  serialNumber: { type: String },
+  purchaseDate: { type: Date },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   history: [{
     action: String,

@@ -12,7 +12,7 @@ const OfficeAssetsPage = () => {
   const [editingAsset, setEditingAsset] = useState(null);
   const [editingContact, setEditingContact] = useState(null);
   
-  const [assetFormData, setAssetFormData] = useState({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '' });
+  const [assetFormData, setAssetFormData] = useState({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
   const [contactFormData, setContactFormData] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
   const [search, setSearch] = useState('');
   
@@ -41,7 +41,7 @@ const OfficeAssetsPage = () => {
       queryClient.invalidateQueries(['office-assets']);
       setIsAssetModalOpen(false);
       setEditingAsset(null);
-      setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '' });
+      setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
     }
   });
 
@@ -97,7 +97,7 @@ const OfficeAssetsPage = () => {
           <button
             onClick={() => {
               setEditingAsset(null);
-              setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '' });
+              setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
               setIsAssetModalOpen(true);
             }}
             className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
@@ -158,7 +158,7 @@ const OfficeAssetsPage = () => {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-[var(--color-text-primary)] uppercase tracking-tight">{asset.name}</h3>
                     <div className="flex gap-1">
-                      <button onClick={() => { setEditingAsset(asset); setAssetFormData({ ...asset, updateNotes: '' }); setIsAssetModalOpen(true); }} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors">
+                      <button onClick={() => { setEditingAsset(asset); setAssetFormData({ ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' }); setIsAssetModalOpen(true); }} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors">
                         <Edit2 size={14} />
                       </button>
                       <button onClick={() => { if(confirm('Delete asset?')) deleteAssetMutation.mutate(asset._id); }} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors">
@@ -181,6 +181,20 @@ const OfficeAssetsPage = () => {
                       <span className="text-[var(--color-text-muted)] text-[10px]">With:</span>
                       <span className="text-blue-500">{asset.currentlyWith}</span>
                     </div>
+                    {asset.serialNumber && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--color-text-muted)] text-[10px]">S/N:</span>
+                        <span className="text-[var(--color-text-primary)] font-mono text-[10px]">{asset.serialNumber}</span>
+                      </div>
+                    )}
+                    {asset.purchaseDate && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--color-text-muted)] text-[10px]">Purchased:</span>
+                        <span className="text-[var(--color-text-primary)] text-[10px]">
+                          {new Date(asset.purchaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -242,6 +256,16 @@ const OfficeAssetsPage = () => {
           <div>
             <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Description</label>
             <input type="text" value={assetFormData.description} onChange={e => setAssetFormData({...assetFormData, description: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Serial Number</label>
+              <input type="text" placeholder="e.g. SN-12345" value={assetFormData.serialNumber || ''} onChange={e => setAssetFormData({...assetFormData, serialNumber: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Purchase Date</label>
+              <input type="date" value={assetFormData.purchaseDate || ''} onChange={e => setAssetFormData({...assetFormData, purchaseDate: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

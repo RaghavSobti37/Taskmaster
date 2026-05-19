@@ -11,6 +11,8 @@ const LeadSchema = new mongoose.Schema({
   rowId: { type: String, unique: true, sparse: true }, // Legacy identifier from CSV
   customerIdExly: { type: String, index: true },
   transactionIdExly: { type: String, index: true },
+  exlyOfferingId: { type: String, index: true },
+  exlyOfferingTitle: { type: String, index: true },
   
   // Basic Information
   name: { type: String, required: true },

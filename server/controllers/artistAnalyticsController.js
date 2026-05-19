@@ -14,23 +14,40 @@ exports.syncArtistStats = async (req, res) => {
     // Spotify data processing
     let spotifyFollowers = null;
     let spotifyPopularity = null;
+    let spotifyGenres = [];
+    let spotifyImage = null;
     let liveTracks = [];
+    let liveDiscography = [];
+    let liveRelatedArtists = [];
 
-    if (spotifyRes?.status === 'fulfilled') {
-      const { artistInfo, tracks } = spotifyRes.value;
+    if (spotifyRes?.status === 'fulfilled' && spotifyRes.value !== null) {
+      const { artistInfo, albums, relatedArtists, liveTracks: serviceTrackss } = spotifyRes.value;
+
+      // followers/popularity/genres require Spotify quota extension — null if not available
       spotifyFollowers = validateMetric(artistInfo?.followers?.total, true);
       spotifyPopularity = validateMetric(artistInfo?.popularity, true);
+      spotifyGenres = artistInfo?.genres || [];
+      spotifyImage = artistInfo?.images?.[0]?.url || null;
 
-      liveTracks = (tracks || []).map(t => ({
-        trackName: t.name || 'Unknown Track',
-        albumName: t.album?.name || 'Single',
-        url: t.external_urls?.spotify || null,
-        streams: 'N/A', // Restricted from public developer key
-        monthlyListeners: 'N/A',
-        saveRate: 'N/A',
-        skipRate: 'N/A',
-        playlists: 'N/A'
+      console.log(`🎵 [Spotify Sync] Artist: ${artistInfo?.name} | Image: ${spotifyImage ? 'yes' : 'no'} | Followers: ${spotifyFollowers ?? 'quota-blocked'} | Popularity: ${spotifyPopularity ?? 'quota-blocked'}`);
+
+      // Tracks pulled from albums (top-tracks endpoint is quota-blocked in dev mode)
+      liveTracks = serviceTrackss || [];
+
+      // Discography
+      liveDiscography = (albums || []).map(a => ({
+        albumId: a.id,
+        title: a.name,
+        type: a.album_type,
+        releaseDate: a.release_date,
+        totalTracks: a.total_tracks,
+        image: a.images?.[0]?.url || null,
+        url: a.external_urls?.spotify || null
       }));
+
+      liveRelatedArtists = relatedArtists || [];
+
+      console.log(`🎵 [Spotify Sync] Tracks: ${liveTracks.length} | Releases: ${liveDiscography.length} | Related: ${liveRelatedArtists.length}`);
     }
 
     // YouTube data processing
@@ -39,7 +56,7 @@ exports.syncArtistStats = async (req, res) => {
     let youtubeVideoCount = null;
     let liveVideos = [];
 
-    if (youtubeRes?.status === 'fulfilled') {
+    if (youtubeRes?.status === 'fulfilled' && youtubeRes.value !== null) {
       const { channel, videoList, externalVideoList } = youtubeRes.value;
       youtubeSubscribers = validateMetric(channel?.statistics?.subscriberCount, true);
       youtubeViews = validateMetric(channel?.statistics?.viewCount, true);
@@ -95,7 +112,7 @@ exports.syncArtistStats = async (req, res) => {
     let engagementRate = null;
     let sharesOutput = null;
 
-    if (metaRes?.status === 'fulfilled') {
+    if (metaRes?.status === 'fulfilled' && metaRes.value !== null) {
       const { media, followers } = metaRes.value;
       metaFollowers = validateMetric(followers, true);
       const mediaItems = media?.data || [];
@@ -133,23 +150,27 @@ exports.syncArtistStats = async (req, res) => {
       }
     }
 
-    const spFNum = typeof spotifyFollowers === 'number' ? spotifyFollowers : 0;
-    const spPNum = typeof spotifyPopularity === 'number' ? spotifyPopularity : 0;
-    const ytSNum = typeof youtubeSubscribers === 'number' ? youtubeSubscribers : 0;
-    const ytVNum = typeof youtubeViews === 'number' ? youtubeViews : 0;
-    const ytVidNum = typeof youtubeVideoCount === 'number' ? youtubeVideoCount : 0;
-    const igFNum = typeof metaFollowers === 'number' ? metaFollowers : 0;
-    const igENum = typeof engagementRate === 'number' ? engagementRate : 0;
-    const igShNum = typeof sharesOutput === 'number' ? sharesOutput : 0;
+    const spFNum = typeof spotifyFollowers === 'number' ? spotifyFollowers : (artist.analytics?.spotify?.followers || 0);
+    const spPNum = typeof spotifyPopularity === 'number' ? spotifyPopularity : (artist.analytics?.spotify?.popularity || 0);
+    const ytSNum = typeof youtubeSubscribers === 'number' ? youtubeSubscribers : (artist.analytics?.youtube?.subscribers || 0);
+    const ytVNum = typeof youtubeViews === 'number' ? youtubeViews : (artist.analytics?.youtube?.views || 0);
+    const ytVidNum = typeof youtubeVideoCount === 'number' ? youtubeVideoCount : (artist.analytics?.youtube?.videoCount || 0);
+    const igFNum = typeof metaFollowers === 'number' ? metaFollowers : (artist.analytics?.instagram?.followers || 0);
+    const igENum = typeof engagementRate === 'number' ? engagementRate : (artist.analytics?.instagram?.engagementRate || 0);
+    const igShNum = typeof sharesOutput === 'number' ? sharesOutput : (artist.analytics?.instagram?.totalShares || 0);
 
     const newStats = {
       spotify: {
         followers: spFNum,
         popularity: spPNum,
+        genres: spotifyGenres,
+        profileImage: spotifyImage,
         monthlyListeners: 0,
         mal: 0,
         streamsPerListener: 0,
-        playlistAdditions: 0
+        playlistAdditions: 0,
+        discography: liveDiscography,
+        relatedArtists: liveRelatedArtists
       },
       youtube: {
         views: ytVNum,
@@ -169,9 +190,6 @@ exports.syncArtistStats = async (req, res) => {
       posts: livePosts
     };
 
-    artist.analytics = newStats;
-    artist.isSynced = true;
-
     // Append to real historical snapshot if synced
     const now = new Date();
     const currentSnapshot = {
@@ -184,34 +202,22 @@ exports.syncArtistStats = async (req, res) => {
       }
     };
 
-    if (!artist.analyticsHistory) artist.analyticsHistory = [];
-    artist.analyticsHistory.push(currentSnapshot);
+    const updated = await Artist.findOneAndUpdate(
+      { _id: id },
+      {
+        $set: {
+          analytics: newStats,
+          isSynced: true,
+          trackedVideos: artist.trackedVideos || []
+        },
+        $push: {
+          analyticsHistory: currentSnapshot
+        }
+      },
+      { new: true }
+    );
 
-    // If history has fewer than 5 items, generate realistic backward points from live stats
-    if (artist.analyticsHistory.length < 5) {
-      const daysAgo = (days) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      const spF = spFNum || 18400;
-      const spP = spPNum || 78;
-      const ytS = ytSNum || 726;
-      const ytV = ytVNum || 53512;
-      const igF = igFNum || 34900;
-      const igE = igENum || 4.5;
-
-      artist.analyticsHistory = [
-        { timestamp: daysAgo(60), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.81), popularity: Math.round(spP * 0.9) }, youtube: { subscribers: Math.round(ytS * 0.85), views: Math.round(ytV * 0.8) }, instagram: { followers: Math.round(igF * 0.82), engagementRate: igE } } },
-        { timestamp: daysAgo(45), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.86), popularity: Math.round(spP * 0.92) }, youtube: { subscribers: Math.round(ytS * 0.89), views: Math.round(ytV * 0.85) }, instagram: { followers: Math.round(igF * 0.88), engagementRate: igE } } },
-        { timestamp: daysAgo(30), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.91), popularity: Math.round(spP * 0.95) }, youtube: { subscribers: Math.round(ytS * 0.93), views: Math.round(ytV * 0.9) }, instagram: { followers: Math.round(igF * 0.93), engagementRate: igE } } },
-        { timestamp: daysAgo(15), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.96), popularity: Math.round(spP * 0.98) }, youtube: { subscribers: Math.round(ytS * 0.97), views: Math.round(ytV * 0.95) }, instagram: { followers: Math.round(igF * 0.97), engagementRate: igE } } },
-        { timestamp: now, platform: 'overall', metrics: { spotify: { followers: spF, popularity: spP }, youtube: { subscribers: ytS, views: ytV }, instagram: { followers: igF, engagementRate: igE } } }
-      ];
-    }
-
-    artist.markModified('analytics');
-    artist.markModified('analyticsHistory');
-    artist.markModified('trackedVideos');
-    await artist.save();
-
-    res.json(artist);
+    res.json(updated || artist);
   } catch (err) {
     console.error('Error in syncArtistStats:', err);
     res.status(500).json({ message: err.message });
@@ -225,28 +231,7 @@ exports.getPlatformAnalytics = async (req, res) => {
     let artist = await Artist.findById(id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
 
-    // If history is empty or short, ensure 5 points for graph rendering
-    if (!artist.analyticsHistory || artist.analyticsHistory.length < 5) {
-      const now = new Date();
-      const daysAgo = (days) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      const spF = artist.analytics?.spotify?.followers || 18400;
-      const spP = artist.analytics?.spotify?.popularity || 78;
-      const ytS = artist.analytics?.youtube?.subscribers || 726;
-      const ytV = artist.analytics?.youtube?.views || 53512;
-      const igF = artist.analytics?.instagram?.followers || 34900;
-      const igE = artist.analytics?.instagram?.engagementRate || 4.5;
-
-      artist.analyticsHistory = [
-        { timestamp: daysAgo(60), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.81), popularity: Math.round(spP * 0.9) }, youtube: { subscribers: Math.round(ytS * 0.85), views: Math.round(ytV * 0.8) }, instagram: { followers: Math.round(igF * 0.82), engagementRate: igE } } },
-        { timestamp: daysAgo(45), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.86), popularity: Math.round(spP * 0.92) }, youtube: { subscribers: Math.round(ytS * 0.89), views: Math.round(ytV * 0.85) }, instagram: { followers: Math.round(igF * 0.88), engagementRate: igE } } },
-        { timestamp: daysAgo(30), platform: 'overall', metrics: { followers: Math.round(spF * 0.91), popularity: Math.round(spP * 0.95), spotify: { followers: Math.round(spF * 0.91), popularity: Math.round(spP * 0.95) }, youtube: { subscribers: Math.round(ytS * 0.93), views: Math.round(ytV * 0.9) }, instagram: { followers: Math.round(igF * 0.93), engagementRate: igE } } },
-        { timestamp: daysAgo(15), platform: 'overall', metrics: { spotify: { followers: Math.round(spF * 0.96), popularity: Math.round(spP * 0.98) }, youtube: { subscribers: Math.round(ytS * 0.97), views: Math.round(ytV * 0.95) }, instagram: { followers: Math.round(igF * 0.97), engagementRate: igE } } },
-        { timestamp: now, platform: 'overall', metrics: { spotify: { followers: spF, popularity: spP }, youtube: { subscribers: ytS, views: ytV }, instagram: { followers: igF, engagementRate: igE } } }
-      ];
-      artist.markModified('analyticsHistory');
-      await artist.save();
-    }
-
+    // Only use real history — no fake data generation
     const historyMap = { spotify: [], youtube: [], meta: [] };
     if (artist.analyticsHistory && Array.isArray(artist.analyticsHistory)) {
       artist.analyticsHistory.forEach(item => {
@@ -275,6 +260,8 @@ exports.getPlatformAnalytics = async (req, res) => {
     const activeTracks = artist.analytics?.tracks || [];
     const activeVideos = artist.analytics?.videos || [];
     const activePosts = artist.analytics?.posts || [];
+    const discography = artist.analytics?.spotify?.discography || [];
+    const relatedArtists = artist.analytics?.spotify?.relatedArtists || [];
 
     res.json({
       current: currentStats,
@@ -283,6 +270,8 @@ exports.getPlatformAnalytics = async (req, res) => {
       tracks: activeTracks,
       videos: activeVideos,
       posts: activePosts,
+      discography,
+      relatedArtists,
       trackedVideos: artist.trackedVideos || [],
       artist: {
         _id: artist._id,
@@ -502,19 +491,23 @@ exports.metaOAuthCallback = async (req, res) => {
       }
     }
 
-    // 5. Update Artist Profile with permanent credentials
-    if (!artist.oauthCredentials) artist.oauthCredentials = {};
-    artist.oauthCredentials.meta = {
-      accessToken: longToken,
-      igAccountId: igAccountId || '',
-      fbPageId: fbPageId,
-      tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days
-    };
+    // 5. Update Artist Profile with permanent credentials using findOneAndUpdate to bypass Mongoose version conflicts
+    const updatedArtist = await Artist.findOneAndUpdate(
+      { _id: id },
+      {
+        $set: {
+          'oauthCredentials.meta': {
+            accessToken: longToken,
+            igAccountId: igAccountId || '',
+            fbPageId: fbPageId,
+            tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days
+          }
+        }
+      },
+      { new: true }
+    );
 
-    artist.markModified('oauthCredentials');
-    await artist.save();
-
-    console.log(`🎉 [OAuth] Harshad/Duhita Meta credentials updated successfully! Triggering live stats sync...`);
+    console.log(`🎉 [OAuth] ${updatedArtist?.name || 'Artist'} Meta credentials updated successfully! Triggering live stats sync...`);
 
     // 6. Auto-trigger live analytics sync
     try {

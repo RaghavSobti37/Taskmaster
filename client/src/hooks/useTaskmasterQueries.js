@@ -547,6 +547,16 @@ export const useCreateTeam = () => {
   });
 };
 
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/teams/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
+  });
+};
+
 export const useCreateMailProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({

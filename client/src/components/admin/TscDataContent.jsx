@@ -318,23 +318,18 @@ const TscDataContent = () => {
         columns={columns} 
         data={data} 
         onRowClick={(item) => setSelectedItem(item)}
-        paginated={false}
+        paginated={true}
+        serverSide={true}
+        totalItems={total}
+        totalPages={pages}
+        currentPage={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setPage(1);
+        }}
       />
-
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between pt-4">
-         <div className="flex items-center gap-4">
-            <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
-              Showing {data.length} of {total} records
-            </p>
-            {searchTerm && <Badge variant="info" className="!text-[8px]">Global Search Active</Badge>}
-         </div>
-         <div className="flex items-center gap-2">
-            <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={12} /></Button>
-            <span className="text-[10px] font-black px-2">{page} / {pages}</span>
-            <Button variant="secondary" size="xs" disabled={page === pages} onClick={() => setPage(p => p + 1)}><ChevronRight size={12} /></Button>
-         </div>
-      </div>
 
       {/* Immersive Record Workspace */}
       <FullScreenWorkspace

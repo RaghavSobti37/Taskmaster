@@ -33,34 +33,25 @@ const Dashboard = () => {
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
 
   const handleSyncBookedCalls = async () => {
-    setIsSyncing(true);
+    setSyncStatus('syncing');
     try {
-      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      addToast({
-        title: 'Sync Success',
-        message: res.data.message,
-        type: 'success',
-        duration: 5000
-      });
+      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     } catch (err) {
-      addToast({
-        title: 'Sync Failed',
-        message: err.response?.data?.error || 'Failed to sync booked calls',
-        type: 'error'
-      });
-    } finally {
-      setIsSyncing(false);
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
     }
   };
 
@@ -128,8 +119,8 @@ const Dashboard = () => {
         icon={LayoutDashboard}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
-              <Zap size={16} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
+              <Zap size={16} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
             </Button>
             <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
               <Plus size={16} /> New Work Item

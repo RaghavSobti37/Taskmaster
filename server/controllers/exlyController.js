@@ -188,7 +188,7 @@ exports.handleExlyWebhook = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 2. Sync lead into CRM (Check-then-write / Update only)
+    // 2. Sync lead into CRM (Check-then-write / Update or Create)
     const filter = { $or: [] };
     if (phone) filter.$or.push({ phone });
     if (email) filter.$or.push({ email });
@@ -198,6 +198,8 @@ exports.handleExlyWebhook = async (req, res) => {
       lead = await Lead.findOne(filter);
       if (lead) {
         lead.name = name || lead.name;
+        lead.email = email || lead.email;
+        lead.phone = phone || lead.phone;
         lead.customerIdExly = custId || lead.customerIdExly;
         lead.transactionIdExly = txnId || lead.transactionIdExly;
         lead.exlyOfferingId = offId || lead.exlyOfferingId;
@@ -206,9 +208,20 @@ exports.handleExlyWebhook = async (req, res) => {
       }
     }
 
-    // 3. Create individual ExlyBooking record
+    // 3. Create/update individual ExlyBooking record with secure query
+    const bookedOnDate = payload.bookedOn ? new Date(payload.bookedOn) : new Date();
+    const bookingQuery = txnId 
+      ? { transactionId: txnId }
+      : {
+          offeringId: offId,
+          $or: [
+            ...(email ? [{ email: email }] : []),
+            ...(phone ? [{ phone: phone }] : [])
+          ]
+        };
+
     await ExlyBooking.findOneAndUpdate(
-      { transactionId: txnId },
+      bookingQuery,
       {
         $set: {
           customerId: custId,
@@ -220,15 +233,20 @@ exports.handleExlyWebhook = async (req, res) => {
           pricePaid: price,
           state: payload.state || 'Selected',
           payoutStatus: payload.payoutStatus || 'Processed',
-          bookedOn: payload.bookedOn ? new Date(payload.bookedOn) : new Date()
+          bookedOn: bookedOnDate,
+          transactionId: txnId
         }
       },
       { upsert: true }
     );
 
-    // 4. Recalculate Offering analytics based on CRM Leads
+    // 4. Recalculate Offering analytics based on ExlyBookings and CRM Leads
     const offering = await ExlyOffering.findOne({ offeringId: offId });
     if (offering) {
+      const bookingsForOff = await ExlyBooking.find({ offeringId: offering.offeringId }).lean();
+      const totalBookings = bookingsForOff.length;
+      const totalRevenue = bookingsForOff.reduce((sum, b) => sum + (b.pricePaid || 0), 0);
+
       const leadsForOffering = await Lead.find({
         $or: [
           { exlyOfferingId: offering.offeringId },
@@ -237,9 +255,7 @@ exports.handleExlyWebhook = async (req, res) => {
         ]
       }).lean();
 
-      const totalBookings = leadsForOffering.length;
       const convertedBookings = leadsForOffering.filter(l => l.leadStatus === 'Converted').length;
-      const totalRevenue = totalBookings * offering.price;
       const conversionRate = totalBookings > 0 ? Number(((convertedBookings / totalBookings) * 100).toFixed(1)) : 0;
 
       offering.totalBookings = totalBookings;
@@ -248,7 +264,7 @@ exports.handleExlyWebhook = async (req, res) => {
       await offering.save();
     }
 
-    res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', leadId: lead._id });
+    res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', leadId: lead ? lead._id : null });
   } catch (err) {
     console.error('❌ [Exly Webhook Error]:', err.message);
     res.status(500).json({ success: false, error: err.message });
@@ -269,7 +285,58 @@ exports.getOfferingDetails = async (req, res) => {
     if (bookings.length === 0) {
       return res.json({
         offering,
-        bookings: [],
+        bookings: []
+      });
+    }
+
+    const uniqueEmails = bookings.map(b => b.email).filter(Boolean);
+    const uniquePhones = bookings.map(b => b.phone).filter(Boolean);
+
+    // Fetch CRM Lead status for each booking safely
+    let crmLeads = [];
+    if (uniqueEmails.length > 0 || uniquePhones.length > 0) {
+      const orFilters = [];
+      if (uniqueEmails.length > 0) orFilters.push({ email: { $in: uniqueEmails } });
+      if (uniquePhones.length > 0) orFilters.push({ phone: { $in: uniquePhones } });
+
+      crmLeads = await Lead.find({ $or: orFilters })
+        .select('email phone leadStatus callStatus assignedRepId')
+        .populate('assignedRepId', 'name')
+        .lean();
+    }
+
+    const bookingsWithCrm = bookings.map(b => {
+      const matched = crmLeads.find(l => 
+        (b.email && l.email?.toLowerCase() === b.email.toLowerCase()) ||
+        (b.phone && l.phone === b.phone)
+      );
+      return {
+        ...b,
+        inCRM: !!matched,
+        crmStatus: matched ? matched.leadStatus : 'Unlinked',
+        crmCallStatus: matched ? matched.callStatus : 'Unlinked',
+        crmRep: matched?.assignedRepId?.name || 'Unassigned'
+      };
+    });
+
+    res.json({
+      offering,
+      bookings: bookingsWithCrm
+    });
+
+  } catch (err) {
+    console.error('[Exly getOfferingDetails Error]', err.message);
+    res.status(500).json({ error: 'Failed to retrieve offering details.' });
+  }
+};
+
+exports.getOfferingAnalytics = async (req, res) => {
+  try {
+    const { offeringId } = req.params;
+
+    const bookings = await ExlyBooking.find({ offeringId }).lean();
+    if (bookings.length === 0) {
+      return res.json({
         analytics: {
           totalCustomers: 0,
           newCustomers: 0,
@@ -282,7 +349,6 @@ exports.getOfferingDetails = async (req, res) => {
       });
     }
 
-    // Get unique customer contacts
     const uniqueEmails = bookings.map(b => b.email).filter(Boolean);
     const uniquePhones = bookings.map(b => b.phone).filter(Boolean);
 
@@ -334,35 +400,19 @@ exports.getOfferingDetails = async (req, res) => {
       totalLTV += ltv;
     });
 
-    // Fetch CRM Lead status for each booking
-    const crmLeads = await Lead.find({
-      $or: [
-        { email: { $in: uniqueEmails } },
-        { phone: { $in: uniquePhones } }
-      ]
-    }).select('email phone leadStatus callStatus assignedRepId')
-      .populate('assignedRepId', 'name')
-      .lean();
-
-    const bookingsWithCrm = bookings.map(b => {
-      const matched = crmLeads.find(l => 
-        (b.email && l.email?.toLowerCase() === b.email.toLowerCase()) ||
-        (b.phone && l.phone === b.phone)
-      );
-      return {
-        ...b,
-        inCRM: !!matched,
-        crmStatus: matched ? matched.leadStatus : 'Unlinked',
-        crmCallStatus: matched ? matched.callStatus : 'Unlinked',
-        crmRep: matched?.assignedRepId?.name || 'Unassigned'
-      };
-    });
-
     // Time-series chart data for this offering specifically
     const dailyMap = new Map();
     bookings.forEach(b => {
       if (!b.bookedOn) return;
-      const dStr = new Date(b.bookedOn).toISOString().split('T')[0];
+      let dStr = '';
+      try {
+        const d = new Date(b.bookedOn);
+        if (!isNaN(d.getTime())) {
+          dStr = d.toISOString().split('T')[0];
+        }
+      } catch (e) {}
+      if (!dStr) return;
+
       if (!dailyMap.has(dStr)) {
         dailyMap.set(dStr, { date: dStr, revenue: 0, bookings: 0 });
       }
@@ -374,8 +424,6 @@ exports.getOfferingDetails = async (req, res) => {
     const chartData = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
     res.json({
-      offering,
-      bookings: bookingsWithCrm,
       analytics: {
         totalCustomers: uniqueCustomers.length,
         newCustomers: newCustomersCount,
@@ -386,10 +434,9 @@ exports.getOfferingDetails = async (req, res) => {
       },
       chartData
     });
-
   } catch (err) {
-    console.error('[Exly getOfferingDetails Error]', err.message);
-    res.status(500).json({ error: 'Failed to retrieve offering details.' });
+    console.error('[Exly getOfferingAnalytics Error]', err.message);
+    res.status(500).json({ error: 'Failed to compute offering analytics.' });
   }
 };
 
@@ -434,6 +481,8 @@ exports.getDashboardStats = async (req, res) => {
     const bookings = await ExlyBooking.find().sort({ bookedOn: 1 }).lean();
 
     const dailyMap = new Map();
+    const uniqueKeys = new Set();
+
     bookings.forEach(b => {
       if (!b.bookedOn) return;
       const dateStr = new Date(b.bookedOn).toISOString().split('T')[0];
@@ -443,6 +492,10 @@ exports.getDashboardStats = async (req, res) => {
       const dayData = dailyMap.get(dateStr);
       dayData.revenue += b.pricePaid || 0;
       dayData.bookings += 1;
+
+      // Unique identifier for client across all offerings
+      const key = `${b.email?.toLowerCase().trim() || ''}-${b.phone?.trim() || ''}`;
+      uniqueKeys.add(key);
     });
 
     const chartData = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
@@ -452,10 +505,103 @@ exports.getDashboardStats = async (req, res) => {
 
     res.json({
       chartData,
-      recentBooking
+      recentBooking,
+      uniqueBookingsCount: uniqueKeys.size,
+      totalBookingsCount: bookings.length
     });
   } catch (err) {
     console.error('[Exly getDashboardStats Error]', err.message);
     res.status(500).json({ error: 'Failed to compute dashboard statistics.' });
   }
 };
+
+exports.getUnlinkedBookings = async (req, res) => {
+  try {
+    const bookings = await ExlyBooking.find().sort({ bookedOn: -1 }).lean();
+    const leads = await Lead.find({}, 'email phone').lean();
+    
+    const leadEmails = new Set(leads.map(l => l.email?.toLowerCase().trim()).filter(Boolean));
+    const leadPhones = new Set(leads.map(l => l.phone?.trim()).filter(Boolean));
+
+    const unlinked = bookings.filter(b => {
+      const emailMatch = b.email ? leadEmails.has(b.email.toLowerCase().trim()) : false;
+      const phoneMatch = b.phone ? leadPhones.has(b.phone.trim()) : false;
+      return !emailMatch && !phoneMatch;
+    });
+
+    res.json(unlinked);
+  } catch (err) {
+    console.error('[Exly getUnlinkedBookings Error]', err.message);
+    res.status(500).json({ error: 'Failed to retrieve unlinked bookings.' });
+  }
+};
+
+exports.linkUnlinkedBookings = async (req, res) => {
+  try {
+    const { bookingIds } = req.body;
+    if (!bookingIds || !Array.isArray(bookingIds) || bookingIds.length === 0) {
+      return res.status(400).json({ error: 'No booking IDs provided.' });
+    }
+
+    // 1. Create manual backup
+    const csvBackupService = require('../services/csvBackupService');
+    const backupFile = await csvBackupService.createManualBackup();
+
+    // 2. Fetch bookings
+    const bookings = await ExlyBooking.find({ _id: { $in: bookingIds } }).lean();
+    if (bookings.length === 0) {
+      return res.status(400).json({ error: 'No matching bookings found.' });
+    }
+
+    let addedCount = 0;
+    for (const booking of bookings) {
+      const filterConditions = [];
+      if (booking.phone) filterConditions.push({ phone: booking.phone });
+      if (booking.email) filterConditions.push({ email: booking.email });
+
+      let existing = null;
+      if (filterConditions.length > 0) {
+        existing = await Lead.findOne({ $or: filterConditions });
+      }
+
+      if (!existing) {
+        const assignedRepId = await assignLeadToRep();
+        
+        await Lead.create({
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+          source: booking.offeringTitle,
+          exlyOfferingId: booking.offeringId,
+          exlyOfferingTitle: booking.offeringTitle,
+          customerIdExly: booking.customerId,
+          transactionIdExly: booking.transactionId,
+          leadStatus: 'Fresh',
+          callStatus: 'Fresh',
+          assignedRepId
+        });
+        addedCount++;
+      } else {
+        existing.customerIdExly = booking.customerId || existing.customerIdExly;
+        existing.transactionIdExly = booking.transactionId || existing.transactionIdExly;
+        existing.exlyOfferingId = booking.offeringId || existing.exlyOfferingId;
+        existing.exlyOfferingTitle = booking.offeringTitle || existing.exlyOfferingTitle;
+        await existing.save();
+      }
+    }
+
+    // 3. Queue CRM CSV backup
+    const { queueCsvBackup } = require('../services/backgroundQueue');
+    queueCsvBackup();
+
+    res.json({
+      success: true,
+      message: `Successfully linked bookings. Added ${addedCount} new leads to CRM.`,
+      backupFile
+    });
+  } catch (err) {
+    console.error('[Exly linkUnlinkedBookings Error]', err.message);
+    res.status(500).json({ error: err.message || 'Failed to link bookings.' });
+  }
+};
+

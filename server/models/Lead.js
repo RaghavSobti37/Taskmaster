@@ -122,21 +122,23 @@ LeadSchema.pre('updateMany', function(next) {
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);
 
-// HolySheet Service Live Sync Middleware
-const holySheetService = require('../services/holySheetService');
-const csvBackupService = require('../services/csvBackupService');
+// Background Queue & Followup Cache Integration
+const backgroundQueue = require('../services/backgroundQueue');
+const followupCache = require('../services/followupCache');
 
 LeadSchema.post('save', function(doc) {
   if (doc) {
-    holySheetService.syncLeadToSheet(doc);
-    csvBackupService.backupAllLeadsToCsv();
+    backgroundQueue.queueHolySheetSync(doc._id);
+    backgroundQueue.queueCsvBackup();
+    followupCache.cacheFollowup(doc).catch(() => {});
   }
 });
 
 LeadSchema.post('findOneAndUpdate', function(doc) {
   if (doc) {
-    holySheetService.syncLeadToSheet(doc);
-    csvBackupService.backupAllLeadsToCsv();
+    backgroundQueue.queueHolySheetSync(doc._id);
+    backgroundQueue.queueCsvBackup();
+    followupCache.cacheFollowup(doc).catch(() => {});
   }
 });
 
@@ -144,11 +146,12 @@ LeadSchema.post('updateOne', async function() {
   try {
     const doc = await this.model.findOne(this.getQuery());
     if (doc) {
-      holySheetService.syncLeadToSheet(doc);
-      csvBackupService.backupAllLeadsToCsv();
+      backgroundQueue.queueHolySheetSync(doc._id);
+      backgroundQueue.queueCsvBackup();
+      followupCache.cacheFollowup(doc).catch(() => {});
     }
   } catch (err) {
-    console.error('[HolySheet Hook Error]', err.message);
+    console.error('[Queue Hook Error]', err.message);
   }
 });
 
@@ -156,25 +159,37 @@ LeadSchema.post('updateMany', async function() {
   try {
     const docs = await this.model.find(this.getQuery());
     for (const doc of docs) {
-      holySheetService.syncLeadToSheet(doc);
+      backgroundQueue.queueHolySheetSync(doc._id);
+      followupCache.cacheFollowup(doc).catch(() => {});
     }
     if (docs.length > 0) {
-      csvBackupService.backupAllLeadsToCsv();
+      backgroundQueue.queueCsvBackup();
     }
   } catch (err) {
-    console.error('[HolySheet Hook Error]', err.message);
+    console.error('[Queue Hook Error]', err.message);
+  }
+});
+
+LeadSchema.post('remove', function(doc) {
+  if (doc) {
+    followupCache.removeFollowup(doc._id).catch(() => {});
+  }
+});
+
+LeadSchema.post('deleteOne', { document: true, query: false }, function(doc) {
+  if (doc) {
+    followupCache.removeFollowup(doc._id).catch(() => {});
   }
 });
 
 // Core Uniqueness Constraints
 LeadSchema.index({ phone: 1 }, { unique: true });
 LeadSchema.index({ email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
-LeadSchema.index({ phone: 1, email: 1 }, { unique: true }); // Compound index as requested
 LeadSchema.index({ email: 1, unsubscribed: 1, bounceCount: 1 });
 
 // Indexes for common query patterns
+LeadSchema.index({ assignedRepId: 1, nextFollowupDate: 1, nextFollowupTime: 1 });
 LeadSchema.index({ assignedRepId: 1, leadStatus: 1 });
-LeadSchema.index({ assignedRepId: 1, nextFollowupDate: 1 });
 LeadSchema.index({ createdAt: -1 });
 
 // Index for full-text search across multiple fields

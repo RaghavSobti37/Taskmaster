@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Search, Filter, Download, Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell
+  Search, Plus, Trash2, CheckCircle2,
+  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History
 } from 'lucide-react';
 import {
   Badge,
@@ -10,7 +10,6 @@ import {
   PageContainer,
   DataTable,
   Button,
-  TabSwitcher,
   StatCard,
   PageSkeleton,
   FullScreenWorkspace,
@@ -27,14 +26,14 @@ export default function LeadsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(25);
-  const [activeTab, setActiveTab] = useState('all');
+  const [pageSize, setPageSize] = useState(25);
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [isPurging, setIsPurging] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [leadLogs, setLeadLogs] = useState([]);
   const queryClient = useQueryClient();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -63,6 +62,13 @@ export default function LeadsPage() {
         setReminder: selectedLead.setReminder || false,
         planOption: selectedLead.planOption || ''
       });
+
+      // Fetch audit trail for the selected lead
+      axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
+        .then(res => setLeadLogs(res.data))
+        .catch(err => console.error('Failed to fetch lead logs', err));
+    } else {
+      setLeadLogs([]);
     }
   }, [selectedLead]);
 
@@ -73,6 +79,19 @@ export default function LeadsPage() {
         id: selectedLead._id,
         data: editLeadData
       });
+      setSelectedLead(null);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+  };
+
+  const handleDeleteLead = async () => {
+    if (!selectedLead) return;
+    if (!window.confirm(`Permanently delete "${selectedLead.name}"? This cannot be undone.`)) return;
+    try {
+      await axios.delete(`/api/crm/leads/${selectedLead._id}`);
       setSelectedLead(null);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
@@ -131,10 +150,8 @@ export default function LeadsPage() {
     search: searchTerm,
     sort: sortField,
     order: sortOrder,
-    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all')),
-    ...(activeTab === 'fresh' ? { leadStatus: 'Fresh' } : {}),
-    ...(activeTab === 'contacted' ? { leadStatus: 'Contacted' } : {})
-  }), [page, pageSize, searchTerm, filters, activeTab, sortField, sortOrder]);
+    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all'))
+  }), [page, pageSize, searchTerm, filters, sortField, sortOrder]);
 
   const handlePurgeTestData = async () => {
     if (!window.confirm("Are you sure you want to remove all testing, dummy, and invalid records from CRM?")) return;
@@ -152,20 +169,20 @@ export default function LeadsPage() {
     }
   };
 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
 
   const handleSyncBookedCalls = async () => {
-    setIsSyncing(true);
+    setSyncStatus('syncing');
     try {
-      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      alert(res.data.message);
+      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to sync booked calls');
-    } finally {
-      setIsSyncing(false);
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
     }
   };
 
@@ -261,8 +278,8 @@ export default function LeadsPage() {
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
-              <Zap size={14} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
+              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
             </Button>
             {user?.role === 'admin' && (
               <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
@@ -284,18 +301,7 @@ export default function LeadsPage() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <TabSwitcher
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              tabs={[
-                { id: 'all', label: 'All Leads' },
-                { id: 'fresh', label: 'Fresh' },
-                { id: 'contacted', label: 'In Progress' }
-              ]}
-            />
-          </div>
+        <div className="flex items-center justify-end gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-56">
               <Input
@@ -369,19 +375,19 @@ export default function LeadsPage() {
             columns={columns}
             data={leads}
             onRowClick={(row) => setSelectedLead(row)}
+            paginated={true}
+            serverSide={true}
+            totalItems={totalLeads}
+            totalPages={totalPages}
+            currentPage={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
           />
         </Card>
-
-        <div className="flex items-center justify-between pt-4">
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="xs" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft size={12} /></Button>
-            <span className="text-[10px] font-black px-2">{page} / {totalPages}</span>
-            <Button variant="secondary" size="xs" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}><ChevronRight size={12} /></Button>
-          </div>
-          <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">
-            Showing {leads.length} of {totalLeads} leads
-          </p>
-        </div>
       </div>
 
       <FullScreenWorkspace
@@ -391,37 +397,49 @@ export default function LeadsPage() {
         subtitle={`ID: ${selectedLead?._id?.substring(0, 8)} • Source: ${selectedLead?.source || 'Direct'}`}
         onSave={handleSaveLead}
         extraActions={
-          <Button
-            variant="mint"
-            size="sm"
-            onClick={async () => {
-              if (!selectedLead) return;
-              try {
-                const updatedData = {
-                  ...editLeadData,
-                  callStatus: editLeadData.callStatus === 'Pending' ? 'Connected' : editLeadData.callStatus,
-                  nextFollowupDate: '',
-                  nextFollowupTime: '',
-                  remarks: (editLeadData.remarks ? editLeadData.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
-                };
-                await updateMutation.mutateAsync({
-                  id: selectedLead._id,
-                  data: updatedData
-                });
-                setSelectedLead(null);
-                queryClient.invalidateQueries({ queryKey: ['leads'] });
-                queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-              } catch (err) {
-                alert(err.response?.data?.error || err.message);
-              }
-            }}
-            className="flex items-center gap-1.5"
-          >
-            <CheckCircle2 size={16} /> <span className="hidden sm:inline">Mark as Done</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="mint"
+              size="sm"
+              onClick={async () => {
+                if (!selectedLead) return;
+                try {
+                  const updatedData = {
+                    ...editLeadData,
+                    callStatus: editLeadData.callStatus === 'Pending' ? 'Connected' : editLeadData.callStatus,
+                    nextFollowupDate: '',
+                    nextFollowupTime: '',
+                    remarks: (editLeadData.remarks ? editLeadData.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                  };
+                  await updateMutation.mutateAsync({
+                    id: selectedLead._id,
+                    data: updatedData
+                  });
+                  setSelectedLead(null);
+                  queryClient.invalidateQueries({ queryKey: ['leads'] });
+                  queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+                } catch (err) {
+                  alert(err.response?.data?.error || err.message);
+                }
+              }}
+              className="flex items-center gap-1.5"
+            >
+              <CheckCircle2 size={16} /> <span className="hidden sm:inline">Mark as Done</span>
+            </Button>
+            {user?.role === 'admin' && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteLead}
+                className="flex items-center gap-1.5"
+              >
+                <Trash2 size={16} /> <span className="hidden sm:inline">Delete Lead</span>
+              </Button>
+            )}
+          </div>
         }
         sidebar={
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
               <div className="space-y-3">
@@ -452,6 +470,28 @@ export default function LeadsPage() {
                   <p className="text-[9px] text-[var(--color-text-muted)] uppercase">Sales Professional</p>
                 </div>
               </div>
+            </Card>
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 border-b border-[var(--color-bg-border)] pb-2">
+                <History size={12} /> Audit Trail
+              </h4>
+              {leadLogs.length > 0 ? (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1 text-[11px] custom-scrollbar">
+                  {leadLogs.map((log, index) => (
+                    <div key={index} className="border-b border-[var(--color-bg-border)] pb-2 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center text-[9px] text-[var(--color-text-muted)] font-mono">
+                        <span className="font-bold text-[var(--color-text-primary)]">{log.userId?.name || 'System / Batch'}</span>
+                        <span>{new Date(log.timestamp).toLocaleDateString()}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">
+                        Changed <span className="font-bold text-blue-400">{log.fieldChanged}</span> from <span className="line-through text-[var(--color-text-muted)]">{log.oldValue || '(empty)'}</span> to <span className="font-bold text-emerald-400">{log.newValue || '(empty)'}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No edits recorded yet</p>
+              )}
             </Card>
           </div>
         }

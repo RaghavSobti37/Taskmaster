@@ -1,18 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus
+  Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus, Edit, Eye, Save
 } from 'lucide-react';
 import { 
   Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton, TabSwitcher, NexusDropdown 
 } from '../ui';
 import { 
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile, 
-  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useDeleteCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics 
+  useDeleteMailProfile, useCreateCampaign, useSendCampaign, useDeleteCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics,
+  useMailTemplates, useSaveMailTemplate, useDeleteMailTemplate, useSyncUnsubscribed, useLocationLeads
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
-import CsvImporter from '../CsvImporter';
 
 export default function AdminMailContent() {
   const queryClient = useQueryClient();
@@ -54,10 +54,256 @@ export default function AdminMailContent() {
   const sendCampaignMutation = useSendCampaign();
   const deleteCampaignMutation = useDeleteCampaign();
   const scanBouncesMutation = useScanBounces();
+  const syncUnsubscribedMutation = useSyncUnsubscribed();
 
   // Navigation within Mail tab
   const [mode, setMode] = useState('campaigns'); // 'campaigns', 'new_campaign', 'profiles'
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [selectedLocationForModal, setSelectedLocationForModal] = useState(null);
+
+  // Templates Management State
+  const { data: templates = [], refetch: refetchTemplates } = useMailTemplates();
+  const saveTemplateMutation = useSaveMailTemplate();
+  const deleteTemplateMutation = useDeleteMailTemplate();
+
+  const [selectedTemplateName, setSelectedTemplateName] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [templateContent, setTemplateContent] = useState('');
+  const [templateType, setTemplateType] = useState('session_reminder');
+  const [templateParams, setTemplateParams] = useState({
+    logoText: 'The Shakti Collective',
+    titleText: 'Your Upcoming Session Alignment',
+    dateText: 'Tomorrow @ 4:00 PM IST',
+    locationText: 'Main Shakti Hall',
+    messageText: 'Your upcoming immersive musical alignment and production session is fast approaching. We are preparing our studio environment for an extraordinary session of creative transcendence.',
+    ctaText: 'Access Collective Portal',
+    ctaUrl: 'https://theshakticollective.in',
+    bannerImg: '',
+    footerText: 'The Shakti Collective • indigenously rooted music',
+    feature1Title: 'Advanced routing pipelines',
+    feature1Text: 'Sales rep assignment metrics are now protected under isolated MongoDB transactions to eliminate duplicate allocations.',
+    feature2Title: 'Dynamic geolocation metrics',
+    feature2Text: 'We now track exact client locations on email open and click events to provide complete geographical breakdown analytics.'
+  });
+
+  const defaultReminderHTML = (params) => {
+    const { logoText = 'The Shakti Collective', dateText = 'Tomorrow @ 4:00 PM IST', locationText = 'Main Shakti Hall', messageText = 'Your upcoming immersive musical alignment and production session is fast approaching. We are preparing our studio environment for an extraordinary session of creative transcendence.', ctaUrl = 'https://theshakticollective.in', ctaText = 'Access Collective Portal', bannerImg = '', footerText = 'The Shakti Collective • indigenously rooted music' } = params;
+    const bannerImgTag = bannerImg 
+      ? `<tr>
+          <td align="center" style="padding-bottom: 24px;">
+            <img src="${bannerImg}" alt="Session Banner" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; border: 1px solid #1F2937;" />
+          </td>
+        </tr>`
+      : '';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Reminder: ${logoText}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0B0F19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F1F5F9; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #111827; border: 1px solid #1F2937; border-radius: 24px; padding: 48px 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          <tr>
+            <td align="center" style="padding-bottom: 32px; border-bottom: 1px solid #1F2937; margin-bottom: 24px;">
+              <h1 style="font-size: 28px; font-weight: 800; color: #38BDF8; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 2px;">${logoText}</h1>
+              <p style="font-size: 14px; font-weight: 600; color: #94A3B8; margin: 0; text-transform: uppercase; letter-spacing: 4px;">Exclusive Session Reminder</p>
+            </td>
+          </tr>
+          ${bannerImgTag}
+          <tr>
+            <td style="padding: 24px 0 28px 0; font-size: 16px; line-height: 1.6; color: #E2E8F0;">
+              <p style="margin: 0 0 20px 0;">Namaste <strong>Valued Member</strong>,</p>
+              <p style="margin: 0 0 24px 0;">${messageText}</p>
+              
+              <div style="background-color: #1E293B; border-left: 4px solid #38BDF8; padding: 20px 24px; border-radius: 12px; margin-bottom: 32px;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; color: #94A3B8; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Session Details</p>
+                <p style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #F8FAFC;">Shakti Studio Alignment</p>
+                <p style="margin: 0; font-size: 14px; color: #CBD5E1;">Date: ${dateText} | Location: ${locationText}</p>
+              </div>
+
+              <p style="margin: 0 0 36px 0; text-align: center;">Please confirm your attendance or review session prerequisites on our official collective portal.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom: 40px;">
+              <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%); color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 40px; border-radius: 16px; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.5);">${ctaText}</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="border-top:1px solid #1f2937;padding-top:20px;font-size:11px;color:#64748b;">
+              <p style="margin:0;">The Shakti Collective • <a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  };
+
+  const defaultMarketingHTML = (params) => {
+    const { titleText = 'Unlocking New Possibilities', messageText = 'We are thrilled to bring you our latest updates. We have optimized our pipeline to deliver maximum performance and reliability. Join us to explore how these features can accelerate your workflow.', ctaUrl = 'https://theshakticollective.in', ctaText = 'Explore Features', bannerImg = '' } = params;
+    const bannerImgTag = bannerImg 
+      ? `<tr>
+          <td>
+            <img src="${bannerImg}" alt="Banner" style="width:100%;height:auto;display:block;border-bottom:1px solid #1f2937;" />
+          </td>
+        </tr>`
+      : '';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Exclusive Announcement</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          ${bannerImgTag}
+          <tr>
+            <td style="padding:40px 32px;">
+              <h2 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">${titleText}</h2>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">Hello {{name}},</p>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">${messageText}</p>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:32px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(135deg,#0284c7 0%,#0369a1 100%);color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:16px 36px;border-radius:12px;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 15px -3px rgba(2,132,199,0.3);">${ctaText}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0;text-align:center;">Have questions? Reply directly to this email or visit our Help Center.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:24px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+              <p style="margin:0 0 8px 0;">You are receiving this because you subscribed to our updates.</p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  };
+
+  const defaultNewsletterHTML = (params) => {
+    const { logoText = 'SHAKTI DIGEST', titleText = 'This Month at the Collective', messageText = "Welcome to this month's digest. We have been working hard to push boundary lines in music production, artist routing networks, and performance optimization.", feature1Title = 'Advanced routing pipelines', feature1Text = 'Sales rep assignment metrics are now protected under isolated MongoDB transactions to eliminate duplicate allocations.', feature2Title = 'Dynamic geolocation metrics', feature2Text = 'We now track exact client locations on email open and click events to provide complete geographical breakdown analytics.', ctaUrl = 'https://theshakticollective.in', ctaText = 'Read Full Blog', footerText = 'The Shakti Collective • indigenously rooted music' } = params;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Monthly Newsletter</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <tr align="center" style="background-color:#1e293b;padding:32px 24px;border-bottom:1px solid #1f2937;">
+            <td align="center" style="padding: 32px 24px;">
+              <h1 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0;text-transform:uppercase;letter-spacing:3px;">${logoText}</h1>
+              <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;text-transform:uppercase;letter-spacing:4px;">Monthly Newsletter & updates</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="font-size:14px;color:#94a3b8;margin:0 0 8px 0;font-weight:bold;text-transform:uppercase;">Update for {{name}}</p>
+              <h2 style="font-size:20px;font-weight:700;color:#f8fafc;margin:0 0 16px 0;">${titleText}</h2>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 20px 0;">${messageText}</p>
+              
+              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">1. ${feature1Title}</h3>
+              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 16px 0;">${feature1Text}</p>
+
+              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">2. ${feature2Title}</h3>
+              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">${feature2Text}</p>
+              
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${ctaUrl}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;">${ctaText}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+              <p style="margin:0 0 6px 0;">${footerText}</p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  };
+
+  const defaultPlainTextHTML = (params) => {
+    const { messageText = 'Hello {{name}},\n\nThis is a plain email update from the collective.' } = params;
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Update</title>
+</head>
+<body style="font-family: monospace; font-size: 14px; line-height: 1.5; color: #cbd5e1; background-color: #0b0f19; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #111827; border: 1px solid #1f2937; padding: 24px; border-radius: 12px;">
+    <pre style="white-space: pre-wrap; font-family: inherit; margin: 0 0 24px 0;">${messageText}</pre>
+    <div style="border-top: 1px solid #1f2937; padding-top: 12px; font-size: 11px; color: #64748b;">
+      <a href="{{unsubscribe_url}}" style="color: #ef4444; text-decoration: underline;">Unsubscribe</a>
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  useEffect(() => {
+    if (templateType === 'session_reminder') {
+      setTemplateContent(defaultReminderHTML(templateParams));
+    } else if (templateType === 'marketing') {
+      setTemplateContent(defaultMarketingHTML(templateParams));
+    } else if (templateType === 'newsletter') {
+      setTemplateContent(defaultNewsletterHTML(templateParams));
+    } else {
+      setTemplateContent(defaultPlainTextHTML(templateParams));
+    }
+  }, [templateType, templateParams]);
+
+  const handleBannerUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTemplateParams({ ...templateParams, bannerImg: event.target.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowPreviewModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // New Profile State
   const [newProfile, setNewProfile] = useState({
@@ -135,7 +381,7 @@ export default function AdminMailContent() {
       alert('Please complete campaign title, subject, content, and select a sender profile.');
       return;
     }
-    if (selectedLeadIds.length === 0 && csvRecipients.length === 0) {
+    if (selectedLeadIds.length === 0) {
       alert('Please select CRM leads or upload a recipient CSV.');
       return;
     }
@@ -312,11 +558,11 @@ export default function AdminMailContent() {
             <Plus size={14} /> Create Campaign
           </Button>
           <Button 
-            variant={mode === 'csv_import' ? 'primary' : 'secondary'} 
+            variant={mode === 'templates' ? 'primary' : 'secondary'} 
             size="sm" 
-            onClick={() => setMode('csv_import')}
+            onClick={() => setMode('templates')}
           >
-            <Upload size={14} /> Import Leads CSV
+            <FileCode size={14} /> Manage Templates ({templates.length})
           </Button>
           <Button 
             variant={mode === 'analytics' ? 'primary' : 'secondary'} 
@@ -352,6 +598,23 @@ export default function AdminMailContent() {
           >
             <RefreshCw size={14} className={scanBouncesMutation.isPending ? 'animate-spin' : ''} /> Scan Bounces
           </Button>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={() => {
+              syncUnsubscribedMutation.mutate(null, {
+                onSuccess: () => {
+                  alert('Unsubscribed sync and deduplication completed successfully!');
+                },
+                onError: (err) => {
+                  alert('Sync failed: ' + (err.response?.data?.error || err.message));
+                }
+              });
+            }} 
+            disabled={syncUnsubscribedMutation.isPending}
+          >
+            <RefreshCw size={14} className={syncUnsubscribedMutation.isPending ? 'animate-spin' : ''} /> Sync Unsubscribed
+          </Button>
         </div>
       </div>
 
@@ -361,7 +624,13 @@ export default function AdminMailContent() {
         <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
         <StatCard label="Bounced / Failed" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" />
         <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
-        <StatCard label="Unsubscribed" value={stats?.totalUnsubscribed || 0} icon={UserMinus} variant="warning" />
+        <StatCard 
+          label="Unsubscribed" 
+          value={stats?.totalUnsubscribed || 0} 
+          icon={UserMinus} 
+          variant="warning" 
+          onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
+        />
       </div>
 
       {/* Mode: Campaigns List */}
@@ -445,47 +714,65 @@ export default function AdminMailContent() {
              </h4>
 
              <div className="space-y-4">
-               {/* CSV Upload Card & Preview */}
-               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3">
-                 <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold uppercase tracking-tight">CSV Direct Upload</span>
-                   <div className="flex items-center gap-2">
-                     {csvRecipients.length > 0 && (
-                       <button 
-                         type="button"
-                         onClick={() => { setCsvRecipients([]); setCsvFileName(''); }}
-                         className="text-[10px] text-rose-500 font-bold hover:underline flex items-center gap-1"
-                       >
-                         <X size={12} /> Clear
-                       </button>
-                     )}
-                     <Badge variant="info">{csvRecipients.length} Loaded</Badge>
-                   </div>
-                 </div>
-                 <p className="text-[10px] text-[var(--color-text-muted)]">Upload a CSV containing "name" and "email" headers for direct mailing.</p>
-                 <label className="w-full cursor-pointer flex items-center justify-center gap-2 py-2 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-bg-border)] rounded-xl text-xs font-bold hover:border-[var(--color-action-primary)] transition-all">
-                   <Upload size={14} /> {csvFileName ? csvFileName : 'Select CSV File'}
-                   <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
-                 </label>
+                {/* CSV Recipient List Upload Card */}
+                <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold uppercase tracking-tight">Upload Custom Recipient List (CSV)</span>
+                      {csvRecipients.length > 0 ? (
+                        <Badge variant="success">{csvRecipients.length} Custom Recipients Loaded</Badge>
+                      ) : (
+                        <Badge variant="slate">Optional</Badge>
+                      )}
+                    </div>
+                    {csvRecipients.length > 0 && (
+                      <Button 
+                        size="xs" 
+                        variant="ghost" 
+                        className="text-rose-500 hover:bg-rose-500/10"
+                        onClick={() => {
+                          setCsvRecipients([]);
+                          setCsvFileName('');
+                        }}
+                      >
+                        Clear List
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)] rounded-xl text-xs font-black uppercase tracking-wider transition-all">
+                      <Upload size={14} className="text-[var(--color-action-primary)]" />
+                      {csvFileName ? csvFileName : 'Select CSV File'}
+                      <input 
+                        type="file" 
+                        accept=".csv" 
+                        className="hidden" 
+                        onChange={handleCsvUpload} 
+                      />
+                    </label>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                      Must contain "email" header column.
+                    </span>
+                  {/* Top 5 Loaded Emails Preview */}
+                  {csvRecipients.length > 0 && (
+                    <div className="mt-3 p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl space-y-2">
+                      <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">
+                        First 5 Recipients Preview
+                      </span>
+                      <div className="space-y-1.5 divide-y divide-[var(--color-bg-border)]/50">
+                        {csvRecipients.slice(0, 5).map((rec, idx) => (
+                          <div key={idx} className="pt-1.5 first:pt-0 text-[11px] font-mono flex items-center justify-between text-[var(--color-text-primary)]">
+                            <span className="font-bold">{rec.name || 'Anonymous'}</span>
+                            <span className="text-[var(--color-text-muted)]">{rec.email}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  </div>
+                </div>
 
-                 {/* Top 5 Emails Preview */}
-                 {csvRecipients.length > 0 && (
-                   <div className="mt-3 space-y-1.5 border-t border-[var(--color-bg-border)] pt-3">
-                     <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-bold uppercase">
-                       <span>Loaded Preview (Top 5)</span>
-                       <span>{Math.min(5, csvRecipients.length)} of {csvRecipients.length}</span>
-                     </div>
-                     <div className="space-y-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl p-2 max-h-40 overflow-y-auto font-mono">
-                       {csvRecipients.slice(0, 5).map((rec, i) => (
-                         <div key={i} className="flex items-center justify-between text-[11px] py-1 px-2 hover:bg-[var(--color-bg-secondary)] rounded-md">
-                           <span className="font-bold truncate max-w-[140px]">{rec.name || 'No Name'}</span>
-                           <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[160px]">{rec.email}</span>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-               </div>
 
                {/* CRM Leads Selection Card */}
                <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-4">
@@ -763,7 +1050,11 @@ export default function AdminMailContent() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(cumulativeAnalytics?.dynamicBreakdown || []).map((item, idx) => (
-                <div key={idx} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between">
+                <div 
+                  key={idx} 
+                  className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-border)]/20 transition-all duration-200"
+                  onClick={() => setSelectedLocationForModal(item.location)}
+                >
                   <span className="font-bold text-xs block">{item.location}</span>
                   <Badge variant="mint">{item.count} Engaged</Badge>
                 </div>
@@ -825,7 +1116,13 @@ export default function AdminMailContent() {
                 <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
                 <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />
                 <StatCard label="Bounced / Fail" value={selectedCampaign.stats?.bounced || 0} icon={AlertCircle} variant="rose" />
-                <StatCard label="User Unsub" value={selectedCampaign.stats?.unsubscribed || 0} icon={UserMinus} variant="warning" />
+                <StatCard 
+                  label="User Unsub" 
+                  value={selectedCampaign.stats?.unsubscribed || 0} 
+                  icon={UserMinus} 
+                  variant="warning" 
+                  onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
+                />
               </div>
 
               <div>
@@ -867,6 +1164,70 @@ export default function AdminMailContent() {
           </div>
         </div>
       )}
+
+      {selectedLocationForModal && (
+        <LocationLeadsModal 
+          location={selectedLocationForModal} 
+          onClose={() => setSelectedLocationForModal(null)} 
+        />
+      )}
+    </div>
+  );
+}
+
+function LocationLeadsModal({ location, onClose }) {
+  const { data: leads = [], isLoading } = useLocationLeads(location, true);
+
+  return (
+    <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Modal Header */}
+        <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-black uppercase tracking-tight">Leads in {location}</h2>
+            <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">Showing engaged/active leads registered at this location</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X size={16} />
+          </Button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[var(--color-bg-primary)]">
+          {isLoading ? (
+            <div className="py-8 text-center text-xs font-mono text-[var(--color-text-muted)] animate-pulse">Loading leads...</div>
+          ) : leads.length === 0 ? (
+            <div className="py-8 text-center text-xs font-mono text-[var(--color-text-muted)] italic">No engaged leads found for this location.</div>
+          ) : (
+            <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]">
+              <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
+                <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)] text-[var(--color-text-muted)] uppercase tracking-wider font-bold">
+                  <tr>
+                    <th className="px-4 py-2.5">Name</th>
+                    <th className="px-4 py-2.5">Email</th>
+                    <th className="px-4 py-2.5">Phone</th>
+                    <th className="px-4 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)] font-mono">
+                  {leads.map((lead, idx) => (
+                    <tr key={lead._id || idx} className="hover:bg-[var(--color-bg-primary)]/50 transition-colors">
+                      <td className="px-4 py-3 font-semibold">{lead.name || 'N/A'}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{lead.email}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-muted)]">{lead.phone || 'N/A'}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={lead.unsubscribed ? 'warning' : lead.emailStatus === 'Bounced' ? 'danger' : 'success'}>
+                          {lead.unsubscribed ? 'Unsubscribed' : lead.emailStatus || 'Active'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

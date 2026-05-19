@@ -5,12 +5,15 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, async (req, res) => {
   try {
-    const { userId, action, lastId, limit = 50, startDate, endDate } = req.query;
+    const { userId, action, lastId, limit = 50, startDate, endDate, origin, status } = req.query;
     const filter = {};
-    if (userId && userId !== 'undefined' && userId !== 'null') {
-      filter.userId = userId;
+    
+    if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
+      filter.$or = [{ userId: userId }, { actorId: userId }];
     }
     if (action) filter.action = action;
+    if (origin) filter.origin = origin;
+    if (status) filter.status = status;
     
     if (lastId) {
       filter._id = { $lt: lastId };
@@ -33,6 +36,28 @@ router.get('/', protect, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.get('/bug-report', protect, async (req, res) => {
+  try {
+    const discoveredBugs = await Log.find({ origin: 'QA_AGENT_TEST', status: 'BUG_DETECTED' })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    res.status(200).json({
+      totalBugsFound: discoveredBugs.length,
+      bugs: discoveredBugs.map(bug => ({
+        identifiedAt: bug.timestamp || bug.createdAt,
+        subsystem: bug.targetEntity || 'Routing Layer',
+        failedAction: bug.actionType || bug.action,
+        errorContext: bug.payload?.errorStack || bug.payload?.message || bug.payload || 'No details',
+        stepsToReproduce: bug.payload?.stepsTaken || []
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 router.post('/', protect, async (req, res) => {
   try {
@@ -62,6 +87,28 @@ router.delete('/clear', protect, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.post('/run-qa', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+    
+    const { exec } = require('child_process');
+    const path = require('path');
+    
+    exec('node scripts/runQATests.js', { cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
+      if (error) {
+        console.error('QA Test execution failed:', error);
+        return res.status(500).json({ error: error.message, stderr, stdout });
+      }
+      res.json({ message: 'QA Test completed successfully', stdout });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 router.put('/:id', protect, async (req, res) => {
   try {

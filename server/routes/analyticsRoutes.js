@@ -4,5 +4,6 @@ const analyticsController = require('../controllers/analyticsController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/cumulative', protect, analyticsController.getCumulativeMetrics);
+router.get('/location-leads', protect, analyticsController.getLocationLeads);
 
 module.exports = router;

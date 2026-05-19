@@ -92,7 +92,12 @@ router.post('/campaigns', protect, async (req, res) => {
       status: 'Pending'
     })).filter(r => r.email);
 
-    const allRecipients = [...recipients, ...custom];
+    const uniqueEmails = new Set();
+    const allRecipients = [...recipients, ...custom].filter(r => {
+      if (uniqueEmails.has(r.email)) return false;
+      uniqueEmails.add(r.email);
+      return true;
+    });
 
     const campaign = await MailCampaign.create({
       ...rest,
@@ -157,9 +162,10 @@ router.get('/stats', protect, async (req, res) => {
         if (['Opened', 'Clicked'].includes(r.status)) totalOpened++;
         if (r.status === 'Clicked') totalClicked++;
         if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) totalBounced++;
-        if (r.status === 'Unsubscribed') totalUnsubscribed++;
       });
     });
+    const Lead = require('../models/Lead');
+    totalUnsubscribed = await Lead.countDocuments({ unsubscribed: true });
 
     res.json({ totalCampaigns, totalSent, totalBounced, totalOpened, totalClicked, totalUnsubscribed });
   } catch (err) {
@@ -184,6 +190,36 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
   const { campaignId, recipientId } = req.params;
   const { email } = req.query;
 
+  // Resolve client IP and Geolocation
+  const ipRaw = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  let ip = ipRaw ? ipRaw.split(',')[0].trim() : '';
+
+  // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
+  if (ip && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  const geoip = require('geoip-lite');
+  
+  let geo = null;
+  let city = 'Unknown City';
+  let region = 'Unknown Region';
+  let country = 'Unknown Country';
+
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1')) {
+    city = 'Mumbai';
+    region = 'MH';
+    country = 'IN';
+  } else {
+    geo = geoip.lookup(ip);
+    if (geo) {
+      city = geo.city || 'Unknown City';
+      region = geo.region || 'Unknown Region';
+      country = geo.country || 'Unknown Country';
+    }
+  }
+  const location = `${city}, ${region}, ${country}`;
+
   try {
     // 1. Record Open event
     await MailEvent.create({
@@ -191,7 +227,7 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
       email: email || 'unknown',
       timestamp: new Date(),
       campaignId: campaignId !== 'undefined' ? campaignId : null,
-      metadata: { recipientId }
+      metadata: { recipientId, ip, location }
     });
 
     // 2. Update campaign recipient status and stats
@@ -209,6 +245,12 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
           recipient.status = 'Opened';
           if (isCore) {
             campaign.metrics.opened = (campaign.metrics.opened || 0) + 1;
+            if (!campaign.locationBreakdown) {
+              campaign.locationBreakdown = new Map();
+            }
+            const locData = campaign.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+            locData.opens = (locData.opens || 0) + 1;
+            campaign.locationBreakdown.set(city, locData);
             campaign.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
           } else {
             campaign.stats.opened = (campaign.stats.opened || 0) + 1;
@@ -244,6 +286,36 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
   const { email, url } = req.query;
   const targetUrl = url && url !== '#' && url !== 'undefined' ? url : 'https://theshakticollective.in';
 
+  // Resolve client IP and Geolocation
+  const ipRaw = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  let ip = ipRaw ? ipRaw.split(',')[0].trim() : '';
+
+  // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
+  if (ip && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  const geoip = require('geoip-lite');
+  
+  let geo = null;
+  let city = 'Unknown City';
+  let region = 'Unknown Region';
+  let country = 'Unknown Country';
+
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1')) {
+    city = 'Mumbai';
+    region = 'MH';
+    country = 'IN';
+  } else {
+    geo = geoip.lookup(ip);
+    if (geo) {
+      city = geo.city || 'Unknown City';
+      region = geo.region || 'Unknown Region';
+      country = geo.country || 'Unknown Country';
+    }
+  }
+  const location = `${city}, ${region}, ${country}`;
+
   try {
     // 1. Record Click event
     await MailEvent.create({
@@ -251,8 +323,9 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
       email: email || 'unknown',
       timestamp: new Date(),
       campaignId: campaignId !== 'undefined' ? campaignId : null,
-      metadata: { recipientId, url: targetUrl }
+      metadata: { recipientId, url: targetUrl, ip, location }
     });
+
 
     // 2. Update campaign recipient status and stats
     if (campaignId && campaignId !== 'undefined') {
@@ -269,6 +342,12 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
           recipient.status = 'Clicked';
           if (isCore) {
             campaign.metrics.clicked = (campaign.metrics.clicked || 0) + 1;
+            if (!campaign.locationBreakdown) {
+              campaign.locationBreakdown = new Map();
+            }
+            const locData = campaign.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+            locData.clicks = (locData.clicks || 0) + 1;
+            campaign.locationBreakdown.set(city, locData);
             campaign.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
           } else {
             campaign.stats.clicked = (campaign.stats.clicked || 0) + 1;
@@ -293,64 +372,250 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
 router.get('/unsubscribe/:campaignId/:recipientId', async (req, res) => {
   const { campaignId, recipientId } = req.params;
   const { email } = req.query;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return res.redirect(`${frontendUrl}/unsubscribe?email=${encodeURIComponent(email || '')}&campaignId=${campaignId}&recipientId=${recipientId}`);
+});
 
+// --- LOCAL EMAIL TEMPLATES MANAGEMENT ---
+const fs = require('fs');
+const path = require('path');
+const TEMPLATE_DIR = "C:\\Users\\ragha\\OneDrive\\Desktop\\AutoMailer\\Auto-Mailer\\templates";
+
+// Ensure template directory exists
+if (!fs.existsSync(TEMPLATE_DIR)) {
   try {
-    if (email) {
-      await MailEvent.create({
-        eventType: 'Unsubscribe',
-        email: email,
-        timestamp: new Date(),
-        campaignId: campaignId !== 'undefined' ? campaignId : null,
-        metadata: { recipientId }
-      });
-
-      await updateEmailTags(email, 'unsubscribed', 'Unsubscribed');
-    }
-
-    if (campaignId && campaignId !== 'undefined') {
-      const Campaign = require('../models/Campaign');
-      let campaign = await MailCampaign.findById(campaignId);
-      let isCore = false;
-      if (!campaign) {
-        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
-        isCore = true;
-      }
-      if (campaign) {
-        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
-        if (recipient && recipient.status !== 'Unsubscribed') {
-          recipient.status = 'Unsubscribed';
-          if (!isCore) {
-            campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
-          }
-          await campaign.save();
-        }
-      }
-    }
+    fs.mkdirSync(TEMPLATE_DIR, { recursive: true });
   } catch (err) {
-    console.error('Unsubscribe Error:', err);
+    console.error('Failed to create local template directory:', err);
+  }
+}
+
+// Pre-populate default templates if empty
+const seedDefaultTemplates = () => {
+  if (!fs.existsSync(TEMPLATE_DIR)) return;
+  try {
+    const files = fs.readdirSync(TEMPLATE_DIR);
+    if (files.length > 0) return;
+  } catch(e) {
+    return;
   }
 
-  res.send(`<!DOCTYPE html>
+  const marketingHTML = `<!DOCTYPE html>
 <html>
 <head>
-  <title>Unsubscribed Successfully</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f19; color: #f1f5f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-    .card { background-color: #1e293b; padding: 40px 30px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); max-width: 420px; width: 90%; border: 1px solid #334155; }
-    h1 { color: #38bdf8; font-size: 24px; margin-bottom: 16px; font-weight: 800; }
-    p { color: #94a3b8; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
-    .icon { width: 64px; height: 64px; background: rgba(56, 189, 248, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: #38bdf8; font-size: 32px; }
-  </style>
+  <meta charset="utf-8">
+  <title>Exclusive Announcement</title>
 </head>
-<body>
-  <div class="card">
-    <div class="icon">✓</div>
-    <h1>Unsubscribed</h1>
-    <p>You have been successfully unsubscribed from our mailing list. Your preferences have been instantly updated across our ecosystem.</p>
-  </div>
+<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <!-- Banner -->
+          <tr>
+            <td>
+              <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&h=250&q=80" alt="Banner" style="width:100%;height:auto;display:block;border-bottom:1px solid #1f2937;" />
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 32px;">
+              <h2 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">Unlocking New Possibilities</h2>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">Hello {{name}},</p>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">We are thrilled to bring you our latest updates. We have optimized our pipeline to deliver maximum performance and reliability. Join us to explore how these features can accelerate your workflow.</p>
+              <!-- CTA -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:32px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{cta_url}}" style="display:inline-block;background:linear-gradient(135deg,#0284c7 0%,#0369a1 100%);color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:16px 36px;border-radius:12px;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 15px -3px rgba(2,132,199,0.3);">Explore Features</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0;text-align:center;">Have questions? Reply directly to this email or visit our Help Center.</p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:24px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+              <p style="margin:0 0 8px 0;">You are receiving this because you subscribed to our updates.</p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>`);
+</html>`;
+
+  const reminderHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Session Reminder</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;padding:40px 32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <tr>
+            <td align="center" style="padding-bottom:24px;border-bottom:1px solid #1f2937;">
+              <h2 style="font-size:20px;font-weight:800;color:#38bdf8;margin:0 0 4px 0;text-transform:uppercase;">The Shakti Collective</h2>
+              <p style="font-size:12px;color:#94a3b8;margin:0;text-transform:uppercase;letter-spacing:2px;">Session Reminder</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 0;font-size:15px;line-height:1.6;color:#cbd5e1;">
+              <p style="margin:0 0 16px 0;">Hello {{name}},</p>
+              <p style="margin:0 0 24px 0;">This is a friendly reminder for your upcoming scheduled collective session. Please find the alignment details below:</p>
+              <div style="background-color:#1e293b;border-left:4px solid #38bdf8;padding:16px 20px;border-radius:10px;margin-bottom:24px;">
+                <p style="margin:0 0 4px 0;font-size:16px;font-weight:700;color:#f8fafc;">Acoustic Alignment Session</p>
+                <p style="margin:0 0 2px 0;font-size:13px;color:#cbd5e1;"><strong>Date:</strong> Tomorrow</p>
+                <p style="margin:0;font-size:13px;color:#cbd5e1;"><strong>Time:</strong> 4:00 PM IST</p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <a href="{{cta_url}}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Confirm Attendance</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="border-top:1px solid #1f2937;padding-top:20px;font-size:11px;color:#64748b;">
+              <p style="margin:0;">The Shakti Collective • <a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const newsletterHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Monthly Newsletter</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+          <!-- Header -->
+          <td align="center" style="background-color:#1e293b;padding:32px 24px;border-bottom:1px solid #1f2937;">
+            <h1 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0;text-transform:uppercase;letter-spacing:3px;">SHAKTI DIGEST</h1>
+            <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;text-transform:uppercase;letter-spacing:4px;">Monthly Newsletter & updates</p>
+          </td>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <p style="font-size:14px;color:#94a3b8;margin:0 0 8px 0;font-weight:bold;text-transform:uppercase;">Update for {{name}}</p>
+              <h2 style="font-size:20px;font-weight:700;color:#f8fafc;margin:0 0 16px 0;">This Month at the Collective</h2>
+              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 20px 0;">Welcome to this month's digest. We have been working hard to push boundary lines in music production, artist routing networks, and performance optimization. Here is a summary of what's new:</p>
+              
+              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">1. Advanced routing pipelines</h3>
+              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 16px 0;">Sales rep assignment metrics are now protected under isolated MongoDB transactions to eliminate duplicate allocations.</p>
+
+              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">2. Dynamic geolocation metrics</h3>
+              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">We now track exact client locations on email open and click events to provide complete geographical breakdown analytics.</p>
+              
+              <!-- CTA -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{cta_url}}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;">Read Full Blog</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+              <p style="margin:0 0 6px 0;">The Shakti Collective • indigenously rooted music</p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    fs.writeFileSync(path.join(TEMPLATE_DIR, 'marketing.html'), marketingHTML, 'utf8');
+    fs.writeFileSync(path.join(TEMPLATE_DIR, 'session-reminder.html'), reminderHTML, 'utf8');
+    fs.writeFileSync(path.join(TEMPLATE_DIR, 'newsletter.html'), newsletterHTML, 'utf8');
+  } catch(e) {
+    console.error('Failed to seed templates:', e);
+  }
+};
+
+seedDefaultTemplates();
+
+// GET /api/mail/templates
+router.get('/templates', protect, async (req, res) => {
+  try {
+    if (!fs.existsSync(TEMPLATE_DIR)) {
+      return res.json([]);
+    }
+    const files = fs.readdirSync(TEMPLATE_DIR);
+    const templates = [];
+
+    files.forEach(file => {
+      if (file.endsWith('.html') || file.endsWith('.txt')) {
+        const filePath = path.join(TEMPLATE_DIR, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+        templates.push({
+          name: file,
+          path: filePath,
+          content,
+          type: file.endsWith('.html') ? 'html' : 'text'
+        });
+      }
+    });
+
+    res.json(templates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/mail/templates
+router.post('/templates', protect, async (req, res) => {
+  const { name, content } = req.body;
+  if (!name || !content) {
+    return res.status(400).json({ error: 'Name and content are required' });
+  }
+  const safeName = path.basename(name).replace(/\.[^/.]+$/, "") + ".html";
+  try {
+    const filePath = path.join(TEMPLATE_DIR, safeName);
+    fs.writeFileSync(filePath, content, 'utf8');
+    res.json({ success: true, name: safeName, filePath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/mail/templates/:name
+router.delete('/templates/:name', protect, async (req, res) => {
+  const safeName = path.basename(req.params.name);
+  try {
+    const filePath = path.join(TEMPLATE_DIR, safeName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.json({ success: true, message: `Template ${safeName} deleted.` });
+    } else {
+      res.status(404).json({ error: 'Template not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
+

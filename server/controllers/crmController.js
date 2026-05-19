@@ -37,12 +37,12 @@ const pick = (src, keys) => {
  * Finds the sales rep with the fewest active (non-converted) leads.
  * @returns {Promise<mongoose.Types.ObjectId|null>} ObjectId of the assigned sales rep
  */
-const assignLeadToRep = async () => {
-  const reps = await User.find({ role: 'sales' });
+const assignLeadToRep = async (session = null) => {
+  const reps = await User.find({ role: 'sales' }).session(session);
   if (reps.length === 0) return null;
 
   const leadCounts = await Promise.all(reps.map(async (rep) => {
-    const count = await Lead.countDocuments({ assignedRepId: rep._id, leadStatus: { $ne: 'Converted' } });
+    const count = await Lead.countDocuments({ assignedRepId: rep._id, leadStatus: { $ne: 'Converted' } }).session(session);
     return { repId: rep._id, count };
   }));
 
@@ -64,7 +64,8 @@ exports.getLeads = async (req, res) => {
     }
 
     if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search, 'i');
+      const escaped = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
       query.$or = [
         { name: searchRegex },
         { email: searchRegex },

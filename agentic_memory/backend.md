@@ -448,6 +448,7 @@ All inputs undergo sanitization to maintain data integrity and prevent security 
     ```javascript
     name = name.trim().replace(/\s+/g, ' ');
     ```
+*   **Placeholder Purge**: Value formats representing empty data (e.g. `"-"`, `"N/A"`, `"null"`, `"undefined"`) are automatically converted to empty strings `""` by the sanitizer to prevent pollution of name, email, or phone fields.
 *   **Email Standardization**: Emails are lowercased and stripped of whitespace before matching or persistence:
     ```javascript
     email = email.toLowerCase().trim();

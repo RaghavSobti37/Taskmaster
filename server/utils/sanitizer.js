@@ -4,7 +4,10 @@
 
 const sanitizeName = (name) => {
   if (!name) return '';
-  return name
+  const str = name.toString().trim();
+  const lower = str.toLowerCase();
+  if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') return '';
+  return str
     .replace(/<[^>]*>?/gm, '') // Strip HTML
     .replace(/\s+/g, ' ')      // Remove duplicate inner whitespace
     .trim();                   // Trim leading/trailing
@@ -12,16 +15,22 @@ const sanitizeName = (name) => {
 
 const sanitizeEmail = (email) => {
   if (!email) return '';
-  return email
-    .toLowerCase()
+  const str = email.toString().trim();
+  const lower = str.toLowerCase();
+  if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') return '';
+  return lower
     .replace(/[\x00-\x1F\x7F]/g, '') // Strip hidden control characters
     .trim();
 };
 
 const normalizePhone = (phone) => {
   if (!phone) return '';
+  const str = phone.toString().trim();
+  const lower = str.toLowerCase();
+  if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') return '';
+  
   // Remove all non-numeric characters except +
-  let cleaned = phone.toString().replace(/[^\d+]/g, '');
+  let cleaned = str.replace(/[^\d+]/g, '');
   
   // If it starts with 0 and has 11 digits, it's likely a local format (e.g., India 09... -> +91...)
   // But for now, let's just ensure it has a standard format.

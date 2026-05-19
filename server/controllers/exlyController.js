@@ -38,6 +38,48 @@ const shouldIgnoreOffering = (title, offeringId) => {
          lowerId === 'demo-day--results';
 };
 
+// Helper to extract nested or flexible case-insensitive keys from a payload object
+const getPayloadValue = (payload, possibleKeys) => {
+  if (!payload || typeof payload !== 'object') return '';
+  
+  // 1. Try exact match
+  for (const key of possibleKeys) {
+    if (payload[key] !== undefined && payload[key] !== null) {
+      const val = payload[key];
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        const lower = trimmed.toLowerCase();
+        if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') {
+          continue;
+        }
+        return trimmed;
+      }
+      return val;
+    }
+  }
+
+  // 2. Try normalized case-insensitive & space/underscore-insensitive match
+  const normalizedTargets = possibleKeys.map(k => k.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  for (const key of Object.keys(payload)) {
+    const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const idx = normalizedTargets.indexOf(cleanKey);
+    if (idx !== -1) {
+      const val = payload[key];
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        const lower = trimmed.toLowerCase();
+        if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') {
+          continue;
+        }
+        return trimmed;
+      }
+      return val;
+    }
+  }
+
+  return '';
+};
+
 exports.getOfferings = async (req, res) => {
   try {
     // Proactive Purge of ignored offerings from DB
@@ -145,8 +187,8 @@ exports.handleExlyWebhook = async (req, res) => {
     const payload = req.body;
     console.log('⚡ [Exly Webhook] Payload received:', JSON.stringify(payload));
 
-    const rawPhone = payload.phone || payload.customerPhone || payload.mobile || '';
-    const rawEmail = payload.email || payload.customerEmail || '';
+    const rawPhone = getPayloadValue(payload, ['phone', 'customerPhone', 'mobile', 'phoneMobile', 'phoneNumber', 'Phone Number', 'Phone/Mobile', 'Customer Phone Number', 'Customer Phone']);
+    const rawEmail = getPayloadValue(payload, ['email', 'customerEmail', 'emailProfile', 'emailAddress', 'Email', 'Customer Email', 'Email Profile', 'Email Address']);
     const phone = normalizePhone(rawPhone);
     const email = sanitizeEmail(rawEmail);
 
@@ -154,8 +196,8 @@ exports.handleExlyWebhook = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid payload: phone or email required.' });
     }
 
-    const rawOfferingTitle = payload.offeringTitle || payload.programName || payload.program || 'Exly Offering';
-    const offeringId = payload.offeringId || payload.programId || '';
+    const rawOfferingTitle = getPayloadValue(payload, ['offeringTitle', 'offeringName', 'offering', 'Offering', 'Offering Name', 'Offering Title', 'offeringPurchased', 'Offering Purchased', 'program', 'programName', 'Program Name', 'Program']) || 'Exly Offering';
+    const offeringId = getPayloadValue(payload, ['offeringId', 'offeringID', 'programId', 'programID', 'id', 'Offering Id', 'Offering ID', 'Program Id', 'Program ID']);
 
     // Ignore test/program name offerings
     if (shouldIgnoreOffering(rawOfferingTitle, offeringId)) {
@@ -164,11 +206,20 @@ exports.handleExlyWebhook = async (req, res) => {
 
     const { cleanTitle, dateStr, timeStr } = parseOfferingTitle(rawOfferingTitle);
 
-    const name = sanitizeName(payload.name || payload.customerName || payload.fullName || 'Exly Lead');
-    const txnId = payload.transactionId || payload.transactionIdExly || '';
-    const custId = payload.customerId || payload.customerIdExly || '';
-    const priceRaw = payload.price || payload.amount || 0;
-    const price = isNaN(Number(priceRaw)) ? 0 : Number(priceRaw);
+    const name = sanitizeName(getPayloadValue(payload, ['name', 'customerName', 'fullName', 'clientName', 'Name', 'Customer Name', 'Full Name', 'Client Name', 'customer_name']) || 'Exly Lead');
+    const txnId = getPayloadValue(payload, ['transactionId', 'transactionID', 'Transaction Id', 'Transaction ID', 'transactionIdExly', 'txnId', 'txnID', 'transaction_id']);
+    const custId = getPayloadValue(payload, ['customerId', 'customerID', 'Customer Id', 'Customer ID', 'customerIdExly', 'custId', 'custID', 'customer_id']);
+    const priceRaw = getPayloadValue(payload, ['price', 'amount', 'pricePaid', 'Price Paid', 'Transaction Amount', 'transactionAmount', 'priceSettled', 'Price Settled']);
+    const priceCleaned = typeof priceRaw === 'string' ? priceRaw.replace(/[₹\s,]/g, '').trim() : priceRaw;
+    const price = isNaN(Number(priceCleaned)) ? 0 : Number(priceCleaned);
+
+    const bookedOnRaw = getPayloadValue(payload, ['bookedOn', 'Booked On', 'bookingDate', 'Booking Date', 'date', 'Date', 'createdAt', 'Created At']);
+    const bookedOnDate = bookedOnRaw ? new Date(bookedOnRaw) : new Date();
+
+    const state = getPayloadValue(payload, ['state', 'State', 'payoutState', 'Payout State', 'region', 'Region']) || 'Selected';
+    const payoutStatus = getPayloadValue(payload, ['payoutStatus', 'Payout Status', 'payoutState', 'Payout State']) || 'Processed';
+    const offeringType = getPayloadValue(payload, ['offeringType', 'Offering Type', 'type', 'Type']) || 'program';
+    const currency = getPayloadValue(payload, ['currency', 'Currency']) || 'INR';
 
     // 1. Sync or Create Exly Offering
     const offId = offeringId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
@@ -179,9 +230,9 @@ exports.handleExlyWebhook = async (req, res) => {
           title: cleanTitle,
           eventDate: dateStr,
           eventTime: timeStr,
-          type: payload.offeringType || payload.type || 'program',
+          type: offeringType,
           price: price,
-          currency: payload.currency || 'INR',
+          currency: currency,
           status: 'active'
         }
       },
@@ -198,8 +249,8 @@ exports.handleExlyWebhook = async (req, res) => {
       lead = await Lead.findOne(filter);
       if (lead) {
         lead.name = name || lead.name;
-        lead.email = email || lead.email;
-        lead.phone = phone || lead.phone;
+        if (email) lead.email = email;
+        if (phone) lead.phone = phone;
         lead.customerIdExly = custId || lead.customerIdExly;
         lead.transactionIdExly = txnId || lead.transactionIdExly;
         lead.exlyOfferingId = offId || lead.exlyOfferingId;
@@ -209,7 +260,6 @@ exports.handleExlyWebhook = async (req, res) => {
     }
 
     // 3. Create/update individual ExlyBooking record with secure query
-    const bookedOnDate = payload.bookedOn ? new Date(payload.bookedOn) : new Date();
     const bookingQuery = txnId 
       ? { transactionId: txnId }
       : {
@@ -231,8 +281,8 @@ exports.handleExlyWebhook = async (req, res) => {
           email: email,
           phone: phone,
           pricePaid: price,
-          state: payload.state || 'Selected',
-          payoutStatus: payload.payoutStatus || 'Processed',
+          state: state,
+          payoutStatus: payoutStatus,
           bookedOn: bookedOnDate,
           transactionId: txnId
         }

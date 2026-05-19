@@ -16,6 +16,7 @@
 - **All Pages**: Replaced `window.alert()` / `window.confirm()` with NexusModal. [FIXED]
 - **Calendar**: Events "disappearing" on refresh bug fixed via MongoDB persistence. [FIXED]
 - **All Pages**: Excessive top padding in `PageHeader` (double padding with `PageContainer`) resolved. [FIXED]
+- **CRM Leads**: Concurrency `checkLock` middleware failed due to ObjectId reference comparison instead of string comparison (leading to false locks on edits). [FIXED]
 
 ## UI Migrations
 

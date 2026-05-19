@@ -1,6 +1,39 @@
 const axios = require('axios');
 const Lead = require('../models/Lead');
 const ExlyOffering = require('../models/ExlyOffering');
+const ExlyBooking = require('../models/ExlyBooking');
+
+const parseOfferingTitle = (title) => {
+  if (!title) return { cleanTitle: '', dateStr: '', timeStr: '' };
+  const parts = title.split('|').map(p => p.trim());
+  if (parts.length >= 3) {
+    return {
+      cleanTitle: parts.slice(2).join(' | '),
+      dateStr: parts[0],
+      timeStr: parts[1]
+    };
+  } else if (parts.length === 2) {
+    return {
+      cleanTitle: parts[1],
+      dateStr: parts[0],
+      timeStr: ''
+    };
+  }
+  return { cleanTitle: title, dateStr: '', timeStr: '' };
+};
+
+const shouldIgnoreOffering = (title, offeringId) => {
+  if (!title) return true;
+  const lower = title.toLowerCase().trim();
+  const lowerId = (offeringId || '').toLowerCase().trim();
+  return lower === 'testing br community' || 
+         lower === 'program name' || 
+         lower === 'testing' ||
+         lower === 'demo community' ||
+         lower === 'demo day- results' ||
+         lowerId === 'demo-community' ||
+         lowerId === 'demo-day--results';
+};
 
 class ExlyService {
   getCredentials() {
@@ -58,16 +91,25 @@ class ExlyService {
    * Synchronizes Exly offerings and bookings into the database.
    */
   async syncAll() {
-    const offerings = await this.fetchOfferings();
-    const bookings = await this.fetchBookings();
+    const offeringsRaw = await this.fetchOfferings();
+    const bookingsRaw = await this.fetchBookings();
 
     // 1. Sync Offerings (Check-then-Write / Upsert)
-    for (const off of offerings) {
+    for (const off of offeringsRaw) {
+      const rawTitle = off.title || off.name || '';
+      const offId = off.id || off.offeringId || '';
+      if (shouldIgnoreOffering(rawTitle, offId)) continue;
+
+      const { cleanTitle, dateStr, timeStr } = parseOfferingTitle(rawTitle);
+      const cleanOffId = offId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
+
       await ExlyOffering.findOneAndUpdate(
-        { offeringId: off.id || off.offeringId },
+        { offeringId: cleanOffId },
         {
           $set: {
-            title: off.title || off.name,
+            title: cleanTitle,
+            eventDate: dateStr,
+            eventTime: timeStr,
             type: off.type || 'program',
             price: isNaN(Number(off.price)) ? 0 : Number(off.price || 0),
             currency: off.currency || 'INR',
@@ -85,7 +127,12 @@ class ExlyService {
     let addedCount = 0;
     let updatedCount = 0;
 
-    for (const b of bookings) {
+    for (const b of bookingsRaw) {
+      const rawTitle = b.offeringTitle || b.program || '';
+      if (shouldIgnoreOffering(rawTitle, b.offeringId)) continue;
+
+      const { cleanTitle } = parseOfferingTitle(rawTitle);
+
       const rawPhone = b.phone || b.customerPhone || '';
       const rawEmail = b.email || b.customerEmail || '';
       const phone = normalizePhone(rawPhone);
@@ -94,46 +141,46 @@ class ExlyService {
       if (!phone && !email) continue;
 
       const name = sanitizeName(b.name || b.customerName || 'Exly Lead');
-      const offeringId = b.offeringId || '';
-      const offeringTitle = b.offeringTitle || b.program || '';
+      const offeringId = b.offeringId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
       const txnId = b.transactionId || b.transactionIdExly || '';
       const custId = b.customerId || b.customerIdExly || '';
+      const pricePaid = isNaN(Number(b.pricePaid)) ? 0 : Number(b.pricePaid || 0);
+      const bookedOn = b.bookedOn ? new Date(b.bookedOn) : new Date();
+
+      // Upsert ExlyBooking
+      await ExlyBooking.findOneAndUpdate(
+        { transactionId: txnId },
+        {
+          $set: {
+            customerId: custId,
+            offeringId,
+            offeringTitle: cleanTitle,
+            name,
+            email,
+            phone,
+            pricePaid,
+            state: b.state || 'Selected',
+            payoutStatus: b.payoutStatus || 'Processed',
+            bookedOn
+          }
+        },
+        { upsert: true }
+      );
 
       const filter = { $or: [] };
       if (phone) filter.$or.push({ phone });
       if (email) filter.$or.push({ email });
 
-      const existing = await Lead.findOne(filter);
-
-      if (existing) {
-        let assignedRepId = existing.assignedRepId;
-        if (!assignedRepId) {
-          assignedRepId = await assignLeadToRep();
+      if (filter.$or.length > 0) {
+        const existing = await Lead.findOne(filter);
+        if (existing) {
+          existing.customerIdExly = custId || existing.customerIdExly;
+          existing.transactionIdExly = txnId || existing.transactionIdExly;
+          existing.exlyOfferingId = offeringId || existing.exlyOfferingId;
+          existing.exlyOfferingTitle = cleanTitle || existing.exlyOfferingTitle;
+          await existing.save();
+          updatedCount++;
         }
-        existing.assignedRepId = assignedRepId;
-        existing.customerIdExly = custId || existing.customerIdExly;
-        existing.transactionIdExly = txnId || existing.transactionIdExly;
-        existing.exlyOfferingId = offeringId || existing.exlyOfferingId;
-        existing.exlyOfferingTitle = offeringTitle || existing.exlyOfferingTitle;
-        existing.source = offeringTitle || existing.source || 'Exly';
-        await existing.save();
-        updatedCount++;
-      } else {
-        const assignedRepId = await assignLeadToRep();
-        await Lead.create({
-          name,
-          email,
-          phone: phone || '0000000000',
-          customerIdExly: custId,
-          transactionIdExly: txnId,
-          exlyOfferingId: offeringId,
-          exlyOfferingTitle: offeringTitle,
-          source: offeringTitle || 'Exly',
-          leadStatus: 'Warm',
-          callStatus: 'Pending',
-          assignedRepId
-        });
-        addedCount++;
       }
     }
 
@@ -160,7 +207,7 @@ class ExlyService {
     }
 
     return {
-      offeringsSynced: offerings.length,
+      offeringsSynced: offeringsRaw.length,
       leadsAdded: addedCount,
       leadsUpdated: updatedCount
     };

@@ -135,4 +135,4 @@ Data flows from **TSC Data** (Raw) to **Lead** (Active) via a cross-collection l
     *   `admin`: Full CRUD access across all modules.
     *   `sales`: Can only view/edit assigned leads and relevant TSC data.
     *   `user`: Restricted to project and task management.
-3.  **Concurrency Control**: The `Lead` model uses `lockedBy` and `lockedAt` fields to prevent two users from editing the same record simultaneously (30-minute lock window).
+3.  **Concurrency Control**: The `Lead` model uses `lockedBy` and `lockedAt` fields via the `checkLock` middleware to prevent two users from editing the same record simultaneously (15-minute lock window). ObjectId comparison is enforced using string conversion (`.toString()`) to prevent self-locking.

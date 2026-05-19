@@ -213,63 +213,142 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
   );
 };
 
-export const DataTable = ({ columns, data, onRowClick, className = '' }) => (
-  <div className={`w-full overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] custom-scrollbar ${className}`}>
-    <table className="w-full text-left border-collapse min-w-[540px] hidden sm:table">
-      <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
-        <tr>
-          {columns.map((col, i) => (
-            <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap">
-              {col.header}
-              {col.info && <InfoButton text={col.info} />}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, i) => (
-          <tr 
-            key={i} 
-            onClick={(e) => {
-              if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-              onRowClick?.(row);
-            }}
-            className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
-          >
-            {columns.map((col, j) => (
-              <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
-                {col.render ? col.render(row) : row[col.key]}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+export const DataTable = ({ columns, data = [], onRowClick, className = '', defaultPageSize = 10, paginated = true }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
 
-    {/* Mobile Responsive Card Stack */}
-    <div className="grid grid-cols-1 gap-3 p-3 sm:hidden">
-      {data.map((row, i) => (
-        <div
-          key={i}
-          onClick={(e) => {
-            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-            onRowClick?.(row);
-          }}
-          className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3 cursor-pointer shadow-sm active:scale-[0.99] transition-transform"
-        >
-          {columns.map((col, j) => (
-            <div key={j} className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</span>
-              <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                {col.render ? col.render(row) : row[col.key]}
-              </div>
+  // Reset page when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data.length]);
+
+  const totalItems = data.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = paginated ? data.slice(startIndex, endIndex) : data;
+
+  return (
+    <div className={`w-full flex flex-col border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] ${className}`}>
+      <div className="w-full overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse min-w-[540px] hidden sm:table">
+          <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
+            <tr>
+              {columns.map((col, i) => (
+                <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap">
+                  {col.header}
+                  {col.info && <InfoButton text={col.info} />}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.map((row, i) => (
+              <tr 
+                key={i} 
+                onClick={(e) => {
+                  if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                  onRowClick?.(row);
+                }}
+                className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
+              >
+                {columns.map((col, j) => (
+                  <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
+                    {col.render ? col.render(row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Mobile Responsive Card Stack */}
+        <div className="grid grid-cols-1 gap-3 p-3 sm:hidden">
+          {paginatedData.map((row, i) => (
+            <div
+              key={i}
+              onClick={(e) => {
+                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                onRowClick?.(row);
+              }}
+              className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3 cursor-pointer shadow-sm active:scale-[0.99] transition-transform"
+            >
+              {columns.map((col, j) => (
+                <div key={j} className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</span>
+                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                    {col.render ? col.render(row) : row[col.key]}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
-      ))}
+      </div>
+
+      {paginated && totalItems > 0 && (
+        <div className="p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+          <div className="flex items-center gap-2">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-[11px] font-bold outline-none text-[var(--color-text-primary)]"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>entries</span>
+            <span className="text-[10px] font-bold opacity-60 ml-2">
+              (Showing {startIndex + 1}-{endIndex} of {totalItems})
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+            >
+              Prev
+            </button>
+            <span className="px-3 text-xs text-[var(--color-text-primary)]">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, extraActions }) => {
   useEffect(() => {

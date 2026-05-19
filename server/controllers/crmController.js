@@ -265,10 +265,42 @@ exports.getAuditLogs = async (req, res) => {
   try {
     const logs = await CRMAudit.find({ leadId: req.params.leadId })
       .populate('userId', 'name')
-      .sort('-createdAt')
+      .sort('-timestamp')
       .lean();
     res.json(logs);
   } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+};
+
+exports.getAllAuditLogs = async (req, res) => {
+  try {
+    const query = {};
+    if (req.query.userId) {
+      query.userId = req.query.userId;
+    }
+    const limit = parseInt(req.query.limit) || 100;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const logs = await CRMAudit.find(query)
+      .populate('userId', 'name email avatar')
+      .populate('leadId', 'name email phone')
+      .sort('-timestamp')
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await CRMAudit.countDocuments(query);
+
+    res.json({
+      logs,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    console.error('Failed to fetch all audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };

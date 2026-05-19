@@ -28,6 +28,10 @@ const importLeads = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB');
+    
+    console.log('Purging Lead collection...');
+    await Lead.deleteMany({});
+    console.log('Lead collection purged.');
 
     // 1. Ensure Rep Users exist
     const userMap = {};
@@ -47,7 +51,7 @@ const importLeads = async () => {
 
     // 2. Parse CSV
     const leads = [];
-    const csvPath = path.join(__dirname, '../../leads_db_import.csv');
+    const csvPath = path.join(__dirname, '../../leads.csv');
 
     fs.createReadStream(csvPath)
       .pipe(csv())

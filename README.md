@@ -1,4 +1,4 @@
-# ⚡ Taskmaster v1.7.2
+# ⚡ Taskmaster v1.7.3
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)

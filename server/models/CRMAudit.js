@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+require('./User');
+require('./Lead');
 
 /**
  * Audit Log Schema

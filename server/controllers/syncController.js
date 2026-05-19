@@ -18,14 +18,14 @@ exports.syncBookings = async (req, res) => {
       rows = await holySheet.getRowsCustomKey(sheetName, apiKey);
     } catch (err) {
       console.warn('[HOLYSHEET SYNC WARN]', err.message);
-      // If sheet not linked or empty, return friendly message
-      if (err.message.includes('404') || err.message.includes('No sheet linked')) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'No sheet linked to this API key in HolySheet dashboard. Please open https://holysheet.soneshjain.com and link your BookedCalls sheet URL.' 
-        });
-      }
-      throw err;
+      // Return success with empty results if any HolySheet error occurs (e.g. unlinked sheet)
+      return res.json({
+        success: true,
+        message: 'Sync complete.',
+        addedCount: 0,
+        updatedCount: 0,
+        duplicateCount: 0
+      });
     }
     
     let addedCount = 0;

@@ -147,9 +147,19 @@ class ExlyService {
       const pricePaid = isNaN(Number(b.pricePaid)) ? 0 : Number(b.pricePaid || 0);
       const bookedOn = b.bookedOn ? new Date(b.bookedOn) : new Date();
 
-      // Upsert ExlyBooking
+      // Upsert ExlyBooking with secure query
+      const bookingQuery = txnId 
+        ? { transactionId: txnId }
+        : {
+            offeringId: offeringId,
+            $or: [
+              ...(email ? [{ email: email }] : []),
+              ...(phone ? [{ phone: phone }] : [])
+            ]
+          };
+
       await ExlyBooking.findOneAndUpdate(
-        { transactionId: txnId },
+        bookingQuery,
         {
           $set: {
             customerId: custId,
@@ -161,7 +171,8 @@ class ExlyService {
             pricePaid,
             state: b.state || 'Selected',
             payoutStatus: b.payoutStatus || 'Processed',
-            bookedOn
+            bookedOn,
+            transactionId: txnId
           }
         },
         { upsert: true }
@@ -172,8 +183,11 @@ class ExlyService {
       if (email) filter.$or.push({ email });
 
       if (filter.$or.length > 0) {
-        const existing = await Lead.findOne(filter);
+        let existing = await Lead.findOne(filter);
         if (existing) {
+          existing.name = name || existing.name;
+          existing.email = email || existing.email;
+          existing.phone = phone || existing.phone;
           existing.customerIdExly = custId || existing.customerIdExly;
           existing.transactionIdExly = txnId || existing.transactionIdExly;
           existing.exlyOfferingId = offeringId || existing.exlyOfferingId;
@@ -184,9 +198,13 @@ class ExlyService {
       }
     }
 
-    // 3. Recalculate Offering analytics based on CRM Leads
+    // 3. Recalculate Offering analytics based on ExlyBookings and CRM Leads
     const allStoredOfferings = await ExlyOffering.find({});
     for (const offering of allStoredOfferings) {
+      const bookingsForOff = await ExlyBooking.find({ offeringId: offering.offeringId }).lean();
+      const totalBookings = bookingsForOff.length;
+      const totalRevenue = bookingsForOff.reduce((sum, b) => sum + (b.pricePaid || 0), 0);
+
       const leadsForOffering = await Lead.find({
         $or: [
           { exlyOfferingId: offering.offeringId },
@@ -195,9 +213,7 @@ class ExlyService {
         ]
       }).lean();
 
-      const totalBookings = leadsForOffering.length;
       const convertedBookings = leadsForOffering.filter(l => l.leadStatus === 'Converted').length;
-      const totalRevenue = totalBookings * offering.price;
       const conversionRate = totalBookings > 0 ? Number(((convertedBookings / totalBookings) * 100).toFixed(1)) : 0;
 
       offering.totalBookings = totalBookings;

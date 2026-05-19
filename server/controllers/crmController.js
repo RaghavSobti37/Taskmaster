@@ -6,6 +6,7 @@ const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 const CRMConfig = require('../models/CRMConfig');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
+const followupCache = require('../services/followupCache');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -201,17 +202,6 @@ exports.createLead = async (req, res) => {
 exports.updateLead = async (req, res) => {
   try {
     const { id } = req.params;
-    const oldLead = await Lead.findById(id);
-    if (!oldLead) return res.status(404).json({ error: 'Lead not found' });
-
-    // Handle locking
-    if (oldLead.lockedBy && oldLead.lockedBy.toString() !== req.user._id.toString()) {
-      const lockDuration = Date.now() - new Date(oldLead.lockedAt).getTime();
-      if (lockDuration < 30 * 60 * 1000) { // 30 min lock
-        return res.status(423).json({ error: 'Row is locked by another user' });
-      }
-    }
-
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
     if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
     
@@ -226,8 +216,10 @@ exports.updateLead = async (req, res) => {
       userRole: req.user.role 
     });
 
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
     res.json(lead);
   } catch (error) {
+    console.error('Update lead error:', error);
     res.status(400).json({ error: 'Failed to update lead' });
   }
 };
@@ -261,14 +253,31 @@ exports.updateEmi = async (req, res) => {
   }
 };
 
+const populateAuditUsers = async (logs) => {
+  const userIds = [...new Set(logs.map(log => log.userId).filter(id => id && mongoose.isValidObjectId(id)))];
+  const users = await User.find({ _id: { $in: userIds } }, 'name email avatar').lean();
+  const userMap = new Map(users.map(u => [u._id.toString(), u]));
+
+  return logs.map(log => {
+    const userIdStr = log.userId ? log.userId.toString() : '';
+    if (userMap.has(userIdStr)) {
+      log.userId = userMap.get(userIdStr);
+    } else {
+      log.userId = { name: log.userId || 'System / Batch' };
+    }
+    return log;
+  });
+};
+
 exports.getAuditLogs = async (req, res) => {
   try {
     const logs = await CRMAudit.find({ leadId: req.params.leadId })
-      .populate('userId', 'name')
       .sort('-timestamp')
       .lean();
-    res.json(logs);
+    const populated = await populateAuditUsers(logs);
+    res.json(populated);
   } catch (error) {
+    console.error('Failed to fetch lead audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };
@@ -284,17 +293,17 @@ exports.getAllAuditLogs = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const logs = await CRMAudit.find(query)
-      .populate('userId', 'name email avatar')
       .populate('leadId', 'name email phone')
       .sort('-timestamp')
       .skip(skip)
       .limit(limit)
       .lean();
 
+    const populated = await populateAuditUsers(logs);
     const total = await CRMAudit.countDocuments(query);
 
     res.json({
-      logs,
+      logs: populated,
       total,
       page,
       pages: Math.ceil(total / limit)
@@ -650,8 +659,18 @@ exports.getCRMStats = async (req, res) => {
 
 exports.getFollowups = async (req, res) => {
   try {
+    const isRep = req.user.role !== 'admin';
+    const repId = isRep ? req.user._id : null;
+    
+    // Attempt cache read
+    const cachedFollowups = await followupCache.getFollowups(repId);
+    if (cachedFollowups !== null) {
+      return res.json(cachedFollowups);
+    }
+
+    // Fallback to database query if cache fails or is offline
     const query = { nextFollowupDate: { $exists: true, $ne: '' } };
-    if (req.user.role !== 'admin') {
+    if (isRep) {
       query.assignedRepId = req.user._id;
     }
     const leads = await Lead.find(query).populate('assignedRepId', 'name avatar').sort({ nextFollowupDate: 1 }).lean();
@@ -684,8 +703,20 @@ exports.addNote = async (req, res) => {
       }
     }, { new: true });
 
+    // Explicitly write an audit log entry for note addition
+    await CRMAudit.create({
+      leadId: id,
+      userId: req.user._id,
+      userRole: req.user.role,
+      fieldChanged: 'notes',
+      oldValue: '',
+      newValue: `Note added: "${text.trim()}"`,
+      timestamp: new Date()
+    });
+
     res.json(lead);
   } catch (error) {
+    console.error('Add note audit error:', error);
     res.status(500).json({ error: 'Failed to add note' });
   }
 };
@@ -803,3 +834,27 @@ exports.cleanupTestData = async (req, res) => {
     res.status(500).json({ error: 'Failed to cleanup test data' });
   }
 };
+
+exports.deleteLead = async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id).lean();
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Log deletion in audit trail before removing
+    await CRMAudit.create({
+      leadId: lead._id,
+      userId: req.user._id,
+      fieldChanged: '__deleted__',
+      oldValue: lead.name,
+      newValue: null,
+      timestamp: new Date()
+    });
+
+    await Lead.findByIdAndDelete(req.params.id);
+    res.json({ message: `Lead "${lead.name}" permanently deleted.` });
+  } catch (error) {
+    console.error('Delete lead error:', error);
+    res.status(500).json({ error: 'Failed to delete lead' });
+  }
+};
+

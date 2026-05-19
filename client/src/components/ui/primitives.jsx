@@ -213,21 +213,42 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
   );
 };
 
-export const DataTable = ({ columns, data = [], onRowClick, className = '', defaultPageSize = 10, paginated = true }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(defaultPageSize);
+export const DataTable = ({ 
+  columns, 
+  data = [], 
+  onRowClick, 
+  className = '', 
+  defaultPageSize = 10, 
+  paginated = true,
+  serverSide = false,
+  totalItems: customTotalItems,
+  totalPages: customTotalPages,
+  currentPage: customCurrentPage,
+  onPageChange,
+  onPageSizeChange,
+  pageSize: customPageSize
+}) => {
+  const [localCurrentPage, setLocalCurrentPage] = useState(1);
+  const [localPageSize, setLocalPageSize] = useState(defaultPageSize);
 
-  // Reset page when data changes
+  const currentPage = serverSide ? (customCurrentPage || 1) : localCurrentPage;
+  const pageSize = serverSide ? (customPageSize || defaultPageSize) : localPageSize;
+  const setCurrentPage = serverSide ? onPageChange : setLocalCurrentPage;
+  const setPageSize = serverSide ? onPageSizeChange : setLocalPageSize;
+
+  const totalItems = serverSide ? (customTotalItems || 0) : data.length;
+  const totalPages = serverSide ? (customTotalPages || 1) : (Math.ceil(totalItems / pageSize) || 1);
+
+  // Reset page when data changes (only client-side)
   useEffect(() => {
-    setCurrentPage(1);
-  }, [data.length]);
-
-  const totalItems = data.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (!serverSide) {
+      setLocalCurrentPage(1);
+    }
+  }, [data.length, serverSide]);
 
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalItems);
-  const paginatedData = paginated ? data.slice(startIndex, endIndex) : data;
+  const endIndex = serverSide ? Math.min(startIndex + data.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = paginated && !serverSide ? data.slice(startIndex, endIndex) : data;
 
   return (
     <div className={`w-full flex flex-col border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] ${className}`}>

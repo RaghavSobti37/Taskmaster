@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import ArtistRoute from './components/ArtistRoute';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DashboardSkeleton } from './components/ui';
@@ -72,9 +73,11 @@ function App() {
               <Route element={<AdminRoute />}>
                 <Route path="admin" element={<AdminPanel />} />
                 <Route path="admin/logs" element={<AdminLogsPage />} />
+                <Route path="campaign/:campaignId" element={<CampaignDetails />} />
+              </Route>
+              <Route element={<ArtistRoute />}>
                 <Route path="artists" element={<ArtistsCollection />} />
                 <Route path="artists/:id/*" element={<ArtistDetail />} />
-                <Route path="campaign/:campaignId" element={<CampaignDetails />} />
               </Route>
             </Route>
           </Route>

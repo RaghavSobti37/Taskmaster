@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const User = require('../models/User');
 
 exports.createProject = async (req, res) => {
   try {
@@ -14,6 +15,16 @@ exports.createProject = async (req, res) => {
     if (!providedMembers.includes(req.user._id.toString())) {
       providedMembers.push(req.user._id);
       providedRoles.push({ user: req.user._id, role: 'owner' });
+    }
+
+    // Ensure deepank@theshakticollective.in is automatically added to all new projects
+    const deepank = await User.findOne({ email: 'deepank@theshakticollective.in' });
+    if (deepank) {
+      const deepankIdStr = deepank._id.toString();
+      if (!providedMembers.some(m => m.toString() === deepankIdStr)) {
+        providedMembers.push(deepank._id);
+        providedRoles.push({ user: deepank._id, role: 'artist_management' });
+      }
     }
 
     const project = await Project.create({

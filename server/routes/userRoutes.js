@@ -8,7 +8,7 @@ const { getTeam, updateProfile, getDirectory, updateUserRole, updateUserTeams, d
 router.get('/team', protect, getTeam);
 router.get('/sales-reps', protect, getSalesReps);
 router.put('/profile', protect, updateProfile);
-router.get('/directory', protect, admin, getDirectory);
+router.get('/directory', protect, getDirectory);
 router.put('/:id/role', protect, admin, updateUserRole);
 router.put('/:id/teams', protect, admin, updateUserTeams);
 router.put('/:id', protect, admin, updateUserAdmin);

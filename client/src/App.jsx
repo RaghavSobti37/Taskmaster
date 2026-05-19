@@ -8,33 +8,51 @@ import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DashboardSkeleton } from './components/ui';
 
+// Helper to retry dynamic imports when a redeploy changes chunk hashes
+const lazyWithRetry = (componentImport) => 
+  lazy(async () => {
+    const hasRetried = window.sessionStorage.getItem('chunk-retry');
+    try {
+      const component = await componentImport();
+      window.sessionStorage.removeItem('chunk-retry');
+      return component;
+    } catch (error) {
+      if (!hasRetried) {
+        window.sessionStorage.setItem('chunk-retry', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // Keep loading state until reload
+      }
+      throw error;
+    }
+  });
+
 // Lazy loaded pages
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
-const ProjectsView = lazy(() => import('./pages/projects/ProjectsView'));
-const ProjectDetail = lazy(() => import('./pages/projects/ProjectDetail'));
-const ProjectCreate = lazy(() => import('./pages/projects/ProjectCreate'));
-const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'));
-const CalendarView = lazy(() => import('./pages/calendar/CalendarView'));
-const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
-const DailyLogPage = lazy(() => import('./pages/productivity/DailyLogPage'));
-const AdminLogsPage = lazy(() => import('./pages/admin/AdminLogsPage'));
-const AssetsPage = lazy(() => import('./pages/assets/AssetsPage'));
-const LeadsPage = lazy(() => import('./pages/crm/LeadsPage'));
-const FollowupsPage = lazy(() => import('./pages/crm/FollowupsPage'));
-const FeaturesPage = lazy(() => import('./pages/marketing/FeaturesPage'));
-const TodoPage = lazy(() => import('./pages/productivity/TodoPage'));
-const GoogleSuccessPage = lazy(() => import('./pages/auth/GoogleSuccessPage'));
-const ArtistsCollection = lazy(() => import('./pages/artists/ArtistsCollection'));
-const ArtistDetail = lazy(() => import('./pages/artists/ArtistDetail'));
-const UnsubscribePage = lazy(() => import('./pages/Unsubscribe'));
-const CampaignDetails = lazy(() => import('./pages/CampaignDetails'));
-const WorkflowCanvas = lazy(() => import('./pages/productivity/WorkflowCanvas'));
-const OfficeAssetsPage = lazy(() => import('./pages/office/OfficeAssetsPage'));
-const MetaOAuthCallback = lazy(() => import('./pages/auth/MetaOAuthCallback'));
-const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
-const UserDataDeletion = lazy(() => import('./pages/legal/UserDataDeletion'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
+const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView'));
+const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
+const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
+const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
+const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
+const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
+const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
+const AdminLogsPage = lazyWithRetry(() => import('./pages/admin/AdminLogsPage'));
+const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
+const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
+const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
+const FeaturesPage = lazyWithRetry(() => import('./pages/marketing/FeaturesPage'));
+const TodoPage = lazyWithRetry(() => import('./pages/productivity/TodoPage'));
+const GoogleSuccessPage = lazyWithRetry(() => import('./pages/auth/GoogleSuccessPage'));
+const ArtistsCollection = lazyWithRetry(() => import('./pages/artists/ArtistsCollection'));
+const ArtistDetail = lazyWithRetry(() => import('./pages/artists/ArtistDetail'));
+const UnsubscribePage = lazyWithRetry(() => import('./pages/Unsubscribe'));
+const CampaignDetails = lazyWithRetry(() => import('./pages/CampaignDetails'));
+const WorkflowCanvas = lazyWithRetry(() => import('./pages/productivity/WorkflowCanvas'));
+const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssetsPage'));
+const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
+const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
 
 function App() {
   const { loading } = useAuth();

@@ -45,6 +45,9 @@ const ArtistSchema = new mongoose.Schema({
       triggerCities: [{ type: String }]
     },
     facebook: {
+      likes: { type: Number, default: 0 },
+      followers: { type: Number, default: 0 },
+      name: { type: String },
       ctr: { type: Number, default: 0 },
       topFanEngagement: { type: Number, default: 0 },
       postReach: {
@@ -102,7 +105,15 @@ const ArtistSchema = new mongoose.Schema({
       accessToken: { type: String, select: false },
       igAccountId: { type: String },
       fbPageId: { type: String },
-      tokenExpiry: { type: Date }
+      tokenExpiry: { type: Date },
+      availableAccounts: [{
+        fbPageId: { type: String },
+        fbPageName: { type: String },
+        igAccountId: { type: String },
+        igUsername: { type: String },
+        igName: { type: String },
+        igProfilePicture: { type: String }
+      }]
     },
     spotify: {
       artistId: { type: String },

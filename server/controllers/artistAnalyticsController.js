@@ -112,8 +112,12 @@ exports.syncArtistStats = async (req, res) => {
     let engagementRate = null;
     let sharesOutput = null;
 
+    let fbLikes = 0;
+    let fbFollowers = 0;
+    let fbName = '';
+
     if (metaRes?.status === 'fulfilled' && metaRes.value !== null) {
-      const { media, followers } = metaRes.value;
+      const { media, followers, facebook } = metaRes.value;
       metaFollowers = validateMetric(followers, true);
       const mediaItems = media?.data || [];
 
@@ -130,13 +134,17 @@ exports.syncArtistStats = async (req, res) => {
           hasValidShares = true;
         }
 
+        // Extract reach metric if available
+        const reachMetric = m.insights?.data?.find(i => i.name === 'reach');
+        const reachValue = reachMetric?.values?.[0]?.value ?? 'N/A';
+
         return {
           caption: m.caption || 'Instagram Post',
           media_type: m.media_type || 'IMAGE',
           like_count: validateMetric(m.like_count, true),
           comments_count: validateMetric(m.comments_count, true),
           shares: validateMetric(m.shares, true),
-          reach: 'N/A', // Restricted from public API insight
+          reach: reachValue,
           permalink: m.permalink || null
         };
       });
@@ -147,6 +155,12 @@ exports.syncArtistStats = async (req, res) => {
 
       if (typeof metaFollowers === 'number' && metaFollowers > 0) {
         engagementRate = Number(((totalLikesAndComments / metaFollowers) * 100).toFixed(2));
+      }
+
+      if (facebook) {
+        fbLikes = facebook.likes || 0;
+        fbFollowers = facebook.followers || 0;
+        fbName = facebook.name || '';
       }
     }
 
@@ -185,6 +199,14 @@ exports.syncArtistStats = async (req, res) => {
         followerVelocity: 0,
         audienceQuality: 0
       },
+      facebook: {
+        likes: fbLikes,
+        followers: fbFollowers,
+        name: fbName,
+        ctr: artist.analytics?.facebook?.ctr || 0,
+        topFanEngagement: artist.analytics?.facebook?.topFanEngagement || 0,
+        postReach: artist.analytics?.facebook?.postReach || { organic: 0, paid: 0 }
+      },
       tracks: liveTracks,
       videos: liveVideos,
       posts: livePosts
@@ -198,7 +220,8 @@ exports.syncArtistStats = async (req, res) => {
       metrics: {
         spotify: { followers: spFNum, popularity: spPNum },
         youtube: { subscribers: ytSNum, views: ytVNum },
-        instagram: { followers: igFNum, engagementRate: igENum }
+        instagram: { followers: igFNum, engagementRate: igENum },
+        facebook: { followers: fbFollowers, likes: fbLikes }
       }
     };
 
@@ -234,7 +257,10 @@ exports.getPlatformAnalytics = async (req, res) => {
     // Only use real history — no fake data generation
     const historyMap = { spotify: [], youtube: [], meta: [] };
     if (artist.analyticsHistory && Array.isArray(artist.analyticsHistory)) {
-      artist.analyticsHistory.forEach(item => {
+      // Sort history chronologically to ensure correct timeline slice
+      const sortedHistory = [...artist.analyticsHistory].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      sortedHistory.forEach(item => {
         if (item.platform === 'spotify' || (item.platform === 'overall' && item.metrics?.spotify)) {
           historyMap.spotify.push({
             timestamp: item.timestamp,
@@ -255,6 +281,20 @@ exports.getPlatformAnalytics = async (req, res) => {
         }
       });
     }
+
+    // Filter histories so they only start from the first non-zero/valid data point (first login/sync)
+    const filterHistoryFromConnection = (historyArray, metricKey) => {
+      const firstValidIndex = historyArray.findIndex(item => {
+        const val = Number(item.metrics?.[metricKey] || 0);
+        return val > 0;
+      });
+      if (firstValidIndex === -1) return [];
+      return historyArray.slice(firstValidIndex);
+    };
+
+    historyMap.spotify = filterHistoryFromConnection(historyMap.spotify, 'followers');
+    historyMap.youtube = filterHistoryFromConnection(historyMap.youtube, 'subscribers');
+    historyMap.meta = filterHistoryFromConnection(historyMap.meta, 'followers');
 
     const currentStats = artist.analytics?.[platform] || artist.analytics?.spotify || {};
     const activeTracks = artist.analytics?.tracks || [];
@@ -471,36 +511,65 @@ exports.metaOAuthCallback = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No Facebook Pages linked to this Meta account. Please create or link a Facebook Page.' });
     }
 
-    let igAccountId = null;
-    let fbPageId = pages[0].id; // Default to first page
+    const availableAccounts = [];
 
-    // 4. For each page, query connected Instagram Professional Account
+    // 4. For each page, query connected Instagram Professional Account and details
     for (const page of pages) {
       try {
-        const pageDetail = await axios.get(`https://graph.facebook.com/v20.0/${page.id}?fields=instagram_business_account`, {
+        const pageDetail = await axios.get(`https://graph.facebook.com/v20.0/${page.id}?fields=instagram_business_account,name`, {
           params: { access_token: longToken }
         });
-        if (pageDetail.data?.instagram_business_account?.id) {
-          igAccountId = pageDetail.data.instagram_business_account.id;
-          fbPageId = page.id;
-          console.log(`✅ [OAuth] Found connected Instagram Professional Account ID: ${igAccountId} on Page ID: ${fbPageId}`);
-          break;
+        const fbPageName = pageDetail.data?.name || page.name;
+        const igAccount = pageDetail.data?.instagram_business_account;
+
+        let igAccountId = null;
+        let igUsername = '';
+        let igName = '';
+        let igProfilePicture = '';
+
+        if (igAccount?.id) {
+          igAccountId = igAccount.id;
+          try {
+            const igDetail = await axios.get(`https://graph.facebook.com/v20.0/${igAccountId}?fields=username,name,profile_picture_url`, {
+              params: { access_token: longToken }
+            });
+            igUsername = igDetail.data?.username || '';
+            igName = igDetail.data?.name || '';
+            igProfilePicture = igDetail.data?.profile_picture_url || '';
+          } catch (igErr) {
+            console.warn(`[OAuth] Fetching IG profile for ${igAccountId} failed:`, igErr.message);
+          }
         }
+
+        availableAccounts.push({
+          fbPageId: page.id,
+          fbPageName,
+          igAccountId,
+          igUsername,
+          igName,
+          igProfilePicture
+        });
       } catch (e) {
         console.warn(`[OAuth] Inspecting page ${page.id} failed:`, e?.response?.data || e.message);
       }
     }
 
-    // 5. Update Artist Profile with permanent credentials using findOneAndUpdate to bypass Mongoose version conflicts
+    // Default to the first account found that has an Instagram ID, or the first page if none
+    const firstWithIg = availableAccounts.find(acc => acc.igAccountId);
+    const activeIgAccountId = firstWithIg ? firstWithIg.igAccountId : (availableAccounts[0]?.igAccountId || '');
+    const activeFbPageId = firstWithIg ? firstWithIg.fbPageId : (availableAccounts[0]?.fbPageId || '');
+
+    // 5. Update Artist Profile with permanent credentials and available accounts using findOneAndUpdate to bypass Mongoose version conflicts
     const updatedArtist = await Artist.findOneAndUpdate(
       { _id: id },
       {
         $set: {
           'oauthCredentials.meta': {
             accessToken: longToken,
-            igAccountId: igAccountId || '',
-            fbPageId: fbPageId,
-            tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) // 60 days
+            igAccountId: activeIgAccountId,
+            fbPageId: activeFbPageId,
+            tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+            availableAccounts: availableAccounts
           }
         }
       },
@@ -521,9 +590,9 @@ exports.metaOAuthCallback = async (req, res) => {
       success: true,
       message: 'Instagram / Facebook account connected successfully!',
       credentials: {
-        igAccountId,
-        fbPageId,
-        tokenExpiry: artist.oauthCredentials.meta.tokenExpiry
+        igAccountId: activeIgAccountId,
+        fbPageId: activeFbPageId,
+        availableAccounts
       }
     });
   } catch (err) {

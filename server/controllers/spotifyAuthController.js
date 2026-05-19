@@ -1,0 +1,150 @@
+/**
+ * Spotify OAuth flow for artist accounts.
+ * Scope: user-read-private (profile), user-top-read (top tracks),
+ *        user-read-recently-played, playlist-read-private
+ *
+ * Flow:
+ *   1. GET  /api/artists/:id/auth/spotify        → redirect to Spotify login
+ *   2. GET  /api/artists/auth/callback/spotify   → exchange code → save token
+ */
+
+const axios = require('axios');
+const Artist = require('../models/Artist');
+
+const CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID?.replace(/['"]/g, '').trim();
+const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET?.replace(/['"]/g, '').trim();
+const REDIRECT_URI  = process.env.SPOTIFY_OAUTH_REDIRECT_URI
+  || 'http://localhost:5000/api/artists/auth/callback/spotify';
+
+// Scopes — everything available to free Developer API
+const SCOPES = [
+  'user-read-private',
+  'user-read-email',
+  'user-top-read',
+  'user-read-recently-played',
+  'user-follow-read',
+  'playlist-read-private',
+  'playlist-read-collaborative'
+].join(' ');
+
+/** Step 1: Redirect artist browser to Spotify auth screen */
+exports.initiateSpotifyAuth = (req, res) => {
+  const { id } = req.params;  // artist MongoDB ID passed as state
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    redirect_uri: REDIRECT_URI,
+    state: id,
+    show_dialog: 'true'
+  });
+  res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
+};
+
+/** Step 2: Spotify redirects back here with ?code=...&state=artistId */
+exports.spotifyAuthCallback = async (req, res) => {
+  const { code, state: artistId, error } = req.query;
+
+  if (error) {
+    console.error('❌ [Spotify OAuth] User denied or error:', error);
+    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_error=${error}`);
+  }
+
+  if (!code || !artistId) {
+    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists?spotify_error=missing_params`);
+  }
+
+  try {
+    const artist = await Artist.findById(artistId);
+    if (!artist) {
+      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists?spotify_error=artist_not_found`);
+    }
+
+    // Exchange code for tokens
+    console.log(`⚡ [Spotify OAuth] Exchanging code for tokens for artist: ${artist.name}`);
+    const tokenRes = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI
+      }).toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`
+        }
+      }
+    );
+
+    const { access_token, refresh_token, expires_in } = tokenRes.data;
+
+    // Fetch the Spotify user profile to verify + get their artistId
+    const profileRes = await axios.get('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    const profile = profileRes.data;
+    console.log(`✅ [Spotify OAuth] Connected Spotify account: ${profile.display_name} (${profile.id})`);
+
+    // Save credentials to artist
+    if (!artist.oauthCredentials) artist.oauthCredentials = {};
+    artist.oauthCredentials.spotify = {
+      ...artist.oauthCredentials.spotify,
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      tokenExpiry: new Date(Date.now() + expires_in * 1000),
+      spotifyUserId: profile.id,
+      displayName: profile.display_name,
+      connectedAt: new Date()
+    };
+
+    artist.markModified('oauthCredentials');
+    await artist.save();
+
+    console.log(`🎉 [Spotify OAuth] Artist ${artist.name} Spotify account connected! Triggering sync...`);
+
+    // Auto-trigger sync
+    try {
+      const { syncArtistStats } = require('./artistAnalyticsController');
+      await syncArtistStats(
+        { params: { id: artistId }, body: {} },
+        { json: () => {}, status: () => ({ json: () => {} }) }
+      );
+    } catch (syncErr) {
+      console.warn('[Spotify OAuth] Auto-sync warning:', syncErr.message);
+    }
+
+    // Redirect back to artist page
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_connected=true`);
+  } catch (err) {
+    console.error('❌ [Spotify OAuth] Error:', err?.response?.data || err.message);
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_error=${encodeURIComponent(err.message)}`);
+  }
+};
+
+/** Refresh token if expired */
+exports.refreshSpotifyToken = async (artist) => {
+  const refreshToken = artist.oauthCredentials?.spotify?.refreshToken;
+  if (!refreshToken) throw new Error('No Spotify refresh token stored');
+
+  const res = await axios.post(
+    'https://accounts.spotify.com/api/token',
+    new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken
+    }).toString(),
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`
+      }
+    }
+  );
+
+  const { access_token, expires_in } = res.data;
+  artist.oauthCredentials.spotify.accessToken = access_token;
+  artist.oauthCredentials.spotify.tokenExpiry = new Date(Date.now() + expires_in * 1000);
+  artist.markModified('oauthCredentials');
+  await artist.save();
+  return access_token;
+};

@@ -9,8 +9,8 @@ const getSpotifyAccessToken = async () => {
     return cachedToken;
   }
 
-  const clientId = process.env.SPOTIFY_CLIENT_ID || "a00df9460cd5450b9e5fa6b672ddd458";
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || "6960f8bf9fa74f069b78d3719c9ce433";
+  const clientId = (process.env.SPOTIFY_CLIENT_ID || "a00df9460cd5450b9e5fa6b672ddd458").replace(/['"]/g, '').trim();
+  const clientSecret = (process.env.SPOTIFY_CLIENT_SECRET || "6960f8bf9fa74f069b78d3719c9ce433").replace(/['"]/g, '').trim();
 
   if (!clientId || !clientSecret) {
     throw new Error('Spotify API credentials unconfigured.');

@@ -342,6 +342,11 @@ const OutletSidebar = () => {
                   queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
                 }}
               />
+            </div>
+          )}
+
+          {(user?.role === 'admin' || user?.role === 'artist_management') && (
+            <div className="space-y-1">
               <NavItem
                 to="/artists"
                 icon={Users}

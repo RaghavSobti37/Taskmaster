@@ -21,7 +21,30 @@ const projectSchema = new mongoose.Schema({
     calendarId: { type: String, default: 'primary' }
   }],
   createdAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+projectSchema.virtual('phases', {
+  ref: 'Phase',
+  localField: '_id',
+  foreignField: 'projectId'
+});
+
+// Cascade deletes to Phase and Task models
+projectSchema.pre('remove', async function(next) {
+  await mongoose.model('Phase').deleteMany({ projectId: this._id });
+  await mongoose.model('Task').deleteMany({ projectId: this._id });
+  next();
+});
+
+projectSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
+  await mongoose.model('Phase').deleteMany({ projectId: this._id });
+  await mongoose.model('Task').deleteMany({ projectId: this._id });
+  next();
+});
 
 projectSchema.index({ outletId: 1, createdAt: -1 });
 projectSchema.index({ owner: 1 });

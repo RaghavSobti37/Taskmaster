@@ -53,11 +53,23 @@ const auditPlugin = (schema, options = {}) => {
       const oldDoc = await this.model.findOne(this.getQuery());
       if (!oldDoc) return next();
 
-      const userId = this.options.userId || 'SYSTEM';
-      const userRole = this.options.userRole || 'SYSTEM';
+      const options = this.getOptions ? this.getOptions() : {};
+      const userId = this.options.userId || options.userId || 'SYSTEM';
+      const userRole = this.options.userRole || options.userRole || 'SYSTEM';
       const auditLogs = [];
 
-      const updateData = update.$set || update;
+      // Unify root-level fields and $set fields
+      const updateData = {};
+      for (const key in update) {
+        if (!key.startsWith('$')) {
+          updateData[key] = update[key];
+        }
+      }
+      if (update.$set) {
+        for (const key in update.$set) {
+          updateData[key] = update.$set[key];
+        }
+      }
 
       for (const path in updateData) {
         if (['updatedAt', 'lockedBy', 'lockedAt', '__v'].includes(path)) continue;

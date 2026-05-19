@@ -6,22 +6,31 @@ const checkLock = (Model) => async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?._id || req.body.userId; // Current user
+    if (!userId) return next();
 
-    const doc = await Model.findById(id);
-    if (!doc) return next();
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
 
-    // If locked by someone else and lock is fresh (less than 15 mins)
-    const LOCK_EXPIRY_MS = 15 * 60 * 1000;
-    const isLocked = doc.lockedBy && 
-                     doc.lockedBy.toString() !== userId.toString() && 
-                     (new Date() - new Date(doc.lockedAt)) < LOCK_EXPIRY_MS;
+    // Attempt to claim or renew lock atomically
+    const lockedLead = await Model.findOneAndUpdate(
+      {
+        _id: id,
+        $or: [
+          { lockedBy: { $exists: false } },
+          { lockedBy: null },
+          { lockedBy: userId.toString() },
+          { lockedAt: { $lt: fifteenMinutesAgo } }
+        ]
+      },
+      {
+        $set: { lockedBy: userId.toString(), lockedAt: new Date() }
+      },
+      { new: true }
+    );
 
-    if (isLocked) {
+    if (!lockedLead) {
       return res.status(423).json({
         error: 'Record Locked',
-        message: 'This record is currently being edited by another user.',
-        lockedBy: doc.lockedBy,
-        lockedAt: doc.lockedAt
+        message: 'This lead is currently being edited by another representative.'
       });
     }
 

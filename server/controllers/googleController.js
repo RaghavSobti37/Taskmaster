@@ -108,9 +108,6 @@ exports.linkGoogleAccount = async (req, res) => {
 
 exports.getCalendarEvents = async (req, res) => {
   try {
-    // Fetch Indian holidays from Google's public iCal feed
-    const indianHolidays = await fetchIndianHolidays();
-
     // If user has linked Google account, fetch their personal events too
     let personalEvents = [];
     if (req.user.googleRefreshToken) {
@@ -144,8 +141,7 @@ exports.getCalendarEvents = async (req, res) => {
       }
     }
 
-    // Combine holidays + personal events
-    res.json([...personalEvents, ...indianHolidays]);
+    res.json(personalEvents);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

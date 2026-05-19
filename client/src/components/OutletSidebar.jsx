@@ -265,7 +265,7 @@ const OutletSidebar = () => {
           <NavItem
             to="/assets"
             icon={Layers}
-            label="Digital Assets"
+            label="Assets"
             collapsed={false}
             isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
@@ -273,7 +273,7 @@ const OutletSidebar = () => {
           <NavItem
             to="/office-assets"
             icon={Building2}
-            label="Office & Contacts"
+            label="Office"
             collapsed={false}
             isMobile={isMobile}
             onMouseEnter={() => {

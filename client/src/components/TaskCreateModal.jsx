@@ -6,10 +6,18 @@ import CKDropdown from './ui/CKDropdown';
 import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { useProjects, useUserDirectory } from '../hooks/useTaskmasterQueries';
 
-const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members, projects, onTaskCreated }) => {
+const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  const { data: fetchedProjects = [] } = useProjects();
+  const { data: fetchedMembers = [] } = useUserDirectory();
+  
+  const projects = passedProjects || fetchedProjects;
+  const members = passedMembers || fetchedMembers;
+
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [priority, setPriority] = useState('medium');

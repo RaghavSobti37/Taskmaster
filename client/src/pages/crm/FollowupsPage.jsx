@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Search, RefreshCw, Clock, Target, Zap, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send
+  Search, RefreshCw, Clock, Target, Zap, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send, History
 } from 'lucide-react';
 import { 
   Badge, 
@@ -27,6 +27,7 @@ export default function FollowupsPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [leadLogs, setLeadLogs] = useState([]);
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useLiveLeads({
@@ -63,19 +64,31 @@ export default function FollowupsPage() {
         setReminder: selectedLead.setReminder || false,
         planOption: selectedLead.planOption || ''
       });
+
+      // Fetch audit trail for the selected lead
+      axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
+        .then(res => setLeadLogs(res.data))
+        .catch(err => console.error('Failed to fetch lead logs', err));
+    } else {
+      setLeadLogs([]);
     }
   }, [selectedLead]);
 
   const handleSaveLead = async () => {
     if (!selectedLead) return;
     try {
-      await updateMutation.mutateAsync({
+      const updatedDoc = await updateMutation.mutateAsync({
         id: selectedLead._id,
         data: editLeadData
       });
-      setSelectedLead(null);
+      setSelectedLead(updatedDoc);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      
+      // Fetch updated audit trail
+      axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
+        .then(res => setLeadLogs(res.data))
+        .catch(err => console.error('Failed to fetch lead logs', err));
     } catch (err) {
       alert(err.response?.data?.error || err.message);
     }
@@ -90,6 +103,11 @@ export default function FollowupsPage() {
       setSelectedLead(res.data);
       setNewNoteText('');
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      
+      // Fetch updated audit trail
+      axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
+        .then(r => setLeadLogs(r.data))
+        .catch(err => console.error('Failed to fetch lead logs', err));
     } catch (err) {
       alert('Failed to add note');
     } finally {
@@ -227,21 +245,21 @@ export default function FollowupsPage() {
     }
   ];
 
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
 
   const handleSyncBookedCalls = async () => {
-    setIsSyncing(true);
+    setSyncStatus('syncing');
     try {
-      const res = await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      alert(res.data.message);
+      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
       refetch();
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to sync booked calls');
-    } finally {
-      setIsSyncing(false);
+      setSyncStatus('done');
+      setTimeout(() => setSyncStatus('idle'), 2000);
     }
   };
 
@@ -264,8 +282,8 @@ export default function FollowupsPage() {
                 { id: 'upcoming', label: `Upcoming (${stats.upcoming})` }
               ]}
             />
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={isSyncing}>
-              <Zap size={14} /> {isSyncing ? 'Syncing...' : 'Sync Booked Calls'}
+            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
+              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh
@@ -332,7 +350,7 @@ export default function FollowupsPage() {
           </Button>
         }
         sidebar={
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in">
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
               <div className="space-y-3">
@@ -363,6 +381,28 @@ export default function FollowupsPage() {
                   <p className="text-[9px] text-[var(--color-text-muted)] uppercase">Sales Professional</p>
                 </div>
               </div>
+            </Card>
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 border-b border-[var(--color-bg-border)] pb-2">
+                <History size={12} /> Audit Trail
+              </h4>
+              {leadLogs.length > 0 ? (
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1 text-[11px] custom-scrollbar">
+                  {leadLogs.map((log, index) => (
+                    <div key={index} className="border-b border-[var(--color-bg-border)] pb-2 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-center text-[9px] text-[var(--color-text-muted)] font-mono">
+                        <span className="font-bold text-[var(--color-text-primary)]">{log.userId?.name || 'System / Batch'}</span>
+                        <span>{new Date(log.timestamp).toLocaleDateString()}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">
+                        Changed <span className="font-bold text-blue-400">{log.fieldChanged}</span> from <span className="line-through text-[var(--color-text-muted)]">{log.oldValue || '(empty)'}</span> to <span className="font-bold text-emerald-400">{log.newValue || '(empty)'}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No edits recorded yet</p>
+              )}
             </Card>
           </div>
         }

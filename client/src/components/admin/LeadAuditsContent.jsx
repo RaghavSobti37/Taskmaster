@@ -8,13 +8,12 @@ import { format } from 'date-fns';
 
 const LeadAuditsContent = () => {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
-  const limit = 20;
 
   const { data, isLoading, refetch, isFetching } = useLeadAudits({
     page,
-    limit,
-    // Add simple query filtering if backend supports it
+    limit: pageSize,
   });
 
   const logs = data?.logs || [];
@@ -137,6 +136,16 @@ const LeadAuditsContent = () => {
           columns={columns} 
           data={filteredLogs} 
           className="!border-none"
+          serverSide={true}
+          totalItems={total}
+          totalPages={pages}
+          currentPage={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
         />
         {filteredLogs.length === 0 && !isLoading && (
           <div className="p-20 text-center opacity-30">
@@ -145,34 +154,6 @@ const LeadAuditsContent = () => {
           </div>
         )}
       </div>
-
-      {pages > 1 && (
-        <div className="p-4 border-t border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]/30">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-            Showing Page {page} of {pages} ({total} logs)
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="xs"
-              disabled={page === 1}
-              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-              className="font-black uppercase text-[9px]"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="xs"
-              disabled={page === pages}
-              onClick={() => setPage(prev => Math.min(prev + 1, pages))}
-              className="font-black uppercase text-[9px]"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
     </Card>
   );
 };

@@ -22,6 +22,7 @@ router.get('/', async (req, res) => {
 
     const tasks = await Task.find({
       dueDate: { $ne: null },
+      status: { $ne: 'done' },
       $or: [
         { createdBy: req.user._id },
         { assignees: req.user._id }

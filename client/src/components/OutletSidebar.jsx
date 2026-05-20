@@ -27,7 +27,11 @@ import {
   Moon,
   Sun,
   Building2,
-  Contact
+  Contact,
+  Trash2,
+  Cloud,
+  Globe,
+  FileText
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';

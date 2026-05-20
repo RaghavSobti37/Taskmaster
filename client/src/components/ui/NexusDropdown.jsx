@@ -13,6 +13,7 @@ const NexusDropdown = ({
   searchable = false,
   variant = 'default',
   required = false,
+  isMulti = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -37,13 +38,43 @@ const NexusDropdown = ({
   }, [isOpen, searchable]);
 
   const handleSelect = (option) => {
-    onChange(option.value);
-    setIsOpen(false);
-    setSearch('');
+    if (isMulti) {
+      const currentValues = Array.isArray(value) ? value : [];
+      const newValues = currentValues.includes(option.value)
+        ? currentValues.filter(v => v !== option.value)
+        : [...currentValues, option.value];
+      onChange(newValues);
+    } else {
+      onChange(option.value);
+      setIsOpen(false);
+      setSearch('');
+    }
   };
 
-  const selectedLabel = options.find(opt => opt.value === value)?.label;
-  const displayText = selectedLabel || placeholder;
+  const isSelected = (val) => {
+    if (isMulti) {
+      return Array.isArray(value) && value.includes(val);
+    }
+    return value === val;
+  };
+
+  let displayText = placeholder;
+  let hasSelection = false;
+  if (isMulti) {
+    const selectedLabels = options
+      .filter(opt => Array.isArray(value) && value.includes(opt.value))
+      .map(opt => opt.label);
+    if (selectedLabels.length > 0) {
+      displayText = selectedLabels.join(', ');
+      hasSelection = true;
+    }
+  } else {
+    const selectedLabel = options.find(opt => opt.value === value)?.label;
+    if (selectedLabel) {
+      displayText = selectedLabel;
+      hasSelection = true;
+    }
+  }
 
   const filteredOptions = searchable && search
     ? options.filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()))
@@ -78,7 +109,7 @@ const NexusDropdown = ({
           ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
         `}
       >
-        <span className={`truncate ${!selectedLabel ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+        <span className={`truncate ${!hasSelection ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
           {displayText}
         </span>
         <ChevronDown
@@ -119,7 +150,7 @@ const NexusDropdown = ({
                 </div>
               ) : (
                 filteredOptions.map(option => {
-                  const isSelected = value === option.value;
+                  const selected = isSelected(option.value);
                   return (
                     <button
                       key={option.value}
@@ -128,14 +159,14 @@ const NexusDropdown = ({
                       className={`
                         w-full flex items-center justify-between px-3 py-1.5 transition-all
                         hover:bg-[var(--color-bg-secondary)]
-                        ${isSelected
+                        ${selected
                           ? 'text-[var(--color-action-primary)] font-bold'
                           : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                         }
                       `}
                     >
                       <span className="truncate">{option.label}</span>
-                      {isSelected && <Check size={12} className="text-[var(--color-action-primary)] shrink-0 ml-2" />}
+                      {selected && <Check size={12} className="text-[var(--color-action-primary)] shrink-0 ml-2" />}
                     </button>
                   );
                 })

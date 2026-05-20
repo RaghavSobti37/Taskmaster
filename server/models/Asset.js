@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 
 const assetSchema = new mongoose.Schema({
-  projectId: {
+  projectIds: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project',
-    default: null
-  },
+    ref: 'Project'
+  }],
   name: {
     type: String,
     required: true,
@@ -15,6 +14,11 @@ const assetSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  type: {
+    type: String,
+    enum: ['drive', 'sheet', 'presentation', 'docs', 'meet', 'other'],
+    default: 'other'
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

@@ -2,7 +2,24 @@ import React from 'react';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Card, Badge } from '../ui';
 
-const ScheduleCard = ({ calendar = [] }) => {
+const ScheduleCard = ({ calendar = [], loading = false }) => {
+  if (loading) {
+    return (
+      <Card className="p-0 flex flex-col shadow-md overflow-hidden">
+        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+          <div className="h-4 w-32 bg-[var(--color-bg-border)] rounded animate-pulse" />
+        </div>
+        <div className="p-4 space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-3 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] space-y-2">
+              <div className="h-3.5 bg-[var(--color-bg-border)] rounded animate-pulse w-3/4" />
+              <div className="h-2.5 bg-[var(--color-bg-border)] rounded animate-pulse w-1/3" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
   return (
     <Card className="p-0 flex flex-col shadow-md overflow-hidden">
       <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">

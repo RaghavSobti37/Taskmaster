@@ -14,6 +14,7 @@ export const NexusModal = ({
   cancelLabel = 'Cancel',
   isConfirm = false,
   showFooter = true,
+  width = 'max-w-sm',
   children
 }) => {
   React.useEffect(() => {
@@ -69,7 +70,7 @@ export const NexusModal = ({
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="relative bg-[var(--color-bg-primary)] w-full max-w-sm rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden"
+            className={`relative bg-[var(--color-bg-primary)] w-full ${width} rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden`}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">

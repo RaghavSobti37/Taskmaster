@@ -30,6 +30,7 @@ const AssetsPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newAsset, setNewAsset] = useState({ projectIds: [], name: '', link: '', type: 'other' });
   const [submitting, setSubmitting] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
 
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
@@ -61,17 +62,30 @@ const AssetsPage = () => {
 
     setSubmitting(true);
     try {
-      const res = await axios.post('/api/assets', {
-        projectIds: newAsset.projectIds,
-        name: newAsset.name,
-        link: newAsset.link.trim(),
-        type: newAsset.type || 'other'
-      });
-      setAssets([res.data, ...assets]);
-      setIsDrawerOpen(false);
-      setNewAsset({ projectIds: [], name: '', link: '', type: 'other' });
+      if (editingAsset) {
+        const res = await axios.put(`/api/assets/${editingAsset._id}`, {
+          projectIds: newAsset.projectIds,
+          name: newAsset.name,
+          link: newAsset.link.trim(),
+          type: newAsset.type || 'other'
+        });
+        setAssets(assets.map(a => a._id === editingAsset._id ? res.data : a));
+        setIsDrawerOpen(false);
+        setEditingAsset(null);
+        setNewAsset({ projectIds: [], name: '', link: '', type: 'other' });
+      } else {
+        const res = await axios.post('/api/assets', {
+          projectIds: newAsset.projectIds,
+          name: newAsset.name,
+          link: newAsset.link.trim(),
+          type: newAsset.type || 'other'
+        });
+        setAssets([res.data, ...assets]);
+        setIsDrawerOpen(false);
+        setNewAsset({ projectIds: [], name: '', link: '', type: 'other' });
+      }
     } catch (err) {
-      console.error('Add asset error:', err);
+      console.error('Save asset error:', err);
     } finally {
       setSubmitting(false);
     }
@@ -83,6 +97,8 @@ const AssetsPage = () => {
       await axios.delete(`/api/assets/${assetId}`);
       setAssets(assets.filter(a => a._id !== assetId));
       setDeleteModal({ open: false, assetId: null });
+      setIsDrawerOpen(false);
+      setEditingAsset(null);
     } catch (err) {
       console.error('Delete asset error:', err);
     }
@@ -223,7 +239,7 @@ const AssetsPage = () => {
                    className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
                 />
              </div>
-             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setNewAsset({ projectIds: [], name: '', link: '', type: 'other' }); }}><Plus size={14} /> Add Link</Button>
+             <Button size="sm" onClick={() => { setEditingAsset(null); setNewAsset({ projectIds: [], name: '', link: '', type: 'other' }); setIsDrawerOpen(true); }}><Plus size={14} /> Add Link</Button>
           </div>
         }
       />
@@ -248,10 +264,10 @@ const AssetsPage = () => {
                  <table className="w-full text-left">
                     <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                        <tr>
-                          <th className="px-6 py-4">Projects</th>
-                          <th className="px-6 py-4">File Name</th>
-                          <th className="px-6 py-4">Link / URL</th>
-                          <th className="px-6 py-4 text-right">Actions</th>
+                          <th className="px-4 py-2">Projects</th>
+                          <th className="px-4 py-2">File Name</th>
+                          <th className="px-4 py-2">Added By</th>
+                          <th className="px-4 py-2">Link / URL</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -266,8 +282,21 @@ const AssetsPage = () => {
                          const typeConfig = getAssetTypeConfig(asset.type, asset.link);
                          const TypeIcon = typeConfig.icon;
                          return (
-                           <tr key={asset._id} className="group hover:bg-[var(--color-bg-secondary)]/50 transition-all">
-                              <td className="px-6 py-4">
+                           <tr 
+                             key={asset._id} 
+                             onClick={() => {
+                               setEditingAsset(asset);
+                               setNewAsset({
+                                 projectIds: (asset.projectIds || []).map(p => p._id || p),
+                                 name: asset.name,
+                                 link: asset.link,
+                                 type: asset.type || 'other'
+                               });
+                               setIsDrawerOpen(true);
+                             }}
+                             className="group hover:bg-[var(--color-bg-secondary)]/50 transition-all cursor-pointer"
+                           >
+                              <td className="px-4 py-2">
                                  {asset.projectIds && asset.projectIds.length > 0 ? (
                                    <div className="flex flex-wrap gap-1">
                                      {asset.projectIds.map(p => (
@@ -276,7 +305,7 @@ const AssetsPage = () => {
                                    </div>
                                  ) : <Badge variant="slate" className="text-[8px]">ROOT</Badge>}
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="px-4 py-2">
                                  <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-lg ${typeConfig.colorClass}`}>
                                        <TypeIcon size={14} />
@@ -287,24 +316,32 @@ const AssetsPage = () => {
                                     </div>
                                  </div>
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="px-4 py-2">
+                                 {asset.createdBy ? (
+                                   <div className="flex items-center gap-2">
+                                      <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                                         <span className="text-[8px] font-black uppercase text-blue-500">{asset.createdBy.name ? asset.createdBy.name.substring(0, 2) : '??'}</span>
+                                      </div>
+                                      <span className="text-[10px] font-bold text-[var(--color-text-secondary)]">{asset.createdBy.name || 'Unknown'}</span>
+                                   </div>
+                                 ) : (
+                                   <span className="text-[9px] italic opacity-30">N/A</span>
+                                 )}
+                              </td>
+                              <td className="px-4 py-2">
                                  {asset.link ? (
                                    <div className="flex items-center gap-2">
                                      <a 
                                        href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`} 
                                        target="_blank" 
                                        rel="noopener noreferrer"
+                                       onClick={e => e.stopPropagation()}
                                        className="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-500 hover:bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20"
                                      >
                                        <ExternalLink size={12} /> Open Link
                                      </a>
                                    </div>
                                  ) : <span className="text-[9px] italic opacity-30">N/A</span>}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="xs" className="text-rose-500 hover:bg-rose-500/10" onClick={() => setDeleteModal({ open: true, assetId: asset._id })}><Trash2 size={12} /></Button>
-                                 </div>
                               </td>
                            </tr>
                          );
@@ -408,7 +445,7 @@ const AssetsPage = () => {
       <InputFormDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Add Link Asset"
+        title={editingAsset ? "Edit Asset Details" : "Add Link Asset"}
       >
         <div className="p-6 space-y-6">
            <form onSubmit={handleAddAsset} className="space-y-6">
@@ -445,9 +482,23 @@ const AssetsPage = () => {
                     />
                  </div>
               </div>
-              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
-                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add Asset</>}
-              </Button>
+              <div className="space-y-2">
+                 <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
+                    {submitting ? <RefreshCw size={14} className="animate-spin" /> : editingAsset ? "Save Changes" : <><Plus size={14} /> Add Asset</>}
+                 </Button>
+                 {editingAsset && (
+                    <Button 
+                       type="button" 
+                       variant="ghost" 
+                       className="w-full !text-rose-500 hover:!bg-rose-500/10 border border-rose-500/10" 
+                       onClick={() => {
+                          setDeleteModal({ open: true, assetId: editingAsset._id });
+                       }}
+                    >
+                       Delete Asset
+                    </Button>
+                 )}
+              </div>
            </form>
         </div>
       </InputFormDrawer>

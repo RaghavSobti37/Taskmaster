@@ -1,8 +1,21 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, Clock, TrendingUp } from 'lucide-react';
-import { StatCard } from '../ui';
+import { StatCard, Skeleton } from '../ui';
 
-const StatCards = ({ metrics = {} }) => {
+const StatCards = ({ metrics = {}, loading = false }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] h-[90px] bg-[var(--color-bg-surface)] animate-pulse">
+            <div className="h-3 w-1/2 bg-[var(--color-bg-border)] rounded" />
+            <div className="h-6 w-1/3 bg-[var(--color-bg-border)] rounded mt-2" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <StatCard 

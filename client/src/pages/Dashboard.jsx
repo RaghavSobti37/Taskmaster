@@ -32,34 +32,14 @@ const Dashboard = () => {
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addToast } = useToast();
 
-  const handleSyncBookedCalls = async () => {
-    setSyncStatus('syncing');
-    try {
-      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    } catch (err) {
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-    }
-  };
-
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
-  const { data: teamMembers = [] } = useUserDirectory();
-
-  const loading = summaryLoading || tasksLoading || projectsLoading;
+  const { data: teamMembers = [], isLoading: teamLoading } = useUserDirectory();
 
   const handleCompleteTask = async (task) => {
     setCompletingIds(prev => new Set(prev).add(task._id));
@@ -106,8 +86,6 @@ const Dashboard = () => {
     });
   }, [tasks]);
 
-  if (loading && tasks.length === 0) return <DashboardSkeleton />;
-
   const { metrics = {}, calendar = [], velocity = 'Stable' } = summary || {};
 
   return (
@@ -118,9 +96,6 @@ const Dashboard = () => {
         icon={LayoutDashboard}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
-              <Zap size={16} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
-            </Button>
             <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
               <Plus size={16} /> New Work Item
             </Button>
@@ -128,7 +103,7 @@ const Dashboard = () => {
         }
       />
 
-      <StatCards metrics={metrics} />
+      <StatCards metrics={metrics} loading={summaryLoading} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
@@ -140,12 +115,13 @@ const Dashboard = () => {
             onSelectTask={setSelectedTask}
             filter={filter}
             setFilter={setFilter}
+            loading={tasksLoading}
           />
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-          <ScheduleCard calendar={calendar} />
-          <SquadCard teamMembers={teamMembers} tasks={tasks} />
+          <ScheduleCard calendar={calendar} loading={summaryLoading} />
+          <SquadCard teamMembers={teamMembers} tasks={tasks} loading={teamLoading} />
         </aside>
       </div>
 

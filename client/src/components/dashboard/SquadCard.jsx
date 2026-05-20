@@ -4,8 +4,37 @@ import { Card, ProgressBar } from '../ui';
 import { useLogs } from '../../hooks/useTaskmasterQueries';
 import { isSameDay } from 'date-fns';
 
-const SquadCard = ({ teamMembers = [], tasks = [] }) => {
-  const { data: logs = [] } = useLogs('all');
+const SquadCard = ({ teamMembers = [], tasks = [], loading = false }) => {
+  const { data: logs = [], isLoading: logsLoading } = useLogs('all');
+  const isLoading = loading || logsLoading;
+
+  if (isLoading) {
+    return (
+      <Card className="p-5 space-y-5 shadow-md">
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-32 bg-[var(--color-bg-border)] rounded animate-pulse" />
+        </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="space-y-2 p-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5 w-2/3">
+                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-border)] animate-pulse shrink-0" />
+                  <div className="space-y-2 w-full">
+                    <div className="h-3 bg-[var(--color-bg-border)] rounded animate-pulse w-3/4" />
+                    <div className="h-2 bg-[var(--color-bg-border)] rounded animate-pulse w-1/3" />
+                  </div>
+                </div>
+                <div className="h-3 w-8 bg-[var(--color-bg-border)] rounded animate-pulse" />
+              </div>
+              <div className="h-1 w-full bg-[var(--color-bg-border)] rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
   const todayLogs = logs.filter(l => l.createdAt && isSameDay(new Date(l.createdAt), new Date()));
   const activeUserIds = new Set(todayLogs.map(l => typeof l.userId === 'object' ? l.userId?._id?.toString() : l.userId?.toString()));
 

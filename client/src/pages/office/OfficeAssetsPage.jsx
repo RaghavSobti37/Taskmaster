@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Plus, Search, Contact, Phone, Mail, FileText, Database, Shield, RefreshCw } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { Button, Input, Badge, NexusModal } from '../../components/ui';
+import { Button, Input, Badge, NexusModal, TabSwitcher } from '../../components/ui';
 
 const OfficeAssetsPage = () => {
   const [activeTab, setActiveTab] = useState('assets'); // 'assets' or 'contacts'
@@ -121,13 +121,24 @@ const OfficeAssetsPage = () => {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl font-black uppercase tracking-tight text-[var(--color-text-primary)] flex items-center gap-3">
-            <Building2 className="text-blue-500" />
-            Office & Contacts Registry
-          </h1>
-          <p className="text-[var(--color-text-muted)] text-[10px] font-black tracking-widest uppercase mt-1">Manage office assets and important personnel</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-bg-border)] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-tight text-[var(--color-text-primary)] flex items-center gap-3">
+              <Building2 className="text-blue-500" />
+              Office & Contacts Registry
+            </h1>
+            <p className="text-[var(--color-text-muted)] text-[10px] font-black tracking-widest uppercase mt-1">Manage office assets and important personnel</p>
+          </div>
+          
+          <TabSwitcher 
+            tabs={[
+              { id: 'assets', label: `Office Assets (${assets.length})` },
+              { id: 'contacts', label: `Important Contacts (${contacts.length})` }
+            ]}
+            activeTab={activeTab}
+            onChange={(tabId) => { setActiveTab(tabId); setSearch(''); }}
+          />
         </div>
         
         {activeTab === 'assets' ? (
@@ -153,22 +164,6 @@ const OfficeAssetsPage = () => {
             <Plus size={14} /> Add Contact
           </Button>
         )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-[var(--color-bg-border)] gap-6">
-        <button
-          onClick={() => { setActiveTab('assets'); setSearch(''); }}
-          className={`pb-2 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'assets' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-        >
-          <Building2 size={14} /> Office Assets ({assets.length})
-        </button>
-        <button
-          onClick={() => { setActiveTab('contacts'); setSearch(''); }}
-          className={`pb-2 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'contacts' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
-        >
-          <Contact size={14} /> Important Contacts ({contacts.length})
-        </button>
       </div>
 
       <div className="bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl p-4">
@@ -288,7 +283,7 @@ const OfficeAssetsPage = () => {
             />
 
             <div>
-              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Description</label>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Description</label>
               <textarea 
                 value={assetFormData.description} 
                 onChange={e => setAssetFormData({...assetFormData, description: e.target.value})} 
@@ -299,7 +294,7 @@ const OfficeAssetsPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Category</label>
+                <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Category</label>
                 <select 
                   value={assetFormData.category} 
                   onChange={e => setAssetFormData({...assetFormData, category: e.target.value})} 
@@ -313,7 +308,7 @@ const OfficeAssetsPage = () => {
               </div>
 
               <div>
-                <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Status</label>
+                <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Status</label>
                 <select 
                   value={assetFormData.status} 
                   onChange={e => setAssetFormData({...assetFormData, status: e.target.value})} 
@@ -329,7 +324,7 @@ const OfficeAssetsPage = () => {
             </div>
 
             <div>
-              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Currently With</label>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Currently With</label>
               <select 
                 value={assetFormData.currentlyWith} 
                 onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} 
@@ -342,7 +337,7 @@ const OfficeAssetsPage = () => {
           </div>
 
           {/* Right 30% Metadata & Action Panel */}
-          <div className="md:col-span-3 border-l border-[var(--color-bg-border)] pl-6 space-y-4">
+          <div className="md:col-span-3 border-t md:border-t-0 md:border-l border-[var(--color-bg-border)] pt-6 md:pt-0 md:pl-6 space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Metadata & Actions</h3>
             
             <Input 
@@ -354,12 +349,13 @@ const OfficeAssetsPage = () => {
             />
 
             <div>
-              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Purchase Date</label>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Purchase Date</label>
               <input 
                 type="date" 
                 value={assetFormData.purchaseDate || ''} 
                 onChange={e => setAssetFormData({...assetFormData, purchaseDate: e.target.value})} 
                 className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500" 
+                placeholder="Purchase Date"
               />
             </div>
 
@@ -440,7 +436,7 @@ const OfficeAssetsPage = () => {
             />
 
             <div>
-              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Internal Remarks / Notes</label>
+              <label className="block text-[10px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1 ml-1">Internal Remarks / Notes</label>
               <textarea 
                 value={contactFormData.notes} 
                 onChange={e => setContactFormData({...contactFormData, notes: e.target.value})} 
@@ -451,7 +447,7 @@ const OfficeAssetsPage = () => {
           </div>
 
           {/* Right 30% Metadata & Action Panel */}
-          <div className="md:col-span-3 border-l border-[var(--color-bg-border)] pl-6 space-y-4">
+          <div className="md:col-span-3 border-t md:border-t-0 md:border-l border-[var(--color-bg-border)] pt-6 md:pt-0 md:pl-6 space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Details & Actions</h3>
             
             <Input 

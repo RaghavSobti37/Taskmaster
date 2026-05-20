@@ -194,3 +194,5 @@ Architected and developed for extreme efficiency by CoreKnot.
 - Added database index configurations on recipients.messageId, recipients.email, and campaignId
 - Refactored frontend routing hierarchy with public LandingPage root and protected absolute dashboard paths for Google OAuth compliance
 
+U p d a t e d   A s s e t s   a n d   D a s h b o a r d   c a c h i n g   m e c h a n i s m s ,   i m p r o v e d   l o a d i n g   s t a t e s   -   V e r s i o n   1 . 7 . 9  
+ 

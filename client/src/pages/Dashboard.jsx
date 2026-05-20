@@ -21,7 +21,6 @@ import { useToast } from '../contexts/ToastContext';
 import { useTasks, useProjects, useUserDirectory, useDashboardSummary } from '../hooks/useTaskmasterQueries';
 import { 
   StatCards, 
-  DailyVelocityCard, 
   ScheduleCard, 
   SquadCard, 
   TaskTable 
@@ -145,7 +144,6 @@ const Dashboard = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-          <DailyVelocityCard velocity={velocity} sparklineData={sparklineData} />
           <ScheduleCard calendar={calendar} />
           <SquadCard teamMembers={teamMembers} tasks={tasks} />
         </aside>

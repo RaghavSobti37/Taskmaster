@@ -859,3 +859,16 @@ exports.deleteLead = async (req, res) => {
   }
 };
 
+exports.purgeAuditLogs = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
+    }
+    await CRMAudit.deleteMany({});
+    res.json({ message: 'All lead change audit logs have been purged.' });
+  } catch (error) {
+    console.error('Failed to purge lead audits:', error);
+    res.status(500).json({ error: 'Failed to purge audit logs' });
+  }
+};
+

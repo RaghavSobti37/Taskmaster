@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema({
   googleAccessToken: { type: String },
   googleRefreshToken: { type: String },
   googleCalendarLinked: { type: Boolean, default: false },
+  googleAccounts: [{
+    email: { type: String, required: true },
+    accessToken: { type: String, required: true },
+    refreshToken: { type: String },
+    linkedAt: { type: Date, default: Date.now }
+  }],
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)
 });
 

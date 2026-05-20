@@ -114,6 +114,7 @@ exports.getMe = async (req, res) => {
 };
 
 exports.googleAuthRedirect = (req, res) => {
+  const { state } = req.query;
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
@@ -125,7 +126,8 @@ exports.googleAuthRedirect = (req, res) => {
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: scopes
+    scope: scopes,
+    state: state || 'login'
   });
 
   res.redirect(url);
@@ -133,7 +135,7 @@ exports.googleAuthRedirect = (req, res) => {
 
 exports.googleAuthCallback = async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     const { createOAuth2Client } = require('../utils/googleAuth');
     const callbackClient = createOAuth2Client();
     const { tokens } = await callbackClient.getToken(code);
@@ -145,7 +147,24 @@ exports.googleAuthCallback = async (req, res) => {
     const email = profile.email;
     const domain = email.split('@')[1];
 
-    if (process.env.NODE_ENV === 'production' && email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && req.query.state !== 'connect') {
+    if (state && state.startsWith('link_')) {
+      const userId = state.split('_')[1];
+      const user = await User.findById(userId);
+      if (user) {
+        const exists = user.googleAccounts.some(acc => acc.email.toLowerCase() === email.toLowerCase());
+        if (!exists) {
+          user.googleAccounts.push({
+            email: email.toLowerCase(),
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token
+          });
+          await user.save();
+        }
+      }
+      return res.redirect(`${FRONTEND_URL}/auth/google/success?link=success`);
+    }
+
+    if (process.env.NODE_ENV === 'production' && email !== ADMIN_EMAIL && domain !== ALLOWED_DOMAIN && state !== 'connect') {
       return res.redirect(`${FRONTEND_URL}/login?error=unauthorized_domain`);
     }
 

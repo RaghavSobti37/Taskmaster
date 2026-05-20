@@ -38,7 +38,7 @@ erDiagram
 | **Log** | `action`, `details`, `targetType` | `userId` → User, `targetId` → (any) |
 | **Message** | `content`, `channel` | `senderId` → User, `mentions` → User[] |
 | **Lead** | `name`, `phone`, `email`, `leadStatus`, `leadQuality` | `assignedRepId` → User |
-| **Asset** | `name`, `links[]` | `projectId` → Project, `createdBy` → User |
+| **Asset** | `name`, `link`, `type`, `projectIds` | `projectIds` → Project[], `createdBy` → User |
 | **CalendarEvent** | `title`, `date`, `visibility` | `createdBy` → User |
 
 ---
@@ -156,8 +156,8 @@ sequenceDiagram
 
 | Endpoint | Method | Used By | What It Does |
 |---|---|---|---|
-| `/api/assets` | GET | AssetsPage, ProjectAssets | List assets (optional projectId filter) |
-| `/api/assets` | POST | AssetsPage, ProjectAssets | Create a new asset |
+| `/api/assets` | GET | AssetsPage, ProjectAssets | List assets (optional projectIds filter) |
+| `/api/assets` | POST | AssetsPage, ProjectAssets | Create a new asset linked to multiple projects |
 | `/api/assets/:id` | DELETE | AssetsPage, ProjectAssets | Delete an asset |
 | `/api/calendar` | GET | CalendarView, Dashboard | Fetch public + owned events |
 | `/api/calendar` | POST | CalendarEntryModal | Create persistent event |

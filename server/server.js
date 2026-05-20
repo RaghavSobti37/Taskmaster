@@ -170,6 +170,7 @@ app.post('/api/crm/unsubscribe', async (req, res) => {
 app.use('/api/crm', crmRoutes);
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
+app.use('/api/google/accounts', require('./routes/googleAccounts'));
 app.use('/api/artists', artistRoutes);
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/calendar', require('./routes/calendarRoutes'));

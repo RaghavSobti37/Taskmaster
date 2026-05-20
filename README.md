@@ -1,4 +1,4 @@
-# Taskmaster v1.7.7
+# Taskmaster v1.7.8
 
 [![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
@@ -45,7 +45,7 @@ Taskmaster is designed as a fully integrated ecosystem replacing disjointed tool
 - **Smart Calendar**: Persistent MongoDB-backed calendar with Public/Private visibility scopes and two-way Google Calendar OAuth2 synchronization.
 - **Artists Hub**: Multi-platform analytics dashboard hydrating live feeds from Spotify, YouTube, and Meta.
 - **Exly Integration**: Webhook receiver and automated CRM lead hydration with real-time performance analytics metrics. Features pagination for unlinked bookings and robust duplication checks matching incoming entries on existing emails/phones when transactionId is missing.
-- **Edge Assets**: Project-scoped resource management utilizing UploadThing for direct edge-based file storage.
+- **Multi-Project Link Assets**: Manage cloud references (Google Drive, Sheets, Docs, Slides, Meet, and custom URLs) linked to multiple projects simultaneously, complete with dynamic icon detection, multi-account Google Workspace OAuth configuration, and direct access links.
 - **Legal & Compliance**: Automated public compliance pages (`/privacy` and `/userdata`) fulfilling Meta, Google, and GDPR data sovereignty mandates.
 
 ---

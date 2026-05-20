@@ -4,6 +4,14 @@ const geoip = require('geoip-lite');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
+const { Reader } = require('@maxmind/geoip2-node');
+const path = require('path');
+
+let geoReader;
+Reader.open(path.join(__dirname, '../geo/GeoLite2-City.mmdb'))
+  .then(reader => { geoReader = reader; })
+  .catch(err => console.error('Failed to load GeoIP Binary database', err));
+
 
 const parseClientNetworkLocation = (req) => {
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -37,55 +45,54 @@ router.get('/open/:pixelId.gif', async (req, res) => {
     const location = parseClientNetworkLocation(req);
     const city = location.city || 'Unknown';
 
-    const log = await EmailLog.findOne({ pixelId });
-    if (log && !log.opened) {
-      await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
-      await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'active', emailStatus: 'Active' } });
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    const isBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent);
 
-      const MailCampaign = require('../models/MailCampaign');
-      const MailEvent = require('../models/MailEvent');
+    if (!isBot) {
+      const log = await EmailLog.findOne({ pixelId });
+      if (log && !log.opened) {
+        await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
+        await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'active', emailStatus: 'Active' } });
 
-      let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
-      let isCore = true;
-      if (!camp) {
-        camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
-        isCore = false;
-      }
+        const MailCampaign = require('../models/MailCampaign');
+        const MailEvent = require('../models/MailEvent');
 
-      if (camp) {
-        if (isCore) {
-          camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-          camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
-        } else {
-          camp.stats.opened = (camp.stats.opened || 0) + 1;
+        let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+        let isCore = true;
+        if (!camp) {
+          camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
+          isCore = false;
         }
 
-        if (camp.recipients) {
-          const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-          if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
-            rec.status = 'Opened';
-            await camp.save();
+        if (camp) {
+          if (isCore) {
+            camp.metrics.opened = (camp.metrics.opened || 0) + 1;
+            camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
           } else {
-            await camp.save();
+            camp.stats.opened = (camp.stats.opened || 0) + 1;
           }
-        } else {
-          await camp.save();
-        }
 
-        await MailEvent.create({
-          eventType: 'Open',
-          email: log.leadEmail,
-          timestamp: new Date(),
-          campaignId: camp._id,
-          metadata: {
-            ip: location.ip || '127.0.0.1',
-            location: `${location.city}, ${location.region}, ${location.country}`,
-            city: location.city,
-            region: location.region,
-            country: location.country,
-            userAgent: req.headers['user-agent'] || 'Unknown'
+          if (camp.recipients) {
+            const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
+            if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
+              rec.status = 'Opened';
+              await camp.save();
+            }
           }
-        });
+
+          await MailEvent.create({
+            eventType: 'Open',
+            email: log.leadEmail,
+            timestamp: new Date(),
+            campaignId: camp._id,
+            ipAddress: location.ip || '127.0.0.1',
+            userAgent,
+            location: {
+              country: location.country || 'Unknown',
+              city: location.city || 'Unknown'
+            }
+          });
+        }
       }
     }
 
@@ -111,71 +118,80 @@ router.get('/click/:clickId', async (req, res) => {
     const destinationUrl = req.query.redirect;
     const location = parseClientNetworkLocation(req);
     const city = location.city || 'Unknown';
+    const userAgent = req.headers['user-agent'] || 'Unknown';
 
-    const log = await EmailLog.findOne({ clickId });
-    if (log && !log.clicked) {
-      await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
-      await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'engaged', emailStatus: 'Active' } });
+    // Anti-Bot Protection
+    const isBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent);
+    const fallbackRedirect = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const finalUrl = destinationUrl ? decodeURIComponent(destinationUrl) : fallbackRedirect;
 
-      const MailCampaign = require('../models/MailCampaign');
-      const MailEvent = require('../models/MailEvent');
+    if (!isBot) {
+      const log = await EmailLog.findOne({ clickId });
+      if (log && !log.clicked) {
+        await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
+        await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'engaged', emailStatus: 'Active' } });
 
-      let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
-      let isCore = true;
-      if (!camp) {
-        camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
-        isCore = false;
-      }
+        const MailCampaign = require('../models/MailCampaign');
+        const MailEvent = require('../models/MailEvent');
 
-      if (camp) {
-        if (isCore) {
-          camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-          if (!camp.locationBreakdown) {
-            camp.locationBreakdown = new Map();
-          }
-          const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-          camp.locationBreakdown.set(city, {
-            opens: locData.opens || 0,
-            clicks: (locData.clicks || 0) + 1
-          });
-          camp.markModified('locationBreakdown');
-          camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
-        } else {
-          camp.stats.clicked = (camp.stats.clicked || 0) + 1;
+        let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+        let isCore = true;
+        if (!camp) {
+          camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
+          isCore = false;
         }
 
-        if (camp.recipients) {
-          const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-          if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
-            rec.status = 'Clicked';
-            await camp.save();
+        if (camp) {
+          if (isCore) {
+            camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
+            if (!camp.locationBreakdown) camp.locationBreakdown = new Map();
+            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+            camp.locationBreakdown.set(city, { opens: locData.opens || 0, clicks: (locData.clicks || 0) + 1 });
+            camp.markModified('locationBreakdown');
+            camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
           } else {
-            await camp.save();
+            camp.stats.clicked = (camp.stats.clicked || 0) + 1;
           }
-        } else {
-          await camp.save();
-        }
 
-        await MailEvent.create({
-          eventType: 'Click',
-          email: log.leadEmail,
-          timestamp: new Date(),
-          campaignId: camp._id,
-          metadata: {
-            url: destinationUrl,
-            ip: location.ip || '127.0.0.1',
-            location: `${location.city}, ${location.region}, ${location.country}`,
-            city: location.city,
-            region: location.region,
-            country: location.country,
-            userAgent: req.headers['user-agent'] || 'Unknown'
+          if (camp.recipients) {
+            const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
+            if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
+              rec.status = 'Clicked';
+              await camp.save();
+            }
           }
-        });
+
+          await MailEvent.create({
+            eventType: 'Click',
+            email: log.leadEmail,
+            timestamp: new Date(),
+            campaignId: camp._id,
+            linkClicked: destinationUrl,
+            ipAddress: location.ip || '127.0.0.1',
+            userAgent,
+            location: {
+              country: location.country || 'Unknown',
+              city: location.city || 'Unknown'
+            }
+          });
+        }
       }
     }
 
-    const fallbackRedirect = process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.redirect(302, destinationUrl ? decodeURIComponent(destinationUrl) : fallbackRedirect);
+    // JS Redirect to bypass strict security bots following 302s automatically
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0; url=${finalUrl}">
+          <title>Redirecting...</title>
+        </head>
+        <body>
+          <script>window.location.href = "${finalUrl}";</script>
+          <p>If you are not redirected automatically, <a href="${finalUrl}">click here</a>.</p>
+        </body>
+      </html>
+    `);
   } catch (err) {
     console.error('Click Tracking Error:', err);
     return res.redirect(302, process.env.FRONTEND_URL || 'http://localhost:5173');
@@ -267,14 +283,12 @@ router.post('/webhooks/resend', async (req, res) => {
     }
 
     // 2. Geolocation parsing for open/click events
-    let locationObj = { city: 'Mumbai', region: 'MH', country: 'IN', ip: '127.0.0.1', userAgent: 'Unknown' };
-    let locationString = 'Mumbai, MH, IN';
+    let locationObj = { country: 'Unknown', city: 'Unknown' };
+    let ip = '';
+    let userAgent = 'Unknown';
     let url = '';
 
     if (eventType === 'email.opened' || eventType === 'email.clicked') {
-      let ip = '';
-      let userAgent = 'Unknown';
-      
       if (eventType === 'email.clicked') {
         ip = payload.data.click?.ipAddress || payload.data.ipAddress || '';
         userAgent = payload.data.click?.userAgent || payload.data.userAgent || 'Unknown';
@@ -284,25 +298,21 @@ router.post('/webhooks/resend', async (req, res) => {
         userAgent = payload.data.open?.userAgent || payload.data.userAgent || 'Unknown';
       }
 
-      if (ip && ip.includes(',')) {
-        ip = ip.split(',')[0].trim();
-      }
+      if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
+      if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
 
-      // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
-      if (ip && ip.startsWith('::ffff:')) {
-        ip = ip.substring(7);
+      if (ip && geoReader && ip !== '127.0.0.1' && ip !== '::1') {
+        try {
+          const response = geoReader.city(ip);
+          locationObj.country = response.country?.names?.en || 'Unknown';
+          locationObj.city = response.city?.names?.en || 'Unknown';
+        } catch (lookupError) {
+          console.warn(`Could not resolve location for IP: ${ip}`);
+        }
       }
-
-      const geo = ip && ip !== '127.0.0.1' && ip !== '::1' ? geoip.lookup(ip) : null;
-      locationObj = {
-        city: geo ? (geo.city || 'Unknown City') : (ip ? 'Unknown City' : 'Mumbai'),
-        region: geo ? (geo.region || 'Unknown Region') : (ip ? 'Unknown Region' : 'MH'),
-        country: geo ? (geo.country || 'Unknown Country') : (ip ? 'Unknown Country' : 'IN'),
-        ip: ip || '127.0.0.1',
-        userAgent
-      };
-      locationString = `${locationObj.city}, ${locationObj.region}, ${locationObj.country}`;
     }
+
+    const isWebhookBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent || '');
 
     // 3. Process State Mutations based on eventType
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
@@ -368,6 +378,8 @@ router.post('/webhooks/resend', async (req, res) => {
       });
 
     } else if (eventType === 'email.opened') {
+      if (isWebhookBot) return res.status(200).send('Ignored bot open');
+
       if (recipient) {
         if (!['Clicked', 'Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
           recipient.status = 'Opened';
@@ -394,17 +406,14 @@ router.post('/webhooks/resend', async (req, res) => {
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-        metadata: {
-          ip: locationObj.ip,
-          location: locationString,
-          city: locationObj.city,
-          region: locationObj.region,
-          country: locationObj.country,
-          userAgent: locationObj.userAgent
-        }
+        ipAddress: ip,
+        userAgent,
+        location: locationObj
       });
 
     } else if (eventType === 'email.clicked') {
+      if (isWebhookBot) return res.status(200).send('Ignored bot click');
+
       if (recipient) {
         if (!['Bounced', 'Unsubscribed', 'Invalid'].includes(recipient.status)) {
           recipient.status = 'Clicked';
@@ -441,15 +450,10 @@ router.post('/webhooks/resend', async (req, res) => {
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-        metadata: {
-          url,
-          ip: locationObj.ip,
-          location: locationString,
-          city: locationObj.city,
-          region: locationObj.region,
-          country: locationObj.country,
-          userAgent: locationObj.userAgent
-        }
+        linkClicked: url,
+        ipAddress: ip,
+        userAgent,
+        location: locationObj
       });
 
     } else if (eventType === 'email.delivered') {

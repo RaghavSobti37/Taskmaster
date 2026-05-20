@@ -11,6 +11,19 @@ const TscData = require('../models/TscData');
 const resendApiKey = process.env.RESEND_API_KEY;
 const globalResend = resendApiKey && resendApiKey !== 'mock_resend_api_key' ? new Resend(resendApiKey) : null;
 
+const Redis = require('ioredis');
+const redisOptions = {
+  maxRetriesPerRequest: 1,
+  retryStrategy(times) {
+    if (times > 3) return null; // Stop retrying after 3 attempts
+    return Math.min(times * 100, 2000);
+  }
+};
+const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL, redisOptions) : new Redis(redisOptions);
+redis.on('error', (err) => {
+  // Suppress connection errors to prevent log flooding
+});
+
 const updateEmailTags = async (email, tag, status) => {
   if (!email) return;
   const cleanEmail = email.toLowerCase().trim();
@@ -88,8 +101,18 @@ const sendCampaign = async (campaignId) => {
   if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
     baseUrl = 'https://tsccoreknot.com';
   }
-  const recipients = campaign.recipients.filter(r => r.status === 'Pending');
+  let recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
+  // Deduplicate explicit target list before loop
+  const seenEmails = new Set();
+  recipients = recipients.filter(r => {
+    if (!r.email) return false;
+    const cleanEmail = r.email.toLowerCase().trim();
+    if (seenEmails.has(cleanEmail)) return false;
+    seenEmails.add(cleanEmail);
+    return true;
+  });
+
   for (const recipient of recipients) {
     try {
       // Check if lead is unsubscribed
@@ -102,6 +125,21 @@ const sendCampaign = async (campaignId) => {
         await campaign.save();
         continue;
       }
+
+      // Atomic Redis Idempotency Lock
+      try {
+        if (redis.status === 'ready' || redis.status === 'connecting') {
+          const lockKey = `lock:campaign:${campaign._id}:${recipient.email.toLowerCase().trim()}`;
+          const acquired = await redis.set(lockKey, 'locked', 'NX', 'EX', 10);
+          if (!acquired) {
+            console.log(`[Idempotency] Duplicate request blocked for ${recipient.email}. Skipping double-send.`);
+            continue;
+          }
+        }
+      } catch (redisErr) {
+        // Fallback or ignore if Redis is completely down
+      }
+
 
       const trackingUrl = `${baseUrl}/api/mail/track/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
       const trackingPixel = `<img src="${trackingUrl}" width="1" height="1" style="display:none; width:1px; height:1px;" alt="" />`;

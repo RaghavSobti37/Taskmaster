@@ -7,3 +7,6 @@ google_service_account.json
 .agents
 graphify-out/
 *backups
+setup.cd
+.claude/
+*.mmdb

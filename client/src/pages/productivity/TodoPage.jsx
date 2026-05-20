@@ -136,9 +136,9 @@ const TodoPage = () => {
               </h3>
               <Badge variant="info">{filteredTasks.length} TASKS</Badge>
             </div>
-            <div className="divide-y divide-[var(--color-bg-border)]">
+            <div className="grid grid-cols-1 md:grid-cols-2">
               {filteredTasks.length === 0 ? (
-                <div className="py-20 text-center opacity-20">
+                <div className="col-span-1 md:col-span-2 py-20 text-center opacity-20">
                   <ListTodo size={48} className="mx-auto mb-4" />
                   <p className="text-[10px] font-black uppercase tracking-widest">No tasks found</p>
                 </div>
@@ -148,7 +148,7 @@ const TodoPage = () => {
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.03 }}
-                  className="group flex items-center justify-between p-4 hover:bg-[var(--color-bg-secondary)]/50 transition-all"
+                  className="group flex items-center justify-between p-4 border-b md:odd:border-r border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)]/50 transition-all"
                 >
                   <div className="flex items-center gap-4 min-w-0">
                     <Button

@@ -9,8 +9,33 @@ const TaskTable = ({
   onCompleteTask, 
   onSelectTask, 
   filter, 
-  setFilter 
+  setFilter,
+  loading = false
 }) => {
+
+  if (loading) {
+    return (
+      <Card className="flex flex-col shadow-md overflow-hidden">
+        <div className="p-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
+          <div className="h-4 w-32 bg-[var(--color-bg-border)] rounded animate-pulse" />
+        </div>
+        <div className="p-4 space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--color-bg-border)]/50 last:border-0">
+              <div className="flex items-center gap-3 w-2/3">
+                <div className="w-5 h-5 rounded-full bg-[var(--color-bg-border)] animate-pulse" />
+                <div className="space-y-2 w-full">
+                  <div className="h-3.5 bg-[var(--color-bg-border)] rounded animate-pulse w-3/4" />
+                  <div className="h-2.5 bg-[var(--color-bg-border)] rounded animate-pulse w-1/4" />
+                </div>
+              </div>
+              <div className="h-5 w-16 bg-[var(--color-bg-border)] rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
 
   const taskColumns = [
     {

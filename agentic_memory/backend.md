@@ -500,3 +500,11 @@ The mailing platform enables unified collaboration by adjusting routing access p
 - Fixed email duplicate sends with array deduplication
 - Integrated Google Sheets (HolySheet) for unsubscribed list management
 - Fixed race condition in background queue dispatch
+
+### v1.7.7
+- Decoupled automated Google Sheet unsubscribe sync, making it manual via POST /api/crm/sync-unsubscribed
+- Solved metrics race conditions using Mongoose atomic operators ($inc and $set)
+- Implemented non-blocking tracking pixel and redirect wrappers running database writes in background setImmediate threads
+- Integrated User-Agent bot checks to screen out anti-spam crawlers from metrics
+- Added database index configurations on recipients.messageId, recipients.email, and campaignId
+

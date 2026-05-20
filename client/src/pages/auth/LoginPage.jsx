@@ -60,8 +60,11 @@ const LoginPage = () => {
           <div className="w-16 h-16 bg-[var(--color-action-primary)] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-4 shadow-lg shadow-blue-500/30">
             CK
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2">Welcome back! Sign in to continue.</p>
+          <h1 className="text-2xl font-bold tracking-tight">TaskMaster</h1>
+          <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-2 leading-relaxed">
+            A comprehensive work management, task tracking, and email marketing platform designed to organize team projects, coordinate newsletters, and safely process CRM customer lists.
+          </p>
+          <p className="text-[var(--color-text-secondary)] mt-4 font-semibold">Sign In to Continue</p>
         </div>
 
         {error && (
@@ -146,10 +149,15 @@ const LoginPage = () => {
 
         </form>
 
-        <div className="mt-8 text-center text-sm">
+        <div className="mt-8 text-center text-sm space-y-4">
           <p className="text-[var(--color-text-muted)]">
             New user? <Link to="/register" className="text-[var(--color-action-primary)] font-bold hover:underline">Register here</Link>
           </p>
+          <div className="pt-4 border-t border-[var(--color-bg-border)] flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)]">
+            <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+            <span>•</span>
+            <Link to="/userdata" className="hover:underline">User Data Deletion</Link>
+          </div>
         </div>
       </motion.div>
     </div>

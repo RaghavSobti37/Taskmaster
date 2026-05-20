@@ -139,9 +139,7 @@ router.post('/', async (req, res) => {
     const { title, subject, content, senderProfileId, eventTag, leadIds, customRecipients } = req.body;
     const campaignId = crypto.randomBytes(12).toString('hex');
 
-    // Pull unsubscribed leads from Google Sheets
-    const { pullUnsubscribedFromSheet } = require('../services/holySheetService');
-    await pullUnsubscribedFromSheet().catch(err => console.error('[Campaign Route] Pull unsubscribed warn:', err.message));
+
 
     const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds }, unsubscribed: { $ne: true }, emailStatus: { $ne: 'Bounced' } }) : [];
     const recipients = leads.map(l => ({

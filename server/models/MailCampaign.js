@@ -26,4 +26,7 @@ const mailCampaignSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+mailCampaignSchema.index({ 'recipients.messageId': 1 });
+mailCampaignSchema.index({ 'recipients.email': 1 });
+
 module.exports = mongoose.model('MailCampaign', mailCampaignSchema);

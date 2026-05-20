@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
+    "@maxmind/geoip2-node": "^6.3.4",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.105.4",
     "@trigger.dev/sdk": "^4.4.6",

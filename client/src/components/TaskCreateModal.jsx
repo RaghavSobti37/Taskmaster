@@ -113,25 +113,13 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           )}
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Title</label>
-            <input 
-              autoFocus={!!initialProjectId}
-              type="text" 
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
-              placeholder="e.g. Update homepage layout"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-            <textarea 
-              value={desc}
-              onChange={e => setDesc(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[100px] text-sm"
-              placeholder="Add details or notes about this task..."
+            <CKDropdown 
+              multi
+              label="Assign To"
+              options={memberOptions}
+              value={assignees}
+              onChange={setAssignees}
+              placeholder="Assign to team members..."
             />
           </div>
 
@@ -159,13 +147,25 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           </div>
 
           <div className="space-y-2">
-            <CKDropdown 
-              multi
-              label="Assign To"
-              options={memberOptions}
-              value={assignees}
-              onChange={setAssignees}
-              placeholder="Assign to team members..."
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Title</label>
+            <input 
+              autoFocus={!!initialProjectId}
+              type="text" 
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
+              placeholder="e.g. Update homepage layout"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description (Optional)</label>
+            <textarea 
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[100px] text-sm"
+              placeholder="Add details or notes about this task..."
             />
           </div>
 

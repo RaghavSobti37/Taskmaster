@@ -226,7 +226,5 @@ const server = app.listen(PORT, () => {
   const notificationService = require('./services/notificationService');
   notificationService.init();
 
-  // Pull unsubscribed leads from Google Sheets
-  const { pullUnsubscribedFromSheet } = require('./services/holySheetService');
-  pullUnsubscribedFromSheet().catch(err => console.error('[SYSTEM] Initial unsubscribe pull failed:', err.message));
+
 });

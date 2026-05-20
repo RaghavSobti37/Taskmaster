@@ -53,6 +53,7 @@ const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssets
 const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 
 function App() {
   const { loading } = useAuth();
@@ -63,6 +64,7 @@ function App() {
     <ThemeProvider>
       <Suspense fallback={<DashboardSkeleton />}>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
@@ -73,29 +75,31 @@ function App() {
           <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="projects" element={<ProjectsView />} />
-              <Route path="projects/new" element={<ProjectCreate />} />
-              <Route path="projects/:id" element={<ProjectDetail />} />
-              <Route path="calendar" element={<CalendarView />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="logs" element={<DailyLogPage />} />
-              <Route path="assets" element={<AssetsPage />} />
-              <Route path="office-assets" element={<OfficeAssetsPage />} />
-              <Route path="leads" element={<LeadsPage />} />
-              <Route path="followups" element={<FollowupsPage />} />
-              <Route path="features" element={<FeaturesPage />} />
-              <Route path="todo" element={<TodoPage />} />
-              <Route path="workflows" element={<WorkflowCanvas />} />
+            <Route element={<MainLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/projects" element={<ProjectsView />} />
+              <Route path="/projects/new" element={<ProjectCreate />} />
+              <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/calendar" element={<CalendarView />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/logs" element={<DailyLogPage />} />
+              <Route path="/assets" element={<AssetsPage />} />
+              <Route path="/office-assets" element={<OfficeAssetsPage />} />
+              <Route path="/leads" element={<LeadsPage />} />
+              <Route path="/followups" element={<FollowupsPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/todo" element={<TodoPage />} />
+              <Route path="/workflows" element={<WorkflowCanvas />} />
+              
               <Route element={<AdminRoute />}>
-                <Route path="admin" element={<AdminPanel />} />
-                <Route path="admin/logs" element={<AdminLogsPage />} />
-                <Route path="campaign/:campaignId" element={<CampaignDetails />} />
+                <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/admin/logs" element={<AdminLogsPage />} />
+                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
               </Route>
+              
               <Route element={<ArtistRoute />}>
-                <Route path="artists" element={<ArtistsCollection />} />
-                <Route path="artists/:id/*" element={<ArtistDetail />} />
+                <Route path="/artists" element={<ArtistsCollection />} />
+                <Route path="/artists/:id/*" element={<ArtistDetail />} />
               </Route>
             </Route>
           </Route>

@@ -4,13 +4,8 @@ const geoip = require('geoip-lite');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
-const { Reader } = require('@maxmind/geoip2-node');
-const path = require('path');
 
-let geoReader;
-Reader.open(path.join(__dirname, '../geo/GeoLite2-City.mmdb'))
-  .then(reader => { geoReader = reader; })
-  .catch(err => console.error('Failed to load GeoIP Binary database', err));
+
 
 
 const parseClientNetworkLocation = (req) => {
@@ -38,21 +33,65 @@ const parseClientNetworkLocation = (req) => {
   };
 };
 
+function isAntiSpamBot(userAgent) {
+  if (!userAgent) return false;
+  const botKeywords = [/bot/i, /crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i, /google/i];
+  return botKeywords.some(regex => regex.test(userAgent));
+}
+
 // Open Tracking Pixel Endpoint
 router.get('/open/:pixelId.gif', async (req, res) => {
   try {
     const { pixelId } = req.params;
-    const location = parseClientNetworkLocation(req);
-    const city = location.city || 'Unknown';
 
-    const userAgent = req.headers['user-agent'] || 'Unknown';
-    const isBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent);
+    // 1. Instantly return a 1x1 transparent tracking GIF to prevent email loading delays
+    const pixelBuffer = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 
+      'base64'
+    );
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Content-Length': pixelBuffer.length,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private'
+    });
+    res.end(pixelBuffer);
 
-    if (!isBot) {
-      const log = await EmailLog.findOne({ pixelId });
-      if (log && !log.opened) {
+    // 2. Offload GeoIP and database writes to a non-blocking background thread
+    setImmediate(async () => {
+      try {
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        
+        // Extract the true client IP (handling reverse proxies like Render/Cloudflare)
+        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        if (ip && ip.includes(',')) {
+          ip = ip.split(',')[0].trim();
+        }
+        if (ip && ip.startsWith('::ffff:')) {
+          ip = ip.substring(7);
+        }
+
+        // Anti-Bot Protection
+        if (isAntiSpamBot(userAgent)) return;
+
+        // Run the local in-memory location lookup
+        let location = { country: 'Unknown', city: 'Unknown' };
+        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+          const geo = geoip.lookup(ip);
+          if (geo) {
+            location.country = geo.country || 'Unknown';
+            location.city = geo.city || 'Unknown';
+          }
+        } else {
+          location.country = 'IN';
+          location.city = 'Mumbai';
+        }
+
+        // Query log record using the unique pixel token
+        const log = await EmailLog.findOne({ pixelId });
+        if (!log || log.opened) return;
+
+        // Mark EmailLog as opened
         await EmailLog.updateOne({ pixelId }, { $set: { opened: true } });
-        await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'active', emailStatus: 'Active' } });
 
         const MailCampaign = require('../models/MailCampaign');
         const MailEvent = require('../models/MailEvent');
@@ -66,48 +105,62 @@ router.get('/open/:pixelId.gif', async (req, res) => {
 
         if (camp) {
           if (isCore) {
-            camp.metrics.opened = (camp.metrics.opened || 0) + 1;
-            camp.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
+            await Promise.all([
+              Campaign.updateOne(
+                { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
+                { 
+                  $set: { "recipients.$.status": "Opened" },
+                  $inc: { "metrics.opened": 1 },
+                  $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
+                }
+              ),
+              Lead.updateOne(
+                { email: log.leadEmail },
+                { $set: { status: 'active', emailStatus: 'Active' } }
+              ),
+              MailEvent.create({
+                eventType: 'Open',
+                email: log.leadEmail,
+                timestamp: new Date(),
+                campaignId: camp._id,
+                ipAddress: ip || '127.0.0.1',
+                userAgent,
+                location
+              })
+            ]);
           } else {
-            camp.stats.opened = (camp.stats.opened || 0) + 1;
+            await Promise.all([
+              MailCampaign.updateOne(
+                { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
+                { 
+                  $set: { "recipients.$.status": "Opened" },
+                  $inc: { "stats.opened": 1 }
+                }
+              ),
+              Lead.updateOne(
+                { email: log.leadEmail },
+                { $set: { status: 'active', emailStatus: 'Active' } }
+              ),
+              MailEvent.create({
+                eventType: 'Open',
+                email: log.leadEmail,
+                timestamp: new Date(),
+                campaignId: camp._id,
+                ipAddress: ip || '127.0.0.1',
+                userAgent,
+                location
+              })
+            ]);
           }
-
-          if (camp.recipients) {
-            const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-            if (rec && !['Clicked', 'Unsubscribed', 'Bounced'].includes(rec.status)) {
-              rec.status = 'Opened';
-              await camp.save();
-            }
-          }
-
-          await MailEvent.create({
-            eventType: 'Open',
-            email: log.leadEmail,
-            timestamp: new Date(),
-            campaignId: camp._id,
-            ipAddress: location.ip || '127.0.0.1',
-            userAgent,
-            location: {
-              country: location.country || 'Unknown',
-              city: location.city || 'Unknown'
-            }
-          });
         }
+      } catch (bgError) {
+        console.error('[GEOLOCATION_TRACK_OPEN_ERROR]', bgError);
       }
-    }
-
-    // Deliver a genuine, non-cached 1x1 transparent tracking pixel
-    const buffer = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-    res.writeHead(200, {
-      'Content-Type': 'image/gif',
-      'Content-Length': buffer.length,
-      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-      'Pragma': 'no-cache'
     });
-    return res.end(buffer);
-  } catch (err) {
-    console.error('Pixel Tracking Interruption:', err);
-    return res.status(500).end();
+  } catch (error) {
+    if (!res.headersSent) {
+      res.sendStatus(204);
+    }
   }
 });
 
@@ -116,70 +169,12 @@ router.get('/click/:clickId', async (req, res) => {
   try {
     const { clickId } = req.params;
     const destinationUrl = req.query.redirect;
-    const location = parseClientNetworkLocation(req);
-    const city = location.city || 'Unknown';
     const userAgent = req.headers['user-agent'] || 'Unknown';
-
-    // Anti-Bot Protection
-    const isBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent);
     const fallbackRedirect = process.env.FRONTEND_URL || 'http://localhost:5173';
     const finalUrl = destinationUrl ? decodeURIComponent(destinationUrl) : fallbackRedirect;
 
-    if (!isBot) {
-      const log = await EmailLog.findOne({ clickId });
-      if (log && !log.clicked) {
-        await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
-        await Lead.updateOne({ email: log.leadEmail }, { $set: { status: 'engaged', emailStatus: 'Active' } });
-
-        const MailCampaign = require('../models/MailCampaign');
-        const MailEvent = require('../models/MailEvent');
-
-        let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
-        let isCore = true;
-        if (!camp) {
-          camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
-          isCore = false;
-        }
-
-        if (camp) {
-          if (isCore) {
-            camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-            if (!camp.locationBreakdown) camp.locationBreakdown = new Map();
-            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            camp.locationBreakdown.set(city, { opens: locData.opens || 0, clicks: (locData.clicks || 0) + 1 });
-            camp.markModified('locationBreakdown');
-            camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
-          } else {
-            camp.stats.clicked = (camp.stats.clicked || 0) + 1;
-          }
-
-          if (camp.recipients) {
-            const rec = camp.recipients.find(r => r.email && r.email.toLowerCase() === log.leadEmail.toLowerCase());
-            if (rec && !['Unsubscribed', 'Bounced'].includes(rec.status)) {
-              rec.status = 'Clicked';
-              await camp.save();
-            }
-          }
-
-          await MailEvent.create({
-            eventType: 'Click',
-            email: log.leadEmail,
-            timestamp: new Date(),
-            campaignId: camp._id,
-            linkClicked: destinationUrl,
-            ipAddress: location.ip || '127.0.0.1',
-            userAgent,
-            location: {
-              country: location.country || 'Unknown',
-              city: location.city || 'Unknown'
-            }
-          });
-        }
-      }
-    }
-
-    // JS Redirect to bypass strict security bots following 302s automatically
-    return res.send(`
+    // 1. Instantly return HTML redirection content
+    res.send(`
       <!DOCTYPE html>
       <html>
         <head>
@@ -192,9 +187,115 @@ router.get('/click/:clickId', async (req, res) => {
         </body>
       </html>
     `);
+
+    // 2. Offload telemetry writes to setImmediate
+    setImmediate(async () => {
+      try {
+        if (isAntiSpamBot(userAgent)) return;
+
+        // True client IP extraction
+        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
+        if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
+
+        let location = { country: 'Unknown', city: 'Unknown' };
+        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+          const geo = geoip.lookup(ip);
+          if (geo) {
+            location.country = geo.country || 'Unknown';
+            location.city = geo.city || 'Unknown';
+          }
+        } else {
+          location.country = 'IN';
+          location.city = 'Mumbai';
+        }
+
+        const log = await EmailLog.findOne({ clickId });
+        if (!log || log.clicked) return;
+
+        await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
+
+        const MailCampaign = require('../models/MailCampaign');
+        const MailEvent = require('../models/MailEvent');
+
+        let camp = await Campaign.findOne({ $or: [{ campaignId: String(log.campaignId) }, { _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null }] });
+        let isCore = true;
+        if (!camp) {
+          camp = await MailCampaign.findOne({ _id: log.campaignId.match(/^[0-9a-fA-F]{24}$/) ? log.campaignId : null });
+          isCore = false;
+        }
+
+        if (camp) {
+          if (isCore) {
+            const city = location.city || 'Unknown';
+            const cleanCity = city.replace(/\./g, '');
+            
+            // Build the dynamic location breakdown update
+            const updateObj = {
+              $set: { "recipients.$.status": "Clicked" },
+              $inc: { 
+                "metrics.clicked": 1,
+                [`locationBreakdown.${cleanCity}.clicks`]: 1
+              },
+              $push: { timeSeries: { time: new Date(), opens: 0, clicks: 1 } }
+            };
+
+            await Promise.all([
+              Campaign.updateOne(
+                { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
+                updateObj
+              ),
+              Lead.updateOne(
+                { email: log.leadEmail },
+                { $set: { status: 'engaged', emailStatus: 'Active' } }
+              ),
+              MailEvent.create({
+                eventType: 'Click',
+                email: log.leadEmail,
+                timestamp: new Date(),
+                campaignId: camp._id,
+                linkClicked: finalUrl,
+                ipAddress: ip || '127.0.0.1',
+                userAgent,
+                location
+              })
+            ]);
+          } else {
+            await Promise.all([
+              MailCampaign.updateOne(
+                { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
+                { 
+                  $set: { "recipients.$.status": "Clicked" },
+                  $inc: { "stats.clicked": 1 }
+                }
+              ),
+              Lead.updateOne(
+                { email: log.leadEmail },
+                { $set: { status: 'engaged', emailStatus: 'Active' } }
+              ),
+              MailEvent.create({
+                eventType: 'Click',
+                email: log.leadEmail,
+                timestamp: new Date(),
+                campaignId: camp._id,
+                linkClicked: finalUrl,
+                ipAddress: ip || '127.0.0.1',
+                userAgent,
+                location
+              })
+            ]);
+          }
+        }
+      } catch (bgError) {
+        console.error('[GEOLOCATION_TRACK_CLICK_ERROR]', bgError);
+      }
+    });
+
   } catch (err) {
     console.error('Click Tracking Error:', err);
-    return res.redirect(302, process.env.FRONTEND_URL || 'http://localhost:5173');
+    if (!res.headersSent) {
+      res.redirect(302, process.env.FRONTEND_URL || 'http://localhost:5173');
+    }
   }
 });
 
@@ -301,11 +402,13 @@ router.post('/webhooks/resend', async (req, res) => {
       if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
       if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
 
-      if (ip && geoReader && ip !== '127.0.0.1' && ip !== '::1') {
+      if (ip && ip !== '127.0.0.1' && ip !== '::1') {
         try {
-          const response = geoReader.city(ip);
-          locationObj.country = response.country?.names?.en || 'Unknown';
-          locationObj.city = response.city?.names?.en || 'Unknown';
+          const geo = geoip.lookup(ip);
+          if (geo) {
+            locationObj.country = geo.country || 'Unknown';
+            locationObj.city = geo.city || 'Unknown';
+          }
         } catch (lookupError) {
           console.warn(`Could not resolve location for IP: ${ip}`);
         }

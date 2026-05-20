@@ -6,7 +6,7 @@ const MailEventSchema = new mongoose.Schema({
   email: { type: String, index: true },
   timestamp: { type: Date, required: true },
   metadata: { type: mongoose.Schema.Types.Mixed },
-  campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'MailCampaign' },
+  campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'MailCampaign', index: true },
   linkClicked: { type: String },
   ipAddress: { type: String },
   userAgent: { type: String },

@@ -181,13 +181,6 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 };
 
 const dispatchCampaignJobs = async (campaignId) => {
-  // Pull unsubscribed leads from Google Sheets first
-  try {
-    const { pullUnsubscribedFromSheet } = require('./holySheetService');
-    await pullUnsubscribedFromSheet();
-  } catch (err) {
-    console.error('[Queue Service] Pull unsubscribed warn:', err.message);
-  }
 
   const Campaign = require('../models/Campaign');
   const MailCampaign = require('../models/MailCampaign');

@@ -247,7 +247,7 @@ const OutletSidebar = () => {
 
         <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
           <NavItem
-            to="/"
+            to="/dashboard"
             icon={LayoutDashboard}
             label="Dashboard"
             collapsed={false}

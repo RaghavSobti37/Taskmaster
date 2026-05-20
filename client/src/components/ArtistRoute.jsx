@@ -8,7 +8,7 @@ const ArtistRoute = () => {
   if (loading) return null;
 
   const hasAccess = user?.role === 'admin' || user?.role === 'artist_management';
-  return hasAccess ? <Outlet /> : <Navigate to="/" replace />;
+  return hasAccess ? <Outlet /> : <Navigate to="/dashboard" replace />;
 };
 
 export default ArtistRoute;

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, UserPlus, Plus } from 'lucide-react';
-import Select from 'react-select';
 import CKDropdown from './ui/CKDropdown';
 import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +22,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
   const [priority, setPriority] = useState('medium');
   const [projectId, setProjectId] = useState(initialProjectId || '');
   const [assignees, setAssignees] = useState(() => {
-    return user ? [{ value: user._id, label: user.name }] : [];
+    return user ? [user._id] : [];
   });
   const [dueDate, setDueDate] = useState(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(false);
@@ -34,7 +33,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       setDesc('');
       setPriority('medium');
       setProjectId(initialProjectId || '');
-      setAssignees(user ? [{ value: user._id, label: user.name }] : []);
+      setAssignees(user ? [user._id] : []);
       setDueDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +59,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         description: desc,
         priority,
         projectId: projectId || null,
-        assignees: assignees.map(a => a.value),
+        assignees: assignees,
         dueDate: dueDate || null,
         status: 'todo'
       });
@@ -103,15 +102,12 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {!initialProjectId && (
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Select Project</label>
-              <Select 
+              <CKDropdown 
+                label="Select Project"
                 options={projectOptions}
-                value={projectOptions.find(p => p.value === projectId)}
-                onChange={opt => setProjectId(opt.value)}
+                value={projectId}
+                onChange={setProjectId}
                 placeholder="Select project..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-                required
               />
             </div>
           )}
@@ -163,15 +159,13 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Assign To</label>
-            <Select 
-              isMulti
+            <CKDropdown 
+              multi
+              label="Assign To"
               options={memberOptions}
               value={assignees}
               onChange={setAssignees}
               placeholder="Assign to team members..."
-              className="react-select-container"
-              classNamePrefix="react-select"
             />
           </div>
 

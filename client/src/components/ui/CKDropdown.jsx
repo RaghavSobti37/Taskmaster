@@ -12,7 +12,8 @@ const CKDropdown = memo(({
   multi = false,
   disabled = false,
   rightAction = null,
-  searchable = true
+  searchable = true,
+  renderOption = null
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -133,7 +134,7 @@ const CKDropdown = memo(({
                       onClick={() => handleSelect(option)}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold transition-all hover:bg-[var(--color-bg-workspace)] ${isSelected ? 'text-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
                     >
-                      {option.label}
+                      {renderOption ? renderOption(option) : option.label}
                       {isSelected && (
                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
                           <Check size={14} className="text-[var(--color-action-primary)]" />

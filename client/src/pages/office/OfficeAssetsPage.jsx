@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Building2, Plus, Edit2, Trash2, Search, Contact, Phone, Mail, Layers } from 'lucide-react';
-import { Modal } from '../../components/ui';
+import { Building2, Plus, Search, Contact, Phone, Mail, FileText, Database, Shield, RefreshCw } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { Button, Input, Badge, NexusModal } from '../../components/ui';
 
 const OfficeAssetsPage = () => {
   const [activeTab, setActiveTab] = useState('assets'); // 'assets' or 'contacts'
@@ -17,7 +17,6 @@ const OfficeAssetsPage = () => {
   const [search, setSearch] = useState('');
   
   const queryClient = useQueryClient();
-
   const { data: users = [] } = useUserDirectory();
 
   // Queries
@@ -30,6 +29,18 @@ const OfficeAssetsPage = () => {
     queryKey: ['contacts'],
     queryFn: async () => (await axios.get('/api/contacts')).data
   });
+
+  // Esc key binding for instant closure
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsAssetModalOpen(false);
+        setIsContactModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Mutations for Assets
   const saveAssetMutation = useMutation({
@@ -47,7 +58,11 @@ const OfficeAssetsPage = () => {
 
   const deleteAssetMutation = useMutation({
     mutationFn: async (id) => await axios.delete(`/api/office-assets/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['office-assets'])
+    onSuccess: () => {
+      queryClient.invalidateQueries(['office-assets']);
+      setIsAssetModalOpen(false);
+      setEditingAsset(null);
+    }
   });
 
   // Mutations for Contacts
@@ -66,276 +81,431 @@ const OfficeAssetsPage = () => {
 
   const deleteContactMutation = useMutation({
     mutationFn: async (id) => await axios.delete(`/api/contacts/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['contacts'])
+    onSuccess: () => {
+      queryClient.invalidateQueries(['contacts']);
+      setIsContactModalOpen(false);
+      setEditingContact(null);
+    }
   });
 
   const handleAssetSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     saveAssetMutation.mutate(assetFormData);
   };
 
   const handleContactSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     saveContactMutation.mutate(contactFormData);
   };
 
-  const filteredAssets = assets.filter(a => a.name.toLowerCase().includes(search.toLowerCase()) || a.currentlyWith.toLowerCase().includes(search.toLowerCase()));
-  const filteredContacts = contacts.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.role.toLowerCase().includes(search.toLowerCase()));
+  const getStatusColorClass = (status) => {
+    switch (status) {
+      case 'Available':
+        return 'bg-[#E6F4EA] text-[#137333] dark:bg-[#0F2916] dark:text-[#81C995]';
+      case 'In Use':
+        return 'bg-[#FEF7E0] text-[#B06000] dark:bg-[#2E2003] dark:text-[#FDD663]';
+      default:
+        return 'bg-[#FCE8E6] text-[#C5221F] dark:bg-[#30100F] dark:text-[#F28B82]';
+    }
+  };
+
+  const filteredAssets = assets.filter(a => 
+    a.name.toLowerCase().includes(search.toLowerCase()) || 
+    a.currentlyWith.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredContacts = contacts.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase()) || 
+    c.role.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--color-text-primary)] flex items-center gap-3">
+          <h1 className="text-xl font-black uppercase tracking-tight text-[var(--color-text-primary)] flex items-center gap-3">
             <Building2 className="text-blue-500" />
             Office & Contacts Registry
           </h1>
-          <p className="text-[var(--color-text-secondary)] text-sm font-bold tracking-widest uppercase mt-1">Manage office assets and important personnel</p>
+          <p className="text-[var(--color-text-muted)] text-[10px] font-black tracking-widest uppercase mt-1">Manage office assets and important personnel</p>
         </div>
         
         {activeTab === 'assets' ? (
-          <button
+          <Button
+            size="sm"
             onClick={() => {
               setEditingAsset(null);
               setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
               setIsAssetModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
           >
-            <Plus size={16} /> Add Asset
-          </button>
+            <Plus size={14} /> Add Asset
+          </Button>
         ) : (
-          <button
+          <Button
+            size="sm"
             onClick={() => {
               setEditingContact(null);
               setContactFormData({ name: '', role: '', phone: '', email: '', notes: '' });
               setIsContactModalOpen(true);
             }}
-            className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20"
           >
-            <Plus size={16} /> Add Contact
-          </button>
+            <Plus size={14} /> Add Contact
+          </Button>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[var(--color-bg-border)] gap-8">
+      <div className="flex border-b border-[var(--color-bg-border)] gap-6">
         <button
           onClick={() => { setActiveTab('assets'); setSearch(''); }}
-          className={`pb-3 font-black text-xs tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'assets' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+          className={`pb-2 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'assets' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
         >
-          <Building2 size={16} /> Office Assets ({assets.length})
+          <Building2 size={14} /> Office Assets ({assets.length})
         </button>
         <button
           onClick={() => { setActiveTab('contacts'); setSearch(''); }}
-          className={`pb-3 font-black text-xs tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'contacts' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+          className={`pb-2 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 border-b-2 transition-all ${activeTab === 'contacts' ? 'border-blue-500 text-blue-500' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
         >
-          <Contact size={16} /> Important Contacts ({contacts.length})
+          <Contact size={14} /> Important Contacts ({contacts.length})
         </button>
       </div>
 
       <div className="bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl p-4">
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
           <input
             type="text"
             placeholder={activeTab === 'assets' ? "SEARCH ASSETS OR USERS..." : "SEARCH CONTACTS BY NAME OR ROLE..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl pl-10 pr-4 py-2.5 text-sm font-bold tracking-widest uppercase text-[var(--color-text-primary)] focus:border-blue-500 transition-colors"
+            className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl pl-9 pr-4 py-2 text-xs font-bold tracking-widest uppercase text-[var(--color-text-primary)] focus:border-blue-500 outline-none transition-colors"
           />
         </div>
 
         {activeTab === 'assets' ? (
           assetsLoading ? (
-            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-sm">Loading Assets...</div>
+            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">Loading Assets...</div>
           ) : filteredAssets.length === 0 ? (
             <div className="text-center py-12 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">No assets found</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredAssets.map(asset => (
-                <div key={asset._id} className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl p-4 hover:border-blue-500/30 transition-all flex flex-col h-full shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-[var(--color-text-primary)] uppercase tracking-tight">{asset.name}</h3>
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditingAsset(asset); setAssetFormData({ ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' }); setIsAssetModalOpen(true); }} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => { if(confirm('Delete asset?')) deleteAssetMutation.mutate(asset._id); }} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-secondary)] mb-4 flex-1">{asset.description}</p>
-                  
-                  <div className="space-y-2 text-xs font-bold tracking-widest uppercase bg-[var(--color-bg-workspace)] p-3 rounded-xl border border-[var(--color-bg-border)]">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[var(--color-text-muted)] text-[10px]">Category:</span>
-                      <span className="text-[var(--color-text-primary)]">{asset.category}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[var(--color-text-muted)] text-[10px]">Status:</span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] ${asset.status === 'Available' ? 'bg-green-500/10 text-green-500' : asset.status === 'In Use' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>{asset.status}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[var(--color-text-muted)] text-[10px]">With:</span>
-                      <span className="text-blue-500">{asset.currentlyWith}</span>
-                    </div>
-                    {asset.serialNumber && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-[var(--color-text-muted)] text-[10px]">S/N:</span>
-                        <span className="text-[var(--color-text-primary)] font-mono text-[10px]">{asset.serialNumber}</span>
-                      </div>
-                    )}
-                    {asset.purchaseDate && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-[var(--color-text-muted)] text-[10px]">Purchased:</span>
-                        <span className="text-[var(--color-text-primary)] text-[10px]">
-                          {new Date(asset.purchaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+            <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-2xl bg-[var(--color-bg-surface)]">
+              <table className="w-full text-left">
+                <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                  <tr>
+                    <th className="px-4 py-2">Asset Name</th>
+                    <th className="px-4 py-2">Category</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">Currently With</th>
+                    <th className="px-4 py-2">Serial Number</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {filteredAssets.map(asset => (
+                    <tr 
+                      key={asset._id} 
+                      onClick={() => {
+                        setEditingAsset(asset);
+                        setAssetFormData({ ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' });
+                        setIsAssetModalOpen(true);
+                      }}
+                      className="cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] uppercase">{asset.name}</td>
+                      <td className="px-4 py-2 text-[10px] font-black uppercase text-[var(--color-text-secondary)]">{asset.category}</td>
+                      <td className="px-4 py-2">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getStatusColorClass(asset.status)}`}>
+                          {asset.status}
                         </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="px-4 py-2 text-xs font-bold text-blue-500">{asset.currentlyWith}</td>
+                      <td className="px-4 py-2 text-[10px] font-mono text-[var(--color-text-muted)] uppercase">{asset.serialNumber || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )
         ) : (
           contactsLoading ? (
-            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-sm">Loading Contacts...</div>
+            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">Loading Contacts...</div>
           ) : filteredContacts.length === 0 ? (
             <div className="text-center py-12 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">No contacts found</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredContacts.map(contact => (
-                <div key={contact._id} className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl p-4 hover:border-blue-500/30 transition-all flex flex-col h-full shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-bold text-[var(--color-text-primary)] uppercase tracking-tight">{contact.name}</h3>
-                      <p className="text-xs font-bold text-blue-500 tracking-widest uppercase">{contact.role}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditingContact(contact); setContactFormData(contact); setIsContactModalOpen(true); }} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => { if(confirm('Delete contact?')) deleteContactMutation.mutate(contact._id); }} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 space-y-2.5 text-xs font-bold tracking-widest uppercase flex-1 bg-[var(--color-bg-workspace)] p-3 rounded-xl border border-[var(--color-bg-border)]">
-                    <div className="flex items-center gap-2 text-[var(--color-text-primary)] hover:text-blue-500 transition-colors">
-                      <Phone size={14} className="text-[var(--color-text-muted)]" /> <a href={`tel:${contact.phone}`}>{contact.phone}</a>
-                    </div>
-                    {contact.email && (
-                      <div className="flex items-center gap-2 text-[var(--color-text-primary)] hover:text-blue-500 transition-colors">
-                        <Mail size={14} className="text-[var(--color-text-muted)]" /> <a href={`mailto:${contact.email}`}>{contact.email}</a>
-                      </div>
-                    )}
-                  </div>
-                  {contact.notes && (
-                    <div className="mt-4 pt-3 border-t border-[var(--color-bg-border)] text-xs text-[var(--color-text-secondary)] italic">
-                      {contact.notes}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-2xl bg-[var(--color-bg-surface)]">
+              <table className="w-full text-left">
+                <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+                  <tr>
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Role / Position</th>
+                    <th className="px-4 py-2">Phone</th>
+                    <th className="px-4 py-2">Email</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-bg-border)]">
+                  {filteredContacts.map(contact => (
+                    <tr 
+                      key={contact._id} 
+                      onClick={() => {
+                        setEditingContact(contact);
+                        setContactFormData(contact);
+                        setIsContactModalOpen(true);
+                      }}
+                      className="cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] uppercase">{contact.name}</td>
+                      <td className="px-4 py-2 text-[10px] font-black uppercase text-blue-500">{contact.role}</td>
+                      <td className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-secondary)]">{contact.phone}</td>
+                      <td className="px-4 py-2 text-[10px] text-[var(--color-text-muted)]">{contact.email || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )
         )}
       </div>
 
-      {/* Asset Modal */}
-      <Modal isOpen={isAssetModalOpen} onClose={() => setIsAssetModalOpen(false)} title={editingAsset ? "Update Asset" : "New Asset"} showFooter={false}>
-        <form onSubmit={handleAssetSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Asset Name</label>
-            <input required type="text" value={assetFormData.name} onChange={e => setAssetFormData({...assetFormData, name: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Description</label>
-            <input type="text" value={assetFormData.description} onChange={e => setAssetFormData({...assetFormData, description: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Serial Number</label>
-              <input type="text" placeholder="e.g. SN-12345" value={assetFormData.serialNumber || ''} onChange={e => setAssetFormData({...assetFormData, serialNumber: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Purchase Date</label>
-              <input type="date" value={assetFormData.purchaseDate || ''} onChange={e => setAssetFormData({...assetFormData, purchaseDate: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Category</label>
-              <select value={assetFormData.category} onChange={e => setAssetFormData({...assetFormData, category: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500">
-                <option>Hardware</option><option>Furniture</option><option>Software</option><option>Misc</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Status</label>
-              <select value={assetFormData.status} onChange={e => setAssetFormData({...assetFormData, status: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500">
-                <option>Available</option><option>In Use</option><option>Maintenance</option><option>Lost</option><option>Damaged</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Currently With</label>
-            <select value={assetFormData.currentlyWith} onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500">
-              <option value="Office">Office (In Storage / Available)</option>
-              {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.role})</option>)}
-            </select>
-          </div>
-          {editingAsset && (
-            <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Update Notes</label>
-              <input type="text" placeholder="e.g., Handed over to John" value={assetFormData.updateNotes} onChange={e => setAssetFormData({...assetFormData, updateNotes: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500" />
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-bg-border)]">
-            <button type="button" onClick={() => setIsAssetModalOpen(false)} className="px-4 py-2 font-bold uppercase tracking-widest text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-border)] rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={saveAssetMutation.isPending} className="px-4 py-2 font-bold uppercase tracking-widest text-xs bg-blue-500 text-white hover:bg-blue-600 rounded-xl transition-colors shadow-md shadow-blue-500/20">
-              {saveAssetMutation.isPending ? 'Saving...' : 'Save Asset'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      {/* Immersive Asset Workspace Drawer Modal (70-30 split layout) */}
+      <NexusModal
+        isOpen={isAssetModalOpen}
+        onClose={() => setIsAssetModalOpen(false)}
+        title={editingAsset ? `Asset Workspace: ${assetFormData.name}` : "Create New Asset"}
+        showFooter={false}
+        width="max-w-4xl"
+      >
+        <form onSubmit={handleAssetSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
+          {/* Left 70% Primary Data Fields */}
+          <div className="md:col-span-7 space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Primary Fields</h3>
+            
+            <Input 
+              label="Asset Name" 
+              value={assetFormData.name} 
+              onChange={e => setAssetFormData({...assetFormData, name: e.target.value})} 
+              icon={Building2}
+              required 
+            />
 
-      {/* Contact Modal */}
-      <Modal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} title={editingContact ? "Update Contact" : "New Contact"} showFooter={false}>
-        <form onSubmit={handleContactSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Name</label>
-            <input required type="text" value={contactFormData.name} onChange={e => setContactFormData({...contactFormData, name: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Role / Position</label>
-            <input required type="text" value={contactFormData.role} onChange={e => setContactFormData({...contactFormData, role: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Phone</label>
-              <input required type="text" value={contactFormData.phone} onChange={e => setContactFormData({...contactFormData, phone: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
+              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Description</label>
+              <textarea 
+                value={assetFormData.description} 
+                onChange={e => setAssetFormData({...assetFormData, description: e.target.value})} 
+                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500 transition-colors min-h-[100px]" 
+                placeholder="Describe the asset..."
+              />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Category</label>
+                <select 
+                  value={assetFormData.category} 
+                  onChange={e => setAssetFormData({...assetFormData, category: e.target.value})} 
+                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500"
+                >
+                  <option>Hardware</option>
+                  <option>Furniture</option>
+                  <option>Software</option>
+                  <option>Misc</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Status</label>
+                <select 
+                  value={assetFormData.status} 
+                  onChange={e => setAssetFormData({...assetFormData, status: e.target.value})} 
+                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500"
+                >
+                  <option>Available</option>
+                  <option>In Use</option>
+                  <option>Maintenance</option>
+                  <option>Lost</option>
+                  <option>Damaged</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Email (Optional)</label>
-              <input type="email" value={contactFormData.email} onChange={e => setContactFormData({...contactFormData, email: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500" />
+              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Currently With</label>
+              <select 
+                value={assetFormData.currentlyWith} 
+                onChange={e => setAssetFormData({...assetFormData, currentlyWith: e.target.value})} 
+                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500"
+              >
+                <option value="Office">Office (In Storage / Available)</option>
+                {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.role})</option>)}
+              </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-[var(--color-text-secondary)] mb-1">Notes</label>
-            <textarea value={contactFormData.notes} onChange={e => setContactFormData({...contactFormData, notes: e.target.value})} className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-sm min-h-[80px] outline-none focus:border-blue-500" />
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-bg-border)]">
-            <button type="button" onClick={() => setIsContactModalOpen(false)} className="px-4 py-2 font-bold uppercase tracking-widest text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-border)] rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={saveContactMutation.isPending} className="px-4 py-2 font-bold uppercase tracking-widest text-xs bg-blue-500 text-white hover:bg-blue-600 rounded-xl transition-colors shadow-md shadow-blue-500/20">
-              {saveContactMutation.isPending ? 'Saving...' : 'Save Contact'}
-            </button>
+
+          {/* Right 30% Metadata & Action Panel */}
+          <div className="md:col-span-3 border-l border-[var(--color-bg-border)] pl-6 space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Metadata & Actions</h3>
+            
+            <Input 
+              label="Serial Number (S/N)" 
+              placeholder="e.g. SN-12345" 
+              value={assetFormData.serialNumber || ''} 
+              onChange={e => setAssetFormData({...assetFormData, serialNumber: e.target.value})} 
+              icon={Database}
+            />
+
+            <div>
+              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Purchase Date</label>
+              <input 
+                type="date" 
+                value={assetFormData.purchaseDate || ''} 
+                onChange={e => setAssetFormData({...assetFormData, purchaseDate: e.target.value})} 
+                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500" 
+              />
+            </div>
+
+            {editingAsset && (
+              <Input 
+                label="Update Remark / Notes" 
+                placeholder="e.g., Handed to John" 
+                value={assetFormData.updateNotes || ''} 
+                onChange={e => setAssetFormData({...assetFormData, updateNotes: e.target.value})} 
+                icon={FileText}
+              />
+            )}
+
+            <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={saveAssetMutation.isPending}
+              >
+                {saveAssetMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Save Asset'}
+              </Button>
+              
+              {editingAsset && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full !text-rose-500 hover:!bg-rose-500/10" 
+                  onClick={() => {
+                    if (confirm('Delete asset permanently?')) {
+                      deleteAssetMutation.mutate(editingAsset._id);
+                    }
+                  }}
+                >
+                  Delete Asset
+                </Button>
+              )}
+              
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="w-full text-[var(--color-text-secondary)]" 
+                onClick={() => setIsAssetModalOpen(false)}
+              >
+                Close (Esc)
+              </Button>
+            </div>
           </div>
         </form>
-      </Modal>
+      </NexusModal>
+
+      {/* Immersive Contact Workspace Drawer Modal (70-30 split layout) */}
+      <NexusModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        title={editingContact ? `Contact Workspace: ${contactFormData.name}` : "Create New Contact"}
+        showFooter={false}
+        width="max-w-4xl"
+      >
+        <form onSubmit={handleContactSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
+          {/* Left 70% Primary Data Fields */}
+          <div className="md:col-span-7 space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2">Primary Fields</h3>
+            
+            <Input 
+              label="Contact Name" 
+              value={contactFormData.name} 
+              onChange={e => setContactFormData({...contactFormData, name: e.target.value})} 
+              icon={Contact}
+              required 
+            />
+
+            <Input 
+              label="Role / Position" 
+              value={contactFormData.role} 
+              onChange={e => setContactFormData({...contactFormData, role: e.target.value})} 
+              icon={Shield}
+              required 
+            />
+
+            <div>
+              <label className="block text-[9px] font-black tracking-widest uppercase text-[var(--color-text-muted)] mb-1.5 ml-1">Internal Remarks / Notes</label>
+              <textarea 
+                value={contactFormData.notes} 
+                onChange={e => setContactFormData({...contactFormData, notes: e.target.value})} 
+                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500 transition-colors min-h-[120px]" 
+                placeholder="Add special notes..."
+              />
+            </div>
+          </div>
+
+          {/* Right 30% Metadata & Action Panel */}
+          <div className="md:col-span-3 border-l border-[var(--color-bg-border)] pl-6 space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Details & Actions</h3>
+            
+            <Input 
+              label="Phone Number" 
+              value={contactFormData.phone} 
+              onChange={e => setContactFormData({...contactFormData, phone: e.target.value})} 
+              icon={Phone}
+              required 
+            />
+
+            <Input 
+              label="Email Address" 
+              type="email"
+              value={contactFormData.email || ''} 
+              onChange={e => setContactFormData({...contactFormData, email: e.target.value})} 
+              icon={Mail}
+            />
+
+            <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={saveContactMutation.isPending}
+              >
+                {saveContactMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Save Contact'}
+              </Button>
+              
+              {editingContact && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full !text-rose-500 hover:!bg-rose-500/10" 
+                  onClick={() => {
+                    if (confirm('Delete contact permanently?')) {
+                      deleteContactMutation.mutate(editingContact._id);
+                    }
+                  }}
+                >
+                  Delete Contact
+                </Button>
+              )}
+              
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="w-full text-[var(--color-text-secondary)]" 
+                onClick={() => setIsContactModalOpen(false)}
+              >
+                Close (Esc)
+              </Button>
+            </div>
+          </div>
+        </form>
+      </NexusModal>
     </div>
   );
 };

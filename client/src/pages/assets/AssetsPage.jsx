@@ -2,18 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Link2, ExternalLink, Plus, Trash2, Search, Database, X,
-  Shield, Briefcase, Pencil, Check, XCircle, HardDrive, 
-  RefreshCw, Cloud, Lock, Globe, FileText, Layout, UploadCloud, Download, Eye
+  Link2, ExternalLink, Plus, Trash2, Search, Database,
+  Shield, RefreshCw, Cloud, Globe, FileText, HardDrive, Video, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   NexusModal, NexusDropdown, PageHeader, 
   PageContainer, Card, Button, Input, StatCard, Badge, 
-  DataTable, InputFormDrawer, PageSkeleton
+  InputFormDrawer, PageSkeleton
 } from '../../components/ui';
 import { format } from 'date-fns';
-import { UploadDropzone } from '../../utils/uploadthing';
 
 const AssetsPage = () => {
   const { user } = useAuth();
@@ -22,15 +20,16 @@ const AssetsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [driveFiles, setDriveFiles] = useState([]);
-  const [previewAsset, setPreviewAsset] = useState(null);
+
+  // Google account link states
+  const [googleAccounts, setGoogleAccounts] = useState([]);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [simEmail, setSimEmail] = useState('');
+  const [linking, setLinking] = useState(false);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [newAsset, setNewAsset] = useState({ projectId: '', name: '', link: '' });
+  const [newAsset, setNewAsset] = useState({ projectIds: [], name: '', link: '', type: 'other' });
   const [submitting, setSubmitting] = useState(false);
-  const [uploadMode, setUploadMode] = useState(false);
-
-  const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ name: '', link: '', projectId: '' });
 
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
@@ -39,14 +38,16 @@ const AssetsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [assetsRes, projectsRes, driveRes] = await Promise.all([
+      const [assetsRes, projectsRes, driveRes, googleRes] = await Promise.all([
         axios.get('/api/assets'),
         axios.get('/api/projects'),
-        axios.get('/api/google/drive/files').catch(() => ({ data: [] }))
+        axios.get('/api/google/drive/files').catch(() => ({ data: [] })),
+        axios.get('/api/google/accounts').catch(() => ({ data: [] }))
       ]);
       setAssets(assetsRes.data);
       setProjects(projectsRes.data);
       setDriveFiles(driveRes.data);
+      setGoogleAccounts(googleRes.data);
     } catch (err) {
       console.error('Error fetching assets:', err);
     } finally {
@@ -56,36 +57,23 @@ const AssetsPage = () => {
 
   const handleAddAsset = async (e) => {
     if (e) e.preventDefault();
-    if (!newAsset.name) return;
+    if (!newAsset.name || !newAsset.link) return;
 
     setSubmitting(true);
     try {
       const res = await axios.post('/api/assets', {
-        projectId: newAsset.projectId || null,
+        projectIds: newAsset.projectIds,
         name: newAsset.name,
-        link: newAsset.link.trim()
+        link: newAsset.link.trim(),
+        type: newAsset.type || 'other'
       });
       setAssets([res.data, ...assets]);
       setIsDrawerOpen(false);
-      setNewAsset({ projectId: '', name: '', link: '' });
+      setNewAsset({ projectIds: [], name: '', link: '', type: 'other' });
     } catch (err) {
       console.error('Add asset error:', err);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const saveEdit = async (assetId) => {
-    try {
-      const res = await axios.put(`/api/assets/${assetId}`, {
-        name: editData.name,
-        link: editData.link.trim(),
-        projectId: editData.projectId || null
-      });
-      setAssets(assets.map(a => a._id === assetId ? res.data : a));
-      setEditingId(null);
-    } catch (err) {
-      console.error('Edit asset error:', err);
     }
   };
 
@@ -100,9 +88,95 @@ const AssetsPage = () => {
     }
   };
 
+  const handleUnlinkAccount = async (id) => {
+    try {
+      await axios.delete(`/api/google/accounts/${id}`);
+      setGoogleAccounts(googleAccounts.filter(acc => acc._id !== id));
+      // Refresh drive files as well
+      const driveRes = await axios.get('/api/google/drive/files').catch(() => ({ data: [] }));
+      setDriveFiles(driveRes.data);
+    } catch (err) {
+      console.error('Failed to unlink account:', err);
+    }
+  };
+
+  const handleSimulateConnect = async (e) => {
+    if (e) e.preventDefault();
+    if (!simEmail || !simEmail.includes('@')) return;
+    setLinking(true);
+    try {
+      const res = await axios.post('/api/google/accounts/simulate', { email: simEmail });
+      setGoogleAccounts([...googleAccounts, res.data]);
+      setIsLinkModalOpen(false);
+      setSimEmail('');
+      // Refresh drive files
+      const driveRes = await axios.get('/api/google/drive/files').catch(() => ({ data: [] }));
+      setDriveFiles(driveRes.data);
+    } catch (err) {
+      console.error('Failed to simulate connect:', err);
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  const handleOAuthConnect = () => {
+    window.location.href = `/api/auth/google?state=link_${user?._id}`;
+  };
+
+  const getAssetTypeConfig = (type, link) => {
+    let detectedType = type;
+    const url = (link || '').toLowerCase();
+    if (!type || type === 'other') {
+      if (url.includes('docs.google.com/spreadsheets')) detectedType = 'sheet';
+      else if (url.includes('docs.google.com/document')) detectedType = 'docs';
+      else if (url.includes('docs.google.com/presentation')) detectedType = 'presentation';
+      else if (url.includes('drive.google.com')) detectedType = 'drive';
+      else if (url.includes('meet.google.com')) detectedType = 'meet';
+    }
+
+    switch (detectedType) {
+      case 'drive':
+        return {
+          icon: Cloud,
+          label: 'Google Drive',
+          colorClass: 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+        };
+      case 'sheet':
+        return {
+          icon: Database,
+          label: 'Google Sheet',
+          colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+        };
+      case 'docs':
+        return {
+          icon: FileText,
+          label: 'Google Doc',
+          colorClass: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20'
+        };
+      case 'presentation':
+        return {
+          icon: Globe,
+          label: 'Presentation',
+          colorClass: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+        };
+      case 'meet':
+        return {
+          icon: Video,
+          label: 'Google Meet',
+          colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/20'
+        };
+      default:
+        return {
+          icon: Link2,
+          label: 'Link',
+          colorClass: 'text-[var(--color-text-secondary)] bg-[var(--color-bg-workspace)] border-[var(--color-bg-border)]'
+        };
+    }
+  };
+
   const filteredAssets = useMemo(() => assets.filter(a =>
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.projectId?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (a.projectIds || []).some(p => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
   ), [assets, searchTerm]);
 
   const driveFolders = useMemo(() => 
@@ -127,7 +201,7 @@ const AssetsPage = () => {
                    className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
                 />
              </div>
-             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setUploadMode(true); }}><Plus size={14} /> Add File</Button>
+             <Button size="sm" onClick={() => { setIsDrawerOpen(true); setNewAsset({ projectIds: [], name: '', link: '', type: 'other' }); }}><Plus size={14} /> Add Link</Button>
           </div>
         }
       />
@@ -135,7 +209,7 @@ const AssetsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
         <StatCard label="Google Drive Folders" value={driveFolders.length} icon={Cloud} variant="mint" />
-        <StatCard label="Cloud Storage" value="CONNECTED" icon={UploadCloud} variant="apricot" />
+        <StatCard label="Cloud Storage" value="CONNECTED" icon={Cloud} variant="apricot" />
         <StatCard label="Status" value="ACTIVE" icon={HardDrive} variant="slate" />
       </div>
 
@@ -152,7 +226,7 @@ const AssetsPage = () => {
                  <table className="w-full text-left">
                     <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                        <tr>
-                          <th className="px-6 py-4">Project</th>
+                          <th className="px-6 py-4">Projects</th>
                           <th className="px-6 py-4">File Name</th>
                           <th className="px-6 py-4">Link / URL</th>
                           <th className="px-6 py-4 text-right">Actions</th>
@@ -166,45 +240,53 @@ const AssetsPage = () => {
                                <p className="text-[10px] font-black uppercase tracking-widest">No files uploaded yet</p>
                             </td>
                          </tr>
-                       ) : filteredAssets.map((asset) => (
-                         <tr key={asset._id} className="group hover:bg-[var(--color-bg-secondary)]/50 transition-all">
-                            <td className="px-6 py-4">
-                               <Badge variant="info" className="text-[8px]">{asset.projectId?.name || 'ROOT'}</Badge>
-                            </td>
-                            <td className="px-6 py-4">
-                               <p className="text-[11px] font-black text-[var(--color-text-primary)] leading-tight">{asset.name}</p>
-                               <p className="text-[8px] text-[var(--color-text-muted)] uppercase mt-0.5">{format(new Date(asset.createdAt), 'MMM dd, yyyy')}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                               {asset.link ? (
-                                 <div className="flex items-center gap-2">
-                                   <Button 
-                                     size="xs" 
-                                     variant="ghost" 
-                                     className="text-blue-400 hover:bg-blue-500/10 flex items-center gap-1.5 py-1 px-2.5 rounded-lg border border-blue-500/20"
-                                     onClick={() => setPreviewAsset(asset)}
-                                   >
-                                     <Eye size={12} /> Preview
-                                   </Button>
-                                   <a 
-                                     href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`} 
-                                     download={asset.name}
-                                     target="_blank" 
-                                     rel="noopener noreferrer"
-                                     className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
-                                   >
-                                     <Download size={12} /> Download
-                                   </a>
+                       ) : filteredAssets.map((asset) => {
+                         const typeConfig = getAssetTypeConfig(asset.type, asset.link);
+                         const TypeIcon = typeConfig.icon;
+                         return (
+                           <tr key={asset._id} className="group hover:bg-[var(--color-bg-secondary)]/50 transition-all">
+                              <td className="px-6 py-4">
+                                 {asset.projectIds && asset.projectIds.length > 0 ? (
+                                   <div className="flex flex-wrap gap-1">
+                                     {asset.projectIds.map(p => (
+                                       <Badge key={p._id} variant="info" className="text-[8px]">{p.name}</Badge>
+                                     ))}
+                                   </div>
+                                 ) : <Badge variant="slate" className="text-[8px]">ROOT</Badge>}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${typeConfig.colorClass}`}>
+                                       <TypeIcon size={14} />
+                                    </div>
+                                    <div>
+                                       <p className="text-[11px] font-black text-[var(--color-text-primary)] leading-tight">{asset.name}</p>
+                                       <p className="text-[8px] text-[var(--color-text-muted)] uppercase mt-0.5">{format(new Date(asset.createdAt), 'MMM dd, yyyy')}</p>
+                                    </div>
                                  </div>
-                               ) : <span className="text-[9px] italic opacity-30">N/A</span>}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                               <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="xs" className="text-rose-500 hover:bg-rose-500/10" onClick={() => setDeleteModal({ open: true, assetId: asset._id })}><Trash2 size={12} /></Button>
-                               </div>
-                            </td>
-                         </tr>
-                       ))}
+                              </td>
+                              <td className="px-6 py-4">
+                                 {asset.link ? (
+                                   <div className="flex items-center gap-2">
+                                     <a 
+                                       href={asset.link.startsWith('http') ? asset.link : `https://${asset.link}`} 
+                                       target="_blank" 
+                                       rel="noopener noreferrer"
+                                       className="inline-flex items-center gap-1.5 text-[10px] font-bold text-blue-500 hover:bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20"
+                                     >
+                                       <ExternalLink size={12} /> Open Link
+                                     </a>
+                                   </div>
+                                 ) : <span className="text-[9px] italic opacity-30">N/A</span>}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="xs" className="text-rose-500 hover:bg-rose-500/10" onClick={() => setDeleteModal({ open: true, assetId: asset._id })}><Trash2 size={12} /></Button>
+                                 </div>
+                              </td>
+                           </tr>
+                         );
+                       })}
                     </tbody>
                  </table>
               </div>
@@ -212,30 +294,77 @@ const AssetsPage = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
+           {/* Google Workspace Connection Panel */}
            <Card className="p-4 space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                 <Cloud size={14} /> Google Drive Sync
-              </h4>
-              <div className="space-y-2">
-                 {driveFolders.length === 0 ? (
-                   <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-4">No volumes synced</p>
-                 ) : driveFolders.map(folder => (
-                   <a 
-                     key={folder.id} 
-                     href={folder.webViewLink} 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] flex items-center gap-3 hover:border-blue-500 transition-all group"
-                   >
-                      <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg group-hover:scale-110 transition-transform">
-                         <HardDrive size={14} />
+              <div className="flex items-center justify-between">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-500 flex items-center gap-2">
+                    <Cloud size={14} /> Google Workspace
+                 </h4>
+                 <Button 
+                   size="xs"
+                   onClick={() => setIsLinkModalOpen(true)}
+                   className="!px-3 !py-2 !text-[9px] font-black uppercase tracking-widest"
+                 >
+                    <Plus size={12} /> Link Account
+                 </Button>
+              </div>
+
+              {/* Linked Accounts with clickable icons for each */}
+              <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar">
+                {googleAccounts.length === 0 ? (
+                   <p className="text-[9px] text-[var(--color-text-muted)] italic text-center py-4">No Google accounts linked yet.</p>
+                ) : googleAccounts.map((acc, index) => (
+                   <div key={acc._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3 relative group">
+                      {/* Header with Account Details & Unlink Trigger */}
+                      <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2 min-w-0">
+                            <div className="p-1.5 bg-blue-500/10 text-blue-500 rounded-lg">
+                               <Cloud size={14} />
+                            </div>
+                            <div className="min-w-0">
+                               <p className="text-[10px] font-black uppercase tracking-tight truncate leading-none text-[var(--color-text-primary)]">{acc.email.split('@')[0]}</p>
+                               <p className="text-[8px] text-[var(--color-text-muted)] truncate mt-0.5">{acc.email}</p>
+                            </div>
+                         </div>
+                         <button 
+                           onClick={() => handleUnlinkAccount(acc._id)}
+                           className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                           title="Unlink Account"
+                         >
+                            <Trash2 size={12} />
+                         </button>
                       </div>
-                      <div className="min-w-0">
-                         <p className="text-[10px] font-black uppercase truncate leading-tight">{folder.name}</p>
-                         <p className="text-[8px] text-[var(--color-text-muted)] font-black italic">Cloud Folder</p>
+
+                      {/* Set of Clickable Google Workspace Service Icons */}
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[
+                          { name: 'Drive', icon: Cloud, color: 'text-blue-500 bg-blue-500/10 border-blue-500/20 hover:border-blue-500/50', url: `https://drive.google.com/drive/u/${index}/` },
+                          { name: 'Sheets', icon: Database, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/50', url: `https://docs.google.com/spreadsheets/u/${index}/` },
+                          { name: 'Docs', icon: FileText, color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20 hover:border-indigo-500/50', url: `https://docs.google.com/document/u/${index}/` },
+                          { name: 'Slides', icon: Globe, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20 hover:border-amber-500/50', url: `https://docs.google.com/presentation/u/${index}/` },
+                          { name: 'Meet', icon: Video, color: 'text-rose-500 bg-rose-500/10 border-rose-500/20 hover:border-rose-500/50', url: `https://meet.google.com/?authuser=${acc.email}` }
+                        ].map(service => {
+                          const Icon = service.icon;
+                          return (
+                            <a 
+                              key={service.name} 
+                              href={service.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex flex-col items-center justify-center p-2 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/40 hover:bg-[var(--color-bg-workspace)] hover:scale-105 transition-all relative group" 
+                              title={`Open Google ${service.name}`}
+                            >
+                              <div className={`p-1.5 rounded-lg ${service.color} shrink-0 mb-1`}>
+                                <Icon size={12} />
+                              </div>
+                              <span className="text-[7px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">{service.name}</span>
+                              <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.5)]" />
+                            </a>
+                          );
+                        })}
                       </div>
-                   </a>
-                 ))}
+                   </div>
+                ))}
               </div>
            </Card>
 
@@ -247,7 +376,7 @@ const AssetsPage = () => {
                     <Shield size={14} className="text-emerald-500" />
                  </div>
                  <div className="p-2.5 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-[10px] font-bold italic text-slate-300">All registered assets are encrypted at rest and hosted securely via UploadThing cloud infrastructure.</p>
+                    <p className="text-[10px] font-bold italic text-slate-300">All registered assets are saved as secure external references.</p>
                  </div>
               </div>
            </Card>
@@ -257,53 +386,45 @@ const AssetsPage = () => {
       <InputFormDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Add File or Link"
+        title="Add Link Asset"
       >
         <div className="p-6 space-y-6">
-           <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-1 rounded-lg">
-              <Button size="xs" variant={uploadMode ? 'primary' : 'ghost'} className="flex-1" onClick={() => setUploadMode(true)}>
-                <UploadCloud size={12} className="mr-1.5" /> Upload File (UploadThing)
-              </Button>
-              <Button size="xs" variant={!uploadMode ? 'primary' : 'ghost'} className="flex-1" onClick={() => setUploadMode(false)}>
-                <Link2 size={12} className="mr-1.5" /> Direct URL Link
-              </Button>
-           </div>
-
-           {uploadMode ? (
-             <div className="border border-dashed border-[var(--color-bg-border)] rounded-xl p-8 text-center bg-[var(--color-bg-secondary)]/30 space-y-4">
-                <UploadDropzone
-                  endpoint="documentUploader"
-                  onClientUploadComplete={(res) => {
-                    if (res && res.length > 0) {
-                      setNewAsset({ ...newAsset, link: res[0].url, name: res[0].name || 'Uploaded File' });
-                      setUploadMode(false);
-                    }
-                  }}
-                  onUploadError={(error) => {
-                    console.error("Upload error:", error);
-                  }}
-                />
-                <p className="text-[10px] text-[var(--color-text-muted)] italic">Drag & drop files or click to upload securely via UploadThing.</p>
-             </div>
-           ) : null}
-
            <form onSubmit={handleAddAsset} className="space-y-6">
               <div className="space-y-4">
-                 <Input label="File Name / Title" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
-                 <Input label="File Link (URL)" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} />
+                 <Input label="Asset Title / Name" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
+                 <Input label="Asset URL Link" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} required />
+                 
                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Asset Type</label>
                     <NexusDropdown 
-                      options={[{ value: '', label: 'Root / No Project' }, ...projects.map(p => ({ value: p._id, label: p.name }))]} 
-                      value={newAsset.projectId} 
-                      onChange={(val) => setNewAsset({ ...newAsset, projectId: val })} 
-                      placeholder="Select Project"
+                      options={[
+                        { value: 'drive', label: 'Google Drive' },
+                        { value: 'sheet', label: 'Google Sheet' },
+                        { value: 'docs', label: 'Google Doc' },
+                        { value: 'presentation', label: 'Presentation' },
+                        { value: 'meet', label: 'Google Meet' },
+                        { value: 'other', label: 'Other Link' }
+                      ]} 
+                      value={newAsset.type} 
+                      onChange={(val) => setNewAsset({ ...newAsset, type: val })} 
+                      placeholder="Select Asset Type"
+                    />
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Associated Projects</label>
+                    <NexusDropdown 
+                      isMulti
+                      options={projects.map(p => ({ value: p._id, label: p.name }))} 
+                      value={newAsset.projectIds || []} 
+                      onChange={(val) => setNewAsset({ ...newAsset, projectIds: Array.isArray(val) ? val : [val].filter(Boolean) })} 
+                      placeholder="Select Projects"
                       searchable
                     />
                  </div>
               </div>
-              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name}>
-                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add File</>}
+              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
+                 {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add Asset</>}
               </Button>
            </form>
         </div>
@@ -320,55 +441,62 @@ const AssetsPage = () => {
         onConfirm={handleDeleteAsset}
       />
 
-      {previewAsset && (
-        <div className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setPreviewAsset(null)}>
-          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText size={18} className="text-blue-500" />
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-tight">{previewAsset.name}</h3>
-                  <p className="text-[10px] text-[var(--color-text-muted)] font-mono">{previewAsset.link}</p>
-                </div>
+      <AnimatePresence>
+        {isLinkModalOpen && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsLinkModalOpen(false)}>
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }} 
+              className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] w-full max-w-sm rounded-[2rem] shadow-2xl p-6 relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setIsLinkModalOpen(false)} 
+                className="absolute top-4 right-4 p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
+              >
+                <X size={16} />
+              </button>
+              
+              <h3 className="text-sm font-black uppercase tracking-tight text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                <Cloud className="text-blue-500" size={16} /> Link Google Account
+              </h3>
+              <p className="text-[10px] text-[var(--color-text-muted)] mb-4">Link Google accounts to access Drive, Sheets, Docs, and Presentation resources.</p>
+              
+              <button 
+                onClick={handleOAuthConnect}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mb-4 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/10"
+              >
+                <Cloud size={14} /> Connect via Google OAuth
+              </button>
+              
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-[var(--color-bg-border)]"></div>
+                <span className="flex-shrink mx-3 text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Or simulate</span>
+                <div className="flex-grow border-t border-[var(--color-bg-border)]"></div>
               </div>
-              <div className="flex items-center gap-2">
-                <a 
-                  href={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`}
-                  download={previewAsset.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+              
+              <form onSubmit={handleSimulateConnect} className="mt-3 space-y-3">
+                <input 
+                  type="email" 
+                  value={simEmail} 
+                  onChange={e => setSimEmail(e.target.value)} 
+                  placeholder="Enter google email..." 
+                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2.5 text-xs font-bold outline-none text-[var(--color-text-primary)]"
+                  required
+                />
+                <button 
+                  type="submit" 
+                  disabled={linking || !simEmail}
+                  className="w-full py-2.5 bg-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]/80 text-[var(--color-text-primary)] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                 >
-                  <Download size={14} /> Direct Download
-                </a>
-                <Button variant="ghost" size="sm" onClick={() => setPreviewAsset(null)}>
-                  <X size={18} />
-                </Button>
-              </div>
-            </div>
-            <div className="p-6 flex-1 flex items-center justify-center overflow-auto bg-slate-950/60 min-h-[400px]">
-              {previewAsset.link.match(/\.(jpeg|jpg|gif|png|webp)$/i) || previewAsset.link.includes('utfs.io/f/') ? (
-                <img src={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`} alt={previewAsset.name} className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl border border-white/10" />
-              ) : previewAsset.link.match(/\.(pdf)$/i) ? (
-                <iframe src={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`} title={previewAsset.name} className="w-full h-[70vh] rounded-lg border border-white/10" />
-              ) : (
-                <div className="text-center space-y-3">
-                  <FileText size={64} className="mx-auto text-blue-500 animate-pulse" />
-                  <p className="text-xs font-mono text-[var(--color-text-muted)]">Document preview unavailable in browser frame.</p>
-                  <a 
-                    href={previewAsset.link.startsWith('http') ? previewAsset.link : `https://${previewAsset.link}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-xs font-bold rounded-xl hover:bg-blue-600 transition-colors"
-                  >
-                    <ExternalLink size={14} /> Open Document in New Tab
-                  </a>
-                </div>
-              )}
-            </div>
+                  {linking ? 'Linking...' : 'Connect Simulated Account'}
+                </button>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </PageContainer>
   );
 };

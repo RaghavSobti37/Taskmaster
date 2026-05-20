@@ -2,8 +2,17 @@ const Asset = require('../models/Asset');
 
 exports.getAssets = async (req, res) => {
   try {
-    const assets = await Asset.find()
-      .populate('projectId', 'name')
+    const { projectId } = req.query;
+    const query = {};
+    if (projectId) {
+      if (projectId === 'null') {
+        query.projectIds = { $size: 0 };
+      } else {
+        query.projectIds = projectId;
+      }
+    }
+    const assets = await Asset.find(query)
+      .populate('projectIds', 'name')
       .populate('createdBy', 'name')
       .sort('-createdAt');
     res.json(assets);
@@ -14,17 +23,24 @@ exports.getAssets = async (req, res) => {
 
 exports.createAsset = async (req, res) => {
   try {
-    const { projectId, name, link } = req.body;
+    const { projectId, projectIds, name, link, type } = req.body;
+    let finalProjectIds = [];
+    if (Array.isArray(projectIds)) {
+      finalProjectIds = projectIds.filter(Boolean);
+    } else if (projectId) {
+      finalProjectIds = [projectId];
+    }
 
     const asset = await Asset.create({
-      projectId: projectId || null,
+      projectIds: finalProjectIds,
       name,
       link: link || '',
+      type: type || 'other',
       createdBy: req.user._id
     });
 
     const populatedAsset = await Asset.findById(asset._id)
-      .populate('projectId', 'name')
+      .populate('projectIds', 'name')
       .populate('createdBy', 'name');
       
     res.status(201).json(populatedAsset);
@@ -43,15 +59,20 @@ exports.updateAsset = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const { name, link, projectId } = req.body;
+    const { name, link, projectId, projectIds, type } = req.body;
     if (name !== undefined) asset.name = name;
     if (link !== undefined) asset.link = link;
-    if (projectId !== undefined) asset.projectId = projectId || null;
+    if (type !== undefined) asset.type = type;
+    if (projectIds !== undefined) {
+      asset.projectIds = Array.isArray(projectIds) ? projectIds.filter(Boolean) : [];
+    } else if (projectId !== undefined) {
+      asset.projectIds = projectId ? [projectId] : [];
+    }
 
     await asset.save();
 
     const populatedAsset = await Asset.findById(asset._id)
-      .populate('projectId', 'name')
+      .populate('projectIds', 'name')
       .populate('createdBy', 'name');
 
     res.json(populatedAsset);

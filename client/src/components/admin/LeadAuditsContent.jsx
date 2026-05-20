@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useLeadAudits } from '../../hooks/useTaskmasterQueries';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
-  History, Search, RefreshCw, Calendar, ArrowRight, User, FileText
+  History, Search, RefreshCw, Calendar, ArrowRight, User, FileText, Trash2
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, Input } from '../ui';
 import { format } from 'date-fns';
 
 const LeadAuditsContent = () => {
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
+  const [purging, setPurging] = useState(false);
 
   const { data, isLoading, refetch, isFetching } = useLeadAudits({
     page,
@@ -105,6 +109,22 @@ const LeadAuditsContent = () => {
     }
   ];
 
+  const handlePurgeLogs = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete all lead change logs? This cannot be undone.")) {
+      return;
+    }
+    try {
+      setPurging(true);
+      await axios.delete('/api/crm/leads/audit-logs/purge');
+      refetch();
+    } catch (err) {
+      console.error('Failed to purge logs:', err);
+      alert(err.response?.data?.error || 'Failed to clear logs.');
+    } finally {
+      setPurging(false);
+    }
+  };
+
   return (
     <Card className="flex flex-col h-full !border-none">
       <div className="p-4 border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-4 bg-[var(--color-bg-secondary)]/50">
@@ -118,6 +138,18 @@ const LeadAuditsContent = () => {
           />
         </div>
         <div className="flex items-center gap-2">
+          {user?.role === 'admin' && (
+            <Button 
+              variant="danger" 
+              size="sm" 
+              onClick={handlePurgeLogs} 
+              disabled={purging}
+              className="flex items-center gap-1.5 font-bold uppercase text-[9px] bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 size={12} className={purging ? 'animate-pulse' : ''} />
+              Clear Audit Logs
+            </Button>
+          )}
           <Button 
             variant="secondary" 
             size="sm" 

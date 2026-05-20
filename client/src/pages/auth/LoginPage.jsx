@@ -51,7 +51,7 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-workspace)] flex items-center justify-center p-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md bg-[var(--color-bg-surface)] p-8 rounded-3xl border border-[var(--color-bg-border)] shadow-xl"
@@ -61,10 +61,9 @@ const LoginPage = () => {
             CK
           </div>
           <h1 className="text-2xl font-bold tracking-tight">TaskMaster</h1>
-          <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-2 leading-relaxed">
-            A comprehensive work management, task tracking, and email marketing platform designed to organize team projects, coordinate newsletters, and safely process CRM customer lists.
+          <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed">
+            A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
           </p>
-          <p className="text-[var(--color-text-secondary)] mt-4 font-semibold">Sign In to Continue</p>
         </div>
 
         {error && (
@@ -78,8 +77,8 @@ const LoginPage = () => {
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email or Username</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 required
                 className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] focus:border-transparent outline-none transition-all"
                 placeholder="Email, Phone, or Name"
@@ -93,8 +92,8 @@ const LoginPage = () => {
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Password</label>
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
                 className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] focus:border-transparent outline-none transition-all"
                 placeholder="••••••••"
@@ -104,7 +103,7 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
@@ -121,7 +120,7 @@ const LoginPage = () => {
             </div>
           </div>
 
-          <button 
+          <button
             type="button"
             onClick={handleGoogleLogin}
             className="w-full bg-white text-gray-700 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm"

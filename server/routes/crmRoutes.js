@@ -52,6 +52,7 @@ router.route('/leads')
   .post(crmController.createLead);
 
 router.get('/leads/audit-logs', admin, crmController.getAllAuditLogs);
+router.delete('/leads/audit-logs/purge', admin, crmController.purgeAuditLogs);
 
 router.route('/leads/:id')
   .put(checkLock(Lead), crmController.updateLead)

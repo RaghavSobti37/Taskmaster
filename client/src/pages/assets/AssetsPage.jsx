@@ -183,6 +183,28 @@ const AssetsPage = () => {
     driveFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
   [driveFiles]);
 
+  const sheetsCount = useMemo(() => {
+    return assets.filter(a => {
+      let detectedType = a.type;
+      const url = (a.link || '').toLowerCase();
+      if (!a.type || a.type === 'other') {
+        if (url.includes('docs.google.com/spreadsheets')) detectedType = 'sheet';
+      }
+      return detectedType === 'sheet';
+    }).length;
+  }, [assets]);
+
+  const docsCount = useMemo(() => {
+    return assets.filter(a => {
+      let detectedType = a.type;
+      const url = (a.link || '').toLowerCase();
+      if (!a.type || a.type === 'other') {
+        if (url.includes('docs.google.com/document')) detectedType = 'docs';
+      }
+      return detectedType === 'docs';
+    }).length;
+  }, [assets]);
+
   if (loading && assets.length === 0) return <PageSkeleton />;
 
   return (
@@ -209,8 +231,8 @@ const AssetsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
         <StatCard label="Google Drive Folders" value={driveFolders.length} icon={Cloud} variant="mint" />
-        <StatCard label="Cloud Storage" value="CONNECTED" icon={Cloud} variant="apricot" />
-        <StatCard label="Status" value="ACTIVE" icon={HardDrive} variant="slate" />
+        <StatCard label="Google Sheets" value={sheetsCount} icon={Database} variant="apricot" />
+        <StatCard label="Google Docs" value={docsCount} icon={FileText} variant="slate" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

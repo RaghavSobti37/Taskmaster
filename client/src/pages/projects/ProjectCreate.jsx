@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Select from 'react-select';
+import CKDropdown from '../../components/ui/CKDropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
@@ -40,9 +40,9 @@ const ProjectCreate = () => {
     fetchUsers();
   }, []);
 
-  const addMember = (userOption) => {
-    const user = users.find(u => u._id === userOption.value);
-    if (!members.find(m => m.userId === user._id)) {
+  const addMember = (userId) => {
+    const user = users.find(u => u._id === userId);
+    if (user && !members.find(m => m.userId === user._id)) {
       setMembers([...members, { userId: user._id, name: user.name, role: user.role, avatar: user.avatar }]);
     }
   };
@@ -54,9 +54,9 @@ const ProjectCreate = () => {
   const handleAddCustomTag = (e) => {
     if (e.key === 'Enter' && customTag.trim()) {
       e.preventDefault();
-      if (!tags.find(t => t.value === customTag.trim())) {
-        const newTag = { value: customTag.trim(), label: customTag.trim() };
-        setTags([...tags, newTag]);
+      const trimmed = customTag.trim();
+      if (!tags.includes(trimmed)) {
+        setTags([...tags, trimmed]);
       }
       setCustomTag('');
     }
@@ -69,7 +69,7 @@ const ProjectCreate = () => {
       await axios.post('/api/projects', { 
         name, 
         description: desc, 
-        tags: tags.map(t => t.value),
+        tags: tags,
         members: members.map(m => ({ userId: m.userId, role: m.role }))
       });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -80,6 +80,16 @@ const ProjectCreate = () => {
       setLoading(false);
     }
   };
+
+  const dropdownTagOptions = React.useMemo(() => {
+    const opts = [...predefinedTags];
+    tags.forEach(tag => {
+      if (!opts.some(o => o.value === tag)) {
+        opts.push({ value: tag, label: tag });
+      }
+    });
+    return opts;
+  }, [tags]);
 
   const formatOptionLabel = ({ value, label }) => {
     const user = users.find(u => u._id === value);
@@ -121,16 +131,12 @@ const ProjectCreate = () => {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Tags</label>
-              <Select
-                isMulti
-                options={predefinedTags}
+              <CKDropdown
+                multi
+                options={dropdownTagOptions}
                 value={tags}
                 onChange={setTags}
                 placeholder="Select tags..."
-                menuPortalTarget={document.body}
-                className="react-select-container"
-                classNamePrefix="react-select"
-                styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
               />
               <input 
                 type="text"
@@ -161,15 +167,12 @@ const ProjectCreate = () => {
           </div>
 
           <div className="space-y-6">
-            <Select
+            <CKDropdown
               options={users.map(u => ({ value: u._id, label: u.name }))}
+              value=""
               onChange={addMember}
               placeholder="Search team members..."
-              formatOptionLabel={formatOptionLabel}
-              menuPortalTarget={document.body}
-              className="react-select-container"
-              classNamePrefix="react-select"
-              styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+              renderOption={formatOptionLabel}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

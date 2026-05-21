@@ -13,8 +13,16 @@ const Artist = require('../models/Artist');
 
 const CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID?.replace(/['"]/g, '').trim();
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET?.replace(/['"]/g, '').trim();
-const REDIRECT_URI  = process.env.SPOTIFY_OAUTH_REDIRECT_URI
-  || 'http://localhost:5000/api/artists/auth/callback/spotify';
+const getRedirectUri = (req) => {
+  if (process.env.SPOTIFY_OAUTH_REDIRECT_URI) return process.env.SPOTIFY_OAUTH_REDIRECT_URI;
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  // Handle production vs local fallback
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://${host}/api/artists/auth/callback/spotify`;
+  }
+  return `https://${host}/api/artists/auth/callback/spotify`;
+};
 
 // Scopes — everything available to free Developer API
 const SCOPES = [
@@ -30,11 +38,12 @@ const SCOPES = [
 /** Step 1: Redirect artist browser to Spotify auth screen */
 exports.initiateSpotifyAuth = (req, res) => {
   const { id } = req.params;  // artist MongoDB ID passed as state
+  const redirectUri = getRedirectUri(req);
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: CLIENT_ID,
     scope: SCOPES,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     state: id,
     show_dialog: 'true'
   });
@@ -44,20 +53,22 @@ exports.initiateSpotifyAuth = (req, res) => {
 /** Step 2: Spotify redirects back here with ?code=...&state=artistId */
 exports.spotifyAuthCallback = async (req, res) => {
   const { code, state: artistId, error } = req.query;
+  const CLIENT_URL = process.env.CLIENT_URL || (req.headers.host.includes('localhost') ? 'http://localhost:5173' : `https://${req.headers.host}`);
+  const redirectUri = getRedirectUri(req);
 
   if (error) {
     console.error('❌ [Spotify OAuth] User denied or error:', error);
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_error=${error}`);
+    return res.redirect(`${CLIENT_URL}/artists/${artistId}?spotify_error=${error}`);
   }
 
   if (!code || !artistId) {
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists?spotify_error=missing_params`);
+    return res.redirect(`${CLIENT_URL}/artists?spotify_error=missing_params`);
   }
 
   try {
     const artist = await Artist.findById(artistId);
     if (!artist) {
-      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists?spotify_error=artist_not_found`);
+      return res.redirect(`${CLIENT_URL}/artists?spotify_error=artist_not_found`);
     }
 
     // Exchange code for tokens
@@ -67,7 +78,7 @@ exports.spotifyAuthCallback = async (req, res) => {
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: REDIRECT_URI
+        redirect_uri: redirectUri
       }).toString(),
       {
         headers: {

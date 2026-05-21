@@ -12,8 +12,16 @@ const Artist = require('../models/Artist');
 
 const CLIENT_ID     = process.env.YOUTUBE_CLIENT_ID?.replace(/['"]/g, '').trim();
 const CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET?.replace(/['"]/g, '').trim();
-const REDIRECT_URI  = process.env.YOUTUBE_OAUTH_REDIRECT_URI
-  || 'http://127.0.0.1:5000/api/artists/auth/callback/youtube';
+const getRedirectUri = (req) => {
+  if (process.env.YOUTUBE_OAUTH_REDIRECT_URI) return process.env.YOUTUBE_OAUTH_REDIRECT_URI;
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  // Handle production vs local fallback
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return `http://${host}/api/artists/auth/callback/youtube`;
+  }
+  return `https://${host}/api/artists/auth/callback/youtube`;
+};
 
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.readonly',
@@ -25,10 +33,11 @@ const SCOPES = [
 /** Step 1: Redirect to Google auth */
 exports.initiateYouTubeAuth = (req, res) => {
   const { id } = req.params;
+  const redirectUri = getRedirectUri(req);
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: SCOPES,
     state: id,
     access_type: 'offline',
@@ -40,7 +49,8 @@ exports.initiateYouTubeAuth = (req, res) => {
 /** Step 2: Google redirects back with ?code=...&state=artistId */
 exports.youTubeAuthCallback = async (req, res) => {
   const { code, state: artistId, error } = req.query;
-  const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+  const CLIENT_URL = process.env.CLIENT_URL || (req.headers.host.includes('localhost') ? 'http://localhost:5173' : `https://${req.headers.host}`);
+  const redirectUri = getRedirectUri(req);
 
   if (error) {
     console.error('❌ [YouTube OAuth] Error:', error);
@@ -61,7 +71,7 @@ exports.youTubeAuthCallback = async (req, res) => {
       code,
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code'
     });
 

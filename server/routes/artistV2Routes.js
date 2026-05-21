@@ -34,20 +34,33 @@ router.get('/:id/stats', protect, async (req, res) => {
       meta: null
     };
 
-    if (ssProfile) {
-      // Mocking songstats API call using their proxy endpoint
-      // Replace with actual implementation and API keys
+    const SONGSTATS_KEY = process.env.SONGSTATS_API_KEY || "f87dfac1-0f05-4898-b2e1-43488dd90073";
+    
+    if (spotifyProfile || ssProfile) {
       try {
-        const ssUrl = `https://api.songstats.com/api/v1/artists/stats?artist_id=${ssProfile.platformId}`;
-        const ssRes = await axios.get(ssUrl, { headers: { 'x-api-key': process.env.SONGSTATS_API_KEY } });
-        responseData = ssRes.data;
+        let ssUrl = 'https://api.songstats.com/enterprise/v1/artists/stats?source=spotify';
+        if (ssProfile) {
+          ssUrl += `&songstats_artist_id=${ssProfile.platformId}`;
+        } else if (spotifyProfile) {
+          ssUrl += `&spotify_artist_id=${spotifyProfile.platformId}`;
+        }
+        
+        const ssRes = await axios.get(ssUrl, { headers: { 'apikey': SONGSTATS_KEY } });
+        
+        // Map songstats enterprise response to our format
+        const stats = ssRes.data?.stats?.[0]?.data || {};
+        
+        responseData.spotify = {
+          followers: stats.followers_total || null,
+          monthly_listeners: stats.monthly_listeners_current || null,
+          popularity: stats.popularity_current || null,
+          streams: stats.streams_total || null
+        };
       } catch (err) {
-        console.error('Songstats API Error', err.message);
-        // Graceful degradation (N/A Handling)
-        responseData = { error: 'Failed to fetch from Songstats', spotify: null, youtube: null, meta: null };
+        console.error('Songstats API Error', err.response?.data || err.message);
+        responseData.spotify = { error: 'Failed to fetch from Songstats', followers: null, monthly_listeners: null };
       }
     } else {
-      // Dummy response for fallback mapping
       responseData = {
         spotify: { followers: null, monthly_listeners: null },
         youtube: { subscribers: null, views: null }

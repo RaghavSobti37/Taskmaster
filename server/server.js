@@ -134,6 +134,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/artists', artistRoutes);
 app.use('/api/v2/artists', require('./routes/artistV2Routes'));
 
 // Public tracking webhooks & unsubscribe endpoints

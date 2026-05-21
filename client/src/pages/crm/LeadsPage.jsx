@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { formatExlyTag } from '../../utils/crmUtils';
 
 export default function LeadsPage() {
   const { user } = useAuth();
@@ -219,6 +220,11 @@ export default function LeadsPage() {
             {row.source && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
                 {row.source}
+              </span>
+            )}
+            {row.exlyOfferingTitle && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold tracking-tight">
+                {formatExlyTag(row.exlyOfferingTitle)}
               </span>
             )}
             {row.emailStatus && row.emailStatus !== 'Pending' && (
@@ -576,6 +582,19 @@ export default function LeadsPage() {
                   onChange={e => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
                 >
                   {qualitiesList.map(q => <option key={q} value={q}>Level {q}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Assigned Sales Rep</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  value={editLeadData.assignedRepId || ''}
+                  onChange={e => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
+                >
+                  <option value="">Unassigned</option>
+                  {team.map(rep => (
+                    <option key={rep._id} value={rep._id}>{rep.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1.5">

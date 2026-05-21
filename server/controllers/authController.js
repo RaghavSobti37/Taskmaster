@@ -120,7 +120,8 @@ exports.googleAuthRedirect = (req, res) => {
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/spreadsheets'
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/webmasters.readonly'
   ];
 
   const url = oauth2Client.generateAuthUrl({

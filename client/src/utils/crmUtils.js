@@ -15,3 +15,15 @@ export const getRepName = (rep) => {
   if (typeof rep === 'object' && rep.name) return rep.name;
   return SALES_REPS[rep] || rep;
 };
+
+export const formatExlyTag = (title) => {
+  if (!title) return null;
+  const lower = title.toLowerCase();
+  if (lower.includes('hindustani classical masterclass')) return 'Classical Masterclass';
+  if (lower.includes('production')) return 'Music Production';
+  if (lower.includes('vocal')) return 'Vocal Training';
+  if (lower.includes('guitar')) return 'Guitar Masterclass';
+  // Fallback to max 3 words
+  const words = title.split(' ');
+  return words.slice(0, 3).join(' ') + (words.length > 3 ? '...' : '');
+};

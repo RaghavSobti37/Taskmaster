@@ -230,3 +230,52 @@ module.exports = {
   queueHolySheetSync,
   queueCsvBackup
 };
+
+// Daily cron job for Platform Analytics (Offload Read Path)
+function startAnalyticsCron() {
+  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+  setInterval(async () => {
+    console.log('[Cron Worker] Starting periodic analytics sync...');
+    try {
+      const Artist = require('../models/Artist');
+      const { fetchLiveAnalytics } = require('./analyticsService');
+      
+      const artists = await Artist.find({ 'oauthCredentials.meta.accessToken': { $exists: true } }); // just to find ones with some connection
+      
+      for (const artist of artists) {
+        try {
+          const { spotifyRes, youtubeRes, metaRes } = await fetchLiveAnalytics(artist);
+          
+          const dailySnapshot = {
+            timestamp: new Date(),
+            platform: 'overall',
+            metrics: {
+              spotify: {
+                followers: spotifyRes?.value?.artistInfo?.followers?.total || 0,
+                popularity: spotifyRes?.value?.artistInfo?.popularity || 0
+              },
+              youtube: {
+                subscribers: youtubeRes?.value?.channel?.statistics?.subscriberCount || 0,
+                views: youtubeRes?.value?.channel?.statistics?.viewCount || 0
+              },
+              instagram: {
+                followers: metaRes?.value?.followers || 0
+              }
+            }
+          };
+
+          await Artist.findByIdAndUpdate(artist._id, {
+            $push: { analyticsHistory: dailySnapshot }
+          });
+        } catch (err) {
+          console.error(`[Cron Worker] Sync failed for artist ${artist._id}:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error('[Cron Worker Error]', err);
+    }
+  }, TWELVE_HOURS);
+}
+
+// Kickoff cron
+setTimeout(startAnalyticsCron, 5000);

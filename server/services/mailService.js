@@ -151,6 +151,12 @@ const sendCampaign = async (campaignId) => {
       </div>`;
 
       let personalizedContent = campaign.content || '';
+      
+      // Preserve line breaks for plain text input
+      if (!/<(br|p|div|h[1-6])[^>]*>/i.test(personalizedContent)) {
+        personalizedContent = personalizedContent.replace(/\n/g, '<br />');
+      }
+
       // Automatically wrap all external links in click tracker
       personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
         if (url.includes('/api/mail/')) return match;

@@ -230,33 +230,43 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
       metadata: { recipientId, ip, location }
     });
 
-    // 2. Update campaign recipient status and stats
+    // 2. Update campaign recipient status and stats Atomically ($inc / $set)
     if (campaignId && campaignId !== 'undefined') {
+      const updateQuery = { _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null };
+      
+      const setPayload = { [`recipients.$[elem].status`]: 'Opened' };
+      const incPayload = { 'metrics.opened': 1, 'stats.opened': 1 };
+      
+      const locKey = `locationBreakdown.${city}.opens`;
+      incPayload[locKey] = 1;
+
       const Campaign = require('../models/Campaign');
-      let campaign = await MailCampaign.findById(campaignId);
-      let isCore = false;
-      if (!campaign) {
-        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
-        isCore = true;
-      }
-      if (campaign) {
-        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
-        if (recipient && recipient.status !== 'Opened' && recipient.status !== 'Clicked') {
-          recipient.status = 'Opened';
-          if (isCore) {
-            campaign.metrics.opened = (campaign.metrics.opened || 0) + 1;
-            if (!campaign.locationBreakdown) {
-              campaign.locationBreakdown = new Map();
-            }
-            const locData = campaign.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            locData.opens = (locData.opens || 0) + 1;
-            campaign.locationBreakdown.set(city, locData);
-            campaign.timeSeries.push({ time: new Date(), opens: 1, clicks: 0 });
-          } else {
-            campaign.stats.opened = (campaign.stats.opened || 0) + 1;
-          }
-          await campaign.save();
+      
+      // Update core campaign natively if it's the newer schema
+      const updatedCampaign = await Campaign.findOneAndUpdate(
+        { $or: [updateQuery, { campaignId }] },
+        { 
+          $set: setPayload,
+          $inc: incPayload,
+          $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
+        },
+        { 
+          arrayFilters: [{ 'elem._id': recipientId, 'elem.status': { $nin: ['Opened', 'Clicked'] } }] 
         }
+      );
+
+      // Fallback for MailCampaign if not found in Campaign
+      if (!updatedCampaign) {
+        await MailCampaign.findOneAndUpdate(
+          updateQuery,
+          { 
+            $set: setPayload,
+            $inc: { 'stats.opened': 1 }
+          },
+          { 
+            arrayFilters: [{ 'elem._id': recipientId, 'elem.status': { $nin: ['Opened', 'Clicked'] } }]
+          }
+        );
       }
     }
 
@@ -327,33 +337,42 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
     });
 
 
-    // 2. Update campaign recipient status and stats
+    // 2. Update campaign recipient status and stats Atomically ($inc / $set)
     if (campaignId && campaignId !== 'undefined') {
+      const updateQuery = { _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null };
+      
+      const setPayload = { [`recipients.$[elem].status`]: 'Clicked' };
+      const incPayload = { 'metrics.clicked': 1, 'stats.clicked': 1 };
+      
+      const locKey = `locationBreakdown.${city}.clicks`;
+      incPayload[locKey] = 1;
+
       const Campaign = require('../models/Campaign');
-      let campaign = await MailCampaign.findById(campaignId);
-      let isCore = false;
-      if (!campaign) {
-        campaign = await Campaign.findOne({ $or: [{ _id: campaignId.match(/^[0-9a-fA-F]{24}$/) ? campaignId : null }, { campaignId }] });
-        isCore = true;
-      }
-      if (campaign) {
-        const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
-        if (recipient && recipient.status !== 'Clicked') {
-          recipient.status = 'Clicked';
-          if (isCore) {
-            campaign.metrics.clicked = (campaign.metrics.clicked || 0) + 1;
-            if (!campaign.locationBreakdown) {
-              campaign.locationBreakdown = new Map();
-            }
-            const locData = campaign.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            locData.clicks = (locData.clicks || 0) + 1;
-            campaign.locationBreakdown.set(city, locData);
-            campaign.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
-          } else {
-            campaign.stats.clicked = (campaign.stats.clicked || 0) + 1;
-          }
-          await campaign.save();
+      
+      const updatedCampaign = await Campaign.findOneAndUpdate(
+        { $or: [updateQuery, { campaignId }] },
+        { 
+          $set: setPayload,
+          $inc: incPayload,
+          $push: { timeSeries: { time: new Date(), opens: 0, clicks: 1 } }
+        },
+        { 
+          arrayFilters: [{ 'elem._id': recipientId, 'elem.status': { $ne: 'Clicked' } }] 
         }
+      );
+
+      // Fallback for MailCampaign
+      if (!updatedCampaign) {
+        await MailCampaign.findOneAndUpdate(
+          updateQuery,
+          { 
+            $set: setPayload,
+            $inc: { 'stats.clicked': 1 }
+          },
+          { 
+            arrayFilters: [{ 'elem._id': recipientId, 'elem.status': { $ne: 'Clicked' } }]
+          }
+        );
       }
     }
 

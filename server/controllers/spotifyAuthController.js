@@ -10,6 +10,9 @@
 
 const axios = require('axios');
 const Artist = require('../models/Artist');
+const { Mutex } = require('async-mutex');
+
+const tokenMutexes = new Map();
 
 const CLIENT_ID     = process.env.SPOTIFY_CLIENT_ID?.replace(/['"]/g, '').trim();
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET?.replace(/['"]/g, '').trim();
@@ -133,29 +136,47 @@ exports.spotifyAuthCallback = async (req, res) => {
   }
 };
 
-/** Refresh token if expired */
+/** Refresh token if expired (Mutex Locked) */
 exports.refreshSpotifyToken = async (artist) => {
   const refreshToken = artist.oauthCredentials?.spotify?.refreshToken;
   if (!refreshToken) throw new Error('No Spotify refresh token stored');
 
-  const res = await axios.post(
-    'https://accounts.spotify.com/api/token',
-    new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken
-    }).toString(),
-    {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`
-      }
-    }
-  );
+  const artistIdStr = artist._id.toString();
+  if (!tokenMutexes.has(artistIdStr)) {
+    tokenMutexes.set(artistIdStr, new Mutex());
+  }
+  const mutex = tokenMutexes.get(artistIdStr);
+  const release = await mutex.acquire();
 
-  const { access_token, expires_in } = res.data;
-  artist.oauthCredentials.spotify.accessToken = access_token;
-  artist.oauthCredentials.spotify.tokenExpiry = new Date(Date.now() + expires_in * 1000);
-  artist.markModified('oauthCredentials');
-  await artist.save();
-  return access_token;
+  try {
+    // 1. Double check inside lock in case a concurrent request already refreshed it
+    const freshArtist = await Artist.findById(artistIdStr).select('oauthCredentials');
+    if (freshArtist.oauthCredentials?.spotify?.tokenExpiry > new Date(Date.now() + 60000)) {
+      return freshArtist.oauthCredentials.spotify.accessToken;
+    }
+
+    // 2. Perform the actual refresh API call
+    const res = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken
+      }).toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`
+        }
+      }
+    );
+
+    const { access_token, expires_in } = res.data;
+    artist.oauthCredentials.spotify.accessToken = access_token;
+    artist.oauthCredentials.spotify.tokenExpiry = new Date(Date.now() + expires_in * 1000);
+    artist.markModified('oauthCredentials');
+    await artist.save();
+    return access_token;
+  } finally {
+    release();
+  }
 };

@@ -77,98 +77,13 @@ const LeadSchema = new mongoose.Schema({
   timestamps: true // Automatically handles createdAt and updatedAt
 });
 
-// Sanitization Hook
-LeadSchema.pre('save', function(next) {
-  if (this.isModified('name')) this.name = sanitizeName(this.name);
-  if (this.isModified('email')) this.email = sanitizeEmail(this.email);
-  if (this.isModified('phone')) this.phone = normalizePhone(this.phone);
-  if (this.isModified('city') && this.city) this.city = sanitizeLocation(this.city);
-  if (this.isModified('location') && this.location) this.location = sanitizeLocation(this.location);
-  
-  // Date validation for followups
-  if (this.isModified('nextFollowupDate') && this.nextFollowupDate) {
-    if (!validateDate(this.nextFollowupDate)) {
-      this.nextFollowupDate = ''; // Reset or fallback
-    }
-  }
-  next();
-});
-
-const sanitizeUpdate = (update) => {
-  if (!update) return;
-  const set = update.$set || update;
-  if (set.name && typeof set.name === 'string') set.name = sanitizeName(set.name);
-  if (set.email && typeof set.email === 'string') set.email = sanitizeEmail(set.email);
-  if (set.phone && typeof set.phone === 'string') set.phone = normalizePhone(set.phone);
-  if (set.city && typeof set.city === 'string') set.city = sanitizeLocation(set.city);
-  if (set.location && typeof set.location === 'string') set.location = sanitizeLocation(set.location);
-};
-
-LeadSchema.pre('findOneAndUpdate', function(next) {
-  sanitizeUpdate(this.getUpdate());
-  next();
-});
-
-LeadSchema.pre('updateOne', function(next) {
-  sanitizeUpdate(this.getUpdate());
-  next();
-});
-
-LeadSchema.pre('updateMany', function(next) {
-  sanitizeUpdate(this.getUpdate());
-  next();
-});
+// Sanitization moved to LeadService.js
+// Update hooks moved to LeadService.js
 
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);
 
-// Background Queue & Followup Cache Integration
-const backgroundQueue = require('../services/backgroundQueue');
-const followupCache = require('../services/followupCache');
-
-LeadSchema.post('save', function(doc) {
-  if (doc) {
-    backgroundQueue.queueHolySheetSync(doc._id);
-    backgroundQueue.queueCsvBackup();
-    followupCache.cacheFollowup(doc).catch(() => {});
-  }
-});
-
-LeadSchema.post('findOneAndUpdate', function(doc) {
-  if (doc) {
-    backgroundQueue.queueHolySheetSync(doc._id);
-    backgroundQueue.queueCsvBackup();
-    followupCache.cacheFollowup(doc).catch(() => {});
-  }
-});
-
-LeadSchema.post('updateOne', async function() {
-  try {
-    const doc = await this.model.findOne(this.getQuery());
-    if (doc) {
-      backgroundQueue.queueHolySheetSync(doc._id);
-      backgroundQueue.queueCsvBackup();
-      followupCache.cacheFollowup(doc).catch(() => {});
-    }
-  } catch (err) {
-    console.error('[Queue Hook Error]', err.message);
-  }
-});
-
-LeadSchema.post('updateMany', async function() {
-  try {
-    const docs = await this.model.find(this.getQuery());
-    for (const doc of docs) {
-      backgroundQueue.queueHolySheetSync(doc._id);
-      followupCache.cacheFollowup(doc).catch(() => {});
-    }
-    if (docs.length > 0) {
-      backgroundQueue.queueCsvBackup();
-    }
-  } catch (err) {
-    console.error('[Queue Hook Error]', err.message);
-  }
-});
+// Background Queue & Followup Cache Integration moved to LeadService.js
 
 LeadSchema.post('remove', function(doc) {
   if (doc) {

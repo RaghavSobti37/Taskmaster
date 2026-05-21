@@ -16,7 +16,7 @@ import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, use
 import { formatChartData } from '../../utils/analyticsDataUtils';
 
 const formatNumber = (num) => {
-  if (num == null || isNaN(num) || num === 'N/A') return 'N/A';
+  if (num == null || isNaN(num) || num === 'N/A' || num === '—') return '—';
   const n = Number(num);
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -53,6 +53,7 @@ export default function ArtistDetail({ isPreview = false }) {
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [newVideoTitle, setNewVideoTitle] = useState('');
   const [newVideoChannel, setNewVideoChannel] = useState('');
+  const [timeframe, setTimeframe] = useState('28D');
 
   const { data: artist, isLoading: isArtistLoading } = useArtist(id);
   const { data: analyticsData, isLoading: isAnalyticsLoading } = useArtistAnalytics(id, activeTab);
@@ -164,18 +165,18 @@ export default function ArtistDetail({ isPreview = false }) {
     );
   }
 
-  // Use ?? not || so 0 values don't fall through to 'N/A'
-  const spFollowers = artist.analytics?.spotify?.followers ?? 'N/A';
-  const spPopularity = artist.analytics?.spotify?.popularity ?? 'N/A';
-  const ytSubs = artist.analytics?.youtube?.subscribers ?? 'N/A';
-  const ytViews = artist.analytics?.youtube?.views ?? 'N/A';
-  const ytVideos = artist.analytics?.youtube?.videoCount ?? 'N/A';
-  const igFollowers = artist.analytics?.instagram?.followers ?? 'N/A';
-  const igEngagement = artist.analytics?.instagram?.engagementRate ?? 'N/A';
-  const igShares = artist.analytics?.instagram?.totalShares ?? 'N/A';
+  // Use ?? not || so 0 values don't fall through to '—'
+  const spFollowers = artist.analytics?.spotify?.followers ?? '—';
+  const spPopularity = artist.analytics?.spotify?.popularity ?? '—';
+  const ytSubs = artist.analytics?.youtube?.subscribers ?? '—';
+  const ytViews = artist.analytics?.youtube?.views ?? '—';
+  const ytVideos = artist.analytics?.youtube?.videoCount ?? '—';
+  const igFollowers = artist.analytics?.instagram?.followers ?? '—';
+  const igEngagement = artist.analytics?.instagram?.engagementRate ?? '—';
+  const igShares = artist.analytics?.instagram?.totalShares ?? '—';
 
-  const fbFollowers = artist.analytics?.facebook?.followers ?? 'N/A';
-  const fbLikes = artist.analytics?.facebook?.likes ?? 'N/A';
+  const fbFollowers = artist.analytics?.facebook?.followers ?? '—';
+  const fbLikes = artist.analytics?.facebook?.likes ?? '—';
   const fbPageName = artist.analytics?.facebook?.name ?? 'Page';
 
   const tracks = analyticsData?.tracks || [];
@@ -839,12 +840,26 @@ export default function ArtistDetail({ isPreview = false }) {
             <TrendingUp className="text-blue-500" size={16} /> Subscriber History
             <InfoButton text="Historical tracking progression of platform audience over time." />
           </h3>
-          <Badge variant="info">{activeTab.toUpperCase()} Trajectory</Badge>
+          <div className="flex gap-2">
+            {['7D', '28D', '90D', 'YTD', 'ALL'].map(tf => (
+              <button
+                key={tf}
+                onClick={() => setTimeframe(tf)}
+                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition ${
+                  timeframe === tf 
+                    ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-[#1F2937] dark:text-slate-400 dark:hover:bg-[#374151]'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="h-52 w-full">
           {chartData.length === 0 ? (
             <div className="flex items-center justify-center h-full text-xs font-bold text-slate-400">
-              No historical data points logged yet for this stream.
+              Awaiting Channel Connection
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

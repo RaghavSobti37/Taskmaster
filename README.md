@@ -1,4 +1,4 @@
-# Taskmaster v1.7.10
+# Taskmaster v1.7.11
 
 **Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It unifies complex project tracking, multi-channel real-time communication, and automated sales pipeline structures into a single, highly optimized operational workspace.
 
@@ -163,6 +163,10 @@ node seeder.js
 ---
 
 ## 📑 Version Changelog Release Ledger
+
+### v1.7.11
+
+* **Artist Architecture Overhaul:** Completed all phases. Built Workspace and ConnectedProfile schemas with AES-256-GCM token encryption. Created Redis cache proxy for Songstats. UI revamped with dynamic timeframe scopes and zero-data states. Built read-only public sharing endpoints.
 
 ### v1.7.10
 

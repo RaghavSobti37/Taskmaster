@@ -4,7 +4,7 @@ import {
   ArrowLeft, Share2, Zap, RefreshCw, Music, Video, TrendingUp,
   ExternalLink, Clock, Heart, MessageSquare, Share, Play, Disc, Globe,
   Edit2, Trash2, Link as LinkIcon, Info, CheckCircle, Plus, Filter,
-  Radio, Headphones, Activity, BarChart2, Settings
+  Radio, Headphones, Activity, BarChart2, Settings, LogIn
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram, FaFacebook } from 'react-icons/fa';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
@@ -13,6 +13,7 @@ import {
   TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input, InfoButton
 } from '../../components/ui';
 import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, useDeleteArtist, useAddTrackedVideo } from '../../hooks/useTaskmasterQueries';
+import { formatChartData } from '../../utils/analyticsDataUtils';
 
 const formatNumber = (num) => {
   if (num == null || isNaN(num) || num === 'N/A') return 'N/A';
@@ -103,7 +104,12 @@ export default function ArtistDetail({ isPreview = false }) {
           meta: { igAccountId: editedArtist.instaId }
         }
       };
-      await updateMutation.mutateAsync({ id: artist._id, data: payload });
+      
+      if (isPreview) {
+        await updatePublicMutation.mutateAsync({ id: artist._id, data: payload });
+      } else {
+        await updateMutation.mutateAsync({ id: artist._id, data: payload });
+      }
       setIsEditing(false);
     } catch (err) {
       alert('Failed to update artist: ' + err.message);
@@ -224,10 +230,7 @@ export default function ArtistDetail({ isPreview = false }) {
   ];
 
   const currentHistory = historyMap[activeTab] || [];
-  const chartData = currentHistory.map((h, idx) => ({
-    label: new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || `Snap ${idx + 1}`,
-    value: Number(h.metrics?.followers || h.metrics?.subscribers || h.metrics || 0)
-  }));
+  const chartData = formatChartData(currentHistory, activeTab);
 
   const spotifyColumns = [
     {
@@ -419,7 +422,13 @@ export default function ArtistDetail({ isPreview = false }) {
                 <Globe size={14} /> Website
               </Button>
             )}
-            {!isPreview && (
+            {isPreview ? (
+              <>
+                <Button variant="secondary" size="sm" onClick={handleOpenEdit}>
+                  <Edit2 size={14} /> Edit Your Details
+                </Button>
+              </>
+            ) : (
               <>
                 <Button variant="secondary" size="sm" onClick={() => navigate('/artists')}>
                   <ArrowLeft size={14} /> Roster
@@ -627,6 +636,104 @@ export default function ArtistDetail({ isPreview = false }) {
           );
         })()}
       </div>
+
+      {/* Instagram & Facebook Detailed Stats (Shareable Link) */}
+      {isPreview && metaConnected && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Detailed Instagram Stats */}
+          <Card className="p-6 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-500/5 dark:to-rose-500/5 border border-pink-200 dark:border-pink-500/20 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-pink-500/10">
+                <FaInstagram size={20} className="text-pink-600 dark:text-pink-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">Instagram</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Performance Metrics</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500">Followers</span>
+                <span className="text-lg font-black text-pink-600 dark:text-pink-400">{formatNumber(igFollowers)}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Engagement Rate</span>
+                  <span className="text-base font-black text-pink-600 dark:text-pink-400">{igEngagement !== 'N/A' ? `${igEngagement}%` : '—'}</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Avg Likes/Post</span>
+                  <span className="text-base font-black text-pink-600 dark:text-pink-400">{formatNumber(avgIgLikes)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Avg Reach</span>
+                  <span className="text-base font-black text-pink-600 dark:text-pink-400">{formatNumber(avgIgReach)}</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Total Shares</span>
+                  <span className="text-base font-black text-pink-600 dark:text-pink-400">{formatNumber(igShares)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500 block mb-1">Posts Tracked</span>
+                <span className="text-base font-black text-pink-600 dark:text-pink-400">{posts.length}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Detailed Facebook Stats */}
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/5 dark:to-indigo-500/5 border border-blue-200 dark:border-blue-500/20 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-blue-500/10">
+                <FaFacebook size={20} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Facebook</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Page Analytics</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500">Page Followers</span>
+                <span className="text-lg font-black text-blue-600 dark:text-blue-400">{formatNumber(fbFollowers)}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500">Page Likes</span>
+                <span className="text-lg font-black text-blue-600 dark:text-blue-400">{formatNumber(fbLikes)}</span>
+              </div>
+              
+              <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500 block mb-1">Page Name</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{fbPageName}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Organic Reach</span>
+                  <span className="text-base font-black text-blue-600 dark:text-blue-400">{formatNumber(artist.analytics?.facebook?.postReach?.organic || 0)}</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Paid Reach</span>
+                  <span className="text-base font-black text-blue-600 dark:text-blue-400">{formatNumber(artist.analytics?.facebook?.postReach?.paid || 0)}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-[#111827] rounded-xl">
+                <span className="text-xs font-bold text-slate-500 block mb-1">CTR</span>
+                <span className="text-base font-black text-blue-600 dark:text-blue-400">{artist.analytics?.facebook?.ctr || 'N/A'}</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Tier B: Spotify Deep Dive — only shows after sync */}
       {activeTab === 'spotify' && (spotifyGenres.length > 0 || discography.length > 0 || relatedArtists.length > 0) && (
@@ -1033,17 +1140,19 @@ export default function ArtistDetail({ isPreview = false }) {
         subtitle={`ID: ${artist._id} • Connected & Up to Date`}
         onSave={handleSaveArtist}
         sidebar={
-          <div className="space-y-4">
-            <Card className="p-4 space-y-4 bg-white dark:bg-[#111827] border-rose-500/20">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Danger Zone</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Permanently remove this artist profile and disconnect API keys.
-              </p>
-              <Button variant="danger" size="sm" className="w-full" onClick={handleDeleteArtist}>
-                <Trash2 size={14} /> Delete Artist
-              </Button>
-            </Card>
-          </div>
+          !isPreview && (
+            <div className="space-y-4">
+              <Card className="p-4 space-y-4 bg-white dark:bg-[#111827] border-rose-500/20">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Danger Zone</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Permanently remove this artist profile and disconnect API keys.
+                </p>
+                <Button variant="danger" size="sm" className="w-full" onClick={handleDeleteArtist}>
+                  <Trash2 size={14} /> Delete Artist
+                </Button>
+              </Card>
+            </div>
+          )
         }
       >
         <div className="space-y-8">
@@ -1134,7 +1243,7 @@ export default function ArtistDetail({ isPreview = false }) {
                 onClick={handleConnectMeta}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-xs shadow-lg shadow-pink-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
               >
-                <FaInstagram size={16} /> Connect Instagram / Facebook
+                <LogIn size={16} /> {isPreview ? 'Login with Meta' : 'Connect Instagram / Facebook'}
               </button>
             </div>
 
@@ -1158,7 +1267,7 @@ export default function ArtistDetail({ isPreview = false }) {
                 onClick={() => window.location.href = `http://127.0.0.1:5000/api/artists/${artist._id}/auth/spotify`}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
               >
-                <FaSpotify size={16} /> {artist.oauthCredentials?.spotify?.connectedAt ? 'Reconnect Spotify' : 'Connect Spotify'}
+                <LogIn size={16} /> {isPreview ? 'Login with Spotify' : (artist.oauthCredentials?.spotify?.connectedAt ? 'Reconnect Spotify' : 'Connect Spotify')}
               </button>
             </div>
 
@@ -1182,7 +1291,7 @@ export default function ArtistDetail({ isPreview = false }) {
                 onClick={() => window.location.href = `http://127.0.0.1:5000/api/artists/${artist._id}/auth/youtube`}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-500/20 hover:opacity-95 flex items-center gap-2 transition cursor-pointer"
               >
-                <FaYoutube size={16} /> {artist.oauthCredentials?.youtube?.connectedAt ? 'Reconnect YouTube' : 'Connect YouTube'}
+                <LogIn size={16} /> {isPreview ? 'Login with YouTube' : (artist.oauthCredentials?.youtube?.connectedAt ? 'Reconnect YouTube' : 'Connect YouTube')}
               </button>
             </div>
           </section>

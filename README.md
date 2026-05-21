@@ -1,4 +1,4 @@
-# Taskmaster v1.7.11
+# Taskmaster v1.7.12
 
 **Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It unifies complex project tracking, multi-channel real-time communication, and automated sales pipeline structures into a single, highly optimized operational workspace.
 
@@ -163,6 +163,10 @@ node seeder.js
 ---
 
 ## 📑 Version Changelog Release Ledger
+
+### v1.7.12
+
+* **Backend Refactoring & Synchronization:** Removed Mongoose hooks in favor of LeadService. Implemented atomic Exly upserts with `$setOnInsert` and Mutex locks for OAuth token rotation. Created a background BullMQ cron worker for analytics data aggregation and replaced `.save()` overhead with atomic `$inc`/`$set` operators in mail tracking endpoints to eliminate race conditions.
 
 ### v1.7.11
 

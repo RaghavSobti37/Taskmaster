@@ -508,3 +508,9 @@ The mailing platform enables unified collaboration by adjusting routing access p
 - Integrated User-Agent bot checks to screen out anti-spam crawlers from metrics
 - Added database index configurations on recipients.messageId, recipients.email, and campaignId
 
+### v1.7.12
+- Refactored Lead Mongoose hooks to LeadService decoupled architecture
+- Atomic upserts ($setOnInsert) inside Mongoose transactions for Exly Webhooks
+- Thread-safe Mutex locks implemented for Spotify OAuth token refresh
+- BullMQ Cron worker deployed for 12-hour Analytics write-offloading
+- Atomic $inc/$set arrayFilters used for Campaign metrics to eliminate race conditions

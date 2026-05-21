@@ -4,6 +4,7 @@ const ExlyBooking = require('../models/ExlyBooking');
 const exlyService = require('../services/exlyService');
 const CRMAudit = require('../models/CRMAudit');
 const Lead = require('../models/Lead');
+const LeadService = require('../services/LeadService');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 
@@ -280,13 +281,16 @@ exports.handleExlyWebhook = async (req, res) => {
         };
 
         // 3. Execute upsert within the same transaction scope
-        lead = await Lead.findOneAndUpdate(
+        lead = await LeadService.upsertLead(
           { $or: filterConditions },
           updatePayload,
-          { upsert: true, new: true, runValidators: true, session }
+          session
         );
 
         await session.commitTransaction();
+        if (lead) {
+          await LeadService.triggerSideEffects(lead._id);
+        }
       } catch (error) {
         await session.abortTransaction();
         throw error;

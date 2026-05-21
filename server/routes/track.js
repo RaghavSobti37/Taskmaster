@@ -129,13 +129,20 @@ router.get('/open/:pixelId.gif', async (req, res) => {
               })
             ]);
           } else {
+            const city = location.city || 'Unknown City';
+            const cleanCity = city.replace(/\./g, '');
+
+            // Build the dynamic location breakdown update for MailCampaign
+            const updateObj = {
+              $set: { "recipients.$.status": "Opened" },
+              $inc: { "stats.opened": 1 },
+              $inc: { [`locationBreakdown.${cleanCity}.opens`]: 1 }
+            };
+
             await Promise.all([
               MailCampaign.updateOne(
                 { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
-                { 
-                  $set: { "recipients.$.status": "Opened" },
-                  $inc: { "stats.opened": 1 }
-                }
+                updateObj
               ),
               Lead.updateOne(
                 { email: log.leadEmail },
@@ -261,13 +268,20 @@ router.get('/click/:clickId', async (req, res) => {
               })
             ]);
           } else {
+            const city = location.city || 'Unknown';
+            const cleanCity = city.replace(/\./g, '');
+
+            // Build the dynamic location breakdown update for MailCampaign
+            const updateObj = {
+              $set: { "recipients.$.status": "Clicked" },
+              $inc: { "stats.clicked": 1 },
+              $inc: { [`locationBreakdown.${cleanCity}.clicks`]: 1 }
+            };
+
             await Promise.all([
               MailCampaign.updateOne(
                 { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
-                { 
-                  $set: { "recipients.$.status": "Clicked" },
-                  $inc: { "stats.clicked": 1 }
-                }
+                updateObj
               ),
               Lead.updateOne(
                 { email: log.leadEmail },
@@ -391,12 +405,12 @@ router.post('/webhooks/resend', async (req, res) => {
 
     if (eventType === 'email.opened' || eventType === 'email.clicked') {
       if (eventType === 'email.clicked') {
-        ip = payload.data.click?.ipAddress || payload.data.ipAddress || '';
-        userAgent = payload.data.click?.userAgent || payload.data.userAgent || 'Unknown';
+        ip = payload.data.click?.ipAddress || payload.data.click?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
+        userAgent = payload.data.click?.userAgent || payload.data.click?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
         url = payload.data.click?.link || payload.data.url || '';
       } else if (eventType === 'email.opened') {
-        ip = payload.data.open?.ipAddress || payload.data.ipAddress || '';
-        userAgent = payload.data.open?.userAgent || payload.data.userAgent || 'Unknown';
+        ip = payload.data.open?.ipAddress || payload.data.open?.ip_address || payload.data.ip_address || payload.data.ipAddress || '';
+        userAgent = payload.data.open?.userAgent || payload.data.open?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
       }
 
       if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();

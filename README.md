@@ -1,4 +1,4 @@
-# Taskmaster v1.7.8
+# Taskmaster v1.7.10
 
 **Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It unifies complex project tracking, multi-channel real-time communication, and automated sales pipeline structures into a single, highly optimized operational workspace.
 
@@ -163,6 +163,12 @@ node seeder.js
 ---
 
 ## 📑 Version Changelog Release Ledger
+
+### v1.7.10
+
+* **Search Console & Analytics Integration:** Added Google Site Verification and GA4 tracking natively.
+* **CRM Refinement:** Improved UI components for lead presentation and stabilized webhook telemetry structures.
+* **Dependencies & Build:** Resolved React/Vite module resolution errors and trimmed deprecated options in jsconfig.
 
 ### v1.7.7
 

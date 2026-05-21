@@ -16,8 +16,13 @@ const getDrive = (auth) => {
   return google.drive({ version: 'v3', auth });
 };
 
+const getSearchConsole = (auth) => {
+  return google.searchconsole({ version: 'v1', auth });
+};
+
 module.exports = {
   createOAuth2Client,
   getCalendar,
-  getDrive
+  getDrive,
+  getSearchConsole
 };

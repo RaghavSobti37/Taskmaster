@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import CKDropdown from '../ui/CKDropdown';
 import { NexusModal } from '../ui';
+import { formatExlyTag } from '../../utils/crmUtils';
 
 const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) => {
   const { user } = useAuth();
@@ -190,6 +191,11 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                 }`}>
                   {formData.leadStatus}
                 </span>
+                {formData.exlyOfferingTitle && (
+                  <span className="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-purple-500/10 text-purple-500 border-purple-500/20">
+                    {formatExlyTag(formData.exlyOfferingTitle)}
+                  </span>
+                )}
               </div>
             </div>
           </div>

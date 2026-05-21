@@ -381,7 +381,7 @@ export default function AdminMailContent() {
       alert('Please complete campaign title, subject, content, and select a sender profile.');
       return;
     }
-    if (selectedLeadIds.length === 0) {
+    if (selectedLeadIds.length === 0 && csvRecipients.length === 0) {
       alert('Please select CRM leads or upload a recipient CSV.');
       return;
     }

@@ -1,58 +1,52 @@
 # Taskmaster v1.7.8
 
-[![React](https://img.shields.io/badge/Frontend-React%2018-blue?style=flat-square&logo=react)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat-square&logo=vite)](https://vitejs.dev/)
-[![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
-[![Tailwind CSS v4](https://img.shields.io/badge/Styling-Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![React Query](https://img.shields.io/badge/State-React_Query-FF4154?style=flat-square&logo=react-query)](https://tanstack.com/query/v3/)
-[![Supabase](https://img.shields.io/badge/Edge_Sync-Supabase-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
-[![Trigger.dev](https://img.shields.io/badge/Background_Jobs-Trigger.dev-000000?style=flat-square)](https://trigger.dev/)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-
-**Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It combines project management, real-time communication, and advanced CRM capabilities into a single, optimized workspace.
+**Taskmaster** is a premium, high-density work management and CRM platform built for high-performance teams. It unifies complex project tracking, multi-channel real-time communication, and automated sales pipeline structures into a single, highly optimized operational workspace.
 
 ---
 
-## Key Features & Ecosystem
+## 🚀 Key Features & Ecosystem Subsystems
 
-Taskmaster is designed as a fully integrated ecosystem replacing disjointed tools (Jira, Salesforce, Slack) with a singular source of truth.
+### 1. Work & Project Management
 
-### Work & Project Management
-- **Real-Time Dashboard**: Live task tracking, productivity metrics, and one-click completion with a 10s undo buffer.
-- **Multi-View Projects**: Manage complex initiatives using List, Kanban, and Gantt views. Features automated progress rollups and hierarchical task architectures (Project > Phase > Task).
-- **Workflow Canvas**: A node-based visual process architecting tool for mapping complex business logic via drag-and-drop mechanics (Powered by React Flow).
-- **Daily Logs & Same-Day Editing**: Precision work logging with project tagging and strict same-day editing/deleting security rules.
-- **Office & Contacts Registry**: Centralized registry for managing physical office hardware, software licenses, physical items, and important VIP contacts globally available across the platform.
+* **Real-Time Productivity Dashboard:** Continuous live tracking of operational task metrics alongside rapid one-click execution states featuring a custom **10-second undo safety buffer**.
+* **Multi-View Initatives Engine:** Native support for seamless visual switching between interactive tabular Lists, structured Kanban boards, and chronological Gantt charts. Includes automatic parent-child progress rollups throughout a deep, hierarchical architectural map: `Project` $\rightarrow$ `Phase` $\rightarrow$ `Task` $\rightarrow$ `Subtask`.
+* **Visual Workflow Canvas:** Drag-and-drop structural node builder powered by React Flow, enabling complex internal business logic and operational flows to be visually modeled and executed.
+* **Precision Daily Work Logging:** High-density timesheet logger containing direct project tagging filters and strict same-day data modification/deletion security rules.
+* **Centralized Asset & Office Registry:** An organizational inventory layout tracking physical workplace hardware, software licensing, localized items, and direct access references to global VIP corporate contact lists.
 
-### Customer Relationship Management (CRM)
-- **Master Data Cleaning Pipeline**: Automated in-memory deduplication and sanitization engine (`import_ultimate_master.js` and `purge_nameless_emailless.js`) ensuring zero duplicate key index collisions and pristine database integrity across 46,000+ lead records.
-- **Advanced Lead Pipeline**: Comprehensive lead funnel management (New/Contacted/Warm/Hot/Converted), source filtering, bulk CSV imports, and real-time bidirectional synchronization with HolySheet API.
-- **Interactive Follow-up Schedule & Mark as Done**: Checkbox-driven instant follow-up completion from table or modal view with automatic timestamp logging and pipeline advancement. Native date/time picker enforcement across all schedule entry fields.
-- **Interactive Interaction & Notes Stream**: Persistent timeline tracking of sales remarks, custom touchpoint notes, and planned action items.
-- **Overdue Alerts & Follow-up Reminders**: Scheduled reminders with overdue visual indicators and rep-specific schedule views.
-- **Role-Based Data Isolation**: Automatic user-level data segregation where sales professionals view their specific assigned leads and performance analytics, while administrators oversee full organizational metrics.
-- **Team-Based Assignment**: Automatic "Least-Loaded" representative assignment distributing leads evenly across active sales teams.
-- **CRM Audit Trails**: Immutable tracking of lead modifications via the `CRMAudit` collection, ensuring accountability and full data provenance.
+### 2. Customer Relationship Management (CRM)
 
-### Marketing & Communications
-- **Admin Auto-Mailer**: Complete broadcast campaign management engine.
-- **Collective Admin Views**: Allows all users with an admin role to collectively view, manage, send, and delete all campaigns, SMTP profiles, and stats across the organization.
-- **Native Analytics Sync**: Deep integration with Resend Webhooks (Svix-verified) for native analytics sync (Opens, Clicks, Bounces, Delivery).
-- **Team Chat**: Real-time internal messaging with channel-based organization, user mentions, and task referencing.
+* **Master Data Cleaning Pipeline:** Automated data sanitization engine operating through custom script components (`import_ultimate_master.js` and `purge_nameless_emailless.js`). Conducts in-memory deduplication and parsing checks across **46,000+ lead records** to prevent duplicate key index collisions and clear out un-routable entries.
+* **Advanced Multi-Tiered Funnel:** Granular lead state management tracking prospects across structured buckets (`New`, `Contacted`, `Warm`, `Hot`, `Converted`), with custom source attribute filters, bulk CSV upload streams, and real-time bidirectional synchronization links with external spreadsheet registers via HolySheet API.
+* **Interactive Follow-up Schedule & Quick Complete:** Checkbox-driven inline completions inside table or modal layouts, updating planned pipelines instantly with automated timestamp logs and native date/time picker schema validation enforcement.
+* **Persistent Interaction Stream:** Organized chronological timeline logs capturing sales representative remarks, custom interaction notes, and individual action items.
+* **Proactive Visual Indicators:** Color-coded alert metrics highlighting overdue actions, paired with rep-specific dashboard view boundaries.
+* **Role-Based Data Isolation (RBAC):** Built-in query security layer ensuring standard sales professionals are strictly confined to leads matching their assigned record metadata (`assignedRepId`), while organizational administrators retain full global visibility.
+* **Team Load Distribution Routing:** Applies a **"Least-Loaded Representative"** routing algorithm to automatically calculate active team backlogs and assign newly arrived or uploaded leads evenly across sales departments.
+* **Immutable CRM Audit Trails:** Dedicated ledger infrastructure powered by the `CRMAudit` collection, capturing field-level change history to ensure absolute transparency and strict accountability.
 
-### Integrations & Extensibility
-- **Smart Calendar**: Persistent MongoDB-backed calendar with Public/Private visibility scopes and two-way Google Calendar OAuth2 synchronization.
-- **Artists Hub**: Multi-platform analytics dashboard hydrating live feeds from Spotify, YouTube, and Meta.
-- **Exly Integration**: Webhook receiver and automated CRM lead hydration with real-time performance analytics metrics. Features pagination for unlinked bookings and robust duplication checks matching incoming entries on existing emails/phones when transactionId is missing.
-- **Multi-Project Link Assets**: Manage cloud references (Google Drive, Sheets, Docs, Slides, Meet, and custom URLs) linked to multiple projects simultaneously, complete with dynamic icon detection, multi-account Google Workspace OAuth configuration, and direct access links.
-- **Legal & Compliance**: Automated public compliance pages (`/privacy` and `/userdata`) fulfilling Meta, Google, and GDPR data sovereignty mandates.
+### 3. Marketing, Communications & Proxy Telemetry
+
+* **Admin Auto-Mailer:** Complete broadcast control layout enabling designated administrators to create, test, distribute, and track mass mailing campaigns, handle global SMTP profile records, and analyze performance aggregates.
+* **Proxy Link & Tracking Pixel Wrapper:** Automatically rewrites outbound campaign HTML content, generating unique 16-byte cryptographically random tokens to route link clicks through secure tracking proxies (`/api/track/click/:clickId`) and transparent 1x1 hidden image pixels (`/api/track/open/:pixelId.gif`).
+* **Svix-Verified Callback Pipeline:** Deep integration with inbound Resend webhooks verified through strict cryptographic signature checks using the `svix` library to monitor open rates, link clicks, deliveries, and bounce events.
+* **Anti-Spam Crawler Filters:** Integrated user-agent screening logic to evaluate incoming telemetry headers and exclude automated bot traffic (e.g., Microsoft Safelinks, Barracuda) from polluting real human engagement data.
+* **Decoupled Unsubscribe Synchronization:** Manual synchronization routines (`POST /api/crm/sync-unsubscribed`) pulling opt-out logs from Google Sheets via HolySheet API, completely isolated from main server request loops.
+* **Team Chat Subsystem:** Real-time channel-based internal messaging components supporting user mentions (`@user`), canvas space indexing, and deep task referencing.
+
+### 4. Integrations & Extensibility
+
+* **Smart Calendar Subsystem:** Persistent MongoDB-backed calendar layer supporting custom visibility boundaries (`Public` vs. `Private`) and bidirectional Google Calendar API OAuth2 synchronization.
+* **Multi-Platform Artists Hub:** Analytics tracking dashboard designed to gather, normalize, and visualize live data feeds pulling directly from Spotify, YouTube, and Meta streaming APIs.
+* **Exly Automation Bridge:** Custom webhook receiver designed to ingest registration lists, track unlinked bookings, and handle missing identity attributes by automatically checking incoming items against existing email or phone parameters.
+* **Multi-Project Linked Assets Engine:** Shared reference asset repository supporting cloud storage references (Google Drive, Docs, Sheets, Slides, Meet, and external URLs) linked to multiple operational projects concurrently, complete with dynamic icon recognition and direct multi-account Google Workspace authentication shortcuts.
+* **Compliance & Data Sovereignty:** Publicly accessible data transparency portals (`/privacy` and `/userdata`) fulfilling validation requirements mandated by Meta, Google, and GDPR frameworks.
 
 ---
 
-## System Architecture & Data Flow
+## 🏗️ System Architecture & Data Flow
 
-Taskmaster operates on a highly optimized MERN stack tailored for real-time responsiveness and enterprise-grade concurrency.
+Taskmaster runs on a highly optimized MERN stack tailored for real-time responsiveness and enterprise-grade concurrency.
 
 ### Full System Map
 
@@ -89,110 +83,107 @@ graph TD
     P_API --> M_Project
     U_API --> M_User
     CR_API --> M_Lead
+
 ```
 
 ### Data Linkage Logic
-- **Project Hierarchy**: Project -> Phase -> Task. Sub-task relationships enable deep dependency trees.
-- **Role-Based Access Control (RBAC)**: Users are strictly isolated into admin, sales, and user privileges. Sales reps only access leads matching their assignedRepId.
-- **Concurrency Locks**: Distributed locking (`lockedBy`, `lockedAt`) on CRM entities prevents race conditions during simultaneous editing by multiple reps.
+
+* **Project Hierarchy Mechanics:** Establishes precise document linkages connecting `Project` $\rightarrow$ `Phase` $\rightarrow$ `Task` with multi-level subtask nesting supporting complex tracking paths.
+* **Role-Based Access Control (RBAC):** Strict driver-level query isolation separating `admin`, `sales`, and standard `user` permissions. Sales representatives are programmatically blocked from viewing or mutating records outside their assigned boundary.
+* **Distributed Concurrency Locking:** Implements explicit, time-stamped ownership trackers (`lockedBy`, `lockedAt`) across high-frequency fields to prevent data overwrites or check-then-act collisions during multi-agent team editing.
 
 ---
 
-## Performance Optimization Layer
+## ⚡ Performance Optimization Layer
 
 Taskmaster is engineered for speed, prioritizing minimal Time to Interactive (TTI) and zero layout shifts.
 
 ### 1. Smart Data Caching (React Query & Supabase)
-- **Zero-Flicker Navigation**: All server state is cached globally using `@tanstack/react-query` with a 5-minute `staleTime`.
-- **Optimistic UI**: Mutations (e.g., creating a task, logging work) update the UI **instantly** via `queryClient.setQueryData()` before the network request resolves, providing a perceived latency of 0ms.
-- **Real-Time Edge**: Supabase Realtime channels (`subscribeToChannel`) emit push events for instant, cross-client synchronization.
+
+* **Zero-Flicker Layout Rendering:** Global server state is handled via `@tanstack/react-query` configured with a 5-minute `staleTime` window, allowing immediate layout displays from memory cache while fetching silently in the background.
+* **Optimistic UI Updates:** State mutations instantly rewrite local data layouts client-side using `queryClient.setQueryData()` prior to network query resolution, reducing perceived user interaction latency to 0ms.
+* **Real-Time Edge Subscription Network:** Direct linkage to Supabase WebPush channels (`subscribeToChannel`) to broadcast mutation metrics across connected client screens instantly.
 
 ### 2. Backend Efficiency
-- **Trigger.dev Automation**: Long-running processes (mail dispatches, daily metric rollups) are offloaded to Trigger.dev, keeping the Express event loop free for high-throughput CRUD operations.
-- **Lean Queries**: All read-only database fetches employ Mongoose `.lean()`. Bypassing document hydration speeds up API responses by ~3-5x.
-- **Strategic Indexing**: Highly queried paths (`userId`, `projectId`, `phone`, `email`) are explicitly indexed in MongoDB, ensuring O(1) read efficiency even at scale.
-- **Response Compression**: Gzip/Brotli compression is actively applied to all JSON payloads to minimize bandwidth utilization.
+
+* **Trigger.dev Task Offloading:** Heavy, long-running operational processes (such as bulk email dispatch loops, spreadsheet synchronization, and nightly metric rollups) are offloaded to background worker nodes via Trigger.dev, leaving the main Express event loop unblocked.
+* **Lean Hydration Bypassing:** All read-only database tracking fetches employ Mongoose `.lean()`, bypassing heavy document serialization models to increase structural JSON payload response speeds by ~3-5x.
+* **Strategic Database Indexing:** Highly queried database lookups (`userId`, `projectId`, `phone`, `email`, `campaignId`, and array fields like `recipients.messageId` and `recipients.email`) contain explicit unique or single-field database index configurations to drop collection scan costs down to an absolute minimum.
+* **Gzip/Brotli Network Compression:** Compression middleware is globally active to minimize payload file sizes across JSON response networks.
 
 ### 3. Pro-Max Design Aesthetics
-- **4px Grid System**: All spatial dimensions in the Tailwind CSS configuration strictly adhere to a 4px modular scale for mathematical perfection.
-- **Zero-Flash Theme Engine**: A blocking script at the root level evaluates user OS preferences (`prefers-color-scheme`) prior to React hydration to prevent dark-mode flickering.
-- **High-Density Semantics**: Uses pastel color-encoding matrices (Success/Warning/Danger/Info) exclusively for data representation, avoiding purely decorative styling.
+
+* **4px Modular Scale Grid:** Every spatial layout dimension, container boundary, padding, and margin parameter inside the Tailwind CSS architecture mathematically strictly adheres to a modular 4px grid scale.
+* **Zero-Flash Theme Engine:** A blocking evaluation script sits at the application root level to interpret native OS dark-mode choices (`prefers-color-scheme`) prior to React client-side framework hydration, completely preventing visual flash artifacts.
+* **High-Density Semantics Map:** Information architecture uses clean pastel color-encoding matrices (`Success`/`Warning`/`Danger`/`Info`) explicitly reserved for semantic data presentation, eliminating purely decorative styling artifacts.
 
 ---
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
-- **Node.js** (v18+)
-- **MongoDB** (Local instance or MongoDB Atlas)
-- **Google OAuth Credentials** (Required for Calendar sync)
-- **Resend API Key** (Required for mailing functionality)
-- **Supabase / UploadThing / Trigger.dev Keys** (For full feature parity)
+
+* **Node.js** (v18+)
+* **MongoDB** (Local Community Edition instance or MongoDB Atlas Cloud Cluster)
+* **Google Cloud Console Developer Credentials** (Required for Workspace Calendar OAuth2 synchronization)
+* **Resend API Authorization Keys** (Required for automated broadcast workflows)
+* **Supabase / UploadThing / Trigger.dev Client Keys** (For total ecosystem feature parity)
 
 ### Installation
 
-1. **Clone & Setup Server**
-   ```bash
-   git clone https://github.com/YOUR_ORG/Taskmaster.git
-   cd Taskmaster/server
-   npm install
-   cp .env.example .env # Configure MONGO_URI, JWT_SECRET, RESEND, etc.
-   npm run dev
-   ```
+1. **Clone & Setup Server Backend Environment**
+```bash
+git clone https://github.com/YOUR_ORG/Taskmaster.git
+cd Taskmaster/server
+npm install
+cp .env.example .env # Configure MONGO_URI, JWT_SECRET, RESEND, etc.
+npm run dev
 
-2. **Setup Client**
-   ```bash
-   cd ../client
-   npm install
-   npm run dev
-   ```
+```
 
-3. **Initialize Database Sandbox (Optional)**
-   ```bash
-   cd ../server
-   node seeder.js
-   ```
 
----
+2. **Setup Client Frontend Application**
+```bash
+cd ../client
+npm install
+npm run dev
 
-## Tech Stack & Tooling
+```
 
-We built Taskmaster standing on the shoulders of incredible open-source and commercial tools:
 
-- **Frontend Core**: [React 18](https://react.dev/), [Vite](https://vitejs.dev/)
-- **Styling & Motion**: [Tailwind CSS v4](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/), [Lucide React](https://lucide.dev/)
-- **State & Data Fetching**: [React Query (TanStack)](https://tanstack.com/query/latest)
-- **Backend Core**: [Node.js](https://nodejs.org/), [Express.js](https://expressjs.com/)
-- **Database Layer**: [MongoDB](https://www.mongodb.com/), [Mongoose ODM](https://mongoosejs.com/)
-- **Infrastructure & Automation**:
-  - [Supabase](https://supabase.com/) (Realtime WebSockets)
-  - [Trigger.dev](https://trigger.dev/) (Background Job Orchestration)
-  - [UploadThing](https://uploadthing.com/) (Asset & File Storage)
-  - [Resend](https://resend.com/) & [Svix](https://www.svix.com/) (Email Delivery & Webhook Verification)
-- **Visuals & Graphs**: [React Flow](https://reactflow.dev/), [Recharts](https://recharts.org/)
+3. **Initialize Database Sandbox Staging Environment (Optional)**
+```bash
+cd ../server
+node seeder.js
+
+```
+
+
 
 ---
 
-## License
-
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
-
----
-Architected and developed for extreme efficiency by CoreKnot.
-
-
-### v1.7.6
-- Fixed email duplicate sends with array deduplication
-- Integrated Google Sheets (HolySheet) for unsubscribed list management
-- Fixed race condition in background queue dispatch
+## 📑 Version Changelog Release Ledger
 
 ### v1.7.7
-- Decoupled automated Google Sheet unsubscribe sync, making it manual via POST /api/crm/sync-unsubscribed
-- Solved metrics race conditions using Mongoose atomic operators ($inc and $set)
-- Implemented non-blocking tracking pixel and redirect wrappers running database writes in background setImmediate threads
-- Integrated User-Agent bot checks to screen out anti-spam crawlers from metrics
-- Added database index configurations on recipients.messageId, recipients.email, and campaignId
-- Refactored frontend routing hierarchy with public LandingPage root and protected absolute dashboard paths for Google OAuth compliance
 
-U p d a t e d   A s s e t s   a n d   D a s h b o a r d   c a c h i n g   m e c h a n i s m s ,   i m p r o v e d   l o a d i n g   s t a t e s   -   V e r s i o n   1 . 7 . 9  
- 
+* **Metrics Concurrency Stabilization:** Resolved potential update data losses across tracking indicators using Mongoose atomic operators (`$inc` and `$set`) to bypass read-modify-write memory bottlenecks.
+* **Asynchronous Telemetry Interceptors:** Configured hidden tracking pixel paths and URL proxies to process analytical logic entirely inside non-blocking background event loops via `setImmediate` tasks.
+* **Bot Crawler Protections:** Integrated explicit `user-agent` verification filters to automatically screen out anti-spam security robots from polluting human analytics records.
+* **Index Infrastructure Deployment:** Implemented explicit index matrices on campaign lookup keys (`recipients.messageId`, `recipients.email`, and `campaignId`) to completely eliminate high-cost full collection scans.
+* **Google Compliance Architecture Refactor:** Structural update to public routes introducing a dedicated unauthenticated landing page layout alongside easy-access privacy and data deletion compliance disclosures (`/privacy` and `/userdata`) to pass strict vendor verification verification audits.
+
+### v1.7.6
+
+* **Array Deduplication Patches:** Corrected duplicate communication transmission anomalies by building strict array verification deduplication filters within mailing workers.
+* **HolySheet Optimization Hub:** Linked unsubscribe opt-out monitoring tasks directly to automated spreadsheet registers via direct HolySheet API connection points.
+* **Race Condition Overhauls:** Resolved asynchronous dispatch execution collisions inside background task queues.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [`LICENSE`](https://www.google.com/search?q=LICENSE) for more specific information.
+
+---
+
+*Architected and developed for extreme efficiency by CoreKnot.*

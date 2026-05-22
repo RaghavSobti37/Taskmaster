@@ -515,6 +515,15 @@ export const useLiveLeads = (params, enabled = true) => {
   });
 };
 
+export const useContacts = (enabled = true) => {
+  return useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => (await axios.get('/api/contacts')).data,
+    enabled,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({

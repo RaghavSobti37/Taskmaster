@@ -45,12 +45,7 @@ router.post('/webhook', express.json({ type: ['application/json', 'text/plain'] 
 
         if (Object.keys(update).length > 0) {
           await MailCampaign.findByIdAndUpdate(campaignId, { $inc: update });
-          
-          // Update recipient status in campaign
-          await MailCampaign.updateOne(
-            { _id: campaignId, 'recipients.email': email },
-            { $set: { 'recipients.$.status': eventType } }
-          );
+          // Array status updates removed for performance. Counter increments handle campaign totals.
         }
       }
     }

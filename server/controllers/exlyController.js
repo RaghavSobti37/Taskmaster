@@ -241,64 +241,18 @@ exports.handleExlyWebhook = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 2. Sync lead into CRM using transaction (race condition safe)
-    let lead = null;
-    const filterConditions = [];
-    if (email) filterConditions.push({ email });
-    if (phone) filterConditions.push({ phone });
-
-    if (filterConditions.length > 0) {
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        let assignedRepId = null;
-        
-        // 1. Check for existing document inside the transaction session
-        const existing = await Lead.findOne({ $or: filterConditions })
-          .select('assignedRepId')
-          .session(session);
-
-        if (!existing) {
-          // 2. Safely calculate least-loaded rep without race conditions
-          assignedRepId = await assignLeadToRep(session);
-        }
-
-        const updatePayload = {
-          customerIdExly: custId,
-          transactionIdExly: txnId,
-          exlyOfferingId: offId,
-          exlyOfferingTitle: cleanTitle,
-          $setOnInsert: {
-            name: name || 'Exly Lead',
-            source: cleanTitle || 'Exly Offering',
-            leadStatus: 'Fresh',
-            callStatus: 'Fresh',
-            ...(email ? { email } : {}),
-            ...(phone ? { phone } : {}),
-            ...(assignedRepId ? { assignedRepId } : {})
-          }
-        };
-
-        // 3. Execute upsert within the same transaction scope
-        lead = await LeadService.upsertLead(
-          { $or: filterConditions },
-          updatePayload,
-          session
-        );
-
-        await session.commitTransaction();
-        if (lead) {
-          await LeadService.triggerSideEffects(lead._id);
-        }
-      } catch (error) {
-        await session.abortTransaction();
-        throw error;
-      } finally {
-        session.endSession();
-      }
+    // 2. Sync lead into Unified Contact Hub (race condition safe via mergeContact)
+    const ContactService = require('../services/ContactService');
+    let contact = null;
+    
+    if (email || phone) {
+      contact = await ContactService.mergeContact({
+        name: name || 'Exly Lead',
+        email: email,
+        phone: phone,
+        exlyOfferingTitle: cleanTitle
+      }, 'exly');
     }
-
 
 
 
@@ -357,7 +311,7 @@ exports.handleExlyWebhook = async (req, res) => {
       await offering.save();
     }
 
-    res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', leadId: lead ? lead._id : null });
+    res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', contactId: contact ? contact._id : null });
   } catch (err) {
     console.error('❌ [Exly Webhook Error]:', err.message);
     res.status(500).json({ success: false, error: err.message });

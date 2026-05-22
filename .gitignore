@@ -10,3 +10,4 @@ graphify-out/
 setup.cd
 .claude/
 *.mmdb
+*.specify

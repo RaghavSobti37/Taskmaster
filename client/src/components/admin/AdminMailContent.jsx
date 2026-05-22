@@ -10,7 +10,7 @@ import {
 import { 
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile, 
   useDeleteMailProfile, useCreateCampaign, useSendCampaign, useDeleteCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics,
-  useMailTemplates, useSaveMailTemplate, useDeleteMailTemplate, useSyncUnsubscribed, useLocationLeads
+  useMailTemplates, useSaveMailTemplate, useDeleteMailTemplate, useSyncUnsubscribed, useLocationLeads, useContacts
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
 
@@ -27,26 +27,32 @@ export default function AdminMailContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [filters, setFilters] = useState({
-    leadQuality: 'all',
-    callStatus: 'all',
     leadStatus: 'all',
-    assignedRepId: 'all',
-    artistType: 'all',
-    primaryRole: 'all'
+    exlyOffering: 'all'
   });
 
-  const queryParams = useMemo(() => ({
-    limit: 1000,
-    hasEmail: 'true',
-    search: searchTerm,
-    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all')),
-    ...(activeTab === 'fresh' ? { leadStatus: 'Fresh' } : {}),
-    ...(activeTab === 'contacted' ? { leadStatus: 'Contacted' } : {})
-  }), [searchTerm, filters, activeTab]);
+  const { data: contactsData, isLoading: contactsLoading } = useContacts();
+  const allContacts = contactsData || [];
 
-  const { data: leadsData, isLoading: leadsLoading } = useLiveLeads(queryParams);
-  const leads = leadsData?.leads || [];
-  const totalLeads = leadsData?.total || 0;
+  const filteredContacts = useMemo(() => {
+    return allContacts.filter(c => {
+      if (!c.email) return false;
+      if (searchTerm && !c.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !c.email?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (activeTab === 'fresh' && c.leadStatus !== 'Fresh') return false;
+      if (activeTab === 'contacted' && c.leadStatus !== 'Contacted') return false;
+      if (filters.leadStatus !== 'all' && c.leadStatus !== filters.leadStatus) return false;
+      if (filters.exlyOffering !== 'all' && (!c.exlyOfferings || !c.exlyOfferings.includes(filters.exlyOffering))) return false;
+      return true;
+    });
+  }, [allContacts, searchTerm, activeTab, filters]);
+
+  const totalContacts = filteredContacts.length;
+
+  const exlyOfferingsList = useMemo(() => {
+    const list = new Set();
+    allContacts.forEach(c => c.exlyOfferings?.forEach(o => list.add(o)));
+    return Array.from(list);
+  }, [allContacts]);
 
   const createProfileMutation = useCreateMailProfile();
   const deleteProfileMutation = useDeleteMailProfile();
@@ -386,13 +392,19 @@ export default function AdminMailContent() {
       return;
     }
 
+    const selectedContactsList = allContacts.filter(c => selectedLeadIds.includes(c._id));
+    const mergedRecipients = [
+      ...csvRecipients,
+      ...selectedContactsList.map(c => ({ name: c.name, email: c.email }))
+    ];
+
     await createCampaignMutation.mutateAsync({
       title,
       subject,
       content,
       senderProfileId,
-      leadIds: selectedLeadIds,
-      customRecipients: csvRecipients
+      leadIds: [], // Rely purely on customRecipients for unified approach
+      customRecipients: mergedRecipients
     });
 
     setTitle('');
@@ -778,9 +790,9 @@ export default function AdminMailContent() {
                <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-4">
                  <div className="flex items-center justify-between flex-wrap gap-2">
                    <div className="flex items-center gap-3">
-                     <span className="text-xs font-bold uppercase tracking-tight">Select CRM Leads</span>
+                     <span className="text-xs font-bold uppercase tracking-tight">Select CRM & Exly Contacts</span>
                      <Badge variant="mint">{selectedLeadIds.length} Selected</Badge>
-                     <span className="text-[10px] text-[var(--color-text-muted)]">({totalLeads} Total Available with Email)</span>
+                     <span className="text-[10px] text-[var(--color-text-muted)]">({totalContacts} Total Available)</span>
                    </div>
                    <div className="flex items-center gap-2">
                      <Button 
@@ -788,12 +800,12 @@ export default function AdminMailContent() {
                        variant="secondary"
                        type="button"
                        onClick={() => {
-                         const filteredIds = leads.map(l => l._id);
+                         const filteredIds = filteredContacts.map(l => l._id);
                          const newSelected = Array.from(new Set([...selectedLeadIds, ...filteredIds]));
                          setSelectedLeadIds(newSelected);
                        }}
                      >
-                       Select All Filtered ({leads.length})
+                       Select All Filtered ({filteredContacts.length})
                      </Button>
                      <Button 
                        size="xs" 
@@ -829,49 +841,18 @@ export default function AdminMailContent() {
                        icon={Search}
                      />
                    </div>
-                   <div className="w-36">
+                   <div className="w-52">
                      <NexusDropdown 
-                       placeholder="Quality"
+                       placeholder="Exly Offering"
                        options={[
-                         { value: 'all', label: 'All Quality' },
-                         { value: '5', label: 'Level 5' },
-                         { value: '4', label: 'Level 4' },
-                         { value: '3', label: 'Level 3' },
-                         { value: '2', label: 'Level 2' },
-                         { value: '1', label: 'Level 1' }
+                         { value: 'all', label: 'All Offerings' },
+                         ...exlyOfferingsList.map(o => ({ value: o, label: o }))
                        ]}
-                       value={filters.leadQuality}
-                       onChange={v => setFilters({...filters, leadQuality: v})}
+                       value={filters.exlyOffering}
+                       onChange={v => setFilters({...filters, exlyOffering: v})}
                      />
                    </div>
-                   <div className="w-36">
-                     <NexusDropdown 
-                       placeholder="Artist Type"
-                       options={[
-                         { value: 'all', label: 'All Artists' },
-                         { value: 'Full-time Artiste', label: 'Full-time' },
-                         { value: 'Part Time Artiste', label: 'Part-time' },
-                         { value: 'Hobbyist', label: 'Hobbyist' }
-                       ]}
-                       value={filters.artistType || 'all'}
-                       onChange={v => setFilters({...filters, artistType: v})}
-                     />
-                   </div>
-                   <div className="w-36">
-                     <NexusDropdown 
-                       placeholder="Role"
-                       options={[
-                         { value: 'all', label: 'All Roles' },
-                         { value: 'Vocalist', label: 'Vocalist' },
-                         { value: 'Music Producer', label: 'Producer' },
-                         { value: 'Singer Songwriter', label: 'Songwriter' },
-                         { value: 'Instrumentalist', label: 'Instrumentalist' },
-                         { value: 'Composer', label: 'Composer' }
-                       ]}
-                       value={filters.primaryRole || 'all'}
-                       onChange={v => setFilters({...filters, primaryRole: v})}
-                     />
-                   </div>
+                   <div className="flex-1"></div>
                    <div className="w-40">
                      <NexusDropdown 
                        placeholder="Agent"
@@ -882,16 +863,16 @@ export default function AdminMailContent() {
                    </div>
                  </div>
 
-                 {/* Leads List */}
+                 {/* Contacts List */}
                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1 border border-[var(--color-bg-border)] rounded-xl p-2 bg-[var(--color-bg-primary)] custom-scrollbar">
-                   {leads.length === 0 ? (
+                   {filteredContacts.length === 0 ? (
                      <div className="p-8 text-center text-xs text-[var(--color-text-muted)] italic font-mono">
-                       {leadsLoading ? 'Loading leads...' : 'No CRM leads match the selected filters.'}
+                       {contactsLoading ? 'Loading contacts...' : 'No contacts match the selected filters.'}
                      </div>
                    ) : (
-                     leads.map(l => {
+                     filteredContacts.map(l => {
                        const isSel = selectedLeadIds.includes(l._id);
-                       const repName = team.find(r => r._id === (typeof l.assignedRep === 'object' ? l.assignedRep?._id : l.assignedRep))?.name || l.assignedRep?.name || 'Unassigned';
+                       const repName = l.addedBy?.name || 'Unassigned';
                        return (
                          <div 
                            key={l._id} 
@@ -908,24 +889,30 @@ export default function AdminMailContent() {
                              <div>
                                <div className="flex items-center gap-2">
                                  <span className="font-bold">{l.name}</span>
-                                 {l.artistType && (
+                                 {l.inCRM && (
                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
-                                     {l.artistType.replace(' Artiste', '')}
+                                     CRM
                                    </span>
                                  )}
-                                 {l.primaryRole && (
+                                 {l.inExly && (
                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-action-primary)]/10 border border-[var(--color-action-primary)]/20 text-[var(--color-action-primary)] font-normal tracking-tight">
-                                     {l.primaryRole}
+                                     Exly
                                    </span>
                                  )}
+                                 {l.exlyOfferings?.map((offering, idx) => (
+                                    <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500 font-normal tracking-tight truncate max-w-[150px]">
+                                      {offering}
+                                    </span>
+                                 ))}
                                </div>
-                               <span className="text-[11px] text-[var(--color-text-muted)] font-mono font-normal block">{l.email} {l.phone ? `• ${l.phone}` : ''} {l.city ? `• ${l.city}` : ''}</span>
+                               <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5 font-mono">
+                                 {l.email} {l.phone && `• ${l.phone}`}
+                               </div>
                              </div>
                            </div>
-                           <div className="flex items-center gap-2">
-                             <Badge variant={l.leadQuality >= 4 ? 'mint' : 'info'}>L{l.leadQuality || 1}</Badge>
-                             <Badge variant={l.leadStatus === 'Converted' ? 'mint' : 'slate'}>{l.leadStatus || 'Fresh'}</Badge>
-                             <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[80px]">{repName}</span>
+                           <div className="text-right">
+                             <div className="text-[10px] uppercase font-bold tracking-wider">{l.leadStatus || 'Contact'}</div>
+                             <div className="text-[10px] text-[var(--color-text-muted)]">{repName}</div>
                            </div>
                          </div>
                        );

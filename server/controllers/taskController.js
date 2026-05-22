@@ -276,9 +276,10 @@ exports.reportBug = async (req, res, next) => {
         name: 'Tech Stack & Maintenance',
         description: 'Core application infrastructure, bug tracking, and continuous refactoring pipeline.',
         status: 'active',
-        priority: 'high',
+        outletId: 'coreknot',
         owner: raghavUser._id,
-        members: [{ user: raghavUser._id, role: 'manager' }]
+        members: [raghavUser._id],
+        memberRoles: [{ user: raghavUser._id, role: 'manager' }]
       }], { session });
       techProject = techProject[0];
     }

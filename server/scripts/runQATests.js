@@ -145,19 +145,24 @@ async function runQATests() {
     // Wait briefly for queue or async work
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const leadCountAfterOne = await Lead.countDocuments({ phone: testPhone });
+    const Contact = require('../models/Contact');
+    const ExlyBooking = require('../models/ExlyBooking');
+
+    const leadCountAfterOne = await Contact.countDocuments({ phone: testPhone });
+    const bookingCountAfterOne = await ExlyBooking.countDocuments({ phone: testPhone });
 
     // Second duplicate request
     const res2 = await client.post('/exly/webhook', webhookPayload);
     
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const leadCountAfterTwo = await Lead.countDocuments({ phone: testPhone });
+    const leadCountAfterTwo = await Contact.countDocuments({ phone: testPhone });
+    const bookingCountAfterTwo = await ExlyBooking.countDocuments({ phone: testPhone });
 
-    if (res1.status >= 200 && res1.status < 300 && leadCountAfterOne === 1 && leadCountAfterTwo === 1) {
+    if (res1.status >= 200 && res1.status < 300 && leadCountAfterOne === 1 && leadCountAfterTwo === 1 && bookingCountAfterOne === 1 && bookingCountAfterTwo === 1) {
       await runLog('TEST_ASSERTION', 'ExlyBooking', 'SUCCESS', {
         testCase: 'Exly Webhook & Deduplication',
-        message: 'Deduplication works successfully. Only one lead created.',
+        message: 'Deduplication works successfully. Only one contact/booking created.',
         res1Status: res1.status,
         res2Status: res2.status,
         finalCount: leadCountAfterTwo
@@ -165,7 +170,7 @@ async function runQATests() {
     } else {
       await runLog('TEST_ASSERTION', 'ExlyBooking', 'BUG_DETECTED', {
         testCase: 'Exly Webhook & Deduplication',
-        message: `Deduplication failed or endpoint error. Count after 1: ${leadCountAfterOne}, Count after 2: ${leadCountAfterTwo}`,
+        message: `Deduplication failed or endpoint error. Count after 1: ${leadCountAfterOne}, Count after 2: ${leadCountAfterTwo}, Bookings 1: ${bookingCountAfterOne}, Bookings 2: ${bookingCountAfterTwo}`,
         res1Status: res1.status,
         res2Status: res2.status
       }, tc2Start);

@@ -183,18 +183,17 @@ class ExlyService {
       if (email) filter.$or.push({ email });
 
       if (filter.$or.length > 0) {
-        let existing = await Lead.findOne(filter);
-        if (existing) {
-          existing.name = name || existing.name;
-          existing.email = email || existing.email;
-          existing.phone = phone || existing.phone;
-          existing.customerIdExly = custId || existing.customerIdExly;
-          existing.transactionIdExly = txnId || existing.transactionIdExly;
-          existing.exlyOfferingId = offeringId || existing.exlyOfferingId;
-          existing.exlyOfferingTitle = cleanTitle || existing.exlyOfferingTitle;
-          await existing.save();
-          updatedCount++;
-        }
+        // Stop automatically adding to Leads table as requested by the user.
+        // Instead, we only aggregate data into the Unified Contact hub.
+        const ContactService = require('./ContactService');
+        await ContactService.mergeContact({
+          name: name || 'Exly Lead',
+          email: email,
+          phone: phone,
+          exlyOfferingTitle: cleanTitle
+        }, 'exly');
+        
+        updatedCount++; // Track successfully processed contacts
       }
     }
 

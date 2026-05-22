@@ -29,6 +29,27 @@ const updateEmailTags = async (email, tag, status) => {
   const cleanEmail = email.toLowerCase().trim();
   let foundInLead = false;
 
+  // 0. Update Unified Contacts
+  const Contact = require('../models/Contact');
+  const contacts = await Contact.find({ email: cleanEmail });
+  for (const contact of contacts) {
+    contact.emailStatus = status;
+    if (status === 'Unsubscribed') contact.unsubscribed = true;
+    if (status === 'Active') contact.inMailer = true;
+    if (status === 'Invalid' || status === 'Bounced') contact.bounceCount = (contact.bounceCount || 0) + 1;
+    await contact.save();
+  }
+
+  // 0.5. Update Exly Bookings
+  const ExlyBooking = require('../models/ExlyBooking');
+  const exlyBookings = await ExlyBooking.find({ email: cleanEmail });
+  for (const booking of exlyBookings) {
+    booking.emailStatus = status;
+    if (status === 'Unsubscribed') booking.unsubscribed = true;
+    if (status === 'Invalid' || status === 'Bounced') booking.bounceCount = (booking.bounceCount || 0) + 1;
+    await booking.save();
+  }
+
   // 1. Update Leads
   const leads = await Lead.find({ email: cleanEmail });
   for (const lead of leads) {

@@ -217,7 +217,7 @@ export default function LeadsPage() {
                 {row.primaryRole}
               </span>
             )}
-            {row.source && (
+            {row.source && (!row.exlyOfferingTitle || (row.source !== 'Exly Offering' && row.source !== row.exlyOfferingTitle)) && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
                 {row.source}
               </span>
@@ -266,7 +266,7 @@ export default function LeadsPage() {
           <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
             {row.assignedRep?.avatar ? <img src={row.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={12} className="text-[var(--color-text-muted)]" />}
           </div>
-          <span className="text-[10px] font-black uppercase tracking-tight truncate">{row.assignedRep?.name || 'Unassigned'}</span>
+          <span className="text-[10px] font-black uppercase tracking-tight truncate">{row.assignedRep?.name || 'Pending Assignment'}</span>
         </div>
       )
     }
@@ -491,25 +491,30 @@ export default function LeadsPage() {
             </Card>
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 border-b border-[var(--color-bg-border)] pb-2">
-                <History size={12} /> Audit Trail
+                <Zap size={12} className="text-purple-500" /> Exly Offerings
               </h4>
-              {leadLogs.length > 0 ? (
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1 text-[11px] custom-scrollbar">
-                  {leadLogs.map((log, index) => (
-                    <div key={index} className="border-b border-[var(--color-bg-border)] pb-2 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-center text-[9px] text-[var(--color-text-muted)] font-mono">
-                        <span className="font-bold text-[var(--color-text-primary)]">{log.userId?.name || 'System / Batch'}</span>
-                        <span>{new Date(log.timestamp).toLocaleDateString()}</span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">
-                        Changed <span className="font-bold text-blue-400">{log.fieldChanged}</span> from <span className="line-through text-[var(--color-text-muted)]">{log.oldValue || '(empty)'}</span> to <span className="font-bold text-emerald-400">{log.newValue || '(empty)'}</span>
-                      </p>
+              <div className="space-y-3">
+                {(() => {
+                  const offerings = selectedLead?.exlyOfferings?.length > 0 
+                    ? selectedLead.exlyOfferings 
+                    : selectedLead?.exlyOfferingTitle ? [{ title: selectedLead.exlyOfferingTitle, purchasedAt: selectedLead.createdAt }] : [];
+                  
+                  if (offerings.length === 0) {
+                    return <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No offerings found</p>;
+                  }
+
+                  return offerings.map((off, idx) => (
+                    <div key={idx} className="flex flex-col gap-1 pb-2 border-b border-[var(--color-bg-border)] last:border-0 last:pb-0">
+                      <span className="text-[11px] font-bold text-[var(--color-text-primary)]">{off.title}</span>
+                      {off.purchasedAt && (
+                        <span className="text-[9px] font-mono text-[var(--color-text-muted)]">
+                          {new Date(off.purchasedAt).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No edits recorded yet</p>
-              )}
+                  ));
+                })()}
+              </div>
             </Card>
           </div>
         }
@@ -591,7 +596,7 @@ export default function LeadsPage() {
                   value={editLeadData.assignedRepId || ''}
                   onChange={e => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
                 >
-                  <option value="">Unassigned</option>
+                  <option value="" disabled>Pending Assignment</option>
                   {team.map(rep => (
                     <option key={rep._id} value={rep._id}>{rep.name}</option>
                   ))}

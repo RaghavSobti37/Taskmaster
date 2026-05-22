@@ -150,6 +150,7 @@ exports.getLeads = async (req, res) => {
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
           remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,
+          exlyOfferings: 1, exlyOfferingTitle: 1, exlyOfferingId: 1,
           'assignedRep.name': 1, 'assignedRep.email': 1, 'assignedRep.avatar': 1
         }
       }

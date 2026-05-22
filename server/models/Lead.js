@@ -13,6 +13,11 @@ const LeadSchema = new mongoose.Schema({
   transactionIdExly: { type: String, index: true },
   exlyOfferingId: { type: String, index: true },
   exlyOfferingTitle: { type: String, index: true },
+  exlyOfferings: [{
+    offeringId: String,
+    title: String,
+    purchasedAt: Date
+  }],
   
   // Basic Information
   name: { type: String, required: true },
@@ -77,7 +82,16 @@ const LeadSchema = new mongoose.Schema({
   timestamps: true // Automatically handles createdAt and updatedAt
 });
 
-// Sanitization moved to LeadService.js
+
+
+LeadSchema.pre('save', function(next) {
+  if (this.name) this.name = sanitizeName(this.name);
+  if (this.email) this.email = sanitizeEmail(this.email);
+  if (this.phone) this.phone = normalizePhone(this.phone);
+  if (this.city) this.city = sanitizeLocation(this.city);
+  next();
+});
+
 // Update hooks moved to LeadService.js
 
 // Apply Audit Plugin

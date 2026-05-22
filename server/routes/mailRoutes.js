@@ -164,8 +164,8 @@ router.get('/stats', protect, async (req, res) => {
         if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) totalBounced++;
       });
     });
-    const Lead = require('../models/Lead');
-    totalUnsubscribed = await Lead.countDocuments({ unsubscribed: true });
+    const Contact = require('../models/Contact');
+    totalUnsubscribed = await Contact.countDocuments({ unsubscribed: true });
 
     res.json({ totalCampaigns, totalSent, totalBounced, totalOpened, totalClicked, totalUnsubscribed });
   } catch (err) {

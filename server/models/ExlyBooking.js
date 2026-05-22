@@ -17,7 +17,11 @@ const ExlyBookingSchema = new mongoose.Schema({
   transactionId: { type: String, index: true },
   customerId: { type: String, index: true },
   state: { type: String },
-  payoutStatus: { type: String }
+  payoutStatus: { type: String },
+  // Mailer specific fields
+  emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending' },
+  bounceCount: { type: Number, default: 0 },
+  unsubscribed: { type: Boolean, default: false }
 }, {
   timestamps: true
 });

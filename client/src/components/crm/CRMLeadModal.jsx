@@ -270,6 +270,33 @@ const CRMLeadModal = ({ isOpen, onClose, lead, onRefresh, onOptimisticUpdate }) 
                           className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-xs font-bold outline-none focus:border-blue-500 transition-all shadow-sm"
                         />
                       </div>
+                      <div className="space-y-3 mt-6 border-t border-[var(--color-bg-border)] pt-4">
+                        <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                          <Star size={12} className="text-purple-500" /> Exly Offerings
+                        </h4>
+                        <div className="space-y-2">
+                          {(() => {
+                            const offerings = formData.exlyOfferings?.length > 0 
+                              ? formData.exlyOfferings 
+                              : formData.exlyOfferingTitle ? [{ title: formData.exlyOfferingTitle, purchasedAt: formData.createdAt }] : [];
+                              
+                            if (offerings.length === 0) {
+                              return <div className="text-xs text-slate-500 font-bold opacity-50 px-2">NO OFFERINGS</div>;
+                            }
+                            
+                            return offerings.map((off, idx) => (
+                              <div key={idx} className="bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl p-3 flex flex-col gap-1">
+                                <span className="text-xs font-bold text-[var(--color-text-primary)]">{off.title}</span>
+                                {off.purchasedAt && (
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                    {new Date(off.purchasedAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-6">

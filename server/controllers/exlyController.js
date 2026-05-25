@@ -169,8 +169,8 @@ exports.syncExlyData = async (req, res) => {
       action: 'EXLY_SYNC',
       fieldChanged: 'all',
       oldValue: 'un-synced',
-      newValue: `offerings_${result.offeringsSynced}_added_${result.leadsAdded}_updated_${result.leadsUpdated}`,
-      notes: `Manually triggered Exly integration sync: Synced ${result.offeringsSynced} offerings, added ${result.leadsAdded} new leads, updated ${result.leadsUpdated} existing leads.`
+      newValue: ['offerings', result.offeringsSynced, 'added', result.leadsAdded, 'updated', result.leadsUpdated].join('_'),
+      notes: 'Manually triggered Exly integration sync: Synced ' + result.offeringsSynced + ' offerings, added ' + result.leadsAdded + ' new leads, updated ' + result.leadsUpdated + ' existing leads.'
     });
 
     res.json({

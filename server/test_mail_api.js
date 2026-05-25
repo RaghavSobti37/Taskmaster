@@ -23,7 +23,7 @@ const runTest = async () => {
         name: 'Redacted User',
         email: 'redacted@example.com',
         phone: '+918591499393',
-        password: 'password123',
+        password: process.env.DEFAULT_SEED_PASSWORD || 'password123',
         role: 'admin'
       });
     }
@@ -38,7 +38,7 @@ const runTest = async () => {
         smtpHost: 'smtp.gmail.com',
         smtpPort: 587,
         smtpUser: 'helloworld@theshakticollective.in',
-        smtpPass: 'wednxwrsjqbmppid',
+        smtpPass: process.env.EMAIL_PASSWORD || 'wednxwrsjqbmppid',
         isDefault: true,
         createdBy: user._id
       });

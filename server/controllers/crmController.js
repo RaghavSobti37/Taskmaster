@@ -65,12 +65,11 @@ exports.getLeads = async (req, res) => {
 
     if (req.query.search) {
       const escaped = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const searchRegex = new RegExp(escaped, 'i');
       query.$or = [
-        { name: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex },
-        { city: searchRegex }
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { phone: { $regex: escaped, $options: 'i' } },
+        { city: { $regex: escaped, $options: 'i' } }
       ];
     }
 

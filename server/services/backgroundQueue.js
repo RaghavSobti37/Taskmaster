@@ -6,8 +6,8 @@ let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 
 if (process.platform === 'win32' && (!process.env.REDIS_URL || process.env.REDIS_URL.includes('127.0.0.1') || process.env.REDIS_URL.includes('localhost'))) {
   try {
-    const { execSync } = require('child_process');
-    const wslIp = execSync('wsl hostname -I').toString().trim().split(' ')[0];
+    const { execFileSync } = require('child_process');
+    const wslIp = execFileSync('wsl', ['hostname', '-I']).toString().trim().split(' ')[0];
     if (wslIp) {
       redisUrl = `redis://${wslIp}:6379`;
       console.log(`[SYSTEM] Windows detected. Using WSL Redis IP: ${redisUrl}`);

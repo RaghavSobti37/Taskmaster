@@ -14,12 +14,12 @@ exports.getTscData = async (req, res) => {
 
     let query = {};
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
+      const escaped = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { name: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex },
-        { campaign: searchRegex }
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { phone: { $regex: escaped, $options: 'i' } },
+        { campaign: { $regex: escaped, $options: 'i' } }
       ];
     }
 
@@ -320,12 +320,12 @@ exports.bulkDeleteTscData = async (req, res) => {
       query = { _id: { $in: ids } };
     } else if (filter || search) {
       if (search) {
-        const searchRegex = new RegExp(search, 'i');
+        const escaped = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         query.$or = [
-          { name: searchRegex },
-          { email: searchRegex },
-          { phone: searchRegex },
-          { campaign: searchRegex }
+          { name: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+          { phone: { $regex: escaped, $options: 'i' } },
+          { campaign: { $regex: escaped, $options: 'i' } }
         ];
       }
       if (filter) {

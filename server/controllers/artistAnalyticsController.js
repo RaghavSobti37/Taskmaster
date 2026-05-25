@@ -385,7 +385,7 @@ exports.metaMentionsWebhook = async (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
-    if (mode && token === (process.env.META_VERIFY_TOKEN || 'taskmaster_secret')) {
+    if (mode && process.env.META_VERIFY_TOKEN && token === process.env.META_VERIFY_TOKEN) {
       return res.status(200).send(challenge);
     }
     return res.status(403).json({ message: 'Forbidden' });
@@ -467,8 +467,12 @@ exports.metaOAuthCallback = async (req, res) => {
     const artist = await Artist.findById(id);
     if (!artist) return res.status(404).json({ success: false, message: 'Artist not found' });
 
-    const clientId = (process.env.META_APP_ID || '733417183164639').replace(/['"]/g, '').trim();
-    const clientSecret = (process.env.META_APP_SECRET || '38dd5d9fbf952919532575704da019dd').replace(/['"]/g, '').trim();
+    const clientId = (process.env.META_APP_ID || '').replace(/['"]/g, '').trim();
+    const clientSecret = (process.env.META_APP_SECRET || '').replace(/['"]/g, '').trim();
+
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({ success: false, message: 'Meta credentials not configured in environment variables' });
+    }
 
     console.log(`⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...`);
 

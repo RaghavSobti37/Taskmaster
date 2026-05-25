@@ -22,7 +22,7 @@ async function run() {
     deepank = await User.create({
       name: 'Deepank',
       email: 'redacted-staff@example.com',
-      password: '1234',
+      password: process.env.DEFAULT_SEED_PASSWORD || '1234',
       role: 'artist_management',
       teams: []
     });

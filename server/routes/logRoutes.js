@@ -95,13 +95,30 @@ router.post('/run-qa', protect, async (req, res) => {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
     
-    const { exec } = require('child_process');
+    const { fork } = require('child_process');
     const path = require('path');
     
-    exec('node scripts/runQATests.js', { cwd: path.join(__dirname, '..') }, (error, stdout, stderr) => {
-      if (error) {
-        console.error('QA Test execution failed:', error);
-        return res.status(500).json({ error: error.message, stderr, stdout });
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'runQATests.js');
+    const child = fork(scriptPath, [], {
+      cwd: path.join(__dirname, '..'),
+      silent: true
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        console.error('QA Test execution failed with code', code);
+        return res.status(500).json({ error: 'QA Test failed with code ' + code, stderr, stdout });
       }
       res.json({ message: 'QA Test completed successfully', stdout });
     });

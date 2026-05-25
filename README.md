@@ -1,124 +1,107 @@
 # Taskmaster CRM & Operations Hub
 
-Taskmaster is a high-density, mission-critical operational hub and CRM system built with a robust **MERN stack** (MongoDB, Express, React, Node.js). Engineered for maximum efficiency, zero-fluff data architecture, and an "impeccable" UI/UX design (Pro-Max standards), this platform serves as the central nervous system for sales, operations, analytics, and team collaboration.
+Taskmaster is the unified operational hub and CRM system in this repository. It uses a decoupled React frontend and an Express/MongoDB backend, with a secure backend proxy for third-party service integrations.
 
 ---
 
-## 🌟 Core Features
+## 🔧 Current Project Structure
 
-- **Unified CRM & Data Hub**: Real-time synchronization with external services (e.g., Exly Webhooks, Resend mailers) utilizing a `ContactService` deduplication layer.
-- **Spec-Driven Autonomous QA**: Native background QA monitoring via automated staging environment checks to trace edge-cases and schema violations dynamically.
-- **High-Density Pro-Max Design**: Strict 4px modular scale grid, semantic pastel encoding, and absolute zero reliance on placeholder/mock data.
-- **Operational Workflows**: Fully featured task management, Kanban boards, Gantt charts, team collaboration chats, and daily productivity logging.
-- **Data Completeness**: Comprehensive Mongoose hooks enforce airtight input sanitization, data uniqueness, and cross-reference validation.
-
----
-
-## 🤖 AI Toolchain & Agentic Memory
-
-This project is actively maintained and built alongside state-of-the-art AI agents. The repository utilizes an **Agentic Memory** architecture to preserve long-term context and architectural rules across sessions.
-
-*   **Specify CLI / Spec-Kit**: Used for spec-driven development (SDD). Preserves AI context inside `.specify/memory/`. Ensures that all new agents inherit the architectural blueprints.
-*   **Antigravity (by Google Deepmind)**: Acts as the primary autonomous agent for complex backend refactors, multi-file synchronizations, background worker logic, and E2E automated test fixing.
-*   **Claude Code / Copilot**: Local assistants for rapid inline prototyping and code-generation tasks.
-
-*All legacy agent memory files (formerly in `.github/agents` and `agentic_memory`) have been migrated to the unified `.specify/memory/` standard.*
+- `server/` — Backend API, Express routes, Mongoose models, middleware, auth, proxy controller, Redis queue support.
+- `client/` — React application built with Vite, Tailwind, Clerk auth hooks, and frontend routing.
+- `docs/PROJECT_MEMORY.md` — Architecture and design memory for the project.
+- `GLOBAL_RULES.md` — Master configuration and coding philosophy rules.
+- `server/.env.example` — Server environment variable template.
 
 ---
 
-## 🏗 System Architecture (MERN)
-
-The application follows a strictly decoupled client-server architecture.
-
-### 1. Frontend Structure (`client/src/`)
-Built with **React** and **Vite**, leveraging high-end motion concepts and TanStack Query for optimal client-side caching.
-
-```text
-client/src/
-├── components/          # Reusable UI elements and modals
-│   ├── ui/              # Primitive components (NexusModal, CKDropdown, etc.)
-│   ├── dashboard/       # Dashboard widgets (Velocity, Tasks, Schedule)
-│   ├── crm/             # Lead management and follow-up tools
-│   └── project/         # Kanban, List, and Gantt project views
-├── pages/               # Top-level route components mapped to React Router
-├── contexts/            # React Context providers (Auth, Theme, Toast)
-├── hooks/               # Custom hooks (e.g., useTaskmasterQueries wrapping TanStack)
-├── utils/               # Client-side utility functions
-└── index.css            # Tailwind v4 configuration and root CSS variables
-```
-
-**Frontend Tenets**:
-*   **Data Hydration**: Absolute purge of mock states. All data is fetched via `@tanstack/react-query` with optimistic updates.
-*   **Design Constraints**: 4px hard grid system. Pastel color-encoding for success/warning/danger semantics. Flawless dark mode depth profiling.
-
-### 2. Backend Structure (`server/`)
-Built with **Node.js** and **Express**, utilizing **Mongoose** for schema definitions, strict validation, and relational population.
-
-```text
-server/
-├── models/              # Mongoose Schemas (Lead, User, Task, Project, ExlyBooking, etc.)
-├── controllers/         # Request handling and HTTP response mapping
-├── routes/              # Express Router definitions
-├── services/            # Deep business logic (ContactService, exlyService, etc.)
-├── scripts/             # CLI tasks, Cron jobs, and Autonomous QA checks
-├── middleware/          # Security, Auth (JWT), and Error handling
-└── utils/               # Shared sanitizers, loggers, and parsers
-```
-
-**Backend Tenets**:
-*   **Mongoose Hooks**: Strict `pre('save')` hooks ensure zero-fluff text sanitization. Emails are normalized, and phones are standardized to global formats prior to persistence.
-*   **Deduplicated Source of Truth**: The `ContactService` handles data aggregation from CRMs and external webhooks into a unified model, preventing duplicate CRM `Lead` creation.
-*   **Optimized Queries**: All read-heavy operations use `.lean()` and MongoDB `$facet` or `$group` aggregation pipelines instead of redundant `countDocuments()`.
-
----
-
-## 🚀 Development Setup & Deployment
-
-The application runs two localized servers concurrently for development.
+## 🚀 Setup (Full Local Project)
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB (v6+)
-- API Keys for Google Auth, UploadThing, Exly, and Resend (set in `.env`).
+- Node.js 18+
+- MongoDB running locally or accessible remotely
+- Redis if you want queue/cache/background worker functionality
+- API keys for services used by the backend
 
-### Environment Variables
-Ensure `.env` files exist in both `client/` and `server/` directories.
+### Environment setup
 
-**Server (`server/.env`)**:
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/taskmaster
-JWT_SECRET=your_secure_secret
-NODE_ENV=development
-```
-
-### Running Locally
-
-To boot the entire application:
-
-1. **Start the Backend**:
+1. Copy the example server environment:
    ```bash
    cd server
-   npm install
-   npm run dev
+   cp .env.example .env
    ```
-   *Runs on `http://localhost:5000` via nodemon.*
-
-2. **Start the Frontend**:
-   ```bash
-   cd client
-   npm install
-   npm run dev
+2. Fill in the required variables in `server/.env`.
+3. In `client/`, confirm `client/.env` exists. If you want an explicit backend URL, set:
+   ```env
+   VITE_API_URL=http://localhost:5000
    ```
-   *Runs on `http://localhost:5173` via Vite.*
 
-### Background Processes & QA Checks
-The repository features an autonomous QA runner that executes unit/integration tests against the local staging database.
+If `VITE_API_URL` is blank, the frontend uses relative `/api` paths and relies on the Vite proxy config to forward `/api` calls to `http://localhost:5000`.
+
+### Run the application
+
+Backend:
 ```bash
-node server/scripts/runQATests.js
+cd server
+npm install
+npm run dev
 ```
-This triggers a headless pipeline to test schema validation, webhook deduplication, and caching strategies without front-end interaction.
+
+Frontend:
+```bash
+cd client
+npm install
+npm run dev
+```
+
+The frontend should be available on `http://localhost:5173`, proxied to the backend on `http://localhost:5000`.
 
 ---
 
-*This project enforces a zero-tolerance policy against dummy data and fluff. Code meticulously.*
+## 🌐 Backend Proxy Behavior
+
+The backend proxy routes are mounted at `server.js` via `/api/proxy`.
+
+Supported proxy services:
+- `youtube`
+- `openai`
+- `exly`
+- `holysheet`
+
+The proxy is protected by the backend auth middleware, so every request must include an `Authorization: Bearer <token>` header.
+
+**Local dev testing shortcut**:
+- Set `DEBUG_BYPASS=true` in `server/.env`
+- Send `Authorization: Bearer bypass_token` from `localhost`
+
+Example local proxy test:
+```bash
+curl.exe -i -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=taskmaster&maxResults=1"
+```
+
+### Verified result
+A local proxy test with `DEBUG_BYPASS=true` and `Authorization: Bearer bypass_token` succeeded and returned a valid YouTube search response.
+
+---
+
+## 🧩 Important Notes
+
+- `client/.env` uses `VITE_API_URL` to configure the frontend base API URL. If empty, relative `/api` paths are forwarded by Vite proxy rules in `client/vite.config.js`.
+- If `POST /api/auth/login` fails with malformed JSON in PowerShell, the issue is usually quoting. Use proper JSON escaping or Node fetch instead.
+- The server currently uses `server/.env` values like `MONGODB_URI`, `JWT_SECRET`, and third-party service keys.
+
+---
+
+## 📘 Recommended Quick Start
+
+1. Start MongoDB
+2. Start Redis (recommended)
+3. Start backend `server`
+4. Start frontend `client`
+5. Open `http://localhost:5173`
+
+If local auth or proxy testing is needed before a normal login token is available, use the debug bypass mode.
+
+## Hardened Diagnostic Protocol
+- **SystemHealthService:** Prevents business logic execution if dependencies (DB, Redis) are offline. Auto-transitions to 503 Maintenance Mode.
+- **Centralized Error Propagation:** Strict structured logging and error routing (Operational vs Programmer).
+- **Diagnostic Scripts:** Use server/scripts/verify_infrastructure.js to test raw database and environment health.

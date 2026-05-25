@@ -38,6 +38,13 @@ const SquadCard = ({ teamMembers = [], tasks = [], loading = false }) => {
   const todayLogs = logs.filter(l => l.createdAt && isSameDay(new Date(l.createdAt), new Date()));
   const activeUserIds = new Set(todayLogs.map(l => typeof l.userId === 'object' ? l.userId?._id?.toString() : l.userId?.toString()));
 
+  const sortedMembers = [...teamMembers].sort((a, b) => {
+    const aActive = activeUserIds.has(a._id?.toString());
+    const bActive = activeUserIds.has(b._id?.toString());
+    if (aActive === bActive) return a.name?.localeCompare(b.name);
+    return aActive ? -1 : 1;
+  });
+
   return (
     <Card className="p-5 space-y-5 shadow-md">
       <div className="flex items-center justify-between">
@@ -49,7 +56,7 @@ const SquadCard = ({ teamMembers = [], tasks = [], loading = false }) => {
         </span>
       </div>
       <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
-        {teamMembers.map(member => {
+        {sortedMembers.map(member => {
           const memberTasks = tasks.filter(t => t.assignees?.includes(member._id));
           const completedCount = memberTasks.filter(t => t.status === 'done').length;
           const progress = memberTasks.length 

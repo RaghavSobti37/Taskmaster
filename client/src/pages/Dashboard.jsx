@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Plus, FileText, Shield, Zap } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, Plus, FileText, Shield, Zap, Target, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { 
   Badge, 
@@ -12,8 +13,9 @@ import {
   Input
 } from '../components/ui';
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import TaskCreateModal from '../components/TaskCreateModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 import { format, subDays, isSameDay } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +27,60 @@ import {
   SquadCard, 
   TaskTable 
 } from '../components/dashboard';
+
+const MissionCompleteModal = ({ mission, isOpen, onClose }) => {
+  if (!isOpen || !mission) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 50 }}
+          transition={{ type: 'spring', bounce: 0.5 }}
+          className="bg-slate-900 border border-amber-500/30 rounded-[2rem] p-8 max-w-sm w-full relative overflow-hidden text-center shadow-2xl shadow-amber-500/20"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent pointer-events-none" />
+          
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
+            transition={{ delay: 0.2, type: 'spring' }}
+            className="text-6xl mb-4 inline-block"
+          >
+            🏆
+          </motion.div>
+          
+          <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-2">Mission Complete!</h2>
+          <p className="text-sm font-bold text-slate-300 mb-6">{mission.title}</p>
+          
+          <div className="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700 relative overflow-hidden">
+             <div className="flex justify-between items-end mb-2">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Experience Gained</span>
+                <span className="text-lg font-black text-amber-400">+{mission.expReward} XP</span>
+             </div>
+             
+             {/* Simulated EXP Bar Increasing */}
+             <div className="h-3 bg-slate-900 rounded-full overflow-hidden w-full relative">
+                <motion.div 
+                  initial={{ width: '40%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-500 to-yellow-300"
+                />
+             </div>
+          </div>
+          
+          <Button onClick={onClose} className="w-full bg-amber-500 hover:bg-amber-600 !text-white font-black uppercase tracking-widest border-none">
+            Awesome!
+          </Button>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -41,25 +97,50 @@ const Dashboard = () => {
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: teamMembers = [], isLoading: teamLoading } = useUserDirectory();
 
+  const { data: missions = [] } = useQuery({
+    queryKey: ['missions'],
+    queryFn: async () => (await axios.get('/api/gamification/missions')).data,
+    refetchInterval: 15000 // Refetch frequently to catch background completion
+  });
+
+  const prevMissionsRef = useRef([]);
+  const [completedMission, setCompletedMission] = useState(null);
+
+  useEffect(() => {
+    if (missions.length > 0) {
+      if (prevMissionsRef.current.length > 0) {
+        missions.forEach(m => {
+          const prev = prevMissionsRef.current.find(p => p._id === m._id);
+          if (prev && !prev.completed && m.completed) {
+            setCompletedMission(m);
+          }
+        });
+      }
+      prevMissionsRef.current = missions;
+    }
+  }, [missions]);
+
   const handleCompleteTask = async (task) => {
     setCompletingIds(prev => new Set(prev).add(task._id));
     try {
       await axios.put(`/api/tasks/${task._id}`, { status: 'done' });
       
       addToast({
-        title: 'Task Finished',
-        message: `Successfully completed "${task.title}".`,
+        title: 'Task Finished (+20 XP)',
+        message: `Successfully completed "${task.title}". Exp awarded.`,
         type: 'success',
         duration: 6000,
         undoAction: async () => {
           await axios.put(`/api/tasks/${task._id}`, { status: 'todo' });
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+          queryClient.invalidateQueries({ queryKey: ['missions'] });
         }
       });
 
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['missions'] });
     } catch (err) {
       console.error('Task completion failed:', err);
       addToast({
@@ -120,106 +201,66 @@ const Dashboard = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
+          <Card className="p-4 space-y-4 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
+               <Target size={14} /> Mission Hub
+            </h4>
+            <div className="space-y-2">
+               {missions.map(mission => (
+                 <div key={mission._id} className={`p-3 rounded-xl border flex items-center justify-between transition-all ${mission.completed ? 'bg-amber-500/10 border-amber-500/20' : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]'}`}>
+                   <div className="flex items-center gap-3">
+                     <div className={`p-1.5 rounded-full ${mission.completed ? 'bg-amber-500 text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'}`}>
+                       <CheckCircle size={14} />
+                     </div>
+                     <div>
+                       <p className={`text-xs font-bold ${mission.completed ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--color-text-primary)]'}`}>{mission.title}</p>
+                       <p className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">{mission.currentCount} / {mission.targetCount} • {mission.expReward} XP</p>
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               {missions.length === 0 && (
+                 <p className="text-xs font-medium text-[var(--color-text-muted)] text-center py-4">Generating missions...</p>
+               )}
+            </div>
+          </Card>
+          
           <ScheduleCard calendar={calendar} loading={summaryLoading} />
           <SquadCard teamMembers={teamMembers} tasks={tasks} loading={teamLoading} />
         </aside>
       </div>
 
-      <FullScreenWorkspace
-        isOpen={!!selectedTask}
+      <TaskDetailModal 
+        isOpen={!!selectedTask} 
+        task={selectedTask}
         onClose={() => setSelectedTask(null)}
-        title={selectedTask?.title || 'Item Details'}
-        subtitle={`Project: ${projects.find(p => p._id === selectedTask?.projectId)?.name || 'Unlinked'} • Status: ${selectedTask?.status?.toUpperCase()}`}
-        onSave={() => setSelectedTask(null)}
-        sidebar={
-          <div className="space-y-4">
-            <Card className="p-5 space-y-4 bg-[var(--color-bg-primary)] shadow-sm">
-               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Settings</h4>
-               <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                     <span className="text-xs font-bold text-[var(--color-text-primary)]">Priority Level</span>
-                     <Badge variant={selectedTask?.priority === 'critical' ? 'danger' : 'info'}>
-                       {selectedTask?.priority}
-                     </Badge>
-                  </div>
-               </div>
-            </Card>
-            <Card className="p-5 space-y-4 bg-[var(--color-bg-primary)] shadow-sm">
-               <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Team Members</h4>
-               <div className="flex -space-x-2">
-                  {selectedTask?.assignees?.map((a, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[var(--color-bg-primary)] bg-[var(--color-bg-secondary)] flex items-center justify-center text-xs font-bold overflow-hidden">
-                       {typeof a === 'object' ? (a.avatar ? <img src={a.avatar} className="w-full h-full object-cover" alt="" /> : a.name?.substring(0, 2)) : '..'}
-                    </div>
-                  ))}
-               </div>
-            </Card>
-          </div>
-        }
-      >
-        <div className="space-y-8">
-           <section>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                 <FileText size={16} /> Description
-              </h3>
-              <div className="p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)] shadow-sm">
-                 <p className="text-sm font-medium leading-relaxed text-[var(--color-text-primary)]">
-                   {selectedTask?.description || 'No detailed instructions provided for this work item.'}
-                 </p>
-              </div>
-           </section>
-
-           <section>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                 <Shield size={16} /> Edit Task
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Input label="Task Title" defaultValue={selectedTask?.title} />
-                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Associated Project</label>
-                    <select 
-                      className="w-full px-3.5 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none font-medium"
-                      defaultValue={selectedTask?.projectId}
-                    >
-                       {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                    </select>
-                 </div>
-                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Deadline</label>
-                    <input 
-                      type="date" 
-                      defaultValue={selectedTask?.dueDate ? format(new Date(selectedTask.dueDate), 'yyyy-MM-dd') : ''}
-                      onClick={e => e.target.showPicker && e.target.showPicker()}
-                      onFocus={e => e.target.showPicker && e.target.showPicker()}
-                      onKeyDown={e => e.preventDefault()}
-                      className="w-full px-3.5 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none font-medium cursor-pointer"
-                    />
-                 </div>
-                 <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Priority Status</label>
-                    <select 
-                      className="w-full px-3.5 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none font-medium"
-                      defaultValue={selectedTask?.priority}
-                    >
-                       <option value="low">low</option>
-                       <option value="medium">medium</option>
-                       <option value="high">high</option>
-                       <option value="critical">critical</option>
-                    </select>
-                 </div>
-              </div>
-           </section>
-        </div>
-      </FullScreenWorkspace>
+        onTaskUpdated={(updatedTask) => {
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+          // Note: XP Toast is now handled natively inside TaskDetailModal!
+          setSelectedTask(null);
+        }}
+        onTaskDeleted={() => {
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+          setSelectedTask(null);
+        }}
+      />
 
       <TaskCreateModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
-        onTaskCreated={() => {
-          setIsTaskModalOpen(false);
+        user={user} 
+        onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
         }}
+      />
+
+      <MissionCompleteModal 
+        mission={completedMission}
+        isOpen={!!completedMission}
+        onClose={() => setCompletedMission(null)}
       />
     </PageContainer>
   );

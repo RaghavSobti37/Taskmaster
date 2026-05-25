@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const WorkspaceSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -14,5 +16,7 @@ const WorkspaceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+WorkspaceSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Workspace', WorkspaceSchema);

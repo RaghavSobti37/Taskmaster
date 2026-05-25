@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 const { sanitizeName } = require('../utils/sanitizer');
 
 const ExlyOfferingSchema = new mongoose.Schema({
@@ -26,5 +28,7 @@ ExlyOfferingSchema.pre('save', function(next) {
   }
   next();
 });
+
+ExlyOfferingSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ExlyOffering', ExlyOfferingSchema);

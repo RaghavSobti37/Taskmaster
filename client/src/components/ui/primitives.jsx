@@ -131,49 +131,27 @@ export const Badge = ({ children, variant = 'info', className = '' }) => {
 
 export const InfoButton = ({ text }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef(null);
-
-  const handleOpen = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.top + window.scrollY - 10,
-        left: rect.left + window.scrollX + rect.width / 2,
-      });
-      setIsOpen(true);
-    }
-  };
 
   return (
     <div 
-      className="inline-flex items-center ml-1.5 align-middle"
-      onMouseEnter={handleOpen}
+      className="inline-flex items-center ml-1.5 align-middle relative"
+      onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
-      onFocus={handleOpen}
+      onFocus={() => setIsOpen(true)}
       onBlur={() => setIsOpen(false)}
     >
       <button 
-        ref={buttonRef}
         type="button"
         className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 hover:bg-blue-500 hover:text-white transition-colors cursor-help focus:outline-none"
       >
         i
       </button>
 
-      {isOpen && createPortal(
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 4 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 4 }}
-          transition={{ duration: 0.1, ease: 'easeOut' }}
-          style={{ top: `${coords.top}px`, left: `${coords.left}px`, transform: 'translate(-50%, -100%)' }}
-          className="absolute z-[99999] w-64 p-3 rounded-2xl bg-slate-900 dark:bg-black text-white text-[10px] font-bold tracking-wide leading-relaxed shadow-2xl border border-white/20 pointer-events-none text-center"
-        >
+      {isOpen && (
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-black text-white text-[10px] px-2.5 py-1.5 rounded-lg shadow-xl w-48 z-[99999] pointer-events-none text-center border border-white/20">
           {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-black" />
-        </motion.div>,
-        document.body
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-slate-900 dark:border-t-black" />
+        </div>
       )}
     </div>
   );

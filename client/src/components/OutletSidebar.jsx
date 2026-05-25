@@ -63,9 +63,10 @@ const useWindowSize = () => {
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick }) => (
+const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => (
   <NavLink
     to={to}
+    end={end}
     onClick={onClick}
     className={({ isActive }) => `
       flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
@@ -268,6 +269,7 @@ const OutletSidebar = () => {
           />
           <NavItem
             to="/assets"
+            end
             icon={Layers}
             label="Assets"
             collapsed={false}
@@ -372,8 +374,36 @@ const OutletSidebar = () => {
           >
             <div className={`px-3 py-3 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] shrink-0">
-                  {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
+                <div className="relative shrink-0 group/avatar">
+                  <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative">
+                    {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
+                  </div>
+
+                  {/* Gamification Ring */}
+                  {user?.level && (
+                    <>
+                      <svg className="absolute -inset-1 w-11 h-11 -rotate-90 pointer-events-none" viewBox="0 0 44 44">
+                        <circle cx="22" cy="22" r="20" fill="none" stroke="var(--color-bg-border)" strokeWidth="2" />
+                        <circle
+                          cx="22" cy="22" r="20"
+                          fill="none"
+                          stroke="var(--color-action-primary)"
+                          strokeWidth="2"
+                          strokeDasharray="125.6"
+                          strokeDashoffset={125.6 - (125.6 * (Math.max(0, user.exp - (Math.pow(user.level - 1, 2) * 100)) / ((Math.pow(user.level, 2) * 100) - (Math.pow(user.level - 1, 2) * 100))))}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[8px] font-black px-1 rounded-sm shadow-sm z-20">
+                        {user.level}
+                      </div>
+
+                      {/* Tooltip */}
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-[8px] font-bold rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-30 transition-opacity">
+                        Level {user.level} • {user.exp} / {Math.pow(user.level, 2) * 100} XP
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>

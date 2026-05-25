@@ -155,6 +155,37 @@ const SettingsPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
+          {/* Progress Analytics */}
+          <Card className="overflow-hidden">
+            <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+               <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                 <Target size={14} className="text-amber-500" /> Progress Analytics
+               </h3>
+               <Badge variant="warning">Level {user?.level || 1}</Badge>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                  Level {user?.level || 1}
+                </span>
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                  Level {(user?.level || 1) + 1}
+                </span>
+              </div>
+              <div className="w-full h-3 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden border border-[var(--color-bg-border)] relative">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(0, ((user?.exp || 0) - (Math.pow((user?.level || 1) - 1, 2) * 100)) / ((Math.pow(user?.level || 1, 2) * 100) - (Math.pow((user?.level || 1) - 1, 2) * 100)) * 100))}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-400 to-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                />
+              </div>
+              <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-3 text-center uppercase tracking-widest">
+                {user?.exp || 0} / {Math.pow((user?.level || 1), 2) * 100} XP
+              </p>
+            </div>
+          </Card>
+
           <Card className="overflow-hidden">
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">

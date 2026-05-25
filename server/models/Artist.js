@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const ArtistSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -149,5 +151,7 @@ ArtistSchema.pre('save', function(next) {
   }
   next();
 });
+
+ArtistSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Artist', ArtistSchema);

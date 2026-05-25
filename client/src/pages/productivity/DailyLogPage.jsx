@@ -331,7 +331,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
               </div>
            </Card>
 
-           <Card className="p-4 bg-slate-900 text-white border-white/5 relative overflow-hidden">
+           <Card className="p-4 bg-slate-50 dark:bg-slate-900 text-[var(--color-text-primary)] dark:text-white border-[var(--color-bg-border)] dark:border-white/5 relative overflow-hidden">
               <div className="relative z-10 space-y-4">
                  <div className="flex items-center justify-between">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Daily Goal</h4>

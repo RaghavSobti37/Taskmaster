@@ -11,3 +11,4 @@ setup.cd
 .claude/
 *.mmdb
 *.specify
+*.zip

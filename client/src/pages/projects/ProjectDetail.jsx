@@ -30,7 +30,8 @@ import {
   PageContainer,
   Button,
   Input,
-  Card
+  Card,
+  NexusModal
 } from '../../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../../components/TaskCreateModal';
@@ -56,6 +57,20 @@ const ProjectDetail = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
+
+  const handleUpdateProjectStatus = async (status) => {
+    try {
+      await axios.put(`/api/projects/${id}`, { status });
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (status === 'completed' || status === 'archived') {
+        navigate('/projects');
+      }
+    } catch (err) {
+      console.error('Failed to update project status:', err);
+    }
+  };
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,6 +140,22 @@ const ProjectDetail = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {project.status === 'active' && (
+            <NexusDropdown
+              variant="compact"
+              options={[
+                { value: 'archive', label: 'Archive Project' },
+                { value: 'close', label: 'Close Project (Gain XP)' }
+              ]}
+              value=""
+              placeholder="Actions"
+              onChange={(val) => {
+                if (val === 'archive') handleUpdateProjectStatus('archived');
+                if (val === 'close') setShowCloseWarning(true);
+              }}
+              className="w-40"
+            />
+          )}
           <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
             <Settings size={14} /> Settings
           </Button>
@@ -133,6 +164,20 @@ const ProjectDetail = () => {
           </Button>
         </div>
       </div>
+
+      <NexusModal
+        isOpen={showCloseWarning}
+        onClose={() => setShowCloseWarning(false)}
+        title="Close Project & Award XP"
+        message="Closing this project will award +500 XP to all team members and automatically mark all pending tasks as Done. Proceed?"
+        type="success"
+        isConfirm
+        confirmLabel="Close Project"
+        onConfirm={() => {
+          setShowCloseWarning(false);
+          handleUpdateProjectStatus('completed');
+        }}
+      />
 
       <TaskCreateModal
         isOpen={isTaskModalOpen}

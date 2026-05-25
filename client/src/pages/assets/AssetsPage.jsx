@@ -427,7 +427,7 @@ const AssetsPage = () => {
               </div>
            </Card>
 
-           <Card className="p-4 bg-slate-900 text-white border-white/5 relative overflow-hidden">
+           <Card className="p-4 bg-slate-50 dark:bg-slate-900 text-[var(--color-text-primary)] dark:text-white border-[var(--color-bg-border)] dark:border-white/5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-3xl rounded-full" />
               <div className="relative z-10 space-y-3">
                  <div className="flex items-center justify-between">

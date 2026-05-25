@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 const { encrypt, decrypt } = require('../utils/encryption');
 
 const ConnectedProfileSchema = new mongoose.Schema({
@@ -33,5 +35,7 @@ ConnectedProfileSchema.methods.getAccessToken = function() {
 ConnectedProfileSchema.methods.getRefreshToken = function() {
   return decrypt(this.refreshToken);
 };
+
+ConnectedProfileSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ConnectedProfile', ConnectedProfileSchema);

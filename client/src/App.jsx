@@ -6,7 +6,9 @@ import AdminRoute from './components/AdminRoute';
 import ArtistRoute from './components/ArtistRoute';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { useToast } from './contexts/ToastContext';
 import { DashboardSkeleton } from './components/ui';
+import axios from 'axios';
 
 // Helper to retry dynamic imports when a redeploy changes chunk hashes
 const lazyWithRetry = (componentImport) => 
@@ -57,6 +59,29 @@ const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 
 function App() {
   const { loading } = useAuth();
+  const { addToast } = useToast();
+
+  React.useEffect(() => {
+    const resInterceptor = axios.interceptors.response.use(
+      (response) => {
+        const method = response.config.method?.toLowerCase();
+        if (['post', 'put', 'patch', 'delete'].includes(method)) {
+          const message = response.data?.message || 'Operation successful';
+          addToast({ title: 'Success', message, type: 'success' });
+        }
+        return response;
+      },
+      (error) => {
+        const method = error.config?.method?.toLowerCase();
+        if (['post', 'put', 'patch', 'delete'].includes(method)) {
+          const message = error.response?.data?.message || error.response?.data?.error || error.message || 'An error occurred';
+          addToast({ title: 'Error', message, type: 'error' });
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(resInterceptor);
+  }, [addToast]);
 
   if (loading) return <DashboardSkeleton />;
 

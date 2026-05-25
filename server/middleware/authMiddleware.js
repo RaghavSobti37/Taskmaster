@@ -51,7 +51,7 @@ const protect = async (req, res, next) => {
         dbUser = await User.create({
           name: email.split('@')[0],
           email: email,
-          password: 'clerk-managed-password',
+          password: process.env.DEFAULT_SEED_PASSWORD || (Math.random().toString(36).substring(2) + Date.now().toString(36)),
           role: 'user',
         });
       }

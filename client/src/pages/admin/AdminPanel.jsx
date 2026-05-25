@@ -324,7 +324,8 @@ const AdminPanel = () => {
                                 try {
                                   await deleteTeamMutation.mutateAsync(team._id);
                                 } catch (err) {
-                                  alert('Failed to delete team: ' + err.message);
+                                  console.error(err);
+                                  alert(`Team removal error: ${err.message}`);
                                 }
                               }
                             }}

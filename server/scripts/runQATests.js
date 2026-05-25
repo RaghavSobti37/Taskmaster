@@ -30,6 +30,18 @@ async function runQATests() {
     process.exit(1);
   }
 
+  // Get or Create Tenant for QA tests
+  const Tenant = require('../models/Tenant');
+  let qaTenant = await Tenant.findOne({ name: 'QA Test Tenant' });
+  if (!qaTenant) {
+    qaTenant = await Tenant.create({
+      name: 'QA Test Tenant',
+      contactEmail: 'qa@theshakticollective.in',
+      status: 'trial'
+    });
+  }
+  const tenantId = qaTenant._id;
+
   // Ensure QA user exists and sign token
   let qaUser = await User.findOne({ email: 'qa_engineer@theshakticollective.in' });
   if (!qaUser) {
@@ -39,7 +51,8 @@ async function runQATests() {
       password: process.env.QA_PASSWORD || 'qa_secure_password_2026',
       role: 'admin',
       gender: 'male',
-      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=qa'
+      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=qa',
+      tenantId
     });
     console.log('👤 Created temporary QA Engineer Admin user.');
   }
@@ -80,6 +93,7 @@ async function runQATests() {
     await Lead.deleteMany({ phone: '+919999999999' });
 
     const dirtyLead = new Lead({
+      tenantId,
       name: '  <b>John   Doe</b>  ',
       email: 'John.Doe@Example.com   ',
       phone: ' +91 999-999-9999 ',
@@ -192,6 +206,7 @@ async function runQATests() {
     // Setup Lead
     await Lead.deleteMany({ email: bounceEmail });
     await Lead.create({
+      tenantId,
       name: 'Bounce Test Lead',
       email: bounceEmail,
       phone: '+917777777777',
@@ -284,6 +299,7 @@ async function runQATests() {
   const tc5Start = Date.now();
   try {
     const auditLead = await Lead.create({
+      tenantId,
       name: 'Audit History Lead',
       email: 'history-audit@example.com',
       phone: '+916666666666',
@@ -334,6 +350,7 @@ async function runQATests() {
     // Setup Lead
     await Lead.deleteMany({ email: unsubEmail });
     await Lead.create({
+      tenantId,
       name: 'Unsubscribe Test Lead',
       email: unsubEmail,
       phone: '+918888888888',

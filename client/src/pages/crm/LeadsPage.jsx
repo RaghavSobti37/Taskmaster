@@ -90,7 +90,7 @@ export default function LeadsPage() {
 
   const handleDeleteLead = async () => {
     if (!selectedLead) return;
-    if (!window.confirm(`Permanently delete "${selectedLead.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Confirm removal of ${selectedLead.name}? Action is permanent.`)) return;
     try {
       await axios.delete(`/api/crm/leads/${selectedLead._id}`);
       setSelectedLead(null);
@@ -400,7 +400,7 @@ export default function LeadsPage() {
         isOpen={!!selectedLead}
         onClose={() => setSelectedLead(null)}
         title={selectedLead?.name || 'Customer Details'}
-        subtitle={selectedLead ? `Lead: ${selectedLead._id.substring(0, 8)} | Channel: ${selectedLead.source || 'Direct'}` : ''}
+        subtitle={selectedLead ? `ref: ${selectedLead._id.substring(0, 8)}` : ''}
         onSave={handleSaveLead}
         extraActions={
           <div className="flex items-center gap-2">

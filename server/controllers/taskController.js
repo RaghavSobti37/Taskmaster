@@ -61,6 +61,12 @@ exports.createTask = async (req, res, next) => {
     await task.populate('createdBy', 'name avatar');
     await task.populate('assignees', 'name avatar');
 
+    const { queueGamificationEvent } = require('../services/backgroundQueue');
+    queueGamificationEvent('TASK_CREATED', {
+      userId: req.user._id,
+      task
+    });
+
     await session.commitTransaction();
     session.endSession();
 
@@ -180,15 +186,11 @@ exports.updateTask = async (req, res, next) => {
 
       // Handle daily log creation on task completion
       if (updates.status === 'done') {
-        // --- Gamification Integration (Event Driven) ---
-        const eventDispatcher = require('../services/eventDispatcher');
-        const tenantId = req.tenantId || task.tenantId || 'default';
-        eventDispatcher.emit('TASK_COMPLETED', {
+        const { queueGamificationEvent } = require('../services/backgroundQueue');
+        queueGamificationEvent('TASK_COMPLETED', {
           userId: req.user._id,
-          tenantId,
           task
         });
-        // --------------------------------
 
         let projectName = 'Unassigned';
         if (task.projectId) {

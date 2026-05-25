@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const MailEventSchema = new mongoose.Schema({
   messageId: { type: String, index: true },
@@ -17,5 +19,7 @@ const MailEventSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 MailEventSchema.index({ 'location.country': 1, 'location.city': 1 });
+
+MailEventSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('MailEvent', MailEventSchema);

@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 const auditPlugin = require('./plugins/auditPlugin');
 
@@ -8,6 +10,7 @@ const auditPlugin = require('./plugins/auditPlugin');
  */
 const LeadSchema = new mongoose.Schema({
   // Core Identifiers
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   rowId: { type: String, unique: true, sparse: true }, // Legacy identifier from CSV
   customerIdExly: { type: String, index: true },
   transactionIdExly: { type: String, index: true },
@@ -111,17 +114,19 @@ LeadSchema.post('deleteOne', { document: true, query: false }, function(doc) {
   }
 });
 
-// Core Uniqueness Constraints
-LeadSchema.index({ phone: 1 }, { unique: true });
-LeadSchema.index({ email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
-LeadSchema.index({ email: 1, unsubscribed: 1, bounceCount: 1 });
+// Core Uniqueness Constraints per Tenant
+LeadSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
+LeadSchema.index({ tenantId: 1, email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
+LeadSchema.index({ tenantId: 1, email: 1, unsubscribed: 1, bounceCount: 1 });
 
 // Indexes for common query patterns
-LeadSchema.index({ assignedRepId: 1, nextFollowupDate: 1, nextFollowupTime: 1 });
-LeadSchema.index({ assignedRepId: 1, leadStatus: 1 });
-LeadSchema.index({ createdAt: -1 });
+LeadSchema.index({ tenantId: 1, assignedRepId: 1, nextFollowupDate: 1, nextFollowupTime: 1 });
+LeadSchema.index({ tenantId: 1, assignedRepId: 1, leadStatus: 1 });
+LeadSchema.index({ tenantId: 1, createdAt: -1 });
 
 // Index for full-text search across multiple fields
 LeadSchema.index({ name: 'text', email: 'text', phone: 'text', remarks: 'text' });
+
+LeadSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Lead', LeadSchema);

@@ -2,15 +2,24 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Clock, AlertCircle, Check } from 'lucide-react';
 import { NexusModal } from './ui';
+import { globalToast } from '../contexts/ToastContext';
 import CKDropdown from './ui/CKDropdown';
+import { useUserDirectory } from '../hooks/useTaskmasterQueries';
 
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }) => {
+  const { data: members = [] } = useUserDirectory();
   const [title, setTitle] = useState(task?.title || '');
   const [desc, setDesc] = useState(task?.description || '');
   const [status, setStatus] = useState(task?.status || 'todo');
   const [priority, setPriority] = useState(task?.priority || 'medium');
+  const [assignees, setAssignees] = useState(task?.assignees?.map(a => typeof a === 'object' ? a._id : a) || []);
+  const [dueDate, setDueDate] = useState(task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
   const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // You can pass members as a prop or fetch them here. For now, assuming memberOptions might be needed or passed.
+  // We will assume `members` is passed as a prop from parent, or fetch them if needed.
 
   React.useEffect(() => {
     if (task) {
@@ -18,6 +27,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
       setDesc(task.description || '');
       setStatus(task.status || 'todo');
       setPriority(task.priority || 'medium');
+      setAssignees(task.assignees?.map(a => typeof a === 'object' ? a._id : a) || []);
+      setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
+      
+      // Fetch logs for this task
+      axios.get(`/api/logs?targetId=${task._id}`)
+        .then(res => setLogs(res.data))
+        .catch(err => console.error('Error fetching task logs:', err));
     }
   }, [task]);
 
@@ -35,6 +51,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
     { value: 'critical', label: 'Critical' }
   ];
 
+  const memberOptions = members?.map(m => ({ 
+    value: m.user?._id || m._id, 
+    label: m.user?.name || m.name || 'Unknown' 
+  })) || [];
+
   if (!isOpen || !task) return null;
 
   const handleSubmit = async (e) => {
@@ -45,8 +66,18 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
         title,
         description: desc,
         status,
-        priority
+        priority,
+        assignees,
+        dueDate: dueDate || null
       });
+      if (status === 'done' && task.status !== 'done') {
+        globalToast.addToast({
+          title: 'Task Finished (+20 XP)',
+          message: `Successfully completed "${title}". Exp awarded.`,
+          type: 'success',
+          duration: 6000
+        });
+      }
       onTaskUpdated(res.data);
       onClose();
     } catch (err) {
@@ -87,6 +118,22 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
               Edit Task
             </h3>
             <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1">ID: {task._id.substring(0, 8).toUpperCase()}</p>
+            {task.createdBy && (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-[var(--color-bg-border)] border border-[var(--color-bg-border)]">
+                  {task.createdBy.avatar ? (
+                    <img src={task.createdBy.avatar} alt={task.createdBy.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full text-[var(--color-text-muted)] text-[10px] font-bold">
+                      {task.createdBy.name?.slice(0, 1).toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  Created by <span className="font-bold text-[var(--color-text-primary)]">{task.createdBy.name}</span>
+                </p>
+              </div>
+            )}
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-xl transition-all">
             <X size={20} />
@@ -134,6 +181,64 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
               onChange={setPriority}
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-8">
+            <CKDropdown 
+              multi
+              label="Assign To"
+              options={memberOptions}
+              value={assignees}
+              disabled={isDone}
+              onChange={setAssignees}
+              placeholder="Assign to team members..."
+            />
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Due Date</label>
+              <input 
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                disabled={isDone}
+                className="w-full px-5 py-3.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl focus:ring-2 focus:ring-[var(--color-action-primary)]/20 outline-none text-sm font-bold disabled:opacity-60"
+              />
+            </div>
+          </div>
+
+          {/* Activity Logs Section */}
+          {logs.length > 0 && (
+            <div className="pt-6 border-t border-[var(--color-bg-border)]">
+              <h4 className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-4">Task Activity</h4>
+              <div className="space-y-4 max-h-40 overflow-y-auto pr-2">
+                {logs.map(log => (
+                  <div key={log._id} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--color-text-muted)] overflow-hidden">
+                      {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full object-cover" /> : <Clock size={12} />}
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="text-xs text-[var(--color-text-primary)]">
+                        <span className="font-bold">{log.userId?.name || 'System'}</span>{' '}
+                        {log.action === 'TASK_DATE_CHANGED' && (
+                          <span>changed due date to <span className="font-bold">{log.details?.newDate ? new Date(log.details.newDate).toLocaleDateString() : 'None'}</span></span>
+                        )}
+                        {log.action === 'TASK_ASSIGNEES_CHANGED' && (
+                          <span>updated task members</span>
+                        )}
+                        {log.action === 'UPDATE_TASK' && (
+                          <span>updated task details</span>
+                        )}
+                        {!['TASK_DATE_CHANGED', 'TASK_ASSIGNEES_CHANGED', 'UPDATE_TASK'].includes(log.action) && (
+                          <span>performed <span className="font-bold">{log.action}</span></span>
+                        )}
+                      </p>
+                      <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {isDone && (
             <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl flex items-center gap-4">

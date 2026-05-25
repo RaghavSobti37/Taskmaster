@@ -5,7 +5,7 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, async (req, res) => {
   try {
-    const { userId, action, lastId, limit = 50, startDate, endDate, origin, status } = req.query;
+    const { userId, action, lastId, limit = 50, startDate, endDate, origin, status, targetId } = req.query;
     const filter = {};
     
     if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
@@ -14,6 +14,7 @@ router.get('/', protect, async (req, res) => {
     if (action) filter.action = action;
     if (origin) filter.origin = origin;
     if (status) filter.status = status;
+    if (targetId) filter.targetId = targetId;
     
     if (lastId) {
       filter._id = { $lt: lastId };

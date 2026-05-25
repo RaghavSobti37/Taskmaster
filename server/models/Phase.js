@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const phaseSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -12,5 +14,7 @@ const phaseSchema = new mongoose.Schema({
 });
 
 phaseSchema.index({ projectId: 1, dueDate: 1 });
+
+phaseSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Phase', phaseSchema);

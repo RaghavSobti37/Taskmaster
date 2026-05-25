@@ -16,6 +16,7 @@ const teamRoutes = require('./routes/teamRoutes');
 const crmRoutes = require('./routes/crmRoutes');
 const googleRoutes = require('./routes/googleRoutes');
 const artistRoutes = require('./routes/artistRoutes');
+const proxyRoutes = require('./routes/proxyRoutes');
 
 
 const app = express();
@@ -55,6 +56,10 @@ const limiter = rateLimit({
   max: process.env.NODE_ENV === 'production' ? 100 : 1000 
 });
 app.use('/api/', limiter);
+
+// System Health Check Middleware
+const SystemHealthService = require('./services/SystemHealthService');
+app.use('/api/', SystemHealthService.middleware);
 
 // MongoDB Connection
 const dbUri = (process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot').trim();
@@ -136,6 +141,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/v2/artists', require('./routes/artistV2Routes'));
+app.use('/api/gamification', require('./routes/gamificationRoutes'));
 
 // Public tracking webhooks & unsubscribe endpoints
 app.use(require('./routes/track')); // Mounts /webhooks/bounces and /unsubscribe at root
@@ -173,6 +179,7 @@ app.use('/api/crm', crmRoutes);
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
 app.use('/api/google/accounts', require('./routes/googleAccounts'));
+app.use('/api/proxy', proxyRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/calendar', require('./routes/calendarRoutes'));
@@ -239,5 +246,10 @@ const server = app.listen(PORT, () => {
   const notificationService = require('./services/notificationService');
   notificationService.init();
 
+  // Initialize Gamification Cron
+  require('./cron/dailyMissions');
 
+  // Initialize Gamification Worker (Event Subscribers)
+  const { initializeWorker } = require('./services/gamificationWorker');
+  initializeWorker();
 });

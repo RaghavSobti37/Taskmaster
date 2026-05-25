@@ -317,7 +317,10 @@ router.get('/click/:clickId', async (req, res) => {
 router.post('/webhooks/resend', async (req, res) => {
   try {
     const { Webhook } = require('svix');
-    const secret = process.env.RESEND_WEBHOOK_SECRET || 'whsec_REDACTED';
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (!secret) {
+      return res.status(500).send('Webhook secret unconfigured');
+    }
     const wh = new Webhook(secret);
 
     let payload;

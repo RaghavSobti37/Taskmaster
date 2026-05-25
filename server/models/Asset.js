@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const assetSchema = new mongoose.Schema({
   projectIds: [{
@@ -26,5 +28,7 @@ const assetSchema = new mongoose.Schema({
     required: true
   }
 }, { timestamps: true });
+
+assetSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Asset', assetSchema);

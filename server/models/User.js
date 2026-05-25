@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
@@ -12,6 +14,10 @@ const userSchema = new mongoose.Schema({
   lastOnline: { type: Date, default: Date.now },
   online: { type: Boolean, default: false },
   teams: [{ type: String }],
+  // Gamification fields
+  exp: { type: Number, default: 0 },
+  level: { type: Number, default: 1 },
+  dailyStreak: { type: Number, default: 0 },
   // Google OAuth fields
   googleId: { type: String },
   googleAccessToken: { type: String },
@@ -36,5 +42,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('User', userSchema);

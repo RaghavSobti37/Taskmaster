@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const officeAssetSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -16,5 +18,7 @@ const officeAssetSchema = new mongoose.Schema({
     notes: String
   }]
 }, { timestamps: true });
+
+officeAssetSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('OfficeAsset', officeAssetSchema);

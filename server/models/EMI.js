@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 /**
  * EMI Installment Schema
@@ -12,5 +14,7 @@ const EmiSchema = new mongoose.Schema({
   status: { type: String, default: 'Pending' }, // Paid, Pending
   paidAt: { type: String },
 }, { timestamps: true });
+
+EmiSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('EMI', EmiSchema);

@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 /**
  * Mongoose schema for dynamic CRM Configurations.
@@ -13,5 +15,7 @@ const CRMConfigSchema = new mongoose.Schema({
   qualities: [{ type: String }],
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
+
+CRMConfigSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('CRMConfig', CRMConfigSchema);

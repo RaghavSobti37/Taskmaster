@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const calendarEventSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -11,5 +13,7 @@ const calendarEventSchema = new mongoose.Schema({
 calendarEventSchema.index({ date: 1 });
 calendarEventSchema.index({ createdBy: 1 });
 calendarEventSchema.index({ visibility: 1 });
+
+calendarEventSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('CalendarEvent', calendarEventSchema);

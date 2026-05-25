@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const logSchema = new mongoose.Schema({
   // Unified Logging Fields
@@ -75,6 +77,8 @@ logSchema.pre('validate', function (next) {
 
 logSchema.index({ origin: 1, status: 1, timestamp: -1 });
 logSchema.index({ userId: 1, createdAt: -1 });
+
+logSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Log', logSchema);
 

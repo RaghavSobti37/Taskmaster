@@ -4,6 +4,10 @@ import { RotateCcw, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
+export const globalToast = {
+  addToast: () => console.warn('globalToast called before ToastProvider initialized')
+};
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
   const timersRef = useRef(new Map());
@@ -31,6 +35,16 @@ export const ToastProvider = ({ children }) => {
 
     return id;
   }, [removeToast]);
+
+  // Expose to global object for non-component usage
+  React.useEffect(() => {
+    globalToast.addToast = addToast;
+    window.alert = (msg) => {
+      let isErr = false;
+      if (typeof msg === 'string' && (msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('required') || msg.toLowerCase().includes('mandatory'))) isErr = true;
+      addToast({ title: isErr ? 'Action Failed' : 'System Message', message: String(msg), type: isErr ? 'error' : 'info' });
+    };
+  }, [addToast]);
 
   const handleUndo = useCallback(async (toast) => {
     if (!toast.undoAction) return;

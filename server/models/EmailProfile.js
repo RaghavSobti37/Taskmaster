@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const emailProfileSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -10,5 +12,7 @@ const emailProfileSchema = new mongoose.Schema({
   isDefault: { type: Boolean, default: false },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
+
+emailProfileSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('EmailProfile', emailProfileSchema);

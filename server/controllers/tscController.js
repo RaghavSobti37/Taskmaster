@@ -320,7 +320,7 @@ exports.bulkDeleteTscData = async (req, res) => {
       query = { _id: { $in: ids } };
     } else if (filter || search) {
       if (search) {
-        const escaped = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const escaped = escapeRegExp(search);
         query.$or = [
           { name: { $regex: escaped, $options: 'i' } },
           { email: { $regex: escaped, $options: 'i' } },

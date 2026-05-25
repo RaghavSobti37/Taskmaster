@@ -5,7 +5,7 @@ const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 const CRMConfig = require('../models/CRMConfig');
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
 const followupCache = require('../services/followupCache');
 
 // Whitelists for mass-assignment protection
@@ -64,7 +64,7 @@ exports.getLeads = async (req, res) => {
     }
 
     if (req.query.search) {
-      const escaped = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegExp(req.query.search);
       query.$or = [
         { name: { $regex: escaped, $options: 'i' } },
         { email: { $regex: escaped, $options: 'i' } },

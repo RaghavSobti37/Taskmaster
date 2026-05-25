@@ -3,7 +3,7 @@ const Lead = require('../models/Lead');
 const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
 const fs = require('fs');
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
 
 exports.getTscData = async (req, res) => {
   try {
@@ -14,7 +14,7 @@ exports.getTscData = async (req, res) => {
 
     let query = {};
     if (search) {
-      const escaped = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegExp(search);
       query.$or = [
         { name: { $regex: escaped, $options: 'i' } },
         { email: { $regex: escaped, $options: 'i' } },

@@ -1,51 +1,44 @@
 const express = require('express');
 const router = express.Router();
-const DailyMission = require('../models/DailyMission');
 const GamificationService = require('../services/gamificationService');
+const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 
-// Get daily missions for user
+// Get active missions
 router.get('/missions', protect, async (req, res) => {
   try {
-    const userId = req.user._id;
-    const tenantId = req.user.tenantId;
-    const dateString = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Ensure missions are generated
-    await GamificationService.generateDailyMissions(userId, tenantId);
+    // Auto-generate if missing
+    await GamificationService.generateDailyMissions(req.user._id);
 
-    const missions = await DailyMission.find({ userId, date: dateString }).setOptions({ tenantId });
+    const missions = await DailyMission.find({
+      userId: req.user._id,
+      date: { $gte: today }
+    });
+
     res.json(missions);
-  } catch (error) {
-    console.error('Error fetching missions:', error);
-    res.status(500).json({ error: 'Server error fetching daily missions' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Claim a completed mission manually if needed (though the service auto-claims it)
-// We might not need this if `progressMission` auto-claims, but some games require user to click "Claim"
-router.post('/missions/:id/claim', protect, async (req, res) => {
+// Get user progress details
+router.get('/progress', protect, async (req, res) => {
   try {
-    const userId = req.user._id;
-    const tenantId = req.user.tenantId;
-    const missionId = req.params.id;
+    const user = req.user;
+    const currentLevelExp = GamificationService.getExpForLevel(user.level || 1);
+    const nextLevelExp = GamificationService.getExpForLevel((user.level || 1) + 1);
 
-    const mission = await DailyMission.findOne({ _id: missionId, userId }).setOptions({ tenantId });
-    if (!mission) return res.status(404).json({ error: 'Mission not found' });
-    
-    if (mission.completed) return res.status(400).json({ error: 'Mission already claimed' });
-
-    if (mission.currentCount >= mission.targetCount) {
-      mission.completed = true;
-      await mission.save();
-      const result = await GamificationService.awardExp(userId, tenantId, mission.expReward);
-      return res.json({ mission, ...result });
-    } else {
-      return res.status(400).json({ error: 'Mission target not reached' });
-    }
-  } catch (error) {
-    console.error('Error claiming mission:', error);
-    res.status(500).json({ error: 'Server error claiming mission' });
+    res.json({
+      level: user.level || 1,
+      exp: user.exp || 0,
+      currentLevelExp,
+      nextLevelExp
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

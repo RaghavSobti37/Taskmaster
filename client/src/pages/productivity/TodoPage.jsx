@@ -173,6 +173,11 @@ const TodoPage = () => {
                             DUE: {format(new Date(task.dueDate), 'MMM dd')}
                           </span>
                         )}
+                        {task.createdBy && (
+                          <span className="text-[8px] font-bold text-[var(--color-text-muted)] italic">
+                            BY: {task.createdBy.name || members.find(m => m._id === task.createdBy || m.clerkId === task.createdBy)?.name || 'UNKNOWN'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

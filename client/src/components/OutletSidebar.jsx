@@ -378,7 +378,6 @@ const OutletSidebar = () => {
                   <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative">
                     {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
                   </div>
-
                   {/* Gamification Ring */}
                   {user?.level && (
                     <>
@@ -390,17 +389,15 @@ const OutletSidebar = () => {
                           stroke="var(--color-action-primary)"
                           strokeWidth="2"
                           strokeDasharray="125.6"
-                          strokeDashoffset={125.6 - (125.6 * (Math.max(0, user.exp - (Math.pow(user.level - 1, 2) * 100)) / ((Math.pow(user.level, 2) * 100) - (Math.pow(user.level - 1, 2) * 100))))}
+                          strokeDashoffset={125.6 - (125.6 * (Math.max(0, user.exp - (Math.floor(100 * Math.pow(user.level - 1, 1.5)))) / ((Math.floor(100 * Math.pow(user.level, 1.5))) - (Math.floor(100 * Math.pow(user.level - 1, 1.5)))))) || 0}
                           className="transition-all duration-1000 ease-out"
                         />
                       </svg>
                       <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[8px] font-black px-1 rounded-sm shadow-sm z-20">
                         {user.level}
                       </div>
-
-                      {/* Tooltip */}
                       <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-[8px] font-bold rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-30 transition-opacity">
-                        Level {user.level} • {user.exp} / {Math.pow(user.level, 2) * 100} XP
+                        Level {user.level} • {user.exp} / {Math.floor(100 * Math.pow(user.level, 1.5))} XP
                       </div>
                     </>
                   )}

@@ -100,7 +100,7 @@ const Dashboard = () => {
   const { data: missions = [] } = useQuery({
     queryKey: ['missions'],
     queryFn: async () => (await axios.get('/api/gamification/missions')).data,
-    refetchInterval: 15000 // Refetch frequently to catch background completion
+    refetchInterval: 15000
   });
 
   const prevMissionsRef = useRef([]);
@@ -119,6 +119,8 @@ const Dashboard = () => {
       prevMissionsRef.current = missions;
     }
   }, [missions]);
+
+
 
   const handleCompleteTask = async (task) => {
     setCompletingIds(prev => new Set(prev).add(task._id));
@@ -201,6 +203,7 @@ const Dashboard = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
+
           <Card className="p-4 space-y-4 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
                <Target size={14} /> Mission Hub
@@ -237,7 +240,7 @@ const Dashboard = () => {
         onTaskUpdated={(updatedTask) => {
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-          // Note: XP Toast is now handled natively inside TaskDetailModal!
+
           setSelectedTask(null);
         }}
         onTaskDeleted={() => {
@@ -256,6 +259,7 @@ const Dashboard = () => {
           queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
         }}
       />
+
 
       <MissionCompleteModal 
         mission={completedMission}

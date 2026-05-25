@@ -72,8 +72,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
       });
       if (status === 'done' && task.status !== 'done') {
         globalToast.addToast({
-          title: 'Task Finished (+20 XP)',
-          message: `Successfully completed "${title}". Exp awarded.`,
+          title: 'Task Finished',
+          message: `Successfully completed "${title}".`,
           type: 'success',
           duration: 6000
         });
@@ -111,8 +111,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
         confirmLabel="Delete"
         onConfirm={handleDelete}
       />
-      <div className="bg-[var(--color-bg-surface)] w-full max-w-xl rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-        <header className="px-8 py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
+      <div className="bg-[var(--color-bg-surface)] w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+        <header className="px-5 py-4 md:px-8 md:py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
           <div>
             <h3 className="font-black text-[var(--color-text-primary)] text-xs uppercase tracking-[0.2em]">
               Edit Task
@@ -140,7 +140,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
           </button>
         </header>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="p-5 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1">
           <div className="space-y-3">
             <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Name</label>
             <input 
@@ -164,7 +164,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
             <CKDropdown 
               label="Status"
               options={statusOptions}
@@ -182,7 +182,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
             <CKDropdown 
               multi
               label="Assign To"
@@ -252,22 +252,22 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
             </div>
           )}
 
-          <div className="pt-8 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+          <div className="pt-6 md:pt-8 border-t border-[var(--color-bg-border)] flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
             {!isDone ? (
               <button 
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-2 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-2 rounded-xl transition-all"
+                className="w-full sm:w-auto flex justify-center items-center gap-2 text-red-500 font-bold text-[10px] uppercase tracking-widest hover:bg-red-500/10 px-4 py-3 sm:py-2 rounded-xl transition-all"
               >
                 <Trash2 size={14} /> Remove Task
               </button>
-            ) : <div />}
+            ) : <div className="hidden sm:block" />}
             
-            <div className="flex items-center gap-4">
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               <button 
                 type="button" 
                 onClick={onClose}
-                className="px-8 py-3 rounded-2xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)] transition-all"
+                className="w-full sm:w-auto px-8 py-3 rounded-2xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)] transition-all"
               >
                 Close
               </button>
@@ -275,7 +275,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
                 <button 
                   type="submit"
                   disabled={loading || !title}
-                  className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-2xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-3 shadow-xl shadow-blue-500/20"
+                  className="w-full sm:w-auto justify-center bg-[var(--color-action-primary)] text-white px-8 md:px-10 py-3 rounded-2xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-3 shadow-xl shadow-blue-500/20"
                 >
                   {loading ? 'Saving...' : <><CheckCircle2 size={20} /> Save Changes</>}
                 </button>

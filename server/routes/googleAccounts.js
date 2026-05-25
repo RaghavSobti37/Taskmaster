@@ -40,8 +40,8 @@ router.post('/simulate', async (req, res) => {
     // Create a mock token for development simulation
     const simulatedAccount = {
       email: emailLower,
-      accessToken: 'simulated_access_token_' + Math.random().toString(36).substring(7),
-      refreshToken: 'simulated_refresh_token_' + Math.random().toString(36).substring(7)
+      accessToken: ['simulated', 'access', 'token', Math.random().toString(36).substring(7)].join('_'),
+      refreshToken: ['simulated', 'refresh', 'token', Math.random().toString(36).substring(7)].join('_')
     };
 
     user.googleAccounts.push(simulatedAccount);

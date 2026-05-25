@@ -218,6 +218,7 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
       country = geo.country || 'Unknown Country';
     }
   }
+  const safeCity = city.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Unknown';
   const location = `${city}, ${region}, ${country}`;
 
   try {
@@ -237,7 +238,7 @@ router.get('/track/:campaignId/:recipientId', async (req, res) => {
       const setPayload = { [`recipients.$[elem].status`]: 'Opened' };
       const incPayload = { 'metrics.opened': 1, 'stats.opened': 1 };
       
-      const locKey = `locationBreakdown.${city}.opens`;
+      const locKey = `locationBreakdown.${safeCity}.opens`;
       incPayload[locKey] = 1;
 
       const Campaign = require('../models/Campaign');
@@ -324,6 +325,7 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
       country = geo.country || 'Unknown Country';
     }
   }
+  const safeCity = city.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Unknown';
   const location = `${city}, ${region}, ${country}`;
 
   try {
@@ -344,7 +346,7 @@ router.get('/click/:campaignId/:recipientId', async (req, res) => {
       const setPayload = { [`recipients.$[elem].status`]: 'Clicked' };
       const incPayload = { 'metrics.clicked': 1, 'stats.clicked': 1 };
       
-      const locKey = `locationBreakdown.${city}.clicks`;
+      const locKey = `locationBreakdown.${safeCity}.clicks`;
       incPayload[locKey] = 1;
 
       const Campaign = require('../models/Campaign');

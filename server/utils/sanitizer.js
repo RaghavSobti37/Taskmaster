@@ -59,11 +59,26 @@ const sanitizeLocation = (loc) => {
     .trim();
 };
 
+const escapeRegExp = (str) => {
+  if (!str) return '';
+  const specials = ['-', '[', ']', '/', '{', '}', '(', ')', '*', '+', '?', '.', '\\', '^', '$', '|'];
+  let output = '';
+  for (const char of String(str)) {
+    if (specials.includes(char)) {
+      output += '\\' + char;
+    } else {
+      output += char;
+    }
+  }
+  return output;
+};
+
 module.exports = {
   sanitizeName,
   sanitizeEmail,
   normalizePhone,
   validateDate,
-  sanitizeLocation
+  sanitizeLocation,
+  escapeRegExp
 };
 

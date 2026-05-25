@@ -6,8 +6,8 @@ Taskmaster is the unified operational hub and CRM system in this repository. It 
 
 ## 🔧 Current Project Structure
 
-- `server/` — Backend API, Express routes, Mongoose models, middleware, auth, proxy controller, Redis queue support.
-- `client/` — React application built with Vite, Tailwind, Clerk auth hooks, and frontend routing.
+- `server/` — Backend API, Express routes, Mongoose models, middleware, auth, proxy controller, gamification engines, Redis queue support.
+- `client/` — React application built with Vite, Tailwind, Clerk auth hooks, frontend routing, and gamification UI.
 - `docs/PROJECT_MEMORY.md` — Architecture and design memory for the project.
 - `GLOBAL_RULES.md` — Master configuration and coding philosophy rules.
 - `server/.env.example` — Server environment variable template.

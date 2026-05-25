@@ -40,7 +40,9 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     } catch (err) {
-      logout();
+      if (err.response?.status === 401) {
+        logout();
+      }
       setLoading(false);
     }
   }, [logout]);

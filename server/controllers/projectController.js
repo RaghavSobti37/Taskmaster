@@ -36,6 +36,13 @@ exports.createProject = async (req, res) => {
       members: providedMembers,
       memberRoles: providedRoles
     });
+
+    const { queueGamificationEvent } = require('../services/backgroundQueue');
+    queueGamificationEvent('PROJECT_CREATED', {
+      userId: req.user._id,
+      project
+    });
+
     res.status(201).json(project);
   } catch (error) {
     console.error('Create Project Error:', error);

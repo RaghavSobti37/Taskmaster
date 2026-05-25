@@ -140,8 +140,8 @@ app.use('/api/logs', logRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/artists', artistRoutes);
-app.use('/api/v2/artists', require('./routes/artistV2Routes'));
-app.use('/api/gamification', require('./routes/gamificationRoutes'));
+    app.use('/api/v2/artists', require('./routes/artistV2Routes'));
+    app.use('/api/gamification', require('./routes/gamificationRoutes'));
 
 // Public tracking webhooks & unsubscribe endpoints
 app.use(require('./routes/track')); // Mounts /webhooks/bounces and /unsubscribe at root
@@ -245,11 +245,4 @@ const server = app.listen(PORT, () => {
   // Initialize Reminder Service
   const notificationService = require('./services/notificationService');
   notificationService.init();
-
-  // Initialize Gamification Cron
-  require('./cron/dailyMissions');
-
-  // Initialize Gamification Worker (Event Subscribers)
-  const { initializeWorker } = require('./services/gamificationWorker');
-  initializeWorker();
 });

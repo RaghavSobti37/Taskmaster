@@ -317,7 +317,7 @@ export default function FollowupsPage() {
         isOpen={!!selectedLead}
         onClose={() => setSelectedLead(null)}
         title={selectedLead?.name || 'Customer Details'}
-        subtitle={`ID: ${selectedLead?._id?.substring(0, 8)} • Source: ${selectedLead?.source || 'Direct'}`}
+        subtitle={selectedLead ? `Lead: ${selectedLead._id.substring(0, 8)} | Channel: ${selectedLead.source || 'Direct'}` : ''}
         onSave={handleSaveLead}
         extraActions={
           <Button

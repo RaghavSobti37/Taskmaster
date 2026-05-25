@@ -17,8 +17,8 @@ const protect = async (req, res, next) => {
     const isBypassEnabled = process.env.NODE_ENV === 'development' 
       && String(process.env.DEBUG_BYPASS).trim() === 'true';
     const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
-    
-    if (isBypassEnabled && isLocalhost && token === 'bypass_token') {
+    const bypassToken = process.env.DEBUG_BYPASS_TOKEN || 'bypass_token';
+    if (isBypassEnabled && isLocalhost && token === bypassToken) {
       const adminUser = await User.findOne({ role: 'admin' }).select('-password');
       if (adminUser) {
         req.user = adminUser;

@@ -84,7 +84,8 @@ const AdminPanel = () => {
       });
       setSelectedUser(null);
     } catch (err) {
-      alert('Failed to update user: ' + err.message);
+      console.error(err);
+      alert(`User modification error: ${err.message}`);
     }
   };
 

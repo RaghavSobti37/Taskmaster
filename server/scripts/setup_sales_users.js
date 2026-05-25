@@ -38,7 +38,7 @@ async function run() {
       console.log(`User ${email} already exists. Updating avatar...`);
       existing.avatar = avatar;
       if (!existing.password) {
-        existing.password = '1234';
+        existing.password = process.env.DEFAULT_SEED_PASSWORD || '1234';
       }
       await existing.save();
     } else {
@@ -46,7 +46,7 @@ async function run() {
       await User.create({
         name,
         email: email.toLowerCase(),
-        password: '1234',
+        password: process.env.DEFAULT_SEED_PASSWORD || '1234',
         role: 'sales',
         avatar
       });

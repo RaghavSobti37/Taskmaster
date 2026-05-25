@@ -26,9 +26,9 @@ const parseClientNetworkLocation = (req) => {
 
   const geo = geoip.lookup(ip);
   return {
-    city: geo ? (geo.city || 'Unknown City') : 'Unknown City',
-    region: geo ? (geo.region || 'Unknown Region') : 'Unknown Region',
-    country: geo ? (geo.country || 'Unknown Country') : 'Unknown Country',
+    city: geo ? (geo.city || 'Unknown') : 'Unknown',
+    region: geo ? (geo.region || 'Unknown') : 'Unknown',
+    country: geo ? (geo.country || 'Unknown') : 'Unknown',
     ip
   };
 };
@@ -61,30 +61,11 @@ router.get('/open/:pixelId.gif', async (req, res) => {
       try {
         const userAgent = req.headers['user-agent'] || 'Unknown';
         
-        // Extract the true client IP (handling reverse proxies like Render/Cloudflare)
-        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        if (ip && ip.includes(',')) {
-          ip = ip.split(',')[0].trim();
-        }
-        if (ip && ip.startsWith('::ffff:')) {
-          ip = ip.substring(7);
-        }
-
         // Anti-Bot Protection
         if (isAntiSpamBot(userAgent)) return;
 
         // Run the local in-memory location lookup
-        let location = { country: 'Unknown', city: 'Unknown' };
-        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-          const geo = geoip.lookup(ip);
-          if (geo) {
-            location.country = geo.country || 'Unknown';
-            location.city = geo.city || 'Unknown';
-          }
-        } else {
-          location.country = 'IN';
-          location.city = 'Mumbai';
-        }
+        const location = parseClientNetworkLocation(req);
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
@@ -200,22 +181,7 @@ router.get('/click/:clickId', async (req, res) => {
       try {
         if (isAntiSpamBot(userAgent)) return;
 
-        // True client IP extraction
-        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
-        if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
-
-        let location = { country: 'Unknown', city: 'Unknown' };
-        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-          const geo = geoip.lookup(ip);
-          if (geo) {
-            location.country = geo.country || 'Unknown';
-            location.city = geo.city || 'Unknown';
-          }
-        } else {
-          location.country = 'IN';
-          location.city = 'Mumbai';
-        }
+        const location = parseClientNetworkLocation(req);
 
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;

@@ -21,19 +21,20 @@ const seedDatabase = async () => {
     console.log('Database cleared.');
 
     // 2. Create Core Users
+    const seedPassword = process.env.DEFAULT_SEED_PASSWORD || '1234';
     const admin = await User.create({
       name: 'Raghav Raj',
       email: 'raghavraj@theshakticollective.in',
-      password: '1234',
+      password: seedPassword,
       role: 'admin',
       outletId: 'main',
       lastOnline: new Date()
     });
 
-    await User.create({ name: 'Harshika', email: 'harshika@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
-    await User.create({ name: 'Rohith', email: 'rohith@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
-    await User.create({ name: 'Ops', email: 'ops@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
-    await User.create({ name: 'Atharva', email: 'atharva@theshakticollective.in', password: '1234', role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Harshika', email: 'harshika@theshakticollective.in', password: seedPassword, role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Rohith', email: 'rohith@theshakticollective.in', password: seedPassword, role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Ops', email: 'ops@theshakticollective.in', password: seedPassword, role: 'admin', outletId: 'main' });
+    await User.create({ name: 'Atharva', email: 'atharva@theshakticollective.in', password: seedPassword, role: 'admin', outletId: 'main' });
 
     console.log('Core Users Created: Raghav Raj, Harshika, Rohith, Ops, Atharva');
 

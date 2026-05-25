@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const MONGODB_URI = 'mongodb+srv://raghavsobti37_db_user:rpSmwUYLByGbgSKs@main-cluster.lgafikg.mongodb.net/?appName=main-cluster';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function run() {
   try {

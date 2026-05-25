@@ -10,6 +10,25 @@ mermaid.initialize({
   fontFamily: 'Geist, sans-serif',
 });
 
+const sanitizeHtml = (html) => {
+  if (!html) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const scripts = doc.querySelectorAll('script');
+  scripts.forEach(s => s.remove());
+  const allElements = doc.querySelectorAll('*');
+  allElements.forEach(el => {
+    for (let i = 0; i < el.attributes.length; i++) {
+      const attr = el.attributes[i];
+      if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+        i--;
+      }
+    }
+  });
+  return doc.body.innerHTML;
+};
+
 export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explainer", data }) => {
   const containerRef = useRef(null);
   const [svgContent, setSvgContent] = useState('');
@@ -80,7 +99,7 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
               ref={containerRef}
               style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease' }}
               className="w-full h-full flex items-center justify-center cursor-move select-none"
-              dangerouslySetInnerHTML={{ __html: svgContent || '<div className="text-xs text-slate-500">Generating diagram...</div>' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(svgContent) || '<div className="text-xs text-slate-500">Generating diagram...</div>' }}
             />
           ) : (
             <div className="max-w-3xl w-full space-y-6 text-slate-200 text-xs self-start my-auto">
@@ -88,7 +107,7 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
                 <h3 className="text-sm font-black text-white border-b border-white/10 pb-2 flex items-center gap-2">
                   <FileText size={16} className="text-blue-400" /> System Overview
                 </h3>
-                <div className="space-y-2 leading-relaxed text-slate-300" dangerouslySetInnerHTML={{ __html: data?.reportHtml || '<p>No structured report available.</p>' }} />
+                <div className="space-y-2 leading-relaxed text-slate-300" dangerouslySetInnerHTML={{ __html: sanitizeHtml(data?.reportHtml) || '<p>No structured report available.</p>' }} />
               </div>
             </div>
           )}

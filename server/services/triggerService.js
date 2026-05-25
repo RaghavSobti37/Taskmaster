@@ -1,4 +1,3 @@
-const { processEmailJob } = require('./queueService');
 const Lead = require('../models/Lead');
 const Project = require('../models/Project');
 
@@ -52,6 +51,7 @@ triggerClient.defineJob({
     
     await logInfo(`Starting email dispatch for campaign ${payload.campaignId}`);
     try {
+      const { processEmailJob } = require('./queueService');
       await processEmailJob(payload);
       await logInfo(`Successfully processed email to ${payload.email}`);
       return { status: 'completed', email: payload.email };

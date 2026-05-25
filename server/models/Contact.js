@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const contactSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -30,5 +32,7 @@ const contactSchema = new mongoose.Schema({
 // We rely on service layer logic to merge duplicates rather than strict DB constraints here to avoid null collision.
 contactSchema.index({ phone: 1 });
 contactSchema.index({ email: 1 });
+
+contactSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Contact', contactSchema);

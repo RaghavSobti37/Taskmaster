@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const campaignSchema = new mongoose.Schema({
   campaignId: { type: String, required: true, unique: true, index: true },
@@ -37,5 +39,7 @@ const campaignSchema = new mongoose.Schema({
 
 campaignSchema.index({ 'recipients.messageId': 1 });
 campaignSchema.index({ 'recipients.email': 1 });
+
+campaignSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Campaign', campaignSchema);

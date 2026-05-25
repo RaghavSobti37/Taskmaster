@@ -15,7 +15,8 @@ import {
   Card, 
   Button, 
   Input,
-  PageSkeleton
+  PageSkeleton,
+  NexusDropdown
 } from '../../components/ui';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
 
@@ -33,14 +34,30 @@ const ProjectMetric = ({ label, value, icon: Icon, variant = 'slate' }) => (
 
 const ProjectsView = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const navigate = useNavigate();
   const { data: projects = [], isLoading: loading } = useProjects();
 
-  const filteredProjects = useMemo(() => projects.filter(p => {
-    const nameMatch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const tagMatch = p.tags?.some(t => t?.toLowerCase().includes(searchTerm.toLowerCase()));
-    return nameMatch || tagMatch;
-  }), [projects, searchTerm]);
+  const filteredProjects = useMemo(() => {
+    let result = projects.filter(p => {
+      const nameMatch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const tagMatch = p.tags?.some(t => t?.toLowerCase().includes(searchTerm.toLowerCase()));
+      const statusMatch = filterStatus === 'all' || p.status === filterStatus;
+      return (nameMatch || tagMatch) && statusMatch;
+    });
+
+    result.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === 'progress-high') return (b.progress || 0) - (a.progress || 0);
+      if (sortBy === 'progress-low') return (a.progress || 0) - (b.progress || 0);
+      if (sortBy === 'name') return a.name?.localeCompare(b.name);
+      return 0;
+    });
+
+    return result;
+  }, [projects, searchTerm, filterStatus, sortBy]);
 
   const metrics = useMemo(() => {
     const completed = projects.filter(p => p.status === 'completed').length;
@@ -85,8 +102,31 @@ const ProjectsView = () => {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm">Active Filters</Button>
-            <Button variant="secondary" size="sm">Sort Matrix</Button>
+            <NexusDropdown
+              variant="compact"
+              options={[
+                { value: 'all', label: 'All Projects' },
+                { value: 'active', label: 'Active Only' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'archived', label: 'Archived' }
+              ]}
+              value={filterStatus}
+              onChange={setFilterStatus}
+              className="w-36"
+            />
+            <NexusDropdown
+              variant="compact"
+              options={[
+                { value: 'newest', label: 'Newest First' },
+                { value: 'oldest', label: 'Oldest First' },
+                { value: 'progress-high', label: 'Highest Progress' },
+                { value: 'progress-low', label: 'Lowest Progress' },
+                { value: 'name', label: 'Alphabetical' }
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+              className="w-40"
+            />
           </div>
         </div>
 

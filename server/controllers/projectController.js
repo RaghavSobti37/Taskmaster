@@ -145,6 +145,26 @@ exports.updateProject = async (req, res) => {
     }
 
     const updated = await Project.findByIdAndUpdate(req.params.id, sanitizedUpdate, { new: true, runValidators: true });
+
+    // Handle Event Dispatch for Gamification
+    if (sanitizedUpdate.status === 'completed' && project.status !== 'completed') {
+      const eventDispatcher = require('../services/eventDispatcher');
+      const tenantId = req.tenantId || project.tenantId;
+      eventDispatcher.emit('PROJECT_CLOSED', {
+        userId: req.user._id,
+        tenantId,
+        projectId: project._id
+      });
+    } else if (sanitizedUpdate.status === 'archived' && project.status !== 'archived') {
+      const eventDispatcher = require('../services/eventDispatcher');
+      const tenantId = req.tenantId || project.tenantId;
+      eventDispatcher.emit('PROJECT_ARCHIVED', {
+        userId: req.user._id,
+        tenantId,
+        projectId: project._id
+      });
+    }
+
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update project' });

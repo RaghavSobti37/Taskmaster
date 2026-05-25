@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const taskSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -37,5 +39,7 @@ taskSchema.index({ projectId: 1, status: 1 });
 taskSchema.index({ phaseId: 1, status: 1 });
 taskSchema.index({ assignees: 1 });
 taskSchema.index({ projectId: 1, dueDate: 1 });
+
+taskSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Task', taskSchema);

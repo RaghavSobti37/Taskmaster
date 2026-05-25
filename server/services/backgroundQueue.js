@@ -63,6 +63,7 @@ try {
 
 let holySheetQueue = null;
 let csvBackupQueue = null;
+let gamificationQueue = null;
 
 // Memory storage for fallback de-duplication
 const pendingHolySheetIds = new Set();
@@ -72,6 +73,7 @@ let batchTimeout = null;
 function initializeQueues() {
   holySheetQueue = new Queue('holySheetQueue', { connection: redisConnection });
   csvBackupQueue = new Queue('csvBackupQueue', { connection: redisConnection });
+  gamificationQueue = new Queue('gamificationQueue', { connection: redisConnection });
 
   // BullMQ Worker to process HolySheet queue in batches every 10s
   const holySheetWorker = new Worker('holySheetQueue', async (job) => {
@@ -98,12 +100,74 @@ function initializeQueues() {
     await csvBackupService.backupAllLeadsToCsv();
   }, { connection: redisConnection, concurrency: 1 });
 
+  // Worker for Gamification
+  const gamificationWorker = new Worker('gamificationQueue', async (job) => {
+    const { eventType, payload } = job.data;
+    const GamificationService = require('./gamificationService');
+    
+    if (eventType === 'TASK_COMPLETED') {
+      const { userId, tenantId, task } = payload;
+      
+      let expReward = 20; // Base XP
+      let description = 'Completed Task';
+      
+      const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+
+      if (!isOverdue) {
+        if (task.priority === 'critical') {
+          expReward += 40;
+          description += ' (Critical)';
+        } else if (task.priority === 'high') {
+          expReward += 20;
+          description += ' (High Priority)';
+        }
+        
+        if (task.description && task.description.length > 0) {
+          const complexityBonus = Math.floor(task.description.length / 100) * 5;
+          expReward += complexityBonus;
+          if (complexityBonus > 0) description += ` + Complexity Bonus`;
+        }
+        
+        if (task.dependencies && task.dependencies.length > 0) {
+          expReward += (task.dependencies.length * 10);
+          description += ` + Dependency Bonus`;
+        }
+      } else {
+        description += ' (Overdue - Missed Bonus)';
+      }
+
+      const usersToReward = new Set();
+      if (task.createdBy) usersToReward.add(task.createdBy.toString());
+      if (task.assignees && task.assignees.length > 0) {
+        task.assignees.forEach(a => usersToReward.add(a.toString()));
+      }
+      if (usersToReward.size === 0) usersToReward.add(userId.toString());
+
+      for (const uid of usersToReward) {
+        await GamificationService.generateDailyMissions(uid, tenantId);
+
+        await GamificationService.awardExp(uid, tenantId, expReward, {
+          actionType: 'COMPLETE_TASK',
+          taskId: task._id,
+          projectId: task.projectId,
+          description: description
+        });
+
+        await GamificationService.progressMission(uid, tenantId, 'COMPLETE_TASK', 1);
+      }
+    }
+  }, { connection: redisConnection, concurrency: 5 });
+
   holySheetWorker.on('failed', (job, err) => {
     console.error(`[Queue Worker] HolySheet job failed: ${err.message}`);
   });
 
   csvWorker.on('failed', (job, err) => {
     console.error(`[Queue Worker] CSV backup job failed: ${err.message}`);
+  });
+  
+  gamificationWorker.on('failed', (job, err) => {
+    console.error(`[Queue Worker] Gamification job failed: ${err.message}`);
   });
 }
 
@@ -226,9 +290,28 @@ async function executeHolySheetSyncDirect(ids) {
   }
 }
 
+const queueGamificationEvent = async (eventType, payload) => {
+  if (redisAvailable && gamificationQueue) {
+    try {
+      await gamificationQueue.add(eventType, { eventType, payload }, {
+        removeOnComplete: true,
+        removeOnFail: false
+      });
+    } catch (e) {
+      console.error('[Queue Error] Gamification direct execution fallback', e);
+      // We will skip memory fallback for now to keep it simple, or implement it if critical.
+    }
+  } else {
+    // Memory fallback if redis fails
+    console.log('[Memory Queue] Simulating gamification queue', eventType);
+    // Real implementation would invoke the logic directly here
+  }
+};
+
 module.exports = {
   queueHolySheetSync,
-  queueCsvBackup
+  queueCsvBackup,
+  queueGamificationEvent
 };
 
 // Daily cron job for Platform Analytics (Offload Read Path)

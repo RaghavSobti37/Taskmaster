@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 const TscDataSchema = new mongoose.Schema({
@@ -70,5 +72,7 @@ TscDataSchema.index({ phone: 1, email: 1 }, { unique: true });
 // Indexes
 TscDataSchema.index({ name: 'text', email: 'text', phone: 'text' });
 TscDataSchema.index({ createdAt: -1 });
+
+TscDataSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('TscData', TscDataSchema);

@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const ExlyBookingSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -28,5 +30,7 @@ const ExlyBookingSchema = new mongoose.Schema({
 
 // Compound index to prevent duplicate booking imports
 ExlyBookingSchema.index({ email: 1, phone: 1, offeringId: 1, bookedOn: 1 }, { unique: true });
+
+ExlyBookingSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('ExlyBooking', ExlyBookingSchema);

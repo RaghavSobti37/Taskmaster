@@ -7,7 +7,9 @@ router.use(protect);
 
 router.get('/', async (req, res) => {
   try {
-    const contacts = await Contact.find().populate('addedBy', 'name email').sort('name');
+    const contacts = await Contact.find({ role: { $nin: ['customer', 'Customer'] } })
+      .populate('addedBy', 'name email')
+      .sort('name');
     res.json(contacts);
   } catch (error) {
     res.status(500).json({ error: 'Server error fetching contacts' });

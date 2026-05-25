@@ -58,6 +58,9 @@ exports.createTask = async (req, res, next) => {
 
     await logActivity(req.user._id, 'CREATE_TASK', task._id, 'Task', { title: task.title }, session);
 
+    await task.populate('createdBy', 'name avatar');
+    await task.populate('assignees', 'name avatar');
+
     await session.commitTransaction();
     session.endSession();
 
@@ -94,8 +97,9 @@ exports.getTasks = async (req, res, next) => {
     }
 
     const tasks = await Task.find(filter)
-      .select('title status priority projectId assignees progress dueDate')
+      .select('title status priority projectId assignees progress dueDate createdBy')
       .populate('assignees', 'name avatar')
+      .populate('createdBy', 'name avatar')
       .lean();
 
     const sw = { 'in-progress': 3, 'todo': 2, 'done': 1 };
@@ -146,16 +150,46 @@ exports.updateTask = async (req, res, next) => {
       }
     }
 
+    // Check for specific granular changes to log
+    let dueDateChanged = false;
+    let oldDueDate = existing.dueDate;
+    if (updates.dueDate && new Date(updates.dueDate).getTime() !== new Date(existing.dueDate).getTime()) {
+      dueDateChanged = true;
+    }
+
+    let assigneesChanged = false;
+    if (updates.assignees && updates.assignees.join(',') !== (existing.assignees || []).join(',')) {
+      assigneesChanged = true;
+    }
+
     const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true, session })
-      .populate('assignees', 'name avatar');
+      .populate('assignees', 'name avatar')
+      .populate('createdBy', 'name avatar');
 
     if (task) {
       // Execute post-update side effects inside the atomic transaction
       await calculateRollup(task.projectId, task.phaseId, session);
       await logActivity(req.user._id, 'UPDATE_TASK', task._id, 'Task', { title: task.title, status: task.status }, session);
+      
+      if (dueDateChanged) {
+        await logActivity(req.user._id, 'TASK_DATE_CHANGED', task._id, 'Task', { oldDate: oldDueDate, newDate: task.dueDate }, session);
+      }
+      if (assigneesChanged) {
+        await logActivity(req.user._id, 'TASK_ASSIGNEES_CHANGED', task._id, 'Task', { assignees: task.assignees.map(a => a._id || a) }, session);
+      }
 
       // Handle daily log creation on task completion
       if (updates.status === 'done') {
+        // --- Gamification Integration (Event Driven) ---
+        const eventDispatcher = require('../services/eventDispatcher');
+        const tenantId = req.tenantId || task.tenantId || 'default';
+        eventDispatcher.emit('TASK_COMPLETED', {
+          userId: req.user._id,
+          tenantId,
+          task
+        });
+        // --------------------------------
+
         let projectName = 'Unassigned';
         if (task.projectId) {
           const projectDoc = await Project.findById(task.projectId).session(session);

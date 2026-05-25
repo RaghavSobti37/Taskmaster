@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const emailLogSchema = new mongoose.Schema({
   campaignId: { type: String, required: true, index: true },
@@ -9,5 +11,7 @@ const emailLogSchema = new mongoose.Schema({
   clicked: { type: Boolean, default: false },
   bounced: { type: Boolean, default: false }
 }, { timestamps: true });
+
+emailLogSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('EmailLog', emailLogSchema);

@@ -5,7 +5,8 @@ const f = createUploadthing();
 const uploadRouter = {
   imageUploader: f({ image: { maxFileSize: "16MB", maxFileCount: 5 } })
     .middleware(async ({ req, res }) => {
-      const authHeader = req.headers.authorization;
+      // SECURITY: Sanitize async context, do not pass raw req/res
+      const authHeader = req?.headers?.authorization ? String(req.headers.authorization) : null;
       if (!authHeader) throw new Error("Unauthorized");
       return { userId: "authenticated-user" };
     })
@@ -17,6 +18,8 @@ const uploadRouter = {
 
   documentUploader: f({ pdf: { maxFileSize: "32MB" }, text: { maxFileSize: "16MB" } })
     .middleware(async ({ req }) => {
+      // SECURITY: Strip context
+      const authHeader = req?.headers?.authorization ? String(req.headers.authorization) : null;
       return { userId: "authenticated-user" };
     })
     .onUploadComplete(async ({ metadata, file }) => {

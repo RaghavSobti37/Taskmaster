@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const tenantPlugin = require('../plugins/tenantPlugin');
+
 
 const projectSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -49,5 +51,7 @@ projectSchema.pre('deleteOne', { document: true, query: false }, async function(
 projectSchema.index({ outletId: 1, createdAt: -1 });
 projectSchema.index({ owner: 1 });
 projectSchema.index({ members: 1 });
+
+projectSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Project', projectSchema);

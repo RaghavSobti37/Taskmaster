@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getTenantId } = require('../utils/tenantContext');
 
 module.exports = function tenantPlugin(schema, options) {
   // Add tenantId to the schema if it doesn't exist
@@ -7,18 +8,45 @@ module.exports = function tenantPlugin(schema, options) {
       tenantId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Tenant', 
-        required: false, // TEMPORARY: Set to false until migration is complete
+        required: false, // Set to false to support fallback contexts, validated on save/validate
         index: true 
       }
     });
   }
 
+  // Pre-validate hook to automatically populate tenantId from AsyncLocalStorage context on document creation
+  schema.pre('validate', async function (next) {
+    if (!this.tenantId) {
+      const tenantId = getTenantId();
+      if (tenantId) {
+        this.tenantId = tenantId;
+      } else {
+        try {
+          const Tenant = require('../models/Tenant');
+          let defaultTenant = await Tenant.findOne({ name: 'Default Tenant' });
+          if (!defaultTenant) {
+            defaultTenant = await Tenant.create({
+              name: 'Default Tenant',
+              contactEmail: 'admin@theshakticollective.in'
+            });
+          }
+          this.tenantId = defaultTenant._id;
+        } catch (e) {
+          // Fallback if Tenant model fails to load or create
+        }
+      }
+    }
+    next();
+  });
+
   // Helper to inject tenantId into query filter
   const injectTenantId = function (next) {
-    // Determine tenantId from a global context or async local storage, 
-    // but in Mongoose it's often passed via query options:
-    // Model.find({}).setOptions({ tenantId: req.tenantId })
-    const tenantId = this.options.tenantId;
+    // Check if query options explicitly bypass tenant scoping
+    if (this.options && this.options.bypassTenant) {
+      return next();
+    }
+
+    const tenantId = (this.options && this.options.tenantId) || getTenantId();
     if (tenantId) {
       this.where({ tenantId });
     }

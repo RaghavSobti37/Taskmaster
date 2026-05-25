@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
+const { runWithContext } = require('../utils/tenantContext');
 
 const protect = async (req, res, next) => {
   let token;
@@ -22,10 +23,11 @@ const protect = async (req, res, next) => {
       const adminUser = await User.findOne({ role: 'admin' }).select('-password');
       if (adminUser) {
         req.user = adminUser;
+        req.tenantId = adminUser.tenantId;
+        return runWithContext({ tenantId: adminUser.tenantId, userId: adminUser._id }, next);
       } else {
         return res.status(503).json({ error: 'No admin user available for bypass' });
       }
-      return next();
     }
 
     let userId = null;
@@ -71,7 +73,8 @@ const protect = async (req, res, next) => {
       $set: { lastOnline: new Date(), online: true } 
     });
     
-    next();
+    req.tenantId = req.user.tenantId;
+    runWithContext({ tenantId: req.user.tenantId, userId: req.user._id }, next);
   } catch (error) {
     res.status(401).json({ error: 'Not authorized, token failed' });
   }

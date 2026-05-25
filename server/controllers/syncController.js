@@ -11,7 +11,7 @@ const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/saniti
 exports.syncBookings = async (req, res) => {
   try {
     const sheetName = req.query.sheet || 'BookedCalls';
-    const apiKey = process.env.HOLYSHEET_BOOKED_CALLS_API_KEY || 'z6aMUsJwG8rEnYNKEAPSdbGHq0oreVFV';
+    const apiKey = process.env.HOLYSHEET_BOOKED_CALLS_API_KEY || '';
     
     let rows = [];
     try {
@@ -101,8 +101,8 @@ exports.syncBookings = async (req, res) => {
         action: 'BOOKING_SYNC',
         fieldChanged: 'leads',
         oldValue: 'holysheet_booked_calls',
-        newValue: `added_${addedCount}_updated_${updatedCount}`,
-        notes: `Ingested ${addedCount} new bookings and updated ${updatedCount} existing leads with scheduled followups.`
+        newValue: ['added', addedCount, 'updated', updatedCount].join('_'),
+        notes: 'Ingested ' + addedCount + ' new bookings and updated ' + updatedCount + ' existing leads with scheduled followups.'
       });
     }
 

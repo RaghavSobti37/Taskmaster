@@ -36,7 +36,7 @@ async function runQATests() {
     qaUser = await User.create({
       name: 'QA Autonomous Engineer',
       email: 'qa_engineer@theshakticollective.in',
-      password: 'qa_secure_password_2026',
+      password: process.env.QA_PASSWORD || 'qa_secure_password_2026',
       role: 'admin',
       gender: 'male',
       avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=qa'

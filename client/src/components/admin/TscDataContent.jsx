@@ -336,7 +336,7 @@ const TscDataContent = () => {
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
         title={selectedItem?.name || 'Record Detail'}
-        subtitle={`Database ID: ${selectedItem?._id?.substring(0, 8)} • Source: ${selectedItem?.originSource?.toUpperCase()}`}
+        subtitle={selectedItem ? `Record: ${selectedItem._id.substring(0, 8)} | Channel: ${selectedItem.originSource?.toUpperCase() || ''}` : ''}
         onSave={() => setSelectedItem(null)}
         sidebar={
           <>

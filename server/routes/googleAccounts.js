@@ -17,6 +17,9 @@ router.get('/', async (req, res) => {
 
 // Simulate linking an account (instant email input)
 router.post('/simulate', async (req, res) => {
+  if (process.env.NODE_ENV !== 'development') {
+    return res.status(403).json({ error: 'Simulation endpoint is disabled in production.' });
+  }
   try {
     const { email } = req.body;
     if (!email || !email.includes('@')) {

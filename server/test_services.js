@@ -46,8 +46,6 @@ async function runTests() {
 
       // Wait 3 seconds for BullMQ / Redis to initialize
       await new Promise(resolve => setTimeout(resolve, 3000));
-      const { initializeWorker } = require('./services/gamificationWorker');
-      initializeWorker();
 
       // Create dummy user
       let user = await User.findOne({ email: 'test_gamification@example.com' });
@@ -55,7 +53,7 @@ async function runTests() {
         user = await User.create({
           name: 'QA Test User',
           email: 'test_gamification@example.com',
-          password: 'password123',
+          password: process.env.DEFAULT_SEED_PASSWORD || 'password123',
           exp: 0,
           level: 1,
           tenantId: new mongoose.Types.ObjectId()
@@ -77,8 +75,9 @@ async function runTests() {
       // Wait 2 seconds for BullMQ / Redis to initialize
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Listen for updates (Wait for 2 seconds to allow worker to process)
-      eventDispatcher.emit('TASK_COMPLETED', {
+      // Queue gamification event directly
+      const { queueGamificationEvent } = require('./services/backgroundQueue');
+      await queueGamificationEvent('TASK_COMPLETED', {
         userId: user._id,
         tenantId: user.tenantId,
         task: mockTask

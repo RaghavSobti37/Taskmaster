@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
+import { subscribeToChannel } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 if (import.meta.env.VITE_API_URL) {
@@ -63,6 +65,43 @@ export const AuthProvider = ({ children }) => {
       return () => clearInterval(interval);
     }
   }, [token, fetchUser]);
+
+  useEffect(() => {
+    if (user?._id) {
+      const unsubscribe = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
+        setUser(prev => ({ 
+          ...prev, 
+          exp: payload.newTotal, 
+          level: payload.leveledUp ? (prev.level || 1) + 1 : prev.level 
+        }));
+        
+        toast.custom((t) => (
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden`}>
+             <div className="p-4 flex-1">
+               <div className="flex items-center">
+                 <div className="flex-shrink-0 bg-blue-500/10 p-2 rounded-xl">
+                    <span className="text-xl">✨</span>
+                 </div>
+                 <div className="ml-3 flex-1">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+                      XP Gained!
+                    </p>
+                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
+                      +{payload.amount} XP • {payload.action.replace(/_/g, ' ')}
+                    </p>
+                    <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out" 
+                           style={{ width: '100%', animation: 'fillBar 1s ease-out' }}></div>
+                    </div>
+                 </div>
+               </div>
+             </div>
+          </div>
+        ), { duration: 4000 });
+      });
+      return () => unsubscribe();
+    }
+  }, [user?._id]);
 
   const login = useCallback((newToken, userData) => {
     localStorage.setItem('coreknot_token', newToken);

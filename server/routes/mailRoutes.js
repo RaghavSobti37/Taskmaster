@@ -398,7 +398,7 @@ router.get('/unsubscribe/:campaignId/:recipientId', async (req, res) => {
 // --- LOCAL EMAIL TEMPLATES MANAGEMENT ---
 const fs = require('fs');
 const path = require('path');
-const TEMPLATE_DIR = "C:\\Users\\ragha\\OneDrive\\Desktop\\AutoMailer\\Auto-Mailer\\templates";
+const TEMPLATE_DIR = process.env.TEMPLATE_DIR || path.join(__dirname, '..', 'templates');
 
 // Ensure template directory exists
 if (!fs.existsSync(TEMPLATE_DIR)) {

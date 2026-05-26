@@ -109,3 +109,8 @@ If local auth or proxy testing is needed before a normal login token is availabl
 
 ## Version
 - Current: **1.7.20**
+
+## [2026-05-26] Version 1.7.21
+- Fixed email signature rendering issues using imported base64 assets.
+- Corrected frontend CSV/HolySheet parsing logic to split compound emails on commas and semicolons immediately upon import.
+- Cleaned up obsolete stats refresh buttons.

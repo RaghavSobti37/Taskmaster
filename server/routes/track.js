@@ -336,8 +336,32 @@ router.post('/webhooks/resend', async (req, res) => {
     let camp = null;
     let isCore = true;
     let recipient = null;
+    
+    // Check tags for campaign_id and recipient_id
+    let resendCampaignId = null;
+    let resendRecipientId = null;
+    if (payload.data.tags && Array.isArray(payload.data.tags)) {
+      const campTag = payload.data.tags.find(t => t.name === 'campaign_id');
+      const recTag = payload.data.tags.find(t => t.name === 'recipient_id');
+      if (campTag) resendCampaignId = campTag.value;
+      if (recTag) resendRecipientId = recTag.value;
+    }
 
-    if (emailId) {
+    if (resendCampaignId) {
+      camp = await Campaign.findById(resendCampaignId);
+      if (camp) {
+        recipient = camp.recipients?.id ? camp.recipients.id(resendRecipientId) : camp.recipients?.find(r => r._id && r._id.toString() === resendRecipientId);
+      }
+      if (!camp) {
+        camp = await MailCampaign.findById(resendCampaignId);
+        if (camp) {
+          isCore = false;
+          recipient = camp.recipients?.id ? camp.recipients.id(resendRecipientId) : camp.recipients?.find(r => r._id && r._id.toString() === resendRecipientId);
+        }
+      }
+    }
+
+    if (!camp && emailId) {
       camp = await Campaign.findOne({ 'recipients.messageId': emailId });
       if (camp) {
         recipient = camp.recipients.find(r => r.messageId === emailId);

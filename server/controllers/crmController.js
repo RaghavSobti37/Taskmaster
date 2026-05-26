@@ -19,7 +19,7 @@ const ALLOWED_LEAD_FIELDS = [
   'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime',
   'emailStatus', 'tags', 'source', 'notes', 'setReminder'
 ];
-const ALLOWED_EMI_FIELDS = ['installmentNo','dueDate','amount','status','paidAt'];
+const ALLOWED_EMI_FIELDS = ['installmentNo', 'dueDate', 'amount', 'status', 'paidAt'];
 
 /**
  * Helper utility to pick specific keys from an object.
@@ -77,14 +77,14 @@ exports.getLeads = async (req, res) => {
     if (req.query.leadQuality && req.query.leadQuality !== 'all') query.leadQuality = req.query.leadQuality;
     if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
     if (req.query.source && req.query.source !== 'all') query.source = req.query.source;
-    
+
     if (req.query.leadStatus && req.query.leadStatus !== 'all') {
       if (req.query.leadStatus === 'Fresh') {
         query.$or = [
-          { leadStatus: null }, 
-          { leadStatus: '' }, 
-          { leadStatus: 'New' }, 
-          { leadStatus: 'Fresh' }, 
+          { leadStatus: null },
+          { leadStatus: '' },
+          { leadStatus: 'New' },
+          { leadStatus: 'Fresh' },
           { leadStatus: 'DNP' },
           { leadStatus: { $exists: false } }
         ];
@@ -121,7 +121,7 @@ exports.getLeads = async (req, res) => {
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
 
     const total = await Lead.countDocuments(query);
-    
+
     const pipeline = [
       { $match: query },
       { $sort: { [sortField]: sortOrder, _id: 1 } },
@@ -174,7 +174,7 @@ exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
     if (leadData.city && typeof leadData.city === 'string') leadData.city = sanitizeLocation(leadData.city);
-    
+
     // Duplicate check
     const filter = { $or: [] };
     if (leadData.rowId) filter.$or.push({ rowId: leadData.rowId });
@@ -206,16 +206,16 @@ exports.updateLead = async (req, res) => {
     const { id } = req.params;
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
     if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
-    
+
     // The audit plugin handles the delta calculation and logging automatically
-    const lead = await Lead.findByIdAndUpdate(id, { 
-      ...updates, 
-      lockedBy: req.user._id, 
-      lockedAt: new Date() 
-    }, { 
+    const lead = await Lead.findByIdAndUpdate(id, {
+      ...updates,
+      lockedBy: req.user._id,
+      lockedAt: new Date()
+    }, {
       new: true,
       userId: req.user._id, // Pass to audit plugin
-      userRole: req.user.role 
+      userRole: req.user.role
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
@@ -321,7 +321,8 @@ exports.getImports = async (req, res) => {
   try {
     const imports = await CRMImport.find()
       .populate('createdBy', 'name')
-      .sort('-createdAt');
+      .sort('-createdAt')
+      .lean();
     res.json(imports);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch imports' });
@@ -361,7 +362,7 @@ exports.getDebugColumns = async (req, res) => {
   const fs = require('fs');
   const path = require('path');
   const CSV_PATH = path.join(__dirname, '../../Master Format CRM.csv');
-  
+
   if (!fs.existsSync(CSV_PATH)) {
     return res.status(404).json({ error: 'Master CSV not found' });
   }
@@ -370,9 +371,9 @@ exports.getDebugColumns = async (req, res) => {
   fs.createReadStream(CSV_PATH)
     .pipe(csv())
     .on('headers', (headers) => {
-      res.json({ 
+      res.json({
         columns: headers,
-        currentMapping: global.crmMapping || {} 
+        currentMapping: global.crmMapping || {}
       });
     })
     .on('error', (err) => res.status(500).json({ error: err.message }));
@@ -472,7 +473,7 @@ exports.uploadLeads = async (req, res) => {
         if (doc.rowId) filter.$or.push({ rowId: doc.rowId });
         if (doc.phone) filter.$or.push({ phone: doc.phone });
         if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
-        
+
         if (filter.$or.length === 0) {
           return { insertOne: { document: { ...doc, importId: importSession._id } } };
         }
@@ -518,18 +519,18 @@ exports.uploadLeads = async (req, res) => {
       }
 
       await CRMImport.findByIdAndUpdate(importSession._id, { leadCount: totalProcessed });
-      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      try { fs.unlinkSync(req.file.path); } catch (e) { }
       res.status(201).json({ message: `${totalProcessed} leads successfully processed via memory-efficient stream.` });
     });
 
     stream.on('error', (error) => {
-      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      try { fs.unlinkSync(req.file.path); } catch (e) { }
       res.status(500).json({ error: 'Stream reading error occurred during CSV import' });
     });
 
   } catch (error) {
     const fs = require('fs');
-    if (req.file) try { fs.unlinkSync(req.file.path); } catch(e) {}
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch (e) { }
     res.status(500).json({ error: 'Failed to synchronize leads' });
   }
 };
@@ -572,16 +573,16 @@ exports.getPurgeLogs = async (req, res) => {
 exports.exportLeads = async (req, res) => {
   try {
     const { format: exportFormat } = req.query;
-    const leads = await Lead.find({}).populate('assignedRepId', 'name');
+    const leads = await Lead.find({}).populate('assignedRepId', 'name').lean();
 
     if (exportFormat === 'json') {
       return res.json(leads);
     }
 
     const fields = ['name', 'email', 'phone', 'city', 'leadStatus', 'callStatus', 'leadQuality', 'remarks', 'assignedRep', 'createdAt'];
-    
+
     let csv = fields.join(',') + '\n';
-    
+
     leads.forEach(l => {
       const row = [
         `"${(l.name || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
@@ -609,8 +610,8 @@ exports.exportLeads = async (req, res) => {
 
 exports.getCRMStats = async (req, res) => {
   try {
-    const matchStage = req.user.role !== 'admin' 
-      ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) } 
+    const matchStage = req.user.role !== 'admin'
+      ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
       : {};
 
     const stats = await Lead.aggregate([
@@ -663,7 +664,7 @@ exports.getFollowups = async (req, res) => {
   try {
     const isRep = req.user.role !== 'admin';
     const repId = isRep ? req.user._id : null;
-    
+
     // Attempt cache read
     const cachedFollowups = await followupCache.getFollowups(repId);
     if (cachedFollowups !== null) {
@@ -824,8 +825,9 @@ exports.cleanupTestData = async (req, res) => {
   try {
     const filter = {
       $or: [
-        { name: { $regex: /test|demo|dummy|invalid/i } },
-        { email: { $regex: /test|demo|dummy|invalid/i } },
+        { name: { $regex: /test|demo|dummy|invalid|john doe/i } },
+        { email: { $regex: /test|demo|dummy|invalid|john\.doe/i } },
+        { phone: { $in: ['+917777777777', '+919999999999', '7777777777', '9999999999'] } },
         { emailStatus: { $in: ['Invalid', 'Bounced'] } }
       ]
     };
@@ -839,7 +841,7 @@ exports.cleanupTestData = async (req, res) => {
 
 exports.deleteLead = async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id).lean();
+    const lead = await Lead.findOne({ _id: req.params.id }, null, { bypassTenant: true }).lean();
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
     // Log deletion in audit trail before removing
@@ -852,7 +854,7 @@ exports.deleteLead = async (req, res) => {
       timestamp: new Date()
     });
 
-    await Lead.findByIdAndDelete(req.params.id);
+    await Lead.findOneAndDelete({ _id: req.params.id }, { bypassTenant: true });
     res.json({ message: `Lead "${lead.name}" permanently deleted.` });
   } catch (error) {
     logger.error('crmController', 'Delete lead ', { error: error.message || error });

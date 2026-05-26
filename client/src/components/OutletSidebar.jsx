@@ -38,7 +38,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
-import NotificationTray from './NotificationTray';
 import { Menu } from 'lucide-react';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -300,16 +299,7 @@ const OutletSidebar = () => {
               queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
             }}
           />
-          <NavItem
-            to="/todo"
-            icon={ListTodo}
-            label="To-Do List"
-            collapsed={false}
-            isMobile={isMobile}
-            count={statusCounts.tasks.overdue}
-            todayCount={statusCounts.tasks.today}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['tasks'], queryFn: async () => (await axios.get('/api/tasks')).data })}
-          />
+
           <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={false} isMobile={isMobile} />
 
           {(user?.role === 'admin' || user?.role === 'sales') && (

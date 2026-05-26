@@ -6,8 +6,9 @@ let failReason = null;
 class SystemHealthService {
   static async checkDependencies() {
     try {
-      if (mongoose.connection.readyState !== 1) {
-        throw new Error('Database disconnected');
+      // readyState 1 = connected, 2 = connecting
+      if (mongoose.connection.readyState !== 1 && mongoose.connection.readyState !== 2) {
+        throw new Error('Database disconnected or connecting failed (readyState: ' + mongoose.connection.readyState + ')');
       }
 
       const { redisAvailable } = require('./backgroundQueue');

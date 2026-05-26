@@ -125,15 +125,23 @@ const sendCampaign = async (campaignId) => {
   }
   let recipients = campaign.recipients.filter(r => r.status === 'Pending');
   
-  // Deduplicate explicit target list before loop
+  // Split any compound emails and deduplicate explicit target list before loop
   const seenEmails = new Set();
-  recipients = recipients.filter(r => {
-    if (!r.email) return false;
-    const cleanEmail = r.email.toLowerCase().trim();
-    if (seenEmails.has(cleanEmail)) return false;
-    seenEmails.add(cleanEmail);
-    return true;
+  const splitRecipients = [];
+  
+  recipients.forEach(r => {
+    if (!r.email) return;
+    const splitEmailsArr = r.email.split(/[,;]/).map(e => e.trim()).filter(Boolean);
+    splitEmailsArr.forEach(email => {
+      const cleanEmail = email.toLowerCase();
+      if (!seenEmails.has(cleanEmail)) {
+        seenEmails.add(cleanEmail);
+        // Create a new recipient object for each split email, retaining original properties
+        splitRecipients.push({ ...r.toObject ? r.toObject() : r, email: cleanEmail, _id: r._id });
+      }
+    });
   });
+  recipients = splitRecipients;
 
   for (const recipient of recipients) {
     try {
@@ -179,6 +187,8 @@ const sendCampaign = async (campaignId) => {
         personalizedContent = personalizedContent.replace(/\n/g, '<br />');
       }
 
+
+
       // Automatically wrap all external links in click tracker
       personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
         if (url.includes('/api/mail/')) return match;
@@ -186,21 +196,40 @@ const sendCampaign = async (campaignId) => {
         return `<a ${before}href="${clickTrackerUrl}"${after}>`;
       });
 
-      const htmlWithTracking = `${personalizedContent}${unsubscribeFooter}${trackingPixel}`;
+      const finalUnsubscribeFooter = campaign.removeUnsubscribe ? '' : unsubscribeFooter;
+      const htmlWithTracking = `${personalizedContent}${finalUnsubscribeFooter}${trackingPixel}`;
       const senderFrom = profile ? `"${profile.name}" <${profile.email}>` : 'onboarding@resend.dev';
 
       let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
+      const formattedAttachments = (campaign.attachments || []).map(att => {
+        const base64Data = att.content.split(',')[1] || att.content;
+        return {
+          filename: att.filename,
+          content: useResend ? base64Data : att.content,
+          contentType: att.contentType
+        };
+      });
+
       if (useResend && campaignResend) {
-        const response = await campaignResend.emails.send({
+        const payload = {
           from: senderFrom,
           to: [recipient.email],
           subject: campaign.subject,
           html: htmlWithTracking,
           headers: {
             'X-Campaign-ID': campaign._id.toString()
-          }
-        });
+          },
+          tags: [
+            { name: 'campaign_id', value: campaign._id.toString() },
+            { name: 'recipient_id', value: recipient._id.toString() }
+          ]
+        };
+        if (formattedAttachments.length > 0) {
+          payload.attachments = formattedAttachments;
+        }
+
+        const response = await campaignResend.emails.send(payload);
         messageIdStr = response?.id || response?.data?.id || messageIdStr;
       } else if (transporter) {
         const mailOptions = {
@@ -212,6 +241,15 @@ const sendCampaign = async (campaignId) => {
             'X-Campaign-ID': campaign._id.toString()
           }
         };
+        
+        if (formattedAttachments.length > 0) {
+          mailOptions.attachments = formattedAttachments.map(a => ({
+            filename: a.filename,
+            content: Buffer.from(a.content.split(',')[1] || a.content, 'base64'),
+            contentType: a.contentType
+          }));
+        }
+
         const info = await transporter.sendMail(mailOptions);
         messageIdStr = info.messageId;
       } else {

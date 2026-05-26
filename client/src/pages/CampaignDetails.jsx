@@ -163,7 +163,7 @@ export default function CampaignDetails() {
                   {evt.email}
                 </span>
                 <span className="text-slate-400 text-[11px]">
-                  {evt.metadata?.url ? `→ Clicked link: ${evt.metadata.url}` : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
+                  {(evt.linkClicked || evt.metadata?.url) ? `→ Clicked link: ${evt.linkClicked || evt.metadata?.url}` : evt.eventType === 'Click' ? '• Clicked link' : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
                 </span>
               </div>
             ))

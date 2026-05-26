@@ -81,10 +81,59 @@ const TaskTable = ({
           {row.priority}
         </Badge>
       )
+    },
+    {
+      header: 'Created By',
+      render: (row) => {
+        const creator = row.createdBy?.name || 'Unknown';
+        return <span className="text-xs text-[var(--color-text-muted)] font-semibold">{creator}</span>;
+      }
+    },
+    {
+      header: 'Due Date',
+      render: (row) => {
+        if (!row.dueDate) return <span className="text-xs text-slate-500">-</span>;
+        const d = new Date(row.dueDate);
+        const today = new Date();
+        const isOverdue = d.setHours(0,0,0,0) < today.setHours(0,0,0,0);
+        const isToday = d.getTime() === today.getTime();
+        return (
+          <span className={`text-xs font-bold ${isOverdue ? 'text-red-500' : isToday ? 'text-amber-500' : 'text-slate-400'}`}>
+            {d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </span>
+        );
+      }
     }
   ];
 
-  const filteredTasks = tasks.filter(t => t.status !== 'done');
+  const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+  
+  const filteredTasks = tasks.filter(t => {
+    if (t.status === 'done') return false;
+    if (filter === 'urgent') return t.priority === 'critical';
+    if (filter === 'overdue') return t.dueDate && new Date(t.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+    return true; // 'all'
+  });
+
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    const getSortValue = (t) => {
+      if (!t.dueDate) return 4;
+      const d = new Date(t.dueDate).setHours(0,0,0,0);
+      const today = new Date().setHours(0,0,0,0);
+      if (d < today) return 0; // Overdue
+      if (d === today) return 1; // Today
+      return 2; // Future
+    };
+    
+    const aTime = getSortValue(a);
+    const bTime = getSortValue(b);
+    
+    if (aTime !== bTime) return aTime - bTime;
+    
+    return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+  });
+
+
 
   return (
     <Card className="flex flex-col shadow-md overflow-hidden">
@@ -94,6 +143,11 @@ const TaskTable = ({
           Active Workflow
         </h3>
         <div className="flex items-center gap-2">
+          {filter !== 'all' && (
+            <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] px-2">
+              Filtered: {filter}
+            </span>
+          )}
           <button 
             onClick={() => setFilter('all')} 
             className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-all ${
@@ -109,7 +163,7 @@ const TaskTable = ({
       <div className="p-0">
         <DataTable 
           columns={taskColumns} 
-          data={filteredTasks} 
+          data={sortedTasks} 
           onRowClick={(task) => onSelectTask(task)}
         />
       </div>

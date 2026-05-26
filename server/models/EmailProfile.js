@@ -9,6 +9,7 @@ const emailProfileSchema = new mongoose.Schema({
   smtpPort: { type: Number, default: 587 },
   smtpUser: { type: String, required: true },
   smtpPass: { type: String, required: true },
+  signature: { type: String, default: '' },
   isDefault: { type: Boolean, default: false },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

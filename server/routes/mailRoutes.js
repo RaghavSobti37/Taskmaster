@@ -2,10 +2,47 @@ const express = require('express');
 const router = express.Router();
 const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
+const MailTemplate = require('../models/MailTemplate');
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { sendCampaign, scanBounces, updateEmailTags } = require('../services/mailService');
+const { google } = require('googleapis');
+
+// --- TEMPLATES ---
+router.get('/templates', protect, async (req, res) => {
+  try {
+    const templates = await MailTemplate.find().sort({ createdAt: -1 });
+    res.json(templates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/templates', protect, async (req, res) => {
+  try {
+    const { name, content } = req.body;
+    let template = await MailTemplate.findOne({ name });
+    if (template) {
+      template.content = content;
+      await template.save();
+    } else {
+      template = await MailTemplate.create({ name, content, createdBy: req.user._id });
+    }
+    res.json(template);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/templates/:id', protect, async (req, res) => {
+  try {
+    await MailTemplate.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- PROFILES ---
 router.get('/profiles', protect, async (req, res) => {
@@ -49,6 +86,27 @@ router.delete('/profiles/:id', protect, async (req, res) => {
   }
 });
 
+router.put('/profiles/:id', protect, async (req, res) => {
+  try {
+    const profile = await EmailProfile.findById(req.params.id);
+    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+    if (req.user.role !== 'admin' && profile.createdBy?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to edit this profile' });
+    }
+    const data = { ...req.body };
+    if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
+      data.smtpHost = 'smtp.gmail.com';
+      data.smtpPort = 587;
+    }
+    Object.assign(profile, data);
+    await profile.save();
+    res.json(profile);
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- CAMPAIGNS ---
 router.get('/campaigns', protect, async (req, res) => {
   try {
@@ -81,16 +139,22 @@ router.post('/campaigns', protect, async (req, res) => {
     const validLeadIds = Array.isArray(leadIds) ? leadIds.filter(id => mongoose.Types.ObjectId.isValid(id)) : [];
     const leads = validLeadIds.length ? await Lead.find({ _id: { $in: validLeadIds } }) : [];
     
-    const recipients = leads.map(l => ({
-      leadId: l._id,
-      email: l.email ? l.email.toLowerCase().trim() : '',
-      status: 'Pending'
-    })).filter(r => r.email);
+    const recipients = leads.flatMap(l => {
+      const emails = l.email ? l.email.toLowerCase().split(/[,;]/).map(e => e.trim()).filter(Boolean) : [];
+      return emails.map(email => ({
+        leadId: l._id,
+        email: email,
+        status: 'Pending'
+      }));
+    });
 
-    const custom = (Array.isArray(customRecipients) ? customRecipients : []).map(r => ({
-      email: r && r.email ? String(r.email).toLowerCase().trim() : '',
-      status: 'Pending'
-    })).filter(r => r.email);
+    const custom = (Array.isArray(customRecipients) ? customRecipients : []).flatMap(r => {
+      const emails = r && r.email ? String(r.email).toLowerCase().split(/[,;]/).map(e => e.trim()).filter(Boolean) : [];
+      return emails.map(email => ({
+        email: email,
+        status: 'Pending'
+      }));
+    });
 
     const uniqueEmails = new Set();
     const allRecipients = [...recipients, ...custom].filter(r => {
@@ -101,6 +165,7 @@ router.post('/campaigns', protect, async (req, res) => {
 
     const campaign = await MailCampaign.create({
       ...rest,
+      attachments: rest.attachments || [],
       recipients: allRecipients,
       stats: { total: allRecipients.length, sent: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0, invalid: 0 },
       createdBy: req.user._id
@@ -634,6 +699,61 @@ router.delete('/templates/:name', protect, async (req, res) => {
       res.status(404).json({ error: 'Template not found' });
     }
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- HOLYSHEET BULK FETCH ---
+router.get('/holysheet/all', protect, async (req, res) => {
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL.trim(),
+        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth });
+    const spreadsheetId = '1AvRDNpmSJqQJ9Hom7kQttr0IPNnid9iut3H6XSsWQY8';
+    
+    // First, get all tab names
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const tabNames = meta.data.sheets.map(s => s.properties.title);
+    
+    // Then fetch data for all tabs in parallel using batchGet
+    const batch = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId,
+      ranges: tabNames.map(t => `'${t}'!A:Z`)
+    });
+    
+    const results = [];
+    batch.data.valueRanges.forEach((rangeData, i) => {
+      const tabName = tabNames[i];
+      const rows = rangeData.values || [];
+      if (rows.length < 2) return;
+      const headers = rows[0].map(h => String(h).toLowerCase().trim());
+      const emailIdx = headers.findIndex(h => h.includes('email'));
+      if (emailIdx === -1) return;
+      
+      let nameIdx = headers.findIndex(h => h === 'name' || h.includes('first name'));
+      
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row) continue;
+        const email = row[emailIdx];
+        if (email && email.includes('@')) {
+          results.push({
+            name: nameIdx !== -1 ? (row[nameIdx] || '') : '',
+            email: email.trim(),
+            source: tabName
+          });
+        }
+      }
+    });
+    
+    res.json(results);
+  } catch (err) {
+    console.error('Fetch HolySheet all error:', err);
     res.status(500).json({ error: err.message });
   }
 });

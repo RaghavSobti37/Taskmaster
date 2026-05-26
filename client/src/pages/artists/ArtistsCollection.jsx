@@ -186,9 +186,7 @@ export default function ArtistsCollection() {
         icon={Users}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => refetch()}>
-              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh Stats
-            </Button>
+
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus size={14} /> Add Artist
             </Button>

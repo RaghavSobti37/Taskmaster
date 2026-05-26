@@ -10,5 +10,6 @@ graphify-out/
 setup.cd
 .claude/
 *.mmdb
-*.specify
+.specify/
+.gemini/
 *.zip

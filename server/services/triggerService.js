@@ -1,5 +1,6 @@
 const Lead = require('../models/Lead');
 const Project = require('../models/Project');
+const logger = require('../utils/logger');
 
 let TriggerClientRef = null;
 let eventTriggerRef = null;
@@ -18,10 +19,10 @@ class MockTriggerClient {
     this.options = options;
   }
   defineJob(job) {
-    console.log(`[Trigger.dev Standby] Registered background job: ${job.name} (${job.id})`);
+    logger.info('Trigger.dev', `Registered background job: ${job.name} (${job.id})`);
   }
   async sendEvent(event) {
-    console.log(`[Trigger.dev Standby] Simulated sendEvent: ${event.name}`);
+    logger.info('Trigger.dev', `Simulated sendEvent: ${event.name}`);
     return true;
   }
 }
@@ -46,8 +47,8 @@ triggerClient.defineJob({
     name: 'mail.dispatch',
   }),
   run: async (payload, io, ctx) => {
-    const logInfo = io?.logger?.info ? (msg) => io.logger.info(msg) : (msg) => console.log(`[Job Info] ${msg}`);
-    const logError = io?.logger?.error ? (msg) => io.logger.error(msg) : (msg) => console.error(`[Job Error] ${msg}`);
+    const logInfo = io?.logger?.info ? (msg) => io.logger.info(msg) : (msg) => logger.info('Job', msg);
+    const logError = io?.logger?.error ? (msg) => io.logger.error(msg) : (msg) => logger.error('Job', msg);
     
     await logInfo(`Starting email dispatch for campaign ${payload.campaignId}`);
     try {
@@ -71,7 +72,7 @@ triggerClient.defineJob({
     cron: '0 0 * * *', // Every midnight
   }),
   run: async (payload, io, ctx) => {
-    const logInfo = io?.logger?.info ? (msg) => io.logger.info(msg) : (msg) => console.log(`[Job Info] ${msg}`);
+    const logInfo = io?.logger?.info ? (msg) => io.logger.info(msg) : (msg) => logger.info('Job', msg);
     
     await logInfo('Executing scheduled daily analytics rollup');
     const totalLeads = await Lead.countDocuments();
@@ -87,7 +88,7 @@ const triggerEmailCampaign = async (jobData) => {
       name: 'mail.dispatch',
       payload: jobData,
     });
-    console.log(`[Trigger.dev] Queued event mail.dispatch for ${jobData.email}`);
+    logger.info('Trigger.dev', `Queued event mail.dispatch for ${jobData.email}`);
     return true;
   }
   return false;

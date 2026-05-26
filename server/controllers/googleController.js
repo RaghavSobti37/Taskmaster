@@ -2,6 +2,7 @@ const { createOAuth2Client, getCalendar, getDrive } = require('../utils/googleAu
 const User = require('../models/User');
 const Project = require('../models/Project');
 const ical = require('node-ical');
+const logger = require('../utils/logger');
 
 // Cache for Indian holidays (refreshed every 24h)
 let holidayCache = null;
@@ -52,10 +53,10 @@ const fetchIndianHolidays = async () => {
     holidayCache = holidays;
     holidayCacheExpiry = now + 24 * 60 * 60 * 1000; // 24h cache
 
-    console.log(`[CALENDAR] Fetched ${holidays.length} Indian holidays from Google Calendar`);
+    logger.info('CALENDAR', 'Fetched ${holidays.length} Indian holidays from Google Calendar');
     return holidays;
   } catch (error) {
-    console.error('[CALENDAR] Failed to fetch holidays from Google, using fallback:', error.message);
+    logger.error('Calendar', 'Failed to fetch holidays from Google, using fallback', { error: error.message });
     return getFallbackHolidays();
   }
 };
@@ -137,7 +138,7 @@ exports.getCalendarEvents = async (req, res) => {
           type: 'personal'
         }));
       } catch (err) {
-        console.error('[CALENDAR] Failed to fetch personal events:', err.message);
+        logger.error('Calendar', 'Failed to fetch personal events', { error: err.message });
       }
     }
 
@@ -249,7 +250,7 @@ exports.getProjectCalendarEvents = async (req, res) => {
 
         allEvents.push(...events);
       } catch (err) {
-        console.error(`[CALENDAR] Failed to fetch events for user ${user.name}:`, err.message);
+        logger.error('CALENDAR', `Failed to fetch events for user ${user.name}:`, { detail: err.message });
       }
     }
 

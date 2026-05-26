@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Task = require('../models/Task');
 const Notification = require('../models/Notification');
 const { parse, addMinutes, isBefore, isAfter, format } = require('date-fns');
+const logger = require('../utils/logger');
 
 // Transporter setup - using placeholders for now
 const transporter = nodemailer.createTransport({
@@ -41,7 +42,7 @@ const checkFollowups = async () => {
           const rep = lead.assignedRepId;
           if (!rep) continue;
 
-          console.log(`[REMINDER] Sending reminder for Lead: ${lead.name} to Rep: ${rep.name}`);
+          logger.info('Reminder', `Sending reminder for Lead: ${lead.name} to Rep: ${rep.name}`);
 
           // 1. Create In-App Notification
           await Notification.create({
@@ -62,7 +63,7 @@ const checkFollowups = async () => {
 
             await transporter.sendMail(mailOptions);
           } else {
-            console.log(`[SKIPPED] Email reminder skipped for ${rep.name} (no email or placeholder config)`);
+            logger.debug('Reminder', `Email reminder skipped for ${rep.name} (no email or placeholder config)`);
           }
 
           // 3. Mark as sent
@@ -70,11 +71,11 @@ const checkFollowups = async () => {
           await lead.save();
         }
       } catch (err) {
-        console.error(`Error processing reminder for lead ${lead._id}:`, err);
+        logger.error('Reminder', `Error processing reminder for lead ${lead._id}`, { error: err.message });
       }
     }
   } catch (err) {
-    console.error('Error in checkFollowups:', err);
+    logger.error('Reminder', 'Error in checkFollowups', { error: err.message });
   }
 };
 
@@ -130,17 +131,17 @@ const checkOverdue = async () => {
           await lead.save();
         }
       } catch (err) {
-        console.error(`Error processing overdue lead ${lead._id}:`, err);
+        logger.error('Overdue', `Error processing overdue lead ${lead._id}`, { error: err.message });
       }
     }
   } catch (err) {
-    console.error('Error in checkOverdue:', err);
+    logger.error('Overdue', 'Error in checkOverdue', { error: err.message });
   }
 };
 
 // Run every minute
 const init = () => {
-  console.log('[SYSTEM] Initializing Reminder Service...');
+  logger.info('System', 'Initializing Reminder Service...');
   cron.schedule('* * * * *', () => {
     checkFollowups();
     checkOverdue();

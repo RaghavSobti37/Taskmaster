@@ -5,6 +5,7 @@ const Project = require('../models/Project');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 exports.getDashboardSummary = async (req, res) => {
   try {
@@ -110,7 +111,7 @@ exports.getDashboardSummary = async (req, res) => {
       velocity: completionRate > 75 ? 'Optimal' : completionRate > 50 ? 'Stable' : 'Critical'
     });
   } catch (error) {
-    console.error('Dashboard Summary Error:', error);
+    logger.error('dashboardController', 'Dashboard Summary ', { error: error.message || error });
     res.status(500).json({ error: 'System error during operational aggregation.' });
   }
 };

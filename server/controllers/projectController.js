@@ -1,5 +1,6 @@
 const Project = require('../models/Project');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 exports.createProject = async (req, res) => {
   try {
@@ -45,7 +46,7 @@ exports.createProject = async (req, res) => {
 
     res.status(201).json(project);
   } catch (error) {
-    console.error('Create Project Error:', error);
+    logger.error('projectController', 'Create Project ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to create project' });
   }
 };
@@ -93,7 +94,7 @@ exports.getProjects = async (req, res) => {
 
     res.json(projectsWithProgress);
   } catch (error) {
-    console.error('Get Projects Error:', error);
+    logger.error('projectController', 'Get Projects ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch projects' });
   }
 };
@@ -127,7 +128,7 @@ exports.getProjectById = async (req, res) => {
       assets
     });
   } catch (error) {
-    console.error('Get Project Detail Error:', error);
+    logger.error('projectController', 'Get Project Detail ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch project details' });
   }
 };

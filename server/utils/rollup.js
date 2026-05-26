@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const Phase = require('../models/Phase');
+const logger = require('../utils/logger');
 
 /**
  * Calculates weighted progress for a parent entity based on children.
@@ -33,7 +34,7 @@ const calculateRollup = async (projectId, phaseId = null, session = null) => {
     
     return averageProgress;
   } catch (err) {
-    console.error('Rollup calculation error:', err);
+    logger.error('rollup', 'Rollup calculation ', { error: err.message || err });
     return 0;
   }
 };

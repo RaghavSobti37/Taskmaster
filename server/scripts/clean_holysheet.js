@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 async function cleanHolySheet() {
-  const apiKey = 'A4NWMO7Hr9zJGlf1epJAOGzp0mzBfLMH';
+  const apiKey = process.env.HOLYSHEET_API_KEY;
   const baseUrl = 'https://holysheet.soneshjain.com/api/v1';
 
   try {

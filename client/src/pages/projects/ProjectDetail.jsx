@@ -20,6 +20,8 @@ import ProjectList from '../../components/project/ProjectList';
 import ProjectKanban from '../../components/project/ProjectKanban';
 import ProjectTeam from '../../components/project/ProjectTeam';
 import ProjectAssets from '../../components/project/ProjectAssets';
+import ProjectFinance from '../../components/project/ProjectFinance';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Badge, 
   ProgressBar, 
@@ -41,6 +43,7 @@ import TaskDetailModal from '../../components/TaskDetailModal';
 import { useProject, useProjectTasks, useUpdateTask, useDeleteTask } from '../../hooks/useTaskmasterQueries';
 
 const ProjectDetail = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -116,6 +119,10 @@ const ProjectDetail = () => {
     { id: 'team', label: 'Team Members' },
     { id: 'assets', label: 'Project Files' },
   ];
+
+  if (user?.role === 'admin' || user?.role === 'ops') {
+    tabs.push({ id: 'finance', label: 'Finance' });
+  }
 
   if (loading && !project) return <PageSkeleton />;
   if (!project) return <div className="p-20 text-center">Project not found.</div>;
@@ -258,6 +265,9 @@ const ProjectDetail = () => {
               )}
               {activeTab === 'assets' && (
                 <ProjectAssets projectId={id} />
+              )}
+              {activeTab === 'finance' && (
+                <ProjectFinance projectId={id} />
               )}
             </motion.div>
           </AnimatePresence>

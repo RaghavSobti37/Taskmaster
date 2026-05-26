@@ -1,0 +1,213 @@
+const fs = require('fs');
+const { PDFParse } = require('pdf-parse');
+const Tesseract = require('tesseract.js');
+const { parse } = require('path');
+
+/**
+ * Extracts raw text from a PDF file buffer.
+ */
+async function extractTextFromPDF(buffer) {
+  try {
+    const parser = new PDFParse(new Uint8Array(buffer));
+    const result = await parser.getText();
+    return result.text || '';
+  } catch (error) {
+    console.error('PDFParse error:', error);
+    return '';
+  }
+}
+
+/**
+ * Extracts raw text from an image file buffer using Tesseract.js.
+ */
+async function extractTextFromImage(buffer) {
+  try {
+    const { data: { text } } = await Tesseract.recognize(
+      buffer,
+      'eng',
+      { logger: m => {} } // Disable verbose logs
+    );
+    return text || '';
+  } catch (error) {
+    console.error('tesseract.js error:', error);
+    return '';
+  }
+}
+
+/**
+ * Regular expression parsing to extract receipt/invoice metadata from text.
+ */
+function parseMetadataFromText(text) {
+  const metadata = {
+    amount: 0,
+    currency: 'INR',
+    vendor: '',
+    date: null,
+    tax: 0,
+    detectedCategory: 'other'
+  };
+
+  if (!text) return metadata;
+
+  // 1. Detect Category
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('invoice') || lowerText.includes('bill no') || lowerText.includes('tax invoice')) {
+    metadata.detectedCategory = 'invoice';
+  } else if (lowerText.includes('receipt') || lowerText.includes('payment success') || lowerText.includes('ticket') || lowerText.includes('boarding pass')) {
+    metadata.detectedCategory = 'receipt';
+  } else if (lowerText.includes('contract') || lowerText.includes('agreement') || lowerText.includes('lease')) {
+    metadata.detectedCategory = 'contract';
+  } else if (lowerText.includes('proposal') || lowerText.includes('estimate') || lowerText.includes('quotation')) {
+    metadata.detectedCategory = 'proposal';
+  } else if (lowerText.includes('budget') || lowerText.includes('cost estimation')) {
+    metadata.detectedCategory = 'budget';
+  } else if (lowerText.includes('tax return') || lowerText.includes('income tax') || lowerText.includes('itr')) {
+    metadata.detectedCategory = 'tax';
+  } else if (lowerText.includes('report') || lowerText.includes('financial report') || lowerText.includes('statement')) {
+    metadata.detectedCategory = 'report';
+  }
+
+  // 2. Extract Currency
+  if (lowerText.includes('$') || lowerText.includes('usd')) {
+    metadata.currency = 'USD';
+  } else if (lowerText.includes('€') || lowerText.includes('eur')) {
+    metadata.currency = 'EUR';
+  } else if (lowerText.includes('£') || lowerText.includes('gbp')) {
+    metadata.currency = 'GBP';
+  }
+
+  // 3. Extract Amount
+  // Look for total/grand total/amount patterns. We'll search for matches, clean commas, and choose a reasonable total.
+  // We want to avoid matching phone numbers or invoice numbers, so we target lines containing amount indicators.
+  const amountPatterns = [
+    /(?:total|due|payable|amount|net|grand total|total amount|inr|rs\.?|\$)\s*(?:[^\w\n\r]*)\s*([\d,]+(?:\.\d{2})?)/gi,
+    /(?:net payable|total payable|total paid|paid amount|amount paid)\s*(?:[^\w\n\r]*)\s*([\d,]+(?:\.\d{2})?)/gi
+  ];
+
+  let potentialAmounts = [];
+  for (const pattern of amountPatterns) {
+    let match;
+    // Reset regex state
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match[1]) {
+        // Strip commas and parse
+        const amtStr = match[1].replace(/,/g, '');
+        const val = parseFloat(amtStr);
+        if (!isNaN(val) && val > 0 && val < 100000000) { // Limit to reasonable invoice amounts
+          potentialAmounts.push(val);
+        }
+      }
+    }
+  }
+
+  // If we found amounts, try to grab the largest one (usually the grand total), or the last one in the document
+  if (potentialAmounts.length > 0) {
+    metadata.amount = Math.max(...potentialAmounts);
+  }
+
+  // 4. Extract Tax
+  const taxPatterns = [
+    /(?:gst|cgst|sgst|igst|vat|tax)\s*(?:[^\w\n\r]*)\s*([\d,]+(?:\.\d{2})?)/gi
+  ];
+  let potentialTaxes = [];
+  for (const pattern of taxPatterns) {
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match[1]) {
+        const taxVal = parseFloat(match[1].replace(/,/g, ''));
+        if (!isNaN(taxVal) && taxVal > 0) {
+          potentialTaxes.push(taxVal);
+        }
+      }
+    }
+  }
+  if (potentialTaxes.length > 0) {
+    // If tax is extracted and it's less than the total amount, set it
+    const maxTax = Math.max(...potentialTaxes);
+    if (maxTax < metadata.amount) {
+      metadata.tax = maxTax;
+    }
+  }
+
+  // 5. Extract Date
+  // Common formats: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD MMM YYYY
+  const datePatterns = [
+    /\b(\d{4}[-/]\d{2}[-/]\d{2})\b/, // YYYY-MM-DD
+    /\b(\d{2}[-/]\d{2}[-/]\d{4})\b/, // DD-MM-YYYY
+    /\b(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b/i, // DD MMM YYYY
+    /\b(?:date|dated|dt)\s*:\s*([\d.-/a-zA-Z\s]{8,15})/i // Date: ...
+  ];
+
+  for (const pattern of datePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const parsedDate = new Date(match[1].trim());
+      if (!isNaN(parsedDate.getTime())) {
+        metadata.date = parsedDate;
+        break;
+      }
+    }
+  }
+
+  // 6. Extract Vendor Name
+  // Heuristic: First few lines of the text usually contain the vendor name.
+  // We can look at the first non-empty lines, excluding things like "INVOICE", "TAX INVOICE", date etc.
+  const lines = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 3 && !/invoice|tax|bill|receipt|page|date|tel|phone|email|website|address|total|payment|balance/i.test(l));
+
+  if (lines.length > 0) {
+    // Take the first line as potential vendor
+    metadata.vendor = lines[0].substring(0, 100);
+  }
+
+  // Special vendor checks (common vendors in workspace)
+  if (lowerText.includes('karma travels')) {
+    metadata.vendor = 'Karma Travels';
+  } else if (lowerText.includes('shakti collective llp') || lowerText.includes('shakti collective llc')) {
+    metadata.vendor = 'Shakti Collective';
+  } else if (lowerText.includes('sage university')) {
+    metadata.vendor = 'Sage University';
+  } else if (lowerText.includes('dwelling inn')) {
+    metadata.vendor = 'Hotel Dwelling Inn';
+  } else if (lowerText.includes('prasad khaparde')) {
+    metadata.vendor = 'Prasad Khaparde';
+  } else if (lowerText.includes('avinash sarmah')) {
+    metadata.vendor = 'Avinash Sarmah';
+  } else if (lowerText.includes('deepak rawat')) {
+    metadata.vendor = 'Deepak Rawat';
+  } else if (lowerText.includes('siddharth shyam')) {
+    metadata.vendor = 'Siddharth Shyam';
+  }
+
+  return metadata;
+}
+
+/**
+ * Main parse function. Detects type and extracts data.
+ */
+async function parseDocument(fileBuffer, mimeType) {
+  let extractedText = '';
+
+  if (mimeType?.includes('pdf')) {
+    extractedText = await extractTextFromPDF(fileBuffer);
+  } else if (mimeType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(mimeType)) {
+    extractedText = await extractTextFromImage(fileBuffer);
+  }
+
+  const metadata = parseMetadataFromText(extractedText);
+
+  return {
+    extractedText,
+    metadata
+  };
+}
+
+module.exports = {
+  extractTextFromPDF,
+  extractTextFromImage,
+  parseMetadataFromText,
+  parseDocument
+};

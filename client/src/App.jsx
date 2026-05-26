@@ -4,6 +4,7 @@ import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import ArtistRoute from './components/ArtistRoute';
+import OpsRoute from './components/OpsRoute';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useToast } from './contexts/ToastContext';
@@ -55,6 +56,7 @@ const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCall
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
+const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 
 function App() {
   const { loading } = useAuth();
@@ -64,7 +66,8 @@ function App() {
     const resInterceptor = axios.interceptors.response.use(
       (response) => {
         const method = response.config.method?.toLowerCase();
-        if (['post', 'put', 'patch', 'delete'].includes(method)) {
+        const skipToast = response.config.headers?.['x-skip-toast'] || response.config.headers?.['X-Skip-Toast'];
+        if (['post', 'put', 'patch', 'delete'].includes(method) && !skipToast) {
           const message = response.data?.message || 'Operation successful';
           addToast({ title: 'Success', message, type: 'success' });
         }
@@ -72,7 +75,8 @@ function App() {
       },
       (error) => {
         const method = error.config?.method?.toLowerCase();
-        if (['post', 'put', 'patch', 'delete'].includes(method)) {
+        const skipToast = error.config?.headers?.['x-skip-toast'] || error.config?.headers?.['X-Skip-Toast'];
+        if (['post', 'put', 'patch', 'delete'].includes(method) && !skipToast) {
           const message = error.response?.data?.message || error.response?.data?.error || error.message || 'An error occurred';
           addToast({ title: 'Error', message, type: 'error' });
         }
@@ -123,6 +127,10 @@ function App() {
               <Route element={<ArtistRoute />}>
                 <Route path="/artists" element={<ArtistsCollection />} />
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />
+              </Route>
+
+              <Route element={<OpsRoute />}>
+                <Route path="/finance" element={<FinancePage />} />
               </Route>
             </Route>
           </Route>

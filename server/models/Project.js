@@ -22,6 +22,8 @@ const projectSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     calendarId: { type: String, default: 'primary' }
   }],
+  color: { type: String, default: '#3b82f6' },
+  starred: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 }, { 
   timestamps: true,

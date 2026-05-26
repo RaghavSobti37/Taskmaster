@@ -45,6 +45,12 @@ exports.createTask = async (req, res, next) => {
   try {
     const taskData = { ...pick(req.body, ALLOWED_CREATE), createdBy: req.user._id };
     if (!taskData.projectId || taskData.projectId === '[object Object]') delete taskData.projectId;
+    if (taskData.projectId) {
+      const proj = await Project.findById(taskData.projectId).session(session);
+      if (proj && proj.color) {
+        taskData.color = proj.color;
+      }
+    }
     if (taskData.assignees) {
       taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
     }
@@ -106,7 +112,7 @@ exports.getTasks = async (req, res, next) => {
     }
 
     const tasks = await Task.find(filter)
-      .select('title status priority projectId assignees progress dueDate createdBy')
+      .select('title status priority projectId assignees progress dueDate createdBy color')
       .populate('assignees', 'name avatar')
       .populate('createdBy', 'name avatar')
       .lean();

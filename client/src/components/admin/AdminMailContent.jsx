@@ -14,6 +14,7 @@ import {
 import { format } from 'date-fns';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 import { signaturePngBase64 } from '../../utils/signaturePng';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
@@ -1395,7 +1396,7 @@ export default function AdminMailContent() {
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto bg-white text-black p-8">
-              <div dangerouslySetInnerHTML={{ __html: content }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
               {!removeUnsubscribe && (
                 <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #eee', fontSize: '12px', color: '#777', textAlign: 'center', fontFamily: 'sans-serif' }}>
                   <p style={{ margin: '4px 0' }}>You are receiving this email because you opted in at our website or events.</p>

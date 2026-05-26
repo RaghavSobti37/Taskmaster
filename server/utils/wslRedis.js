@@ -13,8 +13,8 @@ const getRedisUrl = () => {
       process.env.REDIS_URL.includes('localhost'))
   ) {
     try {
-      const { execSync } = require('child_process');
-      const wslIps = execSync('wsl hostname -I', { encoding: 'utf8' }).trim();
+      // execSync removed
+      const wslIps = ''; // disabled to prevent execSync
       const firstIp = wslIps.split(' ')[0].trim();
       if (firstIp) {
         redisUrl = `redis://${firstIp}:6379`;

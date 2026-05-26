@@ -377,7 +377,7 @@ const AdminPanel = () => {
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
         title={selectedUser?.name || 'User Profile'}
-        subtitle={`System ID: ${selectedUser?._id?.substring(0, 8)} • Role: ${selectedUser?.role?.toUpperCase()}`}
+        subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Role:', selectedUser?.role?.toUpperCase()].join(' ')}
         onSave={handleSaveUser}
         isSaving={updateUserMutation.isPending}
         sidebar={

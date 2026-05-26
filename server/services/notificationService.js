@@ -32,7 +32,7 @@ const checkFollowups = async () => {
     for (const lead of leads) {
       try {
         // Parse DD-MM-YYYY HH:mm
-        const followupStr = lead.nextFollowupDate + ' ' + lead.nextFollowupTime;
+        const followupStr = `${lead.nextFollowupDate} ${lead.nextFollowupTime}`;
         const followupDate = parse(followupStr, 'dd-MM-yyyy HH:mm', new Date());
 
         if (isNaN(followupDate.getTime())) continue;

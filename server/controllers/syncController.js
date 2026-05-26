@@ -73,7 +73,7 @@ exports.syncBookings = async (req, res) => {
         existing.remarks = `${existing.remarks ? existing.remarks + ' • ' : ''}${remarks}`;
         await existing.save();
 
-        updatedCount += 1;
+        updatedCount = updatedCount + 1;
       } else {
         const assignedRepId = await assignLeadToRep();
 

@@ -173,14 +173,26 @@ const ProjectsView = () => {
                               {project.name}
                             </h3>
                           </div>
-                          <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-3.5">
-                            {project.tags?.length > 0 ? project.tags.map((tag, idx) => (
-                              <span key={idx} className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider" style={{ backgroundColor: `${accent}18`, color: accent, borderColor: `${accent}40`, borderWidth: 1 }}>
-                                {tag}
-                              </span>
-                            )) : (
-                              <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Unlabeled</span>
-                            )}
+                          {/* Tags — single line, overflow as +N */}
+                          <div className="flex items-center gap-1 mt-1.5 pl-3.5 overflow-hidden">
+                            {(() => {
+                              const allTags = project.tags || [];
+                              if (allTags.length === 0) return <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Unlabeled</span>;
+                              const visible = allTags.slice(0, 2);
+                              const extra = allTags.length - visible.length;
+                              return (
+                                <>
+                                  {visible.map((tag, idx) => (
+                                    <span key={idx} className="shrink-0 px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider" style={{ backgroundColor: `${accent}18`, color: accent, border: `1px solid ${accent}40` }}>
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {extra > 0 && (
+                                    <span className="shrink-0 text-[8px] font-black text-[var(--color-text-muted)]">+{extra}</span>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0 ml-1">
@@ -200,26 +212,23 @@ const ProjectsView = () => {
                         </div>
                       </div>
 
-                      {/* Progress */}
+                      {/* Progress + task count on same row */}
                       <div className="space-y-1 mt-auto">
                         <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                          <span>Progress</span>
+                          <span>Progress · <span className="normal-case">{project.totalTasks || 0} tasks</span></span>
                           <span style={{ color: accent }}>{project.progress || 0}%</span>
                         </div>
-                        <ProgressBar progress={project.progress || 0} className="h-1" style={{ '--progress-color': accent }} />
+                        <ProgressBar progress={project.progress || 0} className="h-1" />
                       </div>
 
-                      {/* Footer */}
-                      <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)] border-dashed">
-                        <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                          {project.totalTasks || 0} Tasks
-                        </span>
-                        {project.starred && (
+                      {/* Footer — only shows starred badge if starred */}
+                      {project.starred && (
+                        <div className="flex items-center justify-end pt-1.5 border-t border-[var(--color-bg-border)] border-dashed">
                           <span className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: 'rgb(251 191 36)' }}>
                             <Star size={9} className="fill-amber-400" /> Starred
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </motion.div>

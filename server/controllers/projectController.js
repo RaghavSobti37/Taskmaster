@@ -2,6 +2,26 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 
+// 20 perceptually-spaced hues converted to saturated hex colors
+const PALETTE = [
+  '#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c',
+  '#3498db','#9b59b6','#e91e63','#ff5722','#8bc34a',
+  '#00bcd4','#673ab7','#ff9800','#4caf50','#03a9f4',
+  '#ff4081','#7c4dff','#64dd17','#ffab00','#00e5ff',
+];
+
+async function pickDistinctColor() {
+  try {
+    const existing = await Project.find({}, 'color').lean();
+    const usedColors = new Set(existing.map(p => p.color?.toLowerCase()).filter(Boolean));
+    const available = PALETTE.filter(c => !usedColors.has(c.toLowerCase()));
+    const pool = available.length > 0 ? available : PALETTE;
+    return pool[Math.floor(Math.random() * pool.length)];
+  } catch {
+    return PALETTE[Math.floor(Math.random() * PALETTE.length)];
+  }
+}
+
 exports.createProject = async (req, res) => {
   try {
     const { name, description, tags, members, color, starred } = req.body;
@@ -28,11 +48,13 @@ exports.createProject = async (req, res) => {
       }
     }
 
+    const assignedColor = color || await pickDistinctColor();
+
     const project = await Project.create({
       name,
       description,
       tags,
-      color: color || '#3b82f6',
+      color: assignedColor,
       starred: starred || false,
       outletId: req.user.currentOutletId || 'main',
       owner: req.user._id,
@@ -93,6 +115,22 @@ exports.getProjects = async (req, res) => {
         completedTasks: counts.completed 
       };
     });
+
+    // Background backfill: assign distinct colors to projects still using the default blue
+    const defaultBlue = '#3b82f6';
+    const needsColor = projects.filter(p => !p.color || p.color.toLowerCase() === defaultBlue);
+    if (needsColor.length > 0) {
+      const usedColors = new Set(projects.filter(p => p.color && p.color.toLowerCase() !== defaultBlue).map(p => p.color.toLowerCase()));
+      let palettePool = [...PALETTE];
+      (async () => {
+        for (const proj of needsColor) {
+          const available = palettePool.filter(c => !usedColors.has(c.toLowerCase()));
+          const chosen = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : palettePool[Math.floor(Math.random() * palettePool.length)];
+          usedColors.add(chosen.toLowerCase());
+          await Project.findByIdAndUpdate(proj._id, { color: chosen });
+        }
+      })().catch(() => {});
+    }
 
     res.json(projectsWithProgress);
   } catch (error) {

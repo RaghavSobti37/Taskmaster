@@ -44,7 +44,10 @@ exports.createTask = async (req, res, next) => {
   session.startTransaction();
   try {
     const taskData = { ...pick(req.body, ALLOWED_CREATE), createdBy: req.user._id };
-    if (!taskData.projectId) delete taskData.projectId;
+    if (!taskData.projectId || taskData.projectId === '[object Object]') delete taskData.projectId;
+    if (taskData.assignees) {
+      taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
+    }
 
     const [task] = await Task.create([taskData], { session });
 
@@ -131,6 +134,11 @@ exports.updateTask = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id) || req.params.id === '[object Object]') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'Invalid task ID format' });
+    }
     const existing = await Task.findById(req.params.id).session(session);
     if (!existing) {
       await session.abortTransaction();
@@ -256,6 +264,11 @@ exports.deleteTask = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id) || req.params.id === '[object Object]') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'Invalid task ID format' });
+    }
     const existing = await Task.findById(req.params.id).session(session);
     if (!existing) {
       await session.abortTransaction();

@@ -7,7 +7,6 @@ import { Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import NotificationTray from './NotificationTray';
 import CommandPalette from './CommandPalette';
 import HelpBugButton from './HelpBugButton';
 

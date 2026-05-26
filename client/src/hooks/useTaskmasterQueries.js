@@ -586,6 +586,16 @@ export const useDeleteMailProfile = () => {
   });
 };
 
+export const useUpdateMailProfile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) => axios.put(`/api/mail/profiles/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({

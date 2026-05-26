@@ -9,37 +9,7 @@ const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 const logger = require('../utils/logger');
 
-const parseOfferingTitle = (title) => {
-  if (!title) return { cleanTitle: '', dateStr: '', timeStr: '' };
-  const parts = title.split('|').map(p => p.trim());
-  if (parts.length >= 3) {
-    return {
-      cleanTitle: parts.slice(2).join(' | '),
-      dateStr: parts[0],
-      timeStr: parts[1]
-    };
-  } else if (parts.length === 2) {
-    return {
-      cleanTitle: parts[1],
-      dateStr: parts[0],
-      timeStr: ''
-    };
-  }
-  return { cleanTitle: title, dateStr: '', timeStr: '' };
-};
-
-const shouldIgnoreOffering = (title, offeringId) => {
-  if (!title) return true;
-  const lower = title.toLowerCase().trim();
-  const lowerId = (offeringId || '').toLowerCase().trim();
-  return lower === 'testing br community' || 
-         lower === 'program name' || 
-         lower === 'testing' ||
-         lower === 'demo community' ||
-         lower === 'demo day- results' ||
-         lowerId === 'demo-community' ||
-         lowerId === 'demo-day--results';
-};
+const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
 
 // Helper to extract nested or flexible case-insensitive keys from a payload object
 const getPayloadValue = (payload, possibleKeys) => {
@@ -591,9 +561,9 @@ exports.linkUnlinkedBookings = async (req, res) => {
       return res.status(400).json({ error: 'No booking IDs provided.' });
     }
 
-    // 1. Create manual backup
+    // 1. Create automatic backup
     const csvBackupService = require('../services/csvBackupService');
-    const backupFile = await csvBackupService.createManualBackup();
+    csvBackupService.backupAllLeadsToCsv();
 
     // 2. Fetch bookings
     const bookings = await ExlyBooking.find({ _id: { $in: bookingIds } }).lean();
@@ -644,8 +614,7 @@ exports.linkUnlinkedBookings = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Successfully linked bookings. Added ${addedCount} new leads to CRM.`,
-      backupFile
+      message: `Successfully linked bookings. Added ${addedCount} new leads to CRM.`
     });
   } catch (err) {
     logger.error('Exly', 'linkUnlinkedBookings error', { error: err.message });

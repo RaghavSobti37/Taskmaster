@@ -52,7 +52,7 @@ triggerClient.defineJob({
     
     await logInfo(`Starting email dispatch for campaign ${payload.campaignId}`);
     try {
-      const { processEmailJob } = require('./queueService');
+      const { processEmailJob } = require('./emailProcessor');
       await processEmailJob(payload);
       await logInfo(`Successfully processed email to ${payload.email}`);
       return { status: 'completed', email: payload.email };

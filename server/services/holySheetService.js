@@ -1,6 +1,30 @@
 const axios = require('axios');
 const BASE_URL = 'https://holysheet.soneshjain.com/api/v1';
 
+let consecutiveErrors = 0;
+let circuitOpenUntil = 0;
+
+const isCircuitOpen = () => {
+  if (Date.now() < circuitOpenUntil) {
+    console.warn('[Circuit Breaker] HolySheet sync skipped. Circuit is open.');
+    return true;
+  }
+  return false;
+};
+
+const recordError = () => {
+  consecutiveErrors++;
+  if (consecutiveErrors >= 3) {
+    circuitOpenUntil = Date.now() + 5 * 60 * 1000; // Open for 5 mins
+    console.error('[Circuit Breaker] HolySheet API failed 3 times. Circuit opened for 5 minutes.');
+  }
+};
+
+const recordSuccess = () => {
+  consecutiveErrors = 0;
+  circuitOpenUntil = 0;
+};
+
 const HEADERS = [
   'rowId', 'customerIdExly', 'transactionIdExly', 'name', 'email', 'phone', 'city',
   'webinarDates', 'attended', 'attendanceDurationMin', 'qnaAnswered', 
@@ -20,6 +44,7 @@ const extractCell = (doc, key) => {
 };
 
 exports.syncLeadToSheet = async (leadDoc) => {
+  if (isCircuitOpen()) return;
   try {
     const apiKey = process.env.HOLYSHEET_API_KEY || process.env.HOLY_SHEET_API_KEY || 'A4NWMO7Hr9zJGlf1epJAOGzp0mzBfLMH';
     if (!apiKey) return;
@@ -75,8 +100,9 @@ exports.syncLeadToSheet = async (leadDoc) => {
       await axios.post(`${BASE_URL}/${apiKey}/rows`, { rows: [rowValues] }, { params: { sheet: sheetName } });
       console.log(`[HolySheet Backup] Successfully appended new lead ${leadDoc.name} to HolySheet`);
     }
-
+    recordSuccess();
   } catch (error) {
+    recordError();
     console.error('[HolySheet Backup Error]', error.message, error.response?.data || '');
   }
 };

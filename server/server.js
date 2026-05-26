@@ -50,10 +50,10 @@ app.use(express.json({
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(mongoSanitize({ allowDots: true }));
 
-// Rate Limiting
+// Rate Limiting (Loosened for CRM usage)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000 
+  max: process.env.NODE_ENV === 'production' ? 1000 : 2000 
 });
 app.use('/api/', limiter);
 
@@ -240,8 +240,9 @@ app.use(errorHandler);
 
 const backupJob = require('./jobs/backupJob');
 
-// Note: Only start this on master processes if using clustering
-backupJob.start();
+// Note: Disabled inline backup job to prevent multi-instance collisions.
+// Use dedicated worker or Atlas Snapshots instead.
+// backupJob.start();
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {

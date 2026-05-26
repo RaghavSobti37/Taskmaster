@@ -10,23 +10,14 @@ mermaid.initialize({
   fontFamily: 'Geist, sans-serif',
 });
 
+import DOMPurify from 'dompurify';
+
 const sanitizeHtml = (html) => {
   if (!html) return '';
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const scripts = doc.querySelectorAll('script');
-  scripts.forEach(s => s.remove());
-  const allElements = doc.querySelectorAll('*');
-  allElements.forEach(el => {
-    for (let i = 0; i < el.attributes.length; i++) {
-      const attr = el.attributes[i];
-      if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
-        el.removeAttribute(attr.name);
-        i--;
-      }
-    }
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div', 'svg', 'path', 'g', 'rect', 'circle', 'text', 'line', 'polygon', 'polyline', 'style'],
+    ALLOWED_ATTR: ['href', 'title', 'target', 'class', 'style', 'id', 'width', 'height', 'viewBox', 'fill', 'stroke', 'd', 'transform', 'x', 'y', 'cx', 'cy', 'r', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
   });
-  return doc.body.innerHTML;
 };
 
 export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explainer", data }) => {

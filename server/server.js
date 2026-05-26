@@ -194,17 +194,15 @@ app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
 app.use('/api/exly', require('./routes/exlyRoutes'));
+app.use('/api/finance', require('./routes/financeRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");
+
 app.use(
   "/api/uploadthing",
   createRouteHandler({
     router: uploadRouter,
-    config: {
-      uploadthingSecret: process.env.UPLOADTHING_SECRET || process.env.UPLOADTHING_TOKEN,
-      uploadthingId: process.env.UPLOADTHING_APP_ID || "app_id",
-    },
   })
 );
 
@@ -253,3 +251,17 @@ const server = app.listen(PORT, () => {
   notificationService.init();
 });
 console.log('Server re-initialized after port release');
+
+// Graceful shutdown for nodemon restarts to prevent EADDRINUSE
+process.once('SIGUSR2', () => {
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  process.exit(0);
+});
+
+// Trigger nodemon restart
+
+// Trigger nodemon restart 2
+
+// Trigger nodemon restart 3

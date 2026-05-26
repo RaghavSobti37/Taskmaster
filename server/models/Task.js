@@ -32,7 +32,8 @@ const taskSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  notifiedOverdue: { type: Boolean, default: false }
+  notifiedOverdue: { type: Boolean, default: false },
+  color: { type: String }
 }, { timestamps: true });
 
 taskSchema.index({ projectId: 1, status: 1 });

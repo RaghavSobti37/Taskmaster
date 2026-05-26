@@ -6,9 +6,13 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
   const statuses = ['todo', 'in-progress', 'in-review', 'done'];
   const currentIndex = statuses.indexOf(task.status);
   const isDone = task.status === 'done';
+  const accent = task.color || '#3b82f6';
 
   return (
-    <div className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+    <div
+      className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}
+      style={{ borderLeft: `3px solid ${accent}` }}
+    >
       <div className="flex items-start justify-between mb-3">
         <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
           {task.priority.toUpperCase()}

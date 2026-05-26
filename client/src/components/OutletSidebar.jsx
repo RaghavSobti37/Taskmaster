@@ -354,7 +354,7 @@ const OutletSidebar = () => {
             </div>
           )}
 
-          {(user?.role === 'admin' || user?.role === 'ops') && (
+          {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
             <div className="space-y-1">
               <NavItem
                 to="/finance"

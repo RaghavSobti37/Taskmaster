@@ -12,7 +12,7 @@ const upload = multer({
 
 // Role gate: only ops or admin
 const opsOnly = (req, res, next) => {
-  if (req.user && (req.user.role === 'ops' || req.user.role === 'admin')) {
+  if (req.user && (req.user.role === 'ops' || req.user.role === 'admin' || req.user.role === 'operations' || req.user.role === 'Operations')) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized for Finance/Ops' });

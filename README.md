@@ -105,3 +105,7 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **SystemHealthService:** Prevents business logic execution if dependencies (DB, Redis) are offline. Auto-transitions to 503 Maintenance Mode.
 - **Centralized Error Propagation:** Strict structured logging and error routing (Operational vs Programmer).
 - **Diagnostic Scripts:** Use server/scripts/verify_infrastructure.js to test raw database and environment health.
+- **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
+
+## Version
+- Current: **1.7.19**

@@ -1,4 +1,5 @@
 const Log = require('../models/Log');
+const logger = require('../utils/logger');
 
 const logActivity = async (userId, action, targetId, targetType, details = {}, session = null) => {
   try {
@@ -16,7 +17,7 @@ const logActivity = async (userId, action, targetId, targetType, details = {}, s
       await Log.create(logPayload);
     }
   } catch (err) {
-    console.error('[AUDIT_ERROR] Critical audit logging failed:', err);
+    logger.error('AUDIT_ERROR', 'Critical audit logging failed:', { error: err.message || err });
     throw err; // Propagate critical audit failure to prevent unlogged mutations
   }
 };

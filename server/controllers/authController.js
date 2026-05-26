@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
+const logger = require('../utils/logger');
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -202,7 +203,7 @@ exports.googleAuthCallback = async (req, res) => {
 
     res.redirect(`${FRONTEND_URL}/auth/google/success?token=${token}&user=${encodeURIComponent(userJson)}`);
   } catch (error) {
-    console.error('Google Auth Error:', error);
+    logger.error('authController', 'Google Auth ', { error: error.message || error });
     res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
   }
 };

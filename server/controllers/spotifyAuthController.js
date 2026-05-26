@@ -11,6 +11,7 @@
 const axios = require('axios');
 const Artist = require('../models/Artist');
 const { Mutex } = require('async-mutex');
+const logger = require('../utils/logger');
 
 const tokenMutexes = new Map();
 
@@ -60,7 +61,7 @@ exports.spotifyAuthCallback = async (req, res) => {
   const redirectUri = getRedirectUri(req);
 
   if (error) {
-    console.error('❌ [Spotify OAuth] User denied or error:', error);
+    logger.error('Spotify OAuth', '❌ [Spotify OAuth] User denied or ', { error: error.message || error });
     return res.redirect(`${CLIENT_URL}/artists/${artistId}?spotify_error=${error}`);
   }
 
@@ -75,7 +76,7 @@ exports.spotifyAuthCallback = async (req, res) => {
     }
 
     // Exchange code for tokens
-    console.log(`⚡ [Spotify OAuth] Exchanging code for tokens for artist: ${artist.name}`);
+    logger.info('Spotify OAuth', '⚡ [Spotify OAuth] Exchanging code for tokens for artist: ${artist.name}');
     const tokenRes = await axios.post(
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
@@ -98,7 +99,7 @@ exports.spotifyAuthCallback = async (req, res) => {
       headers: { Authorization: `Bearer ${access_token}` }
     });
     const profile = profileRes.data;
-    console.log(`✅ [Spotify OAuth] Connected Spotify account: ${profile.display_name} (${profile.id})`);
+    logger.info('Spotify OAuth', '✅ [Spotify OAuth] Connected Spotify account: ${profile.display_name} (${profile.id})');
 
     // Save credentials to artist
     if (!artist.oauthCredentials) artist.oauthCredentials = {};
@@ -115,7 +116,7 @@ exports.spotifyAuthCallback = async (req, res) => {
     artist.markModified('oauthCredentials');
     await artist.save();
 
-    console.log(`🎉 [Spotify OAuth] Artist ${artist.name} Spotify account connected! Triggering sync...`);
+    logger.info('Spotify OAuth', '🎉 [Spotify OAuth] Artist ${artist.name} Spotify account connected! Triggering sync...');
 
     // Auto-trigger sync
     try {
@@ -125,13 +126,13 @@ exports.spotifyAuthCallback = async (req, res) => {
         { json: () => {}, status: () => ({ json: () => {} }) }
       );
     } catch (syncErr) {
-      console.warn('[Spotify OAuth] Auto-sync warning:', syncErr.message);
+      logger.warn('Spotify OAuth', 'Auto-sync warning', { error: syncErr.message });
     }
 
     // Redirect back to artist page
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_connected=true`);
   } catch (err) {
-    console.error('❌ [Spotify OAuth] Error:', err?.response?.data || err.message);
+    logger.error('Spotify OAuth', 'Error', { error: err?.response?.data || err.message });
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/artists/${artistId}?spotify_error=${encodeURIComponent(err.message)}`);
   }
 };

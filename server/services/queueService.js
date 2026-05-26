@@ -5,6 +5,7 @@ const EmailProfile = require('../models/EmailProfile');
 const Lead = require('../models/Lead');
 const MailEvent = require('../models/MailEvent');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
+const logger = require('../utils/logger');
 
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
@@ -18,7 +19,7 @@ const processMemoryQueue = async () => {
     try {
       await processEmailJob(jobData);
     } catch (err) {
-      console.error('[Memory Queue] Job failed:', err);
+      logger.error('Memory Queue', 'Job failed', { error: err.message });
     }
     await new Promise(res => setTimeout(res, 100));
   }
@@ -57,7 +58,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   const cleanEmail = email.toLowerCase().trim();
   const leadDoc = await Lead.findOne({ email: cleanEmail });
   if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed' || leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid')) {
-    console.log(`[Queue Service] Skipping bad/unsubscribed recipient: ${email}`);
+    logger.info('Queue Service', `Skipping bad/unsubscribed recipient: ${email}`);
     const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString() || r.email === email);
     if (recipient) {
       recipient.status = (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) ? 'Unsubscribed' : 'Bounced';
@@ -137,7 +138,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       });
       messageIdStr = info.messageId;
     } else {
-      console.log(`[Memory Queue] Simulated dispatch to ${email}`);
+      logger.info('Memory Queue', `Simulated dispatch to ${email}`);
     }
 
     const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find(r => r._id.toString() === recipientId.toString());
@@ -153,7 +154,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       if (!campaign.metrics) campaign.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
       campaign.metrics.totalSent = (campaign.metrics.totalSent || 0) + 1;
     }
-    try { await campaign.save(); } catch (err) { if (err.name !== 'VersionError' && err.name !== 'DocumentNotFoundError') console.error('Campaign save error:', err); }
+    try { await campaign.save(); } catch (err) { if (err.name !== 'VersionError' && err.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign save error', { error: err.message }); }
 
     await MailEvent.create({
       messageId: messageIdStr,
@@ -170,7 +171,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       recipient.status = 'Failed';
       recipient.error = err.message;
     }
-    try { await campaign.save(); } catch (e) { if (e.name !== 'VersionError' && e.name !== 'DocumentNotFoundError') console.error('Campaign fail save error:', e); }
+    try { await campaign.save(); } catch (e) { if (e.name !== 'VersionError' && e.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign fail save error', { error: e.message }); }
     await checkCompletion();
     throw err;
   } finally {

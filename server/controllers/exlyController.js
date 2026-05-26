@@ -7,6 +7,7 @@ const Lead = require('../models/Lead');
 const LeadService = require('../services/LeadService');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
+const logger = require('../utils/logger');
 
 const parseOfferingTitle = (title) => {
   if (!title) return { cleanTitle: '', dateStr: '', timeStr: '' };
@@ -140,7 +141,7 @@ exports.getOfferings = async (req, res) => {
 
     res.json(offerings);
   } catch (err) {
-    console.error('[Exly getOfferings Error]', err.message);
+    logger.error('Exly', 'getOfferings error', { error: err.message });
     res.status(500).json({ error: 'Failed to retrieve Exly offerings.' });
   }
 };
@@ -179,7 +180,7 @@ exports.syncExlyData = async (req, res) => {
       ...result
     });
   } catch (err) {
-    console.error('[Exly Controller Sync Error]', err.message);
+    logger.error('Exly', 'Sync error', { error: err.message });
     res.status(400).json({ success: false, error: err.message || 'Sync failed.' });
   }
 };
@@ -187,7 +188,7 @@ exports.syncExlyData = async (req, res) => {
 exports.handleExlyWebhook = async (req, res) => {
   try {
     const payload = req.body;
-    console.log('⚡ [Exly Webhook] Payload received:', JSON.stringify(payload));
+    logger.info('Exly Webhook', 'Payload received', { payload });
 
     const rawPhone = getPayloadValue(payload, ['phone', 'customerPhone', 'mobile', 'phoneMobile', 'phoneNumber', 'Phone Number', 'Phone/Mobile', 'Customer Phone Number', 'Customer Phone']);
     const rawEmail = getPayloadValue(payload, ['email', 'customerEmail', 'emailProfile', 'emailAddress', 'Email', 'Customer Email', 'Email Profile', 'Email Address']);
@@ -313,7 +314,7 @@ exports.handleExlyWebhook = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', contactId: contact ? contact._id : null });
   } catch (err) {
-    console.error('❌ [Exly Webhook Error]:', err.message);
+    logger.error('Exly Webhook', 'Processing error', { error: err.message });
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -372,7 +373,7 @@ exports.getOfferingDetails = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[Exly getOfferingDetails Error]', err.message);
+    logger.error('Exly', 'getOfferingDetails error', { error: err.message });
     res.status(500).json({ error: 'Failed to retrieve offering details.' });
   }
 };
@@ -482,7 +483,7 @@ exports.getOfferingAnalytics = async (req, res) => {
       chartData
     });
   } catch (err) {
-    console.error('[Exly getOfferingAnalytics Error]', err.message);
+    logger.error('Exly', 'getOfferingAnalytics error', { error: err.message });
     res.status(500).json({ error: 'Failed to compute offering analytics.' });
   }
 };
@@ -518,7 +519,7 @@ exports.updateOffering = async (req, res) => {
 
     res.json({ success: true, offering });
   } catch (err) {
-    console.error('[Exly updateOffering Error]', err.message);
+    logger.error('Exly', 'updateOffering error', { error: err.message });
     res.status(500).json({ error: 'Failed to update Exly offering.' });
   }
 };
@@ -557,7 +558,7 @@ exports.getDashboardStats = async (req, res) => {
       totalBookingsCount: bookings.length
     });
   } catch (err) {
-    console.error('[Exly getDashboardStats Error]', err.message);
+    logger.error('Exly', 'getDashboardStats error', { error: err.message });
     res.status(500).json({ error: 'Failed to compute dashboard statistics.' });
   }
 };
@@ -578,7 +579,7 @@ exports.getUnlinkedBookings = async (req, res) => {
 
     res.json(unlinked);
   } catch (err) {
-    console.error('[Exly getUnlinkedBookings Error]', err.message);
+    logger.error('Exly', 'getUnlinkedBookings error', { error: err.message });
     res.status(500).json({ error: 'Failed to retrieve unlinked bookings.' });
   }
 };
@@ -647,7 +648,7 @@ exports.linkUnlinkedBookings = async (req, res) => {
       backupFile
     });
   } catch (err) {
-    console.error('[Exly linkUnlinkedBookings Error]', err.message);
+    logger.error('Exly', 'linkUnlinkedBookings error', { error: err.message });
     res.status(500).json({ error: err.message || 'Failed to link bookings.' });
   }
 };

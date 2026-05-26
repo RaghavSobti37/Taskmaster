@@ -1,21 +1,10 @@
 const { Queue, Worker } = require('bullmq');
 const Redis = require('ioredis');
 const path = require('path');
+const { getRedisUrl } = require('../utils/wslRedis');
+const logger = require('../utils/logger');
 
-let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-
-if (process.platform === 'win32' && (!process.env.REDIS_URL || process.env.REDIS_URL.includes('127.0.0.1') || process.env.REDIS_URL.includes('localhost'))) {
-  try {
-    const { execFileSync } = require('child_process');
-    const wslIp = execFileSync('wsl', ['hostname', '-I']).toString().trim().split(' ')[0];
-    if (wslIp) {
-      redisUrl = `redis://${wslIp}:6379`;
-      console.log(`[SYSTEM] Windows detected. Using WSL Redis IP: ${redisUrl}`);
-    }
-  } catch (err) {
-    // Silent fallback
-  }
-}
+const redisUrl = getRedisUrl();
 
 let redisConnection = null;
 let redisAvailable = false;
@@ -31,12 +20,12 @@ try {
 
   redisConnection.connect()
     .then(() => {
-      console.log('[Queue] Redis connected. BullMQ active.');
+      logger.info('Queue', 'Redis connected. BullMQ active.');
       redisAvailable = true;
       initializeQueues();
     })
     .catch((err) => {
-      console.warn('[Queue Warning] Redis connect failed. Falling back to memory-based delayed execution.', err.message);
+      logger.warn('Queue', 'Redis connect failed. Falling back to memory-based delayed execution.', { error: err.message });
       redisAvailable = false;
       if (redisConnection) {
         try { redisConnection.disconnect(); } catch (e) {}
@@ -47,7 +36,7 @@ try {
   redisConnection.on('error', (err) => {
     // Avoid crashing on connection loss
     if (redisAvailable) {
-      console.warn('[Queue Warning] Redis connection lost. Switching to memory queue.');
+      logger.warn('Queue', 'Redis connection lost. Switching to memory queue.');
       redisAvailable = false;
       if (redisConnection) {
         try { redisConnection.disconnect(); } catch (e) {}
@@ -56,7 +45,7 @@ try {
     }
   });
 } catch (err) {
-  console.warn('[Queue Exception] Failed to initialize Redis. Falling back to memory queues.', err.message);
+  logger.warn('Queue', 'Failed to initialize Redis. Falling back to memory queues.', { error: err.message });
   redisAvailable = false;
   initializeMemoryQueues();
 }
@@ -79,7 +68,7 @@ function initializeQueues() {
   const holySheetWorker = new Worker('holySheetQueue', async (job) => {
     const { leadIds } = job.data;
     if (!leadIds || leadIds.length === 0) return;
-    console.log(`[Queue Worker] Processing batch sync to HolySheet for ${leadIds.length} leads.`);
+    logger.info('Queue Worker', `Processing batch sync to HolySheet for ${leadIds.length} leads.`);
     
     const Lead = require('../models/Lead');
     const holySheetService = require('./holySheetService');
@@ -95,7 +84,7 @@ function initializeQueues() {
 
   // Worker for CSV backup
   const csvWorker = new Worker('csvBackupQueue', async (job) => {
-    console.log('[Queue Worker] Executing CSV backup...');
+    logger.info('Queue Worker', 'Executing CSV backup...');
     const csvBackupService = require('./csvBackupService');
     await csvBackupService.backupAllLeadsToCsv();
   }, { connection: redisConnection, concurrency: 1 });
@@ -107,18 +96,18 @@ function initializeQueues() {
     if (eventType === 'TASK_COMPLETED') {
       const { userId, tenantId, task } = payload;
       
-      console.log(`[GAMIFICATION DIAGNOSTICS] Raw Input Task:`, JSON.stringify(task, null, 2));
+      logger.debug('Gamification', 'Raw Input Task', { task });
       
       let multiplier = 1;
       if (task.priority === 'critical') multiplier = 3;
       else if (task.priority === 'high') multiplier = 2;
       
       let expReward = 20 * multiplier;
-      console.log(`[GAMIFICATION DIAGNOSTICS] Calculation: Base Reward (20) * Multiplier (${multiplier}) = ${expReward} XP`);
+      logger.debug('Gamification', `Calculation: Base(20) * Multiplier(${multiplier}) = ${expReward} XP`);
       
       await GamificationService.generateDailyMissions(userId);
-      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
       await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
+      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
     } else if (eventType === 'TASK_CREATED') {
       const { userId, task } = payload;
       await GamificationService.awardExp(userId, 10, 'CREATE_TASK', { taskId: task._id });
@@ -129,21 +118,21 @@ function initializeQueues() {
   }, { connection: redisConnection, concurrency: 5 });
 
   gamificationWorker.on('failed', (job, err) => {
-    console.error(`[Queue Worker] Gamification job failed: ${err.message}`);
+    logger.error('Queue Worker', `Gamification job failed: ${err.message}`);
   });
 
 
   holySheetWorker.on('failed', (job, err) => {
-    console.error(`[Queue Worker] HolySheet job failed: ${err.message}`);
+    logger.error('Queue Worker', `HolySheet job failed: ${err.message}`);
   });
 
   csvWorker.on('failed', (job, err) => {
-    console.error(`[Queue Worker] CSV backup job failed: ${err.message}`);
+    logger.error('Queue Worker', `CSV backup job failed: ${err.message}`);
   });
 }
 
 function initializeMemoryQueues() {
-  console.log('[Queue] In-memory scheduler initialized.');
+  logger.info('Queue', 'In-memory scheduler initialized.');
 }
 
 // Main API to queue HolySheet sync
@@ -186,9 +175,9 @@ function scheduleRedisBatch() {
           removeOnComplete: true,
           removeOnFail: true
         });
-        console.log(`[Queue] Added batch of ${idsToSync.length} leads to HolySheet queue.`);
+        logger.info('Queue', `Added batch of ${idsToSync.length} leads to HolySheet queue.`);
       } catch (err) {
-        console.error('[Queue Error] Failed to add job to BullMQ, executing inline:', err.message);
+        logger.error('Queue', 'Failed to add job to BullMQ, executing inline', { error: err.message });
         // Fallback to direct async
         executeHolySheetSyncDirect(idsToSync);
       }
@@ -209,7 +198,7 @@ function scheduleRedisCsv() {
           removeOnFail: true
         });
       } catch (err) {
-        console.error('[Queue Error] Failed to add CSV job to BullMQ, executing inline:', err.message);
+        logger.error('Queue', 'Failed to add CSV job to BullMQ, executing inline', { error: err.message });
         const csvBackupService = require('./csvBackupService');
         csvBackupService.backupAllLeadsToCsv();
       }
@@ -226,7 +215,7 @@ function scheduleMemoryBatch() {
     pendingHolySheetIds.clear();
     
     if (idsToSync.length > 0) {
-      console.log(`[Memory Queue] Executing batch sync for ${idsToSync.length} leads.`);
+      logger.info('Memory Queue', `Executing batch sync for ${idsToSync.length} leads.`);
       executeHolySheetSyncDirect(idsToSync);
     }
   }, 10000);
@@ -239,7 +228,7 @@ function scheduleMemoryCsv() {
     memoryCsvTimeout = null;
     if (csvBackupPending) {
       csvBackupPending = false;
-      console.log('[Memory Queue] Executing CSV backup.');
+      logger.info('Memory Queue', 'Executing CSV backup.');
       const csvBackupService = require('./csvBackupService');
       csvBackupService.backupAllLeadsToCsv();
     }
@@ -257,7 +246,7 @@ async function executeHolySheetSyncDirect(ids) {
       await new Promise(r => setTimeout(r, 100)); // Sleep to prevent rate limit
     }
   } catch (err) {
-    console.error('[Memory Queue Error] Direct sync failed:', err.message);
+    logger.error('Memory Queue', 'Direct sync failed', { error: err.message });
   }
 }
 
@@ -268,7 +257,7 @@ const queueGamificationEvent = async (eventType, payload) => {
     try {
       await gamificationQueue.add(eventType, { eventType, payload }, { removeOnComplete: true, removeOnFail: false });
     } catch (e) {
-      console.error('[Queue Error] Gamification direct execution fallback', e);
+      logger.error('Queue', 'Gamification direct execution fallback', { error: e.message });
     }
   } else {
     // Memory fallback
@@ -276,18 +265,18 @@ const queueGamificationEvent = async (eventType, payload) => {
     if (eventType === 'TASK_COMPLETED') {
       const { userId, task } = payload;
       
-      console.log(`[GAMIFICATION DIAGNOSTICS] Raw Input Task:`, JSON.stringify(task, null, 2));
+      logger.debug('Gamification', 'Raw Input Task', { task });
       
       let multiplier = 1;
       if (task.priority === 'critical') multiplier = 3;
       else if (task.priority === 'high') multiplier = 2;
       
       let expReward = 20 * multiplier;
-      console.log(`[GAMIFICATION DIAGNOSTICS] Calculation: Base Reward (20) * Multiplier (${multiplier}) = ${expReward} XP`);
+      logger.debug('Gamification', `Calculation: Base(20) * Multiplier(${multiplier}) = ${expReward} XP`);
 
       await GamificationService.generateDailyMissions(userId);
-      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
       await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
+      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
     } else if (eventType === 'TASK_CREATED') {
       const { userId, task } = payload;
       await GamificationService.awardExp(userId, 10, 'CREATE_TASK', { taskId: task._id });
@@ -308,7 +297,7 @@ module.exports = {
 function startAnalyticsCron() {
   const TWELVE_HOURS = 12 * 60 * 60 * 1000;
   setInterval(async () => {
-    console.log('[Cron Worker] Starting periodic analytics sync...');
+    logger.info('Cron Worker', 'Starting periodic analytics sync...');
     try {
       const Artist = require('../models/Artist');
       const { fetchLiveAnalytics } = require('./analyticsService');
@@ -341,11 +330,11 @@ function startAnalyticsCron() {
             $push: { analyticsHistory: dailySnapshot }
           });
         } catch (err) {
-          console.error(`[Cron Worker] Sync failed for artist ${artist._id}:`, err.message);
+          logger.error('Cron Worker', `Sync failed for artist ${artist._id}`, { error: err.message });
         }
       }
     } catch (err) {
-      console.error('[Cron Worker Error]', err);
+      logger.error('Cron Worker', 'Analytics cron error', { error: err.message });
     }
   }, TWELVE_HOURS);
 }

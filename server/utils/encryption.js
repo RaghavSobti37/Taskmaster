@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'); // Must be 256 bits (32 chars)
 const IV_LENGTH = 16;
@@ -27,7 +28,7 @@ function decrypt(text) {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
   } catch (error) {
-    console.error('Decryption error', error);
+    logger.error('encryption', 'Decryption ', { error: error.message || error });
     return null;
   }
 }

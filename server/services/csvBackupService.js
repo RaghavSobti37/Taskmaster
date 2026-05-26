@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parseAsync } = require('json2csv');
+const logger = require('../utils/logger');
 
 const CSV_PATH = path.join(__dirname, '../../leads.csv');
 
@@ -43,9 +44,9 @@ const triggerCsvBackup = () => {
 
       const csvData = await parseAsync(leads, { fields });
       fs.writeFileSync(CSV_PATH, csvData, 'utf8');
-      console.log(`[CSV Backup] Successfully backed up ${leads.length} leads to leads.csv.`);
+      logger.info('CSV Backup', `Successfully backed up ${leads.length} leads to leads.csv.`);
     } catch (error) {
-      console.error(`[CSV Backup Error] ${error.message}`);
+      logger.error('CSV Backup', `Backup error: ${error.message}`);
     } finally {
       isBackingUp = false;
       if (needsBackup) {
@@ -88,10 +89,10 @@ const createManualBackup = async () => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '_');
     const backupFile = path.join(dir, `leads_backup_${timestamp}.csv`);
     fs.writeFileSync(backupFile, csvData, 'utf8');
-    console.log(`[Manual Backup] Created backup at ${backupFile}`);
+    logger.info('Manual Backup', `Created backup at ${backupFile}`);
     return backupFile;
   } catch (err) {
-    console.error('[Manual Backup Error]', err.message);
+    logger.error('Manual Backup', err.message);
     throw err;
   }
 };

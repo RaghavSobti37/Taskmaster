@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import axios from 'axios';
 import { subscribeToChannel } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AuthContext = createContext();
 if (import.meta.env.VITE_API_URL) {
@@ -66,6 +67,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, fetchUser]);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (user?._id) {
       const unsubscribe = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
@@ -75,6 +78,9 @@ export const AuthProvider = ({ children }) => {
           level: payload.leveledUp ? (prev.level || 1) + 1 : prev.level 
         }));
         
+        queryClient.invalidateQueries({ queryKey: ['missions'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+
         toast.custom((t) => (
           <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden`}>
              <div className="p-4 flex-1">
@@ -101,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       });
       return () => unsubscribe();
     }
-  }, [user?._id]);
+  }, [user?._id, queryClient]);
 
   const login = useCallback((newToken, userData) => {
     localStorage.setItem('coreknot_token', newToken);

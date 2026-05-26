@@ -1,20 +1,8 @@
 const Redis = require('ioredis');
-const path = require('path');
+const { getRedisUrl } = require('../utils/wslRedis');
+const logger = require('../utils/logger');
 
-let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-
-if (process.platform === 'win32' && (!process.env.REDIS_URL || process.env.REDIS_URL.includes('127.0.0.1') || process.env.REDIS_URL.includes('localhost'))) {
-  try {
-    const { execFileSync } = require('child_process');
-    const wslIp = execFileSync('wsl', ['hostname', '-I']).toString().trim().split(' ')[0];
-    if (wslIp) {
-      redisUrl = `redis://${wslIp}:6379`;
-      console.log(`[SYSTEM] Windows detected. Using WSL Redis IP: ${redisUrl}`);
-    }
-  } catch (err) {
-    // Silent fallback
-  }
-}
+const redisUrl = getRedisUrl();
 
 let redisConnection = null;
 let redisAvailable = false;
@@ -29,11 +17,11 @@ try {
   
   redisConnection.connect()
     .then(() => {
-      console.log('[Followup Cache] Redis connected successfully.');
+      logger.info('Followup Cache', 'Redis connected successfully.');
       redisAvailable = true;
     })
     .catch((err) => {
-      console.warn('[Followup Cache Warning] Redis connection failed, bypassing cache layer:', err.message);
+      logger.warn('Followup Cache', 'Redis connection failed, bypassing cache layer', { error: err.message });
       redisAvailable = false;
       if (redisConnection) {
         try { redisConnection.disconnect(); } catch (e) {}
@@ -42,7 +30,7 @@ try {
 
   redisConnection.on('error', (err) => {
     if (redisAvailable) {
-      console.warn('[Followup Cache Warning] Redis disconnected.');
+      logger.warn('Followup Cache', 'Redis disconnected.');
       redisAvailable = false;
       if (redisConnection) {
         try { redisConnection.disconnect(); } catch (e) {}
@@ -50,7 +38,7 @@ try {
     }
   });
 } catch (err) {
-  console.warn('[Followup Cache Exception] Initialization failed:', err.message);
+  logger.warn('Followup Cache', 'Initialization failed', { error: err.message });
   redisAvailable = false;
 }
 
@@ -105,7 +93,7 @@ async function cacheFollowup(lead) {
       redisConnection.zadd(keyGlobal, score, leadId)
     ]);
   } catch (err) {
-    console.error('[Followup Cache Error] Failed to write cache:', err.message);
+    logger.error('Followup Cache', 'Failed to write cache', { error: err.message });
   }
 }
 
@@ -137,7 +125,7 @@ async function getFollowups(repId = null) {
     }
     return followups;
   } catch (err) {
-    console.warn('[Followup Cache Error] Read failed, falling back to database query:', err.message);
+    logger.warn('Followup Cache', 'Read failed, falling back to database query', { error: err.message });
     return null;
   }
 }

@@ -1,14 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Trash2, AlertTriangle, Settings } from 'lucide-react';
+import { X, CheckCircle2, Trash2, AlertTriangle, Settings, Star, Palette } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+
+const PROJECT_COLORS = [
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#ef4444', // red
+  '#f97316', // orange
+  '#eab308', // yellow
+  '#22c55e', // green
+  '#14b8a6', // teal
+  '#06b6d4', // cyan
+  '#64748b', // slate
+];
 
 const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   const [name, setName] = useState(project?.name || '');
   const [desc, setDesc] = useState(project?.description || '');
+  const [color, setColor] = useState(project?.color || '#3b82f6');
+  const [starred, setStarred] = useState(project?.starred || false);
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (project) {
+      setName(project.name || '');
+      setDesc(project.description || '');
+      setColor(project.color || '#3b82f6');
+      setStarred(project.starred || false);
+    }
+  }, [project]);
 
   if (!isOpen) return null;
 
@@ -18,9 +44,13 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
     try {
       const res = await axios.put(`/api/projects/${project._id}`, {
         name,
-        description: desc
+        description: desc,
+        color,
+        starred,
       });
       onProjectUpdated(res.data);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', project._id] });
       onClose();
     } catch (err) {
       console.error('Error updating project:', err);
@@ -32,6 +62,7 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
   const handleDelete = async () => {
     try {
       await axios.delete(`/api/projects/${project._id}`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');
     } catch (err) {
       console.error('Error deleting project:', err);
@@ -63,13 +94,13 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 px-6 py-3 bg-[var(--color-bg-workspace)] rounded-xl font-bold text-sm"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-500/20"
               >
@@ -78,11 +109,11 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
@@ -92,15 +123,61 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-              <textarea 
+              <textarea
                 value={desc}
                 onChange={e => setDesc(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[100px] text-sm"
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[80px] text-sm"
               />
             </div>
 
-            <div className="pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
-              <button 
+            {/* Color Picker */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                <Palette size={11} /> Project Color
+              </label>
+              <div className="flex items-center gap-2.5 flex-wrap p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]">
+                {PROJECT_COLORS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    className={`w-8 h-8 rounded-full transition-all duration-200 shadow-md ${
+                      color === c
+                        ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-125 ring-[var(--color-text-primary)]'
+                        : 'hover:scale-110 opacity-80 hover:opacity-100'
+                    }`}
+                    style={{ backgroundColor: c }}
+                    title={c}
+                  />
+                ))}
+                <span className="text-[9px] font-black uppercase tracking-widest ml-auto" style={{ color }}>
+                  {color}
+                </span>
+              </div>
+            </div>
+
+            {/* Starred Toggle */}
+            <div className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]">
+              <div className="flex items-center gap-2.5">
+                <Star size={16} className={starred ? 'text-amber-400 fill-amber-400' : 'text-[var(--color-text-muted)]'} />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">Star Project</p>
+                  <p className="text-[9px] text-[var(--color-text-muted)] font-medium">Starred projects appear at the top of your list</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStarred(s => !s)}
+                className={`relative w-10 h-5 rounded-full transition-all duration-300 ${starred ? 'bg-amber-400' : 'bg-[var(--color-bg-border)]'}`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${starred ? 'left-5' : 'left-0.5'}`}
+                />
+              </button>
+            </div>
+
+            <div className="pt-4 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+              <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 className="flex items-center gap-2 text-red-500 font-bold text-xs hover:underline"
@@ -108,14 +185,14 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
                 <Trash2 size={14} /> Delete Project
               </button>
               <div className="flex items-center gap-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={onClose}
                   className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={loading || !name}
                   className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"

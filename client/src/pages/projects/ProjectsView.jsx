@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Briefcase, ChevronRight, Search, Tag, 
-  TrendingUp, CheckCircle2, Clock, Layers,
-  ExternalLink, MoreVertical, Edit2
+  Plus, Briefcase, Search,
+  TrendingUp, CheckCircle2, Clock, Layers, Star
 } from 'lucide-react';
 import { 
   Badge, 
@@ -19,6 +18,7 @@ import {
   NexusDropdown
 } from '../../components/ui';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ProjectMetric = ({ label, value, icon: Icon, variant = 'slate' }) => (
   <Card className="p-3 flex items-center gap-4 border-l-4" style={{ borderLeftColor: `var(--color-pastel-${variant}-text)` }}>
@@ -37,7 +37,18 @@ const ProjectsView = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: projects = [], isLoading: loading } = useProjects();
+
+  const toggleStar = useCallback(async (e, project) => {
+    e.stopPropagation();
+    try {
+      await axios.put(`/api/projects/${project._id}`, { starred: !project.starred });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } catch (err) {
+      console.error('Failed to toggle star:', err);
+    }
+  }, [queryClient]);
 
   const filteredProjects = useMemo(() => {
     let result = projects.filter(p => {
@@ -48,6 +59,8 @@ const ProjectsView = () => {
     });
 
     result.sort((a, b) => {
+      // Starred first always
+      if (b.starred !== a.starred) return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
       if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
       if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
       if (sortBy === 'progress-high') return (b.progress || 0) - (a.progress || 0);
@@ -63,7 +76,6 @@ const ProjectsView = () => {
     const completed = projects.filter(p => p.status === 'completed').length;
     const active = projects.length - completed;
     const avgProgress = projects.length ? Math.round(projects.reduce((acc, p) => acc + (p.progress || 0), 0) / projects.length) : 0;
-    
     return { completed, active, avgProgress };
   }, [projects]);
 
@@ -81,7 +93,7 @@ const ProjectsView = () => {
         }
       />
 
-      {/* Analytical Ribbon - Plain English */}
+      {/* Analytical Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <ProjectMetric label="Total Projects" value={projects.length} icon={Layers} variant="slate" />
         <ProjectMetric label="Active Work" value={metrics.active} icon={Clock} variant="info" />
@@ -132,69 +144,93 @@ const ProjectsView = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <AnimatePresence>
-            {filteredProjects.map((project, index) => (
-              <motion.div
-                key={project._id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-              >
-                <Card 
-                  className="p-3 space-y-3 flex flex-col h-full group relative hover:border-[var(--color-action-primary)] transition-colors"
-                  onClick={() => navigate(`/projects/${project._id}`)}
+            {filteredProjects.map((project, index) => {
+              const accent = project.color || '#3b82f6';
+              return (
+                <motion.div
+                  key={project._id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2, delay: index * 0.04 }}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-xs font-black uppercase tracking-tight truncate group-hover:text-[var(--color-action-primary)] transition-colors">
-                        {project.name}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                        {project.tags?.length > 0 ? project.tags.map((tag, idx) => (
-                          <span key={idx} className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                            {tag}
+                  <Card 
+                    className="p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    style={{ borderColor: project.starred ? accent : undefined }}
+                    onClick={() => navigate(`/projects/${project._id}`)}
+                  >
+                    {/* Color accent bar */}
+                    <div className="h-1 w-full" style={{ backgroundColor: accent }} />
+
+                    <div className="p-3 space-y-3 flex flex-col flex-1">
+                      {/* Header row */}
+                      <div className="flex justify-between items-start">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent }} />
+                            <h3 className="text-xs font-black uppercase tracking-tight truncate group-hover:text-[var(--color-action-primary)] transition-colors">
+                              {project.name}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-3.5">
+                            {project.tags?.length > 0 ? project.tags.map((tag, idx) => (
+                              <span key={idx} className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider" style={{ backgroundColor: `${accent}18`, color: accent, borderColor: `${accent}40`, borderWidth: 1 }}>
+                                {tag}
+                              </span>
+                            )) : (
+                              <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Unlabeled</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                          <Badge variant={project.status === 'completed' ? 'success' : 'info'} className="!py-0 !px-1.5 !text-[8px]">
+                            {project.status || 'Active'}
+                          </Badge>
+                          <button
+                            onClick={e => toggleStar(e, project)}
+                            className="p-1 rounded-lg transition-all hover:scale-110"
+                            title={project.starred ? 'Unstar' : 'Star project'}
+                          >
+                            <Star
+                              size={13}
+                              className={project.starred ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-text-muted)] hover:text-amber-400'}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Progress */}
+                      <div className="space-y-1 mt-auto">
+                        <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                          <span>Progress</span>
+                          <span style={{ color: accent }}>{project.progress || 0}%</span>
+                        </div>
+                        <ProgressBar progress={project.progress || 0} className="h-1" style={{ '--progress-color': accent }} />
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)] border-dashed">
+                        <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                          {project.totalTasks || 0} Tasks
+                        </span>
+                        {project.starred && (
+                          <span className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: 'rgb(251 191 36)' }}>
+                            <Star size={9} className="fill-amber-400" /> Starred
                           </span>
-                        )) : (
-                          <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Unlabeled</span>
                         )}
                       </div>
                     </div>
-                    <Badge variant={project.status === 'completed' ? 'success' : 'info'} className="!py-0 !px-1.5 !text-[8px]">
-                      {project.status || 'Active'}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1 mt-auto">
-                    <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                      <span>Velocity</span>
-                      <span className="text-[var(--color-text-primary)]">{project.progress || 0}%</span>
-                    </div>
-                    <ProgressBar progress={project.progress || 0} className="h-1" />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)] border-dashed">
-                    <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
-                       {project.tasksCount || 0} Active Nodes
-                    </span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <Button variant="ghost" size="xs" className="!p-1">
-                         <Edit2 size={10} />
-                       </Button>
-                       <Button variant="ghost" size="xs" className="!p-1">
-                         <ExternalLink size={10} />
-                       </Button>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
+                  </Card>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
 
           {filteredProjects.length === 0 && (
             <div className="col-span-full py-20 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
               <Briefcase size={32} className="mx-auto text-[var(--color-text-muted)] mb-3 opacity-20" />
-              <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No matching execution tracks</p>
+              <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No projects found</p>
             </div>
           )}
         </div>

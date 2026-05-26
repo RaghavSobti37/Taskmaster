@@ -353,6 +353,19 @@ const OutletSidebar = () => {
               />
             </div>
           )}
+
+          {(user?.role === 'admin' || user?.role === 'ops') && (
+            <div className="space-y-1">
+              <NavItem
+                to="/finance"
+                icon={FileText}
+                label="Finance"
+                collapsed={false}
+                isMobile={isMobile}
+                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
+              />
+            </div>
+          )}
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">

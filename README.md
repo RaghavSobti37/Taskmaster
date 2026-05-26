@@ -108,7 +108,14 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.20**
+- Current: **1.7.22**
+
+## [2026-05-26] Version 1.7.22
+- Optimized Finance Portal UI/UX to silence notification toast spam using header-based suppression (`x-skip-toast`).
+- Resolved input lag and cursor reset issues on metadata editing panels via `editForm` local state synchronization and onBlur update triggers.
+- Replaced absolute overlay preview navigation with a styled top navbar to align with global UI standards.
+- Integrated `pdf-parse` and `tesseract.js` OCR/OMR processing on backend for document details extraction.
+- Imported historical Basecamp invoices and receipts into database collections.
 
 ## [2026-05-26] Version 1.7.21
 - Fixed email signature rendering issues using imported base64 assets.

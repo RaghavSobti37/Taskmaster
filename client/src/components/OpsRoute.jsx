@@ -7,7 +7,7 @@ const OpsRoute = () => {
 
   if (loading) return null;
 
-  const hasAccess = user?.role === 'admin' || user?.role === 'ops';
+  const hasAccess = user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations';
   return hasAccess ? <Outlet /> : <Navigate to="/dashboard" replace />;
 };
 

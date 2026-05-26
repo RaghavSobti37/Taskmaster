@@ -21,8 +21,15 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-bg-border)]">
-            {tasks.map(task => (
-              <tr key={task._id} onClick={(e) => { if (!e.target.closest('button')) onDetail(task); }} className={`cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors group ${task.status === 'done' ? 'opacity-60' : ''}`}>
+            {tasks.map(task => {
+              const accent = task.color || '#3b82f6';
+              return (
+              <tr
+                key={task._id}
+                onClick={(e) => { if (!e.target.closest('button')) onDetail(task); }}
+                className={`cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors group ${task.status === 'done' ? 'opacity-60' : ''}`}
+                style={{ borderLeft: `3px solid ${accent}` }}
+              >
                 <td className="px-6 py-4">
                   <button 
                     onClick={() => onUpdate(task._id, { status: task.status === 'done' ? 'todo' : 'done', progress: task.status === 'done' ? 0 : 100 })}
@@ -89,7 +96,8 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {tasks.length === 0 && (
               <tr>
                 <td colSpan="6" className="px-6 py-20 text-center text-[var(--color-text-muted)] italic">

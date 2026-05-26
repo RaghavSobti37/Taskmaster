@@ -120,7 +120,7 @@ const ProjectDetail = () => {
     { id: 'assets', label: 'Project Files' },
   ];
 
-  if (user?.role === 'admin' || user?.role === 'ops') {
+  if (user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') {
     tabs.push({ id: 'finance', label: 'Finance' });
   }
 
@@ -135,15 +135,14 @@ const ProjectDetail = () => {
           <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2">
             <ArrowLeft size={14} />
           </Button>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color || 'var(--color-action-primary)' }} />
-              <h1 className="text-lg font-bold tracking-tight uppercase">{project.name}</h1>
+          <div className="flex flex-col" style={{ borderLeft: `3px solid ${project.color || 'var(--color-action-primary)'}`, paddingLeft: '10px' }}>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold tracking-tight uppercase">{project.name}</h1>
+              </div>
+              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
+              </span>
             </div>
-            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-              Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
-            </span>
-          </div>
         </div>
 
         <div className="flex items-center gap-2">

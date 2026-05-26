@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 exports.createProject = async (req, res) => {
   try {
-    const { name, description, tags, members } = req.body;
+    const { name, description, tags, members, color, starred } = req.body;
     
     const providedMembers = members?.map(m => m.userId) || [];
     const providedRoles = members?.map(m => ({
@@ -32,6 +32,8 @@ exports.createProject = async (req, res) => {
       name,
       description,
       tags,
+      color: color || '#3b82f6',
+      starred: starred || false,
       outletId: req.user.currentOutletId || 'main',
       owner: req.user._id,
       members: providedMembers,
@@ -144,7 +146,7 @@ exports.updateProject = async (req, res) => {
     }
 
     // SECURITY: Whitelist allowed update fields (prevent owner/member injection)
-    const allowedFields = ['name', 'description', 'tags', 'members', 'memberRoles', 'status'];
+    const allowedFields = ['name', 'description', 'tags', 'members', 'memberRoles', 'status', 'color', 'starred'];
     const sanitizedUpdate = {};
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {

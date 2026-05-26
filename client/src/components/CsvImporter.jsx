@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Papa from 'papaparse';
 import axios from 'axios';
 import { Upload, CheckCircle2, ArrowRight, RefreshCw, Database, Layers } from 'lucide-react';
-import { Card, Button, Badge } from './ui';
+import { Card, Button, Badge } from './ui/primitives';
 
 export default function CsvImporter({ onImportComplete }) {
   const [csvData, setCsvData] = useState([]);

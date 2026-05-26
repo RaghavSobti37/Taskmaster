@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle2, AlertCircle, Clock, TrendingUp } from 'lucide-react';
 import { StatCard, Skeleton } from '../ui';
 
-const StatCards = ({ metrics = {}, loading = false }) => {
+const StatCards = ({ metrics = {}, loading = false, onCardClick = () => {} }) => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -31,6 +31,7 @@ const StatCards = ({ metrics = {}, loading = false }) => {
         icon={AlertCircle} 
         variant="rose" 
         info="Important work items that need your attention immediately." 
+        onClick={() => onCardClick('urgent')}
       />
       <StatCard 
         label="Overdue Items" 
@@ -38,6 +39,7 @@ const StatCards = ({ metrics = {}, loading = false }) => {
         icon={Clock} 
         variant="apricot" 
         info="Tasks that have passed their planned completion date." 
+        onClick={() => onCardClick('overdue')}
       />
       <StatCard 
         label="Focus Time Today" 

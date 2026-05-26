@@ -7,6 +7,11 @@ const mailCampaignSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   content: { type: String, required: true },
   senderProfileId: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile' },
+  attachments: [{
+    filename: String,
+    content: String,
+    contentType: String
+  }],
   status: { type: String, enum: ['Draft', 'Sending', 'Completed', 'Failed'], default: 'Draft' },
   recipients: [{
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
@@ -29,6 +34,7 @@ const mailCampaignSchema = new mongoose.Schema({
     type: Map,
     of: { opens: { type: Number, default: 0 }, clicks: { type: Number, default: 0 } }
   },
+  removeUnsubscribe: { type: Boolean, default: false },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 

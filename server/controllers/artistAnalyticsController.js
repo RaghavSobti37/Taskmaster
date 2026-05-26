@@ -340,11 +340,14 @@ exports.addTrackedVideo = async (req, res) => {
 
     let videoId = '';
     try {
-      if (url.includes('v=')) {
+      if (url.includes('youtube.com/shorts/')) {
+        videoId = url.split('shorts/')[1].split('?')[0];
+      } else if (url.includes('v=')) {
         videoId = url.split('v=')[1].split('&')[0];
       } else if (url.includes('youtu.be/')) {
         videoId = url.split('youtu.be/')[1].split('?')[0];
       } else {
+        // Assume it's a raw video ID if it's alphanumeric and length 11
         videoId = url.trim();
       }
     } catch (e) {

@@ -13,16 +13,14 @@ const getRedisUrl = () => {
       process.env.REDIS_URL.includes('localhost'))
   ) {
     try {
-      const { execFileSync } = require('child_process');
-      const wslIp = execFileSync('wsl', ['hostname', '-I'])
-        .toString()
-        .trim()
-        .split(' ')[0];
-      if (wslIp) {
-        redisUrl = `redis://${wslIp}:6379`;
+      const { execSync } = require('child_process');
+      const wslIps = execSync('wsl hostname -I', { encoding: 'utf8' }).trim();
+      const firstIp = wslIps.split(' ')[0].trim();
+      if (firstIp) {
+        redisUrl = `redis://${firstIp}:6379`;
       }
     } catch (err) {
-      // Silent fallback — WSL not available
+      // Silent fallback
     }
   }
 

@@ -44,7 +44,6 @@ const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
 const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
 const FeaturesPage = lazyWithRetry(() => import('./pages/marketing/FeaturesPage'));
-const TodoPage = lazyWithRetry(() => import('./pages/productivity/TodoPage'));
 const GoogleSuccessPage = lazyWithRetry(() => import('./pages/auth/GoogleSuccessPage'));
 const ArtistsCollection = lazyWithRetry(() => import('./pages/artists/ArtistsCollection'));
 const ArtistDetail = lazyWithRetry(() => import('./pages/artists/ArtistDetail'));
@@ -113,7 +112,6 @@ function App() {
               <Route path="/leads" element={<LeadsPage />} />
               <Route path="/followups" element={<FollowupsPage />} />
               <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/todo" element={<TodoPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
               
               <Route element={<AdminRoute />}>

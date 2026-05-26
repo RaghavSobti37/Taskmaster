@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CKDropdown from '../../components/ui/CKDropdown';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
+import { Plus, UserPlus, X, Briefcase, Tag, Hash, Palette } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
 
 const ProjectCreate = () => {
@@ -12,10 +12,24 @@ const ProjectCreate = () => {
   const [desc, setDesc] = useState('');
   const [tags, setTags] = useState([]);
   const [customTag, setCustomTag] = useState('');
+  const [color, setColor] = useState('#3b82f6');
   const [users, setUsers] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const PROJECT_COLORS = [
+    '#3b82f6', // blue
+    '#8b5cf6', // violet
+    '#ec4899', // pink
+    '#ef4444', // red
+    '#f97316', // orange
+    '#eab308', // yellow
+    '#22c55e', // green
+    '#14b8a6', // teal
+    '#06b6d4', // cyan
+    '#64748b', // slate
+  ];
 
   const predefinedTags = [
     { value: 'PR', label: 'PR' },
@@ -70,6 +84,7 @@ const ProjectCreate = () => {
         name, 
         description: desc, 
         tags: tags,
+        color,
         members: members.map(m => ({ userId: m.userId, role: m.role }))
       });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -146,6 +161,23 @@ const ProjectCreate = () => {
                 placeholder="+ Add Custom Tag"
                 className="w-full mt-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-transparent border-b border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)] outline-none"
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1 flex items-center gap-1.5"><Palette size={12} /> Project Color</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {PROJECT_COLORS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-7 h-7 rounded-full transition-all duration-200 ${color === c ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]' : 'hover:scale-110'}`}
+                  style={{ backgroundColor: c }}
+                  title={c}
+                />
+              ))}
+              <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1" style={{ color }}>{color}</span>
             </div>
           </div>
 

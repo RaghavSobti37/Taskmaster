@@ -238,6 +238,11 @@ if (process.env.NODE_ENV === 'production') {
 const errorHandler = require('./middleware/errorMiddleware');
 app.use(errorHandler);
 
+const backupJob = require('./jobs/backupJob');
+
+// Note: Only start this on master processes if using clustering
+backupJob.start();
+
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

@@ -1,6 +1,7 @@
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
+const logger = require('../utils/logger');
 
 exports.getCumulativeMetrics = async (req, res) => {
   try {
@@ -67,7 +68,7 @@ exports.getCumulativeMetrics = async (req, res) => {
 
     res.status(200).json({ aggregateData, dynamicBreakdown });
   } catch (error) {
-    console.error('Cumulative metrics error:', error);
+    logger.error('analyticsController', 'Cumulative metrics ', { error: error.message || error });
     res.status(500).json({ error: error.message });
   }
 };
@@ -116,7 +117,7 @@ exports.getLocationLeads = async (req, res) => {
 
     res.status(200).json(matchedLeads);
   } catch (error) {
-    console.error('Get location leads error:', error);
+    logger.error('analyticsController', 'Get location leads ', { error: error.message || error });
     res.status(500).json({ error: error.message });
   }
 };

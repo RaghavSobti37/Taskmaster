@@ -4,6 +4,7 @@ const User = require('../models/User');
 const CRMAudit = require('../models/CRMAudit');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
+const logger = require('../utils/logger');
 
 /**
   * Sync Call Bookings from HolySheet BookedCalls sheet
@@ -17,7 +18,7 @@ exports.syncBookings = async (req, res) => {
     try {
       rows = await holySheet.getRowsCustomKey(sheetName, apiKey);
     } catch (err) {
-      console.warn('[HOLYSHEET SYNC WARN]', err.message);
+      logger.warn('HolySheet Sync', err.message);
       // Return success with empty results if any HolySheet error occurs (e.g. unlinked sheet)
       return res.json({
         success: true,
@@ -115,7 +116,7 @@ exports.syncBookings = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[SYNC ERROR]', error.message);
+    logger.error('Sync', error.message);
     res.status(500).json({ success: false, error: error.message || 'Sync failed' });
   }
 };

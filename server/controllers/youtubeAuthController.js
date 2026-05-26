@@ -9,6 +9,7 @@
 
 const axios = require('axios');
 const Artist = require('../models/Artist');
+const logger = require('../utils/logger');
 
 const CLIENT_ID     = process.env.YOUTUBE_CLIENT_ID?.replace(/['"]/g, '').trim();
 const CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET?.replace(/['"]/g, '').trim();
@@ -53,7 +54,7 @@ exports.youTubeAuthCallback = async (req, res) => {
   const redirectUri = getRedirectUri(req);
 
   if (error) {
-    console.error('❌ [YouTube OAuth] Error:', error);
+    logger.error('YouTube OAuth', '❌ [YouTube OAuth] ', { error: error.message || error });
     return res.redirect(`${CLIENT_URL}/artists/${artistId}?youtube_error=${error}`);
   }
   if (!code || !artistId) {
@@ -64,7 +65,7 @@ exports.youTubeAuthCallback = async (req, res) => {
     const artist = await Artist.findById(artistId);
     if (!artist) return res.redirect(`${CLIENT_URL}/artists?youtube_error=artist_not_found`);
 
-    console.log(`⚡ [YouTube OAuth] Exchanging code for tokens for artist: ${artist.name}`);
+    logger.info('YouTube OAuth', '⚡ [YouTube OAuth] Exchanging code for tokens for artist: ${artist.name}');
 
     // Exchange code for tokens
     const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
@@ -88,8 +89,8 @@ exports.youTubeAuthCallback = async (req, res) => {
 
     const channelId = channel.id;
     const channelTitle = channel.snippet?.title;
-    console.log(`✅ [YouTube OAuth] Connected channel: ${channelTitle} (${channelId})`);
-    console.log(`   Subscribers: ${channel.statistics?.subscriberCount} | Videos: ${channel.statistics?.videoCount}`);
+    logger.info('YouTube OAuth', '✅ [YouTube OAuth] Connected channel: ${channelTitle} (${channelId})');
+    logger.info('youtubeAuthController', '   Subscribers: ${channel.statistics?.subscriberCount} | Videos: ${channel.statistics?.videoCount}');
 
     // Save to artist
     if (!artist.oauthCredentials) artist.oauthCredentials = {};
@@ -106,7 +107,7 @@ exports.youTubeAuthCallback = async (req, res) => {
     artist.markModified('oauthCredentials');
     await artist.save();
 
-    console.log(`🎉 [YouTube OAuth] Artist ${artist.name} YouTube connected! Triggering sync...`);
+    logger.info('YouTube OAuth', '🎉 [YouTube OAuth] Artist ${artist.name} YouTube connected! Triggering sync...');
 
     // Auto-sync
     try {
@@ -116,12 +117,12 @@ exports.youTubeAuthCallback = async (req, res) => {
         { json: () => {}, status: () => ({ json: () => {} }) }
       );
     } catch (syncErr) {
-      console.warn('[YouTube OAuth] Auto-sync warning:', syncErr.message);
+      logger.warn('YouTube OAuth', 'Auto-sync warning', { error: syncErr.message });
     }
 
     res.redirect(`${CLIENT_URL}/artists/${artistId}?youtube_connected=true`);
   } catch (err) {
-    console.error('❌ [YouTube OAuth] Error:', err?.response?.data || err.message);
+    logger.error('YouTube OAuth', 'Error', { error: err?.response?.data || err.message });
     res.redirect(`${CLIENT_URL}/artists/${artistId}?youtube_error=${encodeURIComponent(err.message)}`);
   }
 };

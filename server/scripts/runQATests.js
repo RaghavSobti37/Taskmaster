@@ -397,6 +397,58 @@ async function runQATests() {
     }, tc6Start);
   }
 
+  // --- TEST CASE 7: Gamification & Missions Validation ---
+  console.log('\n--- Test Case 7: Gamification & Missions ---');
+  const tc7Start = Date.now();
+  try {
+    const GamificationService = require('../services/gamificationService');
+    const DailyMission = require('../models/DailyMission');
+    const Task = require('../models/Task');
+    
+    // Clear old missions
+    await DailyMission.deleteMany({ userId: qaUser._id });
+    
+    // Generate missions
+    await GamificationService.generateDailyMissions(qaUser._id);
+    const missions = await DailyMission.find({ userId: qaUser._id, actionType: 'COMPLETE_TASK' });
+    
+    if (missions.length > 0) {
+      const initialExp = qaUser.exp || 0;
+      // Simulate task complete
+      await GamificationService.progressMission(qaUser._id, 'COMPLETE_TASK', missions[0].targetCount);
+      
+      const updatedUser = await User.findById(qaUser._id);
+      const updatedMission = await DailyMission.findById(missions[0]._id);
+      
+      if (updatedMission.completed && updatedUser.exp > initialExp) {
+        await runLog('TEST_ASSERTION', 'Gamification', 'SUCCESS', {
+          testCase: 'Gamification & Mission Completion',
+          message: 'Missions generated, progressed, and XP awarded successfully.',
+          expGain: updatedUser.exp - initialExp
+        }, tc7Start);
+      } else {
+        await runLog('TEST_ASSERTION', 'Gamification', 'BUG_DETECTED', {
+          testCase: 'Gamification & Mission Completion',
+          message: 'Mission progress did not award XP or mark as completed.',
+          missionCompleted: updatedMission.completed,
+          expBefore: initialExp,
+          expAfter: updatedUser.exp
+        }, tc7Start);
+      }
+    } else {
+      await runLog('TEST_ASSERTION', 'Gamification', 'BUG_DETECTED', {
+        testCase: 'Gamification & Mission Completion',
+        message: 'No Daily Missions were generated.',
+      }, tc7Start);
+    }
+  } catch (err) {
+    await runLog('TEST_ASSERTION', 'Gamification', 'BUG_DETECTED', {
+      testCase: 'Gamification & Mission Completion',
+      message: 'Exception in Gamification test.',
+      errorStack: err.stack || err.message
+    }, tc7Start);
+  }
+
   console.log('\n🏁 [QA_ENGINEER] QA test runner finished. Disconnecting from database...');
   await mongoose.disconnect();
   console.log('👋 Database disconnected.');

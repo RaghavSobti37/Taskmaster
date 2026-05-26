@@ -7,6 +7,7 @@ const CRMImport = require('../models/CRMImport');
 const CRMConfig = require('../models/CRMConfig');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
 const followupCache = require('../services/followupCache');
+const logger = require('../utils/logger');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -164,7 +165,7 @@ exports.getLeads = async (req, res) => {
       pages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error('Error in getLeads:', error);
+    logger.error('crmController', 'in getLeads:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch leads' });
   }
 };
@@ -195,7 +196,7 @@ exports.createLead = async (req, res) => {
     const lead = await Lead.create(leadData);
     res.status(201).json(lead);
   } catch (error) {
-    console.error('Create lead error:', error);
+    logger.error('crmController', 'Create lead ', { error: error.message || error });
     res.status(400).json({ error: 'Failed to create lead' });
   }
 };
@@ -220,7 +221,7 @@ exports.updateLead = async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
     res.json(lead);
   } catch (error) {
-    console.error('Update lead error:', error);
+    logger.error('crmController', 'Update lead ', { error: error.message || error });
     res.status(400).json({ error: 'Failed to update lead' });
   }
 };
@@ -278,7 +279,7 @@ exports.getAuditLogs = async (req, res) => {
     const populated = await populateAuditUsers(logs);
     res.json(populated);
   } catch (error) {
-    console.error('Failed to fetch lead audit logs:', error);
+    logger.error('crmController', 'Failed to fetch lead audit logs:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };
@@ -310,7 +311,7 @@ exports.getAllAuditLogs = async (req, res) => {
       pages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error('Failed to fetch all audit logs:', error);
+    logger.error('crmController', 'Failed to fetch all audit logs:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };
@@ -500,7 +501,7 @@ exports.uploadLeads = async (req, res) => {
         try {
           await processBatch(rowsToProcess);
         } catch (err) {
-          console.error('Batch processing error:', err);
+          logger.error('crmController', 'Batch processing ', { error: err.message || err });
         } finally {
           stream.resume();
         }
@@ -512,7 +513,7 @@ exports.uploadLeads = async (req, res) => {
         try {
           await processBatch(batch);
         } catch (err) {
-          console.error('Final batch processing error:', err);
+          logger.error('crmController', 'Final batch processing ', { error: err.message || err });
         }
       }
 
@@ -601,7 +602,7 @@ exports.exportLeads = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
     res.status(200).send(csv);
   } catch (error) {
-    console.error('Export error:', error);
+    logger.error('crmController', 'Export ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to export leads' });
   }
 };
@@ -653,7 +654,7 @@ exports.getCRMStats = async (req, res) => {
       totalReps: result.totalReps[0]?.count || 0
     });
   } catch (error) {
-    console.error('CRM Stats Error:', error);
+    logger.error('crmController', 'CRM Stats ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch CRM stats' });
   }
 };
@@ -717,7 +718,7 @@ exports.addNote = async (req, res) => {
 
     res.json(lead);
   } catch (error) {
-    console.error('Add note audit error:', error);
+    logger.error('crmController', 'Add note audit ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to add note' });
   }
 };
@@ -814,7 +815,7 @@ exports.getRepSummary = async (req, res) => {
     ]);
     res.json(summary);
   } catch (error) {
-    console.error('Rep summary error:', error);
+    logger.error('crmController', 'Rep summary ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch rep summary' });
   }
 };
@@ -831,7 +832,7 @@ exports.cleanupTestData = async (req, res) => {
     const result = await Lead.deleteMany(filter);
     res.json({ message: `Purged ${result.deletedCount} testing/invalid records.` });
   } catch (error) {
-    console.error('Cleanup test data error:', error);
+    logger.error('crmController', 'Cleanup test data ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to cleanup test data' });
   }
 };
@@ -854,7 +855,7 @@ exports.deleteLead = async (req, res) => {
     await Lead.findByIdAndDelete(req.params.id);
     res.json({ message: `Lead "${lead.name}" permanently deleted.` });
   } catch (error) {
-    console.error('Delete lead error:', error);
+    logger.error('crmController', 'Delete lead ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to delete lead' });
   }
 };
@@ -867,7 +868,7 @@ exports.purgeAuditLogs = async (req, res) => {
     await CRMAudit.deleteMany({});
     res.json({ message: 'All lead change audit logs have been purged.' });
   } catch (error) {
-    console.error('Failed to purge lead audits:', error);
+    logger.error('crmController', 'Failed to purge lead audits:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to purge audit logs' });
   }
 };

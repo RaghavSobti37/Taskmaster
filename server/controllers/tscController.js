@@ -4,6 +4,7 @@ const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
 const fs = require('fs');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
+const logger = require('../utils/logger');
 
 exports.getTscData = async (req, res) => {
   try {
@@ -121,7 +122,7 @@ exports.getTscData = async (req, res) => {
       pages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error('Error fetching TscData:', error);
+    logger.error('tscController', 'fetching TscData:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch TSC data' });
   }
 };
@@ -305,7 +306,7 @@ exports.importTscData = async (req, res) => {
         try { fs.unlinkSync(tempPath); } catch(e) {}
         res.status(201).json({ message: `${tscDocs.length} records processed.` });
       } catch (error) {
-        console.error('Import error:', error);
+        logger.error('tscController', 'Import ', { error: error.message || error });
         res.status(500).json({ error: 'Failed to import TSC data' });
       }
     });

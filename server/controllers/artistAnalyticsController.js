@@ -2,6 +2,7 @@ const axios = require('axios');
 const Artist = require('../models/Artist');
 const { fetchLiveAnalytics } = require('../services/analyticsService');
 const { validateMetric } = require('../utils/nullishValidator');
+const logger = require('../utils/logger');
 
 exports.syncArtistStats = async (req, res) => {
   try {
@@ -29,7 +30,7 @@ exports.syncArtistStats = async (req, res) => {
       spotifyGenres = artistInfo?.genres || [];
       spotifyImage = artistInfo?.images?.[0]?.url || null;
 
-      console.log(`🎵 [Spotify Sync] Artist: ${artistInfo?.name} | Image: ${spotifyImage ? 'yes' : 'no'} | Followers: ${spotifyFollowers ?? 'quota-blocked'} | Popularity: ${spotifyPopularity ?? 'quota-blocked'}`);
+      logger.info('Spotify Sync', `🎵 [Spotify Sync] Artist: ${artistInfo?.name} | Image: ${spotifyImage ? 'yes' : 'no'} | Followers: ${spotifyFollowers ?? 'quota-blocked'} | Popularity: ${spotifyPopularity ?? 'quota-blocked'}`);
 
       // Tracks pulled from albums (top-tracks endpoint is quota-blocked in dev mode)
       liveTracks = serviceTrackss || [];
@@ -47,7 +48,7 @@ exports.syncArtistStats = async (req, res) => {
 
       liveRelatedArtists = relatedArtists || [];
 
-      console.log(`🎵 [Spotify Sync] Tracks: ${liveTracks.length} | Releases: ${liveDiscography.length} | Related: ${liveRelatedArtists.length}`);
+      logger.info('Spotify Sync', '🎵 [Spotify Sync] Tracks: ${liveTracks.length} | Releases: ${liveDiscography.length} | Related: ${liveRelatedArtists.length}');
     }
 
     // YouTube data processing
@@ -242,7 +243,7 @@ exports.syncArtistStats = async (req, res) => {
 
     res.json(updated || artist);
   } catch (err) {
-    console.error('Error in syncArtistStats:', err);
+    logger.error('artistAnalyticsController', 'in syncArtistStats:', { error: err.message || err });
     res.status(500).json({ message: err.message });
   }
 };
@@ -326,7 +327,7 @@ exports.getPlatformAnalytics = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Error in getPlatformAnalytics:', err);
+    logger.error('artistAnalyticsController', 'in getPlatformAnalytics:', { error: err.message || err });
     res.status(500).json({ message: err.message });
   }
 };
@@ -375,7 +376,7 @@ exports.addTrackedVideo = async (req, res) => {
     // Trigger sync stats to immediately pull data
     return exports.syncArtistStats(req, res);
   } catch (err) {
-    console.error('Error in addTrackedVideo:', err);
+    logger.error('artistAnalyticsController', 'in addTrackedVideo:', { error: err.message || err });
     res.status(500).json({ message: err.message });
   }
 };
@@ -397,14 +398,14 @@ exports.metaMentionsWebhook = async (req, res) => {
       body.entry?.forEach(entry => {
         entry.changes?.forEach(change => {
           if (change.field === 'mentions') {
-            console.log('Webhook mention received for media_id:', change.value?.media_id);
+            logger.info('Meta Webhook', 'Webhook mention received', { mediaId: change.value?.media_id });
           }
         });
       });
     }
     res.status(200).send('EVENT_RECEIVED');
   } catch (err) {
-    console.error('Error in metaMentionsWebhook:', err);
+    logger.error('artistAnalyticsController', 'in metaMentionsWebhook:', { error: err.message || err });
     res.status(500).send('SERVER_ERROR');
   }
 };
@@ -425,7 +426,7 @@ exports.enableInstagramWebhooks = async (req, res) => {
       return res.status(400).json({ message: 'Missing Meta Account ID or access token in configuration' });
     }
 
-    console.log(`⚡ [Meta API] Enabling webhook subscriptions for account ID: ${accountId} on fields: ${fields}`);
+    logger.info('Meta API', '⚡ [Meta API] Enabling webhook subscriptions for account ID: ${accountId} on fields: ${fields}');
 
     const response = await axios.post(
       `https://graph.instagram.com/v20.0/${accountId}/subscribed_apps`,
@@ -446,7 +447,7 @@ exports.enableInstagramWebhooks = async (req, res) => {
       fields: fields.split(',')
     });
   } catch (err) {
-    console.error('❌ Error enabling Instagram webhooks:', err?.response?.data || err.message);
+    logger.error('Meta Webhook', 'Error enabling Instagram webhooks', { error: err?.response?.data || err.message });
     res.status(500).json({
       success: false,
       message: err?.response?.data?.error?.message || err.message,
@@ -474,7 +475,7 @@ exports.metaOAuthCallback = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Meta credentials not configured in environment variables' });
     }
 
-    console.log(`⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...`);
+    logger.info('OAuth', '⚡ [OAuth] Exchanging Meta code for short-lived token for artist ${artist.name} (Client ID: ${clientId})...');
 
     // 1. Exchange auth code for short-lived token
     const tokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
@@ -489,7 +490,7 @@ exports.metaOAuthCallback = async (req, res) => {
     const shortToken = tokenRes.data.access_token;
     if (!shortToken) throw new Error("Failed to retrieve short-lived access token from Meta");
 
-    console.log(`⚡ [OAuth] Exchanging short-lived token for 60-day permanent token...`);
+    logger.info('OAuth', '⚡ [OAuth] Exchanging short-lived token for 60-day permanent token...');
 
     // 2. Exchange for long-lived user token
     const longTokenRes = await axios.get(`https://graph.facebook.com/v20.0/oauth/access_token`, {
@@ -503,7 +504,7 @@ exports.metaOAuthCallback = async (req, res) => {
 
     const longToken = longTokenRes.data.access_token || shortToken;
 
-    console.log(`⚡ [OAuth] Fetching connected Facebook Pages for user...`);
+    logger.info('OAuth', '⚡ [OAuth] Fetching connected Facebook Pages for user...');
 
     // 3. Fetch connected Facebook pages
     const accountsRes = await axios.get(`https://graph.facebook.com/v20.0/me/accounts`, {
@@ -541,7 +542,7 @@ exports.metaOAuthCallback = async (req, res) => {
             igName = igDetail.data?.name || '';
             igProfilePicture = igDetail.data?.profile_picture_url || '';
           } catch (igErr) {
-            console.warn(`[OAuth] Fetching IG profile for ${igAccountId} failed:`, igErr.message);
+            logger.warn('OAuth', `Fetching IG profile for ${igAccountId} failed:`, { detail: igErr.message });
           }
         }
 
@@ -554,7 +555,7 @@ exports.metaOAuthCallback = async (req, res) => {
           igProfilePicture
         });
       } catch (e) {
-        console.warn(`[OAuth] Inspecting page ${page.id} failed:`, e?.response?.data || e.message);
+        logger.warn('OAuth', `Inspecting page ${page.id} failed:`, { detail: e?.response?.data || e.message });
       }
     }
 
@@ -580,14 +581,14 @@ exports.metaOAuthCallback = async (req, res) => {
       { new: true }
     );
 
-    console.log(`🎉 [OAuth] ${updatedArtist?.name || 'Artist'} Meta credentials updated successfully! Triggering live stats sync...`);
+    logger.info('OAuth', `🎉 [OAuth] ${updatedArtist?.name || 'Artist'} Meta credentials updated successfully! Triggering live stats sync...`);
 
     // 6. Auto-trigger live analytics sync
     try {
       req.params.id = id;
       await exports.syncArtistStats(req, { json: () => {}, status: () => ({ json: () => {} }) });
     } catch(syncErr) {
-      console.error('[OAuth] Auto-sync stats after login warning:', syncErr.message);
+      logger.warn('OAuth', 'Auto-sync stats after login warning', { error: syncErr.message });
     }
 
     return res.status(200).json({
@@ -600,7 +601,7 @@ exports.metaOAuthCallback = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ Error in metaOAuthCallback:', err?.response?.data || err.message);
+    logger.error('OAuth', 'Error in metaOAuthCallback', { error: err?.response?.data || err.message });
     res.status(500).json({
       success: false,
       message: err?.response?.data?.error?.message || err.message,

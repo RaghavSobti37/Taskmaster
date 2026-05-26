@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
+const logger = require('../utils/logger');
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -117,7 +118,7 @@ router.post('/run-qa', protect, async (req, res) => {
 
     child.on('close', (code) => {
       if (code !== 0) {
-        console.error('QA Test execution failed with code', code);
+        logger.error('QA Tests', `Execution failed with code ${code}`);
         return res.status(500).json({ error: 'QA Test failed with code ' + code, stderr, stdout });
       }
       res.json({ message: 'QA Test completed successfully', stdout });

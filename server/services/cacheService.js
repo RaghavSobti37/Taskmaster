@@ -1,16 +1,7 @@
 const Redis = require('ioredis');
+const { getRedisUrl } = require('../utils/wslRedis');
 
-let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-// Windows WSL fallback
-if (process.platform === 'win32' && (!process.env.REDIS_URL || process.env.REDIS_URL.includes('127.0.0.1') || process.env.REDIS_URL.includes('localhost'))) {
-  try {
-    const { execFileSync } = require('child_process');
-    const wslIp = execFileSync('wsl', ['hostname', '-I']).toString().trim().split(' ')[0];
-    if (wslIp) {
-      redisUrl = `redis://${wslIp}:6379`;
-    }
-  } catch (e) {}
-}
+const redisUrl = getRedisUrl();
 
 const redis = new Redis(redisUrl, {
   retryStrategy: (times) => {

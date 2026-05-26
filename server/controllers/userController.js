@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const { isAfter, subMinutes } = require('date-fns');
+const logger = require('../utils/logger');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
@@ -50,7 +51,7 @@ exports.getTeam = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    logger.error('User', 'getTeam error', { error: err.message });
     res.status(500).json({ error: err.message });
   }
 };

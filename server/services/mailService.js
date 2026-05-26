@@ -7,6 +7,7 @@ const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const TscData = require('../models/TscData');
+const logger = require('../utils/logger');
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const globalResend = resendApiKey && resendApiKey !== 'mock_resend_api_key' ? new Resend(resendApiKey) : null;
@@ -87,7 +88,7 @@ const updateEmailTags = async (email, tag, status) => {
         await newLead.save();
         foundInLead = true;
       } catch (err) {
-        console.error('Error auto-creating lead from TSC sheet:', err);
+        logger.error('Mail Service', 'Error auto-creating lead from TSC sheet', { error: err.message });
       }
     }
   }
@@ -139,7 +140,7 @@ const sendCampaign = async (campaignId) => {
       // Check if lead is unsubscribed
       const leadDoc = await Lead.findOne({ email: recipient.email.toLowerCase().trim() });
       if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed')) {
-        console.log(`[Campaign Dispatch] Skipping unsubscribed recipient: ${recipient.email}`);
+        logger.info('Campaign Dispatch', `Skipping unsubscribed recipient: ${recipient.email}`);
         recipient.status = 'Unsubscribed';
         recipient.error = 'User Unsubscribed';
         campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
@@ -153,7 +154,7 @@ const sendCampaign = async (campaignId) => {
           const lockKey = `lock:campaign:${campaign._id}:${recipient.email.toLowerCase().trim()}`;
           const acquired = await redis.set(lockKey, 'locked', 'NX', 'EX', 10);
           if (!acquired) {
-            console.log(`[Idempotency] Duplicate request blocked for ${recipient.email}. Skipping double-send.`);
+            logger.info('Idempotency', `Duplicate request blocked for ${recipient.email}. Skipping double-send.`);
             continue;
           }
         }
@@ -214,7 +215,7 @@ const sendCampaign = async (campaignId) => {
         const info = await transporter.sendMail(mailOptions);
         messageIdStr = info.messageId;
       } else {
-        console.log(`[Campaign Simulation] Email simulated to ${recipient.email} - Subject: ${campaign.subject}`);
+        logger.info('Campaign Simulation', `Email simulated to ${recipient.email} - Subject: ${campaign.subject}`);
       }
 
       recipient.status = 'Sent';
@@ -230,7 +231,7 @@ const sendCampaign = async (campaignId) => {
         campaignId: campaign._id
       });
     } catch (err) {
-      console.error(`Failed to send to ${recipient.email}:`, err);
+      logger.error('Mail Service', `Failed to send to ${recipient.email}`, { error: err.message });
       recipient.status = 'Failed';
       recipient.error = err.message;
 
@@ -254,7 +255,7 @@ const scanBounces = async (profileId) => {
 
   // Ensure IMAP/SMTP credentials are present before connecting
   if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPass) {
-    console.log('[IMAP Scan] Missing SMTP/IMAP credentials. Skipping IMAP polling.');
+    logger.info('IMAP Scan', 'Missing SMTP/IMAP credentials. Skipping IMAP polling.');
     return [];
   }
 
@@ -405,7 +406,7 @@ const scanBounces = async (profileId) => {
 
     return campaignBounced;
   } catch (err) {
-    console.error('IMAP Scan Error:', err);
+    logger.error('IMAP Scan', 'IMAP Scan Error', { error: err.message });
     throw err;
   }
 };

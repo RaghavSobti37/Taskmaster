@@ -164,8 +164,11 @@ exports.updateTask = async (req, res, next) => {
     }
 
     let assigneesChanged = false;
-    if (updates.assignees && updates.assignees.join(',') !== (existing.assignees || []).join(',')) {
-      assigneesChanged = true;
+    if (updates.assignees) {
+      updates.assignees = updates.assignees.map(a => (typeof a === 'object' && a._id) ? a._id.toString() : a.toString());
+      if (updates.assignees.join(',') !== (existing.assignees || []).map(a => a.toString()).join(',')) {
+        assigneesChanged = true;
+      }
     }
 
     const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true, session })

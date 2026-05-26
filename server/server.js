@@ -246,3 +246,4 @@ const server = app.listen(PORT, () => {
   const notificationService = require('./services/notificationService');
   notificationService.init();
 });
+console.log('Server re-initialized after port release');

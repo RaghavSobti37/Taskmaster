@@ -59,10 +59,12 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    console.time('LoginProcess');
     const { email, password } = req.body; 
     
     // SECURITY: Block NoSQL Injection via Object Payloads
     if (typeof email !== 'string' || typeof password !== 'string') {
+      console.timeEnd('LoginProcess');
       return res.status(400).json({ error: 'Invalid credentials format' });
     }
 
@@ -70,19 +72,29 @@ exports.login = async (req, res) => {
       ? { email: email.toLowerCase() } 
       : { $or: [{ phone: email }, { name: email }] };
 
+    console.time('DBLookup');
     const user = await User.findOne(query).select('+password');
+    console.timeEnd('DBLookup');
 
-    if (user && (await user.comparePassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(401).json({ error: 'Invalid email or password' });
+    if (user) {
+      console.time('PasswordCheck');
+      const isMatch = await user.comparePassword(password);
+      console.timeEnd('PasswordCheck');
+
+      if (isMatch) {
+        console.timeEnd('LoginProcess');
+        return res.json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          token: generateToken(user._id)
+        });
+      }
     }
+    
+    console.timeEnd('LoginProcess');
+    res.status(401).json({ error: 'Invalid email or password' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

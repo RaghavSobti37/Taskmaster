@@ -39,7 +39,7 @@ const MainLayout = () => {
 
       {/* Mobile Toggle Button */}
       {!isMobileOpen && (
-        <button 
+        <button
           onClick={toggleMobileSidebar}
           className="fixed bottom-6 right-24 z-50 p-4 bg-[var(--color-action-primary)] text-white rounded-2xl shadow-2xl shadow-blue-500/40 lg:hidden active:scale-95 transition-transform"
         >
@@ -51,7 +51,7 @@ const MainLayout = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[180px]">
-        <main 
+        <main
           className="flex-1 p-6 lg:p-8"
         >
           <div className="w-full">

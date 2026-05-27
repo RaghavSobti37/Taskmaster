@@ -9,18 +9,25 @@
   --color-brand-cream: #ffecd1;
   --color-brand-pumpkin: #b74b02;
   --color-brand-teal: #083d3a;
-  
-  --color-bg-primary: #fcf8f2; /* Lighter Cream */
-  --color-bg-secondary: #f4eee3; /* Slightly darker cream */
+
+  --color-bg-primary: #fcf8f2;
+  /* Lighter Cream */
+  --color-bg-secondary: #f4eee3;
+  /* Slightly darker cream */
   --color-bg-surface: #ffffff;
   --color-bg-border: #e6dac6;
-  
-  --color-text-primary: #083d3a; /* Deep Teal */
-  --color-text-secondary: #08525f; /* Peacock */
-  --color-text-muted: #592314; /* Chestnut with some opacity maybe */
 
-  --color-action-primary: #126d5e; /* Sea Foam */
-  --color-action-hover: #083d3a; /* Deep Teal */
+  --color-text-primary: #083d3a;
+  /* Deep Teal */
+  --color-text-secondary: #08525f;
+  /* Peacock */
+  --color-text-muted: #592314;
+  /* Chestnut with some opacity maybe */
+
+  --color-action-primary: #126d5e;
+  /* Sea Foam */
+  --color-action-hover: #083d3a;
+  /* Deep Teal */
 
   /* Semantic Pastel System - Light */
   --color-pastel-mint-bg: #E6F4EA;
@@ -35,9 +42,12 @@
   --color-pastel-blue-text: #1967D2;
 
   /* Team Identifiers */
-  --color-team-dev: #F3E5F5; /* Lavender */
-  --color-team-mkt: #E8F5E9; /* Sage */
-  --color-team-sls: #E3F2FD; /* Sky Blue */
+  --color-team-dev: #F3E5F5;
+  /* Lavender */
+  --color-team-mkt: #E8F5E9;
+  /* Sage */
+  --color-team-sls: #E3F2FD;
+  /* Sky Blue */
 
   --font-interface: "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
@@ -55,18 +65,23 @@
   --foreground: #083d3a;
   --card: #ffffff;
   --border: #e6dac6;
-  --ring: rgba(18, 109, 94, 0.2); /* Sea Foam ring */
+  --ring: rgba(18, 109, 94, 0.2);
+  /* Sea Foam ring */
   color-scheme: light;
 }
 
 .dark {
   /* Scannable Pastel Precision - Core Tokens (Dark Mode) */
-  --color-bg-primary: #0B0F19; /* Base Background */
+  --color-bg-primary: #0B0F19;
+  /* Base Background */
   --color-bg-secondary: #0F1320;
-  --color-bg-surface: #111827; /* Card / Surface */
-  --color-bg-floating: #1F2937; /* Floating Elements */
-  --color-bg-border: #1F2937; /* Structural divider */
-  
+  --color-bg-surface: #111827;
+  /* Card / Surface */
+  --color-bg-floating: #1F2937;
+  /* Floating Elements */
+  --color-bg-border: #1F2937;
+  /* Structural divider */
+
   --color-text-primary: #F8F9FA;
   --color-text-secondary: #BDC1C6;
   --color-text-muted: #80868B;
@@ -100,12 +115,19 @@ select option {
   * {
     @apply border-border transition-colors duration-200;
   }
+
   body {
     @apply font-[var(--font-interface)] bg-[var(--background)] text-[var(--foreground)] antialiased;
     font-size: var(--size-text-body);
   }
-  h1 { @apply text-[var(--size-text-header)] font-bold tracking-tight; }
-  h2 { @apply text-[var(--size-text-subheader)] font-semibold tracking-tight; }
+
+  h1 {
+    @apply text-[var(--size-text-header)] font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-[var(--size-text-subheader)] font-semibold tracking-tight;
+  }
 }
 
 /* Precision Layout Utilities */
@@ -118,16 +140,43 @@ select option {
   @apply px-2 py-0.5 rounded-[var(--radius-atomic)] text-[10px] font-bold uppercase tracking-wider inline-flex items-center;
 }
 
-.badge-mint { background: var(--color-pastel-mint-bg); color: var(--color-pastel-mint-text); }
-.badge-apricot { background: var(--color-pastel-apricot-bg); color: var(--color-pastel-apricot-text); }
-.badge-rose { background: var(--color-pastel-rose-bg); color: var(--color-pastel-rose-text); }
-.badge-slate { background: var(--color-pastel-slate-bg); color: var(--color-pastel-slate-text); }
+.badge-mint {
+  background: var(--color-pastel-mint-bg);
+  color: var(--color-pastel-mint-text);
+}
+
+.badge-apricot {
+  background: var(--color-pastel-apricot-bg);
+  color: var(--color-pastel-apricot-text);
+}
+
+.badge-rose {
+  background: var(--color-pastel-rose-bg);
+  color: var(--color-pastel-rose-text);
+}
+
+.badge-slate {
+  background: var(--color-pastel-slate-bg);
+  color: var(--color-pastel-slate-text);
+}
 
 /* Custom scrollbar for high-density grids */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-[var(--color-text-muted)]/20 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-[var(--color-text-muted)]/40; }
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[var(--color-text-muted)]/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-[var(--color-text-muted)]/40;
+}
 
 @theme inline {
   --font-sans: 'Geist Variable', sans-serif;

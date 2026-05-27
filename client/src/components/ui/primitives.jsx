@@ -21,7 +21,7 @@ export const Skeleton = ({ className = '', variant = 'rect', width, height }) =>
 
 export const Button = ({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
   const variants = {
-    primary: 'bg-[var(--color-action-primary)] text-white hover:opacity-90 active:scale-[0.98]',
+    primary: 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)] hover:opacity-90 active:scale-[0.98]',
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
     danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
@@ -490,3 +490,61 @@ export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)
     />
   </div>
 );
+
+export const Switch = ({ checked, onChange, disabled = false, className = '' }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={() => !disabled && onChange(!checked)}
+    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-text-muted)]'} ${className}`}
+  >
+    <motion.span
+      layout
+      transition={{ type: "spring", stiffness: 700, damping: 30 }}
+      className="pointer-events-none block h-4 w-4 rounded-full bg-[var(--color-bg-surface)] shadow-sm ring-0"
+      style={{ x: checked ? 16 : 0 }}
+    />
+  </button>
+);
+
+export const Accordion = ({ items, className = '' }) => {
+  const [openIndex, setOpenIndex] = useState(null);
+  
+  return (
+    <div className={`space-y-2 w-full ${className}`}>
+      {items.map((item, i) => (
+        <div key={i} className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden bg-[var(--color-bg-surface)]">
+          <button
+            onClick={() => setOpenIndex(openIndex === i ? null : i)}
+            className="w-full flex items-center justify-between p-4 text-sm font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none"
+          >
+            {item.title}
+            <motion.div
+              animate={{ rotate: openIndex === i ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
+            </motion.div>
+          </button>
+          <AnimatePresence>
+            {openIndex === i && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden bg-[var(--color-bg-secondary)]"
+              >
+                <div className="p-4 pt-2 text-sm text-[var(--color-text-secondary)]">
+                  {item.content}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
+    </div>
+  );
+};

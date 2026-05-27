@@ -2,17 +2,17 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   Plus, Briefcase, Search,
   TrendingUp, CheckCircle2, Clock, Layers, Star
 } from 'lucide-react';
-import { 
-  Badge, 
-  ProgressBar, 
-  PageHeader, 
-  PageContainer, 
-  Card, 
-  Button, 
+import {
+  Badge,
+  ProgressBar,
+  PageHeader,
+  PageContainer,
+  Card,
+  Button,
   Input,
   PageSkeleton,
   NexusDropdown
@@ -83,7 +83,7 @@ const ProjectsView = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Project Portfolio"
         subtitle="Manage and track your active projects and their progress."
         actions={
@@ -105,9 +105,9 @@ const ProjectsView = () => {
       <Card className="flex flex-col border-none shadow-none bg-transparent">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex-1 max-w-md">
-            <Input 
-              icon={Search} 
-              placeholder="Search by name or tags..." 
+            <Input
+              icon={Search}
+              placeholder="Search by name or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="!py-2 !text-xs font-bold"
@@ -155,7 +155,7 @@ const ProjectsView = () => {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2, delay: index * 0.04 }}
                 >
-                  <Card 
+                  <Card
                     className="p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
                     style={{ borderColor: project.starred ? accent : undefined }}
                     onClick={() => navigate(`/projects/${project._id}`)}
@@ -222,13 +222,13 @@ const ProjectsView = () => {
                       </div>
 
                       {/* Footer — only shows starred badge if starred */}
-                      {project.starred && (
+                      {/* {project.starred && (
                         <div className="flex items-center justify-end pt-1.5 border-t border-[var(--color-bg-border)] border-dashed">
                           <span className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1" style={{ color: 'rgb(251 191 36)' }}>
                             <Star size={9} className="fill-amber-400" /> Starred
                           </span>
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </Card>
                 </motion.div>

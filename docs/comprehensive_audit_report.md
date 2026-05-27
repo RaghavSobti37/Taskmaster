@@ -689,4 +689,6 @@ This report is generated via static analysis of controllers and routes. Live spe
   - Fixed Redis `ECONNREFUSED` log spam by attaching `error` event listeners to cloned BullMQ `Queue` and `Worker` instances in `importWorker.js`, `webhookWorker.js`, and `webhookController.js`.
   - Migrated legacy `assignees` arrays on `tasks` documents to the new `TaskAssignments` collection for `taskmaster_local` and `taskmaster_production` databases to fix tasks not displaying on the dashboard.
   - Re-mapped `.env` DB connections to explicitly point to renamed clone databases `taskmaster_local` and `taskmaster_production`, and purged all unused temporary DBs.
+  - Security (Phase 5): Implemented strict rate limiting (10 req/15min) on all `/api/auth/*` endpoints in `server/server.js` to prevent credential stuffing.
+  - Security (Phase 5): Patched unauthenticated mass-unsubscribe vulnerability in `/api/crm/unsubscribe` and `/api/mail/unsubscribe` by requiring an HMAC-SHA256 token generated at dispatch.
 

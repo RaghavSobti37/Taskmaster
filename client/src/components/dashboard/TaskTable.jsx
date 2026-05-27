@@ -137,27 +137,40 @@ const TaskTable = ({
 
 
   return (
-    <Card className="flex flex-col shadow-md overflow-hidden">
-      <div className="p-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
-        <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-[var(--color-text-primary)]">
-          <Briefcase size={16} className="text-[var(--color-action-primary)]" />
-          Active Workflow
-        </h3>
+    <Card className="flex flex-col shadow-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-hidden">
+      <div className="p-5 flex items-center justify-between border-b border-[var(--color-bg-border)]">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)]">
+            Active Workflow
+          </h3>
+          <p className="text-sm text-[var(--color-text-muted)]">Manage and track your active tasks and priorities.</p>
+        </div>
         <div className="flex items-center gap-2">
           {filter !== 'all' && (
-            <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] px-2">
-              Filtered: {filter}
+            <span className="text-xs font-medium text-[var(--color-text-muted)] px-2">
+              Filtered: <span className="capitalize">{filter}</span>
             </span>
           )}
-          <button
-            onClick={() => setFilter('all')}
-            className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-all ${filter === 'all'
-              ? 'bg-[var(--color-bg-primary)] shadow-sm text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-              }`}
-          >
-            All Items
-          </button>
+          <div className="flex bg-[var(--color-bg-secondary)] p-1 rounded-md border border-[var(--color-bg-border)]">
+            <button
+              onClick={() => setFilter('all')}
+              className={`text-xs font-medium px-3 py-1.5 rounded transition-all ${filter === 'all'
+                ? 'bg-[var(--color-bg-surface)] shadow-sm text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+            >
+              All Items
+            </button>
+            <button
+              onClick={() => setFilter('urgent')}
+              className={`text-xs font-medium px-3 py-1.5 rounded transition-all ${filter === 'urgent'
+                ? 'bg-[var(--color-bg-surface)] shadow-sm text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+            >
+              Urgent
+            </button>
+          </div>
         </div>
       </div>
       <div className="p-0">

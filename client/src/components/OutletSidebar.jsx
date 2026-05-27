@@ -75,7 +75,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
     `}
   >
     <div className="relative flex items-center justify-center">
-      <Icon size={22} className="shrink-0" />
+      <Icon size={20} className="shrink-0" />
       <AnimatePresence>
         {count > 0 && (
           <motion.span
@@ -96,12 +96,44 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
       </AnimatePresence>
     </div>
     <div className="flex-1 flex items-center justify-between min-w-0">
-      <span className={`font-black text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
+      <span className={`font-bold text-xs tracking-wide whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
         {label}
       </span>
     </div>
   </NavLink>
 );
+
+const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="flex flex-col mb-4">
+      <button 
+        onClick={() => setIsOpen(!isOpen)} 
+        className={`flex items-center justify-between px-3 py-1 mb-1 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest hover:text-[var(--color-text-primary)] transition-colors focus:outline-none ${collapsed && !isMobile ? 'justify-center opacity-0' : 'opacity-100'}`}
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={14} />}
+          {(!collapsed || isMobile) && <span>{title}</span>}
+        </div>
+        {(!collapsed || isMobile) && (
+          <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+      <AnimatePresence>
+        {isOpen && (!collapsed || isMobile) && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden flex flex-col gap-0.5">
+            {children}
+          </motion.div>
+        )}
+        {(collapsed && !isMobile) && (
+          <div className="flex flex-col gap-0.5 mt-1">
+            {children}
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const ThemeToggle = ({ theme, toggleTheme }) => (
   <button
@@ -249,125 +281,124 @@ const OutletSidebar = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 mt-2 space-y-1 overflow-y-auto custom-scrollbar">
-          <NavItem
-            to="/dashboard"
-            icon={LayoutDashboard}
-            label="Dashboard"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
-          />
-          <NavItem
-            to="/projects"
-            icon={Briefcase}
-            label="Projects"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
-          />
-          <NavItem
-            to="/assets"
-            end
-            icon={Layers}
-            label="Assets"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
-          />
+        <nav className="flex-1 px-3 mt-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
+          <NavGroup title="Platform" collapsed={!isOpen} isMobile={isMobile}>
+            <NavItem
+              to="/dashboard"
+              icon={LayoutDashboard}
+              label="Dashboard"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
+            />
+            <NavItem
+              to="/calendar"
+              icon={Calendar}
+              label="Calendar"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+              todayCount={statusCounts.calendar?.today}
+              onMouseEnter={() => {
+                queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
+                queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
+              }}
+            />
+            <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={!isOpen} isMobile={isMobile} />
+          </NavGroup>
+
+          <NavGroup title="Workspace" collapsed={!isOpen} isMobile={isMobile}>
+            <NavItem
+              to="/projects"
+              icon={Briefcase}
+              label="Projects"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
+            />
+            <NavItem
+              to="/assets"
+              end
+              icon={Layers}
+              label="Assets"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
+            />
+            <NavItem
+              to="/office-assets"
+              icon={Building2}
+              label="Office"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+              onMouseEnter={() => {
+                queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
+                queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
+              }}
+            />
+          </NavGroup>
+
+          {(user?.role === 'admin' || user?.role === 'sales' || user?.role === 'artist_management') && (
+            <NavGroup title="CRM" collapsed={!isOpen} isMobile={isMobile}>
+              {(user?.role === 'admin' || user?.role === 'sales') && (
+                <>
+                  <NavItem
+                    to="/leads"
+                    icon={Users}
+                    label="Leads"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                    onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
+                  />
+                  <NavItem
+                    to="/followups"
+                    icon={UserCheck}
+                    label="Followups"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                    count={statusCounts.followups.overdue}
+                    todayCount={statusCounts.followups.today}
+                    onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
+                  />
+                </>
+              )}
+              {(user?.role === 'admin' || user?.role === 'artist_management') && (
+                <NavItem
+                  to="/artists"
+                  icon={Users}
+                  label="Artists"
+                  collapsed={!isOpen}
+                  isMobile={isMobile}
+                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
+                />
+              )}
+            </NavGroup>
+          )}
 
           {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
-            <div className="space-y-1">
+            <NavGroup title="Management" collapsed={!isOpen} isMobile={isMobile}>
               <NavItem
                 to="/finance"
                 icon={FileText}
                 label="Finance"
-                collapsed={false}
+                collapsed={!isOpen}
                 isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
               />
-            </div>
+              {user?.role === 'admin' && (
+                <NavItem
+                  to="/admin"
+                  icon={ShieldCheck}
+                  label="Admin Panel"
+                  collapsed={!isOpen}
+                  isMobile={isMobile}
+                  onMouseEnter={() => {
+                    queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+                    queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+                  }}
+                />
+              )}
+            </NavGroup>
           )}
-
-          <NavItem
-            to="/calendar"
-            icon={Calendar}
-            label="Calendar"
-            collapsed={false}
-            isMobile={isMobile}
-            todayCount={statusCounts.calendar?.today}
-            onMouseEnter={() => {
-              queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
-              queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
-            }}
-          />
-
-          <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={false} isMobile={isMobile} />
-
-          {(user?.role === 'admin' || user?.role === 'sales') && (
-            <div className="space-y-1">
-              <NavItem
-                to="/leads"
-                icon={Users}
-                label="Leads"
-                collapsed={false}
-                isMobile={isMobile}
-                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
-              />
-              <NavItem
-                to="/followups"
-                icon={UserCheck}
-                label="Followups"
-                collapsed={false}
-                isMobile={isMobile}
-                count={statusCounts.followups.overdue}
-                todayCount={statusCounts.followups.today}
-                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
-              />
-            </div>
-          )}
-
-          {user?.role === 'admin' && (
-            <div className="space-y-1">
-              <NavItem
-                to="/admin"
-                icon={ShieldCheck}
-                label="Admin Panel"
-                collapsed={false}
-                isMobile={isMobile}
-                onMouseEnter={() => {
-                  queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-                  queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-                }}
-              />
-            </div>
-          )}
-
-          {(user?.role === 'admin' || user?.role === 'artist_management') && (
-            <div className="space-y-1">
-              <NavItem
-                to="/artists"
-                icon={Users}
-                label="Artists"
-                collapsed={false}
-                isMobile={isMobile}
-                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
-              />
-            </div>
-          )}
-
-          <NavItem
-            to="/office-assets"
-            icon={Building2}
-            label="Office"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => {
-              queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
-              queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
-            }}
-          />
-
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">

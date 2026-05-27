@@ -117,6 +117,8 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - Synced `BookedCalls` Google Sheet directly from CRM logic.
 - Implemented UPSERT logic in Lead creation to gracefully handle duplicate emails during booking.
 - Updated AiSensy templates and payload attributes for sales reps and customers.
+- Applied TSC Brandbook styles, including extracted patterns and ink spill textures to authentication and landing pages for a modern, paper-like feel.
+- Enhanced Dashboard TaskTable with colored left-border indicators to visually link tasks to their assigned projects.
 
 ## [2026-05-26] Version 1.7.23
 - Resolved input lag and cursor reset issues on metadata editing panels via `editForm` local state synchronization and onBlur update triggers.

@@ -31,18 +31,26 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-workspace)] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center p-6">
+      {/* Paper texture & Ink spill background */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
+      />
+      {/* Pattern from PDF for subtle texture */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
+      />
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-[var(--color-bg-surface)] p-8 rounded-3xl border border-[var(--color-bg-border)] shadow-xl"
+        className="relative z-10 w-full max-w-md bg-card/90 backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[var(--color-action-primary)] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-4">
+          <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">
             CK
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Create Account</h1>
-          <p className="text-[var(--color-text-secondary)] mt-2">Join the team today</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
+          <p className="text-[var(--color-text-secondary)] mt-2 font-medium">Join the team today</p>
         </div>
 
         {error && (
@@ -59,7 +67,7 @@ const RegisterPage = () => {
               <input 
                 type="text" 
                 required
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -74,7 +82,7 @@ const RegisterPage = () => {
               <input 
                 type="email" 
                 required
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -90,7 +98,7 @@ const RegisterPage = () => {
                   key={g}
                   type="button"
                   onClick={() => setGender(g)}
-                  className={`py-2 rounded-xl text-xs font-bold capitalize transition-all border ${gender === g ? 'bg-[var(--color-action-primary)] text-white border-[var(--color-action-primary)]' : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-[var(--color-text-muted)]'}`}
+                  className={`py-2 rounded-xl text-xs font-bold capitalize transition-all border ${gender === g ? 'bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] border-[var(--color-brand-teal)] shadow-md' : 'bg-background text-[var(--color-text-secondary)] border-border hover:border-[var(--color-brand-teal)]/50 hover:bg-background/80'}`}
                 >
                   {g}
                 </button>
@@ -105,7 +113,7 @@ const RegisterPage = () => {
               <input 
                 type="password" 
                 required
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -116,15 +124,15 @@ const RegisterPage = () => {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+            className="w-full bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20"
           >
             {loading ? 'Registering...' : 'Sign Up'} <ArrowRight size={20} />
           </button>
         </form>
 
         <div className="mt-8 text-center text-sm">
-          <p className="text-[var(--color-text-muted)]">
-            Already have an account? <Link to="/login" className="text-[var(--color-action-primary)] font-bold hover:underline">Sign in</Link>
+          <p className="text-[var(--color-text-muted)] font-medium">
+            Already have an account? <Link to="/login" className="text-[var(--color-brand-teal)] font-bold hover:underline">Sign in</Link>
           </p>
         </div>
       </motion.div>

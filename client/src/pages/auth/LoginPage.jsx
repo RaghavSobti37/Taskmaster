@@ -50,18 +50,26 @@ const LoginPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-workspace)] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center p-6">
+      {/* Paper texture & Ink spill background */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
+      />
+      {/* Pattern from PDF for subtle texture */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
+      />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-[var(--color-bg-surface)] p-8 rounded-3xl border border-[var(--color-bg-border)] shadow-xl"
+        className="relative z-10 w-full max-w-md bg-card/90 backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[var(--color-action-primary)] rounded-2xl mx-auto flex items-center justify-center text-white text-3xl font-bold mb-4 shadow-lg shadow-blue-500/30">
+          <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">
             CK
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">TaskMaster</h1>
-          <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">TaskMaster</h1>
+          <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
             A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
           </p>
         </div>
@@ -80,7 +88,7 @@ const LoginPage = () => {
               <input
                 type="text"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] focus:border-transparent outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="Email, Phone, or Name"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -95,7 +103,7 @@ const LoginPage = () => {
               <input
                 type="password"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] focus:border-transparent outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -106,17 +114,17 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--color-action-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+            className="w-full bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20"
           >
             {loading ? 'Signing in...' : 'Sign In'} <ArrowRight size={20} />
           </button>
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[var(--color-bg-border)]"></div>
+              <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[var(--color-bg-surface)] px-2 text-[var(--color-text-muted)]">Or continue with</span>
+              <span className="bg-card px-2 text-[var(--color-text-muted)] font-medium">Or continue with</span>
             </div>
           </div>
 
@@ -149,13 +157,13 @@ const LoginPage = () => {
         </form>
 
         <div className="mt-8 text-center text-sm space-y-4">
-          <p className="text-[var(--color-text-muted)]">
-            New user? <Link to="/register" className="text-[var(--color-action-primary)] font-bold hover:underline">Register here</Link>
+          <p className="text-[var(--color-text-muted)] font-medium">
+            New user? <Link to="/register" className="text-[var(--color-brand-teal)] font-bold hover:underline">Register here</Link>
           </p>
-          <div className="pt-4 border-t border-[var(--color-bg-border)] flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)]">
-            <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+          <div className="pt-4 border-t border-border flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)] font-medium">
+            <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <span>•</span>
-            <Link to="/userdata" className="hover:underline">User Data Deletion</Link>
+            <Link to="/userdata" className="hover:text-foreground">User Data Deletion</Link>
           </div>
         </div>
       </motion.div>

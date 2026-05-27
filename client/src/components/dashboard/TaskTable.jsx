@@ -2,13 +2,13 @@ import React from 'react';
 import { Briefcase, CheckCircle2 } from 'lucide-react';
 import { Card, DataTable, Badge } from '../ui';
 
-const TaskTable = ({ 
-  tasks = [], 
-  projects = [], 
-  completingIds = new Set(), 
-  onCompleteTask, 
-  onSelectTask, 
-  filter, 
+const TaskTable = ({
+  tasks = [],
+  projects = [],
+  completingIds = new Set(),
+  onCompleteTask,
+  onSelectTask,
+  filter,
   setFilter,
   loading = false
 }) => {
@@ -44,13 +44,14 @@ const TaskTable = ({
         const isCompleting = completingIds.has(row._id);
         const project = projects.find(p => p._id === row.projectId);
         const projectName = project ? project.name : 'Unassigned';
+        const projectColor = project ? project.color || 'var(--color-action-primary)' : 'var(--color-bg-border)';
 
         return (
           <div className="flex items-center gap-3 py-1">
-            <button 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                onCompleteTask(row); 
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCompleteTask(row);
               }}
               disabled={isCompleting}
               className="w-5 h-5 rounded-full border-2 border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)] flex items-center justify-center transition-all group shrink-0"
@@ -62,11 +63,11 @@ const TaskTable = ({
                 <CheckCircle2 size={14} className="opacity-0 group-hover:opacity-100 text-[var(--color-action-primary)] transition-opacity" />
               )}
             </button>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 pl-2.5 py-0.5" style={{ borderLeft: `3px solid ${projectColor}` }}>
               <span className="font-bold text-sm text-[var(--color-text-primary)] leading-snug tracking-tight">
                 {row.title}
               </span>
-              <span className="text-xs text-[var(--color-text-muted)] font-semibold">
+              <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
                 {projectName}
               </span>
             </div>
@@ -95,7 +96,7 @@ const TaskTable = ({
         if (!row.dueDate) return <span className="text-xs text-slate-500">-</span>;
         const d = new Date(row.dueDate);
         const today = new Date();
-        const isOverdue = d.setHours(0,0,0,0) < today.setHours(0,0,0,0);
+        const isOverdue = d.setHours(0, 0, 0, 0) < today.setHours(0, 0, 0, 0);
         const isToday = d.getTime() === today.getTime();
         return (
           <span className={`text-xs font-bold ${isOverdue ? 'text-red-500' : isToday ? 'text-amber-500' : 'text-slate-400'}`}>
@@ -107,29 +108,29 @@ const TaskTable = ({
   ];
 
   const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-  
+
   const filteredTasks = tasks.filter(t => {
     if (t.status === 'done') return false;
     if (filter === 'urgent') return t.priority === 'critical';
-    if (filter === 'overdue') return t.dueDate && new Date(t.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+    if (filter === 'overdue') return t.dueDate && new Date(t.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
     return true; // 'all'
   });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     const getSortValue = (t) => {
       if (!t.dueDate) return 4;
-      const d = new Date(t.dueDate).setHours(0,0,0,0);
-      const today = new Date().setHours(0,0,0,0);
+      const d = new Date(t.dueDate).setHours(0, 0, 0, 0);
+      const today = new Date().setHours(0, 0, 0, 0);
       if (d < today) return 0; // Overdue
       if (d === today) return 1; // Today
       return 2; // Future
     };
-    
+
     const aTime = getSortValue(a);
     const bTime = getSortValue(b);
-    
+
     if (aTime !== bTime) return aTime - bTime;
-    
+
     return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
   });
 
@@ -148,22 +149,21 @@ const TaskTable = ({
               Filtered: {filter}
             </span>
           )}
-          <button 
-            onClick={() => setFilter('all')} 
-            className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-all ${
-              filter === 'all' 
-                ? 'bg-[var(--color-bg-primary)] shadow-sm text-[var(--color-action-primary)] border border-[var(--color-bg-border)]' 
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-            }`}
+          <button
+            onClick={() => setFilter('all')}
+            className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg transition-all ${filter === 'all'
+              ? 'bg-[var(--color-bg-primary)] shadow-sm text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
+              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+              }`}
           >
             All Items
           </button>
         </div>
       </div>
       <div className="p-0">
-        <DataTable 
-          columns={taskColumns} 
-          data={sortedTasks} 
+        <DataTable
+          columns={taskColumns}
+          data={sortedTasks}
           onRowClick={(task) => onSelectTask(task)}
         />
       </div>

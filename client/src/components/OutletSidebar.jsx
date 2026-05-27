@@ -275,17 +275,19 @@ const OutletSidebar = () => {
             isMobile={isMobile}
             onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
           />
-          <NavItem
-            to="/office-assets"
-            icon={Building2}
-            label="Office"
-            collapsed={false}
-            isMobile={isMobile}
-            onMouseEnter={() => {
-              queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
-              queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
-            }}
-          />
+
+          {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
+            <div className="space-y-1">
+              <NavItem
+                to="/finance"
+                icon={FileText}
+                label="Finance"
+                collapsed={false}
+                isMobile={isMobile}
+                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
+              />
+            </div>
+          )}
 
           <NavItem
             to="/calendar"
@@ -354,18 +356,18 @@ const OutletSidebar = () => {
             </div>
           )}
 
-          {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
-            <div className="space-y-1">
-              <NavItem
-                to="/finance"
-                icon={FileText}
-                label="Finance"
-                collapsed={false}
-                isMobile={isMobile}
-                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
-              />
-            </div>
-          )}
+          <NavItem
+            to="/office-assets"
+            icon={Building2}
+            label="Office"
+            collapsed={false}
+            isMobile={isMobile}
+            onMouseEnter={() => {
+              queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
+              queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
+            }}
+          />
+
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">

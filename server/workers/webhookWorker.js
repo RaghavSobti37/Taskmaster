@@ -5,8 +5,14 @@ const { processBookedCallLogic } = require('../controllers/webhookController');
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: null,
-  retryStrategy: (times) => Math.min(times * 50, 2000)
+  retryStrategy: (times) => {
+    if (times > 3) return null;
+    return Math.min(times * 50, 2000);
+  }
 });
+
+connection.on('error', () => {});
+
 
 const initWebhookWorker = () => {
   const worker = new Worker('WebhookQueue', async job => {
@@ -23,6 +29,7 @@ const initWebhookWorker = () => {
   worker.on('failed', (job, err) => {
     logger.error('webhookWorker', `Job ${job.id} failed`, { error: err.message });
   });
+  worker.on('error', (err) => {});
   
   logger.info('webhookWorker', 'Webhook BullMQ worker initialized');
 };

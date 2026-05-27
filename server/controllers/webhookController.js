@@ -11,9 +11,16 @@ const IORedis = require('ioredis');
 // Setup BullMQ Queue
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: null,
-  retryStrategy: (times) => Math.min(times * 50, 2000)
+  retryStrategy: (times) => {
+    if (times > 3) return null;
+    return Math.min(times * 50, 2000);
+  }
 });
+
+connection.on('error', () => {});
+
 const webhookQueue = new Queue('WebhookQueue', { connection });
+webhookQueue.on('error', () => {});
 
 exports.processBookedCallLogic = async (data) => {
   try {

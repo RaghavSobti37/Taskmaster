@@ -70,7 +70,7 @@ exports.login = async (req, res) => {
       ? { email: email.toLowerCase() } 
       : { $or: [{ phone: email }, { name: email }] };
 
-    const user = await User.findOne(query);
+    const user = await User.findOne(query).select('+password');
 
     if (user && (await user.comparePassword(password))) {
       res.json({

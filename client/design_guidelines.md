@@ -61,3 +61,18 @@ This document acts as the structural blueprint for all page development within t
 - [ ] Does clicking a row open a 70/30 Full-screen view?
 - [ ] Are all metrics accompanied by an `InfoButton` where needed?
 - [ ] Is the language simple? (e.g., "User Directory" -> "Users").
+- [ ] Are project color indicators (left-borders) applied consistently in data lists?
+
+---
+
+### Phase 5: Brand Aesthetics & Visual Identity
+
+*   **TSC Brandbook Colors**:
+    - **Background**: Lighter Cream (`#fcf8f2`)
+    - **Text Primary**: Deep Teal (`#083d3a`)
+    - **Accents**: Sea Foam (`#126d5e`), Pumpkin (`#b74b02`)
+*   **The Paperish Feel**:
+    - Use the extracted PDF repeating patterns (`pattern_0.png`) with `mix-blend-overlay` combined with the generated ink spill texture (`ink_spill_bg.png`) with `mix-blend-multiply` (or screen for dark mode) to create an elegant, subtle, paper-like background on static pages (Auth/Landing).
+*   **Project Context Integration**:
+    - All tasks in the dashboard and related views must display a left-border with the associated project's color to establish instant visual linking.
+    - Accompany the project name with its shortened ID.

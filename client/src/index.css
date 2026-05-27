@@ -5,18 +5,22 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Scannable Pastel Precision - Core Tokens (Light Mode) */
-  --color-bg-primary: #F8FAFC;
-  --color-bg-secondary: #F1F5F9;
-  --color-bg-surface: #FFFFFF;
-  --color-bg-border: #E2E8F0;
+  /* TSC Brand Colors */
+  --color-brand-cream: #ffecd1;
+  --color-brand-pumpkin: #b74b02;
+  --color-brand-teal: #083d3a;
   
-  --color-text-primary: #202124;
-  --color-text-secondary: #5F6368;
-  --color-text-muted: #80868B;
+  --color-bg-primary: #fcf8f2; /* Lighter Cream */
+  --color-bg-secondary: #f4eee3; /* Slightly darker cream */
+  --color-bg-surface: #ffffff;
+  --color-bg-border: #e6dac6;
+  
+  --color-text-primary: #083d3a; /* Deep Teal */
+  --color-text-secondary: #08525f; /* Peacock */
+  --color-text-muted: #592314; /* Chestnut with some opacity maybe */
 
-  --color-action-primary: #1A73E8;
-  --color-action-hover: #174EA6;
+  --color-action-primary: #126d5e; /* Sea Foam */
+  --color-action-hover: #083d3a; /* Deep Teal */
 
   /* Semantic Pastel System - Light */
   --color-pastel-mint-bg: #E6F4EA;
@@ -47,11 +51,11 @@
 }
 
 :root {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
-  --card: #FFFFFF;
-  --border: #E2E8F0;
-  --ring: rgba(26, 115, 232, 0.2);
+  --background: #fcf8f2;
+  --foreground: #083d3a;
+  --card: #ffffff;
+  --border: #e6dac6;
+  --ring: rgba(18, 109, 94, 0.2); /* Sea Foam ring */
   color-scheme: light;
 }
 

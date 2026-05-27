@@ -67,6 +67,32 @@ router.post('/instagram', (req, res) => {
 // POST route to handle real-time Resend webhooks (Bounces, Clicks, Opens, Delivered)
 router.post('/resend', async (req, res) => {
   try {
+    // SECURITY: Authenticate Resend Webhook via Svix Signatures
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (secret) {
+      const { Webhook } = require('svix');
+      const wh = new Webhook(secret);
+      const svix_id = req.headers['svix-id'];
+      const svix_timestamp = req.headers['svix-timestamp'];
+      const svix_signature = req.headers['svix-signature'];
+      
+      if (!svix_id || !svix_timestamp || !svix_signature) {
+        return res.status(400).send('MISSING_SVIX_HEADERS');
+      }
+
+      const payloadString = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+      try {
+        wh.verify(payloadString, {
+          'svix-id': svix_id,
+          'svix-timestamp': svix_timestamp,
+          'svix-signature': svix_signature
+        });
+      } catch (err) {
+        console.warn('❌ [Resend Webhook] Signature verification failed:', err.message);
+        return res.status(401).send('INVALID_SIGNATURE');
+      }
+    }
+
     const payload = req.body;
     if (!payload || !payload.type || !payload.data) {
       return res.status(400).send('INVALID_PAYLOAD');

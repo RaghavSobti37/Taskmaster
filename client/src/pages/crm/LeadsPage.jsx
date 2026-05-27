@@ -104,16 +104,38 @@ export default function LeadsPage() {
   const handleAddNote = async (e) => {
     e.preventDefault();
     if (!newNoteText.trim() || !selectedLead) return;
-    setAddingNote(true);
+    
+    const noteText = newNoteText;
+    setNewNoteText('');
+    
+    // Optimistic UI update
+    const optimisticNote = {
+      text: noteText,
+      author: user?.name || user?.email || 'You',
+      date: new Date().toISOString()
+    };
+    
+    setSelectedLead(prev => ({
+      ...prev,
+      notes: [...(prev?.notes || []), optimisticNote]
+    }));
+
+    queryClient.setQueryData(['leads', queryParams], oldData => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        leads: oldData.leads.map(lead => 
+          lead._id === selectedLead._id ? { ...lead, notes: [...(lead.notes || []), optimisticNote] } : lead
+        )
+      };
+    });
+
     try {
-      const res = await axios.post(`/api/crm/leads/${selectedLead._id}/notes`, { text: newNoteText });
+      const res = await axios.post(`/api/crm/leads/${selectedLead._id}/notes`, { text: noteText });
       setSelectedLead(res.data);
-      setNewNoteText('');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err) {
       alert('Failed to add note');
-    } finally {
-      setAddingNote(false);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     }
   };
 

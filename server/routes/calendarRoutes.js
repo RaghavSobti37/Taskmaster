@@ -11,23 +11,33 @@ router.use(protect);
 // Returns: public events from everyone + private events from current user
 router.get('/', async (req, res) => {
   try {
-    const events = await CalendarEvent.find({
+    // Default to -30 days to +60 days if bounds aren't provided
+    const now = new Date();
+    const startDate = req.query.start ? new Date(req.query.start) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const endDate = req.query.end ? new Date(req.query.end) : new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+    const eventQuery = {
+      date: { $gte: startDate, $lte: endDate },
       $or: [
         { visibility: 'public' },
         { createdBy: req.user._id }
       ]
-    })
+    };
+
+    const events = await CalendarEvent.find(eventQuery)
     .populate('createdBy', 'name avatar')
     .lean();
 
-    const tasks = await Task.find({
-      dueDate: { $ne: null },
+    const taskQuery = {
+      dueDate: { $gte: startDate, $lte: endDate, $ne: null },
       status: { $ne: 'done' },
       $or: [
         { createdBy: req.user._id },
         { assignees: req.user._id }
       ]
-    }).populate('createdBy', 'name avatar').lean();
+    };
+
+    const tasks = await Task.find(taskQuery).populate('createdBy', 'name avatar').lean();
 
     const taskEvents = tasks.map(t => ({
       _id: t._id,

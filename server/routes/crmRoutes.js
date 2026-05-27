@@ -27,6 +27,7 @@ router.get('/stats', crmController.getCRMStats);
 router.get('/rep-summary', crmController.getRepSummary);
 router.get('/config', crmController.getCRMConfig);
 router.get('/imports', crmController.getImports);
+router.get('/import/status/:jobId', crmController.getImportJobStatus);
 router.get('/purge-logs', crmController.getPurgeLogs);
 router.delete('/imports/:id', crmController.deleteImport);
 router.post('/reset', crmController.resetCRM);

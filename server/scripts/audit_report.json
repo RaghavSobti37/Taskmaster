@@ -1,0 +1,74 @@
+[
+  {
+    "page": "Dashboard",
+    "frontend": {
+      "lcp": "N/A",
+      "renderTime": "N/A"
+    },
+    "backend": {
+      "responseTime": "15.30ms",
+      "status": 401,
+      "route": "/tasks"
+    },
+    "database": {
+      "query": "Logged via mongoose debug",
+      "executionStats": {
+        "note": "Check console for mongoose.set('debug') output"
+      }
+    }
+  },
+  {
+    "page": "ProjectsPage",
+    "frontend": {
+      "lcp": "N/A",
+      "renderTime": "N/A"
+    },
+    "backend": {
+      "responseTime": "2.27ms",
+      "status": 401,
+      "route": "/projects"
+    },
+    "database": {
+      "query": "Logged via mongoose debug",
+      "executionStats": {
+        "note": "Check console for mongoose.set('debug') output"
+      }
+    }
+  },
+  {
+    "page": "LeadsPage",
+    "frontend": {
+      "lcp": "N/A",
+      "renderTime": "N/A"
+    },
+    "backend": {
+      "responseTime": "2.62ms",
+      "status": 404,
+      "route": "/leads"
+    },
+    "database": {
+      "query": "Logged via mongoose debug",
+      "executionStats": {
+        "note": "Check console for mongoose.set('debug') output"
+      }
+    }
+  },
+  {
+    "page": "CampaignsPage",
+    "frontend": {
+      "lcp": "N/A",
+      "renderTime": "N/A"
+    },
+    "backend": {
+      "responseTime": "1.77ms",
+      "status": 401,
+      "route": "/campaigns"
+    },
+    "database": {
+      "query": "Logged via mongoose debug",
+      "executionStats": {
+        "note": "Check console for mongoose.set('debug') output"
+      }
+    }
+  }
+]

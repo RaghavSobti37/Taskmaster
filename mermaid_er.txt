@@ -1,0 +1,634 @@
+erDiagram
+  Artist {
+    ObjectId _id PK
+    String name
+    String bio
+    String profileImage
+    String website
+    String youtube
+    String instagram
+    String instagramCollective
+    String facebook
+    String spotify
+    String soundcloud
+    String date
+    String venue
+    String audience
+    String title
+    String description
+    String status
+    Date createdAt
+  }
+  ArtistAuth {
+    ObjectId _id PK
+    mongoose artistId
+    String accessToken
+    String refreshToken
+    String channelId
+    Date tokenExpiry
+    String igAccountId
+    String fbPageId
+    String fbPageName
+    String igUsername
+    String igName
+    String igProfilePicture
+    String chartmetricId
+    String spotifyUserId
+    String displayName
+    Date connectedAt
+    Boolean isSynced
+  }
+  ArtistAuth ||--o{ Artist : "artistId"
+  ArtistMetrics {
+    ObjectId _id PK
+    mongoose artistId
+    Number subscribers
+    Number views
+    Number watchTime
+    String avd
+    Number suggested
+    Number search
+    Number returningViewers
+    Number followers
+    Number saves
+    Number shares
+    Number followerVelocity
+    Number audienceQuality
+    Number profileVisitRatio
+    Number monthlyListeners
+    Number streamsPerListener
+    Number playlistAdditions
+    Number mal
+    Number likes
+    String name
+    Number ctr
+    Number topFanEngagement
+    Number organic
+    Number paid
+    String videoId
+    String title
+    String channelName
+    Boolean isNative
+    Number comments
+    Number watchTimeMinutes
+    Number thumbnailCtr
+    String url
+    Date addedAt
+    Date date
+    Number listens
+    Date timestamp
+    String platform
+    mongoose metrics
+  }
+  ArtistMetrics ||--o{ Artist : "artistId"
+  Asset {
+    ObjectId _id PK
+    String name
+    String link
+    mongoose createdBy
+  }
+  Asset ||--o{ User : "createdBy"
+  CalendarEvent {
+    ObjectId _id PK
+    String title
+    String description
+    Date date
+    String visibility
+    mongoose createdBy
+  }
+  CalendarEvent ||--o{ User : "createdBy"
+  Campaign {
+    ObjectId _id PK
+    String campaignId
+    String title
+    String subject
+    String content
+    mongoose senderProfileId
+    String status
+    String eventTag
+    Date sentAt
+    Number totalSent
+    Number opened
+    Number clicked
+    Number bounced
+    Date time
+    Number opens
+    Number clicks
+    Map locationBreakdown
+    mongoose leadId
+    mongoose createdBy
+  }
+  Campaign ||--o{ EmailProfile : "senderProfileId"
+  Campaign ||--o{ Lead : "leadId"
+  Campaign ||--o{ User : "createdBy"
+  ConnectedProfile {
+    ObjectId _id PK
+    mongoose workspace
+    String platform
+    String platformId
+    String platformName
+    String accessToken
+    String refreshToken
+    Date tokenExpiry
+    mongoose profileData
+    String status
+    Date lastSyncedAt
+    Date createdAt
+  }
+  ConnectedProfile ||--o{ Workspace : "workspace"
+  Contact {
+    ObjectId _id PK
+    String name
+    String email
+    String phone
+    Boolean inCRM
+    Boolean inExly
+    Boolean inMailer
+    String leadStatus
+    String leadQuality
+    String emailStatus
+    Number bounceCount
+    Boolean unsubscribed
+    String unsubscribeReason
+    String role
+    String notes
+    mongoose addedBy
+  }
+  Contact ||--o{ User : "addedBy"
+  CRMAudit {
+    ObjectId _id PK
+    mongoose leadId
+    String leadRowId
+    mongoose userId
+    String userRole
+    String fieldChanged
+    String oldValue
+    String newValue
+    Date timestamp
+  }
+  CRMAudit ||--o{ Lead : "leadId"
+  CRMAudit ||--o{ User : "userId"
+  CRMConfig {
+    ObjectId _id PK
+    String configKey
+    mongoose updatedBy
+  }
+  CRMConfig ||--o{ User : "updatedBy"
+  CRMImport {
+    ObjectId _id PK
+    String filename
+    Number leadCount
+    mongoose createdBy
+  }
+  CRMImport ||--o{ User : "createdBy"
+  DailyMission {
+    ObjectId _id PK
+    mongoose userId
+    String title
+    String description
+    Number targetCount
+    Number currentCount
+    Number expReward
+    String actionType
+    Boolean completed
+    Date date
+  }
+  DailyMission ||--o{ User : "userId"
+  EmailEvent {
+    ObjectId _id PK
+    mongoose campaignId
+    mongoose leadId
+    Date timestamp
+  }
+  EmailEvent ||--o{ Campaign : "campaignId"
+  EmailEvent ||--o{ Lead : "leadId"
+  EmailLog {
+    ObjectId _id PK
+    String campaignId
+    String leadEmail
+    String pixelId
+    String clickId
+    Boolean opened
+    Boolean clicked
+    Boolean bounced
+  }
+  EmailProfile {
+    ObjectId _id PK
+    String name
+    String email
+    String smtpHost
+    Number smtpPort
+    String smtpUser
+    String smtpPass
+    String signature
+    Boolean isDefault
+    mongoose createdBy
+  }
+  EmailProfile ||--o{ User : "createdBy"
+  EMI {
+    ObjectId _id PK
+    mongoose leadId
+    String leadRowId
+    Number installmentNo
+    String dueDate
+    String amount
+    String status
+    String paidAt
+  }
+  EMI ||--o{ Lead : "leadId"
+  ExlyBooking {
+    ObjectId _id PK
+    String name
+    String email
+    String phone
+    String offeringTitle
+    String offeringId
+    Number pricePaid
+    Date bookedOn
+    String paymentType
+    String debitType
+    String offeringType
+    String offeringOwner
+    String promotionType
+    String promotionFromOffering
+    String transactionId
+    String customerId
+    String state
+    String payoutStatus
+    String emailStatus
+    Number bounceCount
+    Boolean unsubscribed
+  }
+  ExlyOffering {
+    ObjectId _id PK
+    String offeringId
+    String title
+    String eventDate
+    String eventTime
+    Number price
+    String currency
+    String status
+    Number totalBookings
+    Number totalRevenue
+    Number conversionRate
+  }
+  FinanceDocument {
+    ObjectId _id PK
+    String title
+    String description
+    mongoose project
+    String category
+    String fileUrl
+    String fileKey
+    String fileName
+    Number fileSize
+    String fileType
+    mongoose uploadedBy
+    String extractedText
+    Number amount
+    String currency
+    String vendor
+    Date date
+    Number tax
+    String detectedCategory
+  }
+  FinanceDocument ||--o{ Project : "project"
+  FinanceDocument ||--o{ User : "uploadedBy"
+  Lead {
+    ObjectId _id PK
+    mongoose tenantId
+    String rowId
+    String customerIdExly
+    String transactionIdExly
+    String exlyOfferingId
+    String exlyOfferingTitle
+    String name
+    String email
+    String phone
+    String city
+    String webinarDates
+    String attended
+    String attendanceDurationMin
+    String qnaAnswered
+    String artistType
+    String fullTimeWillingness
+    String primaryRole
+    String learningGoal
+    String learnedMusic
+    String currentJourney
+    String meaningfulConnect
+    String leadQuality
+    String callStatus
+    String leadStatus
+    String remarks
+    String text
+    String author
+    Date date
+    String source
+    String planOption
+    String nextFollowupDate
+    String nextFollowupTime
+    Boolean setReminder
+    mongoose assignedRepId
+    mongoose createdBy
+    mongoose importId
+    mongoose metadata
+    String emailStatus
+    String status
+    String location
+    Number bounceCount
+    Boolean unsubscribed
+    String unsubscribeReason
+    String lockedBy
+    Date lockedAt
+    Boolean reminderSent
+    Boolean notifiedOverdue
+  }
+  Lead ||--o{ Tenant : "tenantId"
+  Lead ||--o{ User : "assignedRepId"
+  Lead ||--o{ User : "createdBy"
+  Lead ||--o{ CRMImport : "importId"
+  Log {
+    ObjectId _id PK
+    Date timestamp
+    String origin
+    String actorId
+    String actorRole
+    String actionType
+    String targetEntity
+    String status
+    mongoose payload
+    Number executionTimeMs
+    mongoose userId
+    String action
+    mongoose details
+    mongoose targetId
+    String targetType
+    Date createdAt
+  }
+  Log ||--o{ User : "userId"
+  MailCampaign {
+    ObjectId _id PK
+    String title
+    String subject
+    String content
+    mongoose senderProfileId
+    String status
+    mongoose leadId
+    Number total
+    Number sent
+    Number opened
+    Number clicked
+    Number bounced
+    Number unsubscribed
+    Number invalid
+    Map locationBreakdown
+    Number opens
+    Number clicks
+    Boolean removeUnsubscribe
+    mongoose createdBy
+  }
+  MailCampaign ||--o{ EmailProfile : "senderProfileId"
+  MailCampaign ||--o{ Lead : "leadId"
+  MailCampaign ||--o{ User : "createdBy"
+  MailEvent {
+    ObjectId _id PK
+    String messageId
+    String eventType
+    String email
+    Date timestamp
+    mongoose metadata
+    mongoose campaignId
+    String linkClicked
+    String ipAddress
+    String userAgent
+    String country
+    String city
+  }
+  MailEvent ||--o{ MailCampaign : "campaignId"
+  MailTemplate {
+    ObjectId _id PK
+    String name
+    String content
+    mongoose createdBy
+  }
+  MailTemplate ||--o{ User : "createdBy"
+  Message {
+    ObjectId _id PK
+    mongoose senderId
+    String content
+    mongoose taskId
+    String channel
+    String outletId
+    Date createdAt
+  }
+  Message ||--o{ User : "senderId"
+  Message ||--o{ Task : "taskId"
+  Notification {
+    ObjectId _id PK
+    mongoose recipient
+    String title
+    String message
+    Boolean read
+    mongoose relatedLeadId
+    Date createdAt
+  }
+  Notification ||--o{ User : "recipient"
+  Notification ||--o{ Lead : "relatedLeadId"
+  OfficeAsset {
+    ObjectId _id PK
+    String name
+    String description
+    String category
+    String currentlyWith
+    String status
+    String serialNumber
+    Date purchaseDate
+    mongoose updatedBy
+    Date date
+  }
+  OfficeAsset ||--o{ User : "updatedBy"
+  Permission {
+    ObjectId _id PK
+    String name
+    String description
+  }
+  Phase {
+    ObjectId _id PK
+    String name
+    String description
+    mongoose projectId
+    Date dueDate
+    String status
+    Boolean isExternal
+    Number progress
+    Date createdAt
+  }
+  Phase ||--o{ Project : "projectId"
+  Project {
+    ObjectId _id PK
+    String name
+    String description
+    String outletId
+    mongoose owner
+    mongoose user
+    String role
+    String status
+    Number progress
+    Number totalTasksCount
+    Number completedTasksCount
+    mongoose userId
+    String calendarId
+    String color
+    Boolean starred
+    Date createdAt
+  }
+  Project ||--o{ User : "owner"
+  Project ||--o{ User : "user"
+  Project ||--o{ User : "userId"
+  Role {
+    ObjectId _id PK
+    mongoose tenantId
+    String name
+  }
+  Role ||--o{ Tenant : "tenantId"
+  Task {
+    ObjectId _id PK
+    String title
+    String description
+    String status
+    String priority
+    mongoose projectId
+    mongoose phaseId
+    mongoose parentTaskId
+    Date startDate
+    Date dueDate
+    Number duration
+    Number plannedHours
+    Number actualHours
+    Number progress
+    Date completedAt
+    Date createdAt
+    Date updatedAt
+    mongoose createdBy
+    Boolean notifiedOverdue
+    String color
+  }
+  Task ||--o{ Project : "projectId"
+  Task ||--o{ Phase : "phaseId"
+  Task ||--o{ Task : "parentTaskId"
+  Task ||--o{ User : "createdBy"
+  TaskAssignment {
+    ObjectId _id PK
+    mongoose taskId
+    mongoose userId
+    Date assignedAt
+    mongoose assignedBy
+  }
+  TaskAssignment ||--o{ Task : "taskId"
+  TaskAssignment ||--o{ User : "userId"
+  TaskAssignment ||--o{ User : "assignedBy"
+  Team {
+    ObjectId _id PK
+    String name
+    String description
+    String color
+    mongoose createdBy
+    Date createdAt
+  }
+  Team ||--o{ User : "createdBy"
+  Tenant {
+    ObjectId _id PK
+    String name
+    String domain
+    String status
+    String contactEmail
+    Date createdAt
+    Date updatedAt
+  }
+  TenantConfig {
+    ObjectId _id PK
+    mongoose tenantId
+    Boolean leads
+    Boolean tasks
+    Boolean campaigns
+    Boolean analytics
+    String primaryColor
+    String logoUrl
+    Date updatedAt
+  }
+  TenantConfig ||--o{ Tenant : "tenantId"
+  TscData {
+    ObjectId _id PK
+    String name
+    String email
+    String phone
+    String city
+    String state
+    String role
+    String mediaUrl
+    String timestamp
+    String originSource
+    String destination
+    String campaign
+    String dataType
+    String dateCreatedFile
+    String dateModifiedFile
+    String sourceFilename
+    mongoose importId
+    mongoose metadata
+    String emailStatus
+  }
+  TscData ||--o{ CRMImport : "importId"
+  User {
+    ObjectId _id PK
+    String name
+    String email
+    String password
+    String role
+    String avatar
+    String gender
+    String phone
+    Date lastOnline
+    Boolean online
+    Number exp
+    Number level
+    Number dailyStreak
+    String googleId
+    String googleAccessToken
+    String googleRefreshToken
+    Boolean googleCalendarLinked
+    String accessToken
+    String refreshToken
+    Date linkedAt
+    String repId
+  }
+  ViewLayout {
+    ObjectId _id PK
+    mongoose tenantId
+    String entity
+    mongoose layout
+    Date updatedAt
+  }
+  ViewLayout ||--o{ Tenant : "tenantId"
+  Workspace {
+    ObjectId _id PK
+    String name
+    String description
+    mongoose user
+    String role
+    String publicShareToken
+    Boolean isPublicShared
+    Date createdAt
+    Date updatedAt
+  }
+  Workspace ||--o{ User : "user"
+  XPAuditLog {
+    ObjectId _id PK
+    mongoose userId
+    Number amount
+    String action
+    mongoose details
+    Date createdAt
+  }
+  XPAuditLog ||--o{ User : "userId"

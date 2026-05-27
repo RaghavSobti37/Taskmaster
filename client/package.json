@@ -17,6 +17,7 @@
     "@tailwindcss/vite": "^4.0.0-alpha.14",
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-query-devtools": "^5.100.10",
+    "@tanstack/react-virtual": "^3.13.26",
     "@types/papaparse": "^5.5.2",
     "@uploadthing/react": "^7.3.3",
     "@xyflow/react": "^12.10.2",

@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import React, { useState, useRef, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { X, Save } from 'lucide-react';
 
@@ -228,9 +229,18 @@ export const DataTable = ({
   const endIndex = serverSide ? Math.min(startIndex + data.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
   const paginatedData = paginated && !serverSide ? data.slice(startIndex, endIndex) : data;
 
+  const parentRef = useRef();
+
+  const rowVirtualizer = useVirtualizer({
+    count: paginatedData.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 50,
+    overscan: 5,
+  });
+
   return (
     <div className={`w-full flex flex-col border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] ${className}`}>
-      <div className="w-full overflow-x-auto custom-scrollbar">
+      <div ref={parentRef} className="w-full overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
         <table className="w-full text-left border-collapse min-w-[540px] hidden sm:table">
           <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
             <tr>
@@ -243,22 +253,32 @@ export const DataTable = ({
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((row, i) => (
-              <tr 
-                key={i} 
-                onClick={(e) => {
-                  if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                  onRowClick?.(row);
-                }}
-                className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
-              >
-                {columns.map((col, j) => (
-                  <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
-                    {col.render ? col.render(row) : row[col.key]}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} />
+            )}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = paginatedData[virtualRow.index];
+              return (
+                <tr 
+                  key={virtualRow.index} 
+                  onClick={(e) => {
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    onRowClick?.(row);
+                  }}
+                  className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
+                  style={{ height: `${virtualRow.size}px` }}
+                >
+                  {columns.map((col, j) => (
+                    <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
+                      {col.render ? col.render(row) : row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+            {rowVirtualizer.getVirtualItems().length > 0 && (
+              <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} />
+            )}
           </tbody>
         </table>
 

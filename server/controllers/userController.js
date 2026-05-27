@@ -139,7 +139,7 @@ exports.updateUserRole = async (req, res) => {
     const { role } = req.body;
 
     // SECURITY: Validate role enum
-    const validRoles = ['user', 'admin', 'sales', 'artist_management'];
+    const validRoles = ['user', 'admin', 'sales', 'artist_management', 'operations'];
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
     }
@@ -188,7 +188,7 @@ exports.updateUserAdmin = async (req, res) => {
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
 
     if (role && role !== targetUser.role) {
-      const validRoles = ['user', 'admin', 'sales', 'artist_management'];
+      const validRoles = ['user', 'admin', 'sales', 'artist_management', 'operations'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
       }

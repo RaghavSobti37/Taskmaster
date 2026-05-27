@@ -269,35 +269,42 @@ const backupJob = require('./jobs/backupJob');
 // backupJob.start();
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  
-  // Initialize Reminder Service
-  const notificationService = require('./services/notificationService');
-  notificationService.init();
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Initialize Reminder Service
+    const notificationService = require('./services/notificationService');
+    notificationService.init();
 
-  // Initialize Background Workers
-  const { initWorker } = require('./workers/statsWorker');
-  initWorker();
-  
-  const { initWebhookWorker } = require('./workers/webhookWorker');
-  initWebhookWorker();
+    // Initialize Background Workers
+    const { initWorker } = require('./workers/statsWorker');
+    initWorker();
+    
+    const { initWebhookWorker } = require('./workers/webhookWorker');
+    initWebhookWorker();
 
-  const { initImportWorker } = require('./workers/importWorker');
-  initImportWorker();
+    const { initImportWorker } = require('./workers/importWorker');
+    initImportWorker();
 
-  const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
-  initLogArchiverWorker();
-});
-console.log('Server re-initialized after port release');
+    const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
+    initLogArchiverWorker();
+  });
+  console.log('Server re-initialized after port release');
+}
 
 // Graceful shutdown for nodemon restarts to prevent EADDRINUSE
 process.once('SIGUSR2', () => {
+  if(server) server.close();
   process.exit(0);
 });
 process.on('SIGINT', () => {
+  if(server) server.close();
   process.exit(0);
 });
+
+module.exports = app;
 
 // Trigger nodemon restart
 

@@ -31,7 +31,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [isPurging, setIsPurging] = useState(false);
+
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [leadLogs, setLeadLogs] = useState([]);
@@ -154,21 +154,7 @@ export default function LeadsPage() {
     ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all'))
   }), [page, pageSize, searchTerm, filters, sortField, sortOrder]);
 
-  const handlePurgeTestData = async () => {
-    if (!window.confirm("Are you sure you want to remove all testing, dummy, and invalid records from CRM?")) return;
-    setIsPurging(true);
-    try {
-      const res = await axios.delete('/api/crm/leads/cleanup-test-data');
-      alert(res.data.message);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-    } catch (err) {
-      console.error(err);
-      alert('Failed to purge test data');
-    } finally {
-      setIsPurging(false);
-    }
-  };
+
 
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
 
@@ -287,11 +273,7 @@ export default function LeadsPage() {
             <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
               <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
             </Button>
-            {user?.role === 'admin' && (
-              <Button variant="danger" size="sm" onClick={handlePurgeTestData} disabled={isPurging}>
-                <Trash2 size={14} /> {isPurging ? 'Purging...' : 'Purge Test Data'}
-              </Button>
-            )}
+
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus size={14} /> Add Lead
             </Button>

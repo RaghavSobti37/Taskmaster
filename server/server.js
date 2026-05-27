@@ -20,6 +20,24 @@ const proxyRoutes = require('./routes/proxyRoutes');
 
 
 const app = express();
+const fs = require('fs');
+const path = require('path');
+
+// Global Performance Logger
+app.use((req, res, next) => {
+    const start = process.hrtime();
+    res.on('finish', () => {
+        const diff = process.hrtime(start);
+        const timeInMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
+        const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${timeInMs}ms - Status: ${res.statusCode}\n`;
+        
+        // Log to file for the report
+        fs.appendFile(path.join(__dirname, 'performance.log'), logEntry, (err) => {
+            if (err) console.error('Logging failed', err);
+        });
+    });
+    next();
+});
 
 // Trust proxy for Render/Vercel (required for express-rate-limit)
 app.set('trust proxy', 1);
@@ -62,7 +80,8 @@ const SystemHealthService = require('./services/SystemHealthService');
 app.use('/api/', SystemHealthService.middleware);
 
 // MongoDB Connection
-const dbUri = (process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot').trim();
+const isProd = process.env.NODE_ENV === 'production';
+const dbUri = (isProd ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI) : (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing')).trim();
 
 // Mask URI for logging
 const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
@@ -206,8 +225,7 @@ app.use(
   })
 );
 
-const path = require('path');
-const fs = require('fs');
+// path and fs already required above
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../client/dist');
   if (fs.existsSync(distPath)) {
@@ -249,6 +267,19 @@ const server = app.listen(PORT, () => {
   // Initialize Reminder Service
   const notificationService = require('./services/notificationService');
   notificationService.init();
+
+  // Initialize Background Workers
+  const { initWorker } = require('./workers/statsWorker');
+  initWorker();
+  
+  const { initWebhookWorker } = require('./workers/webhookWorker');
+  initWebhookWorker();
+
+  const { initImportWorker } = require('./workers/importWorker');
+  initImportWorker();
+
+  const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
+  initLogArchiverWorker();
 });
 console.log('Server re-initialized after port release');
 

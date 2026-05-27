@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
-const Log = require('../models/Log');
-const { calculateRollup } = require('../utils/rollup');
-const logActivity = require('../utils/activityLogger');
+const TaskService = require('../services/TaskService');
 
 const ALLOWED_CREATE = [
   'title', 'description', 'status', 'priority', 'projectId', 'phaseId',
@@ -17,12 +15,6 @@ const ALLOWED_UPDATE = [
   'progress', 'dependencies'
 ];
 
-/**
- * Helper utility to filter an object based on allowed keys.
- * @param {Object} src - Source object containing incoming properties.
- * @param {Array<string>} keys - Whitelisted property names.
- * @returns {Object} Sanitized object containing only allowed properties.
- */
 const pick = (src, keys) => {
   const r = {};
   for (const k of keys) {
@@ -31,55 +23,23 @@ const pick = (src, keys) => {
   return r;
 };
 
-/**
- * Creates a new task and atomically increments project task counts and logs activity.
- * @async
- * @param {Object} req - Express request object containing body payload and authenticated user.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function for error handling.
- * @returns {Promise<void>} Sends 201 status with the newly created task document.
- */
 exports.createTask = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const taskData = { ...pick(req.body, ALLOWED_CREATE), createdBy: req.user._id };
     if (!taskData.projectId || taskData.projectId === '[object Object]') delete taskData.projectId;
-    if (taskData.projectId) {
-      const proj = await Project.findById(taskData.projectId).session(session);
-      if (proj && proj.color) {
-        taskData.color = proj.color;
-      }
-    }
+    
     if (taskData.assignees) {
       taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
     }
 
-    const [task] = await Task.create([taskData], { session });
-
-    if (task.projectId) {
-      await Project.findByIdAndUpdate(
-        task.projectId,
-        { $inc: { totalTasksCount: 1 } },
-        { session }
-      );
-    }
-
-    await logActivity(req.user._id, 'CREATE_TASK', task._id, 'Task', { title: task.title }, session);
-
-    await task.populate('createdBy', 'name avatar');
-    await task.populate('assignees', 'name avatar');
-
-    const { queueGamificationEvent } = require('../services/backgroundQueue');
-    queueGamificationEvent('TASK_CREATED', {
-      userId: req.user._id,
-      task
-    });
-
+    const taskDto = await TaskService.createTask(taskData, req.user, session);
+    
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json(task);
+    res.status(201).json(taskDto);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -87,14 +47,6 @@ exports.createTask = async (req, res, next) => {
   }
 };
 
-/**
- * Retrieves tasks filtered by user and optional project ID with sorted priority.
- * @async
- * @param {Object} req - Express request object containing query parameters.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function for error handling.
- * @returns {Promise<void>} Sends JSON array of task objects.
- */
 exports.getTasks = async (req, res, next) => {
   try {
     const { projectId } = req.query;
@@ -104,38 +56,25 @@ exports.getTasks = async (req, res, next) => {
       filter.projectId = projectId;
     } else {
       if (req.user.role !== 'admin') {
+        // Find tasks where user is assignee via TaskAssignment
+        const TaskAssignment = require('../models/TaskAssignment');
+        const assignments = await TaskAssignment.find({ userId: req.user._id }).lean();
+        const taskIds = assignments.map(a => a.taskId);
+        
         filter.$or = [
           { createdBy: req.user._id },
-          { assignees: req.user._id }
+          { _id: { $in: taskIds } }
         ];
       }
     }
 
-    const tasks = await Task.find(filter)
-      .select('title status priority projectId assignees progress dueDate createdBy color')
-      .populate('assignees', 'name avatar')
-      .populate('createdBy', 'name avatar')
-      .lean();
-
-    const sw = { 'in-progress': 3, 'todo': 2, 'done': 1 };
-    const pw = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
-
-    tasks.sort((a, b) => (sw[b.status] || 0) - (sw[a.status] || 0) || (pw[b.priority] || 0) - (pw[a.priority] || 0));
-
-    res.json(tasks);
+    const tasksDto = await TaskService.getTasks(filter);
+    res.json(tasksDto);
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Updates an existing task, recalculates progress rollups, logs activity, and handles task completion workflows atomically.
- * @async
- * @param {Object} req - Express request object containing params.id and update payload.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function for error handling.
- * @returns {Promise<void>} Sends JSON object of the updated task document.
- */
 exports.updateTask = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -145,127 +84,25 @@ exports.updateTask = async (req, res, next) => {
       session.endSession();
       return res.status(400).json({ error: 'Invalid task ID format' });
     }
-    const existing = await Task.findById(req.params.id).session(session);
-    if (!existing) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ error: 'Task not found' });
-    }
-
-    const isOwner = existing.createdBy?.toString() === req.user._id.toString();
-    const isAssignee = existing.assignees?.some(a => a.toString() === req.user._id.toString());
-    if (!isOwner && !isAssignee && req.user.role !== 'admin') {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(403).json({ error: 'Not authorized to update this task' });
-    }
 
     const updates = pick(req.body, ALLOWED_UPDATE);
-    if (updates.status) {
-      if (updates.status.toLowerCase() === 'done') {
-        updates.completedAt = new Date();
-        updates.progress = 100;
-      } else {
-        updates.completedAt = null;
-      }
-    }
-
-    // Check for specific granular changes to log
-    let dueDateChanged = false;
-    let oldDueDate = existing.dueDate;
-    if (updates.dueDate && new Date(updates.dueDate).getTime() !== new Date(existing.dueDate).getTime()) {
-      dueDateChanged = true;
-    }
-
-    let assigneesChanged = false;
-    if (updates.assignees) {
-      updates.assignees = updates.assignees.map(a => (typeof a === 'object' && a._id) ? a._id.toString() : a.toString());
-      if (updates.assignees.join(',') !== (existing.assignees || []).map(a => a.toString()).join(',')) {
-        assigneesChanged = true;
-      }
-    }
-
-    const task = await Task.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true, session })
-      .populate('assignees', 'name avatar')
-      .populate('createdBy', 'name avatar');
-
-    if (task) {
-      // Execute post-update side effects inside the atomic transaction
-      await calculateRollup(task.projectId, task.phaseId, session);
-      await logActivity(req.user._id, 'UPDATE_TASK', task._id, 'Task', { title: task.title, status: task.status }, session);
-      
-      if (dueDateChanged) {
-        await logActivity(req.user._id, 'TASK_DATE_CHANGED', task._id, 'Task', { oldDate: oldDueDate, newDate: task.dueDate }, session);
-      }
-      if (assigneesChanged) {
-        await logActivity(req.user._id, 'TASK_ASSIGNEES_CHANGED', task._id, 'Task', { assignees: task.assignees.map(a => a._id || a) }, session);
-      }
-
-      // Handle daily log creation on task completion
-      if (updates.status === 'done') {
-        const { queueGamificationEvent } = require('../services/backgroundQueue');
-        queueGamificationEvent('TASK_COMPLETED', {
-          userId: req.user._id,
-          task
-        });
-
-        let projectName = 'Unassigned';
-        if (task.projectId) {
-          const projectDoc = await Project.findById(task.projectId).session(session);
-          if (projectDoc) {
-            projectName = projectDoc.name;
-          }
-        }
-
-        const timeSpentStr = task.actualHours > 0 
-          ? `${task.actualHours}h` 
-          : (task.plannedHours > 0 ? `${task.plannedHours}h` : '1h');
-
-        const logDetails = {
-          type: 'TASK_COMPLETION',
-          title: `Task Finalized: ${task.title}`,
-          message: `Successfully completed task within ${projectName}.`,
-          project: projectName,
-          timeSpent: timeSpentStr
-        };
-
-        await Log.create([{
-          userId: req.user._id,
-          action: 'DAILY_LOG',
-          details: logDetails,
-          targetId: task._id,
-          targetType: 'Task'
-        }], { session });
-
-        if (task.projectId) {
-          await Project.findByIdAndUpdate(
-            task.projectId,
-            { $inc: { completedTasksCount: 1 } },
-            { session }
-          );
-        }
-      }
-    }
+    
+    const taskDto = await TaskService.updateTask(req.params.id, updates, req.user, session);
 
     await session.commitTransaction();
     session.endSession();
 
-    res.json(task);
+    res.json(taskDto);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    if (error.message.includes('authorized') || error.message.includes('not found')) {
+      return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
+    }
     next(error);
   }
 };
 
-/**
- * Deletes a task and atomically decrements associated project task metrics.
- * @async
- * @param {Object} req - Express request object containing params.id.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function for error handling.
- * @returns {Promise<void>} Sends success confirmation message.
- */
 exports.deleteTask = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -275,28 +112,8 @@ exports.deleteTask = async (req, res, next) => {
       session.endSession();
       return res.status(400).json({ error: 'Invalid task ID format' });
     }
-    const existing = await Task.findById(req.params.id).session(session);
-    if (!existing) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ error: 'Task not found' });
-    }
 
-    if (existing.createdBy?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(403).json({ error: 'Not authorized to delete this task' });
-    }
-
-    const task = await Task.findByIdAndDelete(req.params.id, { session });
-    if (task) {
-      if (task.projectId) {
-        const dec = { totalTasksCount: -1 };
-        if (task.status === 'done') dec.completedTasksCount = -1;
-        await Project.findByIdAndUpdate(task.projectId, { $inc: dec }, { session });
-      }
-      await logActivity(req.user._id, 'DELETE_TASK', task._id, 'Task', { title: task.title }, session);
-    }
+    await TaskService.deleteTask(req.params.id, req.user, session);
 
     await session.commitTransaction();
     session.endSession();
@@ -305,14 +122,13 @@ exports.deleteTask = async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    if (error.message.includes('authorized') || error.message.includes('not found')) {
+      return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
+    }
     next(error);
   }
 };
 
-/**
- * Reports a platform bug or issue, automatically assigning it as a task under the Tech Stack project for Raghav.
- * @async
- */
 exports.reportBug = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -327,7 +143,6 @@ exports.reportBug = async (req, res, next) => {
     const User = require('../models/User');
     const raghavUser = await User.findOne({ email: 'raghavraj@theshakticollective.in' }).session(session) || req.user;
 
-    // Find or create Tech Project
     let techProject = await Project.findOne({ name: /tech|maintenance/i }).session(session);
     if (!techProject) {
       techProject = await Project.create([{
@@ -348,24 +163,16 @@ exports.reportBug = async (req, res, next) => {
       status: 'todo',
       priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
       projectId: techProject._id,
-      assignees: [raghavUser._id],
+      assignees: [raghavUser._id.toString()],
       createdBy: req.user._id
     };
 
-    const [task] = await Task.create([taskData], { session });
-
-    await Project.findByIdAndUpdate(
-      techProject._id,
-      { $inc: { totalTasksCount: 1 } },
-      { session }
-    );
-
-    await logActivity(req.user._id, 'REPORT_BUG', task._id, 'Task', { title: task.title, severity }, session);
+    const taskDto = await TaskService.createTask(taskData, req.user, session);
 
     await session.commitTransaction();
     session.endSession();
 
-    res.status(201).json(task);
+    res.status(201).json(taskDto);
   } catch (error) {
     await session.abortTransaction();
     session.endSession();

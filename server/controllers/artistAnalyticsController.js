@@ -226,22 +226,38 @@ exports.syncArtistStats = async (req, res) => {
       }
     };
 
-    const updated = await Artist.findOneAndUpdate(
-      { _id: id },
+    const ArtistMetrics = require('../models/ArtistMetrics');
+    const ArtistAuth = require('../models/ArtistAuth');
+
+    const updatedMetrics = await ArtistMetrics.findOneAndUpdate(
+      { artistId: id },
       {
         $set: {
           analytics: newStats,
-          isSynced: true,
           trackedVideos: artist.trackedVideos || []
         },
         $push: {
           analyticsHistory: currentSnapshot
         }
       },
-      { new: true }
+      { new: true, upsert: true }
     );
 
-    res.json(updated || artist);
+    const updatedAuth = await ArtistAuth.findOneAndUpdate(
+      { artistId: id },
+      { $set: { isSynced: true } },
+      { new: true, upsert: true }
+    );
+
+    // Provide a mocked combined object matching frontend expectation
+    const payload = {
+      ...artist.toObject ? artist.toObject() : artist,
+      analytics: updatedMetrics.analytics,
+      trackedVideos: updatedMetrics.trackedVideos,
+      isSynced: updatedAuth.isSynced
+    };
+
+    res.json(payload);
   } catch (err) {
     logger.error('artistAnalyticsController', 'in syncArtistStats:', { error: err.message || err });
     res.status(500).json({ message: err.message });
@@ -251,9 +267,25 @@ exports.syncArtistStats = async (req, res) => {
 exports.getPlatformAnalytics = async (req, res) => {
   try {
     const { id, platform } = req.params;
+    const mongoose = require('mongoose');
 
-    let artist = await Artist.findById(id);
-    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+    const result = await Artist.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $lookup: { from: 'artistmetrics', localField: '_id', foreignField: 'artistId', as: 'metricsData' } },
+      { $lookup: { from: 'artistauths', localField: '_id', foreignField: 'artistId', as: 'authData' } },
+      { $unwind: { path: '$metricsData', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$authData', preserveNullAndEmptyArrays: true } }
+    ]);
+
+    if (!result || result.length === 0) return res.status(404).json({ message: 'Artist not found' });
+    const artist = result[0];
+    
+    // Polyfill the virtual structure for backwards compatibility with the rest of the controller logic
+    artist.analytics = artist.metricsData?.analytics || {};
+    artist.analyticsHistory = artist.metricsData?.analyticsHistory || [];
+    artist.trackedVideos = artist.metricsData?.trackedVideos || [];
+    artist.isSynced = artist.authData?.isSynced || false;
+    artist.oauthCredentials = artist.authData?.oauthCredentials || {};
 
     // Only use real history — no fake data generation
     const historyMap = { spotify: [], youtube: [], meta: [] };

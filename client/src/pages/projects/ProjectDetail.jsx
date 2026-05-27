@@ -40,7 +40,9 @@ import TaskCreateModal from '../../components/TaskCreateModal';
 import ProjectSettingsModal from '../../components/ProjectSettingsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import TaskDetailModal from '../../components/TaskDetailModal';
+import TaskCompletionModal from '../../components/TaskCompletionModal';
 import { useProject, useProjectTasks, useUpdateTask, useDeleteTask } from '../../hooks/useTaskmasterQueries';
+import { useToast } from '../../contexts/ToastContext';
 
 const ProjectDetail = () => {
   const { user } = useAuth();
@@ -61,6 +63,8 @@ const ProjectDetail = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [taskToComplete, setTaskToComplete] = useState(null);
+  const { addToast } = useToast();
 
   const handleUpdateProjectStatus = async (status) => {
     try {
@@ -85,9 +89,50 @@ const ProjectDetail = () => {
   const handleTaskCreated = () => {};
 
   const handleTaskUpdate = (taskId, updates) => {
+    if (updates.status === 'done') {
+      const task = tasks.find(t => t._id === taskId);
+      if (task) {
+        setTaskToComplete(task);
+        return;
+      }
+    }
     updateTaskMutation.mutate({ id: taskId, data: updates });
     if (selectedTask?._id === taskId) {
       setSelectedTask(prev => ({ ...prev, ...updates }));
+    }
+  };
+
+  const handleCompleteTaskSubmit = async (task, hours) => {
+    try {
+      await axios.put(`/api/tasks/${task._id}`, { status: 'done', actualHours: (task.actualHours || 0) + hours });
+      
+      // Log to daily logs
+      await axios.post('/api/logs', {
+        action: 'TIME_LOG',
+        targetType: 'Task',
+        targetId: task._id,
+        details: { hours, title: task.title }
+      });
+      
+      addToast({
+        title: 'Task Finished (+20 XP)',
+        message: `Successfully completed "${task.title}" and logged ${hours}h. Exp awarded.`,
+        type: 'success',
+        duration: 6000
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['projects', id, 'tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+      setTaskToComplete(null);
+    } catch (err) {
+      console.error('Task completion failed:', err);
+      addToast({
+        title: 'Completion Failed',
+        message: err.response?.data?.error || 'Could not finish task.',
+        type: 'error'
+      });
     }
   };
 
@@ -209,6 +254,13 @@ const ProjectDetail = () => {
         task={selectedTask}
         onTaskUpdated={handleTaskUpdate}
         onTaskDeleted={handleTaskDelete}
+      />
+
+      <TaskCompletionModal 
+        task={taskToComplete}
+        isOpen={!!taskToComplete}
+        onClose={() => setTaskToComplete(null)}
+        onSubmit={handleCompleteTaskSubmit}
       />
 
       {/* Workspace Controls */}

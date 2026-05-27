@@ -5,9 +5,19 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
-exports.handleBookedCall = async (req, res) => {
+const { Queue } = require('bullmq');
+const IORedis = require('ioredis');
+
+// Setup BullMQ Queue
+const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+  maxRetriesPerRequest: null,
+  retryStrategy: (times) => Math.min(times * 50, 2000)
+});
+const webhookQueue = new Queue('WebhookQueue', { connection });
+
+exports.processBookedCallLogic = async (data) => {
   try {
-    const { name, email, phone, whatsapp, course, referral, date, time, timezone = 'Asia/Kolkata' } = req.body;
+    const { name, email, phone, whatsapp, course, referral, date, time, timezone = 'Asia/Kolkata' } = data;
 
     // 1. Assign Rep (Only if new lead or lead has no rep)
     let lead = await Lead.findOne({ email });
@@ -145,10 +155,25 @@ exports.handleBookedCall = async (req, res) => {
     ];
     await pushToGoogleSheets(row);
 
-    res.status(200).json({ success: true, message: 'Call booked and synced' });
+    return { success: true, message: 'Call booked and synced' };
   } catch (error) {
-    console.error('Webhook Error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Webhook Processing Error:', error);
+    throw error; // Let BullMQ handle retry
+  }
+};
+
+exports.handleBookedCall = async (req, res) => {
+  try {
+    // Return 202 Accepted immediately, eliminate write lock
+    await webhookQueue.add('book-call', req.body, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 }
+    });
+    
+    res.status(202).json({ success: true, message: 'Webhook received and queued for processing' });
+  } catch (error) {
+    console.error('Queue Enqueue Error:', error);
+    res.status(500).json({ error: 'Failed to queue webhook' });
   }
 };
 

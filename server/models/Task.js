@@ -15,8 +15,7 @@ const taskSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   phaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Phase' },
   parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
-  
-  assignees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  // assignees removed from physical schema, now a virtual
   
   startDate: { type: Date },
   dueDate: { type: Date },
@@ -38,8 +37,18 @@ const taskSchema = new mongoose.Schema({
 
 taskSchema.index({ projectId: 1, status: 1 });
 taskSchema.index({ phaseId: 1, status: 1 });
-taskSchema.index({ assignees: 1 });
 taskSchema.index({ projectId: 1, dueDate: 1 });
+taskSchema.index({ tenantId: 1, createdAt: -1 });
+
+taskSchema.virtual('assignees', {
+  ref: 'TaskAssignment',
+  localField: '_id',
+  foreignField: 'taskId'
+});
+
+// Ensure virtuals are included in JSON and Object outputs
+taskSchema.set('toObject', { virtuals: true });
+taskSchema.set('toJSON', { virtuals: true });
 
 taskSchema.plugin(tenantPlugin);
 

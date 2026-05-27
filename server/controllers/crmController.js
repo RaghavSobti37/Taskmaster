@@ -385,153 +385,44 @@ exports.saveMapping = async (req, res) => {
 };
 
 exports.uploadLeads = async (req, res) => {
-  const csv = require('csv-parser');
-  const fs = require('fs');
-
   if (!req.file) {
     return res.status(400).json({ error: 'No CSV file provided' });
   }
 
   try {
-    const reps = await User.find({ role: 'sales' });
-    const repMap = {};
-    reps.forEach(r => {
-      if (r.name) {
-        repMap[r.name.toLowerCase().trim()] = r._id;
-      }
+    const { importQueue } = require('../workers/importWorker');
+    
+    // Add job to the queue
+    const job = await importQueue.add('csv-import', {
+      filePath: req.file.path,
+      originalname: req.file.originalname,
+      userId: req.user._id,
+      mapping: global.crmMapping || {}
     });
 
-    const mapping = global.crmMapping || {};
-
-    const importSession = await CRMImport.create({
-      filename: req.file.originalname,
-      leadCount: 0,
-      createdBy: req.user._id
+    res.status(202).json({ 
+      message: 'File uploaded successfully and queued for processing.', 
+      jobId: job.id 
     });
-
-    let totalProcessed = 0;
-    let batch = [];
-    const BATCH_SIZE = 500;
-    let repIndex = 0;
-
-    const stream = fs.createReadStream(req.file.path).pipe(csv());
-
-    const processBatch = async (rows) => {
-      const leadDocs = [];
-      for (const row of rows) {
-        const rawRepName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
-        let assignedRepId = null;
-
-        if (rawRepName) {
-          const matchedKey = Object.keys(repMap).find(key => rawRepName.includes(key));
-          if (matchedKey) {
-            assignedRepId = repMap[matchedKey];
-          }
-        }
-
-        if (!assignedRepId && reps.length > 0) {
-          assignedRepId = reps[repIndex % reps.length]._id;
-          repIndex++;
-        }
-
-        const leadDoc = {
-          assignedRepId,
-          createdBy: req.user._id,
-          leadStatus: 'New',
-          callStatus: 'Pending',
-          metadata: {}
-        };
-
-        for (const [csvCol, dbField] of Object.entries(mapping)) {
-          const value = row[csvCol];
-          if (!value || dbField === 'IGNORE') continue;
-
-          if (dbField === 'metadata') {
-            leadDoc.metadata[csvCol] = value;
-          } else if (ALLOWED_LEAD_FIELDS.includes(dbField)) {
-            leadDoc[dbField] = value;
-          } else {
-            leadDoc.metadata[dbField || csvCol] = value;
-          }
-        }
-
-        if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
-        if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
-        if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
-        if (!leadDoc.city) leadDoc.city = row.city || row.City || row.location || row.Location || '';
-
-        leadDoc.name = sanitizeName(leadDoc.name);
-        leadDoc.email = sanitizeEmail(leadDoc.email);
-        leadDoc.phone = normalizePhone(leadDoc.phone);
-        leadDoc.city = sanitizeLocation(leadDoc.city);
-
-        leadDocs.push(leadDoc);
-      }
-
-      const bulkOps = leadDocs.map(doc => {
-        const filter = { $or: [] };
-        if (doc.rowId) filter.$or.push({ rowId: doc.rowId });
-        if (doc.phone) filter.$or.push({ phone: doc.phone });
-        if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
-
-        if (filter.$or.length === 0) {
-          return { insertOne: { document: { ...doc, importId: importSession._id } } };
-        }
-
-        return {
-          updateOne: {
-            filter,
-            update: { $set: { ...doc, importId: importSession._id } },
-            upsert: true
-          }
-        };
-      });
-
-      if (bulkOps.length > 0) {
-        await Lead.bulkWrite(bulkOps);
-      }
-      totalProcessed += leadDocs.length;
-    };
-
-    stream.on('data', async (data) => {
-      batch.push(data);
-      if (batch.length >= BATCH_SIZE) {
-        stream.pause();
-        const rowsToProcess = [...batch];
-        batch = [];
-        try {
-          await processBatch(rowsToProcess);
-        } catch (err) {
-          logger.error('crmController', 'Batch processing ', { error: err.message || err });
-        } finally {
-          stream.resume();
-        }
-      }
-    });
-
-    stream.on('end', async () => {
-      if (batch.length > 0) {
-        try {
-          await processBatch(batch);
-        } catch (err) {
-          logger.error('crmController', 'Final batch processing ', { error: err.message || err });
-        }
-      }
-
-      await CRMImport.findByIdAndUpdate(importSession._id, { leadCount: totalProcessed });
-      try { fs.unlinkSync(req.file.path); } catch (e) { }
-      res.status(201).json({ message: `${totalProcessed} leads successfully processed via memory-efficient stream.` });
-    });
-
-    stream.on('error', (error) => {
-      try { fs.unlinkSync(req.file.path); } catch (e) { }
-      res.status(500).json({ error: 'Stream reading error occurred during CSV import' });
-    });
-
   } catch (error) {
     const fs = require('fs');
     if (req.file) try { fs.unlinkSync(req.file.path); } catch (e) { }
-    res.status(500).json({ error: 'Failed to synchronize leads' });
+    res.status(500).json({ error: 'Failed to queue import' });
+  }
+};
+
+exports.getImportJobStatus = async (req, res) => {
+  try {
+    const { importQueue } = require('../workers/importWorker');
+    const job = await importQueue.getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    
+    const state = await job.getState();
+    const progress = job.progress;
+    
+    res.json({ id: job.id, state, progress });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get job status' });
   }
 };
 
@@ -573,17 +464,36 @@ exports.getPurgeLogs = async (req, res) => {
 exports.exportLeads = async (req, res) => {
   try {
     const { format: exportFormat } = req.query;
-    const leads = await Lead.find({}).populate('assignedRepId', 'name').lean();
 
     if (exportFormat === 'json') {
-      return res.json(leads);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=leads_export.json');
+      res.write('[');
+      let isFirst = true;
+      const cursor = Lead.find({}).populate('assignedRepId', 'name').lean().cursor();
+      
+      cursor.on('data', doc => {
+        if (!isFirst) res.write(',');
+        res.write(JSON.stringify(doc));
+        isFirst = false;
+      });
+      cursor.on('end', () => { res.write(']'); res.end(); });
+      cursor.on('error', err => {
+        logger.error('crmController', 'Export JSON stream error', { error: err.message });
+        if (!res.headersSent) res.status(500).end();
+      });
+      return;
     }
 
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
+    
     const fields = ['name', 'email', 'phone', 'city', 'leadStatus', 'callStatus', 'leadQuality', 'remarks', 'assignedRep', 'createdAt'];
+    res.write(fields.join(',') + '\n');
 
-    let csv = fields.join(',') + '\n';
-
-    leads.forEach(l => {
+    const cursor = Lead.find({}).populate('assignedRepId', 'name').lean().cursor();
+    
+    cursor.on('data', l => {
       const row = [
         `"${(l.name || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
         `"${(l.email || '').replace(/"/g, '""')}"`,
@@ -596,64 +506,34 @@ exports.exportLeads = async (req, res) => {
         `"${(l.assignedRepId?.name || 'Unassigned').replace(/"/g, '""')}"`,
         `"${l.createdAt ? l.createdAt.toISOString() : ''}"`
       ];
-      csv += row.join(',') + '\n';
+      res.write(row.join(',') + '\n');
     });
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
-    res.status(200).send(csv);
+    cursor.on('end', () => res.end());
+    cursor.on('error', err => {
+      logger.error('crmController', 'Export CSV stream error', { error: err.message });
+      if (!res.headersSent) res.status(500).end();
+    });
+
   } catch (error) {
-    logger.error('crmController', 'Export ', { error: error.message || error });
-    res.status(500).json({ error: 'Failed to export leads' });
+    logger.error('crmController', 'Export Init ', { error: error.message || error });
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to export leads' });
   }
 };
 
 exports.getCRMStats = async (req, res) => {
   try {
-    const matchStage = req.user.role !== 'admin'
-      ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
-      : {};
+    const CRMStatSnapshot = require('../models/CRMStatSnapshot');
+    const isRep = req.user.role !== 'admin';
+    const query = isRep ? { repId: req.user._id } : { repId: null };
 
-    const stats = await Lead.aggregate([
-      { $match: matchStage },
-      {
-        $facet: {
-          total: [{ $count: "count" }],
-          connected: [
-            { $match: { callStatus: 'Connected' } },
-            { $count: "count" }
-          ],
-          meaningful: [
-            { $match: { meaningfulConnect: 'YES' } },
-            { $count: "count" }
-          ],
-          converted: [
-            { $match: { leadStatus: 'Converted' } },
-            { $count: "count" }
-          ],
-          totalReps: [
-            { $group: { _id: "$assignedRepId" } },
-            { $match: { _id: { $ne: null } } },
-            { $count: "count" }
-          ]
-        }
-      }
-    ]);
+    let stats = await CRMStatSnapshot.findOne(query).lean();
+    if (!stats) {
+      // Fallback empty state if worker hasn't run yet
+      stats = { metrics: { totalLeads: 0, activeReach: 0, convertedLeads: 0, conversionRate: 0, connected: 0, totalReps: 0 } };
+    }
 
-    const result = stats[0];
-    const totalLeads = result.total[0]?.count || 0;
-    const convertedLeads = result.converted[0]?.count || 0;
-    const activeReach = result.meaningful[0]?.count || 0;
-    const conversionRate = totalLeads > 0 ? Number(((convertedLeads / totalLeads) * 100).toFixed(1)) : 0;
-
-    res.json({
-      totalLeads,
-      activeReach,
-      convertedLeads,
-      conversionRate,
-      connected: result.connected[0]?.count || 0,
-      totalReps: result.totalReps[0]?.count || 0
-    });
+    res.json(stats.metrics);
   } catch (error) {
     logger.error('crmController', 'CRM Stats ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch CRM stats' });
@@ -662,30 +542,20 @@ exports.getCRMStats = async (req, res) => {
 
 exports.getFollowups = async (req, res) => {
   try {
-    const isRep = req.user.role !== 'admin';
-    const repId = isRep ? req.user._id : null;
+    const FollowupService = require('../services/FollowupService');
+    const result = await FollowupService.getPaginatedFollowups(req.user, req.query);
 
-    // Attempt cache read
-    const cachedFollowups = await followupCache.getFollowups(repId);
-    if (cachedFollowups !== null) {
-      return res.json(cachedFollowups);
-    }
+    // Provide headers so old frontend expecting flat array doesn't break entirely,
+    // although if it's purely a flat array it may need UI updates eventually.
+    // We maintain contract by returning the array itself.
+    res.set('X-Total-Count', result.pagination.total);
+    res.set('X-Total-Pages', result.pagination.pages);
+    res.set('X-Current-Page', result.pagination.page);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count, X-Total-Pages, X-Current-Page');
 
-    // Fallback to database query if cache fails or is offline
-    const query = { nextFollowupDate: { $exists: true, $ne: '' } };
-    if (isRep) {
-      query.assignedRepId = req.user._id;
-    }
-    const leads = await Lead.find(query).populate('assignedRepId', 'name avatar').sort({ nextFollowupDate: 1 }).lean();
-    const followups = leads.map(l => ({
-      ...l,
-      date: l.nextFollowupDate,
-      time: l.nextFollowupTime,
-      status: l.callStatus === 'Connected' || l.leadStatus === 'Converted' ? 'Completed' : 'Pending',
-      assignedRep: l.assignedRepId
-    }));
-    res.json(followups);
+    res.json(result.data);
   } catch (error) {
+    logger.error('crmController', 'Failed to fetch followups:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch followups' });
   }
 };

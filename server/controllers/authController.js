@@ -22,6 +22,12 @@ const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim();
 exports.register = async (req, res) => {
   try {
     const { name, email, password, gender } = req.body;
+    
+    // SECURITY: Block NoSQL Injection via Object Payloads
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Invalid input format' });
+    }
+
     const userExists = await User.findOne({ email });
 
     if (userExists) {
@@ -54,6 +60,12 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body; 
+    
+    // SECURITY: Block NoSQL Injection via Object Payloads
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Invalid credentials format' });
+    }
+
     const query = email.includes('@') 
       ? { email: email.toLowerCase() } 
       : { $or: [{ phone: email }, { name: email }] };

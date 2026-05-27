@@ -72,6 +72,8 @@ const updateEmailTags = async (email, tag, status) => {
 
     // If not found in Lead but found in TscData (sheet uploaded), create a Lead!
     if (!foundInLead) {
+      // DISABLED: User requested to stop adding auto mailer entries into leads directly
+      /*
       try {
         const newLead = new Lead({
           name: tsc.name || 'Unknown from Sheet',
@@ -90,6 +92,7 @@ const updateEmailTags = async (email, tag, status) => {
       } catch (err) {
         logger.error('Mail Service', 'Error auto-creating lead from TSC sheet', { error: err.message });
       }
+      */
     }
   }
 };

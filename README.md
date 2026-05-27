@@ -108,9 +108,9 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.22**
+- Current: **1.7.23**
 
-## [2026-05-26] Version 1.7.22
+## [2026-05-26] Version 1.7.23
 - Optimized Finance Portal UI/UX to silence notification toast spam using header-based suppression (`x-skip-toast`).
 - Resolved input lag and cursor reset issues on metadata editing panels via `editForm` local state synchronization and onBlur update triggers.
 - Replaced absolute overlay preview navigation with a styled top navbar to align with global UI standards.

@@ -115,6 +115,8 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - Automated Least-Loaded Sales Rep assignment upon booking.
 - Configured Dual AiSensy WhatsApp integration (Customer confirmation & Rep Alert).
 - Synced `BookedCalls` Google Sheet directly from CRM logic.
+- Implemented UPSERT logic in Lead creation to gracefully handle duplicate emails during booking.
+- Updated AiSensy templates and payload attributes for sales reps and customers.
 
 ## [2026-05-26] Version 1.7.23
 - Resolved input lag and cursor reset issues on metadata editing panels via `editForm` local state synchronization and onBlur update triggers.

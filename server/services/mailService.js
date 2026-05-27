@@ -177,7 +177,11 @@ const sendCampaign = async (campaignId) => {
       const trackingUrl = `${baseUrl}/api/mail/track/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
       const trackingPixel = `<img src="${trackingUrl}" width="1" height="1" style="display:none; width:1px; height:1px;" alt="" />`;
       
-      const unsubscribeUrl = `${baseUrl}/api/mail/unsubscribe/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}`;
+      const crypto = require('crypto');
+      const token = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
+        .update(recipient.email.toLowerCase().trim())
+        .digest('hex');
+      const unsubscribeUrl = `${baseUrl}/api/mail/unsubscribe/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}&token=${token}`;
       const unsubscribeFooter = `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; text-align: center; font-family: sans-serif;">
         <p style="margin: 4px 0;">You are receiving this email because you opted in at our website or events.</p>
         <p style="margin: 4px 0;">If you no longer wish to receive these emails, you can <a href="${unsubscribeUrl}" style="color: #ef4444; text-decoration: underline;">unsubscribe here</a>.</p>

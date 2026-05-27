@@ -10,10 +10,17 @@ const logger = require('../utils/logger');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
-  maxRetriesPerRequest: null
+  maxRetriesPerRequest: null,
+  retryStrategy: (times) => {
+    if (times > 3) return null;
+    return Math.min(times * 50, 2000);
+  }
 });
 
+connection.on('error', () => {});
+
 const importQueue = new Queue('CsvImportQueue', { connection });
+importQueue.on('error', () => {});
 
 const initImportWorker = () => {
   const worker = new Worker('CsvImportQueue', async job => {
@@ -153,6 +160,7 @@ const initImportWorker = () => {
 
   worker.on('completed', (job, result) => logger.info('importWorker', `Job ${job.id} completed. Processed ${result} leads.`));
   worker.on('failed', (job, err) => logger.error('importWorker', `Job ${job.id} failed: ${err.message}`));
+  worker.on('error', (err) => {});
   
   logger.info('importWorker', 'CSV Import worker initialized');
 };

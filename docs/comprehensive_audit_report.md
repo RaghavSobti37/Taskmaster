@@ -684,3 +684,9 @@ This report is generated via static analysis of controllers and routes. Live spe
 - **Speeds**: Estimated 100-300ms
 - **Bottlenecks**: Database write lock during insert. Ensure input validation is strict before hitting DB.
 
+## Changelog
+- **2026-05-28**:
+  - Fixed Redis `ECONNREFUSED` log spam by attaching `error` event listeners to cloned BullMQ `Queue` and `Worker` instances in `importWorker.js`, `webhookWorker.js`, and `webhookController.js`.
+  - Migrated legacy `assignees` arrays on `tasks` documents to the new `TaskAssignments` collection for `taskmaster_local` and `taskmaster_production` databases to fix tasks not displaying on the dashboard.
+  - Re-mapped `.env` DB connections to explicitly point to renamed clone databases `taskmaster_local` and `taskmaster_production`, and purged all unused temporary DBs.
+

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const GamificationConfig = require('../models/GamificationConfig');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 // Get current gamification config
 router.get('/config', protect, async (req, res) => {
@@ -19,7 +19,7 @@ router.get('/config', protect, async (req, res) => {
 });
 
 // Update gamification config (admin only)
-router.put('/config', protect, authorize('admin'), async (req, res) => {
+router.put('/config', protect, admin, async (req, res) => {
   try {
     const updates = req.body;
 
@@ -72,6 +72,35 @@ router.get('/config/:field', protect, async (req, res) => {
     }
 
     res.json({ field, value });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Recalculate all users' levels with new formula
+router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const GamificationService = require('../services/gamificationService');
+
+    const users = await User.find();
+    let updateCount = 0;
+
+    for (const user of users) {
+      const currentLevel = await GamificationService.getLevelFromExp(user.exp || 0);
+      if (currentLevel !== (user.level || 1)) {
+        user.level = currentLevel;
+        await user.save();
+        updateCount++;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Updated ${updateCount} users with new level formula`,
+      totalUsers: users.length,
+      updatedUsers: updateCount
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

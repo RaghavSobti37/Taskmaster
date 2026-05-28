@@ -1,5 +1,5 @@
-import React from 'react';
-import { Briefcase, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, DataTable, Badge } from '../ui';
 
 const TaskTable = ({
@@ -13,6 +13,8 @@ const TaskTable = ({
   setFilter,
   loading = false
 }) => {
+  const [sortConfig, setSortConfig] = useState({ field: null, order: 'asc' }); // 'asc', 'desc'
+
   const workspaceColorMap = React.useMemo(() => {
     const map = {};
     workspaces.forEach((w) => {
@@ -25,6 +27,16 @@ const TaskTable = ({
     if (!project) return '#64748b';
     const key = (project.workspace || 'General').toUpperCase();
     return workspaceColorMap[key] || '#64748b';
+  };
+
+  const toggleSort = (field) => {
+    setSortConfig(prev => {
+      if (prev.field === field) {
+        if (prev.order === 'asc') return { field, order: 'desc' };
+        if (prev.order === 'desc') return { field: null, order: 'asc' };
+      }
+      return { field, order: 'asc' };
+    });
   };
 
   if (loading) {
@@ -91,7 +103,17 @@ const TaskTable = ({
       }
     },
     {
-      header: 'Priority',
+      header: (
+        <button 
+          onClick={() => toggleSort('priority')}
+          className="flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
+        >
+          Priority
+          {sortConfig.field === 'priority' && (
+            sortConfig.order === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+          )}
+        </button>
+      ),
       render: (row) => (
         <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : 'info'}>
           {row.priority}
@@ -106,7 +128,17 @@ const TaskTable = ({
       }
     },
     {
-      header: 'Due Date',
+      header: (
+        <button 
+          onClick={() => toggleSort('dueDate')}
+          className="flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
+        >
+          Due Date
+          {sortConfig.field === 'dueDate' && (
+            sortConfig.order === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+          )}
+        </button>
+      ),
       render: (row) => {
         if (!row.dueDate) return <span className="text-xs text-slate-500">-</span>;
         const d = new Date(row.dueDate);
@@ -125,13 +157,30 @@ const TaskTable = ({
   const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
 
   const filteredTasks = tasks.filter(t => {
-    if (t.status === 'done') return false;
+    // For urgent filter, show all statuses - urgent tasks should always be visible
     if (filter === 'urgent') return t.priority === 'critical';
+    
+    // For other filters, exclude done tasks
+    if (t.status === 'done') return false;
     if (filter === 'overdue') return t.dueDate && new Date(t.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
     return true; // 'all'
   });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    // Custom sort by sortConfig if set
+    if (sortConfig.field === 'priority') {
+      const aPriority = priorityOrder[a.priority] || 0;
+      const bPriority = priorityOrder[b.priority] || 0;
+      return sortConfig.order === 'asc' ? aPriority - bPriority : bPriority - aPriority;
+    }
+
+    if (sortConfig.field === 'dueDate') {
+      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return sortConfig.order === 'asc' ? aDate - bDate : bDate - aDate;
+    }
+
+    // Default sort: by date status then priority
     const getSortValue = (t) => {
       if (!t.dueDate) return 4;
       const d = new Date(t.dueDate).setHours(0, 0, 0, 0);
@@ -153,40 +202,6 @@ const TaskTable = ({
 
   return (
     <Card className="flex flex-col shadow-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-hidden">
-      <div className="p-5 flex items-center justify-between border-b border-[var(--color-bg-border)]">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)]">
-            Active Workflow
-          </h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {filter !== 'all' && (
-            <span className="text-xs font-medium text-[var(--color-text-muted)] px-2">
-              Filtered: <span className="capitalize">{filter}</span>
-            </span>
-          )}
-          <div className="flex bg-[var(--color-bg-secondary)] p-1 rounded-md border border-[var(--color-bg-border)]">
-            <button
-              onClick={() => setFilter('all')}
-              className={`text-xs font-medium px-3 py-1.5 rounded transition-all ${filter === 'all'
-                ? 'bg-[var(--color-bg-surface)] shadow-sm text-[var(--color-text-primary)]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-            >
-              All Items
-            </button>
-            <button
-              onClick={() => setFilter('urgent')}
-              className={`text-xs font-medium px-3 py-1.5 rounded transition-all ${filter === 'urgent'
-                ? 'bg-[var(--color-bg-surface)] shadow-sm text-[var(--color-text-primary)]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-            >
-              Urgent
-            </button>
-          </div>
-        </div>
-      </div>
       <div className="p-0">
         <DataTable
           columns={taskColumns}

@@ -28,11 +28,12 @@ const uploadRouter = {
     }),
 
   // Finance document uploader — supports PDFs, images, spreadsheets, and text files
+  // minFileCount: 0 required so mixed batches (e.g. only PDFs) don't fail other types
   financeDocUploader: f({
-    pdf: { maxFileSize: "32MB", maxFileCount: 10 },
-    image: { maxFileSize: "16MB", maxFileCount: 10 },
-    text: { maxFileSize: "16MB", maxFileCount: 10 },
-    blob: { maxFileSize: "32MB", maxFileCount: 10 },
+    pdf: { maxFileSize: "32MB", maxFileCount: 50, minFileCount: 0 },
+    image: { maxFileSize: "16MB", maxFileCount: 50, minFileCount: 0 },
+    text: { maxFileSize: "16MB", maxFileCount: 50, minFileCount: 0 },
+    blob: { maxFileSize: "32MB", maxFileCount: 50, minFileCount: 0 },
   })
     .middleware(async ({ req }) => {
       const authHeader = req?.headers?.authorization ? String(req.headers.authorization) : null;

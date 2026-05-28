@@ -32,6 +32,7 @@ export default function LeadsPage() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [statFilter, setStatFilter] = useState(null);
+  const [filters, setFilters] = useState({ leadStatus: 'all', meaningfulConnect: 'all' });
 
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);

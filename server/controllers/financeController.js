@@ -13,6 +13,13 @@ try {
 
 const utapi = new UTApi({ apiKey: utApiKey });
 
+const populateFinanceDoc = (id) =>
+  FinanceDocument.findById(id)
+    .populate('uploadedBy', 'name email avatar')
+    .populate('project', 'name')
+    .populate('folderId', 'folderName title isFolder')
+    .lean();
+
 // Direct file upload via server-side UTApi (bypasses React client version issues)
 const uploadFile = async (req, res) => {
   try {
@@ -45,13 +52,86 @@ const uploadFile = async (req, res) => {
   }
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const uploadOneFileToUT = async (file, maxAttempts = 3) => {
+  let lastError = 'Upload failed';
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const utFile = new UTFile([file.buffer], file.originalname, { type: file.mimetype });
+      const uploadResult = await utapi.uploadFiles([utFile]);
+
+      if (uploadResult[0]?.data) {
+        const { url, key, name } = uploadResult[0].data;
+        return {
+          url: url || uploadResult[0].data.ufsUrl,
+          key,
+          name: name || file.originalname,
+          size: file.size,
+          type: file.mimetype,
+        };
+      }
+      lastError = uploadResult[0]?.error?.message || lastError;
+    } catch (err) {
+      lastError = err.message || lastError;
+    }
+    if (attempt < maxAttempts) await sleep(1500 * attempt);
+  }
+  throw new Error(lastError);
+};
+
+// Multi-file upload via server-side UTApi (batched by client; retries per file)
+const uploadFilesMany = async (req, res) => {
+  try {
+    const files = req.files || [];
+    if (files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files provided' });
+    }
+
+    const data = [];
+    const failed = [];
+
+    for (const file of files) {
+      try {
+        const result = await uploadOneFileToUT(file);
+        data.push(result);
+      } catch (err) {
+        console.error(`Upload failed for ${file.originalname}:`, err.message);
+        failed.push({ fileName: file.originalname, error: err.message });
+      }
+      await sleep(300);
+    }
+
+    const message = failed.length
+      ? `${data.length} uploaded, ${failed.length} failed`
+      : `${data.length} file(s) uploaded`;
+
+    res.status(failed.length && data.length === 0 ? 500 : 200).json({
+      success: data.length > 0,
+      data,
+      failed,
+      message,
+    });
+  } catch (error) {
+    console.error('Multi file upload error:', error);
+    res.status(500).json({ success: false, message: error.message || 'File upload failed' });
+  }
+};
+
 
 const uploadDocument = async (req, res) => {
   try {
-    const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType } = req.body;
+    const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId } = req.body;
 
     if (!title || !project || !fileUrl) {
       return res.status(400).json({ success: false, message: 'Title, project, and file URL are required' });
+    }
+
+    if (folderId) {
+      const folder = await FinanceDocument.findOne({ _id: folderId, isFolder: true, project });
+      if (!folder) {
+        return res.status(404).json({ success: false, message: 'Folder not found for this project' });
+      }
     }
 
     // Validate project exists
@@ -80,6 +160,7 @@ const uploadDocument = async (req, res) => {
       title,
       description: description || '',
       project,
+      folderId: folderId || null,
       category: category || docMetadata.detectedCategory || 'other',
       fileUrl,
       fileKey,
@@ -100,11 +181,7 @@ const uploadDocument = async (req, res) => {
 
     await doc.save();
 
-    // Return populated doc
-    const populated = await FinanceDocument.findById(doc._id)
-      .populate('uploadedBy', 'name email avatar')
-      .populate('project', 'name')
-      .lean();
+    const populated = await populateFinanceDoc(doc._id);
 
     res.status(201).json({ success: true, data: populated, message: 'Document uploaded' });
   } catch (error) {
@@ -122,8 +199,13 @@ const uploadDocumentsBulk = async (req, res) => {
 
     const savedDocs = [];
     for (const d of documents) {
-      const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType } = d;
+      const { title, description, project, category, fileUrl, fileKey, fileName, fileSize, fileType, folderId } = d;
       if (!title || !project || !fileUrl) continue;
+
+      if (folderId) {
+        const folder = await FinanceDocument.findOne({ _id: folderId, isFolder: true, project });
+        if (!folder) continue;
+      }
 
       let extractedText = '';
       let docMetadata = {};
@@ -142,6 +224,7 @@ const uploadDocumentsBulk = async (req, res) => {
         title,
         description: description || '',
         project,
+        folderId: folderId || null,
         category: category || docMetadata.detectedCategory || 'other',
         fileUrl,
         fileKey,
@@ -167,6 +250,7 @@ const uploadDocumentsBulk = async (req, res) => {
     const populatedDocs = await FinanceDocument.find({ _id: { $in: savedDocs } })
       .populate('uploadedBy', 'name email avatar')
       .populate('project', 'name')
+      .populate('folderId', 'folderName title isFolder')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -179,60 +263,288 @@ const uploadDocumentsBulk = async (req, res) => {
 
 const getDocuments = async (req, res) => {
   try {
-    const { project, category, page, limit, startDate, endDate, searchQuery } = req.query;
+    const { project, category, page, limit, startDate, endDate, searchQuery, folderId, sortField, sortOrder } = req.query;
     const filter = {};
-    
-    if (project) filter.project = project;
-    if (category && category !== 'all') filter.category = category;
-    
-    // Date Range Filter (based on upload date or receipt metadata date - we filter by upload date)
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = end;
-      }
-    }
 
-    // Search Query (scans title, fileName, and vendor metadata field)
-    if (searchQuery) {
-      const regex = new RegExp(searchQuery, 'i');
+    if (project) filter.project = project;
+
+    // Folder navigation: root shows folders + root docs; inside folder shows docs only
+    if (folderId) {
+      filter.isFolder = { $ne: true };
+      filter.folderId = folderId;
+    } else if (project && !folderId) {
+      // Project root: folders first, then root-level documents only
       filter.$or = [
-        { title: regex },
-        { fileName: regex },
-        { 'metadata.vendor': regex }
+        { isFolder: true, parentFolderId: null },
+        { isFolder: { $ne: true }, $or: [{ folderId: null }, { folderId: { $exists: false } }] },
+      ];
+    } else if (!project) {
+      // All projects: folders + documents (navigate into folder via ?folderId=)
+      filter.$or = [
+        { isFolder: true, parentFolderId: null },
+        { isFolder: { $ne: true } },
       ];
     }
 
-    // Pagination
+    if (category && category !== 'all') filter.category = category;
+
+    if (startDate || endDate) {
+      const docDateRange = {};
+      if (startDate) docDateRange.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        docDateRange.$lte = end;
+      }
+      const dateClause = {
+        $or: [
+          { isFolder: true },
+          { 'metadata.date': docDateRange },
+        ],
+      };
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, dateClause];
+        delete filter.$or;
+      } else {
+        filter.$and = [dateClause];
+      }
+    }
+
+    if (searchQuery) {
+      const regex = new RegExp(searchQuery, 'i');
+      const searchOr = [
+        { title: regex },
+        { folderName: regex },
+        { fileName: regex },
+        { 'metadata.vendor': regex },
+      ];
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchOr;
+      }
+    }
+
     const pageVal = parseInt(page) || 1;
     const limitVal = parseInt(limit) || 10;
     const skip = (pageVal - 1) * limitVal;
 
+    const SORTABLE = {
+      title: 'title',
+      category: 'category',
+      fileSize: 'fileSize',
+      docDate: 'metadata.date',
+      folderName: 'folderName',
+    };
+    const order = sortOrder === 'asc' ? 1 : -1;
+    let sort = { isFolder: -1, folderName: 1, 'metadata.date': -1, createdAt: -1 };
+    if (sortField && SORTABLE[sortField]) {
+      const key = SORTABLE[sortField];
+      sort = { isFolder: -1, [key]: order };
+      if (sortField === 'docDate') sort.createdAt = order;
+      if (sortField === 'title') sort.fileName = order;
+    }
+
     const total = await FinanceDocument.countDocuments(filter);
-    
-    const docs = await FinanceDocument.find(filter)
+
+    let docs = await FinanceDocument.find(filter)
       .populate('uploadedBy', 'name email avatar')
       .populate('project', 'name')
-      .sort({ createdAt: -1 })
+      .populate('folderId', 'folderName title isFolder')
+      .sort(sort)
       .skip(skip)
       .limit(limitVal)
       .lean();
 
+    // Attach document counts to folder rows
+    const folderIds = docs.filter((d) => d.isFolder).map((d) => d._id);
+    if (folderIds.length > 0) {
+      const counts = await FinanceDocument.aggregate([
+        { $match: { folderId: { $in: folderIds }, isFolder: { $ne: true } } },
+        { $group: { _id: '$folderId', count: { $sum: 1 } } },
+      ]);
+      const countMap = Object.fromEntries(counts.map((c) => [c._id.toString(), c.count]));
+      docs = docs.map((d) =>
+        d.isFolder ? { ...d, documentCount: countMap[d._id.toString()] || 0 } : d
+      );
+    }
+
+    let currentFolder = null;
+    if (folderId) {
+      currentFolder = await FinanceDocument.findOne({ _id: folderId, isFolder: true })
+        .populate('project', 'name')
+        .lean();
+    }
+
     res.json({
       success: true,
       data: docs,
+      currentFolder,
       pagination: {
         total,
         page: pageVal,
         limit: limitVal,
-        pages: Math.ceil(total / limitVal)
-      }
+        pages: Math.ceil(total / limitVal) || 1,
+      },
     });
   } catch (error) {
     console.error('Fetch documents error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const createFolder = async (req, res) => {
+  try {
+    const { folderName, project, parentFolderId } = req.body;
+    if (!folderName || !project) {
+      return res.status(400).json({ success: false, message: 'folderName and project are required' });
+    }
+
+    const projectDoc = await Project.findById(project).lean();
+    if (!projectDoc) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    if (parentFolderId) {
+      const parent = await FinanceDocument.findOne({ _id: parentFolderId, isFolder: true, project });
+      if (!parent) {
+        return res.status(404).json({ success: false, message: 'Parent folder not found' });
+      }
+    }
+
+    const existing = await FinanceDocument.findOne({
+      isFolder: true,
+      project,
+      folderName: folderName.trim(),
+      parentFolderId: parentFolderId || null,
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Folder already exists' });
+    }
+
+    const folder = new FinanceDocument({
+      isFolder: true,
+      folderName: folderName.trim(),
+      title: folderName.trim(),
+      project,
+      parentFolderId: parentFolderId || null,
+      uploadedBy: req.user._id,
+      category: 'other',
+    });
+
+    await folder.save();
+    const populated = await populateFinanceDoc(folder._id);
+    res.status(201).json({ success: true, data: populated, message: 'Folder created' });
+  } catch (error) {
+    console.error('Create folder error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+const getFolders = async (req, res) => {
+  try {
+    const { project, parentFolderId } = req.query;
+    if (!project) {
+      return res.status(400).json({ success: false, message: 'project is required' });
+    }
+
+    const filter = {
+      isFolder: true,
+      project,
+      parentFolderId: parentFolderId || null,
+    };
+
+    const folders = await FinanceDocument.find(filter)
+      .populate('project', 'name')
+      .sort({ folderName: 1 })
+      .lean();
+
+    const folderIds = folders.map((f) => f._id);
+    const counts = await FinanceDocument.aggregate([
+      { $match: { folderId: { $in: folderIds }, isFolder: { $ne: true } } },
+      { $group: { _id: '$folderId', count: { $sum: 1 } } },
+    ]);
+    const countMap = Object.fromEntries(counts.map((c) => [c._id.toString(), c.count]));
+
+    const data = folders.map((f) => ({
+      ...f,
+      documentCount: countMap[f._id.toString()] || 0,
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Get folders error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const deleteFolder = async (req, res) => {
+  try {
+    const folder = await FinanceDocument.findOne({ _id: req.params.folderId, isFolder: true });
+    if (!folder) {
+      return res.status(404).json({ success: false, message: 'Folder not found' });
+    }
+
+    const childDocs = await FinanceDocument.find({ folderId: folder._id, isFolder: { $ne: true } });
+    for (const doc of childDocs) {
+      if (doc.fileKey) {
+        try {
+          await utapi.deleteFiles(doc.fileKey);
+        } catch (err) {
+          console.error('UploadThing delete failed:', err.message);
+        }
+      }
+    }
+
+    await FinanceDocument.deleteMany({ folderId: folder._id });
+    await folder.deleteOne();
+
+    res.json({ success: true, message: 'Folder and documents deleted' });
+  } catch (error) {
+    console.error('Delete folder error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const syncFolderPlacementFromDiskHandler = async (req, res) => {
+  try {
+    const { syncFolderPlacementFromDisk } = require('../utils/financeDiskSync');
+    const results = await syncFolderPlacementFromDisk(req.user._id);
+    res.json({ success: true, data: results, message: 'Folder placement synced from disk' });
+  } catch (error) {
+    console.error('Sync folder placement error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+const getFolderBreadcrumb = async (req, res) => {
+  try {
+    const { folderId } = req.params;
+    const trail = [];
+    let current = await FinanceDocument.findOne({ _id: folderId, isFolder: true })
+      .populate('project', 'name')
+      .lean();
+
+    if (!current) {
+      return res.status(404).json({ success: false, message: 'Folder not found' });
+    }
+
+    while (current) {
+      trail.unshift({
+        _id: current._id,
+        folderName: current.folderName,
+        project: current.project,
+      });
+      if (!current.parentFolderId) break;
+      current = await FinanceDocument.findOne({ _id: current.parentFolderId, isFolder: true })
+        .populate('project', 'name')
+        .lean();
+    }
+
+    res.json({ success: true, data: trail });
+  } catch (error) {
+    console.error('Breadcrumb error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -244,9 +556,20 @@ const deleteDocument = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
 
-    // Only uploader or admin can delete
-    if (req.user.role !== 'admin' && doc.uploadedBy.toString() !== req.user._id.toString()) {
+    if (doc.isFolder) {
+      return res.status(400).json({ success: false, message: 'Use folder delete endpoint for folders' });
+    }
+
+    if (req.user.role !== 'admin' && doc.uploadedBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this document' });
+    }
+
+    if (doc.fileKey) {
+      try {
+        await utapi.deleteFiles(doc.fileKey);
+      } catch (err) {
+        console.error('UploadThing delete failed:', err.message);
+      }
     }
 
     await doc.deleteOne();
@@ -260,6 +583,7 @@ const deleteDocument = async (req, res) => {
 const getStats = async (req, res) => {
   try {
     const stats = await FinanceDocument.aggregate([
+      { $match: { isFolder: { $ne: true } } },
       {
         $facet: {
           totalDocs: [{ $count: 'count' }],
@@ -337,10 +661,7 @@ const updateDocument = async (req, res) => {
 
     await doc.save();
 
-    const populated = await FinanceDocument.findById(doc._id)
-      .populate('uploadedBy', 'name email avatar')
-      .populate('project', 'name')
-      .lean();
+    const populated = await populateFinanceDoc(doc._id);
 
     res.json({ success: true, data: populated, message: 'Document updated' });
   } catch (error) {
@@ -468,6 +789,7 @@ const rejectInvoice = async (req, res) => {
 
 module.exports = {
   uploadFile,
+  uploadFilesMany,
   uploadDocument,
   getDocuments,
   deleteDocument,
@@ -478,4 +800,9 @@ module.exports = {
   listPendingInvoices,
   approveInvoice,
   rejectInvoice,
+  createFolder,
+  getFolders,
+  deleteFolder,
+  getFolderBreadcrumb,
+  syncFolderPlacementFromDiskHandler,
 };

@@ -483,6 +483,13 @@ const OutletSidebar = () => {
                     isMobile={isMobile}
                   />
                   <NavItem
+                    to="/admin/scripts"
+                    icon={Terminal}
+                    label="Script Runner"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
+                  <NavItem
                     to="/admin/gamification"
                     icon={Zap}
                     label="Gamification"

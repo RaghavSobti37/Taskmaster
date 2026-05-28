@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 import { subscribeToChannel } from '../lib/supabase';
+import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -11,7 +12,7 @@ const fetchLogs = async (userId, limit = 200) => {
 
 const fetchProjects = async () => {
   const { data } = await axios.get('/api/projects');
-  return data;
+  return normalizeProjects(data);
 };
 
 const fetchWorkspaces = async () => {
@@ -21,7 +22,7 @@ const fetchWorkspaces = async () => {
 
 const fetchProjectById = async (id) => {
   const { data } = await axios.get(`/api/projects/${id}`);
-  return data;
+  return normalizeProject(data);
 };
 
 const fetchTasks = async () => {

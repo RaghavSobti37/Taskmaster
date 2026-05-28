@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const imaps = require('imap-simple');
 const { simpleParser } = require('mailparser');
 const { Resend } = require('resend');
+const juice = require('juice');
 const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
@@ -194,7 +195,12 @@ const sendCampaign = async (campaignId) => {
         personalizedContent = personalizedContent.replace(/\n/g, '<br />');
       }
 
-
+      // Inline CSS styles for email client compatibility
+      try {
+        personalizedContent = juice(personalizedContent);
+      } catch (inlineErr) {
+        logger.warn('CSS Inlining', 'Failed to inline CSS, continuing without inlining', { error: inlineErr.message });
+      }
 
       // Automatically wrap all external links in click tracker
       personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
@@ -458,6 +464,15 @@ const scanBounces = async (profileId) => {
 
 module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: async (opts) => {
   const { to, subject, html, profile } = opts;
+  
+  // Inline CSS styles for email client compatibility
+  let inlinedHtml = html;
+  try {
+    inlinedHtml = juice(html);
+  } catch (inlineErr) {
+    logger.warn('CSS Inlining', 'Test email CSS inlining failed, sending without inlining', { error: inlineErr.message });
+  }
+  
   const transporter = nodemailer.createTransport({
     host: profile.smtpHost,
     port: profile.smtpPort,
@@ -471,6 +486,6 @@ module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: as
     from: profile.email,
     to,
     subject,
-    html
+    html: inlinedHtml
   });
 } };

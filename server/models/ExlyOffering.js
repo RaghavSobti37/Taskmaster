@@ -15,7 +15,10 @@ const ExlyOfferingSchema = new mongoose.Schema({
   
   // Dynamic aggregations
   totalBookings: { type: Number, default: 0 },
+  paidBookings: { type: Number, default: 0 },
+  freeBookings: { type: Number, default: 0 },
   totalRevenue: { type: Number, default: 0 },
+  avgOrderValue: { type: Number, default: 0 },
   conversionRate: { type: Number, default: 0 }
 }, {
   timestamps: true

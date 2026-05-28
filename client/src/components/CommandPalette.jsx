@@ -92,7 +92,7 @@ const CommandPalette = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-2xl bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
+            className="tm-modal-panel max-w-2xl relative w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
           >
             <div className="flex items-center px-6 py-5 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
               <Search className="text-[var(--color-text-muted)] mr-4" size={20} />

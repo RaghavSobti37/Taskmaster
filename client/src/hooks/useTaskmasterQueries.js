@@ -930,6 +930,15 @@ export const useLeaderboard = (enabled = true) => {
   });
 };
 
+export const useLeaderboardBreakdown = (userId, enabled = true) => {
+  return useQuery({
+    queryKey: ['gamification', 'leaderboard', 'breakdown', userId],
+    queryFn: async () => (await axios.get(`/api/gamification/leaderboard/${userId}/breakdown`)).data,
+    enabled: enabled && !!userId,
+    staleTime: 1000 * 30
+  });
+};
+
 export const useAnnouncements = (enabled = true) => {
   return useQuery({
     queryKey: ['announcements'],

@@ -39,6 +39,7 @@
     "ioredis": "^5.11.0",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.0",
+    "juice": "^11.1.1",
     "mailparser": "^3.9.8",
     "mongoose": "^7.0.3",
     "multer": "^2.1.1",

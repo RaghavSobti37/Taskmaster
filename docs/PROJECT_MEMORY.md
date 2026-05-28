@@ -67,6 +67,7 @@ flowchart LR
 * **Deduplication**: Compound unique keys and upsert behavior prevent duplicate CRM records.
 * **Query performance**: Read routes use `.lean()` and aggregation pipelines rather than repeated `countDocuments()`.
 * **Audit tracing**: Mutation events are recorded into audit logs for CRM changes and user actions.
+* **Exly revenue metrics** (v1.7.28+): Paid bookings = `pricePaid > 0`; revenue = sum of `pricePaid`; AOV = paid revenue ÷ paid count. Shared logic in `server/utils/exlyMetrics.js`; UI at `/admin/exly-campaigns`.
 
 ---
 

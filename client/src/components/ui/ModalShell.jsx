@@ -14,11 +14,18 @@ export const MODAL_WIDTH_PX = {
 };
 
 export const MODAL_PANEL_CLASS = 'tm-modal-panel';
+export const MODAL_OVERLAY_CLASS = 'tm-modal-overlay';
+
+export const getModalPanelClassName = (size = 'lg', extra = '') => {
+  const sizeClass = typeof size === 'number' ? '' : `tm-modal-${size}`;
+  return [MODAL_PANEL_CLASS, sizeClass, extra].filter(Boolean).join(' ');
+};
 
 export const getModalPanelStyle = (sizeOrPx = 'lg') => {
   const px = typeof sizeOrPx === 'number' ? sizeOrPx : (MODAL_WIDTH_PX[sizeOrPx] || MODAL_WIDTH_PX.lg);
   return {
-    width: `${px}px`,
+    ['--tm-modal-width']: `${px}px`,
+    width: `min(calc(100vw - 2rem), ${px}px)`,
     minWidth: 'min(320px, calc(100vw - 2rem))',
     maxWidth: 'calc(100vw - 2rem)',
     flexShrink: 0,
@@ -26,6 +33,24 @@ export const getModalPanelStyle = (sizeOrPx = 'lg') => {
     boxSizing: 'border-box',
   };
 };
+
+/** Lightweight overlay for legacy inline modals — prefer ModalShell / CenteredModal for new code */
+export const ModalOverlay = ({
+  children,
+  className = '',
+  zIndex = 1000,
+  onBackdropClick,
+  padding = true,
+}) => (
+  <div
+    className={`${MODAL_OVERLAY_CLASS} fixed inset-0 ${padding ? 'p-4 sm:p-6' : ''} ${className}`}
+    style={{ zIndex }}
+    onClick={onBackdropClick}
+    role="presentation"
+  >
+    {children}
+  </div>
+);
 
 /**
  * Shared modal overlay + panel shell.
@@ -73,7 +98,7 @@ export const ModalShell = ({
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
             onClick={onClose}
           />
-          <div className="absolute inset-0 grid place-items-center p-4 sm:p-6 pointer-events-none overflow-y-auto">
+          <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}

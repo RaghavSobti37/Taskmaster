@@ -31,7 +31,8 @@ import {
   Trash2,
   Cloud,
   Globe,
-  FileText
+  FileText,
+  Terminal
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';

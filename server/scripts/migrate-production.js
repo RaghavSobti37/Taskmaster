@@ -2,85 +2,89 @@
 
 /**
  * Production Migration Script
- * - Adds `order` field to workspaces collection
- * - Deletes SOCIAL MEDIA workspace
- * - Migrates projects from SOCIAL MEDIA to GENERAL
- * 
+ * - Syncs workspace structure from LOCAL DB to PRODUCTION DB
+ * - No workspace rename/delete/move logic
+ *
  * Usage: node server/scripts/migrate-production.js
  */
 
 const mongoose = require('mongoose');
 require('dotenv').config();
-
-const Workspace = require('../models/Workspace');
-const Project = require('../models/Project');
 const logger = require('../utils/logger');
 
 const runMigration = async () => {
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmaster';
-  
+  let localConnection;
+  let prodConnection;
+
   try {
-    console.log('🔄 Connecting to database...');
-    await mongoose.connect(mongoUri, {
+    const localUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmaster';
+    const prodUri = process.env.MONGODB_URI_PROD;
+
+    if (!prodUri) {
+      console.error('❌ MONGODB_URI_PROD not set in .env');
+      process.exit(1);
+    }
+
+    console.log('🔄 Connecting to local database...');
+    localConnection = await mongoose.createConnection(localUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Connected to database');
+    console.log('✅ Connected to local database');
 
-    // Step 1: Add `order` field to all workspaces
-    console.log('\n📋 Step 1: Adding `order` field to workspaces...');
-    const workspaces = await Workspace.find();
-    
-    for (let i = 0; i < workspaces.length; i++) {
-      const ws = workspaces[i];
-      if (ws.order === undefined || ws.order === null) {
-        ws.order = i;
-        await ws.save();
-        console.log(`  ✓ ${ws.name}: order = ${i}`);
-      }
-    }
-    console.log(`✅ Updated ${workspaces.length} workspaces`);
-
-    // Step 2: Migrate projects from SOCIAL MEDIA to GENERAL
-    console.log('\n📋 Step 2: Migrating SOCIAL MEDIA projects to GENERAL...');
-    const socialMediaProjects = await Project.find({ workspace: 'SOCIAL MEDIA' });
-    
-    if (socialMediaProjects.length > 0) {
-      await Project.updateMany(
-        { workspace: 'SOCIAL MEDIA' },
-        { workspace: 'GENERAL' }
-      );
-      console.log(`✅ Migrated ${socialMediaProjects.length} projects to GENERAL`);
-      socialMediaProjects.forEach(p => {
-        console.log(`  ✓ ${p.name}: SOCIAL MEDIA → GENERAL`);
-      });
-    } else {
-      console.log('ℹ️  No projects in SOCIAL MEDIA workspace');
-    }
-
-    // Step 3: Delete SOCIAL MEDIA workspace
-    console.log('\n📋 Step 3: Deleting SOCIAL MEDIA workspace...');
-    const deleted = await Workspace.deleteOne({ name: 'SOCIAL MEDIA' });
-    
-    if (deleted.deletedCount > 0) {
-      console.log('✅ SOCIAL MEDIA workspace deleted');
-    } else {
-      console.log('ℹ️  SOCIAL MEDIA workspace not found (already deleted)');
-    }
-
-    // Step 4: Verify new structure
-    console.log('\n📋 Step 4: Final verification...');
-    const finalWorkspaces = await Workspace.find().sort({ order: 1 });
-    console.log('✅ Current workspaces (in order):');
-    finalWorkspaces.forEach(ws => {
-      console.log(`  ${ws.order + 1}. ${ws.name} (color: ${ws.color})`);
+    console.log('🔄 Connecting to production database...');
+    prodConnection = await mongoose.createConnection(prodUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
+    console.log('✅ Connected to production database');
 
-    const projectCount = await Project.countDocuments();
-    const socialMediaCount = await Project.countDocuments({ workspace: 'SOCIAL MEDIA' });
-    
-    console.log(`\n✅ Total projects: ${projectCount}`);
-    console.log(`✅ Projects in SOCIAL MEDIA: ${socialMediaCount} (should be 0)`);
+    const workspaceSchema = require('../models/Workspace').schema;
+    const LocalWorkspace = localConnection.model('Workspace', workspaceSchema);
+    const ProdWorkspace = prodConnection.model('Workspace', workspaceSchema);
+
+    console.log('\n📋 Fetching local workspaces...');
+    const localWorkspaces = await LocalWorkspace.find().lean();
+    console.log(`✅ Found ${localWorkspaces.length} local workspaces`);
+
+    if (localWorkspaces.length === 0) {
+      console.log('ℹ️ No local workspaces found. Nothing to migrate.');
+      process.exit(0);
+    }
+
+    console.log('\n📋 Syncing structure to production...');
+    let syncedCount = 0;
+    const localWorkspaceNames = new Set(localWorkspaces.map((ws) => ws.name));
+    for (const ws of localWorkspaces) {
+      const { _id, createdAt, updatedAt, ...syncData } = ws;
+      await ProdWorkspace.updateOne(
+        { name: ws.name },
+        { $set: syncData },
+        { upsert: true }
+      );
+      syncedCount++;
+      console.log(`  ✓ ${ws.name} (order: ${ws.order}, color: ${ws.color})`);
+    }
+    console.log(`✅ Synced ${syncedCount} workspaces`);
+
+    console.log('\n📋 Removing production-only workspaces...');
+    const prodBeforeDelete = await ProdWorkspace.find({}, 'name').lean();
+    const toDelete = prodBeforeDelete
+      .map((ws) => ws.name)
+      .filter((name) => !localWorkspaceNames.has(name));
+
+    if (toDelete.length > 0) {
+      const deleteResult = await ProdWorkspace.deleteMany({ name: { $in: toDelete } });
+      console.log(`✅ Removed ${deleteResult.deletedCount} workspace(s): ${toDelete.join(', ')}`);
+    } else {
+      console.log('ℹ️ No extra production workspaces to remove');
+    }
+
+    console.log('\n📋 Verifying production structure...');
+    const prodWorkspaces = await ProdWorkspace.find().sort({ order: 1 }).lean();
+    prodWorkspaces.forEach((ws, idx) => {
+      console.log(`  ${idx + 1}. ${ws.name} (order: ${ws.order}, color: ${ws.color})`);
+    });
 
     console.log('\n🎉 Migration completed successfully!');
     process.exit(0);
@@ -88,8 +92,10 @@ const runMigration = async () => {
     console.error('❌ Migration failed:', error.message);
     logger.error('migrate-production', 'Migration failed', { error: error.message });
     process.exit(1);
+  } finally {
+    if (localConnection) await localConnection.close();
+    if (prodConnection) await prodConnection.close();
   }
 };
 
-// Run migration
 runMigration();

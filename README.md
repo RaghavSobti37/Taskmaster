@@ -108,7 +108,17 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.25**
+- Current: **1.7.27**
+
+## [2026-05-28] Version 1.7.27 - Production Stability + Data Sync
+### Production Fixes
+- Fixed production crash on sidebar/admin navigation by restoring missing `Terminal` icon import in `OutletSidebar`.
+- Stabilized finance multi-upload flow for large drops through controlled batch upload strategy, retries, and partial-success handling.
+
+### Migration / Sync Updates
+- Updated `server/scripts/migrate-production.js` to mirror workspace structure from local to production and remove production-only workspaces.
+- Added `server/scripts/syncFinanceToProd.js` for full local-to-production `financedocuments` sync (exact mirror replace).
+- Added npm script: `npm run sync-finance-to-prod`.
 
 ## [2026-05-28] Version 1.7.26 - Finance Ops + Admin Script Runner
 ### New

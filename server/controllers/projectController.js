@@ -363,6 +363,49 @@ exports.reorderWorkspaces = async (req, res) => {
   }
 };
 
+exports.deleteWorkspace = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can delete workspaces' });
+    }
+
+    const { name } = req.params;
+    if (!name) {
+      return res.status(400).json({ error: 'Workspace name is required' });
+    }
+
+    // Check if workspace exists
+    const workspace = await Workspace.findOne({ name });
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    // Prevent deletion of default workspaces
+    const DEFAULT_WORKSPACES = ['TSC ACADEMY', 'TSC ARTISTS', 'TSC FILMS', 'TSC TECH', 'GENERAL'];
+    if (DEFAULT_WORKSPACES.includes(name)) {
+      return res.status(403).json({ error: 'Cannot delete default workspaces' });
+    }
+
+    // Count projects in this workspace
+    const projectCount = await Project.countDocuments({ workspace: name });
+
+    if (projectCount > 0) {
+      return res.status(400).json({ 
+        error: `Cannot delete workspace with ${projectCount} project(s). Move or delete projects first.` 
+      });
+    }
+
+    // Delete the workspace
+    await Workspace.deleteOne({ name });
+
+    logger.info('projectController', `Deleted workspace: ${name}`, { user: req.user._id });
+    res.json({ success: true, message: `Workspace "${name}" deleted successfully` });
+  } catch (error) {
+    logger.error('projectController', 'Delete Workspace', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to delete workspace' });
+  }
+};
+
 exports.addMember = async (req, res) => {
   try {
     const { id } = req.params;

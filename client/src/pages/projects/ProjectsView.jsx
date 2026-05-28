@@ -384,9 +384,28 @@ const ProjectsView = () => {
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
                           <h3 className="text-sm font-black uppercase tracking-tight truncate">{group.name}</h3>
                         </div>
-                        <Badge variant="info" className="!py-0 !px-2 !text-[8px] shrink-0">
-                          {group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'}
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="info" className="!py-0 !px-2 !text-[8px]">
+                            {group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'}
+                          </Badge>
+                          {isAdmin && group.projects.length === 0 && !['TSC ACADEMY', 'TSC ARTISTS', 'TSC FILMS', 'TSC TECH', 'GENERAL'].includes(group.name) && (
+                            <Button 
+                              variant="ghost" 
+                              size="xs" 
+                              className="!text-red-400 hover:bg-red-500/10 !p-1"
+                              onClick={() => {
+                                if (window.confirm(`Delete workspace "${group.name}"? This action cannot be undone.`)) {
+                                  axios.delete(`/api/projects/workspaces/${group.name}`)
+                                    .then(() => queryClient.invalidateQueries({ queryKey: ['workspaces'] }))
+                                    .catch(err => alert(err.response?.data?.error || 'Failed to delete workspace'));
+                                }
+                              }}
+                              title="Delete workspace"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {group.projects.length > 0 ? (

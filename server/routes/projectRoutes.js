@@ -11,6 +11,7 @@ const {
   getWorkspaces,
   createWorkspace,
   reorderWorkspaces,
+  deleteWorkspace,
 } = require('../controllers/projectController');
 const { linkProjectCalendar, getProjectCalendarEvents } = require('../controllers/googleController');
 const { protect } = require('../middleware/authMiddleware');
@@ -25,6 +26,9 @@ router.route('/workspaces')
   .get(getWorkspaces)
   .post(createWorkspace)
   .put(reorderWorkspaces);
+
+router.route('/workspaces/:name')
+  .delete(deleteWorkspace);
 
 router.route('/:id')
   .get(getProjectById)

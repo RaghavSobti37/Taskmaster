@@ -8,6 +8,7 @@ const CRMConfig = require('../models/CRMConfig');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
 const followupCache = require('../services/followupCache');
 const logger = require('../utils/logger');
+const { dispatchEmailPayload } = require('../services/mailDriver');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -207,6 +208,10 @@ exports.updateLead = async (req, res) => {
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
     if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
 
+    // Fetch the current lead to check if this is a first call
+    const currentLead = await Lead.findById(id);
+    const wasFirstCall = !currentLead?.callStatus && updates.callStatus && updates.callStatus !== 'Pending';
+
     // The audit plugin handles the delta calculation and logging automatically
     const lead = await Lead.findByIdAndUpdate(id, {
       ...updates,
@@ -219,12 +224,100 @@ exports.updateLead = async (req, res) => {
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Trigger WhatsApp & Email for first call
+    if (wasFirstCall && lead.phone && lead.email) {
+      try {
+        const leadName = lead.name || 'Prospect';
+        const courseTitle = lead.exlyOfferingTitle || 'Our Program';
+        const paymentLink = process.env.PAYMENT_LINK || 'https://payment.taskmaster.io';
+
+        // Send WhatsApp via AiSensy
+        if (lead.phone) {
+          const cleanPhone = lead.phone.replace(/\D/g, '');
+          await sendAiSensyMessage(
+            cleanPhone,
+            'call_completed', // Campaign name
+            [leadName, courseTitle, paymentLink], // Template params
+            null,
+            lead.name
+          );
+          console.log(`✅ WhatsApp sent to ${lead.phone}`);
+        }
+
+        // Send Email
+        if (lead.email) {
+          await dispatchEmailPayload({
+            to: lead.email,
+            subject: `Great! We connected - Next steps for ${courseTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Hi ${leadName},</h2>
+                <p>Thank you for connecting with us! We're excited to help you with <strong>${courseTitle}</strong>.</p>
+                <p><strong>Next Steps:</strong></p>
+                <ol>
+                  <li>Review the course details and curriculum</li>
+                  <li>Proceed with payment using the link below</li>
+                  <li>Complete the enrollment process</li>
+                </ol>
+                <p>
+                  <a href="${paymentLink}" 
+                     style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                    Complete Payment
+                  </a>
+                </p>
+                <p>If you have any questions, feel free to reach out!</p>
+                <p>Best regards,<br/>The Team</p>
+              </div>
+            `,
+            from: 'support@taskmaster.io'
+          });
+          console.log(`✅ Email sent to ${lead.email}`);
+        }
+      } catch (notificationErr) {
+        console.error('Error sending first call notifications:', notificationErr);
+        // Don't fail the lead update if notifications fail
+      }
+    }
+
     res.json(lead);
   } catch (error) {
     logger.error('crmController', 'Update lead ', { error: error.message || error });
     res.status(400).json({ error: 'Failed to update lead' });
   }
 };
+
+// AiSensy WhatsApp helper
+async function sendAiSensyMessage(destination, campaign, params, attributes, userName) {
+  const cleanDestination = destination.replace(/\D/g, '');
+  const body = {
+    apiKey: process.env.AISENSY_API_KEY,
+    campaignName: campaign,
+    destination: cleanDestination,
+    templateParams: params,
+    userName: userName || 'User'
+  };
+  if (attributes) {
+    body.attributes = attributes;
+  }
+  
+  if (!process.env.AISENSY_API_KEY) {
+      console.warn('[Warning] AISENSY_API_KEY not found in environment, skipping fetch');
+      return;
+  }
+
+  try {
+    const res = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    console.log(`[AiSensy Response for ${campaign}]:`, json);
+  } catch (e) {
+      console.error('[AiSensy] Fetch Error:', e);
+  }
+}
 
 exports.getEmis = async (req, res) => {
   try {
@@ -524,16 +617,31 @@ exports.exportLeads = async (req, res) => {
 exports.getCRMStats = async (req, res) => {
   try {
     const CRMStatSnapshot = require('../models/CRMStatSnapshot');
+    const { calculateStats } = require('../workers/statsWorker');
     const isRep = req.user.role !== 'admin';
-    const query = isRep ? { repId: req.user._id } : { repId: null };
+    const query = isRep
+      ? { repId: new mongoose.Types.ObjectId(req.user._id) }
+      : { repId: null };
 
     let stats = await CRMStatSnapshot.findOne(query).lean();
-    if (!stats) {
-      // Fallback empty state if worker hasn't run yet
-      stats = { metrics: { totalLeads: 0, activeReach: 0, convertedLeads: 0, conversionRate: 0, connected: 0, totalReps: 0 } };
+
+    if (!stats?.metrics) {
+      const matchStage = isRep
+        ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
+        : {};
+      return res.json(await calculateStats(matchStage));
     }
 
-    res.json(stats.metrics);
+    const m = stats.metrics;
+    res.json({
+      totalLeads: m.totalLeads || 0,
+      activeReach: m.activeReach ?? m.meaningful ?? 0,
+      convertedLeads: m.convertedLeads ?? m.converted ?? 0,
+      warmLeads: m.warmLeads || 0,
+      conversionRate: m.conversionRate || 0,
+      connected: m.connected || 0,
+      totalReps: m.totalReps || 0
+    });
   } catch (error) {
     logger.error('crmController', 'CRM Stats ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch CRM stats' });

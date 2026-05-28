@@ -98,22 +98,15 @@ function initializeQueues() {
       
       logger.debug('Gamification', 'Raw Input Task', { task });
       
-      let multiplier = 1;
-      if (task.priority === 'critical') multiplier = 3;
-      else if (task.priority === 'high') multiplier = 2;
-      
-      let expReward = 20 * multiplier;
-      logger.debug('Gamification', `Calculation: Base(20) * Multiplier(${multiplier}) = ${expReward} XP`);
-      
       await GamificationService.generateDailyMissions(userId);
       await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
+      await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
     } else if (eventType === 'TASK_CREATED') {
       const { userId, task } = payload;
-      await GamificationService.awardExp(userId, 10, 'CREATE_TASK', { taskId: task._id });
+      await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
     } else if (eventType === 'PROJECT_CREATED') {
       const { userId, project } = payload;
-      await GamificationService.awardExp(userId, 50, 'CREATE_PROJECT', { projectId: project._id });
+      await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
     }
   }, { connection: redisConnection, concurrency: 5 });
 
@@ -267,22 +260,15 @@ const queueGamificationEvent = async (eventType, payload) => {
       
       logger.debug('Gamification', 'Raw Input Task', { task });
       
-      let multiplier = 1;
-      if (task.priority === 'critical') multiplier = 3;
-      else if (task.priority === 'high') multiplier = 2;
-      
-      let expReward = 20 * multiplier;
-      logger.debug('Gamification', `Calculation: Base(20) * Multiplier(${multiplier}) = ${expReward} XP`);
-
       await GamificationService.generateDailyMissions(userId);
       await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-      await GamificationService.awardExp(userId, expReward, 'COMPLETE_TASK', { taskId: task._id });
+      await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
     } else if (eventType === 'TASK_CREATED') {
       const { userId, task } = payload;
-      await GamificationService.awardExp(userId, 10, 'CREATE_TASK', { taskId: task._id });
+      await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
     } else if (eventType === 'PROJECT_CREATED') {
       const { userId, project } = payload;
-      await GamificationService.awardExp(userId, 50, 'CREATE_PROJECT', { projectId: project._id });
+      await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
     }
   }
 };

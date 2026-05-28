@@ -42,4 +42,36 @@ router.get('/progress', protect, async (req, res) => {
   }
 });
 
+// Leaderboard: top users by XP (basic weekly view)
+router.get('/leaderboard', protect, async (req, res) => {
+  try {
+    const XPAuditLog = require('../models/XPAuditLog');
+    const User = require('../models/User');
+    const start = new Date();
+    start.setDate(start.getDate() - start.getDay());
+    start.setHours(0, 0, 0, 0);
+
+    const leaderboard = await XPAuditLog.aggregate([
+      { $match: { createdAt: { $gte: start } } },
+      { $group: { _id: '$userId', weeklyXp: { $sum: '$amount' } } },
+      { $sort: { weeklyXp: -1 } },
+      { $limit: 10 }
+    ]);
+
+    const userIds = leaderboard.map((entry) => entry._id);
+    const users = await User.find({ _id: { $in: userIds } }, 'name avatar xp level').lean();
+    const usersById = new Map(users.map((u) => [String(u._id), u]));
+
+    const top = leaderboard.map((entry, index) => ({
+      rank: index + 1,
+      weeklyXp: entry.weeklyXp,
+      ...(usersById.get(String(entry._id)) || { _id: entry._id, name: 'Unknown' })
+    }));
+
+    res.json(top);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

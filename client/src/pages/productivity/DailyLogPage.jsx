@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Badge, NexusModal, NexusDropdown, PageHeader, Card, 
-  PageContainer, Button, Input, StatCard, InputFormDrawer 
+  PageContainer, Button, Input, StatCard 
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
@@ -50,10 +50,16 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const updateLogMutation = useUpdateLog();
   const deleteLogMutation = useDeleteLog();
 
+  const cleanLogTitle = (title = '') => title.replace(/^Task Finalized:\s*/i, '').trim();
+  const cleanLogMessage = (message = '') => {
+    if (/^Successfully completed task within .+\.$/i.test(message.trim())) return '';
+    return message;
+  };
+
   const handleStartEdit = (log) => {
     setEditingLogId(log._id);
-    setEditTitle(log.details?.title || '');
-    setEditMessage(log.details?.message || '');
+    setEditTitle(cleanLogTitle(log.details?.title || ''));
+    setEditMessage(cleanLogMessage(log.details?.message || ''));
     setEditTimeSpent(log.details?.timeSpent || '');
     setEditProject(log.details?.project || '');
   };
@@ -203,32 +209,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-           {/* Activity Grid */}
-           <Card className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Grid</h4>
-                 <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Less</span>
-                    <div className="flex gap-1">
-                       {[0, 1, 2, 3, 4].map(i => (
-                         <div key={i} className={`w-2.5 h-2.5 rounded-sm bg-blue-500`} style={{ opacity: i === 0 ? 0.05 : i * 0.25 }} />
-                       ))}
-                    </div>
-                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">More</span>
-                 </div>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                 {gridDays.map((day, i) => (
-                   <div 
-                     key={i} 
-                     className={`w-3 h-3 rounded-sm transition-all duration-300 hover:ring-2 hover:ring-blue-400 cursor-help ${day.intensity === 0 ? 'bg-blue-500/5' : 'bg-blue-500'}`} 
-                     style={{ opacity: day.intensity === 0 ? 1 : day.intensity * 0.25 }}
-                     title={`${format(day.date, 'MMM d, yyyy')}: ${day.count} logs`}
-                   />
-                 ))}
-              </div>
-           </Card>
-
           <Card className="flex flex-col min-h-[400px]">
              <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
                 <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -279,7 +259,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                          <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-black uppercase tracking-tight">{log.details?.title}</span>
+                                  <span className="text-xs font-black uppercase tracking-tight">{cleanLogTitle(log.details?.title)}</span>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>
                                <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
@@ -299,7 +279,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                                   )}
                                </div>
                             </div>
-                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{log.details?.message}</p>
+                            {cleanLogMessage(log.details?.message) && (
+                              <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{cleanLogMessage(log.details?.message)}</p>
+                            )}
                          </div>
                       </motion.div>
                     );
@@ -310,24 +292,28 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-           <Card className="p-4 space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-500 flex items-center gap-2">
-                 <CheckCircle2 size={14} /> Completed Today
-              </h4>
-              <div className="space-y-2">
-                 {dailyTasks.length === 0 ? (
-                   <p className="text-[10px] text-[var(--color-text-muted)] font-bold italic uppercase opacity-50 text-center py-4">Nothing completed yet</p>
-                 ) : (
-                   dailyTasks.map(task => (
-                     <div key={task._id} className="p-2.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-start gap-3">
-                        <div className="mt-1 p-0.5 bg-emerald-500 text-white rounded-md shrink-0"><CheckCircle2 size={10} /></div>
-                        <div>
-                           <p className="text-[10px] font-bold leading-tight">{task.title}</p>
-                           <p className="text-[8px] text-[var(--color-text-muted)] font-black uppercase mt-1">{task.projectName || 'General'}</p>
-                        </div>
-                     </div>
-                   ))
-                 )}
+           <Card className="p-4">
+              <div className="flex items-center justify-between mb-6">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Grid</h4>
+                 <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Less</span>
+                    <div className="flex gap-1">
+                       {[0, 1, 2, 3, 4].map(i => (
+                         <div key={i} className={`w-2.5 h-2.5 rounded-sm bg-blue-500`} style={{ opacity: i === 0 ? 0.05 : i * 0.25 }} />
+                       ))}
+                    </div>
+                    <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">More</span>
+                 </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                 {gridDays.map((day, i) => (
+                   <div 
+                     key={i} 
+                     className={`w-3 h-3 rounded-sm transition-all duration-300 hover:ring-2 hover:ring-blue-400 cursor-help ${day.intensity === 0 ? 'bg-blue-500/5' : 'bg-blue-500'}`} 
+                     style={{ opacity: day.intensity === 0 ? 1 : day.intensity * 0.25 }}
+                     title={`${format(day.date, 'MMM d, yyyy')}: ${day.count} logs`}
+                   />
+                 ))}
               </div>
            </Card>
 
@@ -355,12 +341,14 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </aside>
       </div>
 
-      <InputFormDrawer
+      <NexusModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         title="Log Your Work"
+        showFooter={false}
+        size="lg"
       >
-        <form onSubmit={handleManualSubmit} className="space-y-6 p-6">
+        <form onSubmit={handleManualSubmit} className="space-y-6">
             <Input label="What did you work on?" value={title} onChange={e => setTitle(e.target.value)} placeholder="Task name or summary" icon={Target} required />
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
@@ -385,7 +373,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
               {createLogMutation.isLoading ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Log Work</>}
            </Button>
         </form>
-      </InputFormDrawer>
+      </NexusModal>
 
       <NexusModal isOpen={createLogMutation.isSuccess} onClose={() => createLogMutation.reset()} title="Work Logged" message="Your work has been saved successfully." type="success" />
     </PageContainer>

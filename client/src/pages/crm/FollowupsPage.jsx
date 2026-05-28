@@ -269,7 +269,6 @@ export default function FollowupsPage() {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Follow-up Schedule"
-        subtitle="Stay organized with your planned calls and customer interactions."
         icon={PhoneCall}
         actions={
           <div className="flex items-center gap-2">

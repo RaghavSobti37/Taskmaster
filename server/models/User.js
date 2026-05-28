@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin', 'sales', 'artist_management', 'ops', 'operations', 'Operations'], default: 'user' },
   avatar: { type: String },
   gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
+  dateOfBirth: { type: Date },
   phone: { type: String, default: '', index: true },
   lastOnline: { type: Date, default: Date.now },
   online: { type: Boolean, default: false },
@@ -23,8 +24,9 @@ const userSchema = new mongoose.Schema({
   googleCalendarLinked: { type: Boolean, default: false },
   googleAccounts: [{
     email: { type: String, required: true },
-    accessToken: { type: String, required: true },
+    accessToken: { type: String },
     refreshToken: { type: String },
+    manualLink: { type: Boolean, default: false },
     linkedAt: { type: Date, default: Date.now }
   }],
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)

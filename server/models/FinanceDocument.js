@@ -4,7 +4,16 @@ const tenantPlugin = require('../plugins/tenantPlugin');
 const financeDocumentSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   description: { type: String, default: '', trim: true },
-  project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+  },
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  reviewedAt: { type: Date },
+  rejectionReason: { type: String, default: '' },
   category: {
     type: String,
     enum: ['invoice', 'receipt', 'contract', 'proposal', 'budget', 'report', 'tax', 'other'],
@@ -30,6 +39,8 @@ const financeDocumentSchema = new mongoose.Schema({
 financeDocumentSchema.index({ project: 1, createdAt: -1 });
 financeDocumentSchema.index({ category: 1 });
 financeDocumentSchema.index({ uploadedBy: 1 });
+financeDocumentSchema.index({ approvalStatus: 1 });
+financeDocumentSchema.index({ submittedBy: 1 });
 
 // Sanitize title
 financeDocumentSchema.pre('save', function (next) {

@@ -20,11 +20,12 @@ import { format, subDays, isSameDay } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { useTasks, useProjects, useUserDirectory, useDashboardSummary } from '../hooks/useTaskmasterQueries';
+import { useTasks, useProjects, useWorkspaces, useDashboardSummary } from '../hooks/useTaskmasterQueries';
 import { 
   StatCards, 
   ScheduleCard, 
-  SquadCard, 
+  LeaderboardCard,
+  AnnouncementsCard,
   TaskTable 
 } from '../components/dashboard';
 
@@ -98,7 +99,7 @@ const Dashboard = () => {
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
-  const { data: teamMembers = [], isLoading: teamLoading } = useUserDirectory();
+  const { data: workspaces = [] } = useWorkspaces();
 
   const { data: missions = [] } = useQuery({
     queryKey: ['missions'],
@@ -204,6 +205,7 @@ const Dashboard = () => {
           <TaskTable 
             tasks={tasks}
             projects={projects}
+            workspaces={workspaces}
             completingIds={completingIds}
             onCompleteTask={triggerCompleteTask}
             onSelectTask={(task) => {
@@ -220,7 +222,12 @@ const Dashboard = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
+          <AnnouncementsCard />
 
+          
+          
+          <ScheduleCard calendar={calendar} loading={summaryLoading} />
+          <LeaderboardCard />
           <Card className="p-4 space-y-4 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
                <Target size={14} /> Mission Hub
@@ -245,8 +252,6 @@ const Dashboard = () => {
             </div>
           </Card>
           
-          <ScheduleCard calendar={calendar} loading={summaryLoading} />
-          <SquadCard teamMembers={teamMembers} tasks={tasks} loading={teamLoading} />
         </aside>
       </div>
 
@@ -270,8 +275,7 @@ const Dashboard = () => {
       <TaskCreateModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
-        user={user} 
-        onSuccess={() => {
+        onTaskCreated={() => {
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
         }}

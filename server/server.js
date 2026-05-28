@@ -222,6 +222,8 @@ app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
 app.use('/api/exly', require('./routes/exlyRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");

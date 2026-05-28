@@ -37,6 +37,11 @@ const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView')
 const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
 const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
+const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
+const AdminExly = lazyWithRetry(() => import('./pages/admin/AdminExly'));
+const AdminAudits = lazyWithRetry(() => import('./pages/admin/AdminAudits'));
+const AdminMail = lazyWithRetry(() => import('./pages/admin/AdminMail'));
+const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
 const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
@@ -57,6 +62,14 @@ const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'))
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
 const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
+const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
+const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
+const EmailsPage = lazyWithRetry(() => import('./pages/workspace/EmailsPage'));
+const OTPVerificationPage = lazyWithRetry(() => import('./pages/auth/OTPVerificationPage'));
+const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
+const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
+const EquipmentPage = lazyWithRetry(() => import('./pages/management/EquipmentPage'));
+const ContactsPage = lazyWithRetry(() => import('./pages/management/ContactsPage'));
 
 function App() {
   const { loading } = useAuth();
@@ -95,6 +108,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/relegends" element={<OTPVerificationPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -117,11 +131,16 @@ function App() {
               <Route path="/followups" element={<FollowupsPage />} />
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
+              <Route path="/bookings" element={<ExlyBookingsPage />} />
               
               <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/admin" element={<AdminCRM />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
+                <Route path="/admin/audits" element={<AdminAudits />} />
                 <Route path="/admin/logs" element={<AdminLogsPage />} />
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
+                <Route path="/workspace/emails" element={<EmailsPage />} />
               </Route>
               
               <Route element={<ArtistRoute />}>
@@ -131,6 +150,10 @@ function App() {
 
               <Route element={<OpsRoute />}>
                 <Route path="/finance" element={<FinancePage />} />
+                <Route path="/management/attendance" element={<AttendancePage />} />
+                <Route path="/management/announcements" element={<AnnouncementsPage />} />
+                <Route path="/management/equipment" element={<EquipmentPage />} />
+                <Route path="/management/contacts" element={<ContactsPage />} />
               </Route>
             </Route>
           </Route>

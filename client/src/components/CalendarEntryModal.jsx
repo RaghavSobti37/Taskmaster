@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { ModalShell } from './ui/ModalShell';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
   const queryClient = useQueryClient();
@@ -71,19 +72,18 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-[var(--color-bg-surface)] w-full max-w-md rounded-3xl border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
-          <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <CalIcon size={18} className="text-[var(--color-action-primary)]" />
-            {initialData ? 'Edit Event' : 'New Calendar Event'}
-          </h3>
-          <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
-            <X size={20} />
-          </button>
-        </header>
+    <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
+      <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
+        <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+          <CalIcon size={18} className="text-[var(--color-action-primary)]" />
+          {initialData ? 'Edit Event' : 'New Calendar Event'}
+        </h3>
+        <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
+          <X size={20} />
+        </button>
+      </header>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Event Name</label>
             <input 
@@ -170,8 +170,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 };
 

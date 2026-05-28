@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, UserPlus, Plus } from 'lucide-react';
+import { X, CheckCircle2, Plus } from 'lucide-react';
 import CKDropdown from './ui/CKDropdown';
+import { ModalShell } from './ui/ModalShell';
 import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -94,19 +95,18 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
   })) || [];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-[var(--color-bg-surface)] w-full max-w-lg rounded-3xl border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)]">
-          <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <Plus size={18} className="text-[var(--color-action-primary)]" />
-            Create New Task
-          </h3>
-          <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
-            <X size={20} />
-          </button>
-        </header>
+    <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
+      <header className="px-6 py-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
+        <h3 className="font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+          <Plus size={18} className="text-[var(--color-action-primary)]" />
+          Create New Task
+        </h3>
+        <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors">
+          <X size={20} />
+        </button>
+      </header>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {!initialProjectId && (
             <div className="space-y-2">
               <CKDropdown 
@@ -193,8 +193,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 };
 

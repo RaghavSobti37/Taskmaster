@@ -62,17 +62,26 @@ const useWindowSize = () => {
   return windowSize;
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => (
+const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {
+  const location = useLocation();
+  const isActive = end 
+    ? location.pathname === to.split('?')[0] && location.search === (to.includes('?') ? '?' + to.split('?')[1] : '')
+    : location.pathname.startsWith(to.split('?')[0]);
+  
+  return (
   <NavLink
     to={to}
     end={end}
     onClick={onClick}
-    className={({ isActive }) => `
-      flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
-      ${isActive
-        ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20'
-        : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)]'}
-    `}
+    className={({ isActive: navIsActive }) => {
+      const active = end ? isActive : navIsActive;
+      return `
+        flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+        ${active
+          ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20 scale-105'
+          : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
+      `;
+    }}
   >
     <div className="relative flex items-center justify-center">
       <Icon size={20} className="shrink-0" />
@@ -101,14 +110,15 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
       </span>
     </div>
   </NavLink>
-);
+  );
+};
 
 const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <div className="flex flex-col mb-4">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
+      <button
+        onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between px-3 py-1 mb-1 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest hover:text-[var(--color-text-primary)] transition-colors focus:outline-none ${collapsed && !isMobile ? 'justify-center opacity-0' : 'opacity-100'}`}
       >
         <div className="flex items-center gap-2">
@@ -324,17 +334,15 @@ const OutletSidebar = () => {
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
             />
+
             <NavItem
-              to="/office-assets"
-              icon={Building2}
-              label="Office"
+              to="/workspace/emails"
+              icon={MessageSquare}
+              label="Emails"
               collapsed={!isOpen}
               isMobile={isMobile}
-              onMouseEnter={() => {
-                queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
-                queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
-              }}
             />
+
           </NavGroup>
 
           {(user?.role === 'admin' || user?.role === 'sales' || user?.role === 'artist_management') && (
@@ -361,14 +369,14 @@ const OutletSidebar = () => {
                   />
                 </>
               )}
-              {(user?.role === 'admin' || user?.role === 'artist_management') && (
+              {(user?.role === 'admin' || user?.role === 'sales') && (
                 <NavItem
-                  to="/artists"
+                  to="/bookings"
                   icon={Users}
-                  label="Artists"
+                  label="Bookings"
                   collapsed={!isOpen}
                   isMobile={isMobile}
-                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
+                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['bookings'], queryFn: async () => (await axios.get('/api/bookings')).data })}
                 />
               )}
             </NavGroup>
@@ -384,21 +392,99 @@ const OutletSidebar = () => {
                 isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
               />
-              {user?.role === 'admin' && (
-                <NavItem
-                  to="/admin"
-                  icon={ShieldCheck}
-                  label="Admin Panel"
-                  collapsed={!isOpen}
-                  isMobile={isMobile}
-                  onMouseEnter={() => {
-                    queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-                    queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-                  }}
-                />
-              )}
-            </NavGroup>
+              <NavItem
+                to="/management/equipment"
+                icon={Building2}
+                label="Equipment"
+                collapsed={!isOpen}
+                isMobile={isMobile}
+                onMouseEnter={() => {
+                  queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
+                }}
+              />
+              <NavItem
+                to="/management/contacts"
+                icon={Contact}
+                label="Contacts"
+                collapsed={!isOpen}
+                isMobile={isMobile}
+                onMouseEnter={() => {
+                  queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
+                }}
+              />
+              <NavItem
+                to="/management/attendance"
+                icon={Clock}
+                label="Attendance"
+                collapsed={!isOpen}
+                isMobile={isMobile}
+              />
+              <NavItem
+                to="/management/announcements"
+                icon={Bell}
+                label="Announcements"
+                collapsed={!isOpen}
+                isMobile={isMobile}
+              />
+
+</NavGroup>
           )}
+              {user?.role === 'admin' && (
+                <NavGroup title="Admin" collapsed={!isOpen} isMobile={isMobile} defaultOpen={false}>
+                  <NavItem
+                    to="/admin/users"
+                    icon={Users}
+                    label="Users & Teams"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                    onMouseEnter={() => {
+                      queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+                      queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+                    }}
+                  />
+                  <NavItem
+                    to="/admin"
+                    end
+                    icon={Database}
+                    label="All Data"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
+                  <NavItem
+                    to="/admin/exly-campaigns"
+                    icon={Layers}
+                    label="Exly Data"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
+                  <NavItem
+                    to="/admin/audits"
+                    icon={FileText}
+                    label="Lead Audits"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
+                  {(user?.role === 'admin' || user?.role === 'artist_management') && (
+                    <NavItem
+                      to="/artists"
+                      icon={Users}
+                      label="Artists"
+                      collapsed={!isOpen}
+                      isMobile={isMobile}
+                      onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
+                    />
+                  )}
+
+                  <NavItem
+                    to="/admin/logs"
+                    icon={Clock}
+                    label="System Logs"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
+                </NavGroup>
+              )}
+            
         </nav>
 
         <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">
@@ -440,35 +526,11 @@ const OutletSidebar = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.reload();
-                      }}
-                      title="Refresh"
-                      className="p-1 hover:bg-[var(--color-bg-border)] rounded text-blue-500 transition-colors"
-                    >
-                      <RefreshCw size={10} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-bold uppercase tracking-widest">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                    Online
-                  </div>
+                  <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</p>
                 </div>
               </div>
             </div>
           </div>
-          <NavItem to="/settings" icon={Settings} label="Settings" collapsed={!isOpen} isMobile={isMobile} />
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
-          >
-            <LogOut size={22} className="shrink-0" />
-            <span className={`font-bold text-sm transition-all duration-300 overflow-hidden ${(!isOpen && !isMobileOpen) ? 'w-0' : 'w-auto'}`}>Log Out</span>
-          </button>
         </div>
       </motion.aside>
     </>

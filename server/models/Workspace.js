@@ -1,22 +1,14 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-
-const WorkspaceSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String },
-  members: [{
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    role: { type: String, enum: ['owner', 'admin', 'viewer'], default: 'viewer' }
-  }],
-  settings: {
-    publicShareToken: { type: String }, // Phase 4 public share token
-    isPublicShared: { type: Boolean, default: false }
-  },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+const workspaceSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  color: { type: String, default: '#64748b' },
+  order: { type: Number, default: 0 },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now }
 });
 
-WorkspaceSchema.plugin(tenantPlugin);
+workspaceSchema.plugin(tenantPlugin);
 
-module.exports = mongoose.model('Workspace', WorkspaceSchema);
+module.exports = mongoose.model('Workspace', workspaceSchema);

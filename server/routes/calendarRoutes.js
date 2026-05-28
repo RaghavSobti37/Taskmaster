@@ -4,6 +4,9 @@ const { protect } = require('../middleware/authMiddleware');
 const CalendarEvent = require('../models/CalendarEvent');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
+const User = require('../models/User');
+const { dispatchEmailPayload } = require('../services/mailDriver');
+const GamificationService = require('../services/gamificationService');
 
 router.use(protect);
 
@@ -87,6 +90,51 @@ router.post('/', async (req, res) => {
     });
 
     const populated = await event.populate('createdBy', 'name avatar');
+
+    // Send email notification for public events
+    if (visibility === 'public') {
+      try {
+        const allUsers = await User.find({ email: { $exists: true, $ne: '' } }, 'email name');
+        const eventDate = new Date(date).toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        const emailPromises = allUsers.map(user => 
+          dispatchEmailPayload({
+            to: user.email,
+            subject: `📅 New Public Event: ${title}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1e40af;">${title}</h2>
+                <p><strong>Date:</strong> ${eventDate}</p>
+                <p><strong>Created by:</strong> ${populated.createdBy.name}</p>
+                ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
+                <p>
+                  <a href="${process.env.CLIENT_URL || 'https://taskmaster.app'}/calendar" 
+                     style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    View Event
+                  </a>
+                </p>
+              </div>
+            `,
+            from: 'events@taskmaster.io'
+          }).catch(err => console.error(`Failed to send event email to ${user.email}:`, err))
+        );
+        
+        await Promise.all(emailPromises);
+        console.log(`✅ Public event emails sent to ${allUsers.length} users`);
+      } catch (emailErr) {
+        console.error('Error sending public event emails:', emailErr);
+        // Don't fail the event creation if emails fail
+      }
+    }
+    await GamificationService.awardActionXp(req.user._id, 'CALENDAR_EVENT_CREATED', {
+      eventId: event._id,
+      visibility: visibility || 'private'
+    });
 
     // Also create a task for this event
     try {

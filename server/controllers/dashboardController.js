@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const TaskAssignment = require('../models/TaskAssignment');
 const Lead = require('../models/Lead');
 const Log = require('../models/Log');
 const Project = require('../models/Project');
@@ -13,10 +14,13 @@ exports.getDashboardSummary = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const assignments = await TaskAssignment.find({ userId }).select('taskId').lean();
+    const assignedTaskIds = assignments.map(a => a.taskId);
+
     const [taskStats, leadStats, logStats, projectStats, calendarRes, coreCamps, mailCamps] = await Promise.all([
-      // 1. Task Statistics
+      // 1. Task Statistics (assigned tasks only)
       Task.aggregate([
-        { $match: { createdBy: userId } },
+        { $match: { _id: { $in: assignedTaskIds } } },
         { $group: {
           _id: null,
           total: { $sum: 1 },

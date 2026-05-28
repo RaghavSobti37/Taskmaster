@@ -272,13 +272,13 @@ const ProjectDetail = () => {
             onChange={setActiveTab} 
           />
           
-          <div className="flex items-center gap-2 flex-1 max-w-sm">
+          <div className="flex items-center gap-2 flex-1 min-w-[280px] justify-end">
             <Input 
               icon={Search} 
               placeholder="Search tasks..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="!py-1.5 !text-xs"
+              className="!py-1.5 !text-xs flex-1 max-w-md"
             />
             <NexusDropdown
               variant="compact"
@@ -290,7 +290,7 @@ const ProjectDetail = () => {
               ]}
               value={filterStatus}
               onChange={setFilterStatus}
-              className="w-32"
+              className="w-36 shrink-0"
             />
           </div>
         </div>

@@ -50,10 +50,10 @@ const LoginPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
       {/* Paper texture & Ink spill background */}
       <div 
-        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
+        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20"
       />
       {/* Pattern from PDF for subtle texture */}
       <div 
@@ -62,9 +62,9 @@ const LoginPage = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-md bg-card/90 backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
+        className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">
             CK
           </div>
@@ -75,12 +75,12 @@ const LoginPage = () => {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse">
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email or Username</label>
             <div className="relative">
@@ -119,7 +119,7 @@ const LoginPage = () => {
             {loading ? 'Signing in...' : 'Sign In'} <ArrowRight size={20} />
           </button>
 
-          <div className="relative my-8">
+          <div className="relative py-2">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border"></div>
             </div>
@@ -156,11 +156,11 @@ const LoginPage = () => {
 
         </form>
 
-        <div className="mt-8 text-center text-sm space-y-4">
+        <div className="mt-4 text-center text-sm space-y-3">
           <p className="text-[var(--color-text-muted)] font-medium">
             New user? <Link to="/register" className="text-[var(--color-brand-teal)] font-bold hover:underline">Register here</Link>
           </p>
-          <div className="pt-4 border-t border-border flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)] font-medium">
+          <div className="pt-3 border-t border-border flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)] font-medium">
             <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <span>•</span>
             <Link to="/userdata" className="hover:text-foreground">User Data Deletion</Link>

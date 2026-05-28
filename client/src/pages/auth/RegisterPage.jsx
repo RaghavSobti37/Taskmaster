@@ -31,7 +31,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
       {/* Paper texture & Ink spill background */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
@@ -43,7 +43,7 @@ const RegisterPage = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md bg-card/90 backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
+        className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">

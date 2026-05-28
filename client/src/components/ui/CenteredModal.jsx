@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MODAL_PANEL_CLASS, getModalPanelStyle } from './ModalShell';
+import { MODAL_PANEL_CLASS, MODAL_OVERLAY_CLASS, getModalPanelStyle } from './ModalShell';
 
 /**
  * Centered modal overlay for bespoke dialogs.
@@ -48,7 +48,7 @@ export const CenteredModal = ({
             className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             onClick={onClose}
           />
-          <div className="absolute inset-0 grid place-items-center p-4 sm:p-6 pointer-events-none overflow-y-auto">
+          <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}

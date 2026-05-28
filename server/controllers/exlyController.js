@@ -10,6 +10,14 @@ const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/saniti
 const logger = require('../utils/logger');
 
 const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
+const {
+  computeBookingBreakdown,
+  buildDailyChartData,
+  getCustomerKey,
+  isPaidBooking,
+  roundMoney
+} = require('../utils/exlyMetrics');
+const { recalculateOfferingMetrics } = require('../services/exlyOfferingMetrics');
 
 // Helper to extract nested or flexible case-insensitive keys from a payload object
 const getPayloadValue = (payload, possibleKeys) => {
@@ -109,7 +117,42 @@ exports.getOfferings = async (req, res) => {
       offeringId: { $nin: ['demo-community', 'demo-day--results'] }
     }).sort({ totalRevenue: -1 }).lean();
 
-    res.json(offerings);
+    const bookingStats = await ExlyBooking.aggregate([
+      {
+        $group: {
+          _id: '$offeringId',
+          totalBookings: { $sum: 1 },
+          paidBookings: {
+            $sum: { $cond: [{ $gt: [{ $ifNull: ['$pricePaid', 0] }, 0] }, 1, 0] }
+          },
+          freeBookings: {
+            $sum: { $cond: [{ $lte: [{ $ifNull: ['$pricePaid', 0] }, 0] }, 1, 0] }
+          },
+          totalRevenue: { $sum: { $ifNull: ['$pricePaid', 0] } }
+        }
+      }
+    ]);
+
+    const statsMap = new Map(
+      bookingStats.map((row) => [
+        row._id,
+        {
+          totalBookings: row.totalBookings,
+          paidBookings: row.paidBookings,
+          freeBookings: row.freeBookings,
+          totalRevenue: roundMoney(row.totalRevenue),
+          avgOrderValue: row.paidBookings > 0 ? roundMoney(row.totalRevenue / row.paidBookings) : 0
+        }
+      ])
+    );
+
+    const enrichedOfferings = offerings.map((offering) => {
+      const stats = statsMap.get(offering.offeringId);
+      if (!stats) return offering;
+      return { ...offering, ...stats };
+    });
+
+    res.json(enrichedOfferings);
   } catch (err) {
     logger.error('Exly', 'getOfferings error', { error: err.message });
     res.status(500).json({ error: 'Failed to retrieve Exly offerings.' });
@@ -261,25 +304,7 @@ exports.handleExlyWebhook = async (req, res) => {
     // 4. Recalculate Offering analytics based on ExlyBookings and CRM Leads
     const offering = await ExlyOffering.findOne({ offeringId: offId });
     if (offering) {
-      const bookingsForOff = await ExlyBooking.find({ offeringId: offering.offeringId }).lean();
-      const totalBookings = bookingsForOff.length;
-      const totalRevenue = bookingsForOff.reduce((sum, b) => sum + (b.pricePaid || 0), 0);
-
-      const leadsForOffering = await Lead.find({
-        $or: [
-          { exlyOfferingId: offering.offeringId },
-          { exlyOfferingTitle: offering.title },
-          { source: offering.title }
-        ]
-      }).lean();
-
-      const convertedBookings = leadsForOffering.filter(l => l.leadStatus === 'Converted').length;
-      const conversionRate = totalBookings > 0 ? Number(((convertedBookings / totalBookings) * 100).toFixed(1)) : 0;
-
-      offering.totalBookings = totalBookings;
-      offering.totalRevenue = totalRevenue;
-      offering.conversionRate = conversionRate;
-      await offering.save();
+      await recalculateOfferingMetrics(offering);
     }
 
     res.status(200).json({ success: true, message: 'Webhook processed, CRM hydrated.', contactId: contact ? contact._id : null });
@@ -292,25 +317,62 @@ exports.handleExlyWebhook = async (req, res) => {
 exports.getOfferingDetails = async (req, res) => {
   try {
     const { offeringId } = req.params;
-    
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+    const paymentFilter = ['all', 'paid', 'free'].includes(req.query.paymentFilter)
+      ? req.query.paymentFilter
+      : 'all';
+    const search = (req.query.search || '').trim().toLowerCase();
+
     const offering = await ExlyOffering.findOne({ offeringId }).lean();
     if (!offering) {
       return res.status(404).json({ error: 'Offering not found.' });
     }
 
-    const bookings = await ExlyBooking.find({ offeringId }).sort({ bookedOn: -1 }).lean();
+    const allBookings = await ExlyBooking.find({ offeringId }).sort({ bookedOn: -1 }).lean();
+    const metrics = computeBookingBreakdown(allBookings);
 
-    if (bookings.length === 0) {
+    let filteredBookings = allBookings;
+    if (paymentFilter === 'paid') {
+      filteredBookings = allBookings.filter(isPaidBooking);
+    } else if (paymentFilter === 'free') {
+      filteredBookings = allBookings.filter((booking) => !isPaidBooking(booking));
+    }
+
+    if (search) {
+      filteredBookings = filteredBookings.filter((booking) =>
+        booking.name?.toLowerCase().includes(search) ||
+        booking.email?.toLowerCase().includes(search) ||
+        booking.phone?.includes(search)
+      );
+    }
+
+    const totalFiltered = filteredBookings.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / limit));
+    const safePage = Math.min(page, totalPages);
+    const paginatedBookings = filteredBookings.slice((safePage - 1) * limit, safePage * limit);
+
+    if (paginatedBookings.length === 0) {
       return res.json({
         offering,
-        bookings: []
+        metrics: {
+          ...metrics,
+          conversionRate: offering.conversionRate || 0
+        },
+        bookings: [],
+        pagination: {
+          page: safePage,
+          limit,
+          total: totalFiltered,
+          totalPages,
+          paymentFilter
+        }
       });
     }
 
-    const uniqueEmails = bookings.map(b => b.email).filter(Boolean);
-    const uniquePhones = bookings.map(b => b.phone).filter(Boolean);
+    const uniqueEmails = paginatedBookings.map((b) => b.email).filter(Boolean);
+    const uniquePhones = paginatedBookings.map((b) => b.phone).filter(Boolean);
 
-    // Fetch CRM Lead status for each booking safely
     let crmLeads = [];
     if (uniqueEmails.length > 0 || uniquePhones.length > 0) {
       const orFilters = [];
@@ -323,8 +385,8 @@ exports.getOfferingDetails = async (req, res) => {
         .lean();
     }
 
-    const bookingsWithCrm = bookings.map(b => {
-      const matched = crmLeads.find(l => 
+    const bookingsWithCrm = paginatedBookings.map((b) => {
+      const matched = crmLeads.find((l) =>
         (b.email && l.email?.toLowerCase() === b.email.toLowerCase()) ||
         (b.phone && l.phone === b.phone)
       );
@@ -333,15 +395,26 @@ exports.getOfferingDetails = async (req, res) => {
         inCRM: !!matched,
         crmStatus: matched ? matched.leadStatus : 'Unlinked',
         crmCallStatus: matched ? matched.callStatus : 'Unlinked',
-        crmRep: matched?.assignedRepId?.name || 'Unassigned'
+        crmRep: matched?.assignedRepId?.name || 'Unassigned',
+        isPaid: isPaidBooking(b)
       };
     });
 
     res.json({
       offering,
-      bookings: bookingsWithCrm
+      metrics: {
+        ...metrics,
+        conversionRate: offering.conversionRate || 0
+      },
+      bookings: bookingsWithCrm,
+      pagination: {
+        page: safePage,
+        limit,
+        total: totalFiltered,
+        totalPages,
+        paymentFilter
+      }
     });
-
   } catch (err) {
     logger.error('Exly', 'getOfferingDetails error', { error: err.message });
     res.status(500).json({ error: 'Failed to retrieve offering details.' });
@@ -353,6 +426,8 @@ exports.getOfferingAnalytics = async (req, res) => {
     const { offeringId } = req.params;
 
     const bookings = await ExlyBooking.find({ offeringId }).lean();
+    const breakdown = computeBookingBreakdown(bookings);
+
     if (bookings.length === 0) {
       return res.json({
         analytics: {
@@ -361,16 +436,23 @@ exports.getOfferingAnalytics = async (req, res) => {
           upsells: 0,
           loyalCustomers: 0,
           lifetimeValue: 0,
-          avgLTV: 0
+          avgLTV: 0,
+          paidBookings: 0,
+          freeBookings: 0,
+          totalRevenue: 0,
+          paidRevenue: 0,
+          avgOrderValue: 0,
+          conversionRate: 0
         },
         chartData: []
       });
     }
 
-    const uniqueEmails = bookings.map(b => b.email).filter(Boolean);
-    const uniquePhones = bookings.map(b => b.phone).filter(Boolean);
+    const offering = await ExlyOffering.findOne({ offeringId }).lean();
 
-    // Fetch complete history of these customers to compute metrics
+    const uniqueEmails = bookings.map((b) => b.email).filter(Boolean);
+    const uniquePhones = bookings.map((b) => b.phone).filter(Boolean);
+
     const allHistories = await ExlyBooking.find({
       $or: [
         { email: { $in: uniqueEmails } },
@@ -378,10 +460,9 @@ exports.getOfferingAnalytics = async (req, res) => {
       ]
     }).sort({ bookedOn: 1 }).lean();
 
-    // Group bookings by customer key (email or phone)
     const customerMap = new Map();
-    bookings.forEach(b => {
-      const key = b.email || b.phone;
+    bookings.forEach((b) => {
+      const key = getCustomerKey(b);
       if (!customerMap.has(key)) {
         customerMap.set(key, b);
       }
@@ -392,54 +473,42 @@ exports.getOfferingAnalytics = async (req, res) => {
     let upsellsCount = 0;
     let loyalCustomersCount = 0;
     let totalLTV = 0;
+    let paidCustomerCount = 0;
+    let freeCustomerCount = 0;
 
-    uniqueCustomers.forEach(cKey => {
+    uniqueCustomers.forEach((cKey) => {
       const cBooking = customerMap.get(cKey);
       const email = cBooking.email;
       const phone = cBooking.phone;
 
-      const history = allHistories.filter(h => 
+      const history = allHistories.filter((h) =>
         (email && h.email === email) || (phone && h.phone === phone)
       );
 
-      const firstThisBooking = history.find(h => h.offeringId === offeringId);
+      const firstThisBooking = history.find((h) => h.offeringId === offeringId);
       const firstThisDate = firstThisBooking ? firstThisBooking.bookedOn : null;
 
       const isNew = history[0] && history[0].offeringId === offeringId;
       if (isNew) newCustomersCount++;
 
-      const isUpsell = history.some(h => h.offeringId !== offeringId && h.bookedOn < firstThisDate);
+      const isUpsell = history.some((h) => h.offeringId !== offeringId && h.bookedOn < firstThisDate);
       if (isUpsell) upsellsCount++;
 
       const isLoyal = history.length >= 2;
       if (isLoyal) loyalCustomersCount++;
 
-      const ltv = history.reduce((sum, h) => sum + h.pricePaid, 0);
+      const ltv = history.reduce((sum, h) => sum + (Number(h.pricePaid) || 0), 0);
       totalLTV += ltv;
-    });
 
-    // Time-series chart data for this offering specifically
-    const dailyMap = new Map();
-    bookings.forEach(b => {
-      if (!b.bookedOn) return;
-      let dStr = '';
-      try {
-        const d = new Date(b.bookedOn);
-        if (!isNaN(d.getTime())) {
-          dStr = d.toISOString().split('T')[0];
-        }
-      } catch (e) {}
-      if (!dStr) return;
-
-      if (!dailyMap.has(dStr)) {
-        dailyMap.set(dStr, { date: dStr, revenue: 0, bookings: 0 });
+      const paidForOffering = history.some((h) => h.offeringId === offeringId && isPaidBooking(h));
+      if (paidForOffering) {
+        paidCustomerCount += 1;
+      } else {
+        freeCustomerCount += 1;
       }
-      const dayData = dailyMap.get(dStr);
-      dayData.revenue += b.pricePaid || 0;
-      dayData.bookings += 1;
     });
 
-    const chartData = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const chartData = buildDailyChartData(bookings);
 
     res.json({
       analytics: {
@@ -447,8 +516,16 @@ exports.getOfferingAnalytics = async (req, res) => {
         newCustomers: newCustomersCount,
         upsells: upsellsCount,
         loyalCustomers: loyalCustomersCount,
-        lifetimeValue: totalLTV,
-        avgLTV: uniqueCustomers.length > 0 ? Number((totalLTV / uniqueCustomers.length).toFixed(1)) : 0
+        lifetimeValue: roundMoney(totalLTV),
+        avgLTV: uniqueCustomers.length > 0 ? roundMoney(totalLTV / uniqueCustomers.length) : 0,
+        paidBookings: breakdown.paidBookings,
+        freeBookings: breakdown.freeBookings,
+        totalRevenue: breakdown.totalRevenue,
+        paidRevenue: breakdown.paidRevenue,
+        avgOrderValue: breakdown.avgOrderValue,
+        paidCustomers: paidCustomerCount,
+        freeCustomers: freeCustomerCount,
+        conversionRate: offering?.conversionRate || 0
       },
       chartData
     });
@@ -497,35 +574,31 @@ exports.updateOffering = async (req, res) => {
 exports.getDashboardStats = async (req, res) => {
   try {
     const bookings = await ExlyBooking.find().sort({ bookedOn: 1 }).lean();
+    const breakdown = computeBookingBreakdown(bookings);
+    const chartData = buildDailyChartData(bookings);
 
-    const dailyMap = new Map();
     const uniqueKeys = new Set();
+    bookings.forEach((b) => uniqueKeys.add(getCustomerKey(b)));
 
-    bookings.forEach(b => {
-      if (!b.bookedOn) return;
-      const dateStr = new Date(b.bookedOn).toISOString().split('T')[0];
-      if (!dailyMap.has(dateStr)) {
-        dailyMap.set(dateStr, { date: dateStr, revenue: 0, bookings: 0 });
-      }
-      const dayData = dailyMap.get(dateStr);
-      dayData.revenue += b.pricePaid || 0;
-      dayData.bookings += 1;
+    const offerings = await ExlyOffering.find({}, 'conversionRate totalBookings').lean();
+    const weightedConversion = offerings.reduce((sum, off) => sum + (off.conversionRate || 0), 0);
+    const avgConversionRate = offerings.length > 0
+      ? Number((weightedConversion / offerings.length).toFixed(1))
+      : 0;
 
-      // Unique identifier for client across all offerings
-      const key = `${b.email?.toLowerCase().trim() || ''}-${b.phone?.trim() || ''}`;
-      uniqueKeys.add(key);
-    });
-
-    const chartData = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-
-    // Get the absolute most recent booking
     const recentBooking = await ExlyBooking.findOne().sort({ bookedOn: -1 }).lean();
 
     res.json({
       chartData,
       recentBooking,
       uniqueBookingsCount: uniqueKeys.size,
-      totalBookingsCount: bookings.length
+      totalBookingsCount: breakdown.totalBookings,
+      paidBookingsCount: breakdown.paidBookings,
+      freeBookingsCount: breakdown.freeBookings,
+      totalRevenue: breakdown.totalRevenue,
+      paidRevenue: breakdown.paidRevenue,
+      avgOrderValue: breakdown.avgOrderValue,
+      avgConversionRate
     });
   } catch (err) {
     logger.error('Exly', 'getDashboardStats error', { error: err.message });

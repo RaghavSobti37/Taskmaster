@@ -45,8 +45,8 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
-      <Card className="tm-modal-panel w-full max-w-5xl h-[85vh] bg-[var(--color-bg-workspace)] border-white/10 flex flex-col overflow-hidden shadow-2xl" style={{ width: 'min(calc(100vw - 2rem), 1024px)', flexShrink: 0 }} role="dialog" aria-modal="true">
+    <div className="tm-modal-overlay fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+      <Card className="tm-modal-panel max-w-5xl h-[85vh] bg-[var(--color-bg-workspace)] border-white/10 flex flex-col overflow-hidden shadow-2xl" role="dialog" aria-modal="true">
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 bg-[var(--color-bg-secondary)] flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -1,9 +1,9 @@
 const axios = require('axios');
-const Lead = require('../models/Lead');
 const ExlyOffering = require('../models/ExlyOffering');
 const ExlyBooking = require('../models/ExlyBooking');
 
 const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
+const { recalculateOfferingMetrics } = require('./exlyOfferingMetrics');
 
 class ExlyService {
   getCredentials() {
@@ -170,25 +170,7 @@ class ExlyService {
     // 3. Recalculate Offering analytics based on ExlyBookings and CRM Leads
     const allStoredOfferings = await ExlyOffering.find({});
     for (const offering of allStoredOfferings) {
-      const bookingsForOff = await ExlyBooking.find({ offeringId: offering.offeringId }).lean();
-      const totalBookings = bookingsForOff.length;
-      const totalRevenue = bookingsForOff.reduce((sum, b) => sum + (b.pricePaid || 0), 0);
-
-      const leadsForOffering = await Lead.find({
-        $or: [
-          { exlyOfferingId: offering.offeringId },
-          { exlyOfferingTitle: offering.title },
-          { source: offering.title }
-        ]
-      }).lean();
-
-      const convertedBookings = leadsForOffering.filter(l => l.leadStatus === 'Converted').length;
-      const conversionRate = totalBookings > 0 ? Number(((convertedBookings / totalBookings) * 100).toFixed(1)) : 0;
-
-      offering.totalBookings = totalBookings;
-      offering.totalRevenue = totalRevenue;
-      offering.conversionRate = conversionRate;
-      await offering.save();
+      await recalculateOfferingMetrics(offering);
     }
 
     return {

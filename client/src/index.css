@@ -188,22 +188,120 @@ select option {
   color: var(--color-pastel-slate-text);
 }
 
-/* Core fix: flex-centered modals collapse to min-content without explicit width */
+/* Modal layout system — flex-centered panels collapse to min-content without explicit width */
 @layer components {
+  /* Overlay: grid centering (never flex shrink collapse) */
+  .tm-modal-overlay,
+  .fixed.inset-0.flex.items-center.justify-center:not(.flex-col),
+  .min-h-screen.flex.items-center.justify-center,
+  .min-h-screen.grid.place-items-center {
+    display: grid !important;
+    place-items: center;
+  }
+
+  /* Panel: explicit width via CSS variable; inline styles / size classes can override width */
   .tm-modal-panel {
     box-sizing: border-box;
     flex-shrink: 0 !important;
     flex-grow: 0 !important;
+    width: min(var(--tm-modal-width, 512px), calc(100vw - 2rem));
     min-width: min(320px, calc(100vw - 2rem)) !important;
     max-width: calc(100vw - 2rem) !important;
   }
 
-  /* Direct panel inside flex overlay (legacy modals without ModalShell) */
-  .fixed.inset-0.flex.items-center.justify-center > .tm-modal-panel,
-  .fixed.inset-0.flex.items-center.justify-center > [role="dialog"] {
+  /* Size tokens (match ModalShell MODAL_WIDTH_PX) */
+  .tm-modal-sm { --tm-modal-width: 448px; }
+  .tm-modal-md { --tm-modal-width: 512px; }
+  .tm-modal-lg { --tm-modal-width: 672px; }
+  .tm-modal-xl { --tm-modal-width: 896px; }
+  .tm-modal-2xl { --tm-modal-width: 1024px; }
+  .tm-modal-full { --tm-modal-width: 1200px; }
+
+  /* Full-screen panels inside overlays keep viewport size */
+  .tm-modal-overlay > .h-full,
+  .tm-modal-overlay > .w-full.h-full,
+  .fixed.inset-0.flex.items-center.justify-center > .h-full,
+  .fixed.inset-0.flex.items-center.justify-center > .w-full.h-full {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Legacy panels using Tailwind max-w-* inside centered overlays */
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-sm,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-sm,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-sm,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-sm {
+    --tm-modal-width: 384px;
+    width: min(384px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-md,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-md,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-md,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-md {
+    --tm-modal-width: 448px;
+    width: min(448px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-lg,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-lg,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-lg,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-lg {
+    --tm-modal-width: 512px;
+    width: min(512px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-xl,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-xl,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-xl,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-xl {
+    --tm-modal-width: 576px;
+    width: min(576px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-2xl,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-2xl,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-2xl,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-2xl {
+    --tm-modal-width: 672px;
+    width: min(672px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-3xl,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-3xl,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-3xl,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-3xl {
+    --tm-modal-width: 768px;
+    width: min(768px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-4xl,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-4xl,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-4xl,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-4xl {
+    --tm-modal-width: 896px;
+    width: min(896px, calc(100vw - 2rem)) !important;
+  }
+
+  .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-5xl,
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-5xl,
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-5xl,
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-5xl {
+    --tm-modal-width: 1024px;
+    width: min(1024px, calc(100vw - 2rem)) !important;
+  }
+
+  /* Fallback: any non-absolute panel child in centered overlay gets anti-collapse min-width */
+  .tm-modal-overlay > :where(:not(.absolute):not(.pointer-events-none):not(.h-full):not(.w-full.h-full)),
+  .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.pointer-events-none):not(.h-full):not(.w-full.h-full)),
+  .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)),
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)) {
     flex-shrink: 0 !important;
     min-width: min(320px, calc(100vw - 2rem)) !important;
     max-width: calc(100vw - 2rem) !important;
+    box-sizing: border-box;
   }
 }
 

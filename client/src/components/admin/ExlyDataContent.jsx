@@ -1,14 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { 
-  Database, RefreshCw, Key, ShieldAlert, AlertCircle, CheckCircle2,
-  IndianRupee, Calendar, Percent, Users, UserPlus, ShoppingBag, Heart, Search,
-  SlidersHorizontal, BarChart3, TrendingUp, HelpCircle, X
+  Database, RefreshCw, ShieldAlert, AlertCircle,
+  IndianRupee, Users, Search,
+  SlidersHorizontal, BarChart3, TrendingUp, UserPlus
 } from 'lucide-react';
-import { Badge, Card, StatCard, DataTable, Button, ProgressBar, FullScreenWorkspace, Input, Skeleton } from '../ui';
+import { Badge, Card, DataTable, Button, FullScreenWorkspace, Input, Skeleton } from '../ui';
 import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  shortenOfferingTitle,
+  shortenOfferingTitleCompact,
+  formatInr,
+  formatPercent,
+  computeOfferingTotals
+} from '../../utils/exlyFormatters';
+
+const MetricBlock = ({ label, value, tone = 'default', title }) => {
+  const toneClass = {
+    mint: 'text-[var(--color-pastel-mint-text)]',
+    rose: 'text-[var(--color-pastel-rose-text)]',
+    muted: 'text-[var(--color-text-muted)]',
+    default: 'text-[var(--color-text-primary)]'
+  }[tone] || 'text-[var(--color-text-primary)]';
+
+  return (
+    <div className="min-w-0">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">{label}</p>
+      <p className={`text-lg font-black font-mono tabular-nums leading-tight mt-0.5 ${toneClass}`} title={title}>
+        {value}
+      </p>
+    </div>
+  );
+};
 
 const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const [offerings, setOfferings] = useState([]);
@@ -53,6 +77,11 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
   // Search Filter for campaign customers
   const [searchQuery, setSearchQuery] = useState('');
+  const [bookingPaymentFilter, setBookingPaymentFilter] = useState('all');
+  const [bookingPage, setBookingPage] = useState(1);
+  const [bookingRowsPerPage, setBookingRowsPerPage] = useState(25);
+  const [detailsPagination, setDetailsPagination] = useState(null);
+  const [offeringMetrics, setOfferingMetrics] = useState(null);
 
   // Unlinked Bookings States
   const [unlinkedBookings, setUnlinkedBookings] = useState([]);
@@ -71,6 +100,44 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   useEffect(() => {
     setUnlinkedPage(1);
   }, [unlinkedSearch, unlinkedOfferingFilter, unlinkedSort]);
+
+  useEffect(() => {
+    setBookingPage(1);
+  }, [searchQuery, bookingPaymentFilter]);
+
+  const unlinkedCountByOffering = useMemo(() => {
+    const map = new Map();
+    unlinkedBookings.forEach((booking) => {
+      map.set(booking.offeringId, (map.get(booking.offeringId) || 0) + 1);
+    });
+    return map;
+  }, [unlinkedBookings]);
+
+  const offeringTotals = useMemo(() => computeOfferingTotals(offerings), [offerings]);
+
+  const fetchOfferingDetails = useCallback(async (offeringId, page = 1, limit = bookingRowsPerPage, paymentFilter = bookingPaymentFilter, search = searchQuery) => {
+    setDetailsLoading(true);
+    setDetailsError('');
+    try {
+      const res = await axios.get(`/api/exly/offerings/${offeringId}`, {
+        params: { page, limit, paymentFilter, search: search.trim() || undefined }
+      });
+      setDetails(res.data);
+      setOfferingMetrics(res.data.metrics || null);
+      setDetailsPagination(res.data.pagination || null);
+      setEditedTitle(res.data.offering.title || '');
+      setEditedPrice(res.data.offering.price || 0);
+      setEditedType(res.data.offering.type || 'program');
+      setEditedStatus(res.data.offering.status || 'active');
+      setEditedEventDate(res.data.offering.eventDate || '');
+      setEditedEventTime(res.data.offering.eventTime || '');
+    } catch (err) {
+      console.error(err);
+      setDetailsError(err.response?.data?.error || 'Failed to load detailed offering metrics.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  }, [bookingRowsPerPage, bookingPaymentFilter, searchQuery]);
 
   const fetchStatusAndData = async () => {
     setLoading(true);
@@ -232,14 +299,17 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const handleRowClick = async (offering) => {
     setSelectedOffering(offering);
     setWorkspaceOpen(true);
-    setDetailsLoading(true);
     setCohortLoading(true);
     setDetailsError('');
     setDetails(null);
     setCohortAnalytics(null);
     setCohortChartData([]);
+    setOfferingMetrics(null);
+    setDetailsPagination(null);
+    setSearchQuery('');
+    setBookingPaymentFilter('all');
+    setBookingPage(1);
 
-    // Initial edit states from table row object
     setEditedTitle(offering.title || '');
     setEditedPrice(offering.price || 0);
     setEditedType(offering.type || 'program');
@@ -247,25 +317,6 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
     setEditedEventDate(offering.eventDate || '');
     setEditedEventTime(offering.eventTime || '');
 
-    // Part 1: Fast load offering details & bookings
-    try {
-      const res = await axios.get(`/api/exly/offerings/${offering.offeringId}`);
-      setDetails(res.data);
-      // Synchronize with fresh details
-      setEditedTitle(res.data.offering.title || '');
-      setEditedPrice(res.data.offering.price || 0);
-      setEditedType(res.data.offering.type || 'program');
-      setEditedStatus(res.data.offering.status || 'active');
-      setEditedEventDate(res.data.offering.eventDate || '');
-      setEditedEventTime(res.data.offering.eventTime || '');
-    } catch (err) {
-      console.error(err);
-      setDetailsError(err.response?.data?.error || 'Failed to load detailed offering metrics.');
-    } finally {
-      setDetailsLoading(false);
-    }
-
-    // Part 2: Background load cohort analytics
     try {
       const res = await axios.get(`/api/exly/offerings/${offering.offeringId}/analytics`);
       setCohortAnalytics(res.data.analytics);
@@ -276,6 +327,14 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       setCohortLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!workspaceOpen || !selectedOffering?.offeringId) return;
+    const timer = setTimeout(() => {
+      fetchOfferingDetails(selectedOffering.offeringId, bookingPage, bookingRowsPerPage, bookingPaymentFilter, searchQuery);
+    }, searchQuery ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [workspaceOpen, selectedOffering?.offeringId, bookingPage, bookingRowsPerPage, bookingPaymentFilter, searchQuery, fetchOfferingDetails]);
 
   const handleSaveChanges = async () => {
     if (!selectedOffering || isSaving) return;
@@ -312,23 +371,25 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
   const columns = [
     {
-      header: 'Offering Name',
+      header: 'Offering',
       render: (item) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] shrink-0 text-[var(--color-text-primary)]">
+        <div className="flex items-center gap-2.5 max-w-[220px]">
+          <div className="w-7 h-7 rounded-md bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[9px] shrink-0 text-[var(--color-text-primary)]">
             {item.title?.substring(0, 2).toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-xs text-[var(--color-text-primary)]">{item.title}</span>
-              <Badge variant={item.status === 'active' ? 'success' : 'warning'} className="!text-[9px] uppercase tracking-wider">
+          <div className="min-w-0">
+            <span
+              className="font-semibold text-xs text-[var(--color-text-primary)] truncate block"
+              title={item.title}
+            >
+              {shortenOfferingTitleCompact(item.title)}
+            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Badge variant={item.status === 'active' ? 'success' : 'warning'} className="!text-[8px] uppercase tracking-wider shrink-0">
                 {item.status}
               </Badge>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[9px] text-[var(--color-text-muted)] font-mono">ID: {item.offeringId}</span>
               {(item.eventDate || item.eventTime) && (
-                <span className="text-[9px] text-[var(--color-pastel-apricot-text)] bg-[var(--color-pastel-apricot-bg)] px-1 rounded font-mono">
+                <span className="text-[8px] text-[var(--color-text-muted)] font-mono truncate">
                   {item.eventDate} {item.eventTime}
                 </span>
               )}
@@ -338,29 +399,55 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       )
     },
     {
-      header: 'Price',
+      header: 'List Price',
       render: (item) => (
         <span className="text-xs font-mono font-bold text-[var(--color-text-primary)]">
-          {item.currency} {item.price.toLocaleString()}
+          ₹ {formatInr(item.price, { exact: true })}
         </span>
       )
     },
     {
-      header: 'Total Bookings',
+      header: 'Paid',
       render: (item) => (
-        <span className="text-xs font-bold text-[var(--color-text-primary)]">{item.totalBookings}</span>
+        <span className="text-xs font-bold text-[var(--color-pastel-mint-text)] bg-[var(--color-pastel-mint-bg)] px-1.5 py-0.5 rounded font-mono">
+          {item.paidBookings ?? 0}
+        </span>
       )
     },
     {
-      header: 'Unlinked CRM Bookings',
+      header: 'Free',
+      render: (item) => (
+        <span className="text-xs font-bold text-[var(--color-pastel-rose-text)] bg-[var(--color-pastel-rose-bg)] px-1.5 py-0.5 rounded font-mono">
+          {item.freeBookings ?? 0}
+        </span>
+      )
+    },
+    {
+      header: 'Revenue',
+      render: (item) => (
+        <span className="text-xs font-bold font-mono text-[var(--color-text-primary)]">
+          ₹ {formatInr(item.totalRevenue, { exact: true })}
+        </span>
+      )
+    },
+    {
+      header: 'Conv. Rate',
+      render: (item) => (
+        <span className="text-xs font-mono font-bold text-[var(--color-text-primary)]">
+          {formatPercent(item.conversionRate || 0)}
+        </span>
+      )
+    },
+    {
+      header: 'Unlinked',
       render: (item) => {
-        const count = unlinkedBookings.filter(b => b.offeringId === item.offeringId).length;
+        const count = unlinkedCountByOffering.get(item.offeringId) || 0;
         return (
           <div className="flex items-center gap-1.5 font-bold">
             {count > 0 ? (
               <span className="text-xs font-mono text-[var(--color-pastel-rose-text)] bg-[var(--color-pastel-rose-bg)] px-1.5 py-0.5 rounded flex items-center gap-1">
                 <ShieldAlert size={10} />
-                {count} unlinked
+                {count}
               </span>
             ) : (
               <span className="text-xs font-mono text-[var(--color-pastel-mint-text)] bg-[var(--color-pastel-mint-bg)] px-1.5 py-0.5 rounded">
@@ -370,29 +457,21 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
           </div>
         );
       }
-    },
-    {
-      header: 'Total Revenue',
-      render: (item) => (
-        <span className="text-xs font-bold text-[var(--color-text-primary)]">
-          {item.currency} {item.totalRevenue.toLocaleString()}
-        </span>
-      )
     }
   ];
 
   const bookingColumns = [
     {
-      header: 'Customer Details',
+      header: 'Customer',
       render: (b) => (
         <div>
           <div className="font-bold text-xs text-[var(--color-text-primary)]">{b.name}</div>
-          <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{b.email}</div>
+          <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{b.email || '—'}</div>
         </div>
       )
     },
     {
-      header: 'Phone Number',
+      header: 'Phone',
       render: (b) => (
         <span className="text-xs font-mono text-[var(--color-text-primary)]">{b.phone || '—'}</span>
       )
@@ -406,15 +485,34 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       )
     },
     {
+      header: 'Type',
+      render: (b) => (
+        <Badge
+          variant={b.isPaid ? 'success' : 'rose'}
+          className="!text-[9px] uppercase tracking-wider"
+        >
+          {b.isPaid ? 'Paid' : 'Free'}
+        </Badge>
+      )
+    },
+    {
       header: 'Price Paid',
       render: (b) => (
-        <span className="text-xs font-bold text-[var(--color-text-primary)] font-mono">
-          INR {b.pricePaid?.toLocaleString() || 0}
+        <span className={`text-xs font-bold font-mono ${b.isPaid ? 'text-[var(--color-pastel-mint-text)]' : 'text-[var(--color-text-muted)]'}`}>
+          ₹ {formatInr(b.pricePaid, { exact: true })}
         </span>
       )
     },
     {
-      header: 'CRM Status Check',
+      header: 'Payment',
+      render: (b) => (
+        <span className="text-[9px] font-mono text-[var(--color-text-muted)] uppercase">
+          {b.paymentType || (b.isPaid ? 'Paid' : 'Free')}
+        </span>
+      )
+    },
+    {
+      header: 'CRM',
       render: (b) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1">
@@ -440,22 +538,11 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
           )}
         </div>
       )
-    },
-    {
-      header: 'Payout Status',
-      render: (b) => (
-        <Badge variant={b.payoutStatus?.toLowerCase() === 'processed' ? 'success' : 'warning'} className="!text-[9px] uppercase">
-          {b.payoutStatus || 'Pending'}
-        </Badge>
-      )
     }
   ];
 
-  // Calculate totals from offerings list for aggregate ribbon
-  const totalRevenueAll = offerings.reduce((acc, curr) => acc + curr.totalRevenue, 0);
-
   // Filter and Sort offerings list
-  const filteredOfferings = offerings
+  const filteredOfferings = useMemo(() => offerings
     .filter(off => {
       const matchesSearch = off.title.toLowerCase().includes(offeringSearch.toLowerCase()) || 
                             off.offeringId.toLowerCase().includes(offeringSearch.toLowerCase());
@@ -469,31 +556,36 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
         case 'revenue_asc': return a.totalRevenue - b.totalRevenue;
         case 'bookings_desc': return b.totalBookings - a.totalBookings;
         case 'bookings_asc': return a.totalBookings - b.totalBookings;
+        case 'paid_desc': return (b.paidBookings || 0) - (a.paidBookings || 0);
+        case 'free_desc': return (b.freeBookings || 0) - (a.freeBookings || 0);
         case 'unlinked_desc': {
-          const aCount = unlinkedBookings.filter(x => x.offeringId === a.offeringId).length;
-          const bCount = unlinkedBookings.filter(x => x.offeringId === b.offeringId).length;
+          const aCount = unlinkedCountByOffering.get(a.offeringId) || 0;
+          const bCount = unlinkedCountByOffering.get(b.offeringId) || 0;
           return bCount - aCount;
         }
         case 'unlinked_asc': {
-          const aCount = unlinkedBookings.filter(x => x.offeringId === a.offeringId).length;
-          const bCount = unlinkedBookings.filter(x => x.offeringId === b.offeringId).length;
+          const aCount = unlinkedCountByOffering.get(a.offeringId) || 0;
+          const bCount = unlinkedCountByOffering.get(b.offeringId) || 0;
           return aCount - bCount;
         }
         case 'title_asc': return a.title.localeCompare(b.title);
         case 'title_desc': return b.title.localeCompare(a.title);
         default: return b.totalRevenue - a.totalRevenue;
       }
-    });
+    }), [offerings, offeringSearch, statusFilter, typeFilter, sortBy, unlinkedCountByOffering]);
 
-  // Filter bookings list based on query inside workspace details
-  const filteredBookings = details?.bookings?.filter(b => 
-    b.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.phone?.includes(searchQuery)
-  ) || [];
+  const workspaceBookings = details?.bookings || [];
 
-  // Pre-process date data for Recharts area charts
   const overallChartData = dashboardStats?.chartData || [];
+  const displayRevenue = dashboardStats?.totalRevenue ?? offeringTotals.totalRevenue;
+  const displayPaidBookings = dashboardStats?.paidBookingsCount ?? offeringTotals.paidBookings;
+  const displayFreeBookings = dashboardStats?.freeBookingsCount ?? offeringTotals.freeBookings;
+  const displayAov = dashboardStats?.avgOrderValue ?? (
+    displayPaidBookings > 0 ? displayRevenue / displayPaidBookings : 0
+  );
+  const displayTotalBookings = dashboardStats?.totalBookingsCount ?? (
+    displayPaidBookings + displayFreeBookings
+  );
   
   return (
     <div className="space-y-6 p-4">
@@ -508,39 +600,85 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
       {currentSubTab === 'campaigns' ? (
         <>
-          {/* Aggregate metrics ribbon */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <StatCard 
-              label="Total Offerings" 
-              value={loading ? <Skeleton className="h-6 w-12 my-0.5" /> : offerings.length} 
-              icon={Calendar} 
-              variant="info" 
-              info="Total offerings created and active on Exly Creator profile." 
-            />
-            <StatCard 
-              label="Unique Bookings" 
-              value={statsLoading ? <Skeleton className="h-6 w-16 my-0.5" /> : (dashboardStats?.uniqueBookingsCount ?? 0)} 
-              subValue={statsLoading ? undefined : `Total: ${dashboardStats?.totalBookingsCount ?? 0}`}
-              icon={Database} 
-              variant="mint" 
-              info="De-duplicated bookings count across all campaign offerings." 
-            />
-            <StatCard 
-              label="Unlinked Bookings" 
-              value={unlinkedLoading ? <Skeleton className="h-6 w-16 my-0.5" /> : unlinkedBookings.length} 
-              icon={ShieldAlert} 
-              variant="apricot" 
-              info="Exly bookings not linked to any CRM Lead by email/phone. Click to view and link." 
-              onClick={() => setCurrentSubTab('unlinked')}
-              className="cursor-pointer hover:scale-[1.01] transition-transform"
-            />
-            <StatCard 
-              label="Aggregate Revenue" 
-              value={loading ? <Skeleton className="h-6 w-24 my-0.5" /> : `₹ ${totalRevenueAll.toLocaleString()}`} 
-              icon={IndianRupee} 
-              variant="slate" 
-              info="Accumulated revenue of client purchases through Exly." 
-            />
+          {/* Summary — 3 grouped panels instead of 8 cramped cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
+                <Database size={14} className="text-[var(--color-text-muted)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bookings</span>
+              </div>
+              {statsLoading ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  <MetricBlock label="Paid" value={displayPaidBookings.toLocaleString('en-IN')} tone="mint" />
+                  <MetricBlock label="Free" value={displayFreeBookings.toLocaleString('en-IN')} tone="rose" />
+                  <MetricBlock label="All rows" value={displayTotalBookings.toLocaleString('en-IN')} tone="muted" />
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
+                <IndianRupee size={14} className="text-[var(--color-text-muted)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Revenue</span>
+              </div>
+              {statsLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-40" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p
+                    className="text-xl sm:text-2xl font-black font-mono tabular-nums text-[var(--color-text-primary)] leading-none"
+                    title={`₹ ${formatInr(displayRevenue, { exact: true })}`}
+                  >
+                    ₹ {formatInr(displayRevenue, { exact: true })}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Avg order{' '}
+                    <span className="font-mono text-[var(--color-text-primary)]">
+                      ₹ {formatInr(displayAov, { exact: true })}
+                    </span>
+                  </p>
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
+                <Users size={14} className="text-[var(--color-text-muted)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Overview</span>
+              </div>
+              {statsLoading || loading ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <MetricBlock
+                    label="Unique customers"
+                    value={(dashboardStats?.uniqueBookingsCount ?? 0).toLocaleString('en-IN')}
+                  />
+                  <MetricBlock label="Offerings" value={offerings.length.toLocaleString('en-IN')} />
+                  <MetricBlock label="Conversion" value={formatPercent(dashboardStats?.avgConversionRate ?? 0)} />
+                  <button
+                    type="button"
+                    onClick={() => setCurrentSubTab('unlinked')}
+                    className="text-left rounded-md hover:bg-[var(--color-bg-secondary)] transition-colors -m-1 p-1"
+                  >
+                    <MetricBlock
+                      label="Unlinked"
+                      value={unlinkedBookings.length.toLocaleString('en-IN')}
+                      tone="rose"
+                    />
+                  </button>
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* Recharts Overall Analytics Visuals */}
@@ -548,7 +686,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
             <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
               <div className="flex items-center justify-between mb-3 border-b border-[var(--color-bg-border)] pb-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                  Revenue Over Time (Real-time Stream)
+                  Revenue Over Time
                 </span>
                 <div className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-pastel-mint-text)]">
                   <TrendingUp size={12} />
@@ -671,7 +809,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal size={14} className="text-[var(--color-text-muted)]" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Campaign Performance Listings</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">Campaigns</h3>
               </div>
               
               <div className="flex flex-wrap items-center gap-3">
@@ -731,7 +869,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     <option value="revenue_asc">Revenue: Low to High</option>
                     <option value="bookings_desc">Bookings: High to Low</option>
                     <option value="bookings_asc">Bookings: Low to High</option>
-                    <option value="unlinked_desc">Unlinked Bookings: High to Low</option>
+                    <option value="paid_desc">Paid: High to Low</option>
+                    <option value="free_desc">Free: High to Low</option>
+                    <option value="unlinked_desc">Unlinked: High to Low</option>
                     <option value="unlinked_asc">Unlinked Bookings: Low to High</option>
                     <option value="title_asc">Title: A to Z</option>
                     <option value="title_desc">Title: Z to A</option>
@@ -798,7 +938,12 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Price Settled:</span>
-                  <p className="text-[var(--color-text-primary)] font-mono">₹ {dashboardStats.recentBooking.pricePaid?.toLocaleString() || 0}</p>
+                  <p className="text-[var(--color-text-primary)] font-mono">
+                    ₹ {formatInr(dashboardStats.recentBooking.pricePaid, { exact: true })}
+                    {Number(dashboardStats.recentBooking.pricePaid || 0) <= 0 && (
+                      <Badge variant="rose" className="ml-2 !text-[8px]">Free</Badge>
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[var(--color-text-muted)] uppercase tracking-wider">Booking Date:</span>
@@ -1000,14 +1145,19 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">{item.phone || '—'}</td>
                         <td className="p-3">
-                          <div className="text-xs font-semibold text-[var(--color-text-primary)]">{item.offeringTitle}</div>
-                          <div className="text-[9px] text-[var(--color-text-muted)] font-mono">ID: {item.offeringId}</div>
+                          <div className="text-xs font-semibold text-[var(--color-text-primary)]" title={item.offeringTitle}>
+                            {shortenOfferingTitle(item.offeringTitle)}
+                          </div>
+                          <div className="text-[9px] text-[var(--color-text-muted)] font-mono">{item.offeringId}</div>
                         </td>
                         <td className="p-3 text-xs font-mono text-[var(--color-text-primary)]">
                           {item.bookedOn ? format(new Date(item.bookedOn), 'MMM dd yyyy, hh:mm a') : '—'}
                         </td>
                         <td className="p-3 text-xs font-mono font-bold text-[var(--color-text-primary)] text-right">
-                          ₹ {item.pricePaid?.toLocaleString() || 0}
+                          ₹ {formatInr(item.pricePaid, { exact: true })}
+                          {Number(item.pricePaid || 0) <= 0 && (
+                            <span className="block text-[8px] uppercase text-[var(--color-pastel-rose-text)]">Free</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1169,9 +1319,14 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </Badge>
                 </span>
 
-                <span className="text-[var(--color-text-muted)]">Avg Customer LTV:</span>
+                <span className="text-[var(--color-text-muted)]">Avg Order Value:</span>
                 <span className="text-right font-mono text-[var(--color-pastel-mint-text)]">
-                  {cohortLoading ? 'Loading...' : `INR ${cohortAnalytics?.avgLTV?.toLocaleString() || 0}`}
+                  {offeringMetrics ? `₹ ${formatInr(offeringMetrics.avgOrderValue, { exact: true })}` : '—'}
+                </span>
+
+                <span className="text-[var(--color-text-muted)]">Conversion Rate:</span>
+                <span className="text-right font-mono text-[var(--color-text-primary)]">
+                  {formatPercent(offeringMetrics?.conversionRate || details?.offering?.conversionRate || 0)}
                 </span>
 
                 <span className="text-[var(--color-text-muted)]">Created Date:</span>
@@ -1190,44 +1345,58 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* The Five Analytical Counters with Part-by-part Skeleton Hydration */}
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-              <StatCard 
-                label="Total Customers" 
-                value={cohortLoading ? <Skeleton className="h-6 w-12 my-0.5" /> : (cohortAnalytics?.totalCustomers ?? 0)} 
-                icon={Users} 
-                variant="info" 
-                info="Total unique customer contacts registered for this offering." 
-              />
-              <StatCard 
-                label="New Customers" 
-                value={cohortLoading ? <Skeleton className="h-6 w-12 my-0.5" /> : (cohortAnalytics?.newCustomers ?? 0)} 
-                icon={UserPlus} 
-                variant="mint" 
-                info="Customers whose first-ever booking was this offering." 
-              />
-              <StatCard 
-                label="Upsells" 
-                value={cohortLoading ? <Skeleton className="h-6 w-12 my-0.5" /> : (cohortAnalytics?.upsells ?? 0)} 
-                icon={ShoppingBag} 
-                variant="apricot" 
-                info="Customers who purchased this offering after buying another offering previously." 
-              />
-              <StatCard 
-                label="Loyal Customers" 
-                value={cohortLoading ? <Skeleton className="h-6 w-12 my-0.5" /> : (cohortAnalytics?.loyalCustomers ?? 0)} 
-                icon={Heart} 
-                variant="rose" 
-                info="Customers of this offering who have 2 or more total purchases." 
-              />
-              <StatCard 
-                label="Cohort LTV" 
-                value={cohortLoading ? <Skeleton className="h-6 w-20 my-0.5" /> : `₹ ${(cohortAnalytics?.lifetimeValue ?? 0).toLocaleString()}`} 
-                icon={IndianRupee} 
-                variant="slate" 
-                info="Aggregate lifetime value (LTV) across all offerings for the cohort of customers who purchased this offering." 
-              />
+            {/* Offering summary — grouped panels */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Bookings</p>
+                {detailsLoading ? (
+                  <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    <MetricBlock label="Paid" value={(offeringMetrics?.paidBookings ?? 0).toLocaleString('en-IN')} tone="mint" />
+                    <MetricBlock label="Free" value={(offeringMetrics?.freeBookings ?? 0).toLocaleString('en-IN')} tone="rose" />
+                    <MetricBlock label="Total" value={(offeringMetrics?.totalBookings ?? 0).toLocaleString('en-IN')} tone="muted" />
+                  </div>
+                )}
+              </Card>
+              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Revenue</p>
+                {detailsLoading ? (
+                  <div className="space-y-2"><Skeleton className="h-8 w-36" /><Skeleton className="h-4 w-24" /></div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xl font-black font-mono tabular-nums text-[var(--color-text-primary)]">
+                      ₹ {formatInr(offeringMetrics?.totalRevenue ?? 0, { exact: true })}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Avg order <span className="font-mono text-[var(--color-text-primary)]">₹ {formatInr(offeringMetrics?.avgOrderValue ?? 0, { exact: true })}</span>
+                    </p>
+                  </div>
+                )}
+              </Card>
+              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Customers</p>
+                {detailsLoading || cohortLoading ? (
+                  <div className="grid grid-cols-2 gap-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <MetricBlock label="Unique" value={(cohortAnalytics?.totalCustomers ?? 0).toLocaleString('en-IN')} />
+                    <MetricBlock label="Conversion" value={formatPercent(offeringMetrics?.conversionRate ?? 0)} />
+                    <MetricBlock label="New" value={(cohortAnalytics?.newCustomers ?? 0).toLocaleString('en-IN')} />
+                    <MetricBlock label="Loyal" value={(cohortAnalytics?.loyalCustomers ?? 0).toLocaleString('en-IN')} />
+                  </div>
+                )}
+              </Card>
             </div>
+
+            {/* Cohort extras — single compact row */}
+            {!cohortLoading && cohortAnalytics && (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                <span>Upsells: <span className="font-mono text-[var(--color-text-primary)]">{cohortAnalytics.upsells ?? 0}</span></span>
+                <span>Cohort LTV: <span className="font-mono text-[var(--color-text-primary)]">₹ {formatInr(cohortAnalytics.lifetimeValue ?? 0, { exact: true })}</span></span>
+                <span>Avg LTV: <span className="font-mono text-[var(--color-text-primary)]">₹ {formatInr(cohortAnalytics.avgLTV ?? 0, { exact: true })}</span></span>
+              </div>
+            )}
 
             {/* Campaign-level Charts with Part-by-part Skeleton Hydration */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1320,30 +1489,81 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
               </Card>
             </div>
 
-            {/* Customers List Section with Part-by-part Skeleton Hydration */}
+            {/* Customers List Section */}
             <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                    Registered Customers List & CRM Lead Checks
+                    Booking Records
                   </h3>
                   <p className="text-[9px] text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
-                    {detailsLoading ? 'Loading registered bookings...' : `Showing ${filteredBookings.length} of ${details?.bookings?.length ?? 0} total customer bookings`}
+                    {detailsLoading
+                      ? 'Loading bookings...'
+                      : `Page ${detailsPagination?.page ?? 1} · ${workspaceBookings.length} shown · ${detailsPagination?.total ?? 0} total (${bookingPaymentFilter})`}
                   </p>
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, email or phone..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none text-xs font-semibold text-[var(--color-text-primary)] transition-all"
-                    disabled={detailsLoading}
-                  />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="flex items-center gap-1 p-0.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-md">
+                    {[
+                      { key: 'all', label: 'All' },
+                      { key: 'paid', label: 'Paid' },
+                      { key: 'free', label: 'Free' }
+                    ].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setBookingPaymentFilter(key)}
+                        className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors ${
+                          bookingPaymentFilter === key
+                            ? key === 'paid'
+                              ? 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)]'
+                              : key === 'free'
+                                ? 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)]'
+                                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]'
+                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                        }`}
+                      >
+                        {label}
+                        {!detailsLoading && offeringMetrics && (
+                          <span className="ml-1 font-mono opacity-70">
+                            ({key === 'all'
+                              ? offeringMetrics.totalBookings
+                              : key === 'paid'
+                                ? offeringMetrics.paidBookings
+                                : offeringMetrics.freeBookings})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full sm:w-56">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <input
+                      type="text"
+                      placeholder="Search name, email, phone..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none text-xs font-semibold text-[var(--color-text-primary)] transition-all"
+                      disabled={detailsLoading}
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Segment summary — inline, not duplicate cards */}
+              {!detailsLoading && offeringMetrics && (
+                <div className="flex flex-wrap gap-4 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-bold uppercase tracking-wider">
+                  <span className="text-[var(--color-pastel-mint-text)]">
+                    Paid segment: <span className="font-mono text-[var(--color-text-primary)]">{offeringMetrics.paidBookings}</span>
+                    {' · '}₹ {formatInr(offeringMetrics.paidRevenue ?? offeringMetrics.totalRevenue, { exact: true })}
+                  </span>
+                  <span className="text-[var(--color-pastel-rose-text)]">
+                    Free segment: <span className="font-mono text-[var(--color-text-primary)]">{offeringMetrics.freeBookings}</span>
+                  </span>
+                </div>
+              )}
 
               <div className="overflow-hidden bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
                 {detailsLoading ? (
@@ -1360,17 +1580,63 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                       </div>
                     ))}
                   </div>
-                ) : filteredBookings.length === 0 ? (
+                ) : workspaceBookings.length === 0 ? (
                   <div className="p-12 text-center opacity-30">
                     <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">No matching customer bookings</p>
                   </div>
                 ) : (
                   <DataTable
                     columns={bookingColumns}
-                    data={filteredBookings}
+                    data={workspaceBookings}
                   />
                 )}
               </div>
+
+              {!detailsLoading && detailsPagination && detailsPagination.totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between px-1 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] gap-3">
+                  <div className="flex items-center gap-4">
+                    <span>
+                      Page {detailsPagination.page} of {detailsPagination.totalPages} · {detailsPagination.total} bookings
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span>Show</span>
+                      <select
+                        value={bookingRowsPerPage}
+                        onChange={(e) => {
+                          setBookingRowsPerPage(Number(e.target.value));
+                          setBookingPage(1);
+                        }}
+                        className="px-1.5 py-0.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-[10px] font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-action-primary)]"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={bookingPage <= 1}
+                      onClick={() => setBookingPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 text-[10px]"
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={bookingPage >= detailsPagination.totalPages}
+                      onClick={() => setBookingPage((p) => p + 1)}
+                      className="px-2.5 py-1 text-[10px]"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

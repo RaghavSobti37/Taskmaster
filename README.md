@@ -108,7 +108,37 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.27**
+- Current: **1.7.28**
+
+## [2026-05-29] Version 1.7.28 - Exly Analytics, Gamification & Dev Stability
+### Exly Data (`/admin/exly-campaigns`)
+- Rebuilt Exly admin analytics with **accurate paid vs free booking breakdown** (`pricePaid > 0` = paid).
+- Added shared revenue engine: `server/utils/exlyMetrics.js` and `server/services/exlyOfferingMetrics.js`.
+- Extended `ExlyOffering` aggregates: `paidBookings`, `freeBookings`, `avgOrderValue`.
+- Enhanced API responses:
+  - `GET /api/exly/dashboard-stats` — paid/free counts, total revenue, AOV, conversion rate
+  - `GET /api/exly/offerings/:id/analytics` — cohort + payment segment metrics
+  - `GET /api/exly/offerings/:id` — paginated bookings with `paymentFilter` (`all|paid|free`) and search
+- Redesigned Exly UI: grouped summary panels (Bookings | Revenue | Overview), cleaner campaign table, offering drill-down with paid/free tabs.
+
+### Gamification
+- Added `GET /api/gamification/leaderboard/:userId/breakdown` for weekly XP breakdown by action.
+- Dashboard `LeaderboardCard` now supports member drill-down with grouped XP formula display.
+
+### Dev / Server Stability
+- Added graceful shutdown handlers in `server.js` to reduce `EADDRINUSE` on nodemon restarts.
+- Added `juice` dependency for HTML email inlining in mail service.
+
+### UI Polish
+- Modal shell sizing/centering refinements (`ModalShell`, `CenteredModal`).
+- Auth page styling updates and dashboard query hook additions.
+
+### New Files
+```text
+server/utils/exlyMetrics.js
+server/services/exlyOfferingMetrics.js
+client/src/utils/exlyFormatters.js
+```
 
 ## [2026-05-28] Version 1.7.27 - Production Stability + Data Sync
 ### Production Fixes

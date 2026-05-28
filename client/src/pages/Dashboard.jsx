@@ -34,14 +34,13 @@ const MissionCompleteModal = ({ mission, isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="tm-modal-overlay fixed inset-0 z-[9999] p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
         <motion.div 
           initial={{ scale: 0.8, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', bounce: 0.5 }}
-          className="tm-modal-panel bg-slate-900 border border-amber-500/30 rounded-[2rem] p-8 max-w-sm w-full relative overflow-hidden text-center shadow-2xl shadow-amber-500/20"
-          style={{ width: 'min(calc(100vw - 2rem), 384px)', flexShrink: 0 }}
+          className="tm-modal-panel max-w-sm bg-slate-900 border border-amber-500/30 rounded-[2rem] p-8 relative overflow-hidden text-center shadow-2xl shadow-amber-500/20"
           role="dialog"
           aria-modal="true"
           onClick={e => e.stopPropagation()}

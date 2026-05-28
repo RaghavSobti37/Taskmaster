@@ -5,6 +5,7 @@ import { Card, DataTable, Badge } from '../ui';
 const TaskTable = ({
   tasks = [],
   projects = [],
+  workspaces = [],
   completingIds = new Set(),
   onCompleteTask,
   onSelectTask,
@@ -12,6 +13,19 @@ const TaskTable = ({
   setFilter,
   loading = false
 }) => {
+  const workspaceColorMap = React.useMemo(() => {
+    const map = {};
+    workspaces.forEach((w) => {
+      map[(w.name || '').toUpperCase()] = w.color;
+    });
+    return map;
+  }, [workspaces]);
+
+  const getWorkspaceColor = (project) => {
+    if (!project) return '#64748b';
+    const key = (project.workspace || 'General').toUpperCase();
+    return workspaceColorMap[key] || '#64748b';
+  };
 
   if (loading) {
     return (
@@ -44,7 +58,8 @@ const TaskTable = ({
         const isCompleting = completingIds.has(row._id);
         const project = projects.find(p => p._id === row.projectId);
         const projectName = project ? project.name : 'Unassigned';
-        const projectColor = project ? project.color || 'var(--color-action-primary)' : 'var(--color-bg-border)';
+        const workspaceColor = getWorkspaceColor(project);
+        const workspaceLabel = project ? (project.workspace || 'General').toUpperCase() : 'UNASSIGNED';
 
         return (
           <div className="flex items-center gap-3 py-1">
@@ -63,12 +78,12 @@ const TaskTable = ({
                 <CheckCircle2 size={14} className="opacity-0 group-hover:opacity-100 text-[var(--color-action-primary)] transition-opacity" />
               )}
             </button>
-            <div className="flex flex-col gap-0.5 pl-2.5 py-0.5" style={{ borderLeft: `3px solid ${projectColor}` }}>
+            <div className="flex flex-col gap-0.5 pl-2.5 py-0.5" style={{ borderLeft: `3px solid ${workspaceColor}` }}>
               <span className="font-bold text-sm text-[var(--color-text-primary)] leading-snug tracking-tight">
                 {row.title}
               </span>
               <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
-                {projectName}
+                {projectName?.toUpperCase()} · {workspaceLabel}
               </span>
             </div>
           </div>
@@ -143,7 +158,6 @@ const TaskTable = ({
           <h3 className="text-base font-semibold tracking-tight text-[var(--color-text-primary)]">
             Active Workflow
           </h3>
-          <p className="text-sm text-[var(--color-text-muted)]">Manage and track your active tasks and priorities.</p>
         </div>
         <div className="flex items-center gap-2">
           {filter !== 'all' && (

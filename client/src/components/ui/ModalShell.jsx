@@ -1,0 +1,119 @@
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
+
+/** Pixel widths — inline styles so modals never collapse when Tailwind max-w isn't applied */
+export const MODAL_WIDTH_PX = {
+  sm: 448,
+  md: 512,
+  lg: 672,
+  xl: 896,
+  '2xl': 1024,
+  full: 1200,
+};
+
+export const getModalPanelStyle = (sizeOrPx = 'lg') => {
+  const px = typeof sizeOrPx === 'number' ? sizeOrPx : (MODAL_WIDTH_PX[sizeOrPx] || MODAL_WIDTH_PX.lg);
+  return {
+    width: `min(calc(100vw - 2rem), ${px}px)`,
+    minWidth: 'min(320px, calc(100vw - 2rem))',
+    maxWidth: 'calc(100vw - 2rem)',
+  };
+};
+
+/**
+ * Shared modal overlay + panel shell.
+ * Uses grid centering + explicit width (not flex shrink) to prevent collapsed modals.
+ */
+export const ModalShell = ({
+  isOpen,
+  onClose,
+  children,
+  size = 'lg',
+  widthPx,
+  zIndex = 1000,
+  className = '',
+  panelClassName = '',
+}) => {
+  React.useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [isOpen, onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  const panelStyle = getModalPanelStyle(widthPx ?? size);
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className={`fixed inset-0 ${className}`}
+          style={{ zIndex }}
+          role="presentation"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={onClose}
+          />
+          <div className="absolute inset-0 grid place-items-center p-4 sm:p-6 pointer-events-none overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              style={panelStyle}
+              className={`pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden shrink-0 ${panelClassName}`}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              {children}
+            </motion.div>
+          </div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+};
+
+export const ModalHeader = ({ title, onClose, icon: Icon, iconStyle }) => (
+  <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] shrink-0">
+    <div className="flex items-center gap-2 min-w-0">
+      {Icon && (
+        <div className="p-1.5 rounded-[var(--radius-atomic)] shrink-0" style={iconStyle}>
+          <Icon size={16} />
+        </div>
+      )}
+      <h2 className="text-sm font-bold uppercase tracking-wider truncate">{title}</h2>
+    </div>
+    {onClose && (
+      <button type="button" onClick={onClose} className="p-1.5 hover:bg-black/5 rounded transition-colors shrink-0">
+        <X size={16} className="text-[var(--color-text-muted)]" />
+      </button>
+    )}
+  </div>
+);
+
+export const ModalBody = ({ children, className = '' }) => (
+  <div className={`p-6 space-y-4 overflow-y-auto flex-1 min-h-0 ${className}`}>{children}</div>
+);
+
+export const ModalFooter = ({ children, className = '' }) => (
+  <div className={`px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 shrink-0 ${className}`}>
+    {children}
+  </div>
+);

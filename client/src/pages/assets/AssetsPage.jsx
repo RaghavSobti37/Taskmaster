@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Link2, ExternalLink, Plus, Trash2, Search, Database,
   Shield, RefreshCw, Cloud, Globe, FileText, HardDrive, Video, X
@@ -9,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   NexusModal, NexusDropdown, PageHeader, 
   PageContainer, Card, Button, Input, StatCard, Badge, 
-  InputFormDrawer, PageSkeleton
+  PageSkeleton, ModalShell, ModalHeader, ModalBody
 } from '../../components/ui';
 import { format } from 'date-fns';
 
@@ -19,6 +18,9 @@ const AssetsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [driveFiles, setDriveFiles] = useState([]);
 
   // Google account link states
@@ -118,18 +120,33 @@ const AssetsPage = () => {
 
   const handleSimulateConnect = async (e) => {
     if (e) e.preventDefault();
-    if (!simEmail || !simEmail.includes('@')) return;
+    const emails = simEmail.split(/[\n,;]+/).map((v) => v.trim()).filter(Boolean);
+    if (!emails.length || emails.some((email) => !email.includes('@'))) return;
     setLinking(true);
     try {
-      const res = await axios.post('/api/google/accounts/simulate', { email: simEmail });
-      setGoogleAccounts([...googleAccounts, res.data]);
+      const res = await axios.post('/api/google/accounts/manual', { emails: emails.join(',') });
+      const refreshed = await axios.get('/api/google/accounts');
+      setGoogleAccounts(refreshed.data);
       setIsLinkModalOpen(false);
       setSimEmail('');
-      // Refresh drive files
       const driveRes = await axios.get('/api/google/drive/files').catch(() => ({ data: [] }));
       setDriveFiles(driveRes.data);
     } catch (err) {
-      console.error('Failed to simulate connect:', err);
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          for (const email of emails) {
+            await axios.post('/api/google/accounts/simulate', { email });
+          }
+          const refreshed = await axios.get('/api/google/accounts');
+          setGoogleAccounts(refreshed.data);
+          setIsLinkModalOpen(false);
+          setSimEmail('');
+        } catch (simErr) {
+          console.error('Failed to link accounts:', simErr);
+        }
+      } else {
+        console.error('Failed to link accounts:', err);
+      }
     } finally {
       setLinking(false);
     }
@@ -190,10 +207,41 @@ const AssetsPage = () => {
     }
   };
 
-  const filteredAssets = useMemo(() => assets.filter(a =>
-    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.projectIds || []).some(p => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
-  ), [assets, searchTerm]);
+  const getDetectedType = (asset) => {
+    let detectedType = asset.type;
+    const url = (asset.link || '').toLowerCase();
+    if (!asset.type || asset.type === 'other') {
+      if (url.includes('docs.google.com/spreadsheets')) detectedType = 'sheet';
+      else if (url.includes('docs.google.com/document')) detectedType = 'docs';
+      else if (url.includes('docs.google.com/presentation')) detectedType = 'presentation';
+      else if (url.includes('drive.google.com')) detectedType = 'drive';
+      else if (url.includes('meet.google.com')) detectedType = 'meet';
+    }
+    return detectedType || 'other';
+  };
+
+  const filteredAssets = useMemo(() => {
+    let list = assets.filter((a) => {
+      const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase())
+        || (a.projectIds || []).some((p) => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesProject = projectFilter === 'all'
+        || (a.projectIds || []).some((p) => String(p._id || p) === String(projectFilter));
+      const matchesType = typeFilter === 'all' || getDetectedType(a) === typeFilter;
+      return matchesSearch && matchesProject && matchesType;
+    });
+
+    list = [...list].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'project') {
+        const aProject = (a.projectIds?.[0]?.name || 'ZZZ').toUpperCase();
+        const bProject = (b.projectIds?.[0]?.name || 'ZZZ').toUpperCase();
+        return aProject.localeCompare(bProject);
+      }
+      if (sortBy === 'type') return getDetectedType(a).localeCompare(getDetectedType(b));
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    return list;
+  }, [assets, searchTerm, projectFilter, typeFilter, sortBy]);
 
   const driveFolders = useMemo(() => 
     driveFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
@@ -229,7 +277,7 @@ const AssetsPage = () => {
         title="Files & Assets"
         subtitle="Store and manage project files, links, and documents."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
              <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
                 <Input 
@@ -239,6 +287,40 @@ const AssetsPage = () => {
                    className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
                 />
              </div>
+             <NexusDropdown
+               options={[{ value: 'all', label: 'All Projects' }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
+               value={projectFilter}
+               onChange={setProjectFilter}
+               placeholder="Project"
+               className="!w-40"
+             />
+             <NexusDropdown
+               options={[
+                 { value: 'all', label: 'All Types' },
+                 { value: 'sheet', label: 'Sheets' },
+                 { value: 'docs', label: 'Docs' },
+                 { value: 'drive', label: 'Drive' },
+                 { value: 'presentation', label: 'Slides' },
+                 { value: 'meet', label: 'Meet' },
+                 { value: 'other', label: 'Other' },
+               ]}
+               value={typeFilter}
+               onChange={setTypeFilter}
+               placeholder="File type"
+               className="!w-36"
+             />
+             <NexusDropdown
+               options={[
+                 { value: 'newest', label: 'Newest' },
+                 { value: 'name', label: 'Name' },
+                 { value: 'project', label: 'Project' },
+                 { value: 'type', label: 'File Type' },
+               ]}
+               value={sortBy}
+               onChange={setSortBy}
+               placeholder="Sort"
+               className="!w-32"
+             />
              <Button size="sm" onClick={() => { setEditingAsset(null); setNewAsset({ projectIds: [], name: '', link: '', type: 'other' }); setIsDrawerOpen(true); }}><Plus size={14} /> Add Link</Button>
           </div>
         }
@@ -442,66 +524,99 @@ const AssetsPage = () => {
         </aside>
       </div>
 
-      <InputFormDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        title={editingAsset ? "Edit Asset Details" : "Add Link Asset"}
-      >
-        <div className="p-6 space-y-6">
-           <form onSubmit={handleAddAsset} className="space-y-6">
-              <div className="space-y-4">
-                 <Input label="Asset Title / Name" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
-                 <Input label="Asset URL Link" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} required />
-                 
-                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Asset Type</label>
-                    <NexusDropdown 
-                      options={[
-                        { value: 'drive', label: 'Google Drive' },
-                        { value: 'sheet', label: 'Google Sheet' },
-                        { value: 'docs', label: 'Google Doc' },
-                        { value: 'presentation', label: 'Presentation' },
-                        { value: 'meet', label: 'Google Meet' },
-                        { value: 'other', label: 'Other Link' }
-                      ]} 
-                      value={newAsset.type} 
-                      onChange={(val) => setNewAsset({ ...newAsset, type: val })} 
-                      placeholder="Select Asset Type"
-                    />
-                 </div>
+      <ModalShell isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} size="lg">
+        <ModalHeader title={editingAsset ? 'Edit Asset Details' : 'Add Link Asset'} onClose={() => setIsDrawerOpen(false)} />
+        <ModalBody>
+          <form onSubmit={handleAddAsset} className="space-y-6">
+            <div className="space-y-4">
+              <Input label="Asset Title / Name" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
+              <Input label="Asset URL Link" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} required />
 
-                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Associated Projects</label>
-                    <NexusDropdown 
-                      isMulti
-                      options={projects.map(p => ({ value: p._id, label: p.name }))} 
-                      value={newAsset.projectIds || []} 
-                      onChange={(val) => setNewAsset({ ...newAsset, projectIds: Array.isArray(val) ? val : [val].filter(Boolean) })} 
-                      placeholder="Select Projects"
-                      searchable
-                    />
-                 </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Asset Type</label>
+                <NexusDropdown
+                  options={[
+                    { value: 'drive', label: 'Google Drive' },
+                    { value: 'sheet', label: 'Google Sheet' },
+                    { value: 'docs', label: 'Google Doc' },
+                    { value: 'presentation', label: 'Presentation' },
+                    { value: 'meet', label: 'Google Meet' },
+                    { value: 'other', label: 'Other Link' }
+                  ]}
+                  value={newAsset.type}
+                  onChange={(val) => setNewAsset({ ...newAsset, type: val })}
+                  placeholder="Select Asset Type"
+                />
               </div>
-              <div className="space-y-2">
-                 <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
-                    {submitting ? <RefreshCw size={14} className="animate-spin" /> : editingAsset ? "Save Changes" : <><Plus size={14} /> Add Asset</>}
-                 </Button>
-                 {editingAsset && (
-                    <Button 
-                       type="button" 
-                       variant="ghost" 
-                       className="w-full !text-rose-500 hover:!bg-rose-500/10 border border-rose-500/10" 
-                       onClick={() => {
-                          setDeleteModal({ open: true, assetId: editingAsset._id });
-                       }}
-                    >
-                       Delete Asset
-                    </Button>
-                 )}
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Associated Projects</label>
+                <NexusDropdown
+                  isMulti
+                  options={projects.map(p => ({ value: p._id, label: p.name }))}
+                  value={newAsset.projectIds || []}
+                  onChange={(val) => setNewAsset({ ...newAsset, projectIds: Array.isArray(val) ? val : [val].filter(Boolean) })}
+                  placeholder="Select Projects"
+                  searchable
+                />
               </div>
-           </form>
-        </div>
-      </InputFormDrawer>
+            </div>
+            <div className="space-y-2">
+              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
+                {submitting ? <RefreshCw size={14} className="animate-spin" /> : editingAsset ? 'Save Changes' : <><Plus size={14} /> Add Asset</>}
+              </Button>
+              {editingAsset && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full !text-rose-500 hover:!bg-rose-500/10 border border-rose-500/10"
+                  onClick={() => setDeleteModal({ open: true, assetId: editingAsset._id })}
+                >
+                  Delete Asset
+                </Button>
+              )}
+            </div>
+          </form>
+        </ModalBody>
+      </ModalShell>
+
+      <ModalShell isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} size="lg">
+        <ModalHeader title="Link Google Account" onClose={() => setIsLinkModalOpen(false)} icon={Cloud} iconStyle={{ color: '#3b82f6' }} />
+        <ModalBody className="space-y-4">
+          <p className="text-[10px] text-[var(--color-text-muted)] -mt-2">Link Google accounts to access Drive, Sheets, Docs, and Presentation resources.</p>
+
+          <button
+            type="button"
+            onClick={handleOAuthConnect}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/10"
+          >
+            <Cloud size={14} /> Connect via Google OAuth
+          </button>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-[var(--color-bg-border)]" />
+            <span className="flex-shrink mx-3 text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Or type emails</span>
+            <div className="flex-grow border-t border-[var(--color-bg-border)]" />
+          </div>
+
+          <form onSubmit={handleSimulateConnect} className="space-y-3">
+            <textarea
+              value={simEmail}
+              onChange={(e) => setSimEmail(e.target.value)}
+              placeholder="Enter one or more Google emails (comma or newline separated)..."
+              className="w-full min-h-[96px] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2.5 text-xs font-bold outline-none text-[var(--color-text-primary)] resize-y"
+              required
+            />
+            <button
+              type="submit"
+              disabled={linking || !simEmail}
+              className="w-full py-2.5 bg-[var(--color-action-primary)] hover:opacity-90 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+            >
+              {linking ? 'Saving...' : 'Save Linked Emails'}
+            </button>
+          </form>
+        </ModalBody>
+      </ModalShell>
 
       <NexusModal
         isOpen={deleteModal.open}
@@ -513,63 +628,6 @@ const AssetsPage = () => {
         confirmLabel="Delete"
         onConfirm={handleDeleteAsset}
       />
-
-      <AnimatePresence>
-        {isLinkModalOpen && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsLinkModalOpen(false)}>
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.95, opacity: 0 }} 
-              className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] w-full max-w-sm rounded-[2rem] shadow-2xl p-6 relative"
-              onClick={e => e.stopPropagation()}
-            >
-              <button 
-                onClick={() => setIsLinkModalOpen(false)} 
-                className="absolute top-4 right-4 p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)]"
-              >
-                <X size={16} />
-              </button>
-              
-              <h3 className="text-sm font-black uppercase tracking-tight text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
-                <Cloud className="text-blue-500" size={16} /> Link Google Account
-              </h3>
-              <p className="text-[10px] text-[var(--color-text-muted)] mb-4">Link Google accounts to access Drive, Sheets, Docs, and Presentation resources.</p>
-              
-              <button 
-                onClick={handleOAuthConnect}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mb-4 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/10"
-              >
-                <Cloud size={14} /> Connect via Google OAuth
-              </button>
-              
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-[var(--color-bg-border)]"></div>
-                <span className="flex-shrink mx-3 text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Or simulate</span>
-                <div className="flex-grow border-t border-[var(--color-bg-border)]"></div>
-              </div>
-              
-              <form onSubmit={handleSimulateConnect} className="mt-3 space-y-3">
-                <input 
-                  type="email" 
-                  value={simEmail} 
-                  onChange={e => setSimEmail(e.target.value)} 
-                  placeholder="Enter google email..." 
-                  className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2.5 text-xs font-bold outline-none text-[var(--color-text-primary)]"
-                  required
-                />
-                <button 
-                  type="submit" 
-                  disabled={linking || !simEmail}
-                  className="w-full py-2.5 bg-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]/80 text-[var(--color-text-primary)] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                >
-                  {linking ? 'Linking...' : 'Connect Simulated Account'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </PageContainer>
   );
 };

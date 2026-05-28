@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Briefcase, Mail, Circle, Plus, X, Layers, UserMinus } from 'lucide-react';
+import { Briefcase, Mail, Circle, Plus, UserMinus } from 'lucide-react';
 import { Badge, NexusModal } from '../ui';
 import CKDropdown from '../ui/CKDropdown';
 import axios from 'axios';
@@ -8,7 +8,6 @@ import { useAuth } from '../../contexts/AuthContext';
 const ProjectTeam = ({ project, onRemoveMember }) => {
   const { user: currentUser } = useAuth();
   const [allTeams, setAllTeams] = useState([]);
-  const [allProjects, setAllProjects] = useState([]);
   const [localMembers, setLocalMembers] = useState(project.members || []);
   const [removeModal, setRemoveModal] = useState({ open: false, member: null });
   const isAdmin = currentUser?.role === 'admin';
@@ -18,7 +17,6 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
     const team = allTeams.find(t => t.name === teamName);
     if (team?.color) return { borderLeft: `3px solid ${team.color}`, color: team.color };
     
-    // Fallback logic
     const colors = ['#3b82f6', '#a855f7', '#f97316', '#ec4899', '#06b6d4', '#10b981'];
     let hash = 0;
     if (!teamName) return { color: colors[0] };
@@ -30,15 +28,17 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
     return { borderLeft: `3px solid ${color}`, color };
   };
 
+  const getMemberOnline = (member) => {
+    if (typeof member?.user?.online === 'boolean') return member.user.online;
+    if (typeof member?.online === 'boolean') return member.online;
+    return false;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamsRes, projectsRes] = await Promise.all([
-          axios.get('/api/teams'),
-          axios.get('/api/projects')
-        ]);
+        const teamsRes = await axios.get('/api/teams');
         setAllTeams(teamsRes.data);
-        setAllProjects(projectsRes.data);
       } catch (err) {
         console.error('Error fetching data:', err);
       }
@@ -55,14 +55,8 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
     }
   };
 
-  const getUserProjects = (userId) => {
-    return allProjects.filter(p => p.members?.some(m => (m._id || m) === userId));
-  };
-
   const teamOptions = allTeams.map(t => ({ value: t.name, label: t.name.toUpperCase() }));
   const memberRoles = project.memberRoles || [];
-
-  const projectTeams = Array.from(new Set(localMembers.flatMap(m => m.teams || [])));
 
   const handleConfirmRemove = () => {
     if (removeModal.member && onRemoveMember) {
@@ -73,7 +67,6 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   };
 
   const canRemoveMember = (member) => {
-    // Cannot remove the owner
     const ownerId = project.owner?._id || project.owner;
     if (member._id === ownerId) return false;
     return isAdmin || isOwner;
@@ -106,7 +99,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
             <AddMemberDropdown onAdd={async (userId) => {
               try {
                 await axios.post(`/api/projects/${project._id}/members`, { userId });
-                window.location.reload(); // Refresh to show new member
+                window.location.reload();
               } catch (err) {
                 console.error('Error adding member:', err);
               }
@@ -119,11 +112,21 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         {localMembers.map((member) => {
           const roleEntry = memberRoles.find(r => r.user?._id === member._id || r.user === member._id);
           const roleLabel = roleEntry ? roleEntry.role : 'Member';
-          const memberProjects = getUserProjects(member._id);
+          const isOnline = getMemberOnline(member);
           
           return (
-            <div key={member._id} className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] p-6 shadow-sm hover:shadow-xl transition-all group">
-              <div className="flex items-start justify-between mb-6">
+            <div key={member._id} className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] p-6 shadow-sm hover:shadow-xl transition-all group relative">
+              {canRemoveMember(member) && (
+                <button
+                  onClick={() => setRemoveModal({ open: true, member })}
+                  className="absolute top-4 right-4 p-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                  title="Remove from project"
+                >
+                  <UserMinus size={14} />
+                </button>
+              )}
+
+              <div className="flex items-start justify-between mb-6 pr-10">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-xl text-[var(--color-action-primary)] overflow-hidden relative">
                     {member.avatar ? (
@@ -131,7 +134,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                     ) : (
                       member.name.substring(0, 2).toUpperCase()
                     )}
-                    {member.online && (
+                    {isOnline && (
                       <div className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--color-bg-surface)] shadow-sm" />
                     )}
                   </div>
@@ -143,16 +146,6 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                   </div>
                 </div>
               </div>
-
-              {canRemoveMember(member) && (
-                <button
-                  onClick={() => setRemoveModal({ open: true, member })}
-                  className="p-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                  title="Remove from project"
-                >
-                  <UserMinus size={14} />
-                </button>
-              )}
 
               <div className="space-y-5">
                 <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-workspace)]/50 p-2 rounded-xl border border-[var(--color-bg-border)]/50">
@@ -193,28 +186,13 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Layers size={14} className="text-[var(--color-text-muted)]" />
-                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Projects</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {memberProjects.map(p => (
-                      <span key={p._id} className="px-2 py-0.5 bg-[var(--color-bg-workspace)] rounded border border-[var(--color-bg-border)] text-[8px] font-bold text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)] transition-colors">
-                        {p.name}
-                      </span>
-                    ))}
-                    {memberProjects.length === 0 && <span className="text-[10px] text-[var(--color-text-muted)] italic">No projects</span>}
-                  </div>
-                </div>
               </div>
               
               <div className="mt-6 pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Status</span>
                 <div className="flex items-center gap-1.5">
-                  <Circle size={8} className={member.online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
-                  <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">{member.online ? 'Online' : 'Offline'}</span>
+                  <Circle size={8} className={isOnline ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'} />
+                  <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">{isOnline ? 'Online' : 'Offline'}</span>
                 </div>
               </div>
             </div>

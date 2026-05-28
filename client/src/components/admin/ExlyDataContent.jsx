@@ -10,15 +10,15 @@ import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ExlyDataContent = () => {
+const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const [offerings, setOfferings] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
 
-  // Sub-Tab Switcher State
-  const [currentSubTab, setCurrentSubTab] = useState('campaigns');
+  // Sub-Tab Switcher State (now controlled by prop)
+  const [currentSubTab, setCurrentSubTab] = useState(mode);
 
   // Dashboard Stats (charts & debug)
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -497,26 +497,7 @@ const ExlyDataContent = () => {
   
   return (
     <div className="space-y-6 p-4">
-      {/* Sub-tab Switcher Navigation */}
-      <div className="flex border-b border-[var(--color-bg-border)] pb-px">
-        <button
-          onClick={() => setCurrentSubTab('campaigns')}
-          className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${currentSubTab === 'campaigns' ? 'border-[var(--color-action-primary)] text-[var(--color-text-primary)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
-        >
-          Campaigns Performance
-        </button>
-        <button
-          onClick={() => setCurrentSubTab('unlinked')}
-          className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${currentSubTab === 'unlinked' ? 'border-[var(--color-action-primary)] text-[var(--color-text-primary)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
-        >
-          Unlinked Bookings
-          {unlinkedBookings.length > 0 && (
-            <span className="bg-rose-500 text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold font-mono">
-              {unlinkedBookings.length}
-            </span>
-          )}
-        </button>
-      </div>
+      {/* Removed Sub-tab Switcher Navigation because it is controlled by the router now */}
 
       {error && (
         <div className="p-3 bg-[#FCE8E6] text-[#C5221F] rounded-xl flex items-center gap-2 text-[10px] font-bold">

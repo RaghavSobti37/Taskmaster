@@ -2,7 +2,19 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { protect } = require('../middleware/authMiddleware');
-const { uploadFile, uploadDocument, getDocuments, deleteDocument, getStats, uploadDocumentsBulk, updateDocument } = require('../controllers/financeController');
+const {
+  uploadFile,
+  uploadDocument,
+  getDocuments,
+  deleteDocument,
+  getStats,
+  uploadDocumentsBulk,
+  updateDocument,
+  submitInvoice,
+  listPendingInvoices,
+  approveInvoice,
+  rejectInvoice,
+} = require('../controllers/financeController');
 
 // Multer: memory storage for server-side UTApi upload
 const upload = multer({
@@ -19,11 +31,20 @@ const opsOnly = (req, res, next) => {
   }
 };
 
-router.use(protect, opsOnly);
+router.use(protect);
 
-// File upload to UploadThing CDN (server-side, bypasses React version mismatch)
+// Any authenticated user can submit an invoice for ops review
+router.post('/submit-invoice', submitInvoice);
+
+// Ops-only invoice review routes (before /:id catch-all)
+router.get('/pending', opsOnly, listPendingInvoices);
+router.patch('/:id/approve', opsOnly, approveInvoice);
+router.patch('/:id/reject', opsOnly, rejectInvoice);
+
+// Remaining finance routes require ops role
+router.use(opsOnly);
+
 router.post('/upload', upload.single('file'), uploadFile);
-
 router.post('/bulk', uploadDocumentsBulk);
 
 router.route('/')

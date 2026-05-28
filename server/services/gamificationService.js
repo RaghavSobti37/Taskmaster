@@ -3,20 +3,16 @@ const DailyMission = require('../models/DailyMission');
 const XPAuditLog = require('../models/XPAuditLog');
 
 const BASE_XP = 100;
-const EXPONENT = 1.5;
+const STEP_XP = 100;
 
 class GamificationService {
   static getLevelFromExp(exp) {
-    let level = 1;
-    while (exp >= Math.floor(BASE_XP * Math.pow(level, EXPONENT))) {
-      level++;
-    }
-    return level;
+    return Math.max(1, Math.floor((exp || 0) / STEP_XP) + 1);
   }
 
   static getExpForLevel(level) {
     if (level <= 1) return 0;
-    return Math.floor(BASE_XP * Math.pow(level - 1, EXPONENT));
+    return (level - 1) * STEP_XP;
   }
 
   static async awardExp(userId, amount, action, details = {}) {
@@ -50,6 +46,10 @@ class GamificationService {
     });
 
     return { exp: user.exp, level: user.level, leveledUp };
+  }
+
+  static async awardActionXp(userId, action = 'ACTION_TRACKED', details = {}) {
+    return this.awardExp(userId, 1, action, details);
   }
 
   static async generateDailyMissions(userId) {

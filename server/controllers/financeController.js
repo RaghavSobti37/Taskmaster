@@ -349,6 +349,123 @@ const updateDocument = async (req, res) => {
   }
 };
 
+const submitInvoice = async (req, res) => {
+  try {
+    const { title, amount, description, fileUrl, fileKey, fileName, fileSize, fileType } = req.body;
+
+    if (!title || !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Title and file are required' });
+    }
+
+    const doc = new FinanceDocument({
+      title,
+      description: description || '',
+      category: 'invoice',
+      fileUrl,
+      fileKey,
+      fileName,
+      fileSize,
+      fileType,
+      uploadedBy: req.user._id,
+      submittedBy: req.user._id,
+      approvalStatus: 'pending',
+      metadata: {
+        amount: Number(amount) || 0,
+        currency: 'INR',
+      },
+    });
+
+    await doc.save();
+
+    const populated = await FinanceDocument.findById(doc._id)
+      .populate('uploadedBy', 'name email avatar')
+      .populate('submittedBy', 'name email avatar')
+      .lean();
+
+    res.status(201).json({
+      success: true,
+      data: populated,
+      message: 'Invoice submitted for approval',
+    });
+  } catch (error) {
+    console.error('Submit invoice error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const listPendingInvoices = async (req, res) => {
+  try {
+    const docs = await FinanceDocument.find({ approvalStatus: 'pending', category: 'invoice' })
+      .populate('uploadedBy', 'name email avatar')
+      .populate('submittedBy', 'name email avatar')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ success: true, data: docs });
+  } catch (error) {
+    console.error('List pending invoices error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const approveInvoice = async (req, res) => {
+  try {
+    const doc = await FinanceDocument.findById(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+    if (doc.approvalStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Invoice already processed' });
+    }
+
+    doc.approvalStatus = 'approved';
+    doc.reviewedBy = req.user._id;
+    doc.reviewedAt = new Date();
+    doc.rejectionReason = '';
+    await doc.save();
+
+    const populated = await FinanceDocument.findById(doc._id)
+      .populate('uploadedBy', 'name email avatar')
+      .populate('submittedBy', 'name email avatar')
+      .populate('reviewedBy', 'name email avatar')
+      .lean();
+
+    res.json({ success: true, data: populated, message: 'Invoice approved' });
+  } catch (error) {
+    console.error('Approve invoice error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const rejectInvoice = async (req, res) => {
+  try {
+    const doc = await FinanceDocument.findById(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+    if (doc.approvalStatus !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Invoice already processed' });
+    }
+
+    doc.approvalStatus = 'rejected';
+    doc.reviewedBy = req.user._id;
+    doc.reviewedAt = new Date();
+    doc.rejectionReason = req.body?.rejectionReason || req.body?.reason || '';
+    await doc.save();
+
+    const populated = await FinanceDocument.findById(doc._id)
+      .populate('uploadedBy', 'name email avatar')
+      .populate('submittedBy', 'name email avatar')
+      .populate('reviewedBy', 'name email avatar')
+      .lean();
+
+    res.json({ success: true, data: populated, message: 'Invoice rejected' });
+  } catch (error) {
+    console.error('Reject invoice error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   uploadFile,
   uploadDocument,
@@ -356,5 +473,9 @@ module.exports = {
   deleteDocument,
   getStats,
   uploadDocumentsBulk,
-  updateDocument
+  updateDocument,
+  submitInvoice,
+  listPendingInvoices,
+  approveInvoice,
+  rejectInvoice,
 };

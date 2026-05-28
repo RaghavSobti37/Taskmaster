@@ -11,7 +11,7 @@ import {
 import { 
   Badge, Card, NexusModal, PageHeader, NexusDropdown, DataTable, 
   Button, Input, StatCard, ProgressBar, FullScreenWorkspace, InfoButton,
-  InputFormDrawer
+  ModalShell, ModalHeader, ModalBody
 } from '../ui';
 import { format } from 'date-fns';
 
@@ -208,109 +208,79 @@ const TscDataContent = () => {
 
   return (
     <div className="space-y-6 p-4">
-      {/* Module-Specific Analytical Ribbon */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-         <StatCard 
-           label="Total Records" 
-           value={stats?.summary?.total[0]?.count || 0} 
-           icon={Database} 
-           variant="info" 
-           info="Grand total of all entries across the master database." 
-         />
-         <StatCard 
-           label="Top Campaign" 
-           value={stats?.summary?.campaigns[0]?._id || 'N/A'} 
-           icon={Target} 
-           variant="apricot" 
-           subValue={`${stats?.summary?.campaigns[0]?.count || 0}`}
-           info="The campaign with the highest volume of unique lead entries." 
-         />
-         <StatCard 
-           label="Primary Source" 
-           value={stats?.summary?.sources[0]?._id || 'N/A'} 
-           icon={Globe} 
-           variant="mint" 
-           subValue={`${stats?.summary?.sources[0]?.count || 0}`}
-           info="The most common origin channel for incoming data." 
-         />
-         <StatCard 
-           label="Processed" 
-           value={data.filter(i => i.leadData).length} 
-           icon={UserCheck} 
-           variant="slate" 
-           subValue="Current View"
-           info="Number of records in the current view that are synced with active CRM leads." 
-         />
-      </div>
-
       <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed border-2">
-         <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 flex-1 max-w-md">
+         <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
                <Input 
                  icon={Search} 
                  placeholder="Search across entire database..." 
                  value={searchTerm} 
                  onChange={e => setSearchTerm(e.target.value)}
-                 className="!py-1"
+                 className="!py-2 flex-1"
                />
+               <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-bg-border)] min-w-max">
+                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Total:</span>
+                 <span className="text-sm font-black text-[var(--color-action-primary)]">{stats?.summary?.total[0]?.count || 0}</span>
+               </div>
                <Button variant="secondary" size="sm" onClick={() => setShowImportModal(true)}>
                  <Upload size={14} /> Import Data
                </Button>
-            </div>
-            <div className="flex items-center gap-2">
-               {selectedIds.length > 0 && (
-                 <Button variant="danger" size="sm" onClick={() => { setDeleteMode('selected'); setShowDeleteConfirm(true); }}>
-                   Delete ({selectedIds.length})
-                 </Button>
-               )}
                <Button variant="ghost" size="sm" onClick={fetchData}>
                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                </Button>
             </div>
-         </div>
 
-         {/* Filter Matrix */}
-         <div className="grid grid-cols-5 gap-3 mt-4">
-             <NexusDropdown
-               placeholder="Campaign"
-               options={[{ value: 'all', label: 'All Campaigns' }, ...(stats?.filters.campaigns.map(c => ({ value: c, label: c.toUpperCase() })) || [])]}
-               value={filters.campaign}
-               onChange={v => setFilters({...filters, campaign: v})}
-             />
-             <NexusDropdown
-               placeholder="Lead Source"
-               options={[{ value: 'all', label: 'All Sources' }, ...(stats?.filters.sources.map(s => ({ value: s, label: s.toUpperCase() })) || [])]}
-               value={filters.originSource}
-               onChange={v => setFilters({...filters, originSource: v})}
-             />
-             <NexusDropdown
-               placeholder="Personnel Role"
-               options={[{ value: 'all', label: 'All Roles' }, ...(stats?.filters.roles.map(r => ({ value: r, label: r.toUpperCase() })) || [])]}
-               value={filters.role}
-               onChange={v => setFilters({...filters, role: v})}
-             />
-             <NexusDropdown
-               placeholder="Processing State"
-               options={[
-                 { value: 'all', label: 'All States' },
-                 { value: 'synced', label: 'Processed' },
-                 { value: 'unsynced', label: 'Awaiting Sync' }
-               ]}
-               value={filters.syncStatus}
-               onChange={v => setFilters({...filters, syncStatus: v})}
-             />
-             <NexusDropdown
-               placeholder="Email Status"
-               options={[
-                 { value: 'all', label: 'All Emails' },
-                 { value: 'Active', label: 'Active (Opened)' },
-                 { value: 'Unsubscribed', label: 'Unsubscribed' },
-                 { value: 'Invalid', label: 'Bounced / Invalid' },
-                 { value: 'Pending', label: 'Pending Status' }
-               ]}
-               value={filters.emailStatus || 'all'}
-               onChange={v => setFilters({...filters, emailStatus: v})}
-             />
+            {selectedIds.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button variant="danger" size="sm" onClick={() => { setDeleteMode('selected'); setShowDeleteConfirm(true); }}>
+                  Delete ({selectedIds.length})
+                </Button>
+              </div>
+            )}
+
+            {/* Filter Matrix */}
+            <div className="grid grid-cols-5 gap-3">
+                <NexusDropdown
+                  placeholder="Campaign"
+                  options={[{ value: 'all', label: 'All Campaigns' }, ...(stats?.filters.campaigns.map(c => ({ value: c, label: c.toUpperCase() })) || [])]}
+                  value={filters.campaign}
+                  onChange={v => setFilters({...filters, campaign: v})}
+                />
+                <NexusDropdown
+                  placeholder="Lead Source"
+                  options={[{ value: 'all', label: 'All Sources' }, ...(stats?.filters.sources.map(s => ({ value: s, label: s.toUpperCase() })) || [])]}
+                  value={filters.originSource}
+                  onChange={v => setFilters({...filters, originSource: v})}
+                />
+                <NexusDropdown
+                  placeholder="Personnel Role"
+                  options={[{ value: 'all', label: 'All Roles' }, ...(stats?.filters.roles.map(r => ({ value: r, label: r.toUpperCase() })) || [])]}
+                  value={filters.role}
+                  onChange={v => setFilters({...filters, role: v})}
+                />
+                <NexusDropdown
+                  placeholder="Processing State"
+                  options={[
+                    { value: 'all', label: 'All States' },
+                    { value: 'synced', label: 'Processed' },
+                    { value: 'unsynced', label: 'Awaiting Sync' }
+                  ]}
+                  value={filters.syncStatus}
+                  onChange={v => setFilters({...filters, syncStatus: v})}
+                />
+                <NexusDropdown
+                  placeholder="Email Status"
+                  options={[
+                    { value: 'all', label: 'All Emails' },
+                    { value: 'Active', label: 'Active (Opened)' },
+                    { value: 'Unsubscribed', label: 'Unsubscribed' },
+                    { value: 'Invalid', label: 'Bounced / Invalid' },
+                    { value: 'Pending', label: 'Pending Status' }
+                  ]}
+                  value={filters.emailStatus || 'all'}
+                  onChange={v => setFilters({...filters, emailStatus: v})}
+                />
+            </div>
          </div>
       </Card>
 
@@ -437,52 +407,51 @@ const TscDataContent = () => {
       </FullScreenWorkspace>
 
       {/* Import Modal */}
-      <InputFormDrawer 
-        isOpen={showImportModal} 
-        onClose={() => setShowImportModal(false)}
-        title="Import CSV Data"
-      >
-        {importStep === 1 ? (
-          <div className="space-y-6 text-center py-8">
-            <div className="border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl p-12 hover:border-[var(--color-action-primary)]/50 transition-all cursor-pointer relative group">
-               <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-               <div className="w-16 h-16 bg-[var(--color-bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Upload size={24} className="text-[var(--color-action-primary)]" />
-               </div>
-               <p className="text-xs font-black uppercase tracking-widest">Select CSV File</p>
-               <p className="text-[9px] font-bold text-[var(--color-text-muted)] mt-2 uppercase">Max size: 10MB</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest text-center">Map your headers to system fields</p>
-            <div className="space-y-2">
-               {headers.map(h => (
-                 <div key={h} className="flex items-center justify-between gap-4 p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                    <span className="text-[10px] font-black uppercase truncate flex-1">{h}</span>
-                    <ArrowRight size={12} className="text-[var(--color-text-muted)] shrink-0" />
-                    <select 
-                      className="bg-transparent text-[10px] font-black uppercase outline-none min-w-[100px]"
-                      value={mapping[h]}
-                      onChange={(e) => setMapping({...mapping, [h]: e.target.value})}
-                    >
-                       <option value="name">Name</option>
-                       <option value="email">Email</option>
-                       <option value="phone">Phone</option>
-                       <option value="city">City</option>
-                       <option value="role">Role</option>
-                       <option value="metadata">Metadata</option>
-                       <option value="IGNORE">Ignore</option>
-                    </select>
+      <ModalShell isOpen={showImportModal} onClose={() => setShowImportModal(false)} size="lg">
+        <ModalHeader title="Import CSV Data" onClose={() => setShowImportModal(false)} />
+        <ModalBody>
+          {importStep === 1 ? (
+            <div className="space-y-6 text-center py-8">
+              <div className="border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl p-12 hover:border-[var(--color-action-primary)]/50 transition-all cursor-pointer relative group">
+                 <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                 <div className="w-16 h-16 bg-[var(--color-bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Upload size={24} className="text-[var(--color-action-primary)]" />
                  </div>
-               ))}
+                 <p className="text-xs font-black uppercase tracking-widest">Select CSV File</p>
+                 <p className="text-[9px] font-bold text-[var(--color-text-muted)] mt-2 uppercase">Max size: 10MB</p>
+              </div>
             </div>
-            <Button className="w-full py-4" onClick={handleImportExecute} disabled={importing}>
-               {importing ? 'Processing Data...' : 'Confirm & Sync'}
-            </Button>
-          </div>
-        )}
-      </InputFormDrawer>
+          ) : (
+            <div className="space-y-6">
+              <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest text-center">Map your headers to system fields</p>
+              <div className="space-y-2">
+                 {headers.map(h => (
+                   <div key={h} className="flex items-center justify-between gap-4 p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                      <span className="text-[10px] font-black uppercase truncate flex-1">{h}</span>
+                      <ArrowRight size={12} className="text-[var(--color-text-muted)] shrink-0" />
+                      <select 
+                        className="bg-transparent text-[10px] font-black uppercase outline-none min-w-[100px]"
+                        value={mapping[h]}
+                        onChange={(e) => setMapping({...mapping, [h]: e.target.value})}
+                      >
+                         <option value="name">Name</option>
+                         <option value="email">Email</option>
+                         <option value="phone">Phone</option>
+                         <option value="city">City</option>
+                         <option value="role">Role</option>
+                         <option value="metadata">Metadata</option>
+                         <option value="IGNORE">Ignore</option>
+                      </select>
+                   </div>
+                 ))}
+              </div>
+              <Button className="w-full py-4" onClick={handleImportExecute} disabled={importing}>
+                 {importing ? 'Processing Data...' : 'Confirm & Sync'}
+              </Button>
+            </div>
+          )}
+        </ModalBody>
+      </ModalShell>
 
       <NexusModal 
         isOpen={showDeleteConfirm} 

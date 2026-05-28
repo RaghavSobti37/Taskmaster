@@ -26,8 +26,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
 import { AdminLogsContent } from './AdminLogsPage';
 import TscDataContent from '../../components/admin/TscDataContent';
-import AdminMailContent from '../../components/admin/AdminMailContent';
-import ExlyDataContent from '../../components/admin/ExlyDataContent';
 import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits 
@@ -163,10 +161,8 @@ const AdminPanel = () => {
   const pageMeta = {
     users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
     crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
-    exly: { title: "Exly Integration", subtitle: "Track offerings performance, client conversions, and dynamic revenue analytics." },
     audits: { title: "Lead Logs", subtitle: "Track edits made to leads, including what changed, by whom, and when." },
-    logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." },
-    mail: { title: "Email Campaigns", subtitle: "Manage SMTP profiles, email campaigns, and delivery analytics." }
+    logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." }
   };
 
   const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, and system data." };
@@ -187,10 +183,8 @@ const AdminPanel = () => {
                tabs={[
                  { id: 'users', label: 'Users' }, 
                  { id: 'crm', label: 'All Data' },
-                 { id: 'exly', label: 'Exly' },
                  { id: 'audits', label: 'Lead Logs' },
-                 { id: 'logs', label: 'Logs' },
-                 { id: 'mail', label: 'Emails' }
+                 { id: 'logs', label: 'Logs' }
                ]} 
              />
            </div>
@@ -275,10 +269,8 @@ const AdminPanel = () => {
                     />
                   )}
                   {activeTab === 'crm' && <TscDataContent />}
-                  {activeTab === 'exly' && <ExlyDataContent />}
                   {activeTab === 'audits' && <LeadAuditsContent />}
                   {activeTab === 'logs' && <AdminLogsContent />}
-                  {activeTab === 'mail' && <AdminMailContent />}
                 </motion.div>
               </AnimatePresence>
             </div>

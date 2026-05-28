@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Trash2, CheckCircle2,
   Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History
@@ -31,6 +31,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [statFilter, setStatFilter] = useState(null);
 
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -156,16 +157,15 @@ export default function LeadsPage() {
     }
   };
 
-  const [filters, setFilters] = useState({
-    leadQuality: 'all',
-    callStatus: 'all',
-    leadStatus: 'all',
-    source: 'all',
-    assignedRepId: 'all',
-    artistType: 'all',
-    primaryRole: 'all',
-    emailStatus: 'all'
-  });
+  useEffect(() => {
+    if (statFilter === 'warm') {
+      setFilters(prev => ({ ...prev, leadStatus: 'all', meaningfulConnect: 'YES' }));
+    } else if (statFilter === 'converted') {
+      setFilters(prev => ({ ...prev, leadStatus: 'Converted' }));
+    } else {
+      setFilters(prev => ({ ...prev, leadStatus: 'all', meaningfulConnect: 'all' }));
+    }
+  }, [statFilter]);
 
   const queryParams = useMemo(() => ({
     page,
@@ -282,13 +282,13 @@ export default function LeadsPage() {
 
   if (isLoading && page === 1 && !searchTerm) return <PageSkeleton />;
 
-  const stats = statsData || { totalLeads: 0, convertedLeads: 0, conversionRate: 0, activeReach: 0 };
+  const stats = statsData || { totalLeads: 0, convertedLeads: 0, warmLeads: 0, conversionRate: 0, activeReach: 0 };
+  const isAdmin = user?.role === 'admin';
 
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Customer Leads"
-        subtitle="Manage and track potential members in your sales pipeline with Overflow.io journey mapping."
         icon={Database}
         actions={
           <div className="flex items-center gap-2">
@@ -303,10 +303,22 @@ export default function LeadsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard label="Total Leads" value={stats.totalLeads} icon={Users} variant="slate" />
-        <StatCard label="Active Reach" value={stats.activeReach} icon={Zap} variant="info" />
-        <StatCard label="Converted" value={stats.convertedLeads} icon={TrendingUp} variant="mint" />
+        <button 
+          onClick={() => setStatFilter(statFilter === 'warm' ? null : 'warm')}
+          className={`rounded-2xl p-4 transition-all border-2 ${statFilter === 'warm' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--color-bg-border)] hover:border-blue-500'}`}
+        >
+          <div className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Warm Leads</div>
+          <div className="text-2xl font-black text-blue-500">{stats.warmLeads}</div>
+        </button>
+        <button 
+          onClick={() => setStatFilter(statFilter === 'converted' ? null : 'converted')}
+          className={`rounded-2xl p-4 transition-all border-2 ${statFilter === 'converted' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-bg-border)] hover:border-emerald-500'}`}
+        >
+          <div className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Converted</div>
+          <div className="text-2xl font-black text-emerald-500">{stats.convertedLeads}</div>
+        </button>
         <StatCard label="Success Rate" value={`${Number(stats.conversionRate).toFixed(1)}%`} icon={Target} variant="apricot" />
       </div>
 

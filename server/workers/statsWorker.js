@@ -18,6 +18,10 @@ const calculateStats = async (matchStage) => {
           { $match: { meaningfulConnect: 'YES' } },
           { $count: "count" }
         ],
+        warmLeads: [
+          { $match: { meaningfulConnect: 'YES', leadStatus: { $ne: 'Converted' } } },
+          { $count: "count" }
+        ],
         converted: [
           { $match: { leadStatus: 'Converted' } },
           { $count: "count" }
@@ -34,6 +38,7 @@ const calculateStats = async (matchStage) => {
   const result = stats[0];
   const totalLeads = result.total[0]?.count || 0;
   const convertedLeads = result.converted[0]?.count || 0;
+  const warmLeads = result.warmLeads[0]?.count || 0;
   const activeReach = result.meaningful[0]?.count || 0;
   const conversionRate = totalLeads > 0 ? Number(((convertedLeads / totalLeads) * 100).toFixed(1)) : 0;
 
@@ -41,6 +46,7 @@ const calculateStats = async (matchStage) => {
     totalLeads,
     activeReach,
     convertedLeads,
+    warmLeads,
     conversionRate,
     connected: result.connected[0]?.count || 0,
     totalReps: result.totalReps[0]?.count || 0
@@ -105,4 +111,4 @@ const initWorker = () => {
   // setTimeout(updateStats, 5000); 
 };
 
-module.exports = { initWorker, updateStats };
+module.exports = { initWorker, updateStats, calculateStats };

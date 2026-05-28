@@ -14,6 +14,11 @@ const fetchProjects = async () => {
   return data;
 };
 
+const fetchWorkspaces = async () => {
+  const { data } = await axios.get('/api/projects/workspaces');
+  return data;
+};
+
 const fetchProjectById = async (id) => {
   const { data } = await axios.get(`/api/projects/${id}`);
   return data;
@@ -63,6 +68,15 @@ export const useProjects = () => {
   });
 };
 
+export const useWorkspaces = () => {
+  return useQuery({
+    queryKey: ['workspaces'],
+    queryFn: fetchWorkspaces,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+  });
+};
+
 export const useProject = (id) => {
   return useQuery({
     queryKey: ['projects', id],
@@ -86,8 +100,15 @@ export const useTasks = (userId) => {
     queryFn: fetchTasks,
     select: (tasks) => {
       if (!userId) return tasks;
+      const resolveAssigneeId = (a) => {
+        if (typeof a === 'string') return a;
+        if (a?._id) return a._id;
+        if (a?.userId?._id) return a.userId._id;
+        if (a?.userId) return a.userId;
+        return null;
+      };
       return tasks.filter(t =>
-        t.assignees?.some(a => (typeof a === 'string' ? a : a._id) === userId)
+        t.assignees?.some(a => resolveAssigneeId(a) === userId)
       );
     }
   });
@@ -793,6 +814,146 @@ export const useDeleteMailTemplate = () => {
     mutationFn: (name) => axios.delete(`/api/mail/templates/${name}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
+  });
+};
+
+export const useAttendance = (params = {}, enabled = true) => {
+  return useQuery({
+    queryKey: ['attendance', params],
+    queryFn: async () => (await axios.get('/api/attendance', { params })).data,
+    enabled,
+    staleTime: 1000 * 60
+  });
+};
+
+export const useAttendanceCheck = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.post('/api/attendance/check', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
+    }
+  });
+};
+
+export const useApplyLeave = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.post('/api/attendance/leave', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
+    }
+  });
+};
+
+export const useLeaveRequests = (params = {}, enabled = true) => {
+  return useQuery({
+    queryKey: ['leaveRequests', params],
+    queryFn: async () => (await axios.get('/api/attendance/leave/requests', { params })).data,
+    enabled,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useApproveLeaveRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.patch(`/api/attendance/leave/requests/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};
+
+export const useRejectLeaveRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reviewNote }) => axios.patch(`/api/attendance/leave/requests/${id}/reject`, { reviewNote }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
+    },
+  });
+};
+
+export const useBatchMarkPresent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.post('/api/attendance/batch/present', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};
+
+export const useResetAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.delete('/api/attendance/reset'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
+    },
+  });
+};
+
+export const useUpdateAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/attendance/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+};
+
+export const useUpsertAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.put('/api/attendance/upsert/by-user-date', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    }
+  });
+};
+
+export const useLeaderboard = (enabled = true) => {
+  return useQuery({
+    queryKey: ['gamification', 'leaderboard'],
+    queryFn: async () => (await axios.get('/api/gamification/leaderboard')).data,
+    enabled,
+    staleTime: 1000 * 60
+  });
+};
+
+export const useAnnouncements = (enabled = true) => {
+  return useQuery({
+    queryKey: ['announcements'],
+    queryFn: async () => (await axios.get('/api/announcements')).data,
+    enabled,
+    staleTime: 1000 * 60
+  });
+};
+
+export const useAnnouncementTargets = (enabled = true) => {
+  return useQuery({
+    queryKey: ['announcementTargets'],
+    queryFn: async () => (await axios.get('/api/announcements/targets')).data,
+    enabled,
+    staleTime: 1000 * 60 * 5
+  });
+};
+
+export const useCreateAnnouncement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.post('/api/announcements', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
   });
 };

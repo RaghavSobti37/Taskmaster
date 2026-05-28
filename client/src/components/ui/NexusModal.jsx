@@ -1,33 +1,44 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Info, X, Trash2, AlertTriangle } from 'lucide-react';
-import { Button } from './index';
+import { CheckCircle2, Info, Trash2, AlertTriangle } from 'lucide-react';
+import { Button } from './primitives';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter, MODAL_WIDTH_PX } from './ModalShell';
 
-export const NexusModal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  message, 
-  type = 'info', // info, success, warning, danger
-  onConfirm, 
-  confirmLabel = 'Confirm', 
+export const MODAL_SIZES = {
+  sm: 'sm',
+  md: 'md',
+  lg: 'lg',
+  xl: 'xl',
+  '2xl': '2xl',
+  full: 'full',
+};
+
+const LEGACY_WIDTH_MAP = {
+  'max-w-sm': 'sm',
+  'max-w-md': 'md',
+  'max-w-lg': 'md',
+  'max-w-xl': 'lg',
+  'max-w-2xl': 'lg',
+  'max-w-3xl': 'xl',
+  'max-w-4xl': 'xl',
+  'max-w-5xl': '2xl',
+};
+
+export const NexusModal = ({
+  isOpen,
+  onClose,
+  title,
+  message,
+  type = 'info',
+  onConfirm,
+  confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   isConfirm = false,
   showFooter = true,
-  width = 'max-w-sm',
-  children
+  size = 'lg',
+  width,
+  children,
 }) => {
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown, true);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
+  const resolvedSize = (width && LEGACY_WIDTH_MAP[width]) || (width && MODAL_WIDTH_PX[width] ? width : null) || size;
 
   const typeConfig = {
     info: {
@@ -49,83 +60,47 @@ export const NexusModal = ({
       icon: Trash2,
       color: 'var(--color-pastel-rose-text)',
       bg: 'var(--color-pastel-rose-bg)',
-    }
+    },
   };
 
   const config = typeConfig[type] || typeConfig.info;
   const Icon = config.icon;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className={`relative bg-[var(--color-bg-primary)] w-full ${width} rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden`}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-[var(--radius-atomic)]" style={{ background: config.bg, color: config.color }}>
-                  <Icon size={14} />
-                </div>
-                <h2 className="text-xs font-bold uppercase tracking-wider">{title}</h2>
-              </div>
-              <button type="button" onClick={onClose} className="p-1 hover:bg-black/5 rounded transition-colors">
-                <X size={14} className="text-[var(--color-text-muted)]" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-              {message && (
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                  {message}
-                </p>
-              )}
-              {children}
-            </div>
-
-            {/* Footer */}
-            {showFooter && (
-              <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2">
-                {isConfirm ? (
-                  <>
-                    <Button size="sm" variant="ghost" onClick={onClose}>
-                      {cancelLabel}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant={type === 'danger' ? 'danger' : 'primary'} 
-                      onClick={() => {
-                        onConfirm();
-                        onClose();
-                      }}
-                    >
-                      {confirmLabel}
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" variant="primary" onClick={onClose}>
-                    Acknowledged
-                  </Button>
-                )}
-              </div>
-            )}
-          </motion.div>
-        </div>
+    <ModalShell isOpen={isOpen} onClose={onClose} size={resolvedSize}>
+      <ModalHeader
+        title={title}
+        onClose={onClose}
+        icon={Icon}
+        iconStyle={{ background: config.bg, color: config.color }}
+      />
+      <ModalBody>
+        {message && (
+          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{message}</p>
+        )}
+        {children}
+      </ModalBody>
+      {showFooter && (
+        <ModalFooter>
+          {isConfirm ? (
+            <>
+              <Button size="sm" variant="ghost" onClick={onClose}>{cancelLabel}</Button>
+              <Button
+                size="sm"
+                variant={type === 'danger' ? 'danger' : 'primary'}
+                onClick={() => {
+                  onConfirm?.();
+                  onClose();
+                }}
+              >
+                {confirmLabel}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="primary" onClick={onClose}>Acknowledged</Button>
+          )}
+        </ModalFooter>
       )}
-    </AnimatePresence>
+    </ModalShell>
   );
 };
-
-

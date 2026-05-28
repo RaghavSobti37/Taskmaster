@@ -10,6 +10,30 @@ const isUserOnline = (u) => {
   return isAfter(u.lastOnline, fiveMinAgo);
 };
 
+const WEAK_PASSWORDS = new Set([
+  '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890',
+  'password', 'password1', 'password123', 'qwerty', 'qwerty123', 'admin', 'admin123',
+  'letmein', 'welcome', 'monkey', 'dragon', 'master', 'abc123', 'iloveyou',
+  'sunshine', 'princess', 'football', 'baseball', 'trustno1', '111111', '000000',
+]);
+
+const validatePasswordStrength = (password) => {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  const normalized = password.toLowerCase().trim();
+  if (WEAK_PASSWORDS.has(normalized)) {
+    return 'Password is too weak. Please choose a stronger password';
+  }
+  if (/^(.)\1+$/.test(password) || /^(\d+)$/.test(password)) {
+    return 'Password is too weak. Please choose a stronger password';
+  }
+  return null;
+};
+
 exports.getTeam = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -70,15 +94,18 @@ exports.updateUserTeams = async (req, res) => {
 };
 
 exports.updateProfile = async (req, res) => {
-  const { name, avatar, phone, role, currentPassword, newPassword, teams, teamName } = req.body;
+  const { name, avatar, phone, role, currentPassword, newPassword, teams, teamName, dateOfBirth } = req.body;
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).select('+password');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (name) user.name = name;
     if (avatar) user.avatar = avatar;
     if (phone) user.phone = phone;
     if (teams) user.teams = teams;
+    if (dateOfBirth !== undefined) {
+      user.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    }
     if (role && req.user.role === 'admin') {
       // Protect root admin and ensure at least one admin exists
       if (user.email === 'test@example.com' && role !== 'admin') {
@@ -90,6 +117,8 @@ exports.updateProfile = async (req, res) => {
     if (currentPassword && newPassword) {
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) return res.status(400).json({ error: 'Current password incorrect' });
+      const passwordError = validatePasswordStrength(newPassword);
+      if (passwordError) return res.status(400).json({ error: passwordError });
       user.password = newPassword;
     }
 

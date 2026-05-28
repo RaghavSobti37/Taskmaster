@@ -182,7 +182,6 @@ export default function ArtistsCollection() {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Artists"
-        subtitle="Manage your artists and track their social media growth."
         icon={Users}
         actions={
           <div className="flex items-center gap-2">

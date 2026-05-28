@@ -1,6 +1,15 @@
 const Project = require('../models/Project');
+const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+
+const DEFAULT_WORKSPACES = [
+  { name: 'TSC ACADEMY', color: '#3498db' },
+  { name: 'TSC ARTISTS', color: '#9b59b6' },
+  { name: 'TSC FILMS', color: '#e74c3c' },
+  { name: 'TSC TECH', color: '#2ecc71' },
+  { name: 'GENERAL', color: '#64748b' },
+];
 
 // 20 perceptually-spaced hues converted to saturated hex colors
 const PALETTE = [
@@ -24,7 +33,7 @@ async function pickDistinctColor() {
 
 exports.createProject = async (req, res) => {
   try {
-    const { name, description, tags, members, color, starred } = req.body;
+    const { name, description, tags, members, color, starred, workspace } = req.body;
     
     const providedMembers = members?.map(m => m.userId) || [];
     const providedRoles = members?.map(m => ({
@@ -55,6 +64,7 @@ exports.createProject = async (req, res) => {
       description,
       tags,
       color: assignedColor,
+      workspace: workspace ? workspace.toUpperCase().trim() : 'General',
       starred: starred || false,
       outletId: req.user.currentOutletId || 'main',
       owner: req.user._id,
@@ -184,11 +194,13 @@ exports.updateProject = async (req, res) => {
     }
 
     // SECURITY: Whitelist allowed update fields (prevent owner/member injection)
-    const allowedFields = ['name', 'description', 'tags', 'members', 'memberRoles', 'status', 'color', 'starred'];
+    const allowedFields = ['name', 'description', 'tags', 'members', 'memberRoles', 'status', 'color', 'starred', 'workspace'];
     const sanitizedUpdate = {};
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
-        sanitizedUpdate[key] = req.body[key];
+        sanitizedUpdate[key] = key === 'workspace'
+          ? req.body[key].toUpperCase().trim()
+          : req.body[key];
       }
     }
 
@@ -284,6 +296,73 @@ exports.removeMember = async (req, res) => {
     res.status(500).json({ error: 'Failed to remove member' });
   }
 };
+exports.getWorkspaces = async (req, res) => {
+  try {
+    let workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
+
+    if (workspaces.length === 0) {
+      await Workspace.insertMany(
+        DEFAULT_WORKSPACES.map((w, idx) => ({
+          name: w.name,
+          color: w.color,
+          order: idx,
+          createdBy: req.user._id,
+        }))
+      );
+      workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
+    }
+
+    res.json(workspaces);
+  } catch (error) {
+    logger.error('projectController', 'Get Workspaces ', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to fetch workspaces' });
+  }
+};
+
+exports.createWorkspace = async (req, res) => {
+  try {
+    const { name, color } = req.body;
+    if (!name?.trim()) {
+      return res.status(400).json({ error: 'Workspace name is required' });
+    }
+
+    const workspace = await Workspace.create({
+      name: name.toUpperCase().trim(),
+      color: color || '#64748b',
+      createdBy: req.user._id,
+    });
+
+    res.status(201).json(workspace);
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'Workspace already exists' });
+    }
+    logger.error('projectController', 'Create Workspace ', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to create workspace' });
+  }
+};
+
+exports.reorderWorkspaces = async (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) {
+      return res.status(400).json({ error: 'Order must be an array of workspace names' });
+    }
+
+    await Promise.all(
+      order.map((name, index) => 
+        Workspace.updateOne({ name }, { order: index })
+      )
+    );
+
+    const workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
+    res.json(workspaces);
+  } catch (error) {
+    logger.error('projectController', 'Reorder Workspaces', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to reorder workspaces' });
+  }
+};
+
 exports.addMember = async (req, res) => {
   try {
     const { id } = req.params;

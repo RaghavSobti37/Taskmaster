@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Clock, AlertCircle, Check } from 'lucide-react';
-import { NexusModal } from './ui';
+import { NexusModal, ModalShell } from './ui';
 import { globalToast } from '../contexts/ToastContext';
 import CKDropdown from './ui/CKDropdown';
 import { useUserDirectory } from '../hooks/useTaskmasterQueries';
@@ -56,7 +56,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
     label: m.user?.name || m.name || 'Unknown' 
   })) || [];
 
-  if (!isOpen || !task) return null;
+  if (!task) return null;
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -100,7 +100,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
   const isDone = status === 'done';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <>
       <NexusModal 
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
@@ -111,7 +111,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
         confirmLabel="Delete"
         onConfirm={handleDelete}
       />
-      <div className="bg-[var(--color-bg-surface)] w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col rounded-[2rem] border border-[var(--color-bg-border)] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+      <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
         <header className="px-5 py-4 md:px-8 md:py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
           <div>
             <h3 className="font-black text-[var(--color-text-primary)] text-xs uppercase tracking-[0.2em]">
@@ -283,8 +283,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </ModalShell>
+    </>
   );
 };
 

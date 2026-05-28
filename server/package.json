@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "test": "set NODE_ENV=test&& jest",
     "sync-db": "node scripts/sync-prod-to-local.js",
+    "sync-finance-to-prod": "node scripts/syncFinanceToProd.js",
     "import-finance": "node scripts/importInvoices.js --skip-ocr",
     "import-finance:fresh": "node scripts/importInvoices.js --fresh --skip-ocr"
   },

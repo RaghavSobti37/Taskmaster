@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Briefcase, Search, Star, LayoutGrid, List, FolderPlus
+  Plus, Briefcase, Search, Star, LayoutGrid, List, FolderPlus, Trash2
 } from 'lucide-react';
 import {
   Badge,

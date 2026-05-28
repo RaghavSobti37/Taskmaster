@@ -37,6 +37,26 @@ node server/scripts/migrate-local.js
 MONGODB_URI="mongodb://user:pass@host:port/dbname" node server/scripts/migrate-production.js
 ```
 
+### 3. Workspace Data Sync (Local → Production)
+**File:** `server/scripts/sync-workspaces-to-prod.js`
+- Syncs all workspace data from local to production as-is
+- Preserves `name`, `color`, `order`, and all other fields
+- Uses upsert to avoid duplicates and update existing workspaces
+- Safe to run multiple times
+- **Requires:** Both `MONGODB_URI` and `MONGODB_URI_PROD` set in `.env`
+
+**Usage:**
+```bash
+# Ensure .env has both URIs
+node server/scripts/sync-workspaces-to-prod.js
+```
+
+**Example .env:**
+```
+MONGODB_URI=mongodb://localhost:27017/taskmaster
+MONGODB_URI_PROD=mongodb://user:pass@prod-host:port/taskmaster
+```
+
 ## Step-by-Step Deployment
 
 ### Step 1: Backup Production Database
@@ -58,6 +78,13 @@ export MONGODB_URI="mongodb://user:pass@host:port/dbname"
 
 # Run migration
 node server/scripts/migrate-production.js
+```
+
+### Step 3b: Sync Workspace Data (Optional - if workspaces exist locally)
+```bash
+# If you've created new workspaces locally and want to sync them to production:
+# Ensure .env has both MONGODB_URI and MONGODB_URI_PROD
+node server/scripts/sync-workspaces-to-prod.js
 ```
 
 ### Step 4: Verify Migration

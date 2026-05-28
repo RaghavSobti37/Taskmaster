@@ -1,18 +1,31 @@
 const User = require('../models/User');
 const DailyMission = require('../models/DailyMission');
 const XPAuditLog = require('../models/XPAuditLog');
+const GamificationConfig = require('../models/GamificationConfig');
 
 const BASE_XP = 100;
 const STEP_XP = 100;
 
 class GamificationService {
-  static getLevelFromExp(exp) {
-    return Math.max(1, Math.floor((exp || 0) / STEP_XP) + 1);
+  static async getConfig() {
+    let config = await GamificationConfig.findOne();
+    if (!config) {
+      config = await GamificationConfig.create({});
+    }
+    return config;
   }
 
-  static getExpForLevel(level) {
+  static async getLevelFromExp(exp) {
+    const config = await this.getConfig();
+    const stepXp = config.stepXp || STEP_XP;
+    return Math.max(1, Math.floor((exp || 0) / stepXp) + 1);
+  }
+
+  static async getExpForLevel(level) {
+    const config = await this.getConfig();
+    const stepXp = config.stepXp || STEP_XP;
     if (level <= 1) return 0;
-    return (level - 1) * STEP_XP;
+    return (level - 1) * stepXp;
   }
 
   static async awardExp(userId, amount, action, details = {}) {
@@ -20,7 +33,7 @@ class GamificationService {
     if (!user) return;
 
     user.exp = (user.exp || 0) + amount;
-    const newLevel = this.getLevelFromExp(user.exp);
+    const newLevel = await this.getLevelFromExp(user.exp);
     
     let leveledUp = false;
     if (newLevel > (user.level || 1)) {

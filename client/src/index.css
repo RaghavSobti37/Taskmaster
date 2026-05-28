@@ -188,6 +188,25 @@ select option {
   color: var(--color-pastel-slate-text);
 }
 
+/* Core fix: flex-centered modals collapse to min-content without explicit width */
+@layer components {
+  .tm-modal-panel {
+    box-sizing: border-box;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    min-width: min(320px, calc(100vw - 2rem)) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  /* Direct panel inside flex overlay (legacy modals without ModalShell) */
+  .fixed.inset-0.flex.items-center.justify-center > .tm-modal-panel,
+  .fixed.inset-0.flex.items-center.justify-center > [role="dialog"] {
+    flex-shrink: 0 !important;
+    min-width: min(320px, calc(100vw - 2rem)) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
+
 /* Custom scrollbar for high-density grids */
 ::-webkit-scrollbar {
   width: 4px;

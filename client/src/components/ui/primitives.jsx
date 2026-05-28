@@ -192,6 +192,79 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
   );
 };
 
+export const TablePagination = ({
+  pageSize,
+  currentPage,
+  totalPages,
+  totalItems,
+  rowCount = 0,
+  onPageChange,
+  onPageSizeChange,
+}) => {
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
+
+  return (
+    <div className="p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+      <div className="flex items-center gap-2">
+        <span>Show</span>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            onPageSizeChange(Number(e.target.value));
+            onPageChange(1);
+          }}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-[11px] font-bold outline-none text-[var(--color-text-primary)]"
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+        <span>entries</span>
+        <span className="text-[10px] font-bold opacity-60 ml-2">
+          (Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems})
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          First
+        </button>
+        <button
+          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Prev
+        </button>
+        <span className="px-3 text-xs text-[var(--color-text-primary)]">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Next
+        </button>
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
+        >
+          Last
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const DataTable = ({ 
   columns, 
   data = [], 
@@ -307,63 +380,15 @@ export const DataTable = ({
       </div>
 
       {paginated && totalItems > 0 && (
-        <div className="p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
-          <div className="flex items-center gap-2">
-            <span>Show</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded text-[11px] font-bold outline-none text-[var(--color-text-primary)]"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>entries</span>
-            <span className="text-[10px] font-bold opacity-60 ml-2">
-              (Showing {startIndex + 1}-{endIndex} of {totalItems})
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
-            >
-              First
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
-            >
-              Prev
-            </button>
-            <span className="px-3 text-xs text-[var(--color-text-primary)]">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-2 py-1 bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px] uppercase tracking-wider transition-colors"
-            >
-              Last
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          pageSize={pageSize}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          rowCount={serverSide ? data.length : Math.min(pageSize, totalItems - startIndex)}
+          onPageChange={(page) => setCurrentPage(page)}
+          onPageSizeChange={setPageSize}
+        />
       )}
     </div>
   );

@@ -13,12 +13,17 @@ export const MODAL_WIDTH_PX = {
   full: 1200,
 };
 
+export const MODAL_PANEL_CLASS = 'tm-modal-panel';
+
 export const getModalPanelStyle = (sizeOrPx = 'lg') => {
   const px = typeof sizeOrPx === 'number' ? sizeOrPx : (MODAL_WIDTH_PX[sizeOrPx] || MODAL_WIDTH_PX.lg);
   return {
-    width: `min(calc(100vw - 2rem), ${px}px)`,
+    width: `${px}px`,
     minWidth: 'min(320px, calc(100vw - 2rem))',
     maxWidth: 'calc(100vw - 2rem)',
+    flexShrink: 0,
+    flexGrow: 0,
+    boxSizing: 'border-box',
   };
 };
 
@@ -74,8 +79,11 @@ export const ModalShell = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              style={panelStyle}
-              className={`pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden shrink-0 ${panelClassName}`}
+              style={{
+                ...panelStyle,
+                width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
+              }}
+              className={`${MODAL_PANEL_CLASS} pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden ${panelClassName}`}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
@@ -113,7 +121,7 @@ export const ModalBody = ({ children, className = '' }) => (
 );
 
 export const ModalFooter = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 shrink-0 ${className}`}>
+  <div className={`px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 shrink-0 sticky bottom-0 ${className}`}>
     {children}
   </div>
 );

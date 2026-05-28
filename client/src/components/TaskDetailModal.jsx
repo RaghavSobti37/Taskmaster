@@ -112,37 +112,36 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
         onConfirm={handleDelete}
       />
       <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
-        <header className="px-5 py-4 md:px-8 md:py-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
-          <div>
-            <h3 className="font-black text-[var(--color-text-primary)] text-xs uppercase tracking-[0.2em]">
-              Edit Task
-            </h3>
-            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1">ID: {task._id.substring(0, 8).toUpperCase()}</p>
+        <header className="px-5 py-3 md:px-8 md:py-3 border-b border-[var(--color-bg-border)] flex items-center justify-between gap-4 bg-[var(--color-bg-workspace)] shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             {task.createdBy && (
-              <div className="mt-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-[var(--color-bg-border)] border border-[var(--color-bg-border)]">
-                  {task.createdBy.avatar ? (
-                    <img src={task.createdBy.avatar} alt={task.createdBy.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="flex items-center justify-center w-full h-full text-[var(--color-text-muted)] text-[10px] font-bold">
-                      {task.createdBy.name?.slice(0, 1).toUpperCase() || 'U'}
-                    </div>
-                  )}
-                </div>
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  Created by <span className="font-bold text-[var(--color-text-primary)]">{task.createdBy.name}</span>
-                </p>
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-[var(--color-bg-border)] border border-[var(--color-bg-border)] flex-shrink-0">
+                {task.createdBy.avatar ? (
+                  <img src={task.createdBy.avatar} alt={task.createdBy.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-[var(--color-text-muted)] text-[9px] font-bold">
+                    {task.createdBy.name?.slice(0, 1).toUpperCase() || 'U'}
+                  </div>
+                )}
               </div>
             )}
+            <div className="min-w-0">
+              <h3 className="font-black text-[var(--color-text-primary)] text-xs uppercase tracking-[0.2em]">Edit Task</h3>
+              <p className="text-[9px] text-[var(--color-text-muted)] font-bold">
+                {task.createdBy && <span>By {task.createdBy.name}</span>} 
+                {task.createdBy && <span className="text-[8px] mx-1">•</span>}
+                <span>ID: {task._id.substring(0, 8).toUpperCase()}</span>
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-border)] rounded-xl transition-all">
-            <X size={20} />
+          <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg transition-all flex-shrink-0">
+            <X size={16} />
           </button>
         </header>
 
         <form onSubmit={handleSubmit} className="p-5 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1">
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Name</label>
+            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Name</label>
             <input 
               type="text" 
               value={title}
@@ -154,7 +153,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Notes & Details</label>
+            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Notes & Details</label>
             <textarea 
               value={desc}
               disabled={isDone}
@@ -193,7 +192,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
               placeholder="Assign to team members..."
             />
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Due Date</label>
+              <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Due Date</label>
               <input 
                 type="date"
                 value={dueDate}
@@ -205,40 +204,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
           </div>
 
           {/* Activity Logs Section */}
-          {logs.length > 0 && (
-            <div className="pt-6 border-t border-[var(--color-bg-border)]">
-              <h4 className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest mb-4">Task Activity</h4>
-              <div className="space-y-4 max-h-40 overflow-y-auto pr-2">
-                {logs.map(log => (
-                  <div key={log._id} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[var(--color-text-muted)] overflow-hidden">
-                      {log.userId?.avatar ? <img src={log.userId.avatar} alt="" className="w-full h-full object-cover" /> : <Clock size={12} />}
-                    </div>
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <p className="text-xs text-[var(--color-text-primary)]">
-                        <span className="font-bold">{log.userId?.name || 'System'}</span>{' '}
-                        {log.action === 'TASK_DATE_CHANGED' && (
-                          <span>changed due date to <span className="font-bold">{log.details?.newDate ? new Date(log.details.newDate).toLocaleDateString() : 'None'}</span></span>
-                        )}
-                        {log.action === 'TASK_ASSIGNEES_CHANGED' && (
-                          <span>updated task members</span>
-                        )}
-                        {log.action === 'UPDATE_TASK' && (
-                          <span>updated task details</span>
-                        )}
-                        {!['TASK_DATE_CHANGED', 'TASK_ASSIGNEES_CHANGED', 'UPDATE_TASK'].includes(log.action) && (
-                          <span>performed <span className="font-bold">{log.action}</span></span>
-                        )}
-                      </p>
-                      <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          
 
           {isDone && (
             <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-2xl flex items-center gap-4">
@@ -251,8 +217,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted }
                </div>
             </div>
           )}
-
-          <div className="pt-6 md:pt-8 border-t border-[var(--color-bg-border)] flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
+          <div className="pt-6 md:pt-8 border-t border-[var(--color-bg-border)] flex flex-col-reverse sm:flex-row items-center justify-between gap-4 sticky bottom-0 bg-[var(--color-bg-workspace)]">
             {!isDone ? (
               <button 
                 type="button"

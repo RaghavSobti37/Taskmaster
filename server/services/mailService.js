@@ -456,4 +456,21 @@ const scanBounces = async (profileId) => {
   }
 };
 
-module.exports = { sendCampaign, scanBounces, updateEmailTags };
+module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: async (opts) => {
+  const { to, subject, html, profile } = opts;
+  const transporter = nodemailer.createTransport({
+    host: profile.smtpHost,
+    port: profile.smtpPort,
+    secure: profile.smtpPort === 465,
+    auth: {
+      user: profile.smtpUser,
+      pass: profile.smtpPass
+    }
+  });
+  return transporter.sendMail({
+    from: profile.email,
+    to,
+    subject,
+    html
+  });
+} };

@@ -225,6 +225,7 @@ app.use('/api/exly', require('./routes/exlyRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
+app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");

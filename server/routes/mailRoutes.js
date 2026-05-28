@@ -192,6 +192,38 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
   }
 });
 
+router.post('/test-campaign', protect, async (req, res) => {
+  try {
+    const { subject, content, testEmail, senderProfileId } = req.body;
+    
+    if (!subject || !content || !testEmail || !senderProfileId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const profile = await EmailProfile.findById(senderProfileId);
+    if (!profile) return res.status(404).json({ error: 'Sender profile not found' });
+
+    const mailService = require('../services/mailService');
+    await mailService.sendTestEmail({
+      to: testEmail,
+      subject,
+      html: content,
+      profile: {
+        email: profile.email,
+        smtpHost: profile.smtpHost,
+        smtpPort: profile.smtpPort,
+        smtpUser: profile.smtpUser,
+        smtpPass: profile.smtpPass
+      }
+    });
+
+    res.json({ success: true, message: `Test email sent to ${testEmail}` });
+  } catch (err) {
+    console.error('Test campaign error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/campaigns/:id', protect, async (req, res) => {
   try {
     const campaign = await MailCampaign.findById(req.params.id);

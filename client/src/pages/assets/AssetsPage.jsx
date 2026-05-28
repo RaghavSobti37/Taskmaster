@@ -327,10 +327,18 @@ const AssetsPage = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
-        <StatCard label="Google Drive Folders" value={driveFolders.length} icon={Cloud} variant="mint" />
-        <StatCard label="Google Sheets" value={sheetsCount} icon={Database} variant="apricot" />
-        <StatCard label="Google Docs" value={docsCount} icon={FileText} variant="slate" />
+        <div onClick={() => setTypeFilter('all')} className={`cursor-pointer transition-all ${typeFilter === 'all' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
+          <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
+        </div>
+        <div onClick={() => setTypeFilter('drive')} className={`cursor-pointer transition-all ${typeFilter === 'drive' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
+          <StatCard label="Google Drive Folders" value={driveFolders.length} icon={Cloud} variant="mint" />
+        </div>
+        <div onClick={() => setTypeFilter('sheet')} className={`cursor-pointer transition-all ${typeFilter === 'sheet' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
+          <StatCard label="Google Sheets" value={sheetsCount} icon={Database} variant="apricot" />
+        </div>
+        <div onClick={() => setTypeFilter('docs')} className={`cursor-pointer transition-all ${typeFilter === 'docs' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
+          <StatCard label="Google Docs" value={docsCount} icon={FileText} variant="slate" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -346,8 +354,8 @@ const AssetsPage = () => {
                  <table className="w-full text-left">
                     <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                        <tr>
-                          <th className="px-4 py-2">Projects</th>
                           <th className="px-4 py-2">File Name</th>
+                          <th className="px-4 py-2">Projects</th>
                           <th className="px-4 py-2">Added By</th>
                           <th className="px-4 py-2">Link / URL</th>
                        </tr>
@@ -378,15 +386,7 @@ const AssetsPage = () => {
                              }}
                              className="group hover:bg-[var(--color-bg-secondary)]/50 transition-all cursor-pointer"
                            >
-                              <td className="px-4 py-2">
-                                 {asset.projectIds && asset.projectIds.length > 0 ? (
-                                   <div className="flex flex-wrap gap-1">
-                                     {asset.projectIds.map(p => (
-                                       <Badge key={p._id} variant="info" className="text-[8px]">{p.name}</Badge>
-                                     ))}
-                                   </div>
-                                 ) : <Badge variant="slate" className="text-[8px]">ROOT</Badge>}
-                              </td>
+                             
                               <td className="px-4 py-2">
                                  <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-lg ${typeConfig.colorClass}`}>
@@ -397,6 +397,15 @@ const AssetsPage = () => {
                                        <p className="text-[8px] text-[var(--color-text-muted)] uppercase mt-0.5">{format(new Date(asset.createdAt), 'MMM dd, yyyy')}</p>
                                     </div>
                                  </div>
+                              </td>
+                              <td className="px-4 py-2">
+                                 {asset.projectIds && asset.projectIds.length > 0 ? (
+                                   <div className="flex flex-wrap gap-1">
+                                     {asset.projectIds.map(p => (
+                                       <Badge key={p._id} variant="info" className="text-[8px]">{p.name}</Badge>
+                                     ))}
+                                   </div>
+                                 ) : <Badge variant="slate" className="text-[8px]">ROOT</Badge>}
                               </td>
                               <td className="px-4 py-2">
                                  {asset.createdBy ? (

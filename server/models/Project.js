@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
+const { formatProjectName } = require('../utils/formatProjectName');
+
+const applyProjectNameFormat = (doc) => {
+  if (doc?.name) doc.name = formatProjectName(doc.name);
+};
 
 
 const projectSchema = new mongoose.Schema({
@@ -49,6 +54,29 @@ projectSchema.pre('deleteOne', { document: true, query: false }, async function(
   await mongoose.model('Phase').deleteMany({ projectId: this._id });
   await mongoose.model('Task').deleteMany({ projectId: this._id });
   next();
+});
+
+projectSchema.pre('save', function (next) {
+  if (this.isModified('name') && this.name) {
+    this.name = formatProjectName(this.name);
+  }
+  next();
+});
+
+projectSchema.pre('findOneAndUpdate', function (next) {
+  const update = this.getUpdate() || {};
+  if (update.name) update.name = formatProjectName(update.name);
+  if (update.$set?.name) update.$set.name = formatProjectName(update.$set.name);
+  this.setUpdate(update);
+  next();
+});
+
+['find', 'findOne'].forEach((hook) => {
+  projectSchema.post(hook, (result) => {
+    if (!result) return;
+    if (Array.isArray(result)) result.forEach(applyProjectNameFormat);
+    else applyProjectNameFormat(result);
+  });
 });
 
 projectSchema.index({ outletId: 1, createdAt: -1 });

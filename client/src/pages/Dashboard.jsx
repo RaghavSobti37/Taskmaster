@@ -40,7 +40,10 @@ const MissionCompleteModal = ({ mission, isOpen, onClose }) => {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', bounce: 0.5 }}
-          className="bg-slate-900 border border-amber-500/30 rounded-[2rem] p-8 max-w-sm w-full relative overflow-hidden text-center shadow-2xl shadow-amber-500/20"
+          className="tm-modal-panel bg-slate-900 border border-amber-500/30 rounded-[2rem] p-8 max-w-sm w-full relative overflow-hidden text-center shadow-2xl shadow-amber-500/20"
+          style={{ width: 'min(calc(100vw - 2rem), 384px)', flexShrink: 0 }}
+          role="dialog"
+          aria-modal="true"
           onClick={e => e.stopPropagation()}
         >
           <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent pointer-events-none" />
@@ -198,7 +201,7 @@ const Dashboard = () => {
         }
       />
 
-      <StatCards metrics={metrics} loading={summaryLoading} onCardClick={(f) => setFilter(f)} />
+      <StatCards metrics={metrics} loading={summaryLoading} onCardClick={(f) => setFilter(f)} activeFilter={filter} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">

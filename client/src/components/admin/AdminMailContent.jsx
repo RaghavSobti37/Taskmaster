@@ -58,17 +58,40 @@ export default function AdminMailContent() {
   });
 
   const [allContacts, setAllContacts] = useState([]);
+  const [allExlyContacts, setAllExlyContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
+  const [exlyContactsLoading, setExlyContactsLoading] = useState(false);
+  const [templateVariables, setTemplateVariables] = useState({});
+  const [showVariableWarning, setShowVariableWarning] = useState(false);
+  const [testCampaignEmail, setTestCampaignEmail] = useState('redacted@example.com');
+  const [showHtmlPasteModal, setShowHtmlPasteModal] = useState(false);
+  const [htmlPasteText, setHtmlPasteText] = useState('');
+  const [isCustomHtml, setIsCustomHtml] = useState(false);
+  const [useRawHtml, setUseRawHtml] = useState(false);
+  const [previewMode, setPreviewMode] = useState('desktop');
 
-  const loadContactsData = async () => {
+  const loadCrmContactsData = async () => {
     setContactsLoading(true);
     try {
       const res = await axios.get('/api/crm/leads?limit=100000');
-      setAllContacts(res.data?.leads || res.data || []);
+      const leads = res.data?.leads || res.data || [];
+      setAllContacts(leads.filter(l => l.email && !l.exlyOfferings));
     } catch (e) {
       alert('Failed to load CRM Contacts: ' + e.message);
     }
     setContactsLoading(false);
+  };
+
+  const loadExlyContactsData = async () => {
+    setExlyContactsLoading(true);
+    try {
+      const res = await axios.get('/api/crm/leads?limit=100000');
+      const leads = res.data?.leads || res.data || [];
+      setAllExlyContacts(leads.filter(l => l.email && l.exlyOfferings && Array.isArray(l.exlyOfferings)));
+    } catch (e) {
+      alert('Failed to load Exly Contacts: ' + e.message);
+    }
+    setExlyContactsLoading(false);
   };
 
   const filteredContacts = useMemo(() => {
@@ -78,18 +101,43 @@ export default function AdminMailContent() {
       if (activeTab === 'fresh' && c.leadStatus !== 'Fresh') return false;
       if (activeTab === 'contacted' && c.leadStatus !== 'Contacted') return false;
       if (filters.leadStatus !== 'all' && c.leadStatus !== filters.leadStatus) return false;
-      if (filters.exlyOffering !== 'all' && (!c.exlyOfferings || !c.exlyOfferings.includes(filters.exlyOffering))) return false;
       return true;
     });
   }, [allContacts, searchTerm, activeTab, filters]);
+
+  const filteredExlyContacts = useMemo(() => {
+    return allExlyContacts.filter(c => {
+      if (!c.email) return false;
+      if (searchTerm && !c.name?.toLowerCase().includes(searchTerm.toLowerCase()) && !c.email?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (activeTab === 'fresh' && c.leadStatus !== 'Fresh') return false;
+      if (activeTab === 'contacted' && c.leadStatus !== 'Contacted') return false;
+      if (filters.leadStatus !== 'all' && c.leadStatus !== filters.leadStatus) return false;
+      if (filters.exlyOffering !== 'all' && Array.isArray(c.exlyOfferings)) {
+        const offeringNames = c.exlyOfferings.map(o => typeof o === 'string' ? o : o?.title || o?.offeringId).filter(Boolean);
+        if (!offeringNames.includes(filters.exlyOffering)) return false;
+      } else if (filters.exlyOffering !== 'all' && c.exlyOfferingTitle !== filters.exlyOffering) {
+        return false;
+      }
+      return true;
+    });
+  }, [allExlyContacts, searchTerm, activeTab, filters]);
 
   const totalContacts = filteredContacts.length;
 
   const exlyOfferingsList = useMemo(() => {
     const list = new Set();
-    allContacts.forEach(c => c.exlyOfferings?.forEach(o => list.add(o)));
+    allExlyContacts.forEach(c => {
+      if (Array.isArray(c.exlyOfferings)) {
+        c.exlyOfferings.forEach(o => {
+          const name = typeof o === 'string' ? o : o?.title || o?.offeringId;
+          if (name) list.add(name);
+        });
+      } else if (c.exlyOfferingTitle) {
+        list.add(c.exlyOfferingTitle);
+      }
+    });
     return Array.from(list);
-  }, [allContacts]);
+  }, [allExlyContacts]);
 
   const createProfileMutation = useCreateMailProfile();
   const updateProfileMutation = useUpdateMailProfile();
@@ -317,6 +365,7 @@ export default function AdminMailContent() {
   };
 
   useEffect(() => {
+    if (isCustomHtml) return; // Don't overwrite custom HTML
     if (templateType === 'session_reminder') {
       setTemplateContent(defaultReminderHTML(templateParams));
     } else if (templateType === 'marketing') {
@@ -326,7 +375,7 @@ export default function AdminMailContent() {
     } else {
       setTemplateContent(defaultPlainTextHTML(templateParams));
     }
-  }, [templateType, templateParams]);
+  }, [templateType, templateParams, isCustomHtml]);
 
   const handleBannerUpload = (e) => {
     const file = e.target.files[0];
@@ -519,21 +568,33 @@ export default function AdminMailContent() {
       return;
     }
 
-    const selectedContactsList = allContacts.filter(c => selectedLeadIds.includes(c._id));
+    const selectedCrmList = allContacts.filter(c => selectedLeadIds.includes(c._id));
+    const selectedExlyList = allExlyContacts.filter(c => selectedLeadIds.includes(c._id));
     const mergedRecipients = [
       ...activeCsvRecipients,
-      ...selectedContactsList.map(c => ({ name: c.name, email: c.email }))
+      ...selectedCrmList.map(c => ({ name: c.name, email: c.email })),
+      ...selectedExlyList.map(c => ({ name: c.name, email: c.email }))
     ];
+
+    // Replace variables in content
+    let processedContent = content;
+    const detectedVars = new Set();
+    const varRegex = /\{\{(\w+)\}\}/g;
+    let match;
+    while ((match = varRegex.exec(content)) !== null) {
+      detectedVars.add(match[1]);
+    }
 
     await createCampaignMutation.mutateAsync({
       title,
       subject,
-      content,
+      content: processedContent,
       senderProfileId,
       attachments,
       leadIds: [],
       customRecipients: mergedRecipients,
-      removeUnsubscribe
+      removeUnsubscribe,
+      templateVariables: detectedVars.size > 0 ? Array.from(detectedVars) : []
     });
 
     await saveTemplateMutation.mutateAsync({
@@ -549,6 +610,7 @@ export default function AdminMailContent() {
     setCsvRecipients([]);
     setCsvFileName('');
     setHtmlFileName('');
+    setIsCustomHtml(false);
     setMode('campaigns');
   };
 
@@ -861,31 +923,18 @@ export default function AdminMailContent() {
                 )}
               </div>
 
-              {/* CRM / Exly Data */}
+              {/* CRM Data Section */}
               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-3">
-                  <span className="text-xs font-bold uppercase tracking-tight block">Load CRM & Exly Contacts</span>
-                  <Button size="xs" variant="secondary" onClick={loadContactsData} disabled={contactsLoading}>
-                    <RefreshCw size={12} className={contactsLoading ? 'animate-spin' : ''} /> {contactsLoading ? 'Loading...' : 'Fetch CRM Data'}
+                  <span className="text-xs font-bold uppercase tracking-tight block">CRM Contacts</span>
+                  <Button size="xs" variant="secondary" onClick={loadCrmContactsData} disabled={contactsLoading}>
+                    <RefreshCw size={12} className={contactsLoading ? 'animate-spin' : ''} /> {contactsLoading ? 'Loading...' : 'Fetch CRM'}
                   </Button>
                 </div>
                 {allContacts.length > 0 && (
                   <div className="space-y-4">
-                    {/* Filters Bar */}
                     <div className="flex items-center gap-3 flex-wrap bg-[var(--color-bg-primary)] p-3 rounded-xl border border-[var(--color-bg-border)]">
                       <TabSwitcher activeTab={activeTab} onChange={setActiveTab} tabs={[{ id: 'all', label: 'All' }, { id: 'fresh', label: 'Fresh' }, { id: 'contacted', label: 'In Progress' }]} />
-
-                      <select
-                        value={filters.exlyOffering}
-                        onChange={e => setFilters(prev => ({ ...prev, exlyOffering: e.target.value }))}
-                        className="px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-xs font-bold outline-none text-[var(--color-text-primary)]"
-                      >
-                        <option value="all">All Exly Offerings</option>
-                        {Array.from(new Set(allContacts.map(c => c.exlyOfferings || c.exlyOfferingTitle).filter(Boolean))).map(offering => (
-                          <option key={offering} value={offering}>{offering}</option>
-                        ))}
-                      </select>
-
                       <div className="flex-1 min-w-[200px]">
                         <Input placeholder="Search Name or Email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} icon={Search} />
                       </div>
@@ -895,11 +944,75 @@ export default function AdminMailContent() {
                           const newSelected = Array.from(new Set([...selectedLeadIds, ...filteredIds]));
                           setSelectedLeadIds(newSelected);
                         }}>Select Filtered ({filteredContacts.length})</Button>
-                        <Button size="xs" variant="ghost" onClick={() => setSelectedLeadIds([])} className="text-rose-500 hover:bg-rose-500/10">Clear Selection</Button>
+                        <Button size="xs" variant="ghost" onClick={() => setSelectedLeadIds([])} className="text-rose-500 hover:bg-rose-500/10">Clear</Button>
                       </div>
                     </div>
+                    <div className="rounded-xl overflow-hidden">
+                      <DataTable
+                        columns={[
+                          {
+                            header: 'Sel',
+                            render: (row) => {
+                              const isSel = selectedLeadIds.includes(row._id);
+                              return (
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isSel) setSelectedLeadIds(prev => prev.filter(id => id !== row._id));
+                                    else setSelectedLeadIds(prev => [...prev, row._id]);
+                                  }}
+                                  className={`w-4 h-4 rounded flex items-center justify-center border cursor-pointer ${isSel ? 'bg-[var(--color-action-primary)] border-[var(--color-action-primary)] text-white' : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]'}`}
+                                >
+                                  {isSel && <Check size={12} />}
+                                </div>
+                              );
+                            }
+                          },
+                          { header: 'Name', key: 'name', render: (row) => <span className="text-xs font-bold">{row.name || '—'}</span> },
+                          { header: 'Email', key: 'email', render: (row) => <span className="font-mono text-[10px] text-[var(--color-text-muted)]">{row.email}</span> },
+                          { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> }
+                        ]}
+                        data={filteredContacts}
+                        defaultPageSize={5}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
-                    {/* Contacts DataTable */}
+              {/* Exly Data Section */}
+              <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-3">
+                  <span className="text-xs font-bold uppercase tracking-tight block">Exly Contacts</span>
+                  <Button size="xs" variant="secondary" onClick={loadExlyContactsData} disabled={exlyContactsLoading}>
+                    <RefreshCw size={12} className={exlyContactsLoading ? 'animate-spin' : ''} /> {exlyContactsLoading ? 'Loading...' : 'Fetch Exly'}
+                  </Button>
+                </div>
+                {allExlyContacts.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 flex-wrap bg-[var(--color-bg-primary)] p-3 rounded-xl border border-[var(--color-bg-border)]">
+                      <select
+                        value={filters.exlyOffering}
+                        onChange={e => setFilters(prev => ({ ...prev, exlyOffering: e.target.value }))}
+                        className="px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-xs font-bold outline-none text-[var(--color-text-primary)]"
+                      >
+                        <option value="all">All Exly Offerings</option>
+                        {exlyOfferingsList.map(offering => (
+                          <option key={offering} value={offering}>{offering}</option>
+                        ))}
+                      </select>
+                      <div className="flex-1 min-w-[200px]">
+                        <Input placeholder="Search Name or Email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} icon={Search} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="xs" variant="secondary" onClick={() => {
+                          const filteredIds = filteredExlyContacts.map(l => l._id);
+                          const newSelected = Array.from(new Set([...selectedLeadIds, ...filteredIds]));
+                          setSelectedLeadIds(newSelected);
+                        }}>Select Filtered ({filteredExlyContacts.length})</Button>
+                        <Button size="xs" variant="ghost" onClick={() => setSelectedLeadIds([])} className="text-rose-500 hover:bg-rose-500/10">Clear</Button>
+                      </div>
+                    </div>
                     <div className="rounded-xl overflow-hidden">
                       <DataTable
                         columns={[
@@ -926,12 +1039,20 @@ export default function AdminMailContent() {
                           { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> },
                           {
                             header: 'Exly Offering', render: (row) => {
-                              const offering = row.exlyOfferings || row.exlyOfferingTitle;
-                              return offering ? <Badge variant="info" className="text-[9px]">{offering}</Badge> : <span className="text-[10px] text-[var(--color-text-muted)]">—</span>;
+                              let offerings = '';
+                              if (Array.isArray(row.exlyOfferings)) {
+                                offerings = row.exlyOfferings
+                                  .map(o => typeof o === 'string' ? o : o?.title || o?.offeringId || 'Unknown')
+                                  .filter(Boolean)
+                                  .join(', ');
+                              } else {
+                                offerings = row.exlyOfferingTitle || '';
+                              }
+                              return offerings ? <Badge variant="info" className="text-[9px]">{offerings}</Badge> : <span className="text-[10px] text-[var(--color-text-muted)]">—</span>;
                             }
                           }
                         ]}
-                        data={filteredContacts}
+                        data={filteredExlyContacts}
                         defaultPageSize={5}
                       />
                     </div>
@@ -943,22 +1064,43 @@ export default function AdminMailContent() {
 
           {campaignStep === 3 && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Email Content (Rich Text)</label>
+              <div className="flex items-center justify-between gap-4">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-3">
+                  <input 
+                    type="checkbox"
+                    checked={useRawHtml}
+                    onChange={(e) => {
+                      setUseRawHtml(e.target.checked);
+                      setIsCustomHtml(e.target.checked);
+                    }}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  Raw HTML Mode
+                </label>
                 <div className="flex items-center gap-2">
-
                   <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
                     <Eye size={12} /> Preview
                   </Button>
-                  <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
-                    <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
-                    <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
-                  </label>
+                  {!useRawHtml && (
+                    <>
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
+                        <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
+                        <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
+                      </label>
+                      <Button 
+                        size="xs" 
+                        variant="secondary"
+                        onClick={() => setShowHtmlPasteModal(true)}
+                      >
+                        <Upload size={12} /> Paste HTML
+                      </Button>
+                    </>
+                  )}
                   <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
                     <Upload size={12} /> Attachments ({attachments.length})
                     <input type="file" multiple className="hidden" onChange={handleAttachmentUpload} />
                   </label>
-                  {templates.length > 0 && (
+                  {templates.length > 0 && !useRawHtml && (
                     <select
                       className="bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] rounded-lg px-3 py-1 text-[10px] font-black uppercase outline-none"
                       onChange={(e) => {
@@ -984,9 +1126,67 @@ export default function AdminMailContent() {
                   </Button>
                 </div>
               </div>
-              <div className="bg-white text-black rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
-                <ReactQuill theme="snow" value={content} onChange={setContent} className="h-[400px] mb-12" />
-              </div>
+
+              {useRawHtml ? (
+                <>
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-600 font-bold">
+                    ℹ️ Raw HTML Mode Active - Paste your HTML code to see a live preview below
+                  </div>
+                  <Button 
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowHtmlPasteModal(true)}
+                    className="w-full"
+                  >
+                    <Upload size={14} /> Paste HTML Code
+                  </Button>
+                  {content && (
+                    <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden">
+                      <div className="bg-[var(--color-bg-secondary)] px-3 py-2 flex gap-2">
+                        <button
+                          onClick={() => setPreviewMode('desktop')}
+                          className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'desktop' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
+                        >
+                          Desktop
+                        </button>
+                        <button
+                          onClick={() => setPreviewMode('mobile')}
+                          className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'mobile' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
+                        >
+                          Mobile
+                        </button>
+                      </div>
+                      <div className={`bg-white overflow-auto ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`} style={{ height: '400px' }}>
+                        <iframe
+                          srcDoc={content}
+                          className="w-full h-full border-none"
+                          title="Email Preview"
+                          sandbox="allow-same-origin"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Variable Detection Warning */}
+                  {content.includes('{{') && (
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-start gap-3">
+                      <AlertCircle size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-yellow-600 flex-1">
+                        <p className="font-bold mb-1">Variables Detected</p>
+                        <p>Add fallback values for: {(content.match(/\{\{\w+\}\}/g) || []).join(', ')}</p>
+                        <p className="mt-2 font-mono text-[10px]">Format: {"{{variable_name}}"} or {"{{variable_name|fallback_value}}"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white text-black rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
+                    <ReactQuill theme="snow" value={content} onChange={setContent} className="h-[400px] mb-12" />
+                  </div>
+                </>
+              )}
+              
               {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {attachments.map((att, idx) => (
@@ -997,6 +1197,7 @@ export default function AdminMailContent() {
                   ))}
                 </div>
               )}
+
               <div className="flex items-center gap-2 mt-4 text-xs">
                 <input
                   type="checkbox"
@@ -1006,6 +1207,45 @@ export default function AdminMailContent() {
                   className="rounded border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-action-primary)] focus:ring-[var(--color-action-primary)]"
                 />
                 <label htmlFor="removeUnsubscribe" className="cursor-pointer">Remove Unsubscribe Footer (Not Recommended)</label>
+              </div>
+
+              <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Test Campaign</label>
+                  <span className="text-[9px] text-[var(--color-text-muted)]">Send preview to test email</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    type="email"
+                    placeholder="Test email address"
+                    value={testCampaignEmail}
+                    onChange={e => setTestCampaignEmail(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={async () => {
+                      if (!testCampaignEmail) {
+                        alert('Enter test email');
+                        return;
+                      }
+                      try {
+                        await axios.post('/api/mail/test-campaign', {
+                          subject,
+                          content,
+                          testEmail: testCampaignEmail,
+                          senderProfileId
+                        });
+                        alert(`Test email sent to ${testCampaignEmail}`);
+                      } catch (e) {
+                        alert('Failed to send test: ' + (e.response?.data?.error || e.message));
+                      }
+                    }}
+                  >
+                    <Send size={12} /> Send Test
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1062,6 +1302,7 @@ export default function AdminMailContent() {
                 onClick={() => {
                   handleCreateCampaign();
                   setCampaignStep(1);
+                  setIsCustomHtml(false);
                 }}
                 disabled={createCampaignMutation.isPending || (!title || !subject || !content || !senderProfileId || (selectedLeadIds.length === 0 && activeCsvRecipients.length === 0))}
               >
@@ -1279,7 +1520,7 @@ export default function AdminMailContent() {
       {/* Selected Campaign Detail Modal */}
       {selectedCampaign && (
         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="tm-modal-panel bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" style={{ width: 'min(calc(100vw - 2rem), 1024px)', flexShrink: 0 }} role="dialog" aria-modal="true">
             {/* Modal Header */}
             <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
               <div>
@@ -1381,9 +1622,111 @@ export default function AdminMailContent() {
         />
       )}
 
+      {/* HTML Paste Modal - Full Screen */}
+      {showHtmlPasteModal && (
+        <div className="fixed inset-0 z-[1001] bg-black/60 backdrop-blur-sm flex items-center justify-center p-0">
+          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] w-full h-full flex flex-col overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between flex-shrink-0">
+              <h2 className="text-lg font-black uppercase tracking-tight">Paste HTML Email</h2>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setShowHtmlPasteModal(false);
+                setHtmlPasteText('');
+              }}>
+                <X size={16} />
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex flex-1 overflow-hidden gap-4 p-6">
+              {/* Textarea for HTML */}
+              <div className="flex-1 flex flex-col">
+                <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Paste HTML</label>
+                <textarea
+                  value={htmlPasteText}
+                  onChange={(e) => setHtmlPasteText(e.target.value)}
+                  className="flex-1 p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Paste your HTML email template here..."
+                />
+              </div>
+
+              {/* Live Preview with Desktop/Mobile Toggle */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Preview</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPreviewMode('desktop')}
+                      className={`px-3 py-1 rounded text-[9px] font-bold ${previewMode === 'desktop' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'}`}
+                    >
+                      Desktop
+                    </button>
+                    <button
+                      onClick={() => setPreviewMode('mobile')}
+                      className={`px-3 py-1 rounded text-[9px] font-bold ${previewMode === 'mobile' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'}`}
+                    >
+                      Mobile
+                    </button>
+                  </div>
+                </div>
+                <div className={`flex-1 border border-[var(--color-bg-border)] rounded-xl overflow-auto bg-white ${previewMode === 'mobile' ? 'max-w-sm' : ''}`}>
+                  {htmlPasteText.trim() ? (
+                    <iframe
+                      srcDoc={htmlPasteText}
+                      className="w-full h-full border-none"
+                      title="Email Preview"
+                      sandbox="allow-same-origin"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[var(--color-text-muted)]">
+                      <span className="text-sm">Paste HTML to preview</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowHtmlPasteModal(false);
+                  setHtmlPasteText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (htmlPasteText.trim()) {
+                    setContent(htmlPasteText);
+                    setHtmlFileName('pasted-content.html');
+                    setIsCustomHtml(true);
+                    setShowHtmlPasteModal(false);
+                    setHtmlPasteText('');
+                  }
+                }}
+                disabled={!htmlPasteText.trim()}
+              >
+                <CheckCircle2 size={14} /> Use This HTML
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedLocationForModal && (
+        <LocationLeadsModal
+          location={selectedLocationForModal}
+          onClose={() => setSelectedLocationForModal(null)}
+        />
+      )}
+
       {showPreviewModal && (
         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="tm-modal-panel bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" style={{ width: 'min(calc(100vw - 2rem), 896px)', flexShrink: 0 }} role="dialog" aria-modal="true">
             <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-black uppercase tracking-tight">Email Preview</h2>
@@ -1395,14 +1738,13 @@ export default function AdminMailContent() {
                 <X size={16} />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto bg-white text-black p-8">
-              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
-              {!removeUnsubscribe && (
-                <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #eee', fontSize: '12px', color: '#777', textAlign: 'center', fontFamily: 'sans-serif' }}>
-                  <p style={{ margin: '4px 0' }}>You are receiving this email because you opted in at our website or events.</p>
-                  <p style={{ margin: '4px 0' }}>If you no longer wish to receive these emails, you can <a href="#" style={{ color: '#ef4444', textDecoration: 'underline' }}>unsubscribe here</a>.</p>
-                </div>
-              )}
+            <div className="flex-1 overflow-auto bg-white">
+              <iframe
+                srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body>${DOMPurify.sanitize(content, { ALLOWED_TAGS: false })}</body></html>`}
+                className="w-full h-full border-none"
+                title="Email Preview"
+                sandbox="allow-same-origin"
+              />
             </div>
           </div>
         </div>
@@ -1418,7 +1760,7 @@ function LocationLeadsModal({ location, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="tm-modal-panel bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" style={{ width: 'min(calc(100vw - 2rem), 768px)', flexShrink: 0 }} role="dialog" aria-modal="true">
         {/* Modal Header */}
         <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
           <div>

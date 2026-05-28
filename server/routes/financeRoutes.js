@@ -4,6 +4,7 @@ const multer = require('multer');
 const { protect } = require('../middleware/authMiddleware');
 const {
   uploadFile,
+  uploadFilesMany,
   uploadDocument,
   getDocuments,
   deleteDocument,
@@ -14,12 +15,17 @@ const {
   listPendingInvoices,
   approveInvoice,
   rejectInvoice,
+  createFolder,
+  getFolders,
+  deleteFolder,
+  getFolderBreadcrumb,
+  syncFolderPlacementFromDiskHandler,
 } = require('../controllers/financeController');
 
 // Multer: memory storage for server-side UTApi upload
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 32 * 1024 * 1024 }, // 32MB max
+  limits: { fileSize: 32 * 1024 * 1024, files: 12 },
 });
 
 // Role gate: only ops or admin
@@ -45,7 +51,26 @@ router.patch('/:id/reject', opsOnly, rejectInvoice);
 router.use(opsOnly);
 
 router.post('/upload', upload.single('file'), uploadFile);
+router.post('/upload-many', (req, res, next) => {
+  upload.array('files', 12)(req, res, (err) => {
+    if (err?.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files in one batch (max 12). Upload in smaller groups.',
+      });
+    }
+    if (err) return next(err);
+    return uploadFilesMany(req, res);
+  });
+});
 router.post('/bulk', uploadDocumentsBulk);
+
+router.post('/sync-folder-placement', syncFolderPlacementFromDiskHandler);
+router.post('/reorganize-folders', syncFolderPlacementFromDiskHandler);
+router.post('/folders', createFolder);
+router.get('/folders', getFolders);
+router.get('/folders/:folderId/breadcrumb', getFolderBreadcrumb);
+router.delete('/folders/:folderId', deleteFolder);
 
 router.route('/')
   .post(uploadDocument)

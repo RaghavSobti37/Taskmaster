@@ -25,7 +25,9 @@ class GamificationService {
     const config = await this.getConfig();
     const stepXp = config.stepXp || STEP_XP;
     if (level <= 1) return 0;
-    return (level - 1) * stepXp;
+    // Calculate raw XP, then round up to nearest 100
+    const rawXp = (level - 1) * stepXp;
+    return Math.ceil(rawXp / 100) * 100;
   }
 
   static async awardExp(userId, amount, action, details = {}) {

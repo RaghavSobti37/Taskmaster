@@ -2,6 +2,7 @@ const Project = require('../models/Project');
 const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { formatProjectName } = require('../utils/formatProjectName');
 
 const DEFAULT_WORKSPACES = [
   { name: 'TSC ACADEMY', color: '#3498db' },
@@ -60,7 +61,7 @@ exports.createProject = async (req, res) => {
     const assignedColor = color || await pickDistinctColor();
 
     const project = await Project.create({
-      name,
+      name: formatProjectName(name),
       description,
       tags,
       color: assignedColor,
@@ -200,7 +201,9 @@ exports.updateProject = async (req, res) => {
       if (req.body[key] !== undefined) {
         sanitizedUpdate[key] = key === 'workspace'
           ? req.body[key].toUpperCase().trim()
-          : req.body[key];
+          : key === 'name'
+            ? formatProjectName(req.body[key])
+            : req.body[key];
       }
     }
 

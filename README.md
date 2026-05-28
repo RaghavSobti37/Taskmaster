@@ -110,6 +110,52 @@ If local auth or proxy testing is needed before a normal login token is availabl
 ## Version
 - Current: **1.7.25**
 
+## [2026-05-28] Version 1.7.26 - Finance Ops + Admin Script Runner
+### New
+- Added **Admin Script Runner** page at `/admin/scripts` for admins to list and execute server scripts with one-click run, live output, exit code, and duration.
+- Added backend admin script execution API: `GET /api/admin/scripts` and `POST /api/admin/scripts/:scriptId/run`.
+- Added new sidebar Admin entry: **Script Runner**.
+
+### Finance Upload Improvements
+- Added robust multi-file finance upload pipeline using `POST /api/finance/upload-many`.
+- Added drag-and-drop + multi-select upload support in Finance upload modal.
+- Added client batching for large uploads (small batch uploads with progress and partial success handling).
+- Added retry/backoff and per-file failure capture for unstable network paths.
+- Raised UploadThing route limits for finance uploader and set `minFileCount: 0` to support mixed file type batches.
+- Added graceful handling for large upload bursts and partial-upload staging.
+
+### Finance Data/UX Updates
+- Finance table now supports folder delete action from row hover.
+- Finance root/all-project view now includes folders + documents.
+- Finance sorting/date/pagination updates remain aligned with shared table pagination.
+
+### Project Name Formatting
+- Enforced uppercase project names globally (server + client normalization).
+
+### Scripting / Memory Folder Structure
+```text
+server/
+  scripts/
+    importInvoices.js
+    deleteFinanceFolders.js
+    reorganizeFinanceFolders.js
+    ...existing scripts
+  routes/
+    adminScriptsRoutes.js
+  utils/
+    financeDiskSync.js
+    formatProjectName.js
+client/
+  src/
+    pages/admin/
+      AdminScriptsPage.jsx
+    utils/
+      financeUpload.js
+      projectUtils.js
+    components/finance/
+      UploadDocumentModal.jsx
+```
+
 ## [2026-05-28] Version 1.7.25 - Major UI/UX & Admin Updates
 ### Structure Changes
 - **Workspaces:** Added `order` field for drag-and-drop reordering (admin-only)

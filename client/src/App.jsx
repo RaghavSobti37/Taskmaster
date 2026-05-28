@@ -10,6 +10,22 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { useToast } from './contexts/ToastContext';
 import { DashboardSkeleton } from './components/ui';
 import axios from 'axios';
+import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
+
+const normalizeProjectsInResponse = (url, data) => {
+  if (data == null) return data;
+  const path = (url || '').split('?')[0];
+  if (path === '/api/projects' || path.endsWith('/api/projects')) {
+    return normalizeProjects(data);
+  }
+  if (/^\/api\/projects\/[^/]+$/.test(path) && data && !Array.isArray(data)) {
+    return normalizeProject(data);
+  }
+  if (path.startsWith('/api/finance') && data?.data) {
+    return { ...data, data: normalizePopulatedProjectList(data.data) };
+  }
+  return data;
+};
 
 // Helper to retry dynamic imports when a redeploy changes chunk hashes
 const lazyWithRetry = (componentImport) => 
@@ -46,6 +62,7 @@ const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView')
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
 const AdminLogsPage = lazyWithRetry(() => import('./pages/admin/AdminLogsPage'));
+const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
 const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
@@ -79,6 +96,9 @@ function App() {
   React.useEffect(() => {
     const resInterceptor = axios.interceptors.response.use(
       (response) => {
+        if (response.data != null) {
+          response.data = normalizeProjectsInResponse(response.config?.url, response.data);
+        }
         const method = response.config.method?.toLowerCase();
         const skipToast = response.config.headers?.['x-skip-toast'] || response.config.headers?.['X-Skip-Toast'];
         if (['post', 'put', 'patch', 'delete'].includes(method) && !skipToast) {
@@ -140,6 +160,7 @@ function App() {
                 <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
                 <Route path="/admin/audits" element={<AdminAudits />} />
                 <Route path="/admin/logs" element={<AdminLogsPage />} />
+                <Route path="/admin/scripts" element={<AdminScriptsPage />} />
                 <Route path="/admin/gamification" element={<AdminGamification />} />
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
                 <Route path="/workspace/emails" element={<EmailsPage />} />

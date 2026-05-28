@@ -108,7 +108,50 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.24**
+- Current: **1.7.25**
+
+## [2026-05-28] Version 1.7.25 - Major UI/UX & Admin Updates
+### Structure Changes
+- **Workspaces:** Added `order` field for drag-and-drop reordering (admin-only)
+- **Workspace Reordering:** New `PUT /api/projects/workspaces` endpoint with order persistence
+- **Deleted:** SOCIAL MEDIA workspace from defaults (production migration script included)
+- **Production Migration:** Automated migration with `server/scripts/migrate-production.js` for database schema updates
+
+### UI/UX Improvements
+- **Modal System:** Unified `ModalShell` component with consistent sizing and centering (replaces scattered modal implementations)
+- **Admin Workspaces:** Drag project cards between workspaces; drag workspace headers to reorder
+- **Leads Analytics:** 
+  - Added "Warm Leads" stat (meaningful connection + not converted)
+  - Clickable stats to filter: Warm Leads, Converted, Total
+  - Real-time stats by role (admin sees global, reps see personal)
+- **Task Colors:** Tasks now show workspace color (not project color) on dashboard
+- **Settings Redesign:**
+  - Discord-style save bar: full-width bottom bar with Cancel + Save buttons
+  - Improved toggle switches (dark mode, notifications) with better styling
+  - Added Sign Out button in Password & Security section
+  - Leave request form: added Cancel button
+  - Invoice amount: removed scroll-wheel increment (text input with decimal validation)
+- **Sidebar Cleanup:**
+  - Removed Settings and Logout nav items
+  - Removed "Online" status indicator and Refresh button
+  - Cleaner user profile card (name + role only)
+
+### Data Management
+- **All Data Page:** Consolidated to single page (removed tabs); stats moved to corner badge
+- **Import Modal:** Replaced side drawer with centered ModalShell
+- **Search Bar:** Full-width search + Import/Refresh buttons in single row
+- **Delete Button:** Shows only when items selected
+
+### Dashboard & Analytics
+- **Attendance:** Removed Hours column
+- **Daily Logs:** Removed "Completed Today" card (kept Activity Grid and Goal)
+- **All Data Page:** Shows only Total count in compact badge (removed 4 stat cards)
+
+### Bug Fixes
+- Fixed password verification: backend now selects password field before comparing
+- Fixed sidebar "All Data" highlight on other admin pages
+- Fixed LeadsPage useEffect hook import
+- Fixed statFilter initialization order in LeadsPage
 
 ## [2026-05-27] Version 1.7.24
 - Implemented CRM Webhook for direct Next.js Booked Call ingest.

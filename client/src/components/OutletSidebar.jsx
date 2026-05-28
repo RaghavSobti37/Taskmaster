@@ -482,6 +482,13 @@ const OutletSidebar = () => {
                     collapsed={!isOpen}
                     isMobile={isMobile}
                   />
+                  <NavItem
+                    to="/admin/gamification"
+                    icon={Zap}
+                    label="Gamification"
+                    collapsed={!isOpen}
+                    isMobile={isMobile}
+                  />
                 </NavGroup>
               )}
             

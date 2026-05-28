@@ -70,6 +70,7 @@ const AttendancePage = lazyWithRetry(() => import('./pages/management/Attendance
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
 const EquipmentPage = lazyWithRetry(() => import('./pages/management/EquipmentPage'));
 const ContactsPage = lazyWithRetry(() => import('./pages/management/ContactsPage'));
+const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 
 function App() {
   const { loading } = useAuth();
@@ -139,6 +140,7 @@ function App() {
                 <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
                 <Route path="/admin/audits" element={<AdminAudits />} />
                 <Route path="/admin/logs" element={<AdminLogsPage />} />
+                <Route path="/admin/gamification" element={<AdminGamification />} />
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
                 <Route path="/workspace/emails" element={<EmailsPage />} />
               </Route>

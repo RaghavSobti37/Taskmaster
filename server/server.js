@@ -169,6 +169,7 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/artists', artistRoutes);
     app.use('/api/v2/artists', require('./routes/artistV2Routes'));
     app.use('/api/gamification', require('./routes/gamificationRoutes'));
+    app.use('/api/gamification-admin', require('./routes/gamificationAdminRoutes'));
 
 // Public tracking webhooks & unsubscribe endpoints
 app.use(require('./routes/track')); // Mounts /webhooks/bounces and /unsubscribe at root

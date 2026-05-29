@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const { isValidDisplayCity, isEmailImageProxy, lookupGeoAsync, lookupGeoSync } = require('../utils/geoLookup');
+const { isValidDisplayCity, isEmailImageProxy, extractClientIp, lookupGeoAsync, lookupGeoSync, resolveMailEventCityAsync } = require('../utils/geoLookup');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -19,7 +19,7 @@ function isAntiSpamBot(userAgent) {
 }
 
 const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich = false } = {}) => {
-  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = extractClientIp(req);
   let raw = enrich ? await lookupGeoAsync(ip) : lookupGeoSync(ip);
 
   if (skipProxyGeo && isEmailImageProxy(userAgent)) {
@@ -29,6 +29,15 @@ const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich
     return { ...raw, city: null };
   }
   return raw;
+};
+
+const mailEventGeoPayload = (location) => {
+  const city = isValidDisplayCity(location?.city) ? location.city.trim() : undefined;
+  const country = location?.country || undefined;
+  return {
+    ipAddress: location?.ip || undefined,
+    location: city || country ? { city, country } : undefined,
+  };
 };
 
 const locationIncForCity = (city, field) => {
@@ -63,7 +72,9 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         if (isAntiSpamBot(userAgent)) return;
 
         // Run the local in-memory location lookup (Gmail proxy IP ≠ reader city — skip geo on opens)
-        const location = await buildEventLocation(req, userAgent, { skipProxyGeo: true });
+        const location = isEmailImageProxy(userAgent)
+          ? await buildEventLocation(req, userAgent, { skipProxyGeo: true })
+          : await buildEventLocation(req, userAgent, { enrich: true });
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
@@ -109,9 +120,9 @@ router.get('/open/:pixelId.gif', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
-                ipAddress: location?.ip || '127.0.0.1',
+                tenantId: camp.tenantId,
                 userAgent,
-                location
+                ...mailEventGeoPayload(location),
               })
             ]);
           } else {
@@ -137,9 +148,9 @@ router.get('/open/:pixelId.gif', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
-                ipAddress: location?.ip || '127.0.0.1',
+                tenantId: camp.tenantId,
                 userAgent,
-                location
+                ...mailEventGeoPayload(location),
               })
             ]);
           }
@@ -189,7 +200,10 @@ router.get('/click/:clickId', async (req, res) => {
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;
 
-        logger.info('[Track Click]', { clickId: String(clickId).slice(0, 8), city: location?.city, ip: location?.ip?.slice(0, 12) });
+        logger.info('TrackClick', 'geo saved', { clickId: String(clickId).slice(0, 8), city: location?.city, ip: location?.ip });
+        // #region agent log
+        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:click',message:'click geo',data:{clickId:String(clickId).slice(0,8),city:location?.city,ip:location?.ip},timestamp:Date.now(),hypothesisId:'H-ip-save',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
 
         await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
 
@@ -228,10 +242,10 @@ router.get('/click/:clickId', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
+                tenantId: camp.tenantId,
                 linkClicked: finalUrl,
-                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
-                location
+                ...mailEventGeoPayload(location),
               })
             ]);
           } else {
@@ -257,10 +271,10 @@ router.get('/click/:clickId', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
+                tenantId: camp.tenantId,
                 linkClicked: finalUrl,
-                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
-                location
+                ...mailEventGeoPayload(location),
               })
             ]);
           }

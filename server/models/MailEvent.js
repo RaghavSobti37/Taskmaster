@@ -15,8 +15,8 @@ const MailEventSchema = new mongoose.Schema({
   ipAddress: { type: String },
   userAgent: { type: String },
   location: {
-    country: { type: String, default: 'Unknown' },
-    city: { type: String, default: 'Unknown' }
+    country: { type: String },
+    city: { type: String }
   }
 }, { timestamps: true });
 

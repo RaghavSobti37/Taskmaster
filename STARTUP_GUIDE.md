@@ -39,6 +39,8 @@ VITE_API_URL=http://localhost:5000
 
 If `VITE_API_URL` is empty, the client will use relative `/api` routes and rely on the Vite proxy.
 
+**Production (Vercel frontend + Render API):** set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` on the static host. Set `APP_BASE_URL` to the same API URL on Render for email open/click tracking.
+
 ## 2. Install dependencies
 
 ```bash

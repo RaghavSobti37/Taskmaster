@@ -104,7 +104,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
-                ipAddress: ip || '127.0.0.1',
+                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
                 location
               })
@@ -116,8 +116,10 @@ router.get('/open/:pixelId.gif', async (req, res) => {
             // Build the dynamic location breakdown update for MailCampaign
             const updateObj = {
               $set: { "recipients.$.status": "Opened" },
-              $inc: { "stats.opened": 1 },
-              $inc: { [`locationBreakdown.${cleanCity}.opens`]: 1 }
+              $inc: {
+                "stats.opened": 1,
+                [`locationBreakdown.${cleanCity}.opens`]: 1
+              }
             };
 
             await Promise.all([
@@ -134,7 +136,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
                 email: log.leadEmail,
                 timestamp: new Date(),
                 campaignId: camp._id,
-                ipAddress: ip || '127.0.0.1',
+                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
                 location
               })
@@ -228,7 +230,7 @@ router.get('/click/:clickId', async (req, res) => {
                 timestamp: new Date(),
                 campaignId: camp._id,
                 linkClicked: finalUrl,
-                ipAddress: ip || '127.0.0.1',
+                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
                 location
               })
@@ -240,8 +242,10 @@ router.get('/click/:clickId', async (req, res) => {
             // Build the dynamic location breakdown update for MailCampaign
             const updateObj = {
               $set: { "recipients.$.status": "Clicked" },
-              $inc: { "stats.clicked": 1 },
-              $inc: { [`locationBreakdown.${cleanCity}.clicks`]: 1 }
+              $inc: {
+                "stats.clicked": 1,
+                [`locationBreakdown.${cleanCity}.clicks`]: 1
+              }
             };
 
             await Promise.all([
@@ -259,7 +263,7 @@ router.get('/click/:clickId', async (req, res) => {
                 timestamp: new Date(),
                 campaignId: camp._id,
                 linkClicked: finalUrl,
-                ipAddress: ip || '127.0.0.1',
+                ipAddress: location?.ip || '127.0.0.1',
                 userAgent,
                 location
               })

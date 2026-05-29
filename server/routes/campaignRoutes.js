@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
@@ -8,6 +11,19 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 
 router.use(protect);
+
+const attachmentDir = path.join(__dirname, '../uploads/campaign-attachments');
+if (!fs.existsSync(attachmentDir)) fs.mkdirSync(attachmentDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: attachmentDir,
+    filename: (_req, file, cb) => {
+      cb(null, `${crypto.randomBytes(16).toString('hex')}_${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
 router.get('/', async (req, res) => {
   try {
@@ -29,6 +45,19 @@ router.get('/', async (req, res) => {
       camp.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
     }
     res.json(allCampaigns);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/upload-attachment', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    res.json({
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+      storageKey: req.file.filename
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -66,14 +95,12 @@ router.get('/:id', async (req, res) => {
     const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
     campaign.events = events;
 
-    // Fetch all events for this campaign to calculate dynamic, unified aggregates
     const allEvents = await MailEvent.find({ campaignId: campaign._id }).lean();
     
     const locationBreakdown = {};
     const timeSeriesMap = {};
     
     allEvents.forEach(evt => {
-      // 1. Resolve Location
       let city = 'Unknown';
       if (evt.metadata) {
         if (evt.metadata.city) {
@@ -95,7 +122,6 @@ router.get('/:id', async (req, res) => {
         locationBreakdown[city].clicks++;
       }
       
-      // 2. Resolve Time Series
       if (evt.eventType === 'Open' || evt.eventType === 'Click') {
         const date = new Date(evt.timestamp);
         const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
@@ -119,7 +145,6 @@ router.get('/:id', async (req, res) => {
       }))
       .sort((a, b) => new Date(a.time) - new Date(b.time));
 
-    // Normalize campaign.metrics for both core and legacy campaigns in the frontend
     const statsObj = campaign.stats || { total, sent, opened, clicked, bounced, unsubscribed, invalid };
     campaign.metrics = {
       totalSent: statsObj.sent || 0,
@@ -136,10 +161,11 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { title, subject, content, senderProfileId, eventTag, leadIds, customRecipients } = req.body;
+    const {
+      title, subject, content, senderProfileId, senderMode, senderProfileIds,
+      systemProvider, includeSignature, attachments, eventTag, leadIds, customRecipients
+    } = req.body;
     const campaignId = crypto.randomBytes(12).toString('hex');
-
-
 
     const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds }, unsubscribed: { $ne: true }, emailStatus: { $ne: 'Bounced' } }) : [];
     const recipients = leads.map(l => ({
@@ -160,12 +186,29 @@ router.post('/', async (req, res) => {
       return true;
     });
 
+    const mode = senderMode || 'single';
+    if (mode === 'single' && !senderProfileId) {
+      return res.status(400).json({ error: 'senderProfileId required for single sender mode' });
+    }
+    if (mode === 'pool' && (!senderProfileIds || senderProfileIds.length === 0)) {
+      return res.status(400).json({ error: 'At least one profile required for pool mode' });
+    }
+
     const campaign = await Campaign.create({
       campaignId,
       title,
       subject,
       content,
-      senderProfileId,
+      senderProfileId: senderProfileId || undefined,
+      senderMode: mode,
+      senderProfileIds: senderProfileIds || [],
+      systemProvider: systemProvider || null,
+      includeSignature: includeSignature !== false,
+      attachments: (attachments || []).map((a) => ({
+        filename: a.filename,
+        contentType: a.contentType,
+        storageKey: a.storageKey
+      })),
       eventTag: eventTag || 'General',
       recipients: allRecipients,
       metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },

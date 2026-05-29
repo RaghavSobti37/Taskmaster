@@ -87,6 +87,31 @@ flowchart LR
 
 ---
 
+## 7. Mail Engine (v1.7.32+)
+
+### Campaign create payload
+* Large HTML + base64 attachments caused `PayloadTooLargeError` when frontend proxied through Vercel (~4.5MB cap).
+* Fix: `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` on static host; attachments via `POST /api/campaigns/upload-attachment`.
+
+### Sender modes (`Campaign.senderMode`)
+| Mode | Behavior |
+|------|----------|
+| `single` | One `EmailProfile` SMTP (or global Resend if configured) |
+| `pool` | Round-robin across `senderProfileIds`; skips profiles at daily limit |
+| `system_resend` | Uses `RESEND_API_KEY` env |
+| `system_smtp` | Uses `SMTP_HOST/USER/PASS` env |
+
+### Tracking
+* Pixel/click URLs use `APP_BASE_URL` (API origin). Local dev defaults to Render API unless `TRACKING_USE_LOCAL=true`.
+* `track.js` records opens/clicks via `EmailLog` + `MailEvent`; fixed `location.ip` and MailCampaign `$inc` bugs in v1.7.32.
+
+### SMTP profiles
+* `EmailProfile`: `providerType`, `dailyLimit`, `sendStats` (today/total).
+* Presets in `server/utils/smtpPresets.js` and `client/src/utils/smtpPresets.js`.
+* Signatures: client toggle + raw HTML editor; server appends via `emailSignature.js` if missing at send time.
+
+---
+
 ## 5. Current Verified Local Behavior
 
 - The backend is confirmed working on `http://localhost:5000`.
@@ -98,6 +123,7 @@ flowchart LR
 
 * Ensure `server/.env` is populated with all required keys.
 * Ensure `client/.env` has `VITE_API_URL` if explicit backend configuration is needed.
+* **Production mail:** set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` on Vercel; set `APP_BASE_URL` to the same API origin on Render.
 * Start MongoDB before launching the backend.
 * Start Redis if you require queue and cache features.
 * Start backend first, then frontend.

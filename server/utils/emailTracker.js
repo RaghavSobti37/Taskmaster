@@ -9,9 +9,11 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl) => {
   await EmailLog.create({ campaignId, leadEmail, pixelId, clickId });
 
   let cleanBaseUrl = process.env.APP_BASE_URL || baseUrl || 'https://tsccoreknot.com';
-  if (cleanBaseUrl.includes('localhost') || cleanBaseUrl.includes('127.0.0.1')) {
-    cleanBaseUrl = 'https://tsccoreknot.com';
+  const useLocalTracking = process.env.TRACKING_USE_LOCAL === 'true';
+  if (!useLocalTracking && (cleanBaseUrl.includes('localhost') || cleanBaseUrl.includes('127.0.0.1'))) {
+    cleanBaseUrl = 'https://YOUR-RENDER-SERVICE.onrender.com';
   }
+  cleanBaseUrl = cleanBaseUrl.replace(/\/$/, '');
   const unsubscribeUrl = `${cleanBaseUrl}/unsubscribe?email=${encodeURIComponent(leadEmail)}&campaignId=${campaignId}&recipientId=${pixelId}`;
 
   // Replace manual placeholders first, otherwise append a standard footer

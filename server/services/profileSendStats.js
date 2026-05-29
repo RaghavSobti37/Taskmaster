@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
 const { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, getDailyLimitForProvider, getProfileRotationProviders } = require('../utils/smtpPresets');

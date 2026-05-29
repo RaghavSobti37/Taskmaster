@@ -942,16 +942,6 @@ export const useRejectLeaveRequest = () => {
   });
 };
 
-export const useBatchMarkPresent = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload) => axios.post('/api/attendance/batch/present', payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
-    },
-  });
-};
-
 export const useResetAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({

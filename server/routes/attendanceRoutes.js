@@ -12,8 +12,11 @@ const {
   endOfDayFromKey,
   todayStart,
   formatHHMM,
-  isWeekend,
+  getCurrentWeekRange,
+  validateAttendanceTimes,
+  parseTimeToMinutes,
 } = require('../utils/attendanceDate');
+const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
 
@@ -21,7 +24,6 @@ const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 
 const isOps = (user) => isOpsUser(user);
 
-const DEFAULT_CHECKIN_TIME = '10:30';
 const STANDARD_SHIFT_MINUTES = 8 * 60;
 const DISCREPANCY_THRESHOLD_MINUTES = 30;
 
@@ -40,12 +42,6 @@ const isOfficeIp = (ip) => {
   const whitelist = getOfficeIpWhitelist();
   if (whitelist.length === 0) return false;
   return whitelist.some((w) => ip === w || ip.endsWith(w));
-};
-
-const parseTimeToMinutes = (timeStr) => {
-  if (!timeStr || !timeStr.includes(':')) return 0;
-  const [h, m] = timeStr.split(':').map(Number);
-  return (h * 60) + (m || 0);
 };
 
 const computeAttendanceMetrics = async (attendanceDoc) => {
@@ -107,23 +103,7 @@ const isInsideWindow = (value, targetHour, targetMinute) => {
   return d >= start && d <= end;
 };
 
-const getWeekRange = (weekStartInput) => {
-  let weekStart;
-  if (weekStartInput) {
-    weekStart = toStartOfDay(weekStartInput);
-  } else {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-    weekStart = new Date(now);
-    weekStart.setDate(now.getDate() + diffToMonday);
-    weekStart.setHours(0, 0, 0, 0);
-  }
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
-  return { weekStart, weekEnd };
-};
+const getWeekRange = (weekStartInput) => getCurrentWeekRange(weekStartInput);
 
 const materializeApprovedLeave = async (request, reviewerId) => {
   const start = toStartOfDay(request.fromDate);
@@ -221,10 +201,8 @@ router.get('/', async (req, res) => {
 router.post('/check', async (req, res) => {
   try {
     const now = new Date();
-    if (isWeekend(now) && !isAdminUser(req.user)) {
-      return res.status(400).json({ error: 'Weekend — office is closed. Attendance not required.' });
-    }
     const today = todayStart();
+    const todayKey = getDateKey(now);
     const type = req.body?.type === 'out' ? 'out' : 'in';
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -237,13 +215,27 @@ router.post('/check', async (req, res) => {
     if (type === 'out' && existing?.timeOut) {
       return res.status(400).json({ error: 'Already marked out for today' });
     }
+    if (type === 'out' && !existing?.timeIn) {
+      return res.status(400).json({ error: 'Must check in before checking out' });
+    }
 
     const timeValue = formatHHMM(now);
+    const timeValidation = validateAttendanceTimes({
+      dateKey: todayKey,
+      timeIn: type === 'in' ? timeValue : existing?.timeIn,
+      timeOut: type === 'out' ? timeValue : undefined,
+      onLeave: false,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
+
     const clientIp = resolveClientIp(req);
     const checkInFields = type === 'in' ? {
       timeIn: timeValue,
       checkInIp: clientIp,
       workMode: isOfficeIp(clientIp) ? 'office' : 'wfh',
+      onLeave: false,
     } : { timeOut: timeValue };
 
     const attendance = await Attendance.findOneAndUpdate(
@@ -427,47 +419,9 @@ router.patch('/leave/requests/:id/reject', async (req, res) => {
   }
 });
 
-router.post('/batch/present', async (req, res) => {
-  try {
-    if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can batch update attendance' });
-    const { date, userIds } = req.body;
-    if (!date) return res.status(400).json({ error: 'date is required' });
-
-    const day = toStartOfDay(date);
-    const users = userIds?.length
-      ? await User.find({ _id: { $in: userIds } }).select('name')
-      : await User.find({}).select('name');
-
-    const results = await Promise.all(
-      users.map((userRow) =>
-        Attendance.findOneAndUpdate(
-          { userId: userRow._id, date: day },
-          {
-            $set: {
-              userId: userRow._id,
-              username: userRow.name,
-              date: day,
-              timeIn: DEFAULT_CHECKIN_TIME,
-              timeOut: '18:00',
-              isHalfDay: false,
-              onLeave: false,
-              createdBy: req.user._id,
-            },
-          },
-          { new: true, upsert: true, setDefaultsOnInsert: true }
-        )
-      )
-    );
-
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.delete('/reset', async (req, res) => {
   try {
-    if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can reset attendance data' });
+    if (!isAdminUser(req.user)) return res.status(403).json({ error: 'Only admins can reset attendance data' });
     const [attendanceResult, leaveResult] = await Promise.all([
       Attendance.deleteMany({}),
       LeaveRequest.deleteMany({}),
@@ -499,8 +453,23 @@ router.put('/:id', async (req, res) => {
     if (payload.workMode) {
       payload.workModeOverrideBy = req.user._id;
     }
+
+    const existing = await Attendance.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
+
+    const dateKey = getDateKey(payload.date || existing.date);
+    const timeValidation = validateAttendanceTimes({
+      dateKey,
+      timeIn: payload.timeIn !== undefined ? payload.timeIn : existing.timeIn,
+      timeOut: payload.timeOut !== undefined ? payload.timeOut : existing.timeOut,
+      onLeave: payload.onLeave !== undefined ? payload.onLeave : existing.onLeave,
+      isHalfDay: payload.isHalfDay !== undefined ? payload.isHalfDay : existing.isHalfDay,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
+
     const row = await Attendance.findByIdAndUpdate(req.params.id, { $set: payload }, { new: true });
-    if (!row) return res.status(404).json({ error: 'Attendance record not found' });
     await awardAttendanceXpIfEligible(row);
     res.json(row);
   } catch (error) {
@@ -513,6 +482,20 @@ router.put('/upsert/by-user-date', async (req, res) => {
     if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can edit attendance' });
     const { userId, username, date, timeIn, timeOut, isHalfDay, onLeave, reason } = req.body;
     if (!userId || !date) return res.status(400).json({ error: 'userId and date are required' });
+
+    const dateKey = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date.trim())
+      ? date.trim()
+      : getDateKey(date);
+    const timeValidation = validateAttendanceTimes({
+      dateKey,
+      timeIn: timeIn || '',
+      timeOut: timeOut || '',
+      onLeave: !!onLeave,
+      isHalfDay: !!isHalfDay,
+    });
+    if (!timeValidation.ok) {
+      return res.status(400).json({ error: timeValidation.error });
+    }
 
     const row = await Attendance.findOneAndUpdate(
       { userId, date: toStartOfDay(date) },

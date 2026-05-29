@@ -457,11 +457,17 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     syncUnsubscribeInContent(html, include);
 
   const buildEditorContent = (html) => {
+    if (useRawHtml) return html || '';
     let result = html || '';
     result = applyUnsubscribeToContent(result);
     result = includeSignature ? applySignatureToContent(result) : stripSignature(result);
     return result;
   };
+
+  const getTemplateSavePayload = (html) => ({
+    content: html || '',
+    format: useRawHtml ? 'rawHtml' : 'visual',
+  });
 
   const detectedVariables = useMemo(() => {
     const parsed = parseTemplateVariables(content);
@@ -750,7 +756,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     try {
       await saveTemplateMutation.mutateAsync({
         name: `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.html`,
-        content: processedContent
+        ...getTemplateSavePayload(useRawHtml ? content : processedContent),
       });
     } catch (templateErr) {
       console.warn('Template auto-save failed:', templateErr.message);
@@ -1365,7 +1371,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   <Button size="xs" variant="primary" onClick={() => {
                     const name = window.prompt('Enter a name for this template:');
                     if (name) {
-                      saveTemplateMutation.mutate({ name, content });
+                      saveTemplateMutation.mutate({ name, ...getTemplateSavePayload(content) });
                       alert('Template Saved!');
                     }
                   }}>
@@ -1444,6 +1450,27 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     <Button size="xs" variant="secondary" onClick={() => setShowHtmlPasteModal(true)}>
                       <Upload size={12} /> Paste HTML
                     </Button>
+                    {templates.filter((t) => t.format === 'rawHtml' || /\.html$/i.test(t.name || '')).length > 0 && (
+                      <select
+                        className="bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] rounded-lg px-3 py-1 text-[10px] font-black uppercase outline-none"
+                        defaultValue=""
+                        onChange={(e) => {
+                          const t = templates.find((temp) => temp._id === e.target.value);
+                          if (t) {
+                            setContent(t.content);
+                            setUseRawHtml(true);
+                            e.target.value = '';
+                          }
+                        }}
+                      >
+                        <option value="">Load Raw Template...</option>
+                        {templates
+                          .filter((t) => t.format === 'rawHtml' || /\.html$/i.test(t.name || ''))
+                          .map((t) => (
+                            <option key={t._id} value={t._id}>{t.name}</option>
+                          ))}
+                      </select>
+                    )}
                     {includeSignature && !hasSignatureBlock(content) && (
                       <span className="text-amber-500 text-[10px] font-bold">Signature not in HTML yet</span>
                     )}
@@ -1913,6 +1940,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       onClick={() => {
                         setMode('new_campaign');
                         setContent(t.content);
+                        setUseRawHtml(t.format === 'rawHtml' || /\.html$/i.test(t.name || ''));
+                        setIsCustomHtml(t.format === 'rawHtml');
                         setCampaignStep(3);
                       }}
                     >

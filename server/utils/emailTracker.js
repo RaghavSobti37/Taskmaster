@@ -6,6 +6,18 @@ const {
   shouldSkipClickWrap
 } = require('./trackingUrls');
 
+/** Gmail/Outlook skip display:none images — inject a visible 1×1 pixel before </body>. */
+const injectOpenPixel = (html, pixelTag) => {
+  const base = html || '';
+  if (/<\/body>/i.test(base)) {
+    return base.replace(/<\/body>/i, `${pixelTag}\n</body>`);
+  }
+  if (/<\/html>/i.test(base)) {
+    return base.replace(/<\/html>/i, `${pixelTag}\n</html>`);
+  }
+  return `${base}${pixelTag}`;
+};
+
 const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, options = {}) => {
   const pixelId = crypto.randomBytes(16).toString('hex');
 
@@ -25,8 +37,8 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, opti
     processedHtml = processedHtml + unsubscribeFooter;
   }
 
-  const trackingPixel = `<img src="${trackingBaseUrl}/api/track/open/${pixelId}.gif" width="1" height="1" alt="" style="display:none;" />`;
-  processedHtml = processedHtml + trackingPixel;
+  const trackingPixel = `<img src="${trackingBaseUrl}/api/track/open/${pixelId}.gif" width="1" height="1" border="0" alt="" />`;
+  processedHtml = injectOpenPixel(processedHtml, trackingPixel);
 
   const ctaRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi;
   const linkClickIds = [];
@@ -47,4 +59,4 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, opti
   return { processedHtml, pixelId, clickId: linkClickIds[0] || null };
 };
 
-module.exports = { prepareCampaignHTML };
+module.exports = { prepareCampaignHTML, injectOpenPixel };

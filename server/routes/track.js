@@ -35,9 +35,11 @@ const parseClientNetworkLocation = (req) => {
 
 function isAntiSpamBot(userAgent) {
   if (!userAgent) return false;
-  // Gmail/Yahoo image proxies are real opens — do not block
-  if (/GoogleImageProxy|YahooMailProxy|AppleMail/i.test(userAgent)) return false;
-  const botKeywords = [/bot/i, /crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i];
+  // Email client image proxies — real opens (Gmail uses ggpht.com GoogleImageProxy)
+  if (/GoogleImageProxy|ggpht\.com|YahooMailProxy|AppleMail/i.test(userAgent)) return false;
+  const botKeywords = [/crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i];
+  // Avoid broad /bot/i — matches unrelated substrings; use explicit bot UAs
+  if (/\b(bot|bingpreview|facebookexternalhit)\b/i.test(userAgent)) return true;
   return botKeywords.some((regex) => regex.test(userAgent));
 }
 

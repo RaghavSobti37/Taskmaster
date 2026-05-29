@@ -30,13 +30,17 @@ router.get('/templates', protect, async (req, res) => {
 
 router.post('/templates', protect, async (req, res) => {
   try {
-    const { name, content } = req.body;
+    const { name, content, format } = req.body;
+    const payload = {
+      content,
+      format: format === 'rawHtml' ? 'rawHtml' : 'visual',
+    };
     let template = await MailTemplate.findOne({ name });
     if (template) {
-      template.content = content;
+      Object.assign(template, payload);
       await template.save();
     } else {
-      template = await MailTemplate.create({ name, content, createdBy: req.user._id });
+      template = await MailTemplate.create({ name, ...payload, createdBy: req.user._id });
     }
     res.json(template);
   } catch (err) {

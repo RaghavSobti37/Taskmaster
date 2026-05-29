@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const geoip = require('geoip-lite');
 const logger = require('../utils/logger');
-const { isValidDisplayCity, isEmailImageProxy } = require('../utils/mailEventLocation');
+const { isValidDisplayCity, isEmailImageProxy, lookupGeoAsync, lookupGeoSync } = require('../utils/geoLookup');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -10,43 +9,19 @@ const Campaign = require('../models/Campaign');
 
 
 
-const parseClientNetworkLocation = (req) => {
-  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  if (ip && ip.includes(',')) {
-    ip = ip.split(',')[0].trim();
-  }
-
-  // Strip ::ffff: prefix if present (IPv4-mapped IPv6 address)
-  if (ip && ip.startsWith('::ffff:')) {
-    ip = ip.substring(7);
-  }
-
-  // Handle local development network loops cleanly
-  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1')) {
-    return { city: 'Mumbai', region: 'MH', country: 'IN', ip: '127.0.0.1' };
-  }
-
-  const geo = geoip.lookup(ip);
-  return {
-    city: geo?.city || null,
-    region: geo?.region || null,
-    country: geo?.country || null,
-    ip
-  };
-};
 
 function isAntiSpamBot(userAgent) {
   if (!userAgent) return false;
-  // Email client image proxies — real opens (Gmail uses ggpht.com GoogleImageProxy)
   if (/GoogleImageProxy|ggpht\.com|YahooMailProxy|AppleMail/i.test(userAgent)) return false;
   const botKeywords = [/crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i];
-  // Avoid broad /bot/i — matches unrelated substrings; use explicit bot UAs
   if (/\b(bot|bingpreview|facebookexternalhit)\b/i.test(userAgent)) return true;
   return botKeywords.some((regex) => regex.test(userAgent));
 }
 
-const buildEventLocation = (req, userAgent, { skipProxyGeo = false } = {}) => {
-  const raw = parseClientNetworkLocation(req);
+const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich = false } = {}) => {
+  let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  let raw = enrich ? await lookupGeoAsync(ip) : lookupGeoSync(ip);
+
   if (skipProxyGeo && isEmailImageProxy(userAgent)) {
     return { city: null, region: raw.region, country: raw.country, ip: raw.ip };
   }
@@ -88,7 +63,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         if (isAntiSpamBot(userAgent)) return;
 
         // Run the local in-memory location lookup (Gmail proxy IP ≠ reader city — skip geo on opens)
-        const location = buildEventLocation(req, userAgent, { skipProxyGeo: true });
+        const location = await buildEventLocation(req, userAgent, { skipProxyGeo: true });
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
@@ -209,7 +184,7 @@ router.get('/click/:clickId', async (req, res) => {
       try {
         if (isAntiSpamBot(userAgent)) return;
 
-        const location = buildEventLocation(req, userAgent);
+        const location = await buildEventLocation(req, userAgent, { enrich: true });
 
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;

@@ -361,7 +361,7 @@ export default function CampaignDetails() {
                               : evt.eventType === 'Skipped'
                                 ? '• Skipped'
                                 : '• Email sent'}
-                  {(evt.eventType === 'Open' || evt.eventType === 'Click') && eventCityLabel(evt) && (
+                  {(evt.eventType === 'Click' && eventCityLabel(evt)) && (
                     <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
                   )}
                 </span>

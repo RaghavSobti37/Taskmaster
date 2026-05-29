@@ -11,6 +11,12 @@ const isValidDisplayCity = (name) => {
 const isEmailImageProxy = (userAgent = '') =>
   /GoogleImageProxy|ggpht\.com|YahooMailProxy/i.test(userAgent);
 
+/** Gmail/open pixel loads from Google infrastructure — not reader location. */
+const isGoogleInfrastructureIp = (ip = '') => {
+  const n = normalizeIp(ip);
+  return /^(66\.249\.|64\.233\.|72\.14\.|209\.85\.|216\.239\.|172\.217\.|142\.250\.)/.test(n);
+};
+
 const normalizeIp = (ip = '') => {
   if (!ip) return '';
   let value = String(ip);
@@ -54,15 +60,18 @@ const lookupGeoAsync = async (ip) => {
 
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 3000);
-    const res = await fetch(`https://ipwho.is/${normalized}`, { signal: ctrl.signal });
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(normalized)}?fields=status,city,regionName,countryCode`,
+      { signal: ctrl.signal }
+    );
     clearTimeout(timer);
     const data = await res.json();
-    if (data?.success && data.city) {
+    if (data?.status === 'success' && data.city) {
       return {
         city: data.city,
-        region: data.region_code || data.region || null,
-        country: data.country_code || null,
+        region: data.regionName || null,
+        country: data.countryCode || null,
         ip: normalized,
       };
     }
@@ -76,7 +85,10 @@ const eventIp = (evt) => evt?.ipAddress || evt?.metadata?.ip || null;
 
 /** Resolve city for Open/Click — uses stored city, metadata string, or IP re-lookup. */
 const resolveMailEventCity = (evt) => {
-  if (evt?.eventType === 'Open' && isEmailImageProxy(evt.userAgent)) return null;
+  const ip = eventIp(evt);
+  if (evt?.eventType === 'Open' && (isEmailImageProxy(evt.userAgent) || isGoogleInfrastructureIp(ip))) {
+    return null;
+  }
 
   const stored = evt?.location?.city;
   if (isValidDisplayCity(stored)) return stored.trim();
@@ -88,7 +100,6 @@ const resolveMailEventCity = (evt) => {
     if (isValidDisplayCity(first)) return first;
   }
 
-  const ip = eventIp(evt);
   if (ip) {
     const geo = lookupGeoSync(ip);
     if (isValidDisplayCity(geo.city)) return geo.city.trim();
@@ -101,8 +112,10 @@ const resolveMailEventCityAsync = async (evt, ipCache = new Map()) => {
   const sync = resolveMailEventCity(evt);
   if (sync) return sync;
 
+  if (evt?.eventType === 'Open') return null;
+
   const ip = eventIp(evt);
-  if (!ip) return null;
+  if (!ip || isGoogleInfrastructureIp(ip)) return null;
 
   if (!ipCache.has(ip)) ipCache.set(ip, lookupGeoAsync(ip));
   const geo = await ipCache.get(ip);
@@ -112,6 +125,7 @@ const resolveMailEventCityAsync = async (evt, ipCache = new Map()) => {
 module.exports = {
   isValidDisplayCity,
   isEmailImageProxy,
+  isGoogleInfrastructureIp,
   normalizeIp,
   extractClientIp,
   eventIp,

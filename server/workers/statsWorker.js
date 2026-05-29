@@ -44,8 +44,11 @@ const calculateStats = async (matchStage) => {
 
   return {
     totalLeads,
+    // Keep both legacy + new keys so snapshot reads stay stable.
     activeReach,
+    meaningful: activeReach,
     convertedLeads,
+    converted: convertedLeads,
     warmLeads,
     conversionRate,
     connected: result.connected[0]?.count || 0,

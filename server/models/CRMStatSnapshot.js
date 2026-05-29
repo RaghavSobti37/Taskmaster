@@ -5,7 +5,10 @@ const CRMStatSnapshotSchema = new mongoose.Schema({
   metrics: {
     totalLeads: { type: Number, default: 0 },
     connected: { type: Number, default: 0 },
+    activeReach: { type: Number, default: 0 },
     meaningful: { type: Number, default: 0 },
+    warmLeads: { type: Number, default: 0 },
+    convertedLeads: { type: Number, default: 0 },
     converted: { type: Number, default: 0 },
     totalReps: { type: Number, default: 0 },
     conversionRate: { type: Number, default: 0 }

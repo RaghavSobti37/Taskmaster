@@ -11,7 +11,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
-const { resolveMailEventCity, lookupGeoAsync, isValidDisplayCity } = require('../utils/geoLookup');
+const { resolveMailEventCityAsync, eventIp } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 
 router.use(protect);
@@ -75,34 +75,27 @@ router.get('/:id', async (req, res) => {
     campaign.metrics = computed.metrics;
 
     const ipCache = new Map();
-    const resolveClickCity = async (evt) => {
-      const sync = resolveMailEventCity(evt);
-      if (sync) return sync;
-      if (evt.eventType !== 'Click' || !evt.ipAddress) return null;
-      if (!ipCache.has(evt.ipAddress)) {
-        ipCache.set(evt.ipAddress, lookupGeoAsync(evt.ipAddress));
-      }
-      const geo = await ipCache.get(evt.ipAddress);
-      return isValidDisplayCity(geo?.city) ? geo.city.trim() : null;
-    };
+    const resolveEventCity = (evt) => resolveMailEventCityAsync(evt, ipCache);
 
-    const eventsRaw = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
+    const eventQuery = { campaignId: campaign._id };
+    const eventsRaw = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).sort({ timestamp: -1 }).limit(100).lean();
     campaign.events = await Promise.all(eventsRaw.map(async (evt) => ({
       ...evt,
-      displayCity: await resolveClickCity(evt),
+      displayCity: await resolveEventCity(evt),
     })));
 
-    const allEvents = await MailEvent.find({ campaignId: campaign._id }).lean();
+    const allEvents = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).lean();
     
     const locationBreakdown = {};
     const timeSeriesMap = {};
     
     for (const evt of allEvents) {
-      if (evt.eventType === 'Click') {
-        const city = await resolveClickCity(evt);
+      if (evt.eventType === 'Open' || evt.eventType === 'Click') {
+        const city = await resolveEventCity(evt);
         if (city) {
           if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
-          locationBreakdown[city].clicks++;
+          if (evt.eventType === 'Open') locationBreakdown[city].opens++;
+          else locationBreakdown[city].clicks++;
         }
       }
       
@@ -123,8 +116,12 @@ router.get('/:id', async (req, res) => {
     campaign.locationBreakdown = locationBreakdown;
     // #region agent log
     const locSample = Object.entries(locationBreakdown).slice(0, 5).map(([c, s]) => ({ city: c, ...s }));
-    logger.info('[Campaign Location]', { campaignId: String(campaign._id).slice(0, 8), eventCount: allEvents.length, locations: locSample });
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:location',message:'location breakdown built',data:{eventCount:allEvents.length,locations:locSample},timestamp:Date.now(),hypothesisId:'H-loc-read',runId:'post-fix'})}).catch(()=>{});
+    const geoDebug = allEvents
+      .filter((e) => e.eventType === 'Open' || e.eventType === 'Click')
+      .slice(0, 6)
+      .map((e) => ({ type: e.eventType, ip: eventIp(e), storedCity: e.location?.city, metaIp: e.metadata?.ip }));
+    logger.info('CampaignLocation', 'geo breakdown', { campaignId: String(campaign._id).slice(0, 8), eventCount: allEvents.length, locations: locSample, geoDebug });
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:location',message:'geo breakdown',data:{eventCount:allEvents.length,locations:locSample,geoDebug},timestamp:Date.now(),hypothesisId:'H-ip-missing',runId:'post-fix'})}).catch(()=>{});
     // #endregion
     campaign.timeSeries = Object.entries(timeSeriesMap)
       .map(([hourStr, data]) => ({

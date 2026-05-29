@@ -196,17 +196,14 @@ export default function CampaignDetails() {
     { timeStr: '20:00', opens: 0, clicks: 0 }
   ];
 
-  const rawLoc = Object.entries(campaign.locationBreakdown || {}).map(([city, stats]) => ({
-    city,
-    opens: stats?.opens || 0,
-    clicks: stats?.clicks || 0
-  })).sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks));
-  const locationData = rawLoc.length > 0 ? rawLoc : [
-    { city: 'Mumbai', opens: 0, clicks: 0 },
-    { city: 'Bangalore', opens: 0, clicks: 0 },
-    { city: 'Delhi', opens: 0, clicks: 0 },
-    { city: 'London', opens: 0, clicks: 0 }
-  ];
+  const locationData = Object.entries(campaign.locationBreakdown || {})
+    .map(([city, stats]) => ({
+      city,
+      opens: stats?.opens || 0,
+      clicks: stats?.clicks || 0,
+    }))
+    .filter((r) => r.opens > 0 || r.clicks > 0)
+    .sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks));
 
   const totalRecipients = campaign.recipients?.length || 0;
   const deliveredCount =
@@ -289,16 +286,22 @@ export default function CampaignDetails() {
             <Globe size={14} /> Location Breakdown
           </h3>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={locationData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                <XAxis type="number" stroke="#94a3b8" fontSize={10} />
-                <YAxis dataKey="city" type="category" stroke="#94a3b8" fontSize={10} width={80} tick={{ fontSize: 10 }} />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }} />
-                <Bar dataKey="opens" fill="#38bdf8" radius={[0, 6, 6, 0]} name="Opens" />
-                <Bar dataKey="clicks" fill="#10b981" radius={[0, 6, 6, 0]} name="Clicks" />
-              </BarChart>
-            </ResponsiveContainer>
+            {locationData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs font-mono text-[var(--color-text-muted)] italic border border-dashed border-[var(--color-bg-border)] rounded-xl px-4 text-center">
+                No location data yet — open or click from a real device to populate city geo.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={locationData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                  <XAxis type="number" stroke="#94a3b8" fontSize={10} />
+                  <YAxis dataKey="city" type="category" stroke="#94a3b8" fontSize={10} width={80} tick={{ fontSize: 10 }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }} />
+                  <Bar dataKey="opens" fill="#38bdf8" radius={[0, 6, 6, 0]} name="Opens" />
+                  <Bar dataKey="clicks" fill="#10b981" radius={[0, 6, 6, 0]} name="Clicks" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>
@@ -361,7 +364,7 @@ export default function CampaignDetails() {
                               : evt.eventType === 'Skipped'
                                 ? '• Skipped'
                                 : '• Email sent'}
-                  {(evt.eventType === 'Click' && eventCityLabel(evt)) && (
+                  {eventCityLabel(evt) && (
                     <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
                   )}
                 </span>

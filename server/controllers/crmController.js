@@ -625,7 +625,13 @@ exports.getCRMStats = async (req, res) => {
 
     let stats = await CRMStatSnapshot.findOne(query).lean();
 
-    if (!stats?.metrics) {
+    const hasFreshMetrics = !!stats?.metrics && (
+      stats.metrics.warmLeads !== undefined ||
+      stats.metrics.convertedLeads !== undefined ||
+      stats.metrics.converted !== undefined
+    );
+
+    if (!hasFreshMetrics) {
       const matchStage = isRep
         ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
         : {};

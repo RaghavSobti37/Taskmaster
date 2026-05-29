@@ -160,9 +160,10 @@ export default function LeadsPage() {
 
   useEffect(() => {
     if (statFilter === 'warm') {
-      setFilters(prev => ({ ...prev, leadStatus: 'all', meaningfulConnect: 'YES' }));
+      // Warm card should show only warm leads, not all meaningful connections.
+      setFilters(prev => ({ ...prev, leadStatus: 'Warm', meaningfulConnect: 'all' }));
     } else if (statFilter === 'converted') {
-      setFilters(prev => ({ ...prev, leadStatus: 'Converted' }));
+      setFilters(prev => ({ ...prev, leadStatus: 'Converted', meaningfulConnect: 'all' }));
     } else {
       setFilters(prev => ({ ...prev, leadStatus: 'all', meaningfulConnect: 'all' }));
     }
@@ -304,23 +305,53 @@ export default function LeadsPage() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <StatCard label="Total Leads" value={stats.totalLeads} icon={Users} variant="slate" />
-        <button 
-          onClick={() => setStatFilter(statFilter === 'warm' ? null : 'warm')}
-          className={`rounded-2xl p-4 transition-all border-2 ${statFilter === 'warm' ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--color-bg-border)] hover:border-blue-500'}`}
-        >
-          <div className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Warm Leads</div>
-          <div className="text-2xl font-black text-blue-500">{stats.warmLeads}</div>
-        </button>
-        <button 
-          onClick={() => setStatFilter(statFilter === 'converted' ? null : 'converted')}
-          className={`rounded-2xl p-4 transition-all border-2 ${statFilter === 'converted' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--color-bg-border)] hover:border-emerald-500'}`}
-        >
-          <div className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Converted</div>
-          <div className="text-2xl font-black text-emerald-500">{stats.convertedLeads}</div>
-        </button>
-        <StatCard label="Success Rate" value={`${Number(stats.conversionRate).toFixed(1)}%`} icon={Target} variant="apricot" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${!statFilter ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
+          <StatCard
+            label="Total Leads"
+            value={stats.totalLeads}
+            icon={Users}
+            variant="mint"
+            info="Total leads visible in your scope."
+            onClick={() => setStatFilter(null)}
+            className="border-0"
+          />
+        </div>
+
+        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${statFilter === 'warm' ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
+          <StatCard
+            label="Warm Leads"
+            value={stats.warmLeads}
+            icon={TrendingUp}
+            variant="rose"
+            info="Leads with meaningful connection and not converted."
+            onClick={() => setStatFilter(statFilter === 'warm' ? null : 'warm')}
+            className="border-0"
+          />
+        </div>
+
+        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${statFilter === 'converted' ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
+          <StatCard
+            label="Converted"
+            value={stats.convertedLeads}
+            icon={CheckCircle2}
+            variant="apricot"
+            info="Leads converted into paying customers."
+            onClick={() => setStatFilter(statFilter === 'converted' ? null : 'converted')}
+            className="border-0"
+          />
+        </div>
+
+        <div className="rounded-[var(--radius-atomic)] border-2 border-[var(--color-bg-border)] transition-all">
+          <StatCard
+            label="Success Rate"
+            value={`${Number(stats.conversionRate).toFixed(1)}%`}
+            icon={Target}
+            variant="info"
+            info="Converted leads divided by total leads."
+            className="border-0"
+          />
+        </div>
       </div>
 
       <div className="space-y-4">

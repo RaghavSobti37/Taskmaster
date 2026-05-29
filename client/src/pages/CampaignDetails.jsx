@@ -335,12 +335,12 @@ export default function CampaignDetails() {
             campaign.events.map((evt, idx) => (
               <div key={idx} className="flex items-start gap-3 hover:bg-white/5 p-1 rounded transition-colors font-mono">
                 <span className="text-slate-500 text-[10px] shrink-0 pt-0.5">
-                  {evt.timestamp ? format(new Date(evt.timestamp), 'HH:mm:ss.SSS') : '—'}
+                  {evt.timestamp ? format(new Date(evt.timestamp), 'MMM dd, yyyy · HH:mm:ss') : '—'}
                 </span>
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
                   evt.eventType === 'Open' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                   evt.eventType === 'Click' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                  evt.eventType === 'Send' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                  evt.eventType === 'Send' || evt.eventType === 'Delivery' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
                   evt.eventType === 'Failed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
                   evt.eventType === 'Skipped' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                   'bg-slate-500/20 text-slate-300 border border-slate-500/30'
@@ -363,7 +363,9 @@ export default function CampaignDetails() {
                               ? '• Delivery failed'
                               : evt.eventType === 'Skipped'
                                 ? '• Skipped'
-                                : '• Email sent'}
+                              : evt.eventType === 'Send' || evt.eventType === 'Delivery'
+                                ? '• Email sent'
+                                : '• Event'}
                   {eventCityLabel(evt) && (
                     <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
                   )}

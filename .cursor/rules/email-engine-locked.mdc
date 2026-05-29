@@ -1,0 +1,39 @@
+---
+description: Email engine tracking/geo/template logic is LOCKED — do not change without explicit user request
+alwaysApply: true
+---
+
+# Email Engine — DO NOT CHANGE (Locked May 2026)
+
+The user finalized email tracking after extensive debugging. **Do not modify email engine logic** unless they explicitly ask to change tracking, geo, open/click behavior, HolySheet selection defaults, or raw HTML template save logic.
+
+## Read first
+
+Full spec: `docs/EMAIL_ENGINE_LOCKED.md`
+
+## Locked files (logic only — not styling/copy)
+
+- `server/utils/trackingUrls.js`
+- `server/utils/emailTracker.js`
+- `server/utils/geoLookup.js`
+- `server/routes/track.js`
+- `server/routes/campaignRoutes.js` (geo breakdown, displayCity, MailEvent queries with bypassTenant)
+- `server/models/MailEvent.js` (location/ipAddress fields)
+- `server/models/MailTemplate.js` (format field)
+- `client/src/pages/CampaignDetails.jsx` (activity stream geo + timestamp format)
+- `client/src/utils/mailEventLocation.js`
+- HolySheet deselect-on-load in `client/src/components/admin/AdminMailContent.jsx`
+
+## Locked behavior summary
+
+1. **Opens:** Gmail proxy IPs blocked for geo; city inferred from same recipient's click via `buildClickCityByEmail`.
+2. **Clicks:** Real IP → geoip-lite → ip-api.com fallback. City only, no country codes.
+3. **No hardcoded cities** (no Mumbai fallback).
+4. **Tracking base URL:** `TRACKING_BASE_URL` / `taskmaster-jfw0.onrender.com` — never suspended API host.
+5. **Open pixel:** before `</body>`, visible 1×1, no `display:none`.
+6. **HolySheet:** all tabs deselected on fetch.
+7. **Activity stream:** `MMM dd, yyyy · HH:mm:ss` + `@ city` from `displayCity`.
+
+## If user asks for email changes
+
+Confirm they want to unlock the email engine. Make minimal diffs. Re-read `docs/EMAIL_ENGINE_LOCKED.md` before editing.

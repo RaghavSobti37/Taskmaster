@@ -32,7 +32,8 @@ import {
   Cloud,
   Globe,
   FileText,
-  Terminal
+  Terminal,
+  ClipboardCheck
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -315,6 +316,13 @@ const OutletSidebar = () => {
               }}
             />
             <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={!isOpen} isMobile={isMobile} />
+            <NavItem
+              to="/attendance"
+              icon={ClipboardCheck}
+              label="Attendance"
+              collapsed={!isOpen}
+              isMobile={isMobile}
+            />
           </NavGroup>
 
           <NavGroup title="Workspace" collapsed={!isOpen} isMobile={isMobile}>
@@ -412,13 +420,6 @@ const OutletSidebar = () => {
                 onMouseEnter={() => {
                   queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
                 }}
-              />
-              <NavItem
-                to="/management/attendance"
-                icon={Clock}
-                label="Attendance"
-                collapsed={!isOpen}
-                isMobile={isMobile}
               />
               <NavItem
                 to="/management/announcements"

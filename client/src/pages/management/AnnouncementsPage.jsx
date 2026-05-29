@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { PageContainer, PageHeader, Card, Input, Button } from '../../components/ui';
-import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement } from '../../hooks/useTaskmasterQueries';
+import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 
 const AnnouncementsPage = () => {
-  const { data: announcements = [] } = useAnnouncements(true);
+  const { data: announcements = [] } = useAnnouncements(true, 4000, true);
   const { data: targets } = useAnnouncementTargets(true);
   const createAnnouncement = useCreateAnnouncement();
+  const deleteAnnouncement = useDeleteAnnouncement();
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -115,6 +116,40 @@ const AnnouncementsPage = () => {
                 <p className="text-xs text-[var(--color-text-muted)] mt-1">
                   Audience: {item.audienceType} {item.projectId?.name ? `(${item.projectId.name})` : ''}
                 </p>
+                {!!item.emailDispatch && (
+                  <div className="mt-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-2">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Email Dispatch: {item.emailDispatch.status || 'idle'}
+                    </p>
+                    <p className="text-[11px] mt-1">
+                      Total: {item.emailDispatch.total || 0} · Sent: {item.emailDispatch.sent || 0} · Opened: {item.emailDispatch.opened || 0} · Failed: {item.emailDispatch.failed || 0}
+                    </p>
+                    {!!item.emailDispatch.recipients?.length && (
+                      <div className="mt-2 max-h-28 overflow-y-auto space-y-1">
+                        {item.emailDispatch.recipients.map((r) => (
+                          <div key={r._id || r.email} className="flex items-center justify-between text-[10px]">
+                            <span className="truncate mr-2">{r.email}</span>
+                            <span className="font-bold">{r.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    size="xs"
+                    variant="danger"
+                    disabled={deleteAnnouncement.isPending}
+                    onClick={() => {
+                      if (window.confirm('Delete this announcement?')) {
+                        deleteAnnouncement.mutate(item._id);
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
             ))}
             {announcements.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No announcements yet.</p>}

@@ -146,6 +146,8 @@ function App() {
               <Route path="/calendar" element={<CalendarView />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/logs" element={<DailyLogPage />} />
+              <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/office-assets" element={<OfficeAssetsPage />} />
               <Route path="/leads" element={<LeadsPage />} />
@@ -173,7 +175,6 @@ function App() {
 
               <Route element={<OpsRoute />}>
                 <Route path="/finance" element={<FinancePage />} />
-                <Route path="/management/attendance" element={<AttendancePage />} />
                 <Route path="/management/announcements" element={<AnnouncementsPage />} />
                 <Route path="/management/equipment" element={<EquipmentPage />} />
                 <Route path="/management/contacts" element={<ContactsPage />} />

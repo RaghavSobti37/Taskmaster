@@ -27,7 +27,7 @@ const parseClientNetworkLocation = (req) => {
 
   const geo = geoip.lookup(ip);
   return {
-    city: geo ? (geo.city || 'Unknown') : 'Unknown',
+    city: geo ? (geo.city || geo.region || geo.country || 'Unknown') : 'Unknown',
     region: geo ? (geo.region || 'Unknown') : 'Unknown',
     country: geo ? (geo.country || 'Unknown') : 'Unknown',
     ip
@@ -76,7 +76,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         const log = await EmailLog.findOne({ pixelId });
         // #region agent log
         fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:open:bg',message:'open pixel processed',data:{pixelId:String(pixelId).slice(0,8),logFound:!!log,alreadyOpened:!!log?.opened,botBlocked:isAntiSpamBot(userAgent),ua:(userAgent||'').slice(0,40)},timestamp:Date.now(),hypothesisId:'H-track',runId:'post-fix'})}).catch(()=>{});
-        logger.info('[Track Open]', { pixelId: String(pixelId).slice(0, 8), logFound: !!log, alreadyOpened: !!log?.opened, botBlocked: isAntiSpamBot(userAgent), ua: (userAgent || '').slice(0, 60) });
+        logger.info('[Track Open]', { pixelId: String(pixelId).slice(0, 8), logFound: !!log, alreadyOpened: !!log?.opened, botBlocked: isAntiSpamBot(userAgent), ua: (userAgent || '').slice(0, 60), city: location?.city, ip: location?.ip?.slice(0, 12) });
         // #endregion
         if (!log || log.opened) return;
 
@@ -95,12 +95,18 @@ router.get('/open/:pixelId.gif', async (req, res) => {
 
         if (camp) {
           if (isCore) {
+            const city = location.city || 'Unknown';
+            const cleanCity = city.replace(/\./g, '');
+
             await Promise.all([
               Campaign.updateOne(
                 { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
                 { 
                   $set: { "recipients.$.status": "Opened" },
-                  $inc: { "metrics.opened": 1 },
+                  $inc: { 
+                    "metrics.opened": 1,
+                    [`locationBreakdown.${cleanCity}.opens`]: 1
+                  },
                   $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
                 }
               ),
@@ -196,6 +202,8 @@ router.get('/click/:clickId', async (req, res) => {
 
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;
+
+        logger.info('[Track Click]', { clickId: String(clickId).slice(0, 8), city: location?.city, ip: location?.ip?.slice(0, 12) });
 
         await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
 

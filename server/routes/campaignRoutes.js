@@ -11,6 +11,8 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
+const { resolveMailEventCity } = require('../utils/mailEventLocation');
+const logger = require('../utils/logger');
 
 router.use(protect);
 
@@ -81,17 +83,7 @@ router.get('/:id', async (req, res) => {
     const timeSeriesMap = {};
     
     allEvents.forEach(evt => {
-      let city = 'Unknown';
-      if (evt.metadata) {
-        if (evt.metadata.city) {
-          city = evt.metadata.city;
-        } else if (evt.metadata.location) {
-          city = evt.metadata.location.split(',')[0].trim();
-        }
-      }
-      if (city === 'Unknown City' || city === 'Unknown Location') {
-        city = 'Unknown';
-      }
+      const city = resolveMailEventCity(evt);
       
       if (!locationBreakdown[city]) {
         locationBreakdown[city] = { opens: 0, clicks: 0 };
@@ -117,6 +109,11 @@ router.get('/:id', async (req, res) => {
     });
     
     campaign.locationBreakdown = locationBreakdown;
+    // #region agent log
+    const locSample = Object.entries(locationBreakdown).slice(0, 5).map(([c, s]) => ({ city: c, ...s }));
+    logger.info('[Campaign Location]', { campaignId: String(campaign._id).slice(0, 8), eventCount: allEvents.length, locations: locSample });
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:location',message:'location breakdown built',data:{eventCount:allEvents.length,locations:locSample},timestamp:Date.now(),hypothesisId:'H-loc-read',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
     campaign.timeSeries = Object.entries(timeSeriesMap)
       .map(([hourStr, data]) => ({
         time: data.time,

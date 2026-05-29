@@ -22,6 +22,16 @@ const RESEND_STATUS_OPTIONS = [
   { id: 'Invalid', label: 'Invalid' },
 ];
 
+const eventCityLabel = (evt) => {
+  const loc = evt?.location;
+  if (loc?.city && loc.city !== 'Unknown' && loc.city !== 'Unknown City') return loc.city;
+  if (loc?.region && loc.region !== 'Unknown') return loc.region;
+  if (loc?.country && loc.country !== 'Unknown') return loc.country;
+  if (evt?.metadata?.city) return evt.metadata.city;
+  if (typeof evt?.metadata?.location === 'string') return evt.metadata.location.split(',')[0].trim();
+  return null;
+};
+
 export default function CampaignDetails() {
   const { campaignId: routeCampaignId } = useParams();
   const navigate = useNavigate();
@@ -360,6 +370,9 @@ export default function CampaignDetails() {
                               : evt.eventType === 'Skipped'
                                 ? '• Skipped'
                                 : '• Email sent'}
+                  {(evt.eventType === 'Open' || evt.eventType === 'Click') && eventCityLabel(evt) && (
+                    <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
+                  )}
                 </span>
               </div>
             ))

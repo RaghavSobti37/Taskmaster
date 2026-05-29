@@ -8,6 +8,7 @@ const logActivity = require('../utils/activityLogger');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
 
@@ -20,7 +21,7 @@ const getProjectRole = (project, userId) => {
 };
 
 const canAssignTasks = (project, user) => {
-  if (user.role === 'admin') return true;
+  if (isAdminUser(user)) return true;
   const role = getProjectRole(project, user._id);
   return role === 'owner' || role === 'manager';
 };
@@ -70,7 +71,7 @@ const finalizeTaskCompletion = async (task, user, session) => {
     action: 'DAILY_LOG',
     details: {
       type: 'TASK_COMPLETION',
-      title: `Task Finalized: ${task.title}`,
+      title: task.title,
       message: `Successfully completed task within ${projectName}.`,
       project: projectName,
       projectId: task.projectId,
@@ -172,14 +173,14 @@ exports.updateTask = async (taskId, updates, user, session) => {
   const isAssignee = assignments.some((a) => (a.userId?._id || a.userId)?.toString() === user._id.toString());
   const primaryAssignedBy = assignments[0]?.assignedBy?.toString();
 
-  if (!isCreator && !isAssignee && user.role !== 'admin') {
+  if (!isCreator && !isAssignee && !isAdminUser(user)) {
     throw new Error('Not authorized to update this task');
   }
 
   const { assignees, reviewAction, ...coreUpdates } = updates;
 
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
-    if (primaryAssignedBy !== user._id.toString() && user.role !== 'admin') {
+    if (primaryAssignedBy !== user._id.toString() && !isAdminUser(user)) {
       throw new Error('Only the task assigner can approve or rollback');
     }
     if (reviewAction === 'approve') {
@@ -195,7 +196,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (timelineTouched) {
     const canEditTimeline = isCreator
       || primaryAssignedBy === user._id.toString()
-      || user.role === 'admin';
+      || isAdminUser(user);
     if (!canEditTimeline) {
       throw new Error('Only the task creator or assigner can change timeline fields');
     }
@@ -339,7 +340,7 @@ exports.deleteTask = async (taskId, user, session) => {
   const existing = await Task.findById(taskId).session(session);
   if (!existing) throw new Error('Task not found');
 
-  if (existing.createdBy?.toString() !== user._id.toString() && user.role !== 'admin') {
+  if (existing.createdBy?.toString() !== user._id.toString() && !isAdminUser(user)) {
     throw new Error('Not authorized to delete this task');
   }
 

@@ -2,19 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  List,
-  Columns,
-  Database,
   Settings,
-  Filter,
-  Search,
   Plus,
-  Users,
   ArrowLeft,
   Layout,
-  Calendar as CalendarIcon,
-  ChevronRight,
-  MoreVertical
 } from 'lucide-react';
 import ProjectList from '../../components/project/ProjectList';
 import ProjectKanban from '../../components/project/ProjectKanban';
@@ -27,11 +18,10 @@ import {
   ProgressBar, 
   PageSkeleton, 
   NexusDropdown, 
-  PageHeader, 
   TabSwitcher, 
   PageContainer,
   Button,
-  Input,
+  SearchInput,
   Card,
   NexusModal
 } from '../../components/ui';
@@ -44,8 +34,13 @@ import TaskCompletionModal from '../../components/TaskCompletionModal';
 import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
+import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import { format, addDays } from 'date-fns';
 import { useToast } from '../../contexts/ToastContext';
+import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
+import { formatHoursMinutes } from '../../utils/formatHours';
+import { isOpsUser } from '../../utils/departmentPermissions';
 
 const ProjectDetail = () => {
   const { user } = useAuth();
@@ -59,7 +54,7 @@ const ProjectDetail = () => {
   const deleteTaskMutation = useDeleteTask();
 
   const [activeTab, setActiveTab] = useState('list');
-  const { data: scheduleData } = useSchedule({
+  const { data: scheduleData, isLoading: scheduleLoading } = useSchedule({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
     projectId: id
@@ -119,21 +114,23 @@ const ProjectDetail = () => {
   };
 
   const handleCompleteTaskSubmit = async (task, hours) => {
+    suppressAutoToasts(5000);
     try {
-      await axios.put(`/api/tasks/${task._id}`, { status: 'done', actualHours: (task.actualHours || 0) + hours });
-      
-      // Log to daily logs
-      await axios.post('/api/logs', {
-        action: 'TIME_LOG',
-        targetType: 'Task',
-        targetId: task._id,
-        details: { hours, title: task.title }
-      });
+      const taskRes = await axios.put(
+        `/api/tasks/${task._id}`,
+        { status: 'done', actualHours: (task.actualHours || 0) + hours },
+        AXIOS_SKIP_TOAST
+      );
+      if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
+        await axios.post(
+          '/api/logs',
+          buildTaskCompletionLogPayload(task, hours, project ? [project] : []),
+          AXIOS_SKIP_TOAST
+        );
+      }
       
       addToast({
-        title: 'Task Finished (+20 XP)',
-        message: `Successfully completed "${task.title}" and logged ${hours}h. Exp awarded.`,
-        type: 'success',
+        ...taskCompletionToast(taskRes.data?.status, task.title),
         duration: 6000
       });
 
@@ -182,32 +179,35 @@ const ProjectDetail = () => {
     { id: 'assets', label: 'Project Files' },
   ];
 
-  if (user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') {
+  if (isOpsUser(user)) {
     tabs.push({ id: 'finance', label: 'Finance' });
   }
+
+  const showTaskFilters = activeTab === 'list' || activeTab === 'kanban';
 
   if (loading && !project) return <PageSkeleton />;
   if (!project) return <div className="p-20 text-center">Project not found.</div>;
 
   return (
     <PageContainer className="!py-4 !space-y-4">
-      {/* Header Matrix */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2">
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2 shrink-0">
             <ArrowLeft size={14} />
           </Button>
-          <div className="flex flex-col" style={{ borderLeft: `3px solid ${getWorkspaceColor(project.workspace, workspaces)}`, paddingLeft: '10px' }}>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight uppercase">{project.name}</h1>
-              </div>
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
-              </span>
-            </div>
+          <div
+            className="flex flex-col min-w-0 pl-2.5 border-l-[3px]"
+            style={{ borderLeftColor: getWorkspaceColor(project.workspace, workspaces) }}
+          >
+            <h1 className="text-lg font-bold tracking-tight uppercase truncate">{project.name}</h1>
+            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+              Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end shrink-0">
           {project.status === 'active' && (
             <NexusDropdown
               variant="compact"
@@ -281,35 +281,38 @@ const ProjectDetail = () => {
       />
 
       {/* Workspace Controls */}
-      <Card className="flex flex-col">
-        <div className="p-2 border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--color-bg-secondary)]">
-          <TabSwitcher 
-            tabs={tabs} 
-            activeTab={activeTab} 
-            onChange={setActiveTab} 
-          />
-          
-          <div className="flex items-center gap-2 flex-1 min-w-[280px] justify-end">
-            <Input 
-              icon={Search} 
-              placeholder="Search tasks..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="!py-1.5 !text-xs flex-1 max-w-md"
-            />
-            <NexusDropdown
-              variant="compact"
-              options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'todo', label: 'Todo' },
-                { value: 'in-progress', label: 'Active' },
-                { value: 'done', label: 'Done' },
-              ]}
-              value={filterStatus}
-              onChange={setFilterStatus}
-              className="w-36 shrink-0"
+      <Card className="flex flex-col overflow-hidden">
+        <div className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+          <div className="p-3 overflow-x-auto">
+            <TabSwitcher
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
             />
           </div>
+
+          {showTaskFilters && (
+            <div className="px-3 pb-3 pt-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-end border-t border-[var(--color-bg-border)]">
+              <SearchInput
+                placeholder="Search tasks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:max-w-xs"
+              />
+              <NexusDropdown
+                variant="compact"
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'todo', label: 'Todo' },
+                  { value: 'in-progress', label: 'Active' },
+                  { value: 'done', label: 'Done' },
+                ]}
+                value={filterStatus}
+                onChange={setFilterStatus}
+                className="w-full sm:w-40 shrink-0"
+              />
+            </div>
+          )}
         </div>
 
         <div className="p-0 min-h-fit">
@@ -320,7 +323,7 @@ const ProjectDetail = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="h-full"
+              className={activeTab === 'team' || activeTab === 'assets' ? 'w-full' : 'h-full'}
             >
               {activeTab === 'list' && (
                 <ProjectList tasks={displayTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
@@ -330,15 +333,21 @@ const ProjectDetail = () => {
               )}
               {activeTab === 'schedule' && (
                 <div className="p-4 space-y-4">
-                  {hoursSummary && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Task Hours</p><p className="text-2xl font-black">{hoursSummary.taskHours}h</p></Card>
-                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Manual Logs</p><p className="text-2xl font-black">{hoursSummary.manualLogHours}h</p></Card>
-                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Total</p><p className="text-2xl font-black">{hoursSummary.totalHours}h</p></Card>
-                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Planned</p><p className="text-2xl font-black">{hoursSummary.plannedHours}h</p></Card>
-                    </div>
+                  {scheduleLoading ? (
+                    <ScheduleSkeleton compact showStatCards departmentCount={1} />
+                  ) : (
+                    <>
+                      {hoursSummary && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Task Hours</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.taskHours)}</p></Card>
+                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Manual Logs</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.manualLogHours)}</p></Card>
+                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Total</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.totalHours)}</p></Card>
+                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Planned</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.plannedHours)}</p></Card>
+                        </div>
+                      )}
+                      <ScheduleGrid data={scheduleData} projectId={id} compact onTaskClick={handleOpenDetail} />
+                    </>
                   )}
-                  <ScheduleGrid data={scheduleData} projectId={id} compact onTaskClick={handleOpenDetail} />
                 </div>
               )}
               {activeTab === 'team' && (

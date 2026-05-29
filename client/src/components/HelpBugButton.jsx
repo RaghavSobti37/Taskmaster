@@ -32,13 +32,24 @@ const HelpBugButton = () => {
         description: description.trim(),
         severity
       });
-      addToast('success', 'Bug Reported successfully! Task created under Tech Project for Raghav.');
+      addToast({
+        title: 'Bug reported',
+        message: 'Task created under Tech Project for Raghav.',
+        type: 'success',
+        id: 'bug-report-success',
+      });
       setIsOpen(false);
       setTitle('');
       setDescription('');
     } catch (err) {
       console.error('Report bug error:', err);
-      addToast('error', 'Failed to report bug. Please try again.');
+      addToast({
+        title: 'Report failed',
+        message: err.response?.data?.error || 'Failed to report bug. Please try again.',
+        type: 'error',
+        id: 'bug-report-error',
+        technicalError: import.meta.env.DEV ? err.stack : undefined,
+      });
     } finally {
       setSubmitting(false);
     }

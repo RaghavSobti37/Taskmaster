@@ -18,6 +18,8 @@ import {
   Modal
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -25,6 +27,7 @@ import { formatExlyTag } from '../../utils/crmUtils';
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -92,7 +95,13 @@ export default function LeadsPage() {
 
   const handleDeleteLead = async () => {
     if (!selectedLead) return;
-    if (!window.confirm(`Confirm removal of ${selectedLead.name}? Action is permanent.`)) return;
+    const ok = await confirm({
+      title: 'Remove lead?',
+      message: `Confirm removal of ${selectedLead.name}? Action is permanent.`,
+      confirmLabel: 'Remove',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await axios.delete(`/api/crm/leads/${selectedLead._id}`);
       setSelectedLead(null);
@@ -285,7 +294,7 @@ export default function LeadsPage() {
   if (isLoading && page === 1 && !searchTerm) return <PageSkeleton />;
 
   const stats = statsData || { totalLeads: 0, convertedLeads: 0, warmLeads: 0, conversionRate: 0, activeReach: 0 };
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
 
   return (
     <PageContainer className="!py-4 !space-y-6">
@@ -480,7 +489,7 @@ export default function LeadsPage() {
             >
               <CheckCircle2 size={16} /> <span className="hidden sm:inline">Mark as Done</span>
             </Button>
-            {user?.role === 'admin' && (
+            {isAdmin && (
               <Button
                 variant="danger"
                 size="sm"

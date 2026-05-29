@@ -22,6 +22,16 @@ export const PRIORITY_FILTER_OPTIONS = [
   ...PRIORITY_OPTIONS,
 ];
 
+/** Badge variant for task priority — medium = apricot bg + rose text. */
+export function getPriorityBadgeVariant(priority) {
+  const p = String(priority || 'medium').toLowerCase();
+  if (p === 'critical') return 'critical';
+  if (p === 'high') return 'high';
+  if (p === 'medium') return 'medium';
+  if (p === 'low') return 'low';
+  return 'medium';
+}
+
 export const PROJECT_ROLE_OPTIONS = [
   { value: 'owner', label: 'Admin' },
   { value: 'manager', label: 'Manager' },
@@ -85,9 +95,9 @@ export function taskCategoryLabel(value) {
 }
 
 export const SLOT_OPTIONS = [
+  { value: 'FULL', label: 'Full Day' },
   { value: 'AM', label: 'Morning (AM)' },
   { value: 'PM', label: 'Afternoon (PM)' },
-  { value: 'FULL', label: 'Full Day' },
 ];
 
 export function projectRoleLabel(role) {

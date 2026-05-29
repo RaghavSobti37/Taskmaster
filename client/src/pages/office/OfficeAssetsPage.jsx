@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Building2, Plus, Search, Contact, Phone, Mail, FileText, Database, Shield, RefreshCw } from 'lucide-react';
+import { Building2, Plus, Contact, Phone, Mail, FileText, Database, Shield, RefreshCw } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { Button, Input, Badge, NexusModal, TabSwitcher } from '../../components/ui';
+import {
+  Button,
+  Input,
+  Badge,
+  NexusModal,
+  TabSwitcher,
+  PageContainer,
+  PageHeader,
+  SearchInput,
+  EmptyState,
+  LoadingState,
+  SectionCard,
+} from '../../components/ui';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const OfficeAssetsPage = () => {
+  const { confirm } = useConfirm();
   const [activeTab, setActiveTab] = useState('assets'); // 'assets' or 'contacts'
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -98,14 +112,11 @@ const OfficeAssetsPage = () => {
     saveContactMutation.mutate(contactFormData);
   };
 
-  const getStatusColorClass = (status) => {
+  const getStatusBadgeVariant = (status) => {
     switch (status) {
-      case 'Available':
-        return 'bg-[#E6F4EA] text-[#137333] dark:bg-[#0F2916] dark:text-[#81C995]';
-      case 'In Use':
-        return 'bg-[#FEF7E0] text-[#B06000] dark:bg-[#2E2003] dark:text-[#FDD663]';
-      default:
-        return 'bg-[#FCE8E6] text-[#C5221F] dark:bg-[#30100F] dark:text-[#F28B82]';
+      case 'Available': return 'success';
+      case 'In Use': return 'warning';
+      default: return 'danger';
     }
   };
 
@@ -120,69 +131,61 @@ const OfficeAssetsPage = () => {
   );
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[var(--color-bg-border)] pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-          <div>
-            <h1 className="text-xl font-black uppercase tracking-tight text-[var(--color-text-primary)] flex items-center gap-3">
-              <Building2 className="text-blue-500" />
-              Office & Contacts Registry
-            </h1>
-            <p className="text-[var(--color-text-muted)] text-[10px] font-black tracking-widest uppercase mt-1">Manage office assets and important personnel</p>
-          </div>
-          
-          <TabSwitcher 
-            tabs={[
-              { id: 'assets', label: `Office Assets (${assets.length})` },
-              { id: 'contacts', label: `Important Contacts (${contacts.length})` }
-            ]}
-            activeTab={activeTab}
-            onChange={(tabId) => { setActiveTab(tabId); setSearch(''); }}
-          />
-        </div>
-        
-        {activeTab === 'assets' ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingAsset(null);
-              setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
-              setIsAssetModalOpen(true);
-            }}
-          >
-            <Plus size={14} /> Add Asset
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingContact(null);
-              setContactFormData({ name: '', role: '', phone: '', email: '', notes: '' });
-              setIsContactModalOpen(true);
-            }}
-          >
-            <Plus size={14} /> Add Contact
-          </Button>
-        )}
-      </div>
+    <PageContainer className="!py-4 !space-y-6">
+      <PageHeader
+        icon={Building2}
+        title="Office & Contacts Registry"
+        subtitle="Manage office assets and important personnel"
+        actions={
+          activeTab === 'assets' ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingAsset(null);
+                setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
+                setIsAssetModalOpen(true);
+              }}
+            >
+              <Plus size={14} /> Add Asset
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingContact(null);
+                setContactFormData({ name: '', role: '', phone: '', email: '', notes: '' });
+                setIsContactModalOpen(true);
+              }}
+            >
+              <Plus size={14} /> Add Contact
+            </Button>
+          )
+        }
+      >
+        <TabSwitcher
+          tabs={[
+            { id: 'assets', label: `Office Assets (${assets.length})` },
+            { id: 'contacts', label: `Important Contacts (${contacts.length})` }
+          ]}
+          activeTab={activeTab}
+          onChange={(tabId) => { setActiveTab(tabId); setSearch(''); }}
+          className="mt-2"
+        />
+      </PageHeader>
 
-      <div className="bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl p-4">
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-          <input
-            type="text"
-            placeholder={activeTab === 'assets' ? "SEARCH ASSETS OR USERS..." : "SEARCH CONTACTS BY NAME OR ROLE..."}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl pl-9 pr-4 py-2 text-xs font-bold tracking-widest uppercase text-[var(--color-text-primary)] focus:border-blue-500 outline-none transition-colors"
-          />
-        </div>
+      <SectionCard noPadding bodyClassName="p-4">
+        <SearchInput
+          placeholder={activeTab === 'assets' ? 'Search assets or users...' : 'Search contacts by name or role...'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="mb-4"
+        />
 
         {activeTab === 'assets' ? (
           assetsLoading ? (
-            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">Loading Assets...</div>
+            <LoadingState message="Loading assets..." className="!py-8" />
           ) : filteredAssets.length === 0 ? (
-            <div className="text-center py-12 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">No assets found</div>
+            <EmptyState variant="subtle" title="No assets found" />
           ) : (
             <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-2xl bg-[var(--color-bg-surface)]">
               <table className="w-full text-left">
@@ -204,16 +207,14 @@ const OfficeAssetsPage = () => {
                         setAssetFormData({ ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' });
                         setIsAssetModalOpen(true);
                       }}
-                      className="cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors"
+                      className="cursor-pointer hover:bg-[var(--color-bg-secondary)]/60 transition-colors"
                     >
                       <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] uppercase">{asset.name}</td>
                       <td className="px-4 py-2 text-[10px] font-black uppercase text-[var(--color-text-secondary)]">{asset.category}</td>
                       <td className="px-4 py-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getStatusColorClass(asset.status)}`}>
-                          {asset.status}
-                        </span>
+                        <Badge variant={getStatusBadgeVariant(asset.status)}>{asset.status}</Badge>
                       </td>
-                      <td className="px-4 py-2 text-xs font-bold text-blue-500">{asset.currentlyWith}</td>
+                      <td className="px-4 py-2 text-xs font-bold text-[var(--color-action-primary)]">{asset.currentlyWith}</td>
                       <td className="px-4 py-2 text-[10px] font-mono text-[var(--color-text-muted)] uppercase">{asset.serialNumber || 'N/A'}</td>
                     </tr>
                   ))}
@@ -223,9 +224,9 @@ const OfficeAssetsPage = () => {
           )
         ) : (
           contactsLoading ? (
-            <div className="text-center py-8 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">Loading Contacts...</div>
+            <LoadingState message="Loading contacts..." className="!py-8" />
           ) : filteredContacts.length === 0 ? (
-            <div className="text-center py-12 text-[var(--color-text-secondary)] font-bold tracking-widest uppercase text-xs">No contacts found</div>
+            <EmptyState variant="subtle" title="No contacts found" />
           ) : (
             <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-2xl bg-[var(--color-bg-surface)]">
               <table className="w-full text-left">
@@ -246,10 +247,10 @@ const OfficeAssetsPage = () => {
                         setContactFormData(contact);
                         setIsContactModalOpen(true);
                       }}
-                      className="cursor-pointer hover:bg-slate-100/70 dark:hover:bg-slate-800/50 transition-colors"
+                      className="cursor-pointer hover:bg-[var(--color-bg-secondary)]/60 transition-colors"
                     >
                       <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] uppercase">{contact.name}</td>
-                      <td className="px-4 py-2 text-[10px] font-black uppercase text-blue-500">{contact.role}</td>
+                      <td className="px-4 py-2 text-[10px] font-black uppercase text-[var(--color-action-primary)]">{contact.role}</td>
                       <td className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-secondary)]">{contact.phone}</td>
                       <td className="px-4 py-2 text-[10px] text-[var(--color-text-muted)]">{contact.email || 'N/A'}</td>
                     </tr>
@@ -259,7 +260,7 @@ const OfficeAssetsPage = () => {
             </div>
           )
         )}
-      </div>
+      </SectionCard>
 
       {/* Immersive Asset Workspace Drawer Modal (70-30 split layout) */}
       <NexusModal
@@ -331,7 +332,7 @@ const OfficeAssetsPage = () => {
                 className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-3 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-blue-500"
               >
                 <option value="Office">Office (In Storage / Available)</option>
-                {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.role})</option>)}
+                {users.map(u => <option key={u._id} value={u.name}>{u.name} ({u.departmentId?.name || 'Unassigned'})</option>)}
               </select>
             </div>
           </div>
@@ -383,10 +384,14 @@ const OfficeAssetsPage = () => {
                   type="button" 
                   variant="ghost" 
                   className="w-full !text-rose-500 hover:!bg-rose-500/10" 
-                  onClick={() => {
-                    if (confirm('Delete asset permanently?')) {
-                      deleteAssetMutation.mutate(editingAsset._id);
-                    }
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Delete asset?',
+                      message: 'Delete asset permanently?',
+                      confirmLabel: 'Delete',
+                      type: 'danger',
+                    });
+                    if (ok) deleteAssetMutation.mutate(editingAsset._id);
                   }}
                 >
                   Delete Asset
@@ -480,10 +485,14 @@ const OfficeAssetsPage = () => {
                   type="button" 
                   variant="ghost" 
                   className="w-full !text-rose-500 hover:!bg-rose-500/10" 
-                  onClick={() => {
-                    if (confirm('Delete contact permanently?')) {
-                      deleteContactMutation.mutate(editingContact._id);
-                    }
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Delete contact?',
+                      message: 'Delete contact permanently?',
+                      confirmLabel: 'Delete',
+                      type: 'danger',
+                    });
+                    if (ok) deleteContactMutation.mutate(editingContact._id);
                   }}
                 >
                   Delete Contact
@@ -502,7 +511,7 @@ const OfficeAssetsPage = () => {
           </div>
         </form>
       </NexusModal>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -59,7 +59,7 @@ const NotesPanel = () => {
   const saving = createNote.isPending || updateNote.isPending;
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden flex-1 min-h-[280px]">
+    <Card className="p-0 flex flex-col shadow-md overflow-hidden shrink-0">
       <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
         <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
           <StickyNote size={14} className="text-amber-500" /> Private Notes
@@ -80,6 +80,7 @@ const NotesPanel = () => {
           label="Project (optional)"
           placeholder="Personal"
           allowEmpty
+          emptyLabel="Personal"
         />
         <textarea
           value={content}
@@ -97,11 +98,13 @@ const NotesPanel = () => {
         </div>
       </div>
 
-      <div className="p-2 space-y-1 flex-1 min-h-0 overflow-y-auto">
-        {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] p-2">Loading...</p>}
-        {!isLoading && notes.length === 0 && (
-          <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-6">No notes yet</p>
-        )}
+      {(isLoading || notes.length > 0) && (
+      <div
+        className={`p-2 space-y-1 ${
+          notes.length > 4 ? 'max-h-[min(40vh,280px)] overflow-y-auto custom-scrollbar' : ''
+        }`}
+      >
+        {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-2 py-1">Loading...</p>}
         {notes.map((note) => {
           const projectName = note.projectId?.name || 'Personal';
           const dateLabel = format(new Date(note.updatedAt || note.createdAt), 'MMM d, yyyy');
@@ -121,6 +124,7 @@ const NotesPanel = () => {
           );
         })}
       </div>
+      )}
 
       {editingId && (
         <div className="px-3 pb-2">

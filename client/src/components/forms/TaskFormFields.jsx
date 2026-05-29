@@ -9,6 +9,10 @@ import NexusDropdown from '../ui/NexusDropdown';
 import { SLOT_OPTIONS } from '../../constants/taskOptions';
 import { normalizeTaskCategory } from '../../constants/taskOptions';
 
+const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
+const fieldInputClass =
+  'block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30';
+
 const TaskFormFields = ({
   values,
   onChange,
@@ -22,8 +26,26 @@ const TaskFormFields = ({
   disabled = false,
   timelineDisabled = false,
   lockProject = false,
+  title = '',
+  onTitleChange,
+  description = '',
+  onDescriptionChange,
+  showTitle = false,
+  showDescription = false,
 }) => {
   const set = (field, val) => onChange({ ...values, [field]: val });
+
+  const handleWorkspaceChange = (workspace) => {
+    const ws = String(workspace || 'General').toUpperCase();
+    const inWorkspace = (p) => String(p.workspace || 'General').toUpperCase() === ws;
+    const projectStillValid =
+      !values.projectId || projects.some((p) => p._id === values.projectId && inWorkspace(p));
+    onChange({
+      ...values,
+      workspace,
+      projectId: projectStillValid ? values.projectId : '',
+    });
+  };
 
   const handleProjectChange = (projectId) => {
     const project = projects.find((p) => p._id === projectId);
@@ -36,8 +58,17 @@ const TaskFormFields = ({
 
   return (
     <div className="space-y-4 w-full min-w-0">
+      {showWorkspace && (
+        <WorkspaceSelect
+          value={values.workspace || 'General'}
+          onChange={handleWorkspaceChange}
+          disabled={disabled}
+        />
+      )}
+
       {showProject && !lockProject && (
         <ProjectSelect
+          label="Projects"
           projects={projects}
           value={values.projectId || ''}
           onChange={handleProjectChange}
@@ -46,29 +77,61 @@ const TaskFormFields = ({
         />
       )}
 
-      {showWorkspace && (
-        <WorkspaceSelect
-          value={values.workspace || 'General'}
-          onChange={(workspace) => set('workspace', workspace)}
-          disabled={disabled}
-        />
+      {showTitle && onTitleChange && (
+        <div className="w-full min-w-0">
+          <label className={fieldLabelClass}>Task Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            disabled={disabled}
+            className={`${fieldInputClass} font-bold`}
+            placeholder="What needs to be done?"
+            required
+          />
+        </div>
+      )}
+
+      {showDescription && onDescriptionChange && (
+        <div className="w-full min-w-0">
+          <label className={fieldLabelClass}>Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            disabled={disabled}
+            className={`${fieldInputClass} min-h-[88px] resize-y`}
+            placeholder="Add details..."
+          />
+        </div>
       )}
 
       {showAssignees && (
-        <MemberSelect
-          members={members}
-          value={values.assignees || []}
-          onChange={(assignees) => set('assignees', assignees)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
+          <MemberSelect
+            members={members}
+            value={values.assignees || []}
+            onChange={(assignees) => set('assignees', assignees)}
+            disabled={disabled}
+          />
+          <PrioritySelect
+            value={values.priority}
+            onChange={(priority) => set('priority', priority)}
+            disabled={disabled}
+          />
+        </div>
+      )}
+
+      {!showAssignees && (
+        <PrioritySelect
+          value={values.priority}
+          onChange={(priority) => set('priority', priority)}
           disabled={disabled}
         />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
-        {showStatus && (
-          <StatusSelect value={values.status} onChange={(status) => set('status', status)} disabled={disabled} />
-        )}
-        <PrioritySelect value={values.priority} onChange={(priority) => set('priority', priority)} disabled={disabled} />
-      </div>
+      {showStatus && (
+        <StatusSelect value={values.status} onChange={(status) => set('status', status)} disabled={disabled} />
+      )}
 
       <TaskCategorySelect
         label="Category"
@@ -83,33 +146,29 @@ const TaskFormFields = ({
             <NexusDropdown
               label="Slot"
               options={SLOT_OPTIONS}
-              value={values.scheduleSlot || 'AM'}
+              value={values.scheduleSlot || 'FULL'}
               onChange={(scheduleSlot) => set('scheduleSlot', scheduleSlot)}
               disabled={disabled || timelineDisabled}
             />
             <div className="w-full min-w-0">
-              <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-                Schedule Date
-              </label>
+              <label className={fieldLabelClass}>Start Date</label>
               <input
                 type="date"
                 value={values.scheduleDate || ''}
                 disabled={disabled || timelineDisabled}
                 onChange={(e) => set('scheduleDate', e.target.value)}
-                className="block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm"
+                className={fieldInputClass}
               />
             </div>
           </div>
           <div className="w-full min-w-0">
-            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-              Due Date
-            </label>
+            <label className={fieldLabelClass}>Due Date</label>
             <input
               type="date"
               value={values.dueDate || ''}
               disabled={disabled || timelineDisabled}
               onChange={(e) => set('dueDate', e.target.value)}
-              className="block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm"
+              className={fieldInputClass}
             />
           </div>
         </>

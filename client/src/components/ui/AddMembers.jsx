@@ -7,6 +7,7 @@ import SectionCard from './SectionCard';
 import RoleOptionBoxes from './RoleOptionBoxes';
 import { PROJECT_ROLE_OPTIONS } from '../../constants/taskOptions';
 import { suggestProjectRole } from '../../utils/taskText';
+import { getDepartmentSlug } from '../../utils/departmentPermissions';
 
 const UserAvatar = ({ user, size = 'md' }) => {
   const sizes = { sm: 'w-7 h-7 text-[9px]', md: 'w-9 h-9 text-[10px]', lg: 'w-11 h-11 text-xs' };
@@ -62,7 +63,7 @@ const AddMembers = ({
   const handleSelectUser = (userId) => {
     setSelectedUserId(userId);
     const user = users.find((u) => u._id === userId);
-    if (user) setProjectRole(suggestProjectRole(user.role));
+    if (user) setProjectRole(suggestProjectRole(getDepartmentSlug(user)));
   };
 
   const handleAdd = async () => {
@@ -161,7 +162,7 @@ const AddMembers = ({
   // picker (default)
   return (
     <div
-      className={`w-full min-w-[min(100%,320px)] max-w-md flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-hidden ${className}`}
+      className={`w-full min-w-[min(100%,280px)] flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-hidden ${className}`}
     >
       <div className="shrink-0 px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50">
         <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]">{title}</p>

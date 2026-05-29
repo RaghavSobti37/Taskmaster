@@ -20,9 +20,9 @@ const WorkspaceSelect = ({ value, onChange, label = 'Workspace', disabled = fals
   }));
 
   const renderOption = (option) => (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-2 min-w-0">
       <WorkspaceDot color={option.color || getWorkspaceColor(option.value, workspaces)} />
-      {option.label}
+      <span className="truncate">{option.label}</span>
     </span>
   );
 

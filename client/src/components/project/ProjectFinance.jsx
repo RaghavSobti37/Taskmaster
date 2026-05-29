@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, X, Eye, Check, Info, ArrowLeft
 } from 'lucide-react';
 import { Card } from '../ui';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Types' },
@@ -67,6 +68,7 @@ const InfoTooltip = ({ content }) => {
 };
 
 const ProjectFinance = ({ projectId }) => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -252,7 +254,16 @@ const ProjectFinance = ({ projectId }) => {
                               <Download size={14} />
                             </a>
                             <button
-                              onClick={(e) => { e.stopPropagation(); if (confirm('Delete record?')) deleteMutation.mutate(doc._id); }}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const ok = await confirm({
+                                  title: 'Delete record?',
+                                  message: 'Delete record?',
+                                  confirmLabel: 'Delete',
+                                  type: 'danger',
+                                });
+                                if (ok) deleteMutation.mutate(doc._id);
+                              }}
                               className="p-1.5 hover:bg-red-500/10 rounded text-red-500 transition-colors"
                             >
                               <Trash2 size={14} />
@@ -377,7 +388,15 @@ const ProjectFinance = ({ projectId }) => {
                       <Download size={14} />
                     </a>
                     <button
-                      onClick={() => { if (confirm('Delete document?')) deleteMutation.mutate(selectedDoc._id); }}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete document?',
+                          message: 'Delete document?',
+                          confirmLabel: 'Delete',
+                          type: 'danger',
+                        });
+                        if (ok) deleteMutation.mutate(selectedDoc._id);
+                      }}
                       className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
                       title="Delete"
                     >

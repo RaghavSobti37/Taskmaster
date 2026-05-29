@@ -1,5 +1,6 @@
 const Log = require('../models/Log');
 const logger = require('../utils/logger');
+const { broadcastRealtimeEvent } = require('../config/realtime');
 
 const logActivity = async (userId, action, targetId, targetType, details = {}, session = null) => {
   try {
@@ -15,6 +16,7 @@ const logActivity = async (userId, action, targetId, targetType, details = {}, s
       await Log.create([logPayload], { session });
     } else {
       await Log.create(logPayload);
+      broadcastRealtimeEvent('logs', 'log_update', { targetId, action });
     }
   } catch (err) {
     logger.error('AUDIT_ERROR', 'Critical audit logging failed:', { error: err.message || err });

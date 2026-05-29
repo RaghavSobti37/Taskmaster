@@ -30,8 +30,10 @@ import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits 
 } from '../../hooks/useTaskmasterQueries';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AdminPanel = () => {
+  const { confirm } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'users');
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,7 +90,13 @@ const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to permanently remove this user account?")) return;
+    const ok = await confirm({
+      title: 'Remove user?',
+      message: 'Are you sure you want to permanently remove this user account?',
+      confirmLabel: 'Remove',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteUserMutation.mutateAsync(userId);
       setSelectedUser(null);
@@ -311,16 +319,21 @@ const AdminPanel = () => {
                         <div className="flex items-center gap-2">
                           <Badge variant="info" className="!text-[9px]">{memberCount} Members</Badge>
                           <button 
-                            onClick={async () => {
-                              if (window.confirm("Are you sure you want to decommission this workgroup/team?")) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'Decommission team?',
+                                  message: 'Are you sure you want to decommission this workgroup/team?',
+                                  confirmLabel: 'Decommission',
+                                  type: 'danger',
+                                });
+                                if (!ok) return;
                                 try {
                                   await deleteTeamMutation.mutateAsync(team._id);
                                 } catch (err) {
                                   console.error(err);
                                   alert(`Team removal error: ${err.message}`);
                                 }
-                              }
-                            }}
+                              }}
                             disabled={deleteTeamMutation.isPending}
                             className="text-rose-500 hover:text-rose-600 transition-colors p-1"
                             title="Delete Team"

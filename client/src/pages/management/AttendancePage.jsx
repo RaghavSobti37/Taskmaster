@@ -14,11 +14,10 @@ import {
   useUserDirectory,
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
+import { isOpsUser } from '../../utils/departmentPermissions';
 import { addDays, format } from 'date-fns';
 import { Check, Lock, LogIn, LogOut, RotateCcw, Palmtree } from 'lucide-react';
 import { isWeekend } from '../../utils/attendanceUtils';
-
-const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
 
 const TEST_USER_PATTERN = /(test\s*user|qa\s*tester|^test$|demo\s*user)/i;
 
@@ -182,7 +181,7 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
 
 const AttendancePage = () => {
   const { user } = useAuth();
-  const canEdit = OPS_ROLES.has(user?.role);
+  const canEdit = isOpsUser(user);
   const [editCell, setEditCell] = useState(null);
   const [editForm, setEditForm] = useState({ status: 'present', timeIn: '10:30', timeOut: '18:00' });
 

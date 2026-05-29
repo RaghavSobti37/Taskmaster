@@ -3,6 +3,7 @@ const Project = require('../models/Project');
 const { UTApi, UTFile } = require('uploadthing/server');
 const axios = require('axios');
 const { parseDocument } = require('../utils/documentParser');
+const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 
 // Extract sk_ API key from base64 UPLOADTHING_TOKEN
 let utApiKey;
@@ -560,7 +561,7 @@ const deleteDocument = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Use folder delete endpoint for folders' });
     }
 
-    if (req.user.role !== 'admin' && doc.uploadedBy?.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && doc.uploadedBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this document' });
     }
 
@@ -638,10 +639,8 @@ const getStats = async (req, res) => {
   }
 };
 
-const OPS_FINANCE_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
-
 const canManageFinanceDoc = (user, doc) => (
-  OPS_FINANCE_ROLES.has(user?.role)
+  isOpsUser(user)
   || doc.uploadedBy?.toString() === user._id.toString()
 );
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { isAdminUser } = require('../utils/departmentPermissions');
 const CalendarEvent = require('../models/CalendarEvent');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
@@ -212,7 +213,7 @@ router.delete('/:id', async (req, res) => {
     if (!event) return res.status(404).json({ error: 'Event not found' });
 
     const isOwner = event.createdBy.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = isAdminUser(req.user);
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Not authorized to delete this event' });
     }

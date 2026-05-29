@@ -6,7 +6,9 @@ import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
-import { PROJECT_ROLE_OPTIONS, suggestProjectRole } from '../../utils/taskText';
+import { PROJECT_ROLE_OPTIONS } from '../../constants/taskOptions';
+import { suggestProjectRole } from '../../utils/taskText';
+import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPermissions';
 
 const ProjectCreate = () => {
   const queryClient = useQueryClient();
@@ -48,8 +50,8 @@ const ProjectCreate = () => {
       setMembers([...members, {
         userId: user._id,
         name: user.name,
-        profileRole: user.role,
-        projectRole: suggestProjectRole(user.role),
+        profileRole: getDepartmentSlug(user),
+        projectRole: suggestProjectRole(getDepartmentSlug(user)),
         avatar: user.avatar
       }]);
     }
@@ -113,7 +115,7 @@ const ProjectCreate = () => {
         </div>
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
-          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{user.role}</span>
+          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{getDepartmentName(user)}</span>
         </div>
       </div>
     );

@@ -1,7 +1,17 @@
 const jwt = require('jsonwebtoken');
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
+const Department = require('../models/Department');
 const { runWithContext } = require('../utils/tenantContext');
+const {
+  isAdminUser,
+  isOpsUser,
+  isArtistManagerUser,
+  ADMIN_SLUG,
+} = require('../utils/departmentPermissions');
+
+const populateDepartment = (query) =>
+  query.populate('departmentId', 'name slug color signupAllowed');
 
 const protect = async (req, res, next) => {
   let token;
@@ -15,25 +25,25 @@ const protect = async (req, res, next) => {
   }
 
   try {
-    const isBypassEnabled = process.env.NODE_ENV === 'development' 
+    const isBypassEnabled = process.env.NODE_ENV === 'development'
       && String(process.env.DEBUG_BYPASS).trim() === 'true';
     const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
     const bypassToken = process.env.DEBUG_BYPASS_TOKEN || 'bypass_token';
     if (isBypassEnabled && isLocalhost && token === bypassToken) {
-      const adminUser = await User.findOne({ role: 'admin' }).select('-password');
+      const adminDept = await Department.findOne({ slug: ADMIN_SLUG }).select('_id');
+      const adminUser = adminDept
+        ? await populateDepartment(User.findOne({ departmentId: adminDept._id }).select('-password'))
+        : null;
       if (adminUser) {
         req.user = adminUser;
         req.tenantId = adminUser.tenantId;
         return runWithContext({ tenantId: adminUser.tenantId, userId: adminUser._id }, next);
-      } else {
-        return res.status(503).json({ error: 'No admin user available for bypass' });
       }
+      return res.status(503).json({ error: 'No admin user available for bypass' });
     }
 
-    let userId = null;
     let email = null;
 
-    // Dual Authentication Pipeline: Attempt Clerk Verification First
     if (process.env.CLERK_SECRET_KEY && process.env.CLERK_SECRET_KEY !== 'mock_clerk_secret') {
       try {
         const verified = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
@@ -42,37 +52,34 @@ const protect = async (req, res, next) => {
           email = clerkUser.emailAddresses?.[0]?.emailAddress?.toLowerCase().trim();
         }
       } catch (clerkErr) {
-        // Fallthrough to standard JWT if Clerk verification fails (e.g., standard login token)
+        // Fallthrough to standard JWT
       }
     }
 
     if (email) {
-      // Find or synchronize user with database
-      let dbUser = await User.findOne({ email });
+      let dbUser = await populateDepartment(User.findOne({ email }));
       if (!dbUser) {
         dbUser = await User.create({
           name: email.split('@')[0],
-          email: email,
+          email,
           password: process.env.DEFAULT_SEED_PASSWORD || (Math.random().toString(36).substring(2) + Date.now().toString(36)),
-          role: 'user',
         });
+        dbUser = await populateDepartment(User.findById(dbUser._id).select('-password'));
       }
       req.user = dbUser;
     } else {
-      // Standard JWT Verification
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
     }
 
     if (!req.user) {
       return res.status(401).json({ error: 'User no longer exists' });
     }
 
-    // Update presence
-    await User.findByIdAndUpdate(req.user._id, { 
-      $set: { lastOnline: new Date(), online: true } 
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: { lastOnline: new Date(), online: true },
     });
-    
+
     req.tenantId = req.user.tenantId;
     runWithContext({ tenantId: req.user.tenantId, userId: req.user._id }, next);
   } catch (error) {
@@ -81,22 +88,36 @@ const protect = async (req, res, next) => {
 };
 
 const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && isAdminUser(req.user)) {
     next();
   } else {
     res.status(403).json({ error: 'Not authorized as an admin' });
   }
 };
 
-const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
-const isOps = (user) => OPS_ROLES.has(user?.role);
-
 const opsOrAdmin = (req, res, next) => {
-  if (req.user && isOps(req.user)) {
+  if (req.user && isOpsUser(req.user)) {
     next();
   } else {
     res.status(403).json({ error: 'Not authorized — ops or admin required' });
   }
 };
 
-module.exports = { protect, admin, opsOrAdmin, isOps, OPS_ROLES };
+const artistOrAdmin = (req, res, next) => {
+  if (req.user && isArtistManagerUser(req.user)) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized — artist management or admin required' });
+  }
+};
+
+module.exports = {
+  protect,
+  admin,
+  opsOrAdmin,
+  artistOrAdmin,
+  isOps: isOpsUser,
+  isArtistManager: isArtistManagerUser,
+  isAdminUser,
+  isSalesUser: require('../utils/departmentPermissions').isSalesUser,
+};

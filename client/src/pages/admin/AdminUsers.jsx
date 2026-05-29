@@ -20,10 +20,13 @@ import { format, isToday } from 'date-fns';
 import {
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats,
   useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits,
-  useDepartments, useUpdateUserDepartment, usePendingDepartmentRequests, useReviewDepartmentChange
+  useDepartments
 } from '../../hooks/useTaskmasterQueries';
+import { isAdminUser } from '../../utils/departmentPermissions';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AdminUsers = () => {
+  const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -32,7 +35,6 @@ const AdminUsers = () => {
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: teams = [] } = useTeams();
   const { data: departments = [] } = useDepartments();
-  const { data: pendingDeptRequests = [] } = usePendingDepartmentRequests();
   const { data: crmStats } = useCRMStats();
   const { data: repSummary } = useRepSummary();
   const { data: mailStats } = useMailStats();
@@ -48,15 +50,12 @@ const AdminUsers = () => {
   const deleteUserMutation = useDeleteUser();
   const createTeamMutation = useCreateTeam();
   const deleteTeamMutation = useDeleteTeam();
-  const updateUserDepartment = useUpdateUserDepartment();
-  const reviewDepartmentChange = useReviewDepartmentChange();
 
   useEffect(() => {
     if (selectedUser) {
       setEditUserData({
         name: selectedUser.name || '',
         email: selectedUser.email || '',
-        role: selectedUser.role || 'user',
         teams: selectedUser.teams || [],
         departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || ''
       });
@@ -70,9 +69,6 @@ const AdminUsers = () => {
         id: selectedUser._id,
         data: editUserData
       });
-      if (editUserData.departmentId !== (selectedUser.departmentId?._id || selectedUser.departmentId)) {
-        await updateUserDepartment.mutateAsync({ userId: selectedUser._id, departmentId: editUserData.departmentId || null });
-      }
       setSelectedUser(null);
     } catch (err) {
       console.error(err);
@@ -81,7 +77,13 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Are you sure you want to permanently remove this user account?")) return;
+    const ok = await confirm({
+      title: 'Remove user?',
+      message: 'Are you sure you want to permanently remove this user account?',
+      confirmLabel: 'Remove',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteUserMutation.mutateAsync(userId);
       setSelectedUser(null);
@@ -124,8 +126,8 @@ const AdminUsers = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{u.name}</span>
-              <Badge variant={u.role === 'admin' ? 'rose' : 'info'} className="!text-[9px] uppercase font-mono">
-                {u.role}
+              <Badge variant={isAdminUser(u) ? 'rose' : 'info'} className="!text-[9px] uppercase font-mono">
+                {u.departmentId?.name || 'Unassigned'}
               </Badge>
             </div>
             <span className="text-[10px] text-[var(--color-text-muted)]">{u.email}</span>
@@ -256,13 +258,18 @@ const AdminUsers = () => {
                       <Badge variant="info" className="!text-[9px]">{memberCount} Members</Badge>
                       <button
                         onClick={async () => {
-                          if (window.confirm("Are you sure you want to decommission this workgroup/team?")) {
-                            try {
-                              await deleteTeamMutation.mutateAsync(team._id);
-                            } catch (err) {
-                              console.error(err);
-                              alert(`Team removal error: ${err.message}`);
-                            }
+                          const ok = await confirm({
+                            title: 'Decommission team?',
+                            message: 'Are you sure you want to decommission this workgroup/team?',
+                            confirmLabel: 'Decommission',
+                            type: 'danger',
+                          });
+                          if (!ok) return;
+                          try {
+                            await deleteTeamMutation.mutateAsync(team._id);
+                          } catch (err) {
+                            console.error(err);
+                            alert(`Team removal error: ${err.message}`);
                           }
                         }}
                         disabled={deleteTeamMutation.isPending}
@@ -311,7 +318,7 @@ const AdminUsers = () => {
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
         title={selectedUser?.name || 'User Profile'}
-        subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Role:', selectedUser?.role?.toUpperCase()].join(' ')}
+        subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Department:', selectedUser?.departmentId?.name || 'Unassigned'].join(' ')}
         onSave={handleSaveUser}
         isSaving={updateUserMutation.isPending}
         sidebar={
@@ -381,21 +388,7 @@ const AdminUsers = () => {
                 value={editUserData.phone || ''}
                 onChange={e => setEditUserData({ ...editUserData, phone: e.target.value })}
               />
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Role</label>
-                <select
-                  value={editUserData.role || 'user'}
-                  onChange={e => setEditUserData({ ...editUserData, role: e.target.value })}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
-                >
-                  <option value="admin">Administrator</option>
-                  <option value="artist_management">Artist Management</option>
-                  <option value="operations">Operations</option>
-                  <option value="sales">Sales Rep</option>
-                  <option value="user">Standard User</option>
-                </select>
-              </div>
-              <div className="space-y-1">
+              <div className="space-y-1 col-span-2">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Department</label>
                 <select
                   value={editUserData.departmentId || ''}
@@ -410,28 +403,6 @@ const AdminUsers = () => {
               </div>
             </div>
           </section>
-
-          {pendingDeptRequests.length > 0 && (
-            <section>
-              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Pending Department Changes</h3>
-              <div className="space-y-2">
-                {pendingDeptRequests.map((req) => (
-                  <Card key={req._id} className="p-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-sm">{req.userId?.name}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {req.currentDepartmentId?.name || 'None'} → {req.requestedDepartmentId?.name}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="xs" variant="primary" onClick={() => reviewDepartmentChange.mutate({ id: req._id, action: 'approve' })}>Approve</Button>
-                      <Button size="xs" variant="danger" onClick={() => reviewDepartmentChange.mutate({ id: req._id, action: 'reject' })}>Reject</Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
 
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">

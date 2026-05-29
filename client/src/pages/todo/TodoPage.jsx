@@ -5,15 +5,17 @@ import { PageContainer, Card, Badge, SearchInput, PageSkeleton, DataLoading } fr
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
-import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel } from '../../constants/taskOptions';
+import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTasks, useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { formatDueDate } from '../../utils/formatDueDate';
-import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import TaskDetailModal from '../../components/TaskDetailModal';
 import TaskCompletionModal from '../../components/TaskCompletionModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../contexts/ToastContext';
+import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
 import { Circle, CheckCircle2 } from 'lucide-react';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 
@@ -60,11 +62,24 @@ const TodoPage = () => {
   const doneTasks = filtered.filter((t) => t.status === 'done');
 
   const handleCompleteSubmit = async (task, hours) => {
+    suppressAutoToasts(5000);
     try {
-      await axios.put(`/api/tasks/${task._id}`, { status: 'done', actualHours: (task.actualHours || 0) + hours });
-      await axios.post('/api/logs', { action: 'TIME_LOG', targetType: 'Task', targetId: task._id, details: { hours, title: task.title } });
-      addToast({ title: 'Task Finished', message: `Completed "${task.title}"`, type: 'success' });
+      const taskRes = await axios.put(
+        `/api/tasks/${task._id}`,
+        { status: 'done', actualHours: (task.actualHours || 0) + hours },
+        AXIOS_SKIP_TOAST
+      );
+      if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
+        await axios.post(
+          '/api/logs',
+          buildTaskCompletionLogPayload(task, hours, projects),
+          AXIOS_SKIP_TOAST
+        );
+      }
+      const toast = taskCompletionToast(taskRes.data?.status, task.title);
+      addToast(toast);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
       setTaskToComplete(null);
     } catch (err) {
       addToast({ title: 'Error', message: err.response?.data?.error || 'Failed', type: 'error' });
@@ -74,13 +89,13 @@ const TodoPage = () => {
   const renderRow = (task) => {
     const isDone = task.status === 'done';
     const project = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
-    const accent = getWorkspaceColor(getTaskWorkspace(task), workspaces);
+    const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
     return (
       <tr
         key={task._id}
         data-highlight-id={task._id}
-        className={`hover:bg-[var(--color-bg-secondary)] cursor-pointer ${isDone ? 'opacity-60' : ''}`}
-        style={{ borderLeft: `3px solid ${accent}` }}
+        className={`tm-task-row cursor-pointer rounded-xl overflow-hidden ${isDone ? 'opacity-60' : ''}`}
+        style={getTaskRowStyle(accent)}
         onClick={() => setSelectedTask(task)}
       >
         <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
@@ -98,7 +113,7 @@ const TodoPage = () => {
         <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase truncate max-w-[120px]">{project || '—'}</td>
         <td className="px-4 py-2"><Badge variant="todo">{task.status}</Badge></td>
-        <td className="px-4 py-2"><Badge variant="todo">{task.priority}</Badge></td>
+        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority}</Badge></td>
         <td className="px-4 py-2 text-xs">{formatDueDate(task.dueDate || task.scheduleDate)}</td>
       </tr>
     );
@@ -128,7 +143,7 @@ const TodoPage = () => {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-separate border-spacing-y-2">
             <thead>
               <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                 <th className="px-4 py-3 w-10" />
@@ -140,7 +155,7 @@ const TodoPage = () => {
                 <th className="px-4 py-3">Due</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-bg-border)]">
+            <tbody>
               {isLoading && (
                 <tr><td colSpan={7}><DataLoading /></td></tr>
               )}

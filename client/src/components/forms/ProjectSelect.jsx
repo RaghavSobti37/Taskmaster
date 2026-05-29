@@ -12,7 +12,8 @@ const ProjectSelect = ({
   label = 'Project',
   disabled = false,
   placeholder = 'Select project...',
-  allowEmpty = true,
+  allowEmpty = false,
+  emptyLabel = 'Personal',
   className = '',
 }) => {
   const { data: workspaces = [] } = useWorkspaces();
@@ -26,17 +27,17 @@ const ProjectSelect = ({
       label: p.name,
       workspace: p.workspace,
     }));
-    if (allowEmpty) return [{ value: '', label: 'No project' }, ...mapped];
+    if (allowEmpty) return [{ value: '', label: emptyLabel }, ...mapped];
     return mapped;
-  }, [projects, workspaceFilter, allowEmpty]);
+  }, [projects, workspaceFilter, allowEmpty, emptyLabel]);
 
   const renderOption = (option) => {
     if (!option.workspace) return option.label;
     const color = getWorkspaceColor(option.workspace, workspaces);
     return (
-      <span className="flex items-center gap-2">
+      <span className="flex items-center gap-2 min-w-0">
         <WorkspaceDot color={color} />
-        {option.label}
+        <span className="truncate">{option.label}</span>
       </span>
     );
   };

@@ -1,12 +1,13 @@
 const Lead = require('../models/Lead');
 const paginatedQuery = require('../utils/paginatedQuery');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 class FollowupService {
   /**
    * Retrieves paginated followups using the CQRS separation logic.
    */
   static async getPaginatedFollowups(user, queryParams = {}) {
-    const isRep = user.role !== 'admin';
+    const isRep = !isAdminUser(user);
     const query = { nextFollowupDate: { $exists: true, $ne: '' } };
     
     if (isRep) {

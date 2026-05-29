@@ -63,26 +63,40 @@ const urlBase64ToUint8Array = (base64String) => {
 
 export const subscribeToPush = async () => {
   if (!isPushPreferenceEnabled()) return false;
+  if (!localStorage.getItem('coreknot_token')) return false;
+
   const granted = await requestNotificationPermission();
   if (!granted) return false;
   const registration = await registerServiceWorker();
   if (!registration) return false;
 
   const axios = (await import('axios')).default;
-  const { data } = await axios.get('/api/notifications/push/vapid-key');
-  if (!data?.publicKey) return false;
+  const { AXIOS_SKIP_TOAST } = await import('../lib/notifications');
 
-  let subscription = await registration.pushManager.getSubscription();
-  if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(data.publicKey)
-    });
+  try {
+    const { data } = await axios.get('/api/notifications/push/vapid-key', AXIOS_SKIP_TOAST);
+    if (!data?.publicKey) return false;
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+      });
+    }
+
+    const payload = subscription.toJSON();
+    if (!payload?.endpoint || !payload?.keys?.p256dh || !payload?.keys?.auth) {
+      return false;
+    }
+
+    await axios.post('/api/notifications/push/subscribe', { subscription: payload }, AXIOS_SKIP_TOAST);
+    setPushPreferenceEnabled(true);
+    return true;
+  } catch (err) {
+    console.warn('Push subscription failed', err?.response?.status || err?.message);
+    return false;
   }
-
-  await axios.post('/api/notifications/push/subscribe', { subscription: subscription.toJSON() });
-  setPushPreferenceEnabled(true);
-  return true;
 };
 
 export const unsubscribeFromPush = async () => {
@@ -90,7 +104,11 @@ export const unsubscribeFromPush = async () => {
   const subscription = await registration?.pushManager?.getSubscription();
   if (subscription) {
     const axios = (await import('axios')).default;
-    await axios.delete('/api/notifications/push/unsubscribe', { data: { endpoint: subscription.endpoint } });
+    const { AXIOS_SKIP_TOAST } = await import('../lib/notifications');
+    await axios.delete('/api/notifications/push/unsubscribe', {
+      data: { endpoint: subscription.endpoint },
+      ...AXIOS_SKIP_TOAST,
+    });
     await subscription.unsubscribe();
   }
   setPushPreferenceEnabled(false);

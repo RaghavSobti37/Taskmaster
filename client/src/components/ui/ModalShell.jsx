@@ -142,11 +142,13 @@ export const ModalHeader = ({ title, onClose, icon: Icon, iconStyle }) => (
 );
 
 export const ModalBody = ({ children, className = '' }) => (
-  <div className={`p-6 space-y-4 overflow-y-auto flex-1 min-h-0 ${className}`}>{children}</div>
+  <div className={`tm-modal-scroll p-6 space-y-4 flex-1 min-h-0 ${className}`}>{children}</div>
 );
 
 export const ModalFooter = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 shrink-0 sticky bottom-0 ${className}`}>
+  <div
+    className={`tm-modal-footer px-6 py-4 bg-[var(--color-bg-secondary)] border-t border-[var(--color-bg-border)] flex items-center justify-end gap-2 shrink-0 ${className}`}
+  >
     {children}
   </div>
 );

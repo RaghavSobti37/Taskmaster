@@ -253,23 +253,27 @@ const queueGamificationEvent = async (eventType, payload) => {
       logger.error('Queue', 'Gamification direct execution fallback', { error: e.message });
     }
   } else {
-    // Memory fallback
-    const GamificationService = require('./gamificationService');
-    if (eventType === 'TASK_COMPLETED') {
-      const { userId, task } = payload;
-      
-      logger.debug('Gamification', 'Raw Input Task', { task });
-      
-      await GamificationService.generateDailyMissions(userId);
-      await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-      await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
-    } else if (eventType === 'TASK_CREATED') {
-      const { userId, task } = payload;
-      await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
-    } else if (eventType === 'PROJECT_CREATED') {
-      const { userId, project } = payload;
-      await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
-    }
+    // Defer so gamification DB writes never run inside an active MongoDB transaction.
+    setImmediate(async () => {
+      try {
+        const GamificationService = require('./gamificationService');
+        if (eventType === 'TASK_COMPLETED') {
+          const { userId, task } = payload;
+          logger.debug('Gamification', 'Raw Input Task', { task });
+          await GamificationService.generateDailyMissions(userId);
+          await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
+          await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
+        } else if (eventType === 'TASK_CREATED') {
+          const { userId, task } = payload;
+          await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
+        } else if (eventType === 'PROJECT_CREATED') {
+          const { userId, project } = payload;
+          await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
+        }
+      } catch (err) {
+        logger.error('Queue', 'Deferred gamification failed', { error: err.message });
+      }
+    });
   }
 };
 

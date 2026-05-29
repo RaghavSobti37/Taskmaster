@@ -1,37 +1,53 @@
 import React from 'react';
 import { Circle } from 'lucide-react';
-import { Badge } from '../ui';
+import { Badge, Skeleton } from '../ui';
 import { formatDueDate } from '../../utils/formatDueDate';
-
-const priorityVariant = (priority) => {
-  const p = String(priority || 'medium').toLowerCase();
-  if (p === 'critical' || p === 'high') return 'danger';
-  if (p === 'medium') return 'info';
-  if (p === 'low') return 'low';
-  return 'info';
-};
+import { getTaskRowStyle } from '../../utils/workspaceColors';
+import { isTaskOverdue } from '../../utils/dashboardTasks';
+import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 
 /**
  * Dashboard task row — workspace color bar, title, due label, priority badge.
- * Default: no fill highlight. Hover: subtle surface lift.
+ * Workspace tint background + coloured left bar.
  */
 const DashboardTaskRow = ({
   task,
   workspaceColor,
   onComplete,
   onOpen,
+  isCompleting = false,
   className = '',
 }) => {
   const dueLabel = formatDueDate(task.dueDate || task.scheduleDate, { emptyLabel: 'No date' });
+  const overdue = isTaskOverdue(task);
+
+  if (isCompleting) {
+    return (
+      <div
+        data-highlight-id={task._id}
+        className={`tm-task-row flex items-stretch rounded-xl border border-[var(--color-bg-border)] overflow-hidden ${className}`}
+        aria-busy="true"
+        aria-label="Completing task"
+      >
+        <Skeleton className="w-1 shrink-0 rounded-l-xl self-stretch min-h-[52px]" />
+        <div className="flex-1 p-3 space-y-2">
+          <Skeleton variant="text" className="!h-4 !w-3/4" />
+          <Skeleton variant="text" className="!h-3 !w-1/3" />
+        </div>
+        <Skeleton className="w-14 h-6 shrink-0 self-center mr-3 rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div
       data-highlight-id={task._id}
-      className={`flex items-stretch rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:border-[var(--color-bg-border)] ${className}`}
+      style={getTaskRowStyle(workspaceColor)}
+      className={`tm-task-row flex items-stretch rounded-xl border border-[var(--color-bg-border)] ${className}`}
     >
       <div
         className="w-1 shrink-0 rounded-l-xl"
-        style={{ backgroundColor: workspaceColor }}
+        style={{ backgroundColor: workspaceColor || 'var(--workspace-accent)' }}
         aria-hidden
       />
       <div className="flex items-center gap-2.5 flex-1 min-w-0 py-2.5 pr-3 pl-2">
@@ -52,9 +68,9 @@ const DashboardTaskRow = ({
           className="flex-1 min-w-0 text-left"
         >
           <p className="tm-task-title truncate">{task.title}</p>
-          <p className="tm-caption mt-0.5">{dueLabel}</p>
+          <p className={`tm-caption mt-0.5 ${overdue ? 'text-[var(--color-pastel-rose-text)] font-bold' : ''}`}>{dueLabel}</p>
         </button>
-        <Badge variant={priorityVariant(task.priority)} className="shrink-0 uppercase !text-[10px] !font-bold tracking-wide">
+        <Badge variant={getPriorityBadgeVariant(task.priority)} className="shrink-0 uppercase !text-[10px] !font-bold tracking-wide">
           {task.priority || 'medium'}
         </Badge>
       </div>

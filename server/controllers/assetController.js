@@ -1,4 +1,5 @@
 const Asset = require('../models/Asset');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 exports.getAssets = async (req, res) => {
   try {
@@ -55,7 +56,7 @@ exports.updateAsset = async (req, res) => {
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
 
     // Only creator or admin can edit
-    if (asset.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (asset.createdBy.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -87,7 +88,7 @@ exports.deleteAsset = async (req, res) => {
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     
     // Only creator or admin can delete
-    if (asset.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (asset.createdBy.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

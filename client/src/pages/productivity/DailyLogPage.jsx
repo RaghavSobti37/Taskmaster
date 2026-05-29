@@ -11,6 +11,8 @@ import {
   PageContainer, Button, Input, StatCard 
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { useSearchParams } from 'react-router-dom';
 import { 
   useLogs, useProjects, useTasks, useUserDirectory, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
@@ -18,6 +20,7 @@ import {
 
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [searchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ? new Date(searchParams.get('date')) : new Date());
 
@@ -84,7 +87,13 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
 
   const handleDeleteLog = async (logId) => {
-    if (!window.confirm('Are you sure you want to delete this log?')) return;
+    const ok = await confirm({
+      title: 'Delete log?',
+      message: 'Are you sure you want to delete this log?',
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteLogMutation.mutateAsync(logId);
     } catch (err) {
@@ -226,7 +235,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   </div>
                 ) : (
                   dailyLogs.map((log, idx) => {
-                    const isEditable = isSameDay(new Date(log.createdAt), new Date()) || user?.role === 'admin';
+                    const isEditable = isSameDay(new Date(log.createdAt), new Date()) || isAdminUser(user);
                     if (editingLogId === log._id) {
                       return (
                         <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-2xl space-y-4">

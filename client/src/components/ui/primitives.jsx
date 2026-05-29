@@ -68,12 +68,12 @@ export const PageContainer = ({ children, className = '', maxWidth = '1600px' })
 );
 
 export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
-  <div className={`flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] w-fit ${className}`}>
+  <div className={`inline-flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-auto ${className}`}>
     {tabs.map((tab) => (
       <button
         key={tab.id}
         onClick={() => onChange(tab.id)}
-        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-[var(--radius-atomic)] whitespace-nowrap ${
+        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
           activeTab === tab.id
             ? 'bg-[var(--color-bg-surface)] text-[var(--color-action-primary)] shadow-sm border border-[var(--color-bg-border)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -151,7 +151,9 @@ export const Badge = ({ children, variant = 'info', className = '' }) => {
     danger: 'badge-rose',
     overdue: 'badge-rose',
     hot: 'badge-rose',
-    high: 'badge-rose',
+    high: 'badge-apricot',
+    critical: 'badge-rose',
+    medium: 'badge-medium',
     info: 'badge-slate',
     neutral: 'badge-slate',
     fresh: 'badge-slate',

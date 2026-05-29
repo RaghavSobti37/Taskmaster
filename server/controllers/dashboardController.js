@@ -7,6 +7,7 @@ const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 exports.getDashboardSummary = async (req, res) => {
   try {
@@ -32,7 +33,7 @@ exports.getDashboardSummary = async (req, res) => {
 
       // 2. Lead Statistics
       Lead.aggregate([
-        { $match: req.user.role === 'admin' ? {} : { assignedRepId: userId } },
+        { $match: isAdminUser(req.user) ? {} : { assignedRepId: userId } },
         { $group: {
           _id: null,
           total: { $sum: 1 },

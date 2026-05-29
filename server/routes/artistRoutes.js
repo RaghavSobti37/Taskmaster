@@ -4,7 +4,7 @@ const artistController = require('../controllers/artistController');
 const artistAnalyticsController = require('../controllers/artistAnalyticsController');
 const spotifyAuthController = require('../controllers/spotifyAuthController');
 const youtubeAuthController = require('../controllers/youtubeAuthController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, artistOrAdmin } = require('../middleware/authMiddleware');
 
 // ─── Public endpoints (webhooks, OAuth callbacks, Spotify OAuth) ──────────────
 router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
@@ -24,13 +24,13 @@ router.get('/:id/analytics/:platform', artistAnalyticsController.getPlatformAnal
 // ─── Protected endpoints ──────────────────────────────────────────────────────
 router.use(protect);
 router.get('/', artistController.getArtists);
-router.post('/', artistController.createArtist);
-router.put('/:id', artistController.updateArtist);
-router.delete('/:id', artistController.deleteArtist);
-router.post('/:id/inject-event', artistController.injectEvent);
-router.post('/:id/sync-stats', artistAnalyticsController.syncArtistStats);
-router.post('/:id/tracked-video', artistAnalyticsController.addTrackedVideo);
-router.post('/:id/webhooks/subscribe', artistAnalyticsController.enableInstagramWebhooks);
+router.post('/', artistOrAdmin, artistController.createArtist);
+router.put('/:id', artistOrAdmin, artistController.updateArtist);
+router.delete('/:id', artistOrAdmin, artistController.deleteArtist);
+router.post('/:id/inject-event', artistOrAdmin, artistController.injectEvent);
+router.post('/:id/sync-stats', artistOrAdmin, artistAnalyticsController.syncArtistStats);
+router.post('/:id/tracked-video', artistOrAdmin, artistAnalyticsController.addTrackedVideo);
+router.post('/:id/webhooks/subscribe', artistOrAdmin, artistAnalyticsController.enableInstagramWebhooks);
 
 // Artist by ID must come after protect so auth works (but getArtistById is public above)
 router.get('/:id', artistController.getArtistById);

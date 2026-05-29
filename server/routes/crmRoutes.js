@@ -28,13 +28,13 @@ router.get('/rep-summary', crmController.getRepSummary);
 router.get('/config', crmController.getCRMConfig);
 router.get('/imports', crmController.getImports);
 router.get('/import/status/:jobId', crmController.getImportJobStatus);
-router.get('/purge-logs', crmController.getPurgeLogs);
-router.delete('/imports/:id', crmController.deleteImport);
-router.post('/reset', crmController.resetCRM);
-router.get('/debug/columns', crmController.getDebugColumns);
-router.post('/debug/save-mapping', crmController.saveMapping);
-router.post('/sync-bookings', require('../controllers/syncController').syncBookings);
-router.post('/sync-unsubscribed', async (req, res) => {
+router.get('/purge-logs', admin, crmController.getPurgeLogs);
+router.delete('/imports/:id', admin, crmController.deleteImport);
+router.post('/reset', admin, crmController.resetCRM);
+router.get('/debug/columns', admin, crmController.getDebugColumns);
+router.post('/debug/save-mapping', admin, crmController.saveMapping);
+router.post('/sync-bookings', admin, require('../controllers/syncController').syncBookings);
+router.post('/sync-unsubscribed', admin, async (req, res) => {
   try {
     const { syncAndCleanUnsubscribeSheet } = require('../services/holySheetService');
     const result = await syncAndCleanUnsubscribeSheet();
@@ -44,7 +44,7 @@ router.post('/sync-unsubscribed', async (req, res) => {
   }
 });
 
-router.delete('/leads/cleanup-test-data', crmController.cleanupTestData);
+router.delete('/leads/cleanup-test-data', admin, crmController.cleanupTestData);
 
 router.get('/followups', crmController.getFollowups);
 

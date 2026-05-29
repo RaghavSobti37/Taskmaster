@@ -42,7 +42,6 @@ export { Spinner, LoadingState } from './Spinner';
 // export { Button as ShadcnButton, buttonVariants } from './button';
 
 // ── Dropdowns (Phase 2: consolidate into Select) ──
-export { default as CKDropdown } from './CKDropdown';
 export { default as NexusDropdown } from './NexusDropdown';
 
 // ── Page chrome ──

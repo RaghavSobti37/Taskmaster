@@ -57,7 +57,7 @@ const systemFlowData = {
     C -->|Clerk Verified| D[System Activity Logger]:::pulse
     C -->|Legacy JWT| D
     D --> E[Activity Log Stream]
-    E --> F[Supabase Realtime Broadcast]:::pulse
+    E --> F[Socket.io Realtime Broadcast]:::pulse
     D --> G[Trigger.dev Queue Dispatch]:::warn`,
   reportHtml: `
     <div class="space-y-4">
@@ -68,7 +68,7 @@ const systemFlowData = {
         <tr class="border-b border-white/10 text-slate-400"><th>Subsystem</th><th>Status</th><th>Latency</th></tr>
         <tr class="border-b border-white/5"><td>Auth Engine (Clerk)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>14ms</td></tr>
         <tr class="border-b border-white/5"><td>Database (MongoDB)</td><td><span class="text-emerald-400">ACTIVE</span></td><td>8ms</td></tr>
-        <tr class="border-b border-white/5"><td>Realtime Updates (Supabase)</td><td><span class="text-emerald-400">CONNECTED</span></td><td>22ms</td></tr>
+        <tr class="border-b border-white/5"><td>Realtime Updates (Socket.io)</td><td><span class="text-emerald-400">CONNECTED</span></td><td>22ms</td></tr>
         <tr><td>Background Jobs (Trigger.dev)</td><td><span class="text-amber-400">STANDBY</span></td><td>--</td></tr>
       </table>
     </div>

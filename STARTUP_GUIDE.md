@@ -35,8 +35,6 @@ Ensure `client/.env` exists and optionally configure the frontend API URL:
 
 ```env
 VITE_API_URL=http://localhost:5000
-VITE_SUPABASE_URL=https://your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
 If `VITE_API_URL` is empty, the client will use relative `/api` routes and rely on the Vite proxy.

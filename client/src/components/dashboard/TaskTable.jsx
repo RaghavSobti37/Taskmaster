@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Briefcase, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, DataTable, Badge } from '../ui';
 import { formatDueDate } from '../../utils/formatDueDate';
+import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 
 const TaskTable = ({
   tasks = [],
@@ -116,7 +117,7 @@ const TaskTable = ({
         </button>
       ),
       render: (row) => (
-        <Badge variant={row.priority === 'critical' ? 'danger' : row.priority === 'high' ? 'warning' : 'info'}>
+        <Badge variant={getPriorityBadgeVariant(row.priority)}>
           {row.priority}
         </Badge>
       )

@@ -189,6 +189,11 @@ select option {
   color: var(--color-pastel-apricot-text);
 }
 
+.badge-medium {
+  background: var(--color-pastel-apricot-bg);
+  color: var(--color-pastel-rose-text);
+}
+
 .badge-rose {
   background: var(--color-pastel-rose-bg);
   color: var(--color-pastel-rose-text);
@@ -237,6 +242,21 @@ select option {
   color: var(--color-text-primary);
 }
 
+/* Task rows — workspace tint (--workspace-accent set inline) */
+.tm-task-row {
+  background-color: color-mix(in srgb, var(--workspace-accent, #64748b) 28%, var(--color-bg-surface)) !important;
+  transition: background-color 0.15s ease;
+}
+.tm-task-row:hover {
+  background-color: color-mix(in srgb, var(--workspace-accent, #64748b) 36%, var(--color-bg-surface)) !important;
+}
+.tm-task-row.tm-task-row--completed {
+  background-color: var(--color-pastel-slate-bg) !important;
+}
+.tm-task-row.tm-task-row--completed:hover {
+  background-color: color-mix(in srgb, var(--color-pastel-slate-text) 14%, var(--color-pastel-slate-bg)) !important;
+}
+
 /* Modal layout system — flex-centered panels collapse to min-content without explicit width */
 @layer components {
   /* Overlay: grid centering (never flex shrink collapse) */
@@ -265,6 +285,53 @@ select option {
   .tm-modal-xl { --tm-modal-width: 896px; }
   .tm-modal-2xl { --tm-modal-width: 1024px; }
   .tm-modal-full { --tm-modal-width: 1200px; }
+
+  /* Scrollable modal body + pinned footer (form uses flex column on panel) */
+  .tm-modal-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tm-modal-footer {
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 -4px 12px rgba(8, 61, 58, 0.06);
+  }
+
+  /* react-hot-toast — top-right stack */
+  .tm-toast-container {
+    top: 16px !important;
+    right: 16px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(420px, calc(100vw - 2rem)) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  .tm-toast-container > div {
+    max-width: min(420px, calc(100vw - 2rem)) !important;
+    justify-content: flex-end !important;
+  }
+
+  /* react-hot-toast — prevent custom cards collapsing to icon-width column */
+
+  .tm-toast-host {
+    min-width: min(300px, calc(100vw - 2rem)) !important;
+    max-width: min(420px, calc(100vw - 2rem)) !important;
+    width: min(420px, calc(100vw - 2rem)) !important;
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  .tm-toast-host > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 
   /* Full-screen panels inside overlays keep viewport size */
   .tm-modal-overlay > .h-full,

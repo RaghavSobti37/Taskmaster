@@ -3,7 +3,7 @@ import axios from 'axios';
 import { X, CheckCircle2, Trash2, AlertTriangle, Settings, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ModalShell } from './ui/ModalShell';
+import { ModalShell, ModalFooter } from './ui/ModalShell';
 
 const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   const [name, setName] = useState(project?.name || '');
@@ -77,7 +77,8 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="tm-modal-scroll p-6 space-y-5">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold" required />
@@ -98,17 +99,19 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${starred ? 'left-5' : 'left-0.5'}`} />
             </button>
           </div>
-          <div className="pt-4 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+          </div>
+
+          <ModalFooter className="justify-between">
             <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 font-bold text-xs hover:underline">
               <Trash2 size={14} /> Delete Project
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ml-auto">
               <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]">Cancel</button>
               <button type="submit" disabled={loading || !name} className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2">
                 {loading ? 'Saving...' : <><CheckCircle2 size={18} /> Save Changes</>}
               </button>
             </div>
-          </div>
+          </ModalFooter>
         </form>
       )}
     </ModalShell>

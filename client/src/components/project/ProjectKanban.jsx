@@ -1,8 +1,9 @@
 import React from 'react';
 import { Badge, ProgressBar } from '../ui';
 import { User, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
-import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+import { getPriorityBadgeVariant } from '../../constants/taskOptions';
+import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
 
 const progressForStatus = (status) => {
   if (status === 'done') return 100;
@@ -10,21 +11,20 @@ const progressForStatus = (status) => {
   return 50;
 };
 
-const KanbanCard = ({ task, onMove, onDetail }) => {
-  const { data: workspaces = [] } = useWorkspaces();
+const KanbanCard = ({ task, onMove, onDetail, workspaces, projects }) => {
   const statuses = ['todo', 'in-progress', 'in-review', 'done'];
   const currentIndex = statuses.indexOf(task.status);
   const isDone = task.status === 'done';
-  const accent = getWorkspaceColor(getTaskWorkspace(task), workspaces);
+  const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
 
   return (
     <div
-      className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}
-      style={{ borderLeft: `3px solid ${accent}` }}
+      className={`tm-task-row p-4 rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'tm-task-row--completed' : 'hover:shadow-md'}`}
+      style={isDone ? getCompletedTaskRowStyle() : getTaskRowStyle(accent)}
       data-highlight-id={task._id}
     >
       <div className="flex items-start justify-between mb-3">
-        <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
+        <Badge variant={getPriorityBadgeVariant(task.priority)}>
           {task.priority.toUpperCase()}
         </Badge>
         {!isDone && (
@@ -54,7 +54,7 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
         </h4>
         {isDone ? (
           <div className="pt-2 border-t border-[var(--color-bg-border)] border-dashed space-y-1">
-            <p className="text-[9px] font-black text-green-500 uppercase tracking-widest flex items-center gap-1.5">
+            <p className="text-[9px] font-black text-[var(--color-pastel-slate-text)] uppercase tracking-widest flex items-center gap-1.5">
               <CheckCircle2 size={10} /> Completed
             </p>
           </div>
@@ -86,11 +86,13 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
 };
 
 const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
+  const { data: workspaces = [] } = useWorkspaces();
+  const { data: projects = [] } = useProjects();
   const columns = [
     { id: 'todo', label: 'To Do', color: 'bg-gray-500' },
     { id: 'in-progress', label: 'In Progress', color: 'bg-blue-500' },
     { id: 'in-review', label: 'In Review', color: 'bg-orange-500' },
-    { id: 'done', label: 'Done', color: 'bg-green-500' },
+    { id: 'done', label: 'Done', color: 'bg-[var(--color-pastel-slate-text)]' },
   ];
 
   const handleMove = (taskId, newStatus) => {
@@ -118,7 +120,7 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
             
             <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3 overflow-y-auto custom-scrollbar">
               {columnTasks.map(task => (
-                <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} />
+                <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} workspaces={workspaces} projects={projects} />
               ))}
               {columnTasks.length === 0 && (
                 <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-bg-border)] rounded-xl">

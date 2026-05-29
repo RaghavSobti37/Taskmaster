@@ -73,7 +73,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast']
 };
 
 app.use(cors(corsOptions));
@@ -321,6 +321,10 @@ if (process.env.NODE_ENV !== 'test') {
     const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
     initLogArchiverWorker();
   });
+
+  const { initRealtime } = require('./config/realtime');
+  initRealtime(server, corsAllowlist);
+
   console.log('Server re-initialized after port release');
 }
 

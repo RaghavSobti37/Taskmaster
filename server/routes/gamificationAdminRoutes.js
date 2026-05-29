@@ -3,8 +3,8 @@ const router = express.Router();
 const GamificationConfig = require('../models/GamificationConfig');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-// Get current gamification config
-router.get('/config', protect, async (req, res) => {
+// Get current gamification config (admin only — matches AdminRoute UI)
+router.get('/config', protect, admin, async (req, res) => {
   try {
     let config = await GamificationConfig.findOne();
     
@@ -56,8 +56,8 @@ router.put('/config', protect, admin, async (req, res) => {
   }
 });
 
-// Get single config field
-router.get('/config/:field', protect, async (req, res) => {
+// Get single config field (admin only)
+router.get('/config/:field', protect, admin, async (req, res) => {
   try {
     let config = await GamificationConfig.findOne();
     if (!config) {

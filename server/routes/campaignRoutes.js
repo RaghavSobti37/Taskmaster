@@ -11,7 +11,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
-const { resolveMailEventCity } = require('../utils/mailEventLocation');
+const { resolveMailEventCity, lookupGeoAsync, isValidDisplayCity } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 
 router.use(protect);
@@ -74,25 +74,36 @@ router.get('/:id', async (req, res) => {
     campaign.stats = computed.stats;
     campaign.metrics = computed.metrics;
 
-    const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
-    campaign.events = events;
+    const ipCache = new Map();
+    const resolveClickCity = async (evt) => {
+      const sync = resolveMailEventCity(evt);
+      if (sync) return sync;
+      if (evt.eventType !== 'Click' || !evt.ipAddress) return null;
+      if (!ipCache.has(evt.ipAddress)) {
+        ipCache.set(evt.ipAddress, lookupGeoAsync(evt.ipAddress));
+      }
+      const geo = await ipCache.get(evt.ipAddress);
+      return isValidDisplayCity(geo?.city) ? geo.city.trim() : null;
+    };
+
+    const eventsRaw = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
+    campaign.events = await Promise.all(eventsRaw.map(async (evt) => ({
+      ...evt,
+      displayCity: await resolveClickCity(evt),
+    })));
 
     const allEvents = await MailEvent.find({ campaignId: campaign._id }).lean();
     
     const locationBreakdown = {};
     const timeSeriesMap = {};
     
-    allEvents.forEach(evt => {
-      const city = resolveMailEventCity(evt);
-      if (!city) return;
-      
-      if (!locationBreakdown[city]) {
-        locationBreakdown[city] = { opens: 0, clicks: 0 };
-      }
-      if (evt.eventType === 'Open') {
-        locationBreakdown[city].opens++;
-      } else if (evt.eventType === 'Click') {
-        locationBreakdown[city].clicks++;
+    for (const evt of allEvents) {
+      if (evt.eventType === 'Click') {
+        const city = await resolveClickCity(evt);
+        if (city) {
+          if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
+          locationBreakdown[city].clicks++;
+        }
       }
       
       if (evt.eventType === 'Open' || evt.eventType === 'Click') {
@@ -107,7 +118,7 @@ router.get('/:id', async (req, res) => {
           timeSeriesMap[hourStr].clicks++;
         }
       }
-    });
+    }
     
     campaign.locationBreakdown = locationBreakdown;
     // #region agent log

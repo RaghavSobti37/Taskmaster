@@ -96,7 +96,9 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
             </div>
           </div>
           <div className="w-full md:w-80">
-            <AddMemberDropdown onAdd={async (userId) => {
+            <AddMemberDropdown
+              excludeIds={localMembers.map((m) => m._id)}
+              onAdd={async (userId) => {
               try {
                 await axios.post(`/api/projects/${project._id}/members`, { userId });
                 window.location.reload();
@@ -203,9 +205,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   );
 };
 
-import Select from 'react-select';
-
-const AddMemberDropdown = ({ onAdd }) => {
+const AddMemberDropdown = ({ onAdd, excludeIds = [] }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -223,15 +223,17 @@ const AddMemberDropdown = ({ onAdd }) => {
     fetchUsers();
   }, []);
 
-  const formatOptionLabel = ({ value, label }) => {
-    const user = users.find(u => u._id === value);
-    if (!user) return label;
+  const availableUsers = users.filter((u) => !excludeIds.includes(u._id));
+
+  const formatOptionLabel = (option) => {
+    const user = users.find((u) => u._id === option.value);
+    if (!user) return option.label;
     return (
       <div className="flex items-center gap-3">
         <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
           {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.substring(0, 2).toUpperCase()}
         </div>
-        <div className="flex flex-col">
+        <div className="flex flex-col items-start">
           <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
           <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{user.role}</span>
         </div>
@@ -240,16 +242,14 @@ const AddMemberDropdown = ({ onAdd }) => {
   };
 
   return (
-    <Select
-      isLoading={loading}
-      options={users.map(u => ({ value: u._id, label: u.name }))}
-      onChange={(opt) => onAdd(opt.value)}
-      placeholder="Select member..."
-      formatOptionLabel={formatOptionLabel}
-      menuPortalTarget={document.body}
-      className="react-select-container"
-      classNamePrefix="react-select"
-      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+    <CKDropdown
+      options={availableUsers.map((u) => ({ value: u._id, label: u.name }))}
+      value=""
+      onChange={onAdd}
+      placeholder={loading ? 'Loading members...' : 'Select member...'}
+      renderOption={formatOptionLabel}
+      disabled={loading}
+      className="w-full"
     />
   );
 };

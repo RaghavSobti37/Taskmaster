@@ -7,6 +7,7 @@ const MailEvent = require('../models/MailEvent');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
 const logger = require('../utils/logger');
 const { processEmailJob } = require('./emailProcessor');
+const { resolveCampaignByParam } = require('../utils/resolveCampaign');
 
 const memoryQueue = [];
 let isProcessingMemoryQueue = false;
@@ -28,18 +29,10 @@ const processMemoryQueue = async () => {
 };
 
 const dispatchCampaignJobs = async (campaignId) => {
-  const Campaign = require('../models/Campaign');
-  const MailCampaign = require('../models/MailCampaign');
-  let isLegacy = false;
-  let Model = Campaign;
+  const resolved = await resolveCampaignByParam(campaignId);
+  if (!resolved) throw new Error('Campaign not found');
 
-  let campaign = await Campaign.findById(campaignId);
-  if (!campaign) {
-    campaign = await MailCampaign.findById(campaignId);
-    Model = MailCampaign;
-    isLegacy = true;
-  }
-  if (!campaign) throw new Error('Campaign not found');
+  const { campaign, isLegacy, Model } = resolved;
 
   campaign.status = 'Sending';
   await campaign.save();

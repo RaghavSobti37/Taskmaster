@@ -10,6 +10,7 @@ const Lead = require('../models/Lead');
 const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
+const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
 
 router.use(protect);
 
@@ -61,19 +62,10 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const MailEvent = require('../models/MailEvent');
-    let campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] })
-      .populate('recipients.leadId', 'name email location phone status artistType')
-      .populate('senderProfileId')
-      .populate('senderProfileIds')
-      .lean();
-    
-    if (!campaign && id.match(/^[0-9a-fA-F]{24}$/)) {
-      campaign = await MailCampaign.findById(id)
-        .populate('recipients.leadId', 'name email location phone status artistType')
-        .populate('senderProfileId')
-        .lean();
-    }
-    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const resolved = await resolveCampaignByParam(id, { populate: true, lean: true });
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    let campaign = resolved.campaign;
 
     const computed = computeRecipientStats(campaign.recipients);
     campaign.recipientStatusCounts = computed.recipientStatusCounts;
@@ -219,7 +211,9 @@ router.post('/', async (req, res) => {
 
 router.post('/:id/dispatch', async (req, res) => {
   try {
-    const result = await dispatchCampaignJobs(req.params.id);
+    const resolved = await resolveCampaignByParam(req.params.id);
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    const result = await dispatchCampaignJobs(resolved.campaign._id);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -233,13 +227,15 @@ router.post('/:id/resend', async (req, res) => {
       targetStatuses, includeSignature
     } = req.body;
 
-    let campaign = await Campaign.findById(req.params.id);
-    let isCore = true;
-    if (!campaign) {
-      campaign = await MailCampaign.findById(req.params.id);
-      isCore = false;
-    }
-    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+    const resolved = await resolveCampaignByParam(req.params.id);
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:resend',message:'campaign resolved for resend',data:{paramId:String(req.params.id).slice(0,12),resolvedId:String(resolved.campaign._id).slice(0,12),campaignId:resolved.campaign.campaignId?.slice(0,12),isLegacy:resolved.isLegacy},timestamp:Date.now(),hypothesisId:'H404-resend',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
+
+    let campaign = resolved.campaign;
+    const isCore = !resolved.isLegacy;
 
     const defaultTargets = ['Failed', 'Bounced', 'Pending', 'Invalid'];
     const statuses = Array.isArray(targetStatuses) && targetStatuses.length
@@ -324,9 +320,9 @@ router.post('/:id/resend-filtered', async (req, res) => {
       return res.status(400).json({ error: 'recipientEmails required' });
     }
 
-    let source = await Campaign.findById(req.params.id);
-    if (!source) source = await MailCampaign.findById(req.params.id);
-    if (!source) return res.status(404).json({ error: 'Campaign not found' });
+    const resolved = await resolveCampaignByParam(req.params.id);
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+    const source = resolved.campaign;
 
     const emailSet = new Set(recipientEmails.map((e) => String(e).toLowerCase().trim()).filter(Boolean));
     const filteredRecipients = (source.recipients || [])
@@ -393,9 +389,14 @@ router.post('/:id/resend-filtered', async (req, res) => {
     const campaign = await Campaign.create(campaignPayload);
     const result = await dispatchCampaignJobs(campaign._id);
 
+    const campaignObj = campaign.toObject ? campaign.toObject() : campaign;
+
     res.status(201).json({
-      campaign,
       ...result,
+      campaign: campaignObj,
+      campaignId: campaign.campaignId,
+      campaignMongoId: String(campaign._id),
+      title: campaign.title,
       queuedCount: filteredRecipients.length,
       filterLabel: label,
     });
@@ -411,7 +412,9 @@ router.delete('/:id', async (req, res) => {
     const MailEvent = require('../models/MailEvent');
     const EmailLog = require('../models/EmailLog');
 
-    const campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] });
+    const campaign = await Campaign.findOne({
+      ...(isObjectIdHex(id) ? { $or: [{ campaignId: id }, { _id: id }] } : { campaignId: id }),
+    });
     if (campaign) {
       await Campaign.findByIdAndDelete(campaign._id);
       await EmailLog.deleteMany({ campaignId: { $in: [String(campaign.campaignId), String(campaign._id)] } });

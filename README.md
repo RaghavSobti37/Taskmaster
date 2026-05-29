@@ -108,7 +108,18 @@ If local auth or proxy testing is needed before a normal login token is availabl
 - **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
 
 ## Version
-- Current: **1.7.28**
+- Current: **1.7.29**
+
+## [2026-05-29] Version 1.7.29 - Announcement Dispatch Visibility + Professional Email Template
+### Announcements (`/management/announcements`)
+- Added live email dispatch tracking on each announcement card (`queued`, `sending`, `completed`, `failed`) with recipient-level status rows.
+- Added manager-side announcement deletion action via `DELETE /api/announcements/:id`.
+- Announcement list query now supports manager-controlled expired visibility (`includeExpired=true`) so sent announcements remain visible for auditing.
+
+### Announcement Email Delivery
+- Reworked announcement HTML template into branded, production-ready layout with stronger typography, CTA treatment, sender context, and expiry hint.
+- Shifted dispatch pipeline to queued/background send flow with per-recipient tracking (`Pending`, `Sending`, `Sent`, `Opened`, `Failed`).
+- Added public tracking pixel endpoint for open events and automatic sent/opened/failed counter recomputation.
 
 ## [2026-05-29] Version 1.7.28 - Exly Analytics, Gamification & Dev Stability
 ### Exly Data (`/admin/exly-campaigns`)

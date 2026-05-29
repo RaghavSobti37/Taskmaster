@@ -9,7 +9,10 @@ const attendanceSchema = new mongoose.Schema({
   isHalfDay: { type: Boolean, default: false },
   onLeave: { type: Boolean, default: false },
   reason: { type: String },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isApproved: { type: Boolean, default: false },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Attendance', attendanceSchema);

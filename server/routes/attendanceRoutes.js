@@ -16,6 +16,8 @@ const toStartOfDay = (date) => {
   return value;
 };
 
+const DEFAULT_CHECKIN_TIME = '10:30';
+
 const formatHHMM = (date = new Date()) => {
   const hh = String(date.getHours()).padStart(2, '0');
   const mm = String(date.getMinutes()).padStart(2, '0');
@@ -149,8 +151,19 @@ router.post('/check', async (req, res) => {
     const now = new Date();
     const today = toStartOfDay(now);
     const type = req.body?.type === 'out' ? 'out' : 'in';
-    const timeValue = req.body?.time || formatHHMM(now);
+    const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
+    if (existing?.isApproved) {
+      return res.status(403).json({ error: 'Attendance is locked for today' });
+    }
+    if (type === 'in' && existing?.timeIn) {
+      return res.status(400).json({ error: 'Already marked in for today' });
+    }
+    if (type === 'out' && existing?.timeOut) {
+      return res.status(400).json({ error: 'Already marked out for today' });
+    }
+
+    const timeValue = formatHHMM(now);
     const attendance = await Attendance.findOneAndUpdate(
       { userId: req.user._id, date: today },
       {
@@ -158,8 +171,8 @@ router.post('/check', async (req, res) => {
           userId: req.user._id,
           username: req.user.name,
           date: today,
-          ...(type === 'in' ? { timeIn: timeValue } : { timeOut: timeValue })
-        }
+          ...(type === 'in' ? { timeIn: timeValue } : { timeOut: timeValue }),
+        },
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
@@ -167,6 +180,62 @@ router.post('/check', async (req, res) => {
     await awardAttendanceXpIfEligible(attendance);
     await GamificationService.awardActionXp(req.user._id, 'ATTENDANCE_ACTION', { type });
     res.json(attendance);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/check/undo', async (req, res) => {
+  try {
+    const today = toStartOfDay(new Date());
+    const type = req.body?.type === 'out' ? 'out' : 'in';
+    const existing = await Attendance.findOne({ userId: req.user._id, date: today });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'No attendance record for today' });
+    }
+    if (existing.isApproved) {
+      return res.status(403).json({ error: 'Attendance is locked for today' });
+    }
+    if (type === 'in' && !existing.timeIn) {
+      return res.status(400).json({ error: 'No check-in to undo' });
+    }
+    if (type === 'out' && !existing.timeOut) {
+      return res.status(400).json({ error: 'No check-out to undo' });
+    }
+
+    const update = type === 'in' ? { $unset: { timeIn: '' } } : { $unset: { timeOut: '' } };
+    const attendance = await Attendance.findOneAndUpdate(
+      { userId: req.user._id, date: today },
+      update,
+      { new: true }
+    );
+    res.json(attendance);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/:id/approve', async (req, res) => {
+  try {
+    if (!isOps(req.user)) {
+      return res.status(403).json({ error: 'Only operations can approve attendance' });
+    }
+
+    const row = await Attendance.findById(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Attendance record not found' });
+    if (row.onLeave) {
+      return res.status(400).json({ error: 'Leave entries are approved separately' });
+    }
+    if (!row.timeIn && !row.timeOut) {
+      return res.status(400).json({ error: 'Cannot approve empty attendance' });
+    }
+
+    row.isApproved = true;
+    row.approvedBy = req.user._id;
+    row.approvedAt = new Date();
+    await row.save();
+    res.json(row);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -274,7 +343,7 @@ router.post('/batch/present', async (req, res) => {
               userId: userRow._id,
               username: userRow.name,
               date: day,
-              timeIn: '09:00',
+              timeIn: DEFAULT_CHECKIN_TIME,
               timeOut: '18:00',
               isHalfDay: false,
               onLeave: false,
@@ -314,7 +383,7 @@ router.delete('/reset', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can edit attendance' });
-    const allowed = ['timeIn', 'timeOut', 'isHalfDay', 'onLeave', 'reason', 'date', 'userId', 'username'];
+    const allowed = ['timeIn', 'timeOut', 'isHalfDay', 'onLeave', 'reason', 'date', 'userId', 'username', 'isApproved'];
     const payload = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) payload[key] = req.body[key];

@@ -839,6 +839,26 @@ export const useAttendanceCheck = () => {
   });
 };
 
+export const useUndoAttendanceCheck = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => axios.post('/api/attendance/check/undo', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};
+
+export const useApproveAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.patch(`/api/attendance/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+    },
+  });
+};
+
 export const useApplyLeave = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -939,12 +959,13 @@ export const useLeaderboardBreakdown = (userId, enabled = true) => {
   });
 };
 
-export const useAnnouncements = (enabled = true) => {
+export const useAnnouncements = (enabled = true, refetchInterval = false, includeExpired = false) => {
   return useQuery({
-    queryKey: ['announcements'],
-    queryFn: async () => (await axios.get('/api/announcements')).data,
+    queryKey: ['announcements', { includeExpired }],
+    queryFn: async () => (await axios.get('/api/announcements', { params: { includeExpired } })).data,
     enabled,
-    staleTime: 1000 * 60
+    staleTime: 1000 * 60,
+    refetchInterval
   });
 };
 
@@ -961,6 +982,17 @@ export const useCreateAnnouncement = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload) => axios.post('/api/announcements', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    }
+  });
+};
+
+export const useDeleteAnnouncement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/announcements/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });

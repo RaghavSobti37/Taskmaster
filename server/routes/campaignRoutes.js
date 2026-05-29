@@ -84,6 +84,7 @@ router.get('/:id', async (req, res) => {
     
     allEvents.forEach(evt => {
       const city = resolveMailEventCity(evt);
+      if (!city) return;
       
       if (!locationBreakdown[city]) {
         locationBreakdown[city] = { opens: 0, clicks: 0 };

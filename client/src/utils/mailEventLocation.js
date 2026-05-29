@@ -1,5 +1,4 @@
-/** True city name only — rejects country codes (IN, US) and unknown placeholders. */
-const isValidDisplayCity = (name) => {
+export const isValidDisplayCity = (name) => {
   if (!name || typeof name !== 'string') return false;
   const t = name.trim();
   if (!t || /^unknown(\s+city)?$/i.test(t)) return false;
@@ -7,11 +6,10 @@ const isValidDisplayCity = (name) => {
   return true;
 };
 
-const isEmailImageProxy = (userAgent = '') =>
+export const isEmailImageProxy = (userAgent = '') =>
   /GoogleImageProxy|ggpht\.com|YahooMailProxy/i.test(userAgent);
 
-/** Resolve display city from MailEvent — city name only, or null. */
-const resolveMailEventCity = (evt) => {
+export const eventCityLabel = (evt) => {
   if (evt?.eventType === 'Open' && isEmailImageProxy(evt.userAgent)) return null;
 
   const candidates = [];
@@ -19,8 +17,6 @@ const resolveMailEventCity = (evt) => {
   if (evt?.metadata?.city) candidates.push(evt.metadata.city);
   if (typeof evt?.metadata?.location === 'string') {
     candidates.push(evt.metadata.location.split(',')[0].trim());
-  } else if (evt?.metadata?.location?.city) {
-    candidates.push(evt.metadata.location.city);
   }
 
   for (const c of candidates) {
@@ -28,5 +24,3 @@ const resolveMailEventCity = (evt) => {
   }
   return null;
 };
-
-module.exports = { isValidDisplayCity, isEmailImageProxy, resolveMailEventCity };

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const geoip = require('geoip-lite');
 const logger = require('../utils/logger');
+const { isValidDisplayCity, isEmailImageProxy } = require('../utils/mailEventLocation');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -27,9 +28,9 @@ const parseClientNetworkLocation = (req) => {
 
   const geo = geoip.lookup(ip);
   return {
-    city: geo ? (geo.city || geo.region || geo.country || 'Unknown') : 'Unknown',
-    region: geo ? (geo.region || 'Unknown') : 'Unknown',
-    country: geo ? (geo.country || 'Unknown') : 'Unknown',
+    city: geo?.city || null,
+    region: geo?.region || null,
+    country: geo?.country || null,
     ip
   };
 };
@@ -43,6 +44,23 @@ function isAntiSpamBot(userAgent) {
   if (/\b(bot|bingpreview|facebookexternalhit)\b/i.test(userAgent)) return true;
   return botKeywords.some((regex) => regex.test(userAgent));
 }
+
+const buildEventLocation = (req, userAgent, { skipProxyGeo = false } = {}) => {
+  const raw = parseClientNetworkLocation(req);
+  if (skipProxyGeo && isEmailImageProxy(userAgent)) {
+    return { city: null, region: raw.region, country: raw.country, ip: raw.ip };
+  }
+  if (raw.city && !isValidDisplayCity(raw.city)) {
+    return { ...raw, city: null };
+  }
+  return raw;
+};
+
+const locationIncForCity = (city, field) => {
+  if (!isValidDisplayCity(city)) return {};
+  const cleanCity = city.replace(/\./g, '');
+  return { [`locationBreakdown.${cleanCity}.${field}`]: 1 };
+};
 
 // Open Tracking Pixel Endpoint
 router.get('/open/:pixelId.gif', async (req, res) => {
@@ -69,8 +87,8 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         // Anti-Bot Protection
         if (isAntiSpamBot(userAgent)) return;
 
-        // Run the local in-memory location lookup
-        const location = parseClientNetworkLocation(req);
+        // Run the local in-memory location lookup (Gmail proxy IP ≠ reader city — skip geo on opens)
+        const location = buildEventLocation(req, userAgent, { skipProxyGeo: true });
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
@@ -95,9 +113,6 @@ router.get('/open/:pixelId.gif', async (req, res) => {
 
         if (camp) {
           if (isCore) {
-            const city = location.city || 'Unknown';
-            const cleanCity = city.replace(/\./g, '');
-
             await Promise.all([
               Campaign.updateOne(
                 { _id: camp._id, "recipients.email": log.leadEmail.toLowerCase() },
@@ -105,7 +120,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
                   $set: { "recipients.$.status": "Opened" },
                   $inc: { 
                     "metrics.opened": 1,
-                    [`locationBreakdown.${cleanCity}.opens`]: 1
+                    ...locationIncForCity(location.city, 'opens')
                   },
                   $push: { timeSeries: { time: new Date(), opens: 1, clicks: 0 } }
                 }
@@ -125,15 +140,11 @@ router.get('/open/:pixelId.gif', async (req, res) => {
               })
             ]);
           } else {
-            const city = location.city || 'Unknown City';
-            const cleanCity = city.replace(/\./g, '');
-
-            // Build the dynamic location breakdown update for MailCampaign
             const updateObj = {
               $set: { "recipients.$.status": "Opened" },
               $inc: {
                 "stats.opened": 1,
-                [`locationBreakdown.${cleanCity}.opens`]: 1
+                ...locationIncForCity(location.city, 'opens')
               }
             };
 
@@ -198,7 +209,7 @@ router.get('/click/:clickId', async (req, res) => {
       try {
         if (isAntiSpamBot(userAgent)) return;
 
-        const location = parseClientNetworkLocation(req);
+        const location = buildEventLocation(req, userAgent);
 
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;
@@ -219,15 +230,11 @@ router.get('/click/:clickId', async (req, res) => {
 
         if (camp) {
           if (isCore) {
-            const city = location.city || 'Unknown';
-            const cleanCity = city.replace(/\./g, '');
-            
-            // Build the dynamic location breakdown update
             const updateObj = {
               $set: { "recipients.$.status": "Clicked" },
               $inc: { 
                 "metrics.clicked": 1,
-                [`locationBreakdown.${cleanCity}.clicks`]: 1
+                ...locationIncForCity(location.city, 'clicks')
               },
               $push: { timeSeries: { time: new Date(), opens: 0, clicks: 1 } }
             };
@@ -253,15 +260,11 @@ router.get('/click/:clickId', async (req, res) => {
               })
             ]);
           } else {
-            const city = location.city || 'Unknown';
-            const cleanCity = city.replace(/\./g, '');
-
-            // Build the dynamic location breakdown update for MailCampaign
             const updateObj = {
               $set: { "recipients.$.status": "Clicked" },
               $inc: {
                 "stats.clicked": 1,
-                [`locationBreakdown.${cleanCity}.clicks`]: 1
+                ...locationIncForCity(location.city, 'clicks')
               }
             };
 

@@ -4,33 +4,30 @@ const Notification = require('../models/Notification');
 const Task = require('../models/Task');
 const Lead = require('../models/Lead');
 const CalendarEvent = require('../models/CalendarEvent');
+const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
-const { parse, startOfDay, endOfDay, isBefore } = require('date-fns');
+const { startOfDay, endOfDay, isBefore } = require('date-fns');
+const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
+const { getVapidPublicKey } = require('../services/pushNotificationService');
 
-// Get status counts for overdue items and today's items
 router.get('/status-counts', protect, async (req, res) => {
   try {
     const now = new Date();
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
 
-    // 1. Overdue Tasks
     const overdueTasksCount = await Task.countDocuments({
       assignees: req.user._id,
       status: { $ne: 'done' },
       dueDate: { $lt: now }
     });
 
-    // 2. Tasks Due Today
     const todayTasksCount = await Task.countDocuments({
       assignees: req.user._id,
       status: { $ne: 'done' },
       dueDate: { $gte: todayStart, $lte: todayEnd }
     });
 
-    // 3. Overdue and Today Followups (Leads)
-    // Since nextFollowupDate is a string, we might need a more complex query or fetch and filter
-    // For now, let's fetch leads assigned to user and filter
     const leads = await Lead.find({
       assignedRepId: req.user._id,
       leadStatus: { $ne: 'Converted' },
@@ -40,71 +37,100 @@ router.get('/status-counts', protect, async (req, res) => {
     let overdueFollowupsCount = 0;
     let todayFollowupsCount = 0;
 
-    leads.forEach(lead => {
+    leads.forEach((lead) => {
       try {
-        // Parse DD-MM-YYYY or similar. The model says string.
-        // FollowupsPage.jsx uses new Date(lead.nextFollowupDate)
         const followupDate = new Date(lead.nextFollowupDate);
         if (isNaN(followupDate.getTime())) return;
-
-        if (followupDate >= todayStart && followupDate <= todayEnd) {
-          todayFollowupsCount++;
-        } else if (followupDate < now) {
-          overdueFollowupsCount++;
-        }
+        if (followupDate >= todayStart && followupDate <= todayEnd) todayFollowupsCount++;
+        else if (followupDate < now) overdueFollowupsCount++;
       } catch (e) {}
     });
 
-    // 4. Calendar Events Today
     const todayCalendarCount = await CalendarEvent.countDocuments({
-      $or: [
-        { createdBy: req.user._id },
-        { visibility: 'public' }
-      ],
+      $or: [{ createdBy: req.user._id }, { visibility: 'public' }],
       date: { $gte: todayStart, $lte: todayEnd }
     });
-    
-    // 5. Unread Notifications
-    const unreadNotificationsCount = await Notification.countDocuments({
-      recipient: req.user._id,
-      read: false
-    });
+
+    const allowed = await getAllowedCategoriesForUser(req.user);
+    const unreadFilter = { recipient: req.user._id, read: false };
+    if (req.user.role !== 'admin') {
+      unreadFilter.category = { $in: allowed };
+    }
+    const unreadNotificationsCount = await Notification.countDocuments(unreadFilter);
 
     res.json({
-      tasks: {
-        overdue: overdueTasksCount,
-        today: todayTasksCount
-      },
-      followups: {
-        overdue: overdueFollowupsCount,
-        today: todayFollowupsCount
-      },
-      calendar: {
-        today: todayCalendarCount
-      },
-      notifications: {
-        unread: unreadNotificationsCount
-      }
+      tasks: { overdue: overdueTasksCount, today: todayTasksCount },
+      followups: { overdue: overdueFollowupsCount, today: todayFollowupsCount },
+      calendar: { today: todayCalendarCount },
+      notifications: { unread: unreadNotificationsCount }
     });
   } catch (error) {
-    console.error('Status counts error:', error);
     res.status(500).json({ error: 'Failed to fetch status counts' });
   }
 });
 
-// Get all notifications for the logged-in user
+router.get('/push/vapid-key', protect, (req, res) => {
+  res.json({ publicKey: getVapidPublicKey() });
+});
+
+router.post('/push/subscribe', protect, async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    if (!subscription?.endpoint || !subscription?.keys) {
+      return res.status(400).json({ error: 'Invalid subscription' });
+    }
+    const user = await User.findById(req.user._id);
+    user.pushSubscriptions = user.pushSubscriptions || [];
+    user.pushSubscriptions = user.pushSubscriptions.filter((s) => s.endpoint !== subscription.endpoint);
+    user.pushSubscriptions.push({
+      endpoint: subscription.endpoint,
+      keys: subscription.keys,
+      userAgent: req.headers['user-agent'] || ''
+    });
+    await user.save();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save subscription' });
+  }
+});
+
+router.delete('/push/unsubscribe', protect, async (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { pushSubscriptions: { endpoint } }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove subscription' });
+  }
+});
+
 router.get('/', protect, async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipient: req.user._id })
+    const allowed = await getAllowedCategoriesForUser(req.user);
+    const filter = { recipient: req.user._id };
+    if (req.user.role !== 'admin') {
+      filter.category = { $in: allowed };
+    }
+
+    const notifications = await Notification.find(filter)
       .sort('-createdAt')
-      .limit(50);
-    res.json(notifications);
+      .limit(50)
+      .populate('actorId', 'name avatar')
+      .populate('relatedProjectId', 'name color');
+
+    const user = await User.findById(req.user._id).populate('departmentId', 'slug name');
+    res.json({
+      notifications,
+      allowedCategories: ['all', ...allowed],
+      departmentSlug: user?.departmentId?.slug || ''
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch notifications' });
   }
 });
 
-// Mark notification as read
 router.patch('/:id/read', protect, async (req, res) => {
   try {
     const notification = await Notification.findOneAndUpdate(
@@ -119,7 +145,6 @@ router.patch('/:id/read', protect, async (req, res) => {
   }
 });
 
-// Mark all as read
 router.patch('/read-all', protect, async (req, res) => {
   try {
     await Notification.updateMany(

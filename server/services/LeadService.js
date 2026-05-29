@@ -1,6 +1,7 @@
 const Lead = require('../models/Lead');
 const backgroundQueue = require('./backgroundQueue');
 const followupCache = require('./followupCache');
+const { parse } = require('date-fns');
 const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 
 class LeadService {
@@ -16,8 +17,42 @@ class LeadService {
     return newLead;
   }
 
+  applyFollowupReminderResets(updateData, existingLead) {
+    if (!existingLead) return updateData;
+    const set = updateData.$set || updateData;
+    const dateChanged = set.nextFollowupDate !== undefined
+      && set.nextFollowupDate !== existingLead.nextFollowupDate;
+    const timeChanged = set.nextFollowupTime !== undefined
+      && set.nextFollowupTime !== existingLead.nextFollowupTime;
+    if (!dateChanged && !timeChanged) return updateData;
+
+    const patch = { reminderSent: false };
+    if (set.nextFollowupDate) {
+      try {
+        const newDate = parse(set.nextFollowupDate, 'dd-MM-yyyy', new Date());
+        const oldDate = existingLead.nextFollowupDate
+          ? parse(existingLead.nextFollowupDate, 'dd-MM-yyyy', new Date())
+          : null;
+        if (!isNaN(newDate.getTime()) && (!oldDate || isNaN(oldDate.getTime()) || newDate >= oldDate)) {
+          patch.notifiedOverdue = false;
+        }
+      } catch (_) {
+        patch.notifiedOverdue = false;
+      }
+    } else {
+      patch.notifiedOverdue = false;
+    }
+
+    if (updateData.$set) {
+      return { ...updateData, $set: { ...updateData.$set, ...patch } };
+    }
+    return { ...updateData, ...patch };
+  }
+
   async updateLead(query, updateData) {
-    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(updateData);
+    const existingLead = await Lead.findOne(query).select('nextFollowupDate nextFollowupTime reminderSent notifiedOverdue');
+    const withResets = this.applyFollowupReminderResets(updateData, existingLead);
+    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(withResets);
     const updatedLead = await Lead.findOneAndUpdate(query, sanitizedUpdate, { new: true });
     
     if (updatedLead) {
@@ -30,7 +65,9 @@ class LeadService {
   }
 
   async upsertLead(query, updateData, session = null) {
-    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(updateData);
+    const existingLead = await Lead.findOne(query).select('nextFollowupDate nextFollowupTime reminderSent notifiedOverdue');
+    const withResets = this.applyFollowupReminderResets(updateData, existingLead);
+    const sanitizedUpdate = this.sanitizeAndNormalizeUpdate(withResets);
     
     // Add $setOnInsert sanitization if present
     if (sanitizedUpdate.$setOnInsert) {

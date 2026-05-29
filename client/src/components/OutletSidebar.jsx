@@ -1,39 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useStatusCounts } from '../hooks/useTaskmasterQueries';
 import {
   LayoutDashboard,
   Briefcase,
-  Settings,
   ChevronLeft,
   ChevronRight,
-  LogOut,
-  ShieldCheck,
-  Calendar,
-  Users,
-  Plus,
-  ChevronDown,
-  Layers,
-  Circle,
-  MessageSquare,
-  Database,
+  CalendarDays,
+  CalendarClock,
   ListTodo,
+  Inbox,
+  FolderArchive,
+  NotebookPen,
+  Mail,
+  Wrench,
+  Contact,
+  ClipboardCheck,
+  UserPlus,
+  PhoneCall,
+  CalendarCheck,
+  CircleDollarSign,
+  Megaphone,
+  Mic2,
+  Users,
+  Database,
+  BarChart2,
+  FileSearch,
+  ScrollText,
+  Brackets,
+  Trophy,
+  ChevronDown,
   X,
-  Clock,
-  Zap,
-  UserCheck,
-  RefreshCw,
-  Bell,
   Moon,
   Sun,
-  Building2,
-  Contact,
-  Trash2,
-  Cloud,
-  Globe,
-  FileText,
-  Terminal,
-  ClipboardCheck
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,24 +69,27 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
   const isActive = end 
     ? location.pathname === to.split('?')[0] && location.search === (to.includes('?') ? '?' + to.split('?')[1] : '')
     : location.pathname.startsWith(to.split('?')[0]);
+  const iconOnly = collapsed && !isMobile;
   
   return (
   <NavLink
     to={to}
     end={end}
     onClick={onClick}
+    title={iconOnly ? label : undefined}
     className={({ isActive: navIsActive }) => {
       const active = end ? isActive : navIsActive;
       return `
-        flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative
+        flex items-center rounded-lg transition-all duration-200 relative
+        ${iconOnly ? 'justify-center px-2 py-2 gap-0' : 'gap-2.5 px-2.5 py-1.5'}
         ${active
-          ? 'bg-[var(--color-action-primary)] text-white shadow-lg shadow-blue-500/20 scale-105'
+          ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-blue-500/15'
           : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
       `;
     }}
   >
-    <div className="relative flex items-center justify-center">
-      <Icon size={20} className="shrink-0" />
+    <div className="relative flex items-center justify-center shrink-0">
+      <Icon size={18} className="shrink-0" />
       <AnimatePresence>
         {count > 0 && (
           <motion.span
@@ -106,39 +109,41 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
         )}
       </AnimatePresence>
     </div>
-    <div className="flex-1 flex items-center justify-between min-w-0">
-      <span className={`font-bold text-xs tracking-wide whitespace-nowrap overflow-hidden transition-[width] duration-300 ${(!collapsed || isMobile) ? 'w-auto' : 'w-0'}`}>
+    {(!collapsed || isMobile) && (
+      <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
         {label}
       </span>
-    </div>
+    )}
   </NavLink>
   );
 };
 
 const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const iconOnly = collapsed && !isMobile;
   return (
-    <div className="flex flex-col mb-4">
+    <div className="flex flex-col mb-2">
+      {!iconOnly && (
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between px-3 py-1 mb-1 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest hover:text-[var(--color-text-primary)] transition-colors focus:outline-none ${collapsed && !isMobile ? 'justify-center opacity-0' : 'opacity-100'}`}
+        className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
       >
-        <div className="flex items-center gap-2">
-          {Icon && <Icon size={14} />}
-          {(!collapsed || isMobile) && <span>{title}</span>}
+        <div className="flex items-center gap-1.5">
+          {Icon && <Icon size={12} />}
+          <span>{title}</span>
         </div>
-        {(!collapsed || isMobile) && (
-          <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-        )}
+        <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
+      )}
       <AnimatePresence>
         {isOpen && (!collapsed || isMobile) && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden flex flex-col gap-0.5">
             {children}
           </motion.div>
         )}
-        {(collapsed && !isMobile) && (
-          <div className="flex flex-col gap-0.5 mt-1">
+        {iconOnly && (
+          <div className="flex flex-col gap-0.5">
             {children}
           </div>
         )}
@@ -147,12 +152,27 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
   );
 };
 
-const ThemeToggle = ({ theme, toggleTheme }) => (
+const ThemeToggle = ({ theme, toggleTheme, collapsed, isMobile }) => {
+  const iconOnly = collapsed && !isMobile;
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={toggleTheme}
+        title={theme === 'light' ? 'Light mode' : 'Dark mode'}
+        className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/40 transition-colors"
+      >
+        {theme === 'light' ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-blue-400" />}
+      </button>
+    );
+  }
+  return (
   <button
+    type="button"
     onClick={toggleTheme}
-    className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-blue-500/50 transition-all group overflow-hidden"
+    className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
   >
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <AnimatePresence mode="wait">
         {theme === 'light' ? (
           <motion.div
@@ -162,7 +182,7 @@ const ThemeToggle = ({ theme, toggleTheme }) => (
             exit={{ y: -20, opacity: 0, rotate: 90 }}
             transition={{ type: 'spring', damping: 15 }}
           >
-            <Sun size={18} className="text-amber-500" />
+            <Sun size={16} className="text-amber-500" />
           </motion.div>
         ) : (
           <motion.div
@@ -172,23 +192,24 @@ const ThemeToggle = ({ theme, toggleTheme }) => (
             exit={{ y: -20, opacity: 0, rotate: 90 }}
             transition={{ type: 'spring', damping: 15 }}
           >
-            <Moon size={18} className="text-blue-400" />
+            <Moon size={16} className="text-blue-400" />
           </motion.div>
         )}
       </AnimatePresence>
-      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-secondary)]">
-        {theme === 'light' ? 'Light Mode' : 'Dark Mode'}
+      <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+        {theme === 'light' ? 'Light' : 'Dark'}
       </span>
     </div>
-    <div className={`w-8 h-4 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
+    <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
       <motion.div
         animate={{ x: theme === 'light' ? 2 : 18 }}
         transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-        className="absolute top-1 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
+        className="absolute top-0.5 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
       />
     </div>
   </button>
-);
+  );
+};
 
 const OutletSidebar = () => {
   const { isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
@@ -198,41 +219,12 @@ const OutletSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { width } = useWindowSize();
-  const [notifications, setNotifications] = useState([]);
-  const [statusCounts, setStatusCounts] = useState({
+  const { data: statusCounts = {
     tasks: { overdue: 0, today: 0 },
     followups: { overdue: 0, today: 0 },
     calendar: { today: 0 },
     notifications: { unread: 0 }
-  });
-
-  const fetchNotifications = async () => {
-    try {
-      const res = await axios.get('/api/notifications');
-      setNotifications(res.data);
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-    }
-  };
-
-  const fetchStatusCounts = async () => {
-    try {
-      const res = await axios.get('/api/notifications/status-counts');
-      setStatusCounts(res.data);
-    } catch (err) {
-      console.error('Failed to fetch status counts:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    fetchStatusCounts();
-    const interval = setInterval(() => {
-      fetchNotifications();
-      fetchStatusCounts();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  } } = useStatusCounts(!!user);
 
   const isMobile = width < 1024;
 
@@ -241,11 +233,13 @@ const OutletSidebar = () => {
   }, [location]);
 
   const sidebarVariants = {
-    open: { x: 0, width: 180 },
-    collapsed: { x: 0, width: 180 },
-    mobileOpen: { x: 0, width: 280 },
-    mobileClosed: { x: -300, width: 280 }
+    open: { x: 0, width: 160 },
+    collapsed: { x: 0, width: 56 },
+    mobileOpen: { x: 0, width: 260 },
+    mobileClosed: { x: -280, width: 260 },
   };
+
+  const showLabels = isMobile ? isMobileOpen : isOpen;
 
   return (
     <>
@@ -265,49 +259,62 @@ const OutletSidebar = () => {
         initial={false}
         animate={
           isMobile
-            ? (isMobileOpen ? "mobileOpen" : "mobileClosed")
-            : "open"
+            ? (isMobileOpen ? 'mobileOpen' : 'mobileClosed')
+            : (isOpen ? 'open' : 'collapsed')
         }
         variants={sidebarVariants}
         className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col shadow-2xl shadow-black/5 transition-[width,transform] duration-300 ease-in-out`}
       >
-        <div className="p-3 py-5 flex items-center justify-between overflow-hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 shrink-0 bg-[var(--color-action-primary)] rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+        <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
+          <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
+            <div className="w-7 h-7 shrink-0 bg-[var(--color-action-primary)] rounded-md flex items-center justify-center text-white text-[10px] font-bold shadow-md shadow-blue-500/15">
               CK
             </div>
-            <span className={`font-bold text-xl tracking-tight text-[var(--color-text-primary)] transition-all duration-300 overflow-hidden ${(!isOpen && !isMobileOpen) ? 'w-0' : 'w-auto'}`}>
-              CoreKnot
-            </span>
+            {showLabels && (
+              <span className="font-bold text-sm tracking-tight text-[var(--color-text-primary)] truncate">
+                CoreKnot
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className={`flex items-center shrink-0 ${showLabels ? 'gap-0.5' : 'flex-col gap-1'}`}>
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                className="p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              >
+                {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
+            )}
             {isMobileOpen && (
               <button
+                type="button"
                 onClick={closeMobileSidebar}
-                className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-lg text-[var(--color-text-muted)] transition-colors"
+                className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             )}
           </div>
         </div>
 
-        <nav className="flex-1 px-3 mt-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
-          <NavGroup title="Platform" collapsed={!isOpen} isMobile={isMobile}>
+        <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
+          <NavGroup title="Platform" collapsed={!showLabels} isMobile={isMobile}>
             <NavItem
               to="/dashboard"
               icon={LayoutDashboard}
               label="Dashboard"
-              collapsed={!isOpen}
+              collapsed={!showLabels}
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
             />
             <NavItem
               to="/calendar"
-              icon={Calendar}
+              icon={CalendarDays}
               label="Calendar"
-              collapsed={!isOpen}
+              collapsed={!showLabels}
               isMobile={isMobile}
               todayCount={statusCounts.calendar?.today}
               onMouseEnter={() => {
@@ -315,62 +322,99 @@ const OutletSidebar = () => {
                 queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
               }}
             />
-            <NavItem to="/logs" icon={Clock} label="Daily Logs" collapsed={!isOpen} isMobile={isMobile} />
             <NavItem
-              to="/attendance"
-              icon={ClipboardCheck}
-              label="Attendance"
-              collapsed={!isOpen}
+              to="/todo"
+              icon={ListTodo}
+              label="Todo"
+              collapsed={!showLabels}
               isMobile={isMobile}
+            />
+            <NavItem
+              to="/inbox"
+              icon={Inbox}
+              label="Inbox"
+              collapsed={!showLabels}
+              isMobile={isMobile}
+              count={statusCounts.notifications?.unread}
             />
           </NavGroup>
 
-          <NavGroup title="Workspace" collapsed={!isOpen} isMobile={isMobile}>
+          <NavGroup title="Workspace" collapsed={!showLabels} isMobile={isMobile}>
             <NavItem
               to="/projects"
               icon={Briefcase}
               label="Projects"
-              collapsed={!isOpen}
+              collapsed={!showLabels}
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
             />
             <NavItem
               to="/assets"
               end
-              icon={Layers}
+              icon={FolderArchive}
               label="Assets"
-              collapsed={!isOpen}
+              collapsed={!showLabels}
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
             />
-
             <NavItem
-              to="/workspace/emails"
-              icon={MessageSquare}
-              label="Emails"
-              collapsed={!isOpen}
+              to="/schedule"
+              icon={CalendarClock}
+              label="Schedule"
+              collapsed={!showLabels}
               isMobile={isMobile}
             />
+            <NavItem to="/logs" icon={NotebookPen} label="Daily Logs" collapsed={!showLabels} isMobile={isMobile} />
+            <NavItem
+              to="/workspace/emails"
+              icon={Mail}
+              label="Emails"
+              collapsed={!showLabels}
+              isMobile={isMobile}
+            />
+          </NavGroup>
 
+          <NavGroup title="Office" collapsed={!showLabels} isMobile={isMobile}>
+            <NavItem
+              to="/management/equipment"
+              icon={Wrench}
+              label="Equipment"
+              collapsed={!showLabels}
+              isMobile={isMobile}
+            />
+            <NavItem
+              to="/management/contacts"
+              icon={Contact}
+              label="Contacts"
+              collapsed={!showLabels}
+              isMobile={isMobile}
+            />
+            <NavItem
+              to="/attendance"
+              icon={ClipboardCheck}
+              label="Attendance"
+              collapsed={!showLabels}
+              isMobile={isMobile}
+            />
           </NavGroup>
 
           {(user?.role === 'admin' || user?.role === 'sales' || user?.role === 'artist_management') && (
-            <NavGroup title="CRM" collapsed={!isOpen} isMobile={isMobile}>
+            <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile}>
               {(user?.role === 'admin' || user?.role === 'sales') && (
                 <>
                   <NavItem
                     to="/leads"
-                    icon={Users}
+                    icon={UserPlus}
                     label="Leads"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                     onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
                   />
                   <NavItem
                     to="/followups"
-                    icon={UserCheck}
+                    icon={PhoneCall}
                     label="Followups"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                     count={statusCounts.followups.overdue}
                     todayCount={statusCounts.followups.today}
@@ -381,9 +425,9 @@ const OutletSidebar = () => {
               {(user?.role === 'admin' || user?.role === 'sales') && (
                 <NavItem
                   to="/bookings"
-                  icon={Users}
+                  icon={CalendarCheck}
                   label="Bookings"
-                  collapsed={!isOpen}
+                  collapsed={!showLabels}
                   isMobile={isMobile}
                   onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['bookings'], queryFn: async () => (await axios.get('/api/bookings')).data })}
                 />
@@ -392,52 +436,42 @@ const OutletSidebar = () => {
           )}
 
           {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
-            <NavGroup title="Management" collapsed={!isOpen} isMobile={isMobile}>
+            <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile}>
               <NavItem
                 to="/finance"
-                icon={FileText}
+                icon={CircleDollarSign}
                 label="Finance"
-                collapsed={!isOpen}
+                collapsed={!showLabels}
                 isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
               />
               <NavItem
-                to="/management/equipment"
-                icon={Building2}
-                label="Equipment"
-                collapsed={!isOpen}
-                isMobile={isMobile}
-                onMouseEnter={() => {
-                  queryClient.prefetchQuery({ queryKey: ['office-assets'], queryFn: async () => (await axios.get('/api/office-assets')).data });
-                }}
-              />
-              <NavItem
-                to="/management/contacts"
-                icon={Contact}
-                label="Contacts"
-                collapsed={!isOpen}
-                isMobile={isMobile}
-                onMouseEnter={() => {
-                  queryClient.prefetchQuery({ queryKey: ['contacts'], queryFn: async () => (await axios.get('/api/contacts')).data });
-                }}
-              />
-              <NavItem
                 to="/management/announcements"
-                icon={Bell}
+                icon={Megaphone}
                 label="Announcements"
-                collapsed={!isOpen}
+                collapsed={!showLabels}
                 isMobile={isMobile}
               />
+              {(user?.role === 'admin' || user?.role === 'artist_management') && (
+                <NavItem
+                  to="/artists"
+                  icon={Mic2}
+                  label="Artists"
+                  collapsed={!showLabels}
+                  isMobile={isMobile}
+                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
+                />
+              )}
 
 </NavGroup>
           )}
               {user?.role === 'admin' && (
-                <NavGroup title="Admin" collapsed={!isOpen} isMobile={isMobile} defaultOpen={false}>
+                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen={false}>
                   <NavItem
                     to="/admin/users"
                     icon={Users}
                     label="Users & Teams"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                     onMouseEnter={() => {
                       queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
@@ -449,53 +483,43 @@ const OutletSidebar = () => {
                     end
                     icon={Database}
                     label="All Data"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
                   <NavItem
                     to="/admin/exly-campaigns"
-                    icon={Layers}
+                    icon={BarChart2}
                     label="Exly Data"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
                   <NavItem
                     to="/admin/audits"
-                    icon={FileText}
+                    icon={FileSearch}
                     label="Lead Audits"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
-                  {(user?.role === 'admin' || user?.role === 'artist_management') && (
-                    <NavItem
-                      to="/artists"
-                      icon={Users}
-                      label="Artists"
-                      collapsed={!isOpen}
-                      isMobile={isMobile}
-                      onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
-                    />
-                  )}
 
                   <NavItem
                     to="/admin/logs"
-                    icon={Clock}
+                    icon={ScrollText}
                     label="System Logs"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
                   <NavItem
                     to="/admin/scripts"
-                    icon={Terminal}
+                    icon={Brackets}
                     label="Script Runner"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
                   <NavItem
                     to="/admin/gamification"
-                    icon={Zap}
+                    icon={Trophy}
                     label="Gamification"
-                    collapsed={!isOpen}
+                    collapsed={!showLabels}
                     isMobile={isMobile}
                   />
                 </NavGroup>
@@ -503,17 +527,18 @@ const OutletSidebar = () => {
             
         </nav>
 
-        <div className="p-3 border-t border-[var(--color-bg-border)] space-y-2">
-          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+        <div className="p-2 border-t border-[var(--color-bg-border)] space-y-1.5">
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} collapsed={!showLabels} isMobile={isMobile} />
 
           <div
             onClick={() => navigate('/settings')}
             className="w-full text-left group cursor-pointer"
+            title={!showLabels ? user?.name : undefined}
           >
-            <div className={`px-3 py-3 bg-[var(--color-bg-workspace)] rounded-2xl border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden`}>
-              <div className="flex items-center gap-3">
+            <div className={`bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
+              <div className={`flex items-center ${showLabels ? 'gap-2.5' : 'justify-center'}`}>
                 <div className="relative shrink-0 group/avatar">
-                  <div className="w-9 h-9 rounded-xl bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative">
+                  <div className={`rounded-lg bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative ${showLabels ? 'w-8 h-8' : 'w-7 h-7'}`}>
                     {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs font-bold">{user?.name?.[0]}</div>}
                   </div>
                   {/* Gamification Ring */}
@@ -540,10 +565,12 @@ const OutletSidebar = () => {
                     </>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
-                  <p className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{user.role}</p>
-                </div>
+                {showLabels && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
+                    <p className="text-[8px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider truncate">{user.role}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

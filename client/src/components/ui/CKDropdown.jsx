@@ -70,18 +70,32 @@ const CKDropdown = memo(({
   };
 
   return (
-    <div className={`space-y-1.5 relative ${className}`} ref={dropdownRef} onKeyDown={handleKeyDown}>
-      <div className="flex items-center justify-between px-1">
-        {label && <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">{label}</label>}
-        {rightAction && <button type="button" onClick={rightAction.onClick} className="text-[9px] font-black text-[var(--color-action-primary)] hover:text-[var(--color-action-hover)] uppercase tracking-widest">{rightAction.label}</button>}
-      </div>
-      
-      <div className="flex gap-2">
+    <div className={`relative flex flex-col gap-2 w-full min-w-0 ${className}`} ref={dropdownRef} onKeyDown={handleKeyDown}>
+      {(label || rightAction) && (
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          {label && (
+            <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+              {label}
+            </label>
+          )}
+          {rightAction && (
+            <button
+              type="button"
+              onClick={rightAction.onClick}
+              className="shrink-0 text-[9px] font-black text-[var(--color-action-primary)] hover:text-[var(--color-action-hover)] uppercase tracking-widest"
+            >
+              {rightAction.label}
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex w-full min-w-0 gap-2">
         <button
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`flex-1 flex items-center justify-between px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl transition-all outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] focus:ring-2 focus:ring-[var(--color-action-primary)]/10 shadow-sm active:scale-[0.98]'}`}
+          className={`w-full min-w-0 min-h-[2.5rem] flex items-center justify-between px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] transition-all outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] focus:border-[var(--color-action-primary)]'}`}
         >
           <span className={`text-[13px] font-bold truncate ${selectedLabels.length === 0 ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
             {displayText}

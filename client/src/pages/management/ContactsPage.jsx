@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Search, Contact } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, Input, NexusModal } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, Input, NexusModal, PageSkeleton, DataLoading } from '../../components/ui';
 
 const ContactsPage = () => {
   const [search, setSearch] = useState('');
@@ -30,9 +30,13 @@ const ContactsPage = () => {
     c.name.toLowerCase().includes(search.toLowerCase()) || c.role.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (isLoading && !contacts.length) {
+    return <PageContainer className="!py-4"><PageSkeleton /></PageContainer>;
+  }
+
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Important Contacts" subtitle="Manage key contacts for operations." actions={<Button size="sm" onClick={() => setIsModalOpen(true)}><Plus size={14} /> Add Contact</Button>} />
+      <PageHeader title="Important Contacts" subtitle="Manage key contacts for operations." icon={Contact} actions={<Button size="sm" onClick={() => setIsModalOpen(true)}><Plus size={14} /> Add Contact</Button>} />
       <Card className="p-4 space-y-4">
         <Input placeholder="Search contacts..." value={search} onChange={(e) => setSearch(e.target.value)} icon={Search} />
         <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
@@ -46,7 +50,7 @@ const ContactsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td className="px-3 py-2" colSpan={4}>Loading...</td></tr>}
+              {isLoading && <tr><td colSpan={4}><DataLoading /></td></tr>}
               {!isLoading && filtered.map((contact) => (
                 <tr key={contact._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { setEditingContact(contact); setFormData(contact); setIsModalOpen(true); }}>
                   <td className="px-3 py-2 font-bold">{contact.name}</td>

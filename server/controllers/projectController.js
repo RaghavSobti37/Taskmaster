@@ -58,7 +58,7 @@ exports.createProject = async (req, res) => {
       }
     }
 
-    const assignedColor = color || await pickDistinctColor();
+    const assignedColor = color || '#64748b';
 
     const project = await Project.create({
       name: formatProjectName(name),
@@ -412,42 +412,137 @@ exports.deleteWorkspace = async (req, res) => {
 exports.addMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
+    const { userId, role = 'member' } = req.body;
 
     const project = await Project.findById(id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    // Only admin or project owner can add members
-    if (req.user.role !== 'admin' && project.owner.toString() !== req.user._id.toString()) {
+    const callerRole = req.user.role === 'admin' ? 'owner' : (
+      project.owner.toString() === req.user._id.toString() ? 'owner' :
+      project.memberRoles?.find((r) => r.user?.toString() === req.user._id.toString())?.role
+    );
+
+    if (!['owner', 'manager'].includes(callerRole) && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Not authorized to add members' });
     }
 
-    // Check if already a member
     if (project.members.includes(userId)) {
       return res.status(400).json({ error: 'User is already a member of this project' });
     }
 
-    project.members.push(userId);
-    
-    // Fetch user to get their current role
-    const User = require('../models/User');
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    project.memberRoles.push({
-      user: userId,
-      role: user.role || 'member'
-    });
+    const validRoles = ['owner', 'manager', 'member'];
+    const projectRole = validRoles.includes(role) ? role : 'member';
 
+    project.members.push(userId);
+    project.memberRoles.push({ user: userId, role: projectRole });
     await project.save();
 
     const updatedProject = await Project.findById(id)
-      .populate('owner', 'name email avatar teams')
-      .populate('members', 'name email avatar teams online lastOnline')
+      .populate('owner', 'name email avatar teams departmentId')
+      .populate('members', 'name email avatar teams online lastOnline departmentId')
       .populate('memberRoles.user', 'name email avatar');
 
     res.json(updatedProject);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add member' });
+  }
+};
+
+exports.getProjectWorkload = async (req, res) => {
+  try {
+    const Task = require('../models/Task');
+    const TaskAssignment = require('../models/TaskAssignment');
+    const { start, end } = req.query;
+    const { parseISO, startOfDay, endOfDay, addDays, format } = require('date-fns');
+
+    const project = await Project.findById(req.params.id).lean();
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const startDate = start ? startOfDay(parseISO(start)) : startOfDay(new Date());
+    const endDate = end ? endOfDay(parseISO(end)) : endOfDay(addDays(new Date(), 1));
+
+    const memberIds = [...(project.members || []), project.owner].filter(Boolean);
+    const tasks = await Task.find({ projectId: project._id }).select('scheduleDate dueDate startDate scheduleSlot plannedHours title').lean();
+    const assignments = await TaskAssignment.find({ taskId: { $in: tasks.map((t) => t._id) }, userId: { $in: memberIds } }).lean();
+
+    const taskMap = Object.fromEntries(tasks.map((t) => [t._id.toString(), t]));
+    const workload = {};
+
+    for (const memberId of memberIds) {
+      const uid = memberId.toString();
+      workload[uid] = {};
+      let cursor = startOfDay(startDate);
+      while (cursor <= endDate) {
+        workload[uid][format(cursor, 'yyyy-MM-dd')] = { amCount: 0, pmCount: 0, fullCount: 0, totalTasks: 0, plannedHours: 0 };
+        cursor = addDays(cursor, 1);
+      }
+    }
+
+    for (const a of assignments) {
+      const task = taskMap[a.taskId.toString()];
+      if (!task) continue;
+      const sched = task.scheduleDate || task.startDate || task.dueDate;
+      if (!sched) continue;
+      const d = new Date(sched);
+      if (d < startDate || d > endDate) continue;
+      const key = format(d, 'yyyy-MM-dd');
+      const uid = a.userId.toString();
+      if (!workload[uid]?.[key]) continue;
+      workload[uid][key].totalTasks += 1;
+      workload[uid][key].plannedHours += task.plannedHours || 0;
+      const slot = task.scheduleSlot || 'FULL';
+      if (slot === 'AM') workload[uid][key].amCount += 1;
+      else if (slot === 'PM') workload[uid][key].pmCount += 1;
+      else workload[uid][key].fullCount += 1;
+    }
+
+    res.json({ projectId: project._id, start: format(startDate, 'yyyy-MM-dd'), end: format(endDate, 'yyyy-MM-dd'), workload });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getProjectHoursSummary = async (req, res) => {
+  try {
+    const Task = require('../models/Task');
+    const Log = require('../models/Log');
+
+    const project = await Project.findById(req.params.id).lean();
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const tasks = await Task.find({ projectId: project._id }).select('actualHours plannedHours').lean();
+    const taskHours = tasks.reduce((sum, t) => sum + (t.actualHours || 0), 0);
+    const plannedHours = tasks.reduce((sum, t) => sum + (t.plannedHours || 0), 0);
+
+    const logs = await Log.find({
+      action: 'DAILY_LOG',
+      'details.type': { $ne: 'TASK_COMPLETION' },
+      $or: [
+        { 'details.projectId': project._id },
+        { 'details.project': project.name }
+      ]
+    }).select('details').lean();
+
+    const parseHours = (str) => {
+      if (!str) return 0;
+      const match = String(str).match(/([\d.]+)/);
+      return match ? parseFloat(match[1]) : 0;
+    };
+
+    const manualLogHours = logs.reduce((sum, l) => sum + parseHours(l.details?.timeSpent), 0);
+
+    res.json({
+      projectId: project._id,
+      projectName: project.name,
+      taskHours,
+      plannedHours,
+      manualLogHours,
+      totalHours: taskHours + manualLogHours
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

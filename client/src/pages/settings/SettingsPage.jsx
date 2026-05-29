@@ -18,8 +18,14 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import axios from 'axios';
-import { useAttendance, useApplyLeave, useLeaveRequests } from '../../hooks/useTaskmasterQueries';
+import { useAttendance, useApplyLeave, useLeaveRequests, useDepartments, useDepartmentChangeRequests, useSubmitDepartmentChange } from '../../hooks/useTaskmasterQueries';
 import { uploadFiles } from '../../utils/uploadthing';
+import {
+  getNotificationPushStatus,
+  subscribeToPush,
+  unsubscribeFromPush,
+  setPushPreferenceEnabled
+} from '../../utils/notifications';
 
 const WEAK_PASSWORDS = new Set([
   '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890',
@@ -85,10 +91,43 @@ const SettingsPage = () => {
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const invoiceFileRef = useRef(null);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushPermission, setPushPermission] = useState('default');
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    getNotificationPushStatus().then(({ permission, subscribed, enabled }) => {
+      setPushPermission(permission);
+      setPushEnabled(enabled || subscribed);
+    });
+  }, []);
+
+  const handlePushToggle = async () => {
+    if (pushPermission === 'denied') return;
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        setPushPreferenceEnabled(true);
+        const ok = await subscribeToPush();
+        const status = await getNotificationPushStatus();
+        setPushPermission(status.permission);
+        setPushEnabled(ok && status.subscribed);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const { data: myAttendance = [] } = useAttendance({ mine: true }, !!user);
   const { data: myLeaveRequests = [] } = useLeaveRequests({}, !!user);
   const applyLeave = useApplyLeave();
+  const { data: departments = [] } = useDepartments();
+  const { data: deptRequests = [] } = useDepartmentChangeRequests(!!user);
+  const submitDeptChange = useSubmitDepartmentChange();
+  const [requestedDeptId, setRequestedDeptId] = useState('');
 
   const pendingLeaveCount = useMemo(
     () => myLeaveRequests.filter((r) => r.status === 'pending').length,
@@ -334,6 +373,41 @@ const SettingsPage = () => {
           </Card>
 
           <Card className="overflow-hidden">
+            <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <Users size={14} className="text-teal-500" /> Department
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm">
+                Current: <strong>{user?.departmentId?.name || 'Unassigned'}</strong>
+              </p>
+              {deptRequests.find((r) => r.status === 'pending') && (
+                <p className="text-xs text-amber-600">Department change pending admin approval.</p>
+              )}
+              <div className="flex flex-wrap gap-2 items-end">
+                <select
+                  value={requestedDeptId}
+                  onChange={(e) => setRequestedDeptId(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] text-sm"
+                >
+                  <option value="">Request new department</option>
+                  {departments.filter((d) => d.signupAllowed !== false).map((d) => (
+                    <option key={d._id} value={d._id}>{d.name}</option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  disabled={!requestedDeptId || submitDeptChange.isPending}
+                  onClick={() => submitDeptChange.mutate(requestedDeptId, { onSuccess: () => setRequestedDeptId('') })}
+                >
+                  Request Change
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="overflow-hidden">
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
               <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                 <CalendarDays size={14} className="text-violet-500" /> Apply for Leave
@@ -503,13 +577,31 @@ const SettingsPage = () => {
                   </button>
                </div>
                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
-                  <div className="flex items-center gap-3">
-                     <Bell size={16} className="text-emerald-500" />
-                     <span className="text-[11px] font-black uppercase tracking-wider">Notifications</span>
+                  <div className="flex flex-col gap-1 min-w-0">
+                     <div className="flex items-center gap-3">
+                        <Bell size={16} className="text-emerald-500" />
+                        <span className="text-[11px] font-black uppercase tracking-wider">Desktop Notifications</span>
+                     </div>
+                     {pushPermission === 'denied' && (
+                        <p className="text-[9px] text-rose-500 pl-7">Blocked in browser — enable notifications in site settings.</p>
+                     )}
                   </div>
-                  <div className="w-12 h-6 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center shrink-0">
-                     <div className="w-5 h-5 bg-emerald-500 rounded-full shadow-lg ml-6" />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePushToggle}
+                    disabled={pushLoading || pushPermission === 'denied'}
+                    className={`w-12 h-6 rounded-full transition-all duration-300 border-2 flex items-center shrink-0 disabled:opacity-50 ${
+                      pushEnabled ? 'bg-emerald-500/20 border-emerald-500' : 'bg-slate-400/20 border-slate-400'
+                    }`}
+                  >
+                     <motion.div
+                       layout
+                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                       className={`w-5 h-5 rounded-full shadow-lg transition-all ${
+                         pushEnabled ? 'bg-emerald-500 ml-6' : 'bg-white ml-0.5'
+                       }`}
+                     />
+                  </button>
                </div>
             </div>
           </Card>

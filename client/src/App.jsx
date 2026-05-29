@@ -87,7 +87,11 @@ const AttendancePage = lazyWithRetry(() => import('./pages/management/Attendance
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
 const EquipmentPage = lazyWithRetry(() => import('./pages/management/EquipmentPage'));
 const ContactsPage = lazyWithRetry(() => import('./pages/management/ContactsPage'));
+const SchedulePage = lazyWithRetry(() => import('./pages/schedule/SchedulePage'));
+const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
+const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
+const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 
 function App() {
   const { loading } = useAuth();
@@ -147,6 +151,12 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/logs" element={<DailyLogPage />} />
               <Route path="/attendance" element={<AttendancePage />} />
+              <Route path="/schedule" element={<SchedulePage />} />
+              <Route path="/inbox" element={<InboxPage />} />
+              <Route path="/todo" element={<TodoPage />} />
+              <Route path="/components" element={<ComponentsShowcase />} />
+              <Route path="/management/equipment" element={<EquipmentPage />} />
+              <Route path="/management/contacts" element={<ContactsPage />} />
               <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/office-assets" element={<OfficeAssetsPage />} />
@@ -176,8 +186,6 @@ function App() {
               <Route element={<OpsRoute />}>
                 <Route path="/finance" element={<FinancePage />} />
                 <Route path="/management/announcements" element={<AnnouncementsPage />} />
-                <Route path="/management/equipment" element={<EquipmentPage />} />
-                <Route path="/management/contacts" element={<ContactsPage />} />
               </Route>
             </Route>
           </Route>

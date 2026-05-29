@@ -2,6 +2,17 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 
+@keyframes flashHighlight {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
+  25%, 75% { box-shadow: 0 0 0 3px rgba(18, 109, 94, 0.45); background-color: rgba(18, 109, 94, 0.12); }
+  50% { box-shadow: 0 0 0 5px rgba(18, 109, 94, 0.25); background-color: rgba(18, 109, 94, 0.18); }
+}
+
+.flash-highlight {
+  animation: flashHighlight 2s ease-in-out;
+  border-radius: 0.75rem;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -186,6 +197,44 @@ select option {
 .badge-slate {
   background: var(--color-pastel-slate-bg);
   color: var(--color-pastel-slate-text);
+}
+
+/* Taskmaster typography — use across pages for consistency */
+.tm-page-title {
+  font-size: var(--size-text-header);
+  font-weight: 800;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-text-primary);
+}
+
+.tm-section-label {
+  font-size: var(--size-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-text-muted);
+}
+
+.tm-body {
+  font-size: var(--size-text-body);
+  font-weight: 500;
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.tm-caption {
+  font-size: var(--size-text-caption);
+  font-weight: 500;
+  line-height: var(--line-height-normal);
+  color: var(--color-text-muted);
+}
+
+.tm-task-title {
+  font-size: var(--size-text-body);
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
 }
 
 /* Modal layout system — flex-centered panels collapse to min-content without explicit width */

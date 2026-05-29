@@ -12,7 +12,12 @@ const taskSchema = new mongoose.Schema({
     lowercase: true 
   },
   priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
+  type: { type: String, default: '' },
+  scheduleSlot: { type: String, enum: ['AM', 'PM', 'FULL'], default: 'FULL' },
+  scheduleDate: { type: Date },
+  notifiedWarning: { type: Boolean, default: false },
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+  workspace: { type: String, default: 'General', index: true },
   phaseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Phase' },
   parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', default: null },
   // assignees removed from physical schema, now a virtual

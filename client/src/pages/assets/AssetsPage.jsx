@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
 import {
   Link2, ExternalLink, Plus, Trash2, Search, Database,
-  Shield, RefreshCw, Cloud, Globe, FileText, HardDrive, Video, X
+  Shield, RefreshCw, Cloud, Globe, FileText, HardDrive, Video, X, FolderArchive
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   NexusModal, NexusDropdown, PageHeader, 
   PageContainer, Card, Button, Input, StatCard, Badge, 
-  PageSkeleton, ModalShell, ModalHeader, ModalBody
+  PageSkeleton, ModalShell, ModalHeader, ModalBody, SearchInput
 } from '../../components/ui';
 import { format } from 'date-fns';
 
 const AssetsPage = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [assets, setAssets] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +39,10 @@ const AssetsPage = () => {
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    if (searchParams.get('add') === '1') setIsDrawerOpen(true);
+  }, [searchParams]);
 
   const fetchData = async () => {
     try {
@@ -276,17 +282,15 @@ const AssetsPage = () => {
       <PageHeader
         title="Files & Assets"
         subtitle="Store and manage project files, links, and documents."
+        icon={FolderArchive}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={12} />
-                <Input 
-                   value={searchTerm} 
-                   onChange={e => setSearchTerm(e.target.value)} 
-                   placeholder="Filter assets..." 
-                   className="!pl-9 !py-1.5 !w-48 !text-[10px]" 
-                />
-             </div>
+             <SearchInput
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               placeholder="Filter assets..."
+               className="!w-48"
+             />
              <NexusDropdown
                options={[{ value: 'all', label: 'All Projects' }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
                value={projectFilter}

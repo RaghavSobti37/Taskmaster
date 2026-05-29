@@ -88,4 +88,15 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
+const isOps = (user) => OPS_ROLES.has(user?.role);
+
+const opsOrAdmin = (req, res, next) => {
+  if (req.user && isOps(req.user)) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized — ops or admin required' });
+  }
+};
+
+module.exports = { protect, admin, opsOrAdmin, isOps, OPS_ROLES };

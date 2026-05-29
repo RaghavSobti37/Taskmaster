@@ -1,6 +1,6 @@
 {
   "name": "coreknot-server",
-  "version": "1.7.24",
+  "version": "1.7.30",
   "description": "Enterprise Work Management API",
   "main": "server.js",
   "scripts": {
@@ -50,7 +50,8 @@
     "resend": "^6.12.3",
     "svix": "^1.94.0",
     "tesseract.js": "^7.0.0",
-    "uploadthing": "^7.7.4"
+    "uploadthing": "^7.7.4",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "jest": "^30.4.2",

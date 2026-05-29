@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { Terminal, Play, Clock3, CheckCircle2, XCircle } from 'lucide-react';
+import { Brackets, Play, Clock3, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge, Button, Card, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
 
 const formatMs = (ms = 0) => {
@@ -58,7 +58,7 @@ const AdminScriptsPage = () => {
       <PageHeader
         title="Admin Script Runner"
         subtitle="Run project scripts safely from admin UI."
-        icon={Terminal}
+        icon={Brackets}
         actions={
           <div className="flex items-center gap-2">
             <Input

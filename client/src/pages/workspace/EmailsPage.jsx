@@ -1,7 +1,7 @@
 import React from 'react';
 import { PageContainer, PageHeader } from '../../components/ui';
 import AdminMailContent from '../../components/admin/AdminMailContent';
-import { MessageSquare } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const EmailsPage = () => {
   return (
@@ -9,7 +9,7 @@ const EmailsPage = () => {
       <PageHeader 
         title="Email Campaigns" 
         subtitle="Manage SMTP profiles, email campaigns, and delivery analytics."
-        icon={MessageSquare}
+        icon={Mail}
       />
       
       <div className="w-full">

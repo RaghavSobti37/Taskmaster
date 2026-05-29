@@ -15,21 +15,21 @@ const PageHeader = ({ icon: Icon, title, subtitle, actions, children }) => {
     <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6"
+      className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4"
     >
-      <div className="space-y-2">
-        <div className="flex items-center gap-4">
+      <div className="space-y-1">
+        <div className="flex items-center gap-3">
           {Icon && (
-            <div className="p-2.5 bg-[var(--color-action-primary)]/10 rounded-xl text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
-              <Icon size={20} strokeWidth={2.5} />
+            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10">
+              <Icon size={18} strokeWidth={2.5} />
             </div>
           )}
-          <h1 className="text-xl md:text-2xl font-black tracking-tight text-[var(--color-text-primary)] uppercase leading-tight">
+          <h1 className="tm-page-title uppercase">
             {title}
           </h1>
         </div>
         {subtitle && (
-          <p className={`text-[10px] md:text-xs font-medium text-[var(--color-text-muted)] ${Icon ? 'ml-12 md:ml-14' : ''}`}>
+          <p className={`tm-caption ${Icon ? 'ml-10 md:ml-11' : ''}`}>
             {subtitle}
           </p>
         )}

@@ -21,7 +21,7 @@ const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim();
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, gender } = req.body;
+    const { name, email, password, gender, departmentId } = req.body;
     
     // SECURITY: Block NoSQL Injection via Object Payloads
     if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
@@ -40,7 +40,8 @@ exports.register = async (req, res) => {
       email, 
       password, 
       gender: gender || 'male',
-      avatar: getRandomAvatar(gender || 'male')
+      avatar: getRandomAvatar(gender || 'male'),
+      departmentId: departmentId || undefined
     });
 
     res.status(201).json({
@@ -135,7 +136,8 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  res.json(req.user);
+  const user = await User.findById(req.user._id).select('-password').populate('departmentId', 'name slug color');
+  res.json(user);
 };
 
 exports.googleAuthRedirect = (req, res) => {

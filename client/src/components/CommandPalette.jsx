@@ -6,11 +6,11 @@ import {
   ArrowRight, 
   LayoutDashboard, 
   Briefcase, 
-  Users, 
-  Calendar, 
+  UserPlus, 
+  CalendarDays, 
   Settings,
   Plus,
-  Zap
+  NotebookPen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,11 +24,11 @@ const CommandPalette = () => {
   const actions = [
     { id: 'dash', icon: LayoutDashboard, label: 'Go to Dashboard', shortcut: 'G D', path: '/' },
     { id: 'proj', icon: Briefcase, label: 'View Projects', shortcut: 'G P', path: '/projects' },
-    { id: 'leads', icon: Users, label: 'Manage CRM Leads', shortcut: 'G L', path: '/leads' },
-    { id: 'cal', icon: Calendar, label: 'Open Calendar', shortcut: 'G C', path: '/calendar' },
+    { id: 'leads', icon: UserPlus, label: 'Manage CRM Leads', shortcut: 'G L', path: '/leads' },
+    { id: 'cal', icon: CalendarDays, label: 'Open Calendar', shortcut: 'G C', path: '/calendar' },
     { id: 'set', icon: Settings, label: 'Account Settings', shortcut: 'G S', path: '/settings' },
     { id: 'new-proj', icon: Plus, label: 'Create New Project', shortcut: 'N P', path: '/projects/new', color: 'text-blue-500' },
-    { id: 'quick-log', icon: Zap, label: 'Record Daily Log', shortcut: 'N L', path: '/logs', color: 'text-amber-500' },
+    { id: 'quick-log', icon: NotebookPen, label: 'Record Daily Log', shortcut: 'N L', path: '/logs', color: 'text-amber-500' },
   ];
 
   const filteredActions = actions.filter(action => 

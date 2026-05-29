@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Trash2, CheckCircle2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History
+  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History, UserPlus
 } from 'lucide-react';
 import {
   Badge,
@@ -291,7 +291,7 @@ export default function LeadsPage() {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Customer Leads"
-        icon={Database}
+        icon={UserPlus}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>

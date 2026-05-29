@@ -3,6 +3,47 @@ const { PDFParse } = require('pdf-parse');
 const Tesseract = require('tesseract.js');
 const { parse } = require('path');
 
+const MONTHS = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+const dateFromParts = (year, month, day) => {
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const dt = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    return null;
+  }
+  return dt;
+};
+
+/**
+ * Parse OCR date strings using DD/MM/YYYY as the default for numeric dates.
+ */
+function parseDateValue(raw) {
+  if (!raw) return null;
+  const text = String(raw).trim().replace(/\s+/g, ' ');
+  if (!text) return null;
+
+  let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (match) {
+    return dateFromParts(Number(match[1]), Number(match[2]), Number(match[3]));
+  }
+
+  match = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (match) {
+    return dateFromParts(Number(match[3]), Number(match[2]), Number(match[1]));
+  }
+
+  match = text.match(/^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{4})$/i);
+  if (match) {
+    const month = MONTHS[match[2].slice(0, 3).toLowerCase()];
+    return dateFromParts(Number(match[3]), month, Number(match[1]));
+  }
+
+  return null;
+}
+
 /**
  * Extracts raw text from a PDF file buffer.
  */
@@ -131,20 +172,19 @@ function parseMetadataFromText(text) {
     }
   }
 
-  // 5. Extract Date
-  // Common formats: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, DD MMM YYYY
+  // 5. Extract Date (DD/MM/YYYY preferred for Indian invoices)
   const datePatterns = [
-    /\b(\d{4}[-/]\d{2}[-/]\d{2})\b/, // YYYY-MM-DD
-    /\b(\d{2}[-/]\d{2}[-/]\d{4})\b/, // DD-MM-YYYY
-    /\b(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b/i, // DD MMM YYYY
-    /\b(?:date|dated|dt)\s*:\s*([\d.-/a-zA-Z\s]{8,15})/i // Date: ...
+    /\b(\d{4}[-/]\d{1,2}[-/]\d{1,2})\b/,
+    /\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b/,
+    /\b(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4})\b/i,
+    /\b(?:date|dated|invoice date|bill date|dt)\s*[:\-]?\s*([\d.\-/a-zA-Z\s]{6,20})/i,
   ];
 
   for (const pattern of datePatterns) {
     const match = text.match(pattern);
-    if (match && match[1]) {
-      const parsedDate = new Date(match[1].trim());
-      if (!isNaN(parsedDate.getTime())) {
+    if (match?.[1]) {
+      const parsedDate = parseDateValue(match[1]);
+      if (parsedDate) {
         metadata.date = parsedDate;
         break;
       }
@@ -208,6 +248,7 @@ async function parseDocument(fileBuffer, mimeType) {
 module.exports = {
   extractTextFromPDF,
   extractTextFromImage,
+  parseDateValue,
   parseMetadataFromText,
   parseDocument
 };

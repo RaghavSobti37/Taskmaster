@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Project = require('../models/Project');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
+const { createNotification } = require('../services/notificationDispatcher');
 
 const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
 const canManage = (user) => OPS_ROLES.has(user?.role);
@@ -339,6 +340,23 @@ router.post('/', async (req, res) => {
     }
 
     await GamificationService.awardActionXp(req.user._id, 'ANNOUNCEMENT_CREATED', { announcementId: doc._id });
+
+    const inboxTargets = await getRecipientUsers(doc);
+    for (const target of inboxTargets) {
+      if (!target?._id) continue;
+      await createNotification({
+        recipientId: target._id,
+        title: doc.title,
+        message: doc.message?.slice(0, 200) || 'New announcement',
+        category: 'announcement',
+        type: 'alert',
+        actionUrl: '/management/announcements',
+        actorId: req.user._id,
+        iconType: 'system',
+        sendEmail: false
+      });
+    }
+
     const payload = await doc.populate('createdBy', 'name avatar');
     res.status(201).json(payload);
   } catch (error) {

@@ -13,6 +13,13 @@ const attendanceSchema = new mongoose.Schema({
   isApproved: { type: Boolean, default: false },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedAt: { type: Date },
+  checkInIp: { type: String },
+  workMode: { type: String, enum: ['office', 'wfh'], default: 'wfh' },
+  workModeOverrideBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  overtimeMinutes: { type: Number, default: 0 },
+  systemHours: { type: Number, default: 0 },
+  loggedHours: { type: Number, default: 0 },
+  discrepancyMinutes: { type: Number, default: 0 },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Attendance', attendanceSchema);

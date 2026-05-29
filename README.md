@@ -1,272 +1,476 @@
-# Taskmaster CRM & Operations Hub
+<p align="center">
+  <img src="client/public/favicon.svg" alt="CoreKnot" width="72" height="72" />
+</p>
 
-Taskmaster is the unified operational hub and CRM system in this repository. It uses a decoupled React frontend and an Express/MongoDB backend, with a secure backend proxy for third-party service integrations.
+<h1 align="center">Taskmaster</h1>
+
+<p align="center">
+  <strong>Enterprise CRM & Operations Hub</strong><br/>
+  Unified project management, sales pipeline, finance ops, and team productivity — built for high-density agency workflows.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#environment-variables">Environment</a> ·
+  <a href="#changelog">Changelog</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.7.30-126d5e?style=flat-square" alt="Version 1.7.30" />
+  <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
+  <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/PWA-enabled-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
+</p>
 
 ---
 
-## 🔧 Current Project Structure
+## Overview
 
-- `server/` — Backend API, Express routes, Mongoose models, middleware, auth, proxy controller, gamification engines, Redis queue support.
-- `client/` — React application built with Vite, Tailwind, Clerk auth hooks, frontend routing, and gamification UI.
-- `docs/PROJECT_MEMORY.md` — Architecture and design memory for the project.
-- `GLOBAL_RULES.md` — Master configuration and coding philosophy rules.
-- `server/.env.example` — Server environment variable template.
+Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational platform that combines CRM, project delivery, finance document management, gamification, and internal communications in a single workspace. The codebase follows a decoupled **React + Vite** frontend and **Express + MongoDB** backend, with a secure proxy layer for third-party integrations.
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | React 18, Vite 5, Tailwind CSS v4, TanStack Query, Framer Motion |
+| Backend | Node.js, Express, Mongoose, BullMQ, Trigger.dev |
+| Data | MongoDB Atlas, Redis (queues/cache), Supabase Realtime |
+| Auth | JWT + Google OAuth, role-based route guards |
+| Deploy | Render (web service + static CDN), tsccoreknot.com |
 
 ---
 
-## 🚀 Setup (Full Local Project)
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Backend Proxy](#backend-proxy)
+- [Notifications & PWA](#notifications--pwa)
+- [API Surface](#api-surface)
+- [Scripts & Tooling](#scripts--tooling)
+- [Diagnostic Protocol](#diagnostic-protocol)
+- [Changelog](#changelog)
+
+---
+
+## Features
+
+### Dashboard & Productivity
+- **Three-column dashboard** — Leaderboard podium, announcements, pin board, schedule, todos today, projects today, and private notes in a single view.
+- **Pin board** — Team-wide shared notes with composer; persisted via `/api/pinboard`.
+- **Private notes** — Per-user sticky notes with project linking via `/api/notes`.
+- **Todo page** (`/todo`) — Full task list with search, status/priority/category/project filters, workspace color accents, and flash-highlight deep links.
+- **Schedule grid** (`/schedule`) — Department-aware workload view with AM/PM/FULL slot assignment.
+- **Command palette** — Global keyboard-driven navigation and quick actions.
+- **Quick-add menu** — Floating FAB for fast task/project creation.
+
+### Notifications & Inbox
+- **Inbox page** (`/inbox`) — Category-filtered notification feed (task, CRM, attendance, announcement, department, system).
+- **Web Push (PWA)** — VAPID-based desktop push via service worker; subscribe/unsubscribe endpoints.
+- **Email dispatch** — Branded HTML notification template with CTA deep links.
+- **Status counts** — Sidebar badges for overdue/today tasks, follow-ups, calendar events, and unread notifications.
+- **Flash highlight** — Navigate from notification → target row with animated highlight.
+
+### Departments & Task Types
+- **Department model** — Signup-time department selection, color/slug/sort order, admin seeding.
+- **Task types** — Department- and project-role-scoped task categories.
+- **Change requests** — Users can request department transfers; admins approve/reject.
+
+### CRM & Sales
+- Lead management with CSV import, HolySheet sync, and Exly webhook ingest.
+- Follow-up scheduling with Today / Overdue / Upcoming tabs.
+- Least-loaded sales rep auto-assignment on booked calls.
+- AiSensy WhatsApp dual integration (customer + rep alerts).
+- Exly analytics with paid/free booking breakdown and revenue engine.
+
+### Projects & Workspaces
+- Kanban, list, team, and Gantt views per project.
+- Workspace drag-and-drop reordering (admin).
+- Task assignment via `TaskAssignment` join model with virtual `assignees`.
+- Schedule slots (`AM`, `PM`, `FULL`) and `scheduleDate` on tasks.
+
+### Finance & Operations
+- Multi-file drag-and-drop upload with batching, retries, and partial-success handling.
+- OCR/OMR document parsing (`pdf-parse`, `tesseract.js`).
+- Admin Script Runner at `/admin/scripts` for one-click server script execution.
+
+### Admin & Integrations
+- User/team/CRM/mail/gamification admin panels.
+- Announcement dispatch with recipient-level email tracking and open pixel.
+- Artists Hub with Spotify, YouTube, Meta live analytics.
+- Backend proxy for YouTube, OpenAI, Exly, HolySheet (auth-protected).
+- Resend/SES mail campaigns with Svix webhook verification.
+
+### PWA
+- Installable progressive web app with `manifest.json`, 192/512 icons, and injectManifest service worker.
+- App shortcuts to Inbox and Todo.
+- Install banner with deferred prompt handling.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     React SPA (Vite + PWA)                      │
+│  Dashboard │ Projects │ CRM │ Finance │ Inbox │ Schedule │ Admin│
+│              TanStack Query  │  Service Worker (sw.js)          │
+└────────────────────────────┬────────────────────────────────────┘
+                             │  /api/*
+┌────────────────────────────▼────────────────────────────────────┐
+│                    Express API (server.js)                      │
+│  Auth │ Tasks │ Projects │ CRM │ Notifications │ Departments   │
+│  PinBoard │ Notes │ Schedule │ Finance │ Gamification │ Mail   │
+│  SystemHealthService │ Rate Limiting │ Gzip │ Helmet            │
+└──────┬──────────────┬──────────────┬──────────────┬─────────────┘
+       │              │              │              │
+   MongoDB         Redis/BullMQ   Supabase      External APIs
+   (Mongoose)     (queues)       (realtime)    (Exly, Resend, Google…)
+```
+
+### Design System
+- **Pro-Max UI** — Semantic CSS tokens, zero-flash theme engine, Framer Motion micro-animations.
+- **Shared form components** — `MemberSelect`, `PrioritySelect`, `StatusSelect`, `ProjectSelect`, `WorkspaceSelect`, `TaskCategorySelect`.
+- **UI primitives** — `EmptyState`, `DataLoading`, `Spinner`, `SectionCard`, `SearchInput`, `IconButton`, `PageLoadGuard`, `FlashHighlight`.
+
+---
+
+## Project Structure
+
+```
+Taskmaster/
+├── client/                    # React frontend (Vite)
+│   ├── public/
+│   │   ├── manifest.json      # PWA manifest
+│   │   └── icons/             # 192px & 512px app icons
+│   ├── scripts/
+│   │   └── generate-pwa-icons.mjs
+│   └── src/
+│       ├── components/        # UI, dashboard, forms, schedule
+│       ├── pages/             # Route pages (dashboard, inbox, todo, schedule…)
+│       ├── hooks/             # React Query hooks, PWA install
+│       ├── contexts/          # Auth, theme, sidebar, toast
+│       ├── constants/         # Task options, categories
+│       ├── utils/             # Notifications, workspace colors, formatting
+│       └── sw.js              # Service worker (injectManifest)
+├── server/                    # Express backend
+│   ├── routes/                # REST API routers
+│   ├── controllers/           # Business logic
+│   ├── models/                # Mongoose schemas
+│   ├── services/              # Notifications, push, departments, mail
+│   ├── middleware/            # Auth, error handling, health checks
+│   ├── scripts/               # Migrations, seeds, QA, finance sync
+│   ├── templates/             # HTML email templates
+│   └── .env.example           # Environment template
+├── docs/                      # Project documentation
+├── .specify/memory/           # Architecture & agent memory
+└── GLOBAL_RULES.md            # Coding philosophy & config rules
+```
+
+---
+
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- MongoDB running locally or accessible remotely
-- Redis if you want queue/cache/background worker functionality
-- API keys for services used by the backend
 
-### Environment setup
+| Requirement | Notes |
+|-------------|-------|
+| Node.js 18+ | LTS recommended |
+| MongoDB | Local instance or Atlas cluster |
+| Redis | Optional — required for BullMQ queues and cache |
+| API keys | See [Environment Variables](#environment-variables) |
 
-1. Copy the example server environment:
-   ```bash
-   cd server
-   cp .env.example .env
-   ```
-2. Fill in the required variables in `server/.env`.
-3. In `client/`, confirm `client/.env` exists. If you want an explicit backend URL, set:
-   ```env
-   VITE_API_URL=http://localhost:5000
-   ```
+### 1. Clone & install
 
-If `VITE_API_URL` is blank, the frontend uses relative `/api` paths and relies on the Vite proxy config to forward `/api` calls to `http://localhost:5000`.
+```bash
+git clone https://github.com/YOUR_ORG/Taskmaster.git
+cd Taskmaster
 
-### Run the application
+# Backend
+cd server && npm install
 
-Backend:
+# Frontend
+cd ../client && npm install
+```
+
+### 2. Configure environment
+
 ```bash
 cd server
-npm install
+cp .env.example .env
+# Edit .env with your MongoDB URI, JWT secret, and service keys
+```
+
+Optional — Web Push (desktop notifications):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+Add to `server/.env`:
+```env
+VAPID_PUBLIC_KEY=<public key>
+VAPID_PRIVATE_KEY=<private key>
+VAPID_SUBJECT=mailto:your@email.com
+```
+
+Frontend API URL (optional in `client/.env`):
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+When `VITE_API_URL` is blank, the frontend uses relative `/api` paths.
+
+### 3. Seed departments (first run)
+
+```bash
+cd server
+node scripts/seedDepartmentsAndTaskTypes.js
+```
+
+### 4. Run locally
+
+**Terminal 1 — Backend:**
+```bash
+cd server
 npm run dev
 ```
 
-Frontend:
+**Terminal 2 — Frontend:**
 ```bash
 cd client
-npm install
 npm run dev
 ```
 
-The frontend should be available on `http://localhost:5173`, proxied to the backend on `http://localhost:5000`.
+Open **http://localhost:5173** — API proxied to **http://localhost:5000**.
 
----
+### 5. Generate PWA icons (optional)
 
-## 🌐 Backend Proxy Behavior
-
-The backend proxy routes are mounted at `server.js` via `/api/proxy`.
-
-Supported proxy services:
-- `youtube`
-- `openai`
-- `exly`
-- `holysheet`
-
-The proxy is protected by the backend auth middleware, so every request must include an `Authorization: Bearer <token>` header.
-
-**Local dev testing shortcut**:
-- Set `DEBUG_BYPASS=true` in `server/.env`
-- Send `Authorization: Bearer bypass_token` from `localhost`
-
-Example local proxy test:
 ```bash
-curl.exe -i -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=taskmaster&maxResults=1"
+cd client
+npm run generate-icons
 ```
-
-### Verified result
-A local proxy test with `DEBUG_BYPASS=true` and `Authorization: Bearer bypass_token` succeeded and returned a valid YouTube search response.
 
 ---
 
-## 🧩 Important Notes
+## Environment Variables
 
-- `client/.env` uses `VITE_API_URL` to configure the frontend base API URL. If empty, relative `/api` paths are forwarded by Vite proxy rules in `client/vite.config.js`.
-- If `POST /api/auth/login` fails with malformed JSON in PowerShell, the issue is usually quoting. Use proper JSON escaping or Node fetch instead.
-- The server currently uses `server/.env` values like `MONGODB_URI`, `JWT_SECRET`, and third-party service keys.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONGODB_URI` | Yes | MongoDB connection string |
+| `JWT_SECRET` | Yes | Token signing secret |
+| `FRONTEND_URL` | Prod | Public app URL for email CTAs |
+| `VAPID_PUBLIC_KEY` | Push | Web Push public key |
+| `VAPID_PRIVATE_KEY` | Push | Web Push private key |
+| `VAPID_SUBJECT` | Push | `mailto:` contact for push |
+| `EMAIL_ADDRESS` | Mail | SMTP sender address |
+| `EMAIL_PASSWORD` | Mail | SMTP password |
+| `RESEND_API_KEY` | Mail | Resend API key |
+| `REDIS_URL` | Queues | Redis for BullMQ |
+| `SUPABASE_URL` | Realtime | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Realtime | Supabase anon key |
+| `GOOGLE_CLIENT_ID` | OAuth | Google OAuth client |
+| `GOOGLE_CLIENT_SECRET` | OAuth | Google OAuth secret |
+| `DEBUG_BYPASS` | Dev | Enable local auth bypass |
+| `CORS_ALLOWED_ORIGINS` | Prod | Comma-separated extra origins |
+
+Full template: `server/.env.example`
 
 ---
 
-## 📘 Recommended Quick Start
+## Backend Proxy
 
-1. Start MongoDB
-2. Start Redis (recommended)
-3. Start backend `server`
-4. Start frontend `client`
-5. Open `http://localhost:5173`
+Mounted at `/api/proxy`. Protected by auth middleware.
 
-If local auth or proxy testing is needed before a normal login token is available, use the debug bypass mode.
+| Service | Path prefix |
+|---------|-------------|
+| YouTube | `/api/proxy/youtube` |
+| OpenAI | `/api/proxy/openai` |
+| Exly | `/api/proxy/exly` |
+| HolySheet | `/api/proxy/holysheet` |
 
-## Hardened Diagnostic Protocol
-- **SystemHealthService:** Prevents business logic execution if dependencies (DB, Redis) are offline. Auto-transitions to 503 Maintenance Mode.
-- **Centralized Error Propagation:** Strict structured logging and error routing (Operational vs Programmer).
-- **Diagnostic Scripts:** Use server/scripts/verify_infrastructure.js to test raw database and environment health.
-- **QA Automation:** `server/scripts/runQATests.js` includes advanced automated test cases covering gamification queues, webhooks, and Mongoose hooks.
-
-## Version
-- Current: **1.7.29**
-
-## [2026-05-29] Version 1.7.29 - Announcement Dispatch Visibility + Professional Email Template
-### Announcements (`/management/announcements`)
-- Added live email dispatch tracking on each announcement card (`queued`, `sending`, `completed`, `failed`) with recipient-level status rows.
-- Added manager-side announcement deletion action via `DELETE /api/announcements/:id`.
-- Announcement list query now supports manager-controlled expired visibility (`includeExpired=true`) so sent announcements remain visible for auditing.
-
-### Announcement Email Delivery
-- Reworked announcement HTML template into branded, production-ready layout with stronger typography, CTA treatment, sender context, and expiry hint.
-- Shifted dispatch pipeline to queued/background send flow with per-recipient tracking (`Pending`, `Sending`, `Sent`, `Opened`, `Failed`).
-- Added public tracking pixel endpoint for open events and automatic sent/opened/failed counter recomputation.
-
-## [2026-05-29] Version 1.7.28 - Exly Analytics, Gamification & Dev Stability
-### Exly Data (`/admin/exly-campaigns`)
-- Rebuilt Exly admin analytics with **accurate paid vs free booking breakdown** (`pricePaid > 0` = paid).
-- Added shared revenue engine: `server/utils/exlyMetrics.js` and `server/services/exlyOfferingMetrics.js`.
-- Extended `ExlyOffering` aggregates: `paidBookings`, `freeBookings`, `avgOrderValue`.
-- Enhanced API responses:
-  - `GET /api/exly/dashboard-stats` — paid/free counts, total revenue, AOV, conversion rate
-  - `GET /api/exly/offerings/:id/analytics` — cohort + payment segment metrics
-  - `GET /api/exly/offerings/:id` — paginated bookings with `paymentFilter` (`all|paid|free`) and search
-- Redesigned Exly UI: grouped summary panels (Bookings | Revenue | Overview), cleaner campaign table, offering drill-down with paid/free tabs.
-
-### Gamification
-- Added `GET /api/gamification/leaderboard/:userId/breakdown` for weekly XP breakdown by action.
-- Dashboard `LeaderboardCard` now supports member drill-down with grouped XP formula display.
-
-### Dev / Server Stability
-- Added graceful shutdown handlers in `server.js` to reduce `EADDRINUSE` on nodemon restarts.
-- Added `juice` dependency for HTML email inlining in mail service.
-
-### UI Polish
-- Modal shell sizing/centering refinements (`ModalShell`, `CenteredModal`).
-- Auth page styling updates and dashboard query hook additions.
-
-### New Files
-```text
-server/utils/exlyMetrics.js
-server/services/exlyOfferingMetrics.js
-client/src/utils/exlyFormatters.js
+**Local dev bypass:**
+```env
+DEBUG_BYPASS=true
+```
+```bash
+curl -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=taskmaster&maxResults=1"
 ```
 
-## [2026-05-28] Version 1.7.27 - Production Stability + Data Sync
-### Production Fixes
-- Fixed production crash on sidebar/admin navigation by restoring missing `Terminal` icon import in `OutletSidebar`.
-- Stabilized finance multi-upload flow for large drops through controlled batch upload strategy, retries, and partial-success handling.
+---
 
-### Migration / Sync Updates
-- Updated `server/scripts/migrate-production.js` to mirror workspace structure from local to production and remove production-only workspaces.
-- Added `server/scripts/syncFinanceToProd.js` for full local-to-production `financedocuments` sync (exact mirror replace).
-- Added npm script: `npm run sync-finance-to-prod`.
+## Notifications & PWA
 
-## [2026-05-28] Version 1.7.26 - Finance Ops + Admin Script Runner
-### New
-- Added **Admin Script Runner** page at `/admin/scripts` for admins to list and execute server scripts with one-click run, live output, exit code, and duration.
-- Added backend admin script execution API: `GET /api/admin/scripts` and `POST /api/admin/scripts/:scriptId/run`.
-- Added new sidebar Admin entry: **Script Runner**.
+### Notification categories
+| Category | Triggers |
+|----------|----------|
+| `task` | Assignment, due date, completion |
+| `crm` | Lead assignment, follow-up reminders |
+| `attendance` | Check-in/out events |
+| `announcement` | Manager broadcasts |
+| `department` | Change request status |
+| `review` | Task review requests |
+| `system` | Admin alerts |
 
-### Finance Upload Improvements
-- Added robust multi-file finance upload pipeline using `POST /api/finance/upload-many`.
-- Added drag-and-drop + multi-select upload support in Finance upload modal.
-- Added client batching for large uploads (small batch uploads with progress and partial success handling).
-- Added retry/backoff and per-file failure capture for unstable network paths.
-- Raised UploadThing route limits for finance uploader and set `minFileCount: 0` to support mixed file type batches.
-- Added graceful handling for large upload bursts and partial-upload staging.
+### Key endpoints
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/notifications` | List notifications (category-filtered) |
+| GET | `/api/notifications/status-counts` | Sidebar badge counts |
+| POST | `/api/notifications/push/subscribe` | Register push subscription |
+| GET | `/api/notifications/push/vapid-key` | Public VAPID key |
+| PATCH | `/api/notifications/:id/read` | Mark single read |
+| POST | `/api/notifications/read-all` | Mark all read |
 
-### Finance Data/UX Updates
-- Finance table now supports folder delete action from row hover.
-- Finance root/all-project view now includes folders + documents.
-- Finance sorting/date/pagination updates remain aligned with shared table pagination.
+### PWA install
+The app registers a service worker via `vite-plugin-pwa` (injectManifest strategy). Users see an install banner on supported browsers. Shortcuts in `manifest.json` link directly to `/inbox` and `/todo`.
 
-### Project Name Formatting
-- Enforced uppercase project names globally (server + client normalization).
+---
 
-### Scripting / Memory Folder Structure
+## API Surface
+
+| Prefix | Module |
+|--------|--------|
+| `/api/auth` | Login, register, OAuth |
+| `/api/tasks` | Task CRUD, assignments |
+| `/api/projects` | Projects, workspaces, phases |
+| `/api/users` | Profiles, avatars |
+| `/api/crm` | Leads, follow-ups, imports |
+| `/api/notifications` | Inbox, push, status counts |
+| `/api/departments` | Departments, task types, change requests |
+| `/api/schedule` | Workload grid |
+| `/api/pinboard` | Team pin board |
+| `/api/notes` | Private user notes |
+| `/api/attendance` | Attendance tracking |
+| `/api/announcements` | Manager announcements + email dispatch |
+| `/api/finance` | Documents, folders, OCR upload |
+| `/api/gamification` | XP, leaderboard, streaks |
+| `/api/exly` | Exly campaigns & analytics |
+| `/api/mail` | Email campaigns |
+| `/api/admin/scripts` | Script runner (admin) |
+| `/api/proxy` | Third-party API proxy |
+
+---
+
+## Scripts & Tooling
+
+| Command | Location | Purpose |
+|---------|----------|---------|
+| `npm run dev` | server / client | Development servers |
+| `npm run build` | client | Production frontend build |
+| `npm run generate-icons` | client | Regenerate PWA icons |
+| `npm run sync-finance-to-prod` | server | Mirror finance docs to prod |
+| `node scripts/seedDepartmentsAndTaskTypes.js` | server | Seed departments & task types |
+| `node scripts/runQATests.js` | server | Automated QA suite |
+| `node scripts/verify_infrastructure.js` | server | DB & env health check |
+
+---
+
+## Diagnostic Protocol
+
+- **SystemHealthService** — Blocks business logic when DB/Redis is offline; returns 503 Maintenance Mode.
+- **Centralized error propagation** — Structured logging with operational vs programmer error routing.
+- **Performance logging** — Request timing written to `server/performance.log`.
+- **Graceful shutdown** — SIGTERM/SIGINT handlers reduce port conflicts on nodemon restart.
+
+---
+
+## Changelog
+
+### [2026-05-29] v1.7.30 — Dashboard Redesign, Notifications, PWA & Departments
+
+#### Dashboard
+- Rebuilt dashboard as three-column layout: leaderboard + announcements + pin board + schedule (left), todos + projects today (center), private notes + pin composer (right).
+- Added `LeaderboardPodium`, `TodosTodayCard`, `ProjectsTodayCard`, `NotesPanel`, `PinBoardMessages`, `PinBoardComposer`.
+- Pin board CRUD via `/api/pinboard`; private notes via `/api/notes`.
+
+#### Notifications & Inbox
+- New `/inbox` page with category filters, actor avatars, and action URL deep links with flash highlight.
+- `NotificationBridge` for push permission + subscription lifecycle.
+- `notificationDispatcher` service: in-app + email + web push tri-channel delivery.
+- Branded HTML template at `server/templates/notification.html`.
+- Sidebar status badges from `/api/notifications/status-counts`.
+
+#### PWA
+- `vite-plugin-pwa` with injectManifest service worker (`client/src/sw.js`).
+- `manifest.json`, 192/512 icons, install banner, app shortcuts.
+- Icon generator script: `npm run generate-icons`.
+
+#### Departments & Scheduling
+- `Department`, `TaskType`, `DepartmentChangeRequest` models with seed script.
+- Signup department selection; admin approve/reject change requests.
+- `/schedule` page with `ScheduleGrid` — department/project workload by date slot.
+- Task fields: `scheduleSlot` (AM/PM/FULL), `scheduleDate`, `type`.
+
+#### UI Component Library
+- Form selects: `MemberSelect`, `PrioritySelect`, `StatusSelect`, `ProjectSelect`, `WorkspaceSelect`, `TaskCategorySelect`, `TaskFormFields`.
+- Primitives: `EmptyState`, `DataLoading`, `Spinner`, `SectionCard`, `SearchInput`, `IconButton`, `PageLoadGuard`, `FlashHighlight`, `AddMembers`, `RoleOptionBoxes`.
+- `/todo` page with full filter suite; `/components` dev showcase page.
+- `QuickAddMenu` floating action button in `MainLayout`.
+
+#### New Files
 ```text
-server/
-  scripts/
-    importInvoices.js
-    deleteFinanceFolders.js
-    reorganizeFinanceFolders.js
-    ...existing scripts
-  routes/
-    adminScriptsRoutes.js
-  utils/
-    financeDiskSync.js
-    formatProjectName.js
-client/
-  src/
-    pages/admin/
-      AdminScriptsPage.jsx
-    utils/
-      financeUpload.js
-      projectUtils.js
-    components/finance/
-      UploadDocumentModal.jsx
+client/src/pages/inbox/InboxPage.jsx
+client/src/pages/todo/TodoPage.jsx
+client/src/pages/schedule/SchedulePage.jsx
+client/src/components/NotificationBridge.jsx
+client/src/components/PwaInstallBanner.jsx
+client/src/components/QuickAddMenu.jsx
+client/src/hooks/usePwaInstall.js
+client/src/sw.js
+client/public/manifest.json
+server/controllers/noteController.js
+server/controllers/pinBoardController.js
+server/routes/noteRoutes.js
+server/routes/pinBoardRoutes.js
+server/routes/departmentRoutes.js
+server/routes/scheduleRoutes.js
+server/services/notificationDispatcher.js
+server/services/pushNotificationService.js
+server/services/departmentService.js
+server/models/Department.js
+server/models/TaskType.js
+server/models/PinBoardNote.js
+server/models/UserNote.js
+server/scripts/seedDepartmentsAndTaskTypes.js
 ```
 
-## [2026-05-28] Version 1.7.25 - Major UI/UX & Admin Updates
-### Structure Changes
-- **Workspaces:** Added `order` field for drag-and-drop reordering (admin-only)
-- **Workspace Reordering:** New `PUT /api/projects/workspaces` endpoint with order persistence
-- **Deleted:** SOCIAL MEDIA workspace from defaults (production migration script included)
-- **Production Migration:** Automated migration with `server/scripts/migrate-production.js` for database schema updates
+---
 
-### UI/UX Improvements
-- **Modal System:** Unified `ModalShell` component with consistent sizing and centering (replaces scattered modal implementations)
-- **Admin Workspaces:** Drag project cards between workspaces; drag workspace headers to reorder
-- **Leads Analytics:** 
-  - Added "Warm Leads" stat (meaningful connection + not converted)
-  - Clickable stats to filter: Warm Leads, Converted, Total
-  - Real-time stats by role (admin sees global, reps see personal)
-- **Task Colors:** Tasks now show workspace color (not project color) on dashboard
-- **Settings Redesign:**
-  - Discord-style save bar: full-width bottom bar with Cancel + Save buttons
-  - Improved toggle switches (dark mode, notifications) with better styling
-  - Added Sign Out button in Password & Security section
-  - Leave request form: added Cancel button
-  - Invoice amount: removed scroll-wheel increment (text input with decimal validation)
-- **Sidebar Cleanup:**
-  - Removed Settings and Logout nav items
-  - Removed "Online" status indicator and Refresh button
-  - Cleaner user profile card (name + role only)
+### [2026-05-29] v1.7.29 — Announcement Dispatch Visibility + Professional Email Template
+- Live email dispatch tracking on announcement cards (`queued`, `sending`, `completed`, `failed`).
+- Manager-side delete via `DELETE /api/announcements/:id`.
+- Branded announcement HTML template; queued background send with per-recipient tracking.
+- Public open-tracking pixel endpoint.
 
-### Data Management
-- **All Data Page:** Consolidated to single page (removed tabs); stats moved to corner badge
-- **Import Modal:** Replaced side drawer with centered ModalShell
-- **Search Bar:** Full-width search + Import/Refresh buttons in single row
-- **Delete Button:** Shows only when items selected
+### [2026-05-29] v1.7.28 — Exly Analytics, Gamification & Dev Stability
+- Accurate paid vs free booking breakdown; shared revenue engine.
+- Weekly XP breakdown endpoint; dashboard leaderboard drill-down.
+- Graceful shutdown handlers; `juice` for HTML email inlining.
 
-### Dashboard & Analytics
-- **Attendance:** Removed Hours column
-- **Daily Logs:** Removed "Completed Today" card (kept Activity Grid and Goal)
-- **All Data Page:** Shows only Total count in compact badge (removed 4 stat cards)
+### [2026-05-28] v1.7.27 — Production Stability + Data Sync
+- Fixed sidebar crash (missing `Terminal` icon import).
+- Finance multi-upload batch strategy with retries.
+- Production migration and finance sync scripts.
 
-### Bug Fixes
-- Fixed password verification: backend now selects password field before comparing
-- Fixed sidebar "All Data" highlight on other admin pages
-- Fixed LeadsPage useEffect hook import
-- Fixed statFilter initialization order in LeadsPage
+### [2026-05-28] v1.7.26 — Finance Ops + Admin Script Runner
+- Admin Script Runner at `/admin/scripts`.
+- Robust multi-file finance upload pipeline.
+- Uppercase project name enforcement globally.
 
-## [2026-05-27] Version 1.7.24
-- Implemented CRM Webhook for direct Next.js Booked Call ingest.
-- Automated Least-Loaded Sales Rep assignment upon booking.
-- Configured Dual AiSensy WhatsApp integration (Customer confirmation & Rep Alert).
-- Synced `BookedCalls` Google Sheet directly from CRM logic.
-- Implemented UPSERT logic in Lead creation to gracefully handle duplicate emails during booking.
-- Updated AiSensy templates and payload attributes for sales reps and customers.
-- Applied TSC Brandbook styles, including extracted patterns and ink spill textures to authentication and landing pages for a modern, paper-like feel.
-- Enhanced Dashboard TaskTable with colored left-border indicators to visually link tasks to their assigned projects.
+<details>
+<summary>Earlier versions (1.7.25 and below)</summary>
 
-## [2026-05-26] Version 1.7.23
-- Resolved input lag and cursor reset issues on metadata editing panels via `editForm` local state synchronization and onBlur update triggers.
-- Replaced absolute overlay preview navigation with a styled top navbar to align with global UI standards.
-- Integrated `pdf-parse` and `tesseract.js` OCR/OMR processing on backend for document details extraction.
-- Imported historical Basecamp invoices and receipts into database collections.
+See git history for full changelog through v1.7.21.
 
-## [2026-05-26] Version 1.7.21
-- Fixed email signature rendering issues using imported base64 assets.
-- Corrected frontend CSV/HolySheet parsing logic to split compound emails on commas and semicolons immediately upon import.
-- Cleaned up obsolete stats refresh buttons.
+</details>
+
+---
+
+## License
+
+Private — All rights reserved.

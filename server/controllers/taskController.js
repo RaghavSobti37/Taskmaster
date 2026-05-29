@@ -4,15 +4,15 @@ const Project = require('../models/Project');
 const TaskService = require('../services/TaskService');
 
 const ALLOWED_CREATE = [
-  'title', 'description', 'status', 'priority', 'projectId', 'phaseId',
-  'parentTaskId', 'assignees', 'startDate', 'dueDate', 'duration',
+  'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
+  'projectId', 'phaseId', 'parentTaskId', 'assignees', 'startDate', 'dueDate', 'duration',
   'plannedHours', 'actualHours', 'progress', 'dependencies'
 ];
 
 const ALLOWED_UPDATE = [
-  'title', 'description', 'status', 'priority', 'phaseId', 'assignees',
-  'startDate', 'dueDate', 'duration', 'plannedHours', 'actualHours',
-  'progress', 'dependencies'
+  'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
+  'phaseId', 'assignees', 'startDate', 'dueDate', 'duration', 'plannedHours', 'actualHours',
+  'progress', 'dependencies', 'reviewAction'
 ];
 
 const pick = (src, keys) => {

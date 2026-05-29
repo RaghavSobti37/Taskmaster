@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { ClipboardCheck } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown } from '../../components/ui';
 import {
   useAttendance,
@@ -14,7 +15,8 @@ import {
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { addDays, format } from 'date-fns';
-import { Check, Lock, LogIn, LogOut, RotateCcw } from 'lucide-react';
+import { Check, Lock, LogIn, LogOut, RotateCcw, Palmtree } from 'lucide-react';
+import { isWeekend } from '../../utils/attendanceUtils';
 
 const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
 
@@ -33,6 +35,7 @@ const TimeCell = ({ time, marked, locked, approved }) => (
 );
 
 const SelfAttendancePanel = ({ today, todayKey }) => {
+  const weekend = isWeekend(today);
   const { data: rows = [], isLoading } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const checkIn = useAttendanceCheck();
   const checkOut = useAttendanceCheck();
@@ -57,8 +60,37 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
             Approved & locked
           </span>
         )}
+        {entry?.workMode && (
+          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border ${
+            entry.workMode === 'office' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+          }`}>
+            {entry.workMode === 'office' ? 'In Office' : 'WFH'}
+          </span>
+        )}
       </div>
 
+      {(entry?.overtimeMinutes > 0 || entry?.discrepancyMinutes >= 30) && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {entry.overtimeMinutes > 0 && (
+            <span className="px-2 py-1 rounded-lg bg-violet-500/10 text-violet-600 border border-violet-500/20 font-bold">
+              OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
+            </span>
+          )}
+          {entry.discrepancyMinutes >= 30 && (
+            <span className="px-2 py-1 rounded-lg bg-red-500/10 text-red-600 border border-red-500/20 font-bold">
+              Discrepancy: {entry.discrepancyMinutes}m
+            </span>
+          )}
+        </div>
+      )}
+
+      {weekend ? (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+          <Palmtree size={18} />
+          <span className="text-sm font-bold">Weekend — holiday. Attendance not required.</span>
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <TimeCell time={entry?.timeIn} marked={hasIn} locked={isLocked} approved={entry?.isApproved} />
         <TimeCell time={entry?.timeOut} marked={hasOut} locked={isLocked} approved={entry?.isApproved} />
@@ -84,8 +116,10 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
           Mark Out
         </Button>
       </div>
+        </>
+      )}
 
-      {!isLocked && (hasIn || hasOut) && (
+      {!weekend && !isLocked && (hasIn || hasOut) && (
         <div className="flex flex-wrap gap-2 pt-1">
           {hasIn && (
             <Button
@@ -187,7 +221,7 @@ const AttendancePage = () => {
   const rowMap = useMemo(() => {
     const map = new Map();
     rows.forEach((entry) => {
-      const key = `${String(entry.userId)}_${new Date(entry.date).toISOString().slice(0, 10)}`;
+      const key = `${String(entry.userId)}_${format(new Date(entry.date), 'yyyy-MM-dd')}`;
       map.set(key, entry);
     });
     return map;
@@ -249,6 +283,7 @@ const AttendancePage = () => {
         <PageHeader
           title="Attendance"
           subtitle="Mark your check-in and check-out for today."
+          icon={ClipboardCheck}
         />
         <SelfAttendancePanel today={today} todayKey={todayKey} />
       </PageContainer>
@@ -260,6 +295,7 @@ const AttendancePage = () => {
       <PageHeader
         title="Attendance Dashboard"
         subtitle="Review team attendance, edit times, and approve entries."
+        icon={ClipboardCheck}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold px-3 py-1 rounded-lg bg-[var(--color-bg-secondary)]">
@@ -333,7 +369,7 @@ const AttendancePage = () => {
                 <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)]/40">
                   <td className="px-4 py-3 font-bold whitespace-nowrap sticky left-0 bg-[var(--color-bg-primary)] z-10">{userRow.name}</td>
                   {dateColumns.map(({ date, key: dayKey }) => {
-                      const key = `${String(userRow._id)}_${date.toISOString().slice(0, 10)}`;
+                      const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
                       const entry = rowMap.get(key);
                       const status = resolveStatus(entry);
                       return (

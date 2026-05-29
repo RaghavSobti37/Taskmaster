@@ -62,7 +62,7 @@ export const Card = ({ children, className = '', hover = false, variant = 'surfa
 };
 
 export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
-  <div className={`mx-auto px-4 py-6 space-y-6 pb-24 ${className}`} style={{ maxWidth }}>
+  <div className={`mx-auto px-4 py-4 space-y-4 pb-16 ${className}`} style={{ maxWidth }}>
     {children}
   </div>
 );
@@ -85,22 +85,57 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
   </div>
 );
 
-export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', ...props }) => (
-  <div className="space-y-1 w-full">
-    {label && <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-0.5">{label}</label>}
-    <div className="relative">
-      {Icon && !multiline && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />}
+/** Wraps a single form control so it sizes correctly in flex/grid layouts. */
+export const FormField = ({ children, className = '' }) => (
+  <div className={`w-full min-w-0 shrink-0 ${className}`}>{children}</div>
+);
+
+/** Responsive field layout — flex-based to avoid CSS grid min-content collapse. */
+export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
+  const childArray = React.Children.toArray(children).filter(Boolean);
+  if (columns <= 1) {
+    return <div className={`flex flex-col gap-6 w-full ${className}`}>{childArray}</div>;
+  }
+  return (
+    <div
+      className={`grid w-full gap-6 grid-cols-1 md:[grid-template-columns:repeat(2,minmax(0,1fr))] ${className}`}
+    >
+      {childArray.map((child, i) => (
+        <div key={i} className="w-full min-w-0">
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, ...props }) => (
+  <div className="flex flex-col gap-2 w-full min-w-0">
+    {label && (
+      <label className="block tm-section-label">
+        {label}
+      </label>
+    )}
+    <div className="relative w-full min-w-0">
+      {Icon && !multiline && (
+        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]" />
+      )}
       {multiline ? (
         <textarea
           rows={rows}
-          className={`w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-xs font-mono resize-y ${className}`}
+          className={`block w-full min-w-0 min-h-[5rem] p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm resize-y ${className}`}
           {...props}
         />
       ) : (
-        <input 
-          className={`w-full ${Icon ? 'pl-9' : 'px-3'} pr-3 py-1.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${className}`}
+        <input
+          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${className}`}
           {...props}
         />
+      )}
+      {endAdornment && !multiline && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center">
+          {endAdornment}
+        </div>
       )}
     </div>
   </div>
@@ -268,7 +303,8 @@ export const TablePagination = ({
 export const DataTable = ({ 
   columns, 
   data = [], 
-  onRowClick, 
+  onRowClick,
+  getRowId,
   className = '', 
   defaultPageSize = 10, 
   paginated = true,
@@ -331,9 +367,11 @@ export const DataTable = ({
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = paginatedData[virtualRow.index];
+              const rowId = getRowId?.(row);
               return (
                 <tr 
-                  key={virtualRow.index} 
+                  key={virtualRow.index}
+                  data-highlight-id={rowId || undefined}
                   onClick={(e) => {
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     onRowClick?.(row);
@@ -360,6 +398,7 @@ export const DataTable = ({
           {paginatedData.map((row, i) => (
             <div
               key={i}
+              data-highlight-id={getRowId?.(row) || undefined}
               onClick={(e) => {
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 onRowClick?.(row);

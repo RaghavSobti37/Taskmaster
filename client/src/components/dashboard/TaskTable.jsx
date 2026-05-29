@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Briefcase, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, DataTable, Badge } from '../ui';
+import { formatDueDate } from '../../utils/formatDueDate';
 
 const TaskTable = ({
   tasks = [],
@@ -144,10 +145,11 @@ const TaskTable = ({
         const d = new Date(row.dueDate);
         const today = new Date();
         const isOverdue = d.setHours(0, 0, 0, 0) < today.setHours(0, 0, 0, 0);
-        const isToday = d.getTime() === today.getTime();
+        const label = formatDueDate(row.dueDate);
+        const isTodayLabel = label === 'Today';
         return (
-          <span className={`text-xs font-bold ${isOverdue ? 'text-red-500' : isToday ? 'text-amber-500' : 'text-slate-400'}`}>
-            {d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          <span className={`text-xs font-bold ${isOverdue ? 'text-red-500' : isTodayLabel ? 'text-amber-500' : 'text-slate-400'}`}>
+            {label}
           </span>
         );
       }

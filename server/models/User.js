@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   lastOnline: { type: Date, default: Date.now },
   online: { type: Boolean, default: false },
   teams: [{ type: String }],
+  departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', index: true },
   exp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   dailyStreak: { type: Number, default: 0 },
@@ -30,6 +31,15 @@ const userSchema = new mongoose.Schema({
     linkedAt: { type: Date, default: Date.now }
   }],
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)
+  pushSubscriptions: [{
+    endpoint: { type: String, required: true },
+    keys: {
+      p256dh: { type: String, required: true },
+      auth: { type: String, required: true },
+    },
+    userAgent: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+  }],
 });
 
 userSchema.pre('save', async function(next) {

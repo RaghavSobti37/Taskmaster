@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, Clock, CalendarDays } from 'lucide-react';
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
@@ -186,6 +186,7 @@ const CalendarView = () => {
       <PageHeader
         title="Calendar"
         subtitle="Schedule meetings, follow-ups, and track holidays."
+        icon={CalendarDays}
         actions={
           <div className="flex items-center gap-2">
              <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>

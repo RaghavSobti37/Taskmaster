@@ -1,17 +1,27 @@
 import React from 'react';
 import { Badge, ProgressBar } from '../ui';
 import { User, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+
+const progressForStatus = (status) => {
+  if (status === 'done') return 100;
+  if (status === 'todo') return 0;
+  return 50;
+};
 
 const KanbanCard = ({ task, onMove, onDetail }) => {
+  const { data: workspaces = [] } = useWorkspaces();
   const statuses = ['todo', 'in-progress', 'in-review', 'done'];
   const currentIndex = statuses.indexOf(task.status);
   const isDone = task.status === 'done';
-  const accent = task.color || '#3b82f6';
+  const accent = getWorkspaceColor(getTaskWorkspace(task), workspaces);
 
   return (
     <div
       className={`p-4 bg-[var(--color-bg-surface)] rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'opacity-70 grayscale-[0.5]' : 'hover:shadow-md'}`}
       style={{ borderLeft: `3px solid ${accent}` }}
+      data-highlight-id={task._id}
     >
       <div className="flex items-start justify-between mb-3">
         <Badge variant={task.priority === 'high' || task.priority === 'critical' ? 'critical' : 'todo'}>
@@ -48,9 +58,7 @@ const KanbanCard = ({ task, onMove, onDetail }) => {
               <CheckCircle2 size={10} /> Completed
             </p>
           </div>
-        ) : task.description && (
-          <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-1 italic">{task.description}</p>
-        )}
+        ) : null}
       </div>
       
       {!isDone && (
@@ -86,7 +94,7 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
   ];
 
   const handleMove = (taskId, newStatus) => {
-    onUpdate(taskId, { status: newStatus });
+    onUpdate(taskId, { status: newStatus, progress: progressForStatus(newStatus) });
   };
 
   return (

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Plus, Search, Zap, TrendingUp,
-  ChevronLeft, ChevronRight, RefreshCw, Globe, Database, Trash2, Edit2, Link as LinkIcon
+  ChevronLeft, ChevronRight, RefreshCw, Globe, Database, Trash2, Edit2, Link as LinkIcon, Mic2
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import {
@@ -182,7 +182,7 @@ export default function ArtistsCollection() {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Artists"
-        icon={Users}
+        icon={Mic2}
         actions={
           <div className="flex items-center gap-2">
 

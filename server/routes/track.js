@@ -78,10 +78,6 @@ router.get('/open/:pixelId.gif', async (req, res) => {
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
-        // #region agent log
-        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:open:bg',message:'open pixel processed',data:{pixelId:String(pixelId).slice(0,8),logFound:!!log,alreadyOpened:!!log?.opened,botBlocked:isAntiSpamBot(userAgent),ua:(userAgent||'').slice(0,40)},timestamp:Date.now(),hypothesisId:'H-track',runId:'post-fix'})}).catch(()=>{});
-        logger.info('[Track Open]', { pixelId: String(pixelId).slice(0, 8), logFound: !!log, alreadyOpened: !!log?.opened, botBlocked: isAntiSpamBot(userAgent), ua: (userAgent || '').slice(0, 60), city: location?.city, ip: location?.ip?.slice(0, 12) });
-        // #endregion
         if (!log || log.opened) return;
 
         // Mark EmailLog as opened
@@ -201,9 +197,6 @@ router.get('/click/:clickId', async (req, res) => {
         if (!log || log.clicked) return;
 
         logger.info('TrackClick', 'geo saved', { clickId: String(clickId).slice(0, 8), city: location?.city, ip: location?.ip });
-        // #region agent log
-        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:click',message:'click geo',data:{clickId:String(clickId).slice(0,8),city:location?.city,ip:location?.ip},timestamp:Date.now(),hypothesisId:'H-ip-save',runId:'post-fix'})}).catch(()=>{});
-        // #endregion
 
         await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
 

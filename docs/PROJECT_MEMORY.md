@@ -141,3 +141,13 @@ flowchart LR
 * Start Redis if you require queue and cache features.
 * Start backend first, then frontend.
 * Use the bypass token for direct proxy tests if real auth is not yet available.
+
+---
+
+## 7. Email Engine (LOCKED — May 2026)
+
+**Do not change tracking/geo/template logic without explicit user request.**
+
+See **`docs/EMAIL_ENGINE_LOCKED.md`** and **`.cursor/rules/email-engine-locked.mdc`** for the full frozen spec (open/click tracking, ip-api geo, Gmail proxy handling, HolySheet deselect defaults, raw HTML templates).
+
+Campaign cleanup script: `node server/scripts/keepOnlyCampaign.js "Artist Path Delay Email"`

@@ -662,7 +662,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
         const filtered = prev.filter(p => !p.source || p.source === 'CSV Upload');
         return [...filtered, ...newRecs];
       });
-      alert(`Loaded ${newRecs.length} recipients from HolySheet!`);
+      const holySheetSources = Array.from(new Set(newRecs.map((r) => r.source).filter(Boolean)));
+      setExcludedSources((prev) => [...new Set([...prev, ...holySheetSources])]);
+      alert(`Loaded ${newRecs.length} recipients from HolySheet (${holySheetSources.length} tabs — all deselected by default).`);
     } catch (e) {
       alert('Failed to load HolySheet: ' + (e.response?.data?.error || e.message));
     }

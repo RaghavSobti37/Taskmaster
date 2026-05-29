@@ -11,7 +11,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
-const { resolveMailEventCityAsync, buildClickCityByEmail, eventIp } = require('../utils/geoLookup');
+const { resolveMailEventCityAsync, buildClickCityByEmail } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 
 router.use(protect);
@@ -115,15 +115,6 @@ router.get('/:id', async (req, res) => {
     }
     
     campaign.locationBreakdown = locationBreakdown;
-    // #region agent log
-    const locSample = Object.entries(locationBreakdown).slice(0, 5).map(([c, s]) => ({ city: c, ...s }));
-    const geoDebug = allEvents
-      .filter((e) => e.eventType === 'Open' || e.eventType === 'Click')
-      .slice(0, 6)
-      .map((e) => ({ type: e.eventType, ip: eventIp(e), storedCity: e.location?.city, metaIp: e.metadata?.ip }));
-    logger.info('CampaignLocation', 'geo breakdown', { campaignId: String(campaign._id).slice(0, 8), eventCount: allEvents.length, locations: locSample, geoDebug });
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:location',message:'geo breakdown',data:{eventCount:allEvents.length,locations:locSample,geoDebug},timestamp:Date.now(),hypothesisId:'H-ip-missing',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
     campaign.timeSeries = Object.entries(timeSeriesMap)
       .map(([hourStr, data]) => ({
         time: data.time,
@@ -236,10 +227,6 @@ router.post('/:id/resend', async (req, res) => {
 
     const resolved = await resolveCampaignByParam(req.params.id);
     if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'campaignRoutes.js:resend',message:'campaign resolved for resend',data:{paramId:String(req.params.id).slice(0,12),resolvedId:String(resolved.campaign._id).slice(0,12),campaignId:resolved.campaign.campaignId?.slice(0,12),isLegacy:resolved.isLegacy},timestamp:Date.now(),hypothesisId:'H404-resend',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
 
     let campaign = resolved.campaign;
     const isCore = !resolved.isLegacy;

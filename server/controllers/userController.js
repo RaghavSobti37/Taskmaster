@@ -218,7 +218,7 @@ exports.deleteUser = async (req, res) => {
 
 exports.updateUserAdmin = async (req, res) => {
   try {
-    const { name, email, phone, departmentId, teams } = req.body;
+    const { name, email, phone, departmentId, teams, dateOfBirth } = req.body;
 
     const targetUser = await User.findById(req.params.id);
     if (!targetUser) return res.status(404).json({ error: 'User not found' });
@@ -242,6 +242,9 @@ exports.updateUserAdmin = async (req, res) => {
     if (phone !== undefined) updateFields.phone = phone;
     if (departmentId !== undefined) updateFields.departmentId = departmentId || null;
     if (teams !== undefined) updateFields.teams = Array.isArray(teams) ? teams.map((t) => t.toUpperCase()) : [];
+    if (dateOfBirth !== undefined) {
+      updateFields.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(req.params.id, { $set: updateFields }, { new: true })
       .select('-password')

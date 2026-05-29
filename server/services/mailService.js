@@ -463,29 +463,28 @@ const scanBounces = async (profileId) => {
 };
 
 module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: async (opts) => {
-  const { to, subject, html, profile } = opts;
-  
-  // Inline CSS styles for email client compatibility
+  const { to, subject, html, profile, senderMode } = opts;
+  const { resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
+
   let inlinedHtml = html;
   try {
     inlinedHtml = juice(html);
   } catch (inlineErr) {
     logger.warn('CSS Inlining', 'Test email CSS inlining failed, sending without inlining', { error: inlineErr.message });
   }
-  
-  const transporter = nodemailer.createTransport({
-    host: profile.smtpHost,
-    port: profile.smtpPort,
-    secure: profile.smtpPort === 465,
-    auth: {
-      user: profile.smtpUser,
-      pass: profile.smtpPass
-    }
+
+  const transport = await resolveMailTransport({
+    senderMode: senderMode || 'single',
+    profile,
+    preferResend: true
   });
-  return transporter.sendMail({
-    from: profile.email,
+
+  return sendViaTransport({
+    transport,
     to,
     subject,
-    html: inlinedHtml
+    html: inlinedHtml,
+    fromEmail: transport.fromEmail,
+    fromName: transport.fromName
   });
 } };

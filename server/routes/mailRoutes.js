@@ -7,7 +7,14 @@ const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
-const { getDailyLimitForProvider } = require('../utils/smtpPresets');
+const { getDailyLimitForProvider, FREE_ROTATION_PROVIDER_KEYS } = require('../utils/smtpPresets');
+const { mergeProviderCredentials } = require('../utils/profileCredentials');
+const {
+  getTodaySendCountsByProfileProvider,
+  syncProviderUsageFromEvents,
+  buildProfileUsage,
+  nextResetAtUtc,
+} = require('../services/profileSendStats');
 const { sendCampaign, scanBounces, updateEmailTags } = require('../services/mailService');
 const { google } = require('googleapis');
 
@@ -50,22 +57,40 @@ router.delete('/templates/:id', protect, async (req, res) => {
 router.get('/smtp-usage', protect, async (req, res) => {
   try {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
+    await syncProviderUsageFromEvents();
+    const todayCounts = await getTodaySendCountsByProfileProvider();
     const profiles = await EmailProfile.find(filter).lean();
-    const usage = profiles.map((p) => {
-      const today = new Date().toISOString().slice(0, 10);
-      const stats = p.sendStats || { today: 0, total: 0, lastResetDate: today };
-      const used = stats.lastResetDate === today ? (stats.today || 0) : 0;
-      const limit = p.dailyLimit || getDailyLimitForProvider(p.providerType);
-      return {
+    const usage = profiles.flatMap((p) => {
+      const u = buildProfileUsage(p, todayCounts);
+      if (u.rotation?.providers?.length) {
+        return u.rotation.providers.map((prov) => ({
+          profileId: p._id,
+          profileName: p.name,
+          email: p.email,
+          providerKey: prov.providerKey,
+          label: prov.label,
+          smtpHost: prov.smtpHost,
+          used: prov.used,
+          limit: prov.limit,
+          total: prov.total,
+          percent: prov.percent,
+          resetAt: prov.resetAt,
+          resetLabel: u.resetLabel,
+        }));
+      }
+      return [{
         profileId: p._id,
-        name: p.name,
+        profileName: p.name,
         email: p.email,
-        providerType: p.providerType || 'custom',
-        used,
-        limit,
-        total: stats.total || 0,
-        percent: limit ? Math.min(100, Math.round((used / limit) * 100)) : 0
-      };
+        providerKey: p.providerType || 'custom',
+        label: p.providerType || 'custom',
+        used: u.used,
+        limit: u.limit,
+        total: u.total,
+        percent: u.percent,
+        resetAt: u.resetAt,
+        resetLabel: u.resetLabel,
+      }];
     });
     res.json(usage);
   } catch (err) {
@@ -76,14 +101,14 @@ router.get('/smtp-usage', protect, async (req, res) => {
 router.get('/profiles', protect, async (req, res) => {
   try {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
+    await syncProviderUsageFromEvents();
+    const todayCounts = await getTodaySendCountsByProfileProvider();
     const profiles = await EmailProfile.find(filter).lean();
-    const today = new Date().toISOString().slice(0, 10);
-    const enriched = profiles.map((p) => {
-      const stats = p.sendStats || { today: 0, total: 0, lastResetDate: today };
-      const used = stats.lastResetDate === today ? (stats.today || 0) : 0;
-      const limit = p.dailyLimit || getDailyLimitForProvider(p.providerType);
-      return { ...p, usage: { used, limit, total: stats.total || 0, percent: limit ? Math.min(100, Math.round((used / limit) * 100)) : 0 } };
-    });
+    const enriched = profiles.map((p) => ({
+      ...p,
+      rotationProviderCount: FREE_ROTATION_PROVIDER_KEYS.length,
+      usage: buildProfileUsage(p, todayCounts),
+    }));
     res.json(enriched);
   } catch (err) {
     console.error('Get profiles error:', err);
@@ -94,12 +119,32 @@ router.get('/profiles', protect, async (req, res) => {
 router.post('/profiles', protect, async (req, res) => {
   try {
     const data = { ...req.body };
-    if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
+    if (!data.name?.trim() || !data.email?.trim()) {
+      return res.status(400).json({ error: 'Profile name and From email are required.' });
+    }
+    const hasPrimary = data.smtpUser?.trim() && data.smtpPass?.trim();
+    const hasExtra = data.providerCredentials && Object.values(data.providerCredentials).some((c) => c?.enabled && c?.smtpPass?.trim());
+    if (!hasPrimary && !hasExtra) {
+      return res.status(400).json({ error: 'Primary SMTP credentials or at least one additional provider key is required.' });
+    }
+    if (!hasPrimary) {
+      data.smtpUser = data.smtpUser?.trim() || data.email.trim();
+      data.smtpPass = data.smtpPass?.trim() || 'unused';
+    }
+    if (data.rotationEnabled !== false) {
+      data.rotationEnabled = true;
+      data.providerType = 'rotation';
+      data.smtpHost = 'rotation';
+      data.smtpPort = 587;
+    } else if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
       data.smtpHost = 'smtp.gmail.com';
       data.smtpPort = 587;
     }
-    if (data.providerType && !data.dailyLimit) {
+    if (data.providerType && data.providerType !== 'rotation' && !data.dailyLimit) {
       data.dailyLimit = getDailyLimitForProvider(data.providerType);
+    }
+    if (data.providerCredentials) {
+      data.providerCredentials = mergeProviderCredentials(new Map(), data.providerCredentials);
     }
     const profile = await EmailProfile.create({ ...data, createdBy: req.user._id });
     res.json(profile);
@@ -132,12 +177,23 @@ router.put('/profiles/:id', protect, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this profile' });
     }
     const data = { ...req.body };
-    if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
+    if (data.rotationEnabled !== false) {
+      data.rotationEnabled = true;
+      data.providerType = 'rotation';
+      data.smtpHost = 'rotation';
+      data.smtpPort = 587;
+    } else if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
       data.smtpHost = 'smtp.gmail.com';
       data.smtpPort = 587;
     }
-    if (data.providerType && !data.dailyLimit) {
+    if (data.providerType && data.providerType !== 'rotation' && !data.dailyLimit) {
       data.dailyLimit = getDailyLimitForProvider(data.providerType);
+    }
+    if (!data.smtpPass) delete data.smtpPass;
+    if (data.providerCredentials) {
+      profile.providerCredentials = mergeProviderCredentials(profile.providerCredentials, data.providerCredentials);
+      profile.markModified('providerCredentials');
+      delete data.providerCredentials;
     }
     Object.assign(profile, data);
     await profile.save();
@@ -235,21 +291,51 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
 
 router.post('/test-campaign', protect, async (req, res) => {
   try {
-    const { subject, content, testEmail, senderProfileId, includeSignature } = req.body;
-    
+    const {
+      subject, content, testEmail, senderProfileId, includeSignature,
+      senderMode, senderProfileIds
+    } = req.body;
+
     if (!subject || !content || !testEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const mode = senderMode || 'single';
+    if (mode === 'single' && !senderProfileId) {
+      return res.status(400).json({ error: 'Select a sender profile, or choose System Resend / System SMTP mode.' });
+    }
+    if (mode === 'pool' && (!senderProfileIds || senderProfileIds.length === 0)) {
+      return res.status(400).json({ error: 'Select at least one profile for pool mode test send.' });
+    }
+
     let html = content;
     let profile = null;
-    if (senderProfileId) {
-      profile = await EmailProfile.findById(senderProfileId);
-      if (!profile) return res.status(404).json({ error: 'Sender profile not found' });
-      if (includeSignature !== false && profile.signature) {
+
+    const profileIdForSig = senderProfileId || senderProfileIds?.[0];
+    if (profileIdForSig) {
+      profile = await EmailProfile.findById(profileIdForSig);
+      if (!profile && mode === 'single') {
+        return res.status(404).json({ error: 'Sender profile not found' });
+      }
+      if (profile && includeSignature !== false && profile.signature) {
         const { appendSignatureIfMissing } = require('../utils/emailSignature');
         html = appendSignatureIfMissing(html, profile.signature);
       }
+    }
+
+    if (mode === 'pool' && senderProfileIds?.length) {
+      profile = await EmailProfile.findById(senderProfileIds[0]);
+    }
+
+    if (mode === 'system_resend' || mode === 'system_smtp') {
+      profile = profile || {
+        name: mode === 'system_resend' ? 'System Resend' : 'System SMTP',
+        email: process.env.SYSTEM_VERIFIED_FROM_EMAIL || process.env.SMTP_USER || 'onboarding@resend.dev',
+        smtpHost: '',
+        smtpPort: 587,
+        smtpUser: '',
+        smtpPass: ''
+      };
     }
 
     const mailService = require('../services/mailService');
@@ -257,21 +343,8 @@ router.post('/test-campaign', protect, async (req, res) => {
       to: testEmail,
       subject,
       html,
-      profile: profile ? {
-        email: profile.email,
-        name: profile.name,
-        smtpHost: profile.smtpHost,
-        smtpPort: profile.smtpPort,
-        smtpUser: profile.smtpUser,
-        smtpPass: profile.smtpPass
-      } : {
-        email: process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev',
-        name: 'System',
-        smtpHost: '',
-        smtpPort: 587,
-        smtpUser: '',
-        smtpPass: ''
-      }
+      profile,
+      senderMode: mode
     });
 
     res.json({ success: true, message: `Test email sent to ${testEmail}` });

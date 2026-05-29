@@ -70,6 +70,7 @@ router.get('/:id', async (req, res) => {
     let campaign = await Campaign.findOne({ $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { campaignId: id }] })
       .populate('recipients.leadId', 'name email location phone status artistType')
       .populate('senderProfileId')
+      .populate('senderProfileIds')
       .lean();
     
     if (!campaign && id.match(/^[0-9a-fA-F]{24}$/)) {
@@ -82,7 +83,14 @@ router.get('/:id', async (req, res) => {
     
     let total = campaign.recipients?.length || 0;
     let sent = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, invalid = 0;
+    const recipientStatusCounts = {
+      Pending: 0, Queued: 0, Sent: 0, Opened: 0, Clicked: 0,
+      Bounced: 0, Failed: 0, Invalid: 0, Unsubscribed: 0
+    };
     campaign.recipients?.forEach(r => {
+      const st = r.status || 'Pending';
+      if (recipientStatusCounts[st] !== undefined) recipientStatusCounts[st]++;
+      else recipientStatusCounts.Pending++;
       if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) sent++;
       if (['Opened', 'Clicked'].includes(r.status)) { opened++; }
       if (r.status === 'Clicked') { clicked++; }
@@ -90,6 +98,7 @@ router.get('/:id', async (req, res) => {
       if (r.status === 'Invalid') { invalid++; }
       if (r.status === 'Unsubscribed') unsubscribed++;
     });
+    campaign.recipientStatusCounts = recipientStatusCounts;
     campaign.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
 
     const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
@@ -163,7 +172,8 @@ router.post('/', async (req, res) => {
   try {
     const {
       title, subject, content, senderProfileId, senderMode, senderProfileIds,
-      systemProvider, includeSignature, attachments, eventTag, leadIds, customRecipients
+      systemProvider, includeSignature, attachments, eventTag, leadIds, customRecipients,
+      removeUnsubscribe, variableFallbacks,
     } = req.body;
     const campaignId = crypto.randomBytes(12).toString('hex');
 
@@ -171,11 +181,13 @@ router.post('/', async (req, res) => {
     const recipients = leads.map(l => ({
       leadId: l._id,
       email: l.email ? l.email.toLowerCase().trim() : '',
+      name: l.name || '',
       status: 'Pending'
     })).filter(r => r.email);
 
     const custom = (Array.isArray(customRecipients) ? customRecipients : []).map(r => ({
       email: r && r.email ? String(r.email).toLowerCase().trim() : '',
+      name: (r?.name || r?.firstName || '').trim(),
       status: 'Pending'
     })).filter(r => r.email);
 
@@ -194,7 +206,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'At least one profile required for pool mode' });
     }
 
-    const campaign = await Campaign.create({
+    const campaignPayload = {
       campaignId,
       title,
       subject,
@@ -202,8 +214,8 @@ router.post('/', async (req, res) => {
       senderProfileId: senderProfileId || undefined,
       senderMode: mode,
       senderProfileIds: senderProfileIds || [],
-      systemProvider: systemProvider || null,
       includeSignature: includeSignature !== false,
+      removeUnsubscribe: removeUnsubscribe === true,
       attachments: (attachments || []).map((a) => ({
         filename: a.filename,
         contentType: a.contentType,
@@ -213,7 +225,15 @@ router.post('/', async (req, res) => {
       recipients: allRecipients,
       metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },
       createdBy: req.user._id
-    });
+    };
+    if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
+      campaignPayload.systemProvider = systemProvider;
+    }
+    if (variableFallbacks && typeof variableFallbacks === 'object') {
+      campaignPayload.variableFallbacks = variableFallbacks;
+    }
+
+    const campaign = await Campaign.create(campaignPayload);
 
     if (allRecipients.length > 0) {
       dispatchCampaignJobs(campaign._id);
@@ -231,6 +251,185 @@ router.post('/:id/dispatch', async (req, res) => {
     const result = await dispatchCampaignJobs(req.params.id);
     res.json(result);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/resend', async (req, res) => {
+  try {
+    const {
+      senderMode, senderProfileId, senderProfileIds, systemProvider,
+      targetStatuses, includeSignature
+    } = req.body;
+
+    let campaign = await Campaign.findById(req.params.id);
+    let isCore = true;
+    if (!campaign) {
+      campaign = await MailCampaign.findById(req.params.id);
+      isCore = false;
+    }
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    const defaultTargets = ['Failed', 'Bounced', 'Pending', 'Invalid'];
+    const statuses = Array.isArray(targetStatuses) && targetStatuses.length
+      ? targetStatuses
+      : defaultTargets;
+
+    if (isCore) {
+      if (senderMode) campaign.senderMode = senderMode;
+      if (senderProfileId !== undefined) campaign.senderProfileId = senderProfileId || undefined;
+      if (senderProfileIds !== undefined) campaign.senderProfileIds = senderProfileIds || [];
+      if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
+        campaign.systemProvider = systemProvider;
+      } else if (senderMode && senderMode !== 'system_resend' && senderMode !== 'system_smtp') {
+        campaign.set('systemProvider', undefined);
+      }
+      if (includeSignature !== undefined) campaign.includeSignature = includeSignature;
+
+      const mode = campaign.senderMode || 'single';
+      if (mode === 'single' && !campaign.senderProfileId && senderProfileId === undefined) {
+        return res.status(400).json({ error: 'senderProfileId required for single sender mode' });
+      }
+      if (mode === 'pool' && (!campaign.senderProfileIds || campaign.senderProfileIds.length === 0)) {
+        return res.status(400).json({ error: 'At least one profile required for pool mode' });
+      }
+    } else if (senderProfileId) {
+      campaign.senderProfileId = senderProfileId;
+    }
+
+    let resetCount = 0;
+    for (const rec of campaign.recipients || []) {
+      if (statuses.includes(rec.status)) {
+        rec.status = 'Pending';
+        rec.sentAt = undefined;
+        rec.messageId = undefined;
+        rec.error = undefined;
+        resetCount++;
+      }
+    }
+
+    if (resetCount === 0) {
+      return res.status(400).json({
+        error: 'No recipients match the selected statuses',
+        recipientStatusCounts: statuses
+      });
+    }
+
+    const remainingAfter = (campaign.recipients || []).filter(
+      (r) => r.status === 'Pending' || r.status === 'Queued'
+    ).length;
+
+    campaign.status = 'Sending';
+    await campaign.save();
+
+    const result = await dispatchCampaignJobs(campaign._id);
+    res.json({
+      ...result,
+      resetCount,
+      remainingToSend: remainingAfter,
+      targetStatuses: statuses,
+      senderMode: campaign.senderMode || 'single'
+    });
+  } catch (err) {
+    console.error('Resend campaign error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/resend-filtered', async (req, res) => {
+  try {
+    const {
+      recipientEmails,
+      filterLabel,
+      titleOverride,
+      senderMode,
+      senderProfileId,
+      senderProfileIds,
+      systemProvider,
+      includeSignature,
+    } = req.body;
+
+    if (!Array.isArray(recipientEmails) || recipientEmails.length === 0) {
+      return res.status(400).json({ error: 'recipientEmails required' });
+    }
+
+    let source = await Campaign.findById(req.params.id);
+    if (!source) source = await MailCampaign.findById(req.params.id);
+    if (!source) return res.status(404).json({ error: 'Campaign not found' });
+
+    const emailSet = new Set(recipientEmails.map((e) => String(e).toLowerCase().trim()).filter(Boolean));
+    const filteredRecipients = (source.recipients || [])
+      .filter((r) => emailSet.has((r.email || '').toLowerCase().trim()))
+      .map((r) => ({
+        leadId: r.leadId,
+        email: (r.email || '').toLowerCase().trim(),
+        name: r.name || '',
+        status: 'Pending',
+      }));
+
+    if (filteredRecipients.length === 0) {
+      return res.status(400).json({ error: 'No matching recipients found in source campaign' });
+    }
+
+    const label = (filterLabel || 'Filtered').trim();
+    const newTitle = (titleOverride || `${source.title} [${label}]`).trim();
+    const mode = senderMode || source.senderMode || 'single';
+    const resolvedProfileId = senderProfileId
+      || (source.senderProfileId?._id || source.senderProfileId);
+    const resolvedProfileIds = senderProfileIds?.length
+      ? senderProfileIds
+      : (source.senderProfileIds || []).map((p) => p._id || p);
+
+    if (mode === 'single' && !resolvedProfileId) {
+      return res.status(400).json({ error: 'senderProfileId required for single sender mode' });
+    }
+    if (mode === 'pool' && (!resolvedProfileIds || resolvedProfileIds.length === 0)) {
+      return res.status(400).json({ error: 'At least one profile required for pool mode' });
+    }
+
+    const campaignId = crypto.randomBytes(12).toString('hex');
+    const campaignPayload = {
+      campaignId,
+      title: newTitle,
+      subject: source.subject,
+      content: source.content,
+      senderProfileId: mode === 'single' ? resolvedProfileId : resolvedProfileId || undefined,
+      senderMode: mode,
+      senderProfileIds: mode === 'pool' ? resolvedProfileIds : [],
+      includeSignature: includeSignature !== undefined ? includeSignature !== false : source.includeSignature !== false,
+      removeUnsubscribe: source.removeUnsubscribe === true,
+      attachments: (source.attachments || []).map((a) => ({
+        filename: a.filename,
+        contentType: a.contentType,
+        storageKey: a.storageKey,
+      })),
+      eventTag: source.eventTag || 'General',
+      recipients: filteredRecipients,
+      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },
+      createdBy: req.user._id,
+    };
+
+    if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
+      campaignPayload.systemProvider = systemProvider;
+    } else if (source.systemProvider && (mode === 'system_resend' || mode === 'system_smtp')) {
+      campaignPayload.systemProvider = source.systemProvider;
+    }
+
+    if (source.variableFallbacks) {
+      campaignPayload.variableFallbacks = source.variableFallbacks;
+    }
+
+    const campaign = await Campaign.create(campaignPayload);
+    const result = await dispatchCampaignJobs(campaign._id);
+
+    res.status(201).json({
+      campaign,
+      ...result,
+      queuedCount: filteredRecipients.length,
+      filterLabel: label,
+    });
+  } catch (err) {
+    console.error('Resend filtered campaign error:', err);
     res.status(500).json({ error: err.message });
   }
 });

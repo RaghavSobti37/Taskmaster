@@ -8,6 +8,7 @@ export default function UnsubscribePage() {
   const emailParam = searchParams.get('email') || '';
   const campaignId = searchParams.get('campaignId') || '';
   const recipientId = searchParams.get('recipientId') || '';
+  const tokenParam = searchParams.get('token') || '';
   const [email, setEmail] = useState(emailParam);
   const [reason, setReason] = useState('Too frequent');
   const [status, setStatus] = useState(null);
@@ -26,7 +27,7 @@ export default function UnsubscribePage() {
     setStatus(null);
 
     try {
-      await axios.post('/api/track/unsubscribe', { email, reason, campaignId, recipientId });
+      await axios.post('/api/track/unsubscribe', { email, reason, campaignId, recipientId, token: tokenParam });
       setStatus({ success: true });
     } catch (err) {
       console.error('Unsubscribe error:', err);

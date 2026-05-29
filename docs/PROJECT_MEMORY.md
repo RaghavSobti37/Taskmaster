@@ -87,11 +87,15 @@ flowchart LR
 
 ---
 
-## 7. Mail Engine (v1.7.32+)
+## 7. Mail Engine (v1.7.33+)
 
 ### Campaign create payload
 * Large HTML + base64 attachments caused `PayloadTooLargeError` when frontend proxied through Vercel (~4.5MB cap).
-* Fix: `VITE_API_URL=https://taskmaster-api.onrender.com` on static host; attachments via `POST /api/campaigns/upload-attachment`.
+* Fix: `VITE_API_URL` on static host; attachments via `POST /api/campaigns/upload-attachment`.
+
+### Filtered resend
+* Campaign Details → Delivery Log status filter → **Resend [Filter]** creates new campaign `{title} [{FilterLabel}]` with only filtered recipients.
+* Endpoint: `POST /api/campaigns/:id/resend-filtered` with `recipientEmails`, `filterLabel`, sender config.
 
 ### Sender modes (`Campaign.senderMode`)
 | Mode | Behavior |
@@ -102,8 +106,10 @@ flowchart LR
 | `system_smtp` | Uses `SMTP_HOST/USER/PASS` env |
 
 ### Tracking
-* Pixel/click URLs use `APP_BASE_URL` (API origin). Local dev defaults to Render API unless `TRACKING_USE_LOCAL=true`.
-* `track.js` records opens/clicks via `EmailLog` + `MailEvent`; fixed `location.ip` and MailCampaign `$inc` bugs in v1.7.32.
+* Centralized in `server/utils/trackingUrls.js`: `TRACKING_BASE_URL` > `APP_BASE_URL` (or localhost with `TRACKING_USE_LOCAL=true`).
+* Unsubscribe → `FRONTEND_URL/unsubscribe?email=...&token=...`; not wrapped in click tracker.
+* Live production API: `taskmaster-jfw0.onrender.com` (Vercel `/api` proxy); avoid suspended `taskmaster-api.onrender.com`.
+* `track.js` records opens/clicks via `EmailLog` + `MailEvent`.
 
 ### SMTP profiles
 * `EmailProfile`: `providerType`, `dailyLimit`, `sendStats` (today/total).
@@ -123,7 +129,7 @@ flowchart LR
 
 * Ensure `server/.env` is populated with all required keys.
 * Ensure `client/.env` has `VITE_API_URL` if explicit backend configuration is needed.
-* **Production mail:** set `VITE_API_URL=https://taskmaster-api.onrender.com` on Vercel; set `APP_BASE_URL` to the same API origin on Render.
+* **Production mail:** set `VITE_API_URL=https://taskmaster-jfw0.onrender.com` on Vercel; set `TRACKING_BASE_URL` or `APP_BASE_URL` to the same API origin on Render.
 * Start MongoDB before launching the backend.
 * Start Redis if you require queue and cache features.
 * Start backend first, then frontend.

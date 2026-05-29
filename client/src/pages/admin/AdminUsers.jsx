@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import {
-  ShieldCheck, Users, Search, Plus, Trash2, UserCheck, TrendingUp,
-  Database, Zap, Clock, ShieldAlert, LogIn, Shield, Layers
+  ShieldCheck, Users, Search, Trash2, UserCheck, TrendingUp,
+  Database, Zap, Clock, ShieldAlert, LogIn, CalendarDays
 } from 'lucide-react';
 import {
   Badge,
-  PageHeader,
   PageContainer,
   Card,
   StatCard,
@@ -18,22 +16,25 @@ import {
 } from '../../components/ui';
 import { format, isToday } from 'date-fns';
 import {
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats,
-  useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits,
+  useUserDirectory, useCRMStats, useRepSummary, useMailStats,
+  useLogs, useUpdateUser, useDeleteUser, useLeadAudits,
   useDepartments
 } from '../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
+const formatDateInput = (value) => {
+  if (!value) return '';
+  return new Date(value).toISOString().slice(0, 10);
+};
+
 const AdminUsers = () => {
   const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
-  const [newTeamName, setNewTeamName] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
 
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
-  const { data: teams = [] } = useTeams();
   const { data: departments = [] } = useDepartments();
   const { data: crmStats } = useCRMStats();
   const { data: repSummary } = useRepSummary();
@@ -48,16 +49,15 @@ const AdminUsers = () => {
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
-  const createTeamMutation = useCreateTeam();
-  const deleteTeamMutation = useDeleteTeam();
 
   useEffect(() => {
     if (selectedUser) {
       setEditUserData({
         name: selectedUser.name || '',
         email: selectedUser.email || '',
-        teams: selectedUser.teams || [],
-        departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || ''
+        phone: selectedUser.phone || '',
+        dateOfBirth: formatDateInput(selectedUser.dateOfBirth),
+        departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || '',
       });
     }
   }, [selectedUser]);
@@ -67,7 +67,14 @@ const AdminUsers = () => {
     try {
       await updateUserMutation.mutateAsync({
         id: selectedUser._id,
-        data: editUserData
+        data: {
+          name: editUserData.name,
+          email: editUserData.email,
+          phone: editUserData.phone,
+          departmentId: editUserData.departmentId || null,
+          dateOfBirth: editUserData.dateOfBirth || null,
+          teams: [],
+        },
       });
       setSelectedUser(null);
     } catch (err) {
@@ -89,16 +96,6 @@ const AdminUsers = () => {
       setSelectedUser(null);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete user');
-    }
-  };
-
-  const handleCreateTeam = async () => {
-    if (!newTeamName) return;
-    try {
-      await createTeamMutation.mutateAsync({ name: newTeamName });
-      setNewTeamName('');
-    } catch (err) {
-      alert('Failed to create team: ' + err.message);
     }
   };
 
@@ -136,10 +133,10 @@ const AdminUsers = () => {
       )
     },
     {
-      header: 'Assigned Team',
+      header: 'Date of Birth',
       render: (u) => (
-        <span className="text-xs font-bold uppercase text-[var(--color-text-secondary)]">
-          {u.teams?.length > 0 ? u.teams.join(', ') : 'Unassigned'}
+        <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
+          {u.dateOfBirth ? format(new Date(u.dateOfBirth), 'MMM dd, yyyy') : '—'}
         </span>
       )
     },
@@ -157,7 +154,6 @@ const AdminUsers = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-    
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <StatCard
@@ -225,66 +221,6 @@ const AdminUsers = () => {
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-          <Card className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users size={14} className="text-[var(--color-action-primary)]" />
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Teams & Workgroups</h4>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="New team name..."
-                value={newTeamName}
-                onChange={e => setNewTeamName(e.target.value)}
-                className="!py-1 !text-[11px]"
-              />
-              <Button
-                onClick={handleCreateTeam}
-                disabled={createTeamMutation.isPending || !newTeamName.trim()}
-                size="sm"
-                className="whitespace-nowrap font-black uppercase text-[10px]"
-              >
-                Add
-              </Button>
-            </div>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {teams.map(team => {
-                const memberCount = users.filter(u => u.teams?.includes(team.name)).length;
-                return (
-                  <div key={team._id} className="p-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-lg flex items-center justify-between">
-                    <span className="font-bold uppercase tracking-tight text-[10px]">{team.name}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="info" className="!text-[9px]">{memberCount} Members</Badge>
-                      <button
-                        onClick={async () => {
-                          const ok = await confirm({
-                            title: 'Decommission team?',
-                            message: 'Are you sure you want to decommission this workgroup/team?',
-                            confirmLabel: 'Decommission',
-                            type: 'danger',
-                          });
-                          if (!ok) return;
-                          try {
-                            await deleteTeamMutation.mutateAsync(team._id);
-                          } catch (err) {
-                            console.error(err);
-                            alert(`Team removal error: ${err.message}`);
-                          }
-                        }}
-                        disabled={deleteTeamMutation.isPending}
-                        className="text-rose-500 hover:text-rose-600 transition-colors p-1"
-                        title="Delete Team"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
           <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed h-fit">
             <div className="flex items-center gap-2 mb-4">
               <ShieldAlert size={14} className="text-rose-500" />
@@ -388,7 +324,14 @@ const AdminUsers = () => {
                 value={editUserData.phone || ''}
                 onChange={e => setEditUserData({ ...editUserData, phone: e.target.value })}
               />
-              <div className="space-y-1 col-span-2">
+              <Input
+                type="date"
+                label="Date of Birth"
+                icon={CalendarDays}
+                value={editUserData.dateOfBirth || ''}
+                onChange={e => setEditUserData({ ...editUserData, dateOfBirth: e.target.value })}
+              />
+              <div className="space-y-1">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Department</label>
                 <select
                   value={editUserData.departmentId || ''}
@@ -401,33 +344,6 @@ const AdminUsers = () => {
                   ))}
                 </select>
               </div>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-              <Shield size={14} /> Assigned Workgroups
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {teams.map(t => {
-                const isAssigned = editUserData.teams?.includes(t.name);
-                return (
-                  <Card
-                    key={t._id}
-                    onClick={() => {
-                      const currentTeams = editUserData.teams || [];
-                      const nextTeams = isAssigned
-                        ? currentTeams.filter(name => name !== t.name)
-                        : [...currentTeams, t.name];
-                      setEditUserData(prev => ({ ...prev, teams: nextTeams }));
-                    }}
-                    className={`p-3 cursor-pointer transition-all border ${isAssigned ? 'bg-[var(--color-bg-secondary)] border-[var(--color-action-primary)]' : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] opacity-60'}`}
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-tight">{t.name}</p>
-                    <p className="text-[8px] font-bold text-[var(--color-text-muted)] mt-1">{isAssigned ? 'Assigned (Click to Remove)' : 'Click to Assign'}</p>
-                  </Card>
-                );
-              })}
             </div>
           </section>
 

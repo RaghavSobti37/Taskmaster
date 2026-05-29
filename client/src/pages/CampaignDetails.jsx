@@ -1,17 +1,168 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap } from 'lucide-react';
+import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap, RefreshCw, Filter, X, Eye } from 'lucide-react';
 import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader } from '../components/ui';
-import { useCampaignDetails } from '../hooks/useTaskmasterQueries';
+import { useCampaignDetails, useMailProfiles, useResendCampaign, useResendFilteredCampaign } from '../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
+
+const STATUS_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending', match: ['Pending', 'Queued'] },
+  { id: 'sent', label: 'Sent', match: ['Sent'] },
+  { id: 'opened', label: 'Opened', match: ['Opened'] },
+  { id: 'clicked', label: 'Clicked', match: ['Clicked'] },
+  { id: 'bounced', label: 'Bounced', match: ['Bounced', 'Failed', 'Invalid'] },
+];
+
+const RESEND_STATUS_OPTIONS = [
+  { id: 'Pending', label: 'Pending' },
+  { id: 'Failed', label: 'Failed' },
+  { id: 'Bounced', label: 'Bounced' },
+  { id: 'Invalid', label: 'Invalid' },
+];
 
 export default function CampaignDetails() {
   const { campaignId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const backToEmails = location.state?.from || '/workspace/emails';
-  const { data: campaign, isLoading, error } = useCampaignDetails(campaignId);
+  const { data: campaign, isLoading, error, refetch } = useCampaignDetails(campaignId);
+  const { data: profiles = [] } = useMailProfiles();
+  const resendMutation = useResendCampaign();
+  const resendFilteredMutation = useResendFilteredCampaign();
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [showFilteredResendModal, setShowFilteredResendModal] = useState(false);
+  const [resendSenderMode, setResendSenderMode] = useState('single');
+  const [resendSenderProfileId, setResendSenderProfileId] = useState('');
+  const [resendSenderProfileIds, setResendSenderProfileIds] = useState([]);
+  const [resendTargetStatuses, setResendTargetStatuses] = useState(['Failed', 'Bounced', 'Pending', 'Invalid']);
+
+  const openResendModal = () => {
+    setResendSenderMode(campaign?.senderMode || 'single');
+    setResendSenderProfileId(campaign?.senderProfileId?._id || campaign?.senderProfileId || '');
+    setResendSenderProfileIds(
+      (campaign?.senderProfileIds || []).map((p) => p._id || p)
+    );
+    setShowResendModal(true);
+  };
+
+  const openFilteredResendModal = () => {
+    setResendSenderMode(campaign?.senderMode || 'single');
+    setResendSenderProfileId(campaign?.senderProfileId?._id || campaign?.senderProfileId || '');
+    setResendSenderProfileIds(
+      (campaign?.senderProfileIds || []).map((p) => p._id || p)
+    );
+    setShowFilteredResendModal(true);
+  };
+
+  const recipientStatusCounts = useMemo(() => {
+    const counts = campaign?.recipientStatusCounts || {};
+    const fallback = { Pending: 0, Queued: 0, Sent: 0, Opened: 0, Clicked: 0, Bounced: 0, Failed: 0, Invalid: 0, Unsubscribed: 0 };
+    return { ...fallback, ...counts };
+  }, [campaign?.recipientStatusCounts]);
+
+  const filterCounts = useMemo(() => {
+    const map = { all: campaign?.recipients?.length || 0 };
+    STATUS_FILTERS.forEach((f) => {
+      if (f.id === 'all') return;
+      map[f.id] = f.match.reduce((sum, st) => sum + (recipientStatusCounts[st] || 0), 0);
+    });
+    return map;
+  }, [campaign?.recipients, recipientStatusCounts]);
+
+  const filteredRecipients = useMemo(() => {
+    const list = campaign?.recipients || [];
+    if (statusFilter === 'all') return list;
+    const def = STATUS_FILTERS.find((f) => f.id === statusFilter);
+    if (!def?.match) return list;
+    return list.filter((r) => def.match.includes(r.status || 'Pending'));
+  }, [campaign?.recipients, statusFilter]);
+
+  const activeFilterLabel = useMemo(() => {
+    const def = STATUS_FILTERS.find((f) => f.id === statusFilter);
+    return def?.label || 'All';
+  }, [statusFilter]);
+
+  const filteredResendTitle = useMemo(() => {
+    if (!campaign?.title) return '';
+    return `${campaign.title} [${activeFilterLabel}]`;
+  }, [campaign?.title, activeFilterLabel]);
+
+  const resendPreviewCount = useMemo(() => {
+    if (!campaign?.recipients) return 0;
+    return campaign.recipients.filter((r) => resendTargetStatuses.includes(r.status)).length;
+  }, [campaign?.recipients, resendTargetStatuses]);
+
+  const handleResend = async () => {
+    if (resendPreviewCount === 0) {
+      alert('No recipients match the selected resend statuses.');
+      return;
+    }
+    if (resendSenderMode === 'single' && !resendSenderProfileId) {
+      alert('Select a sender profile.');
+      return;
+    }
+    if (resendSenderMode === 'pool' && resendSenderProfileIds.length === 0) {
+      alert('Select at least one profile for the SMTP pool.');
+      return;
+    }
+    try {
+      const payload = {
+        id: campaign._id,
+        senderMode: resendSenderMode,
+        senderProfileId: resendSenderMode === 'single' ? resendSenderProfileId : resendSenderProfileIds[0],
+        senderProfileIds: resendSenderMode === 'pool' ? resendSenderProfileIds : [],
+        ...(resendSenderMode === 'system_resend' ? { systemProvider: 'resend' } : {}),
+        ...(resendSenderMode === 'system_smtp' ? { systemProvider: 'env_smtp' } : {}),
+        targetStatuses: resendTargetStatuses,
+        includeSignature: campaign.includeSignature !== false
+      };
+      const result = await resendMutation.mutateAsync(payload);
+      setShowResendModal(false);
+      await refetch();
+      alert(`Resend queued: ${result.resetCount} recipient(s) reset, ${result.queuedCount ?? result.remainingToSend ?? 0} job(s) dispatched.`);
+    } catch (e) {
+      alert(e.response?.data?.error || e.message);
+    }
+  };
+
+  const handleFilteredResend = async () => {
+    if (filteredRecipients.length === 0) {
+      alert('No recipients in the current filter.');
+      return;
+    }
+    if (resendSenderMode === 'single' && !resendSenderProfileId) {
+      alert('Select a sender profile.');
+      return;
+    }
+    if (resendSenderMode === 'pool' && resendSenderProfileIds.length === 0) {
+      alert('Select at least one profile for the SMTP pool.');
+      return;
+    }
+    try {
+      const payload = {
+        id: campaign._id,
+        recipientEmails: filteredRecipients.map((r) => r.email),
+        filterLabel: activeFilterLabel,
+        titleOverride: filteredResendTitle,
+        senderMode: resendSenderMode,
+        senderProfileId: resendSenderMode === 'single' ? resendSenderProfileId : resendSenderProfileIds[0],
+        senderProfileIds: resendSenderMode === 'pool' ? resendSenderProfileIds : [],
+        ...(resendSenderMode === 'system_resend' ? { systemProvider: 'resend' } : {}),
+        ...(resendSenderMode === 'system_smtp' ? { systemProvider: 'env_smtp' } : {}),
+        includeSignature: campaign.includeSignature !== false,
+      };
+      const result = await resendFilteredMutation.mutateAsync(payload);
+      setShowFilteredResendModal(false);
+      alert(`New campaign "${result.campaign?.title || filteredResendTitle}" queued: ${result.queuedCount ?? filteredRecipients.length} recipient(s).`);
+      navigate(`/campaign/${result.campaign?._id || result.campaign?.campaignId}`);
+    } catch (e) {
+      alert(e.response?.data?.error || e.message);
+    }
+  };
 
   if (isLoading) return <PageSkeleton />;
   if (error || !campaign) {
@@ -25,7 +176,6 @@ export default function CampaignDetails() {
     );
   }
 
-  // Format time series data for Recharts
   const rawChart = (campaign.timeSeries || []).map(pt => ({
     timeStr: pt.time ? format(new Date(pt.time), 'HH:mm') : '',
     opens: pt.opens || 0,
@@ -38,7 +188,6 @@ export default function CampaignDetails() {
     { timeStr: '20:00', opens: 0, clicks: 0 }
   ];
 
-  // Format location breakdown for Recharts
   const rawLoc = Object.entries(campaign.locationBreakdown || {}).map(([city, stats]) => ({
     city,
     opens: stats?.opens || 0,
@@ -55,6 +204,19 @@ export default function CampaignDetails() {
   const metrics = campaign.metrics || { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
   const openRate = totalRecipients ? Math.round((metrics.opened / totalRecipients) * 100) : 0;
   const clickRate = totalRecipients ? Math.round((metrics.clicked / totalRecipients) * 100) : 0;
+  const pendingCount = (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Queued || 0);
+  const resendableCount = (recipientStatusCounts.Failed || 0) + (recipientStatusCounts.Bounced || 0)
+    + (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Invalid || 0);
+
+  const currentSenderLabel = (() => {
+    if (campaign.senderMode === 'system_resend') return 'System Resend (API)';
+    if (campaign.senderMode === 'system_smtp') return 'System SMTP (env)';
+    if (campaign.senderMode === 'pool') return `SMTP Pool (${(campaign.senderProfileIds || []).length} profiles)`;
+    const sp = campaign.senderProfileId;
+    if (sp && typeof sp === 'object') return `${sp.name} (${sp.email})`;
+    const p = profiles.find((pr) => pr._id === sp);
+    return p ? `${p.name} (${p.email})` : 'Single profile';
+  })();
 
   return (
     <PageContainer className="!py-6 space-y-6">
@@ -62,20 +224,29 @@ export default function CampaignDetails() {
         <Button size="xs" variant="ghost" onClick={() => navigate(backToEmails)} className="flex items-center gap-2">
           <ArrowLeft size={14} /> Back to Email Campaigns
         </Button>
-        <Badge variant={campaign.status === 'Completed' ? 'success' : campaign.status === 'Sending' ? 'warning' : 'info'}>
-          {campaign.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button size="xs" variant="secondary" onClick={() => refetch()} className="flex items-center gap-1">
+            <RefreshCw size={12} /> Refresh
+          </Button>
+          <Button size="xs" variant="primary" onClick={openResendModal} className="flex items-center gap-1" disabled={resendableCount === 0}>
+            <RefreshCw size={12} /> Resend Campaign
+          </Button>
+          <Badge variant={campaign.status === 'Completed' ? 'success' : campaign.status === 'Sending' ? 'warning' : 'info'}>
+            {campaign.status}
+          </Badge>
+        </div>
       </div>
 
       <PageHeader 
         title={campaign.title} 
-        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}`}
+        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Sender: ${currentSenderLabel} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}`}
         icon={Mail}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard label="Total Recipients" value={totalRecipients} icon={Users} variant="info" />
         <StatCard label="Sent Successfully" value={metrics.totalSent || 0} icon={CheckCircle2} variant="mint" />
+        <StatCard label="Pending / Queued" value={pendingCount} icon={Clock} variant="slate" />
         <StatCard label="Unique Open Rate" value={`${openRate}%`} subValue={`${metrics.opened || 0} Opens`} icon={Clock} variant="apricot" />
         <StatCard label="Click-Through Rate" value={`${clickRate}%`} subValue={`${metrics.clicked || 0} Clicks`} icon={Play} variant="slate" />
       </div>
@@ -118,7 +289,6 @@ export default function CampaignDetails() {
         </Card>
       </div>
 
-      {/* Live Campaign Terminal Stream */}
       <Card className="p-6 bg-[#0B0F19] border border-blue-500/30 rounded-2xl space-y-4 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
         <div className="flex items-center justify-between border-b border-blue-500/20 pb-3">
@@ -129,16 +299,13 @@ export default function CampaignDetails() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
             </div>
             <Terminal size={16} className="text-blue-400" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 font-mono">
-              Live Activity Stream
-            </h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 font-mono">Live Activity Stream</h3>
           </div>
           <div className="flex items-center gap-2 font-mono text-[10px]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-emerald-400 font-bold">STREAM ACTIVE</span>
           </div>
         </div>
-
         <div className="bg-black/60 rounded-xl p-4 font-mono text-xs text-slate-300 h-64 overflow-y-auto space-y-2.5 border border-white/5 custom-scrollbar select-text">
           <div className="text-slate-500 text-[10px] pb-1 border-b border-white/5">
             Connected to campaign stream: {campaign.campaignId || campaign._id}
@@ -161,11 +328,9 @@ export default function CampaignDetails() {
                 }`}>
                   [{evt.eventType}]
                 </span>
-                <span className="text-slate-200 font-semibold break-all">
-                  {evt.email}
-                </span>
+                <span className="text-slate-200 font-semibold break-all">{evt.email}</span>
                 <span className="text-slate-400 text-[11px]">
-                  {(evt.linkClicked || evt.metadata?.url) ? `→ Clicked link: ${evt.linkClicked || evt.metadata?.url}` : evt.eventType === 'Click' ? '• Clicked link' : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
+                  {(evt.linkClicked || evt.metadata?.url) ? `→ ${evt.linkClicked || evt.metadata?.url}` : evt.eventType === 'Click' ? '• Clicked link' : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
                 </span>
               </div>
             ))
@@ -174,11 +339,42 @@ export default function CampaignDetails() {
       </Card>
 
       <Card className="p-6 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
             <Users size={14} /> Target Recipient Delivery Log
           </h3>
-          <Badge variant="info">{totalRecipients} Total Loaded</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="info">{filteredRecipients.length} shown</Badge>
+            <Badge variant="slate">{totalRecipients} total</Badge>
+            <Button
+              size="xs"
+              variant="primary"
+              onClick={openFilteredResendModal}
+              disabled={filteredRecipients.length === 0 || statusFilter === 'all'}
+              className="flex items-center gap-1"
+              title={statusFilter === 'all' ? 'Select a status filter first' : `Resend to ${activeFilterLabel} recipients`}
+            >
+              <RefreshCw size={12} /> Resend [{activeFilterLabel}] ({filteredRecipients.length})
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter size={12} className="text-[var(--color-text-muted)]" />
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setStatusFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                statusFilter === f.id
+                  ? 'bg-[var(--color-action-primary)]/15 border-[var(--color-action-primary)]/40 text-[var(--color-action-primary)]'
+                  : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/30'
+              }`}
+            >
+              {f.label} ({filterCounts[f.id] ?? 0})
+            </button>
+          ))}
         </div>
 
         <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-primary)] custom-scrollbar">
@@ -192,8 +388,14 @@ export default function CampaignDetails() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-bg-border)]">
-              {campaign.recipients?.map((r, idx) => (
-                <tr key={idx} className="hover:bg-[var(--color-bg-secondary)]/50">
+              {filteredRecipients.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic">
+                    No recipients match this filter.
+                  </td>
+                </tr>
+              ) : filteredRecipients.map((r, idx) => (
+                <tr key={r._id || idx} className="hover:bg-[var(--color-bg-secondary)]/50">
                   <td className="px-4 py-3 font-semibold">{r.email}</td>
                   <td className="px-4 py-3">
                     <Badge variant={r.status === 'Opened' ? 'mint' : r.status === 'Clicked' ? 'success' : r.status === 'Sent' ? 'info' : r.status === 'Bounced' || r.status === 'Failed' ? 'rose' : 'slate'}>
@@ -212,6 +414,219 @@ export default function CampaignDetails() {
           </table>
         </div>
       </Card>
+
+      {showFilteredResendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-2xl p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
+                <Eye size={16} /> Resend to Filtered Recipients
+              </h3>
+              <button type="button" onClick={() => setShowFilteredResendModal(false)} className="text-[var(--color-text-muted)] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Creates a new campaign named <strong className="text-white">{filteredResendTitle}</strong> and sends only to the {filteredRecipients.length} recipient(s) matching the <strong className="text-white">{activeFilterLabel}</strong> filter.
+            </p>
+
+            <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl text-xs space-y-1 font-mono">
+              <div><span className="text-[var(--color-text-muted)]">Subject:</span> {campaign.subject || '—'}</div>
+              <div><span className="text-[var(--color-text-muted)]">New campaign:</span> {filteredResendTitle}</div>
+              <div className="text-[var(--color-action-primary)] font-bold">Recipients: {filteredRecipients.length}</div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase flex items-center gap-1">
+                <Eye size={12} /> Email Preview
+              </label>
+              <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden bg-white h-64">
+                <iframe
+                  srcDoc={campaign.content || '<p style="font-family:sans-serif;padding:16px;color:#666;">No content</p>'}
+                  title="Campaign preview"
+                  className="w-full h-full border-0"
+                  sandbox=""
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Sender Mode</label>
+              <select
+                value={resendSenderMode}
+                onChange={(e) => setResendSenderMode(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+              >
+                <option value="single">Single SMTP Profile</option>
+                <option value="pool">Rotate SMTP Pool</option>
+                <option value="system_resend">System Resend (API key)</option>
+                <option value="system_smtp">System SMTP (env vars)</option>
+              </select>
+            </div>
+
+            {resendSenderMode === 'single' && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Sender Profile</label>
+                <select
+                  value={resendSenderProfileId}
+                  onChange={(e) => setResendSenderProfileId(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+                >
+                  <option value="">— Select profile —</option>
+                  {profiles.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.email}) — {p.usage?.used ?? 0}/{p.usage?.limit ?? 500} today
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {resendSenderMode === 'pool' && (
+              <div className="space-y-2 max-h-32 overflow-y-auto p-3 bg-[var(--color-bg-secondary)] rounded-xl">
+                {profiles.map((p) => {
+                  const checked = resendSenderProfileIds.includes(p._id);
+                  return (
+                    <label key={p._id} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setResendSenderProfileIds((prev) => checked ? prev.filter((id) => id !== p._id) : [...prev, p._id])}
+                      />
+                      <span className="flex-1">{p.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setShowFilteredResendModal(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={handleFilteredResend} disabled={resendFilteredMutation.isPending || filteredRecipients.length === 0}>
+                <RefreshCw size={14} className={resendFilteredMutation.isPending ? 'animate-spin' : ''} />
+                {resendFilteredMutation.isPending ? 'Creating…' : `Send ${filteredRecipients.length} as "${activeFilterLabel}"`}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showResendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-lg p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
+                <RefreshCw size={16} /> Resend Campaign
+              </h3>
+              <button type="button" onClick={() => setShowResendModal(false)} className="text-[var(--color-text-muted)] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Update SMTP sender and resend to recipients matching selected statuses. Opens/clicks on already-delivered emails are preserved unless you include those statuses.
+            </p>
+
+            <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl text-xs space-y-1 font-mono">
+              <div><span className="text-[var(--color-text-muted)]">Current sender:</span> {currentSenderLabel}</div>
+              <div><span className="text-[var(--color-text-muted)]">Resendable now:</span> {resendableCount} (failed/bounced/pending/invalid)</div>
+              <div className="text-[var(--color-action-primary)] font-bold">Will queue: {resendPreviewCount} recipient(s)</div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Sender Mode</label>
+              <select
+                value={resendSenderMode}
+                onChange={(e) => setResendSenderMode(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+              >
+                <option value="single">Single SMTP Profile</option>
+                <option value="pool">Rotate SMTP Pool</option>
+                <option value="system_resend">System Resend (API key)</option>
+                <option value="system_smtp">System SMTP (env vars)</option>
+              </select>
+            </div>
+
+            {resendSenderMode === 'single' && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Sender Profile</label>
+                <select
+                  value={resendSenderProfileId}
+                  onChange={(e) => setResendSenderProfileId(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+                >
+                  <option value="">— Select profile —</option>
+                  {profiles.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} ({p.email}) — {p.usage?.used ?? 0}/{p.usage?.limit ?? 500} today
+                    </option>
+                  ))}
+                </select>
+                {resendSenderProfileId && (() => {
+                  const sp = profiles.find((p) => p._id === resendSenderProfileId);
+                  if (!sp?.usage) return null;
+                  const remaining = Math.max(0, (sp.usage.limit || 500) - (sp.usage.used || 0));
+                  return (
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      SMTP capacity remaining today: <strong className={remaining < resendPreviewCount ? 'text-amber-500' : 'text-emerald-500'}>{remaining}</strong> / {sp.usage.limit}
+                      {remaining < resendPreviewCount && ' — may need pool mode or wait until tomorrow'}
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
+
+            {resendSenderMode === 'pool' && (
+              <div className="space-y-2 max-h-32 overflow-y-auto p-3 bg-[var(--color-bg-secondary)] rounded-xl">
+                {profiles.map((p) => {
+                  const checked = resendSenderProfileIds.includes(p._id);
+                  const remaining = Math.max(0, (p.usage?.limit ?? 500) - (p.usage?.used ?? 0));
+                  return (
+                    <label key={p._id} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setResendSenderProfileIds((prev) => checked ? prev.filter((id) => id !== p._id) : [...prev, p._id])}
+                      />
+                      <span className="flex-1">{p.name}</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)]">{remaining} left today</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase">Resend to statuses</label>
+              <div className="flex flex-wrap gap-2">
+                {RESEND_STATUS_OPTIONS.map((opt) => (
+                  <label key={opt.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded-lg border border-[var(--color-bg-border)]">
+                    <input
+                      type="checkbox"
+                      checked={resendTargetStatuses.includes(opt.id)}
+                      onChange={() => {
+                        setResendTargetStatuses((prev) =>
+                          prev.includes(opt.id) ? prev.filter((s) => s !== opt.id) : [...prev, opt.id]
+                        );
+                      }}
+                    />
+                    {opt.label} ({recipientStatusCounts[opt.id] || 0})
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setShowResendModal(false)}>Cancel</Button>
+              <Button className="flex-1" onClick={handleResend} disabled={resendMutation.isPending || resendPreviewCount === 0}>
+                <RefreshCw size={14} className={resendMutation.isPending ? 'animate-spin' : ''} />
+                {resendMutation.isPending ? 'Queuing…' : `Resend ${resendPreviewCount}`}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </PageContainer>
   );
 }

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const { isValidDisplayCity, isEmailImageProxy, extractClientIp, lookupGeoAsync, lookupGeoSync, resolveMailEventCityAsync } = require('../utils/geoLookup');
+const { isValidDisplayCity, isEmailImageProxy, isGoogleInfrastructureIp, extractClientIp, lookupGeoAsync, lookupGeoSync, resolveMailEventCityAsync } = require('../utils/geoLookup');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -72,7 +72,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         if (isAntiSpamBot(userAgent)) return;
 
         // Run the local in-memory location lookup (Gmail proxy IP ≠ reader city — skip geo on opens)
-        const location = isEmailImageProxy(userAgent)
+        const location = isEmailImageProxy(userAgent) || isGoogleInfrastructureIp(extractClientIp(req))
           ? await buildEventLocation(req, userAgent, { skipProxyGeo: true })
           : await buildEventLocation(req, userAgent, { enrich: true });
 

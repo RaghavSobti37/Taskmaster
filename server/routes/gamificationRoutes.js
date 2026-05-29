@@ -4,6 +4,7 @@ const GamificationService = require('../services/gamificationService');
 const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
+const { getCurrentWeekRange } = require('../utils/attendanceDate');
 
 const ACTION_LABELS = {
   COMPLETE_TASK: 'Completed task',
@@ -72,12 +73,10 @@ router.get('/leaderboard', protect, async (req, res) => {
   try {
     const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
-    const start = new Date();
-    start.setDate(start.getDate() - start.getDay());
-    start.setHours(0, 0, 0, 0);
+    const { weekStart, weekEnd } = getCurrentWeekRange();
 
     const leaderboard = await XPAuditLog.aggregate([
-      { $match: { createdAt: { $gte: start } } },
+      { $match: { createdAt: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: '$userId', weeklyXp: { $sum: '$amount' } } },
       { $sort: { weeklyXp: -1 } },
       { $limit: 10 }
@@ -110,17 +109,11 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
     const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
 
-    const start = new Date();
-    start.setDate(start.getDate() - start.getDay());
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+    const { weekStart, weekEnd } = getCurrentWeekRange();
 
     const logs = await XPAuditLog.find({
       userId,
-      createdAt: { $gte: start, $lte: end }
+      createdAt: { $gte: weekStart, $lte: weekEnd }
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -150,8 +143,8 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
 
     res.json({
       user: user || { _id: userId, name: 'Unknown' },
-      weekStart: start,
-      weekEnd: end,
+      weekStart,
+      weekEnd,
       totalXp,
       groupedBreakdown,
       recentLogs: logs.slice(0, 15).map((log) => ({

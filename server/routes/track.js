@@ -196,8 +196,6 @@ router.get('/click/:clickId', async (req, res) => {
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;
 
-        logger.info('TrackClick', 'geo saved', { clickId: String(clickId).slice(0, 8), city: location?.city, ip: location?.ip });
-
         await EmailLog.updateOne({ clickId }, { $set: { clicked: true } });
 
         const MailCampaign = require('../models/MailCampaign');

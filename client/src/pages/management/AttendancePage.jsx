@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, Trash2 } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown } from '../../components/ui';
 import {
   useAttendance,
@@ -7,19 +7,81 @@ import {
   useLeaveRequests,
   useApproveLeaveRequest,
   useRejectLeaveRequest,
-  useBatchMarkPresent,
   useAttendanceCheck,
   useUndoAttendanceCheck,
   useApproveAttendance,
   useUserDirectory,
+  useResetAttendance,
 } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
-import { isOpsUser } from '../../utils/departmentPermissions';
+import { isOpsUser, isAdminUser } from '../../utils/departmentPermissions';
+import { isAttendanceExcluded } from '../../utils/attendanceUsers';
+import { useToast } from '../../contexts/ToastContext';
 import { addDays, format } from 'date-fns';
 import { Check, Lock, LogIn, LogOut, RotateCcw, Palmtree } from 'lucide-react';
-import { isWeekend } from '../../utils/attendanceUtils';
+import {
+  isWeekend,
+  getWeekDaysIST,
+  shouldUseSplitLayout,
+  getMergedCellLabel,
+  formatDateKeyIST,
+} from '../../utils/attendanceUtils';
 
-const TEST_USER_PATTERN = /(test\s*user|qa\s*tester|^test$|demo\s*user)/i;
+const VIEW_MODES = {
+  COMPACT: 'compact',
+  WEEK: 'week',
+};
+
+const getCellButtonClass = (status, entry) => (
+  entry?.isApproved ? 'bg-blue-500/10 border-blue-500/30' :
+  status === 'leave' ? 'bg-red-500/10 border-red-500/30' :
+  status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
+  status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
+  'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'
+);
+
+const AttendanceDayCells = ({ userRow, date, entry, status, onEdit, statusDot }) => {
+  const split = shouldUseSplitLayout(entry, status);
+  const baseClass = `w-full rounded-lg border px-2 py-2 transition-colors hover:ring-2 hover:ring-[var(--color-action-primary)]/30 cursor-pointer ${getCellButtonClass(status, entry)}`;
+
+  if (!split) {
+    return (
+      <td colSpan={2} className="px-2 py-2 align-top">
+        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} flex items-center justify-center gap-2 min-h-[36px]`}>
+          {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
+          <span className={`text-[10px] font-bold ${status === 'empty' ? 'text-[var(--color-text-muted)]' : ''}`}>
+            {getMergedCellLabel(status)}
+          </span>
+        </button>
+      </td>
+    );
+  }
+
+  return (
+    <>
+      <td className="px-2 py-2 align-top">
+        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} text-left`}>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
+            <span className="text-[10px] font-bold truncate">{entry?.timeIn || '--'}</span>
+            {entry?.timeIn && !entry?.isApproved && <Check size={10} className="text-emerald-500 shrink-0" />}
+            {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
+          </div>
+        </button>
+      </td>
+      <td className="px-2 py-2 align-top">
+        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} text-left`}>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
+            <span className="text-[10px] font-bold truncate">{entry?.timeOut || '--'}</span>
+            {entry?.timeOut && !entry?.isApproved && <Check size={10} className="text-emerald-500 shrink-0" />}
+            {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
+          </div>
+        </button>
+      </td>
+    </>
+  );
+};
 
 const TimeCell = ({ time, marked, locked, approved }) => (
   <div className={`rounded-xl border px-4 py-3 ${locked ? 'bg-blue-500/10 border-blue-500/30' : marked ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'}`}>
@@ -45,6 +107,14 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
   const hasIn = !!entry?.timeIn;
   const hasOut = !!entry?.timeOut;
   const isBusy = checkIn.isPending || checkOut.isPending || undoCheck.isPending;
+
+  const displayStatus = () => {
+    if (isLoading) return 'Loading...';
+    if (isLocked) return 'Approved';
+    if (entry?.onLeave || (weekend && !hasIn && !hasOut)) return 'On leave';
+    if (hasIn || hasOut) return 'Pending review';
+    return 'Not marked';
+  };
 
   return (
     <Card className="p-6 space-y-6">
@@ -83,13 +153,13 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
         </div>
       )}
 
-      {weekend ? (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+      {weekend && !hasIn && !hasOut && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400">
           <Palmtree size={18} />
-          <span className="text-sm font-bold">Weekend — holiday. Attendance not required.</span>
+          <span className="text-sm font-bold">Weekend — on leave. Mark in if you are working.</span>
         </div>
-      ) : (
-        <>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <TimeCell time={entry?.timeIn} marked={hasIn} locked={isLocked} approved={entry?.isApproved} />
         <TimeCell time={entry?.timeOut} marked={hasOut} locked={isLocked} approved={entry?.isApproved} />
@@ -108,17 +178,15 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
         <Button
           variant="primary"
           className="!py-3"
-          disabled={isLoading || isBusy || hasOut || isLocked}
+          disabled={isLoading || isBusy || hasOut || isLocked || !hasIn}
           onClick={() => checkOut.mutate({ type: 'out' })}
         >
           <LogOut size={16} className="mr-2" />
           Mark Out
         </Button>
       </div>
-        </>
-      )}
 
-      {!weekend && !isLocked && (hasIn || hasOut) && (
+      {!isLocked && (hasIn || hasOut) && (
         <div className="flex flex-wrap gap-2 pt-1">
           {hasIn && (
             <Button
@@ -169,7 +237,7 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
                 </div>
               </td>
               <td className="px-4 py-3 text-xs font-bold text-[var(--color-text-muted)]">
-                {isLoading ? 'Loading...' : isLocked ? 'Approved' : hasIn || hasOut ? 'Pending review' : 'Not marked'}
+                {displayStatus()}
               </td>
             </tr>
           </tbody>
@@ -181,25 +249,34 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
 
 const AttendancePage = () => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const canEdit = isOpsUser(user);
+  const canReset = isAdminUser(user);
   const [editCell, setEditCell] = useState(null);
-  const [editForm, setEditForm] = useState({ status: 'present', timeIn: '10:30', timeOut: '18:00' });
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [viewMode, setViewMode] = useState(VIEW_MODES.COMPACT);
+  const [editForm, setEditForm] = useState({ status: 'present', timeIn: '', timeOut: '' });
 
   const today = useMemo(() => {
     const value = new Date();
     value.setHours(0, 0, 0, 0);
     return value;
   }, []);
-  const todayKey = format(today, 'yyyy-MM-dd');
+  const todayKey = formatDateKeyIST(today);
 
-  const dateColumns = useMemo(() => ([
-    { key: 'yesterday', label: 'Yesterday', date: addDays(today, -1) },
-    { key: 'today', label: 'Today', date: today },
-    { key: 'tomorrow', label: 'Tomorrow', date: addDays(today, 1) },
-  ]), [today]);
+  const dateColumns = useMemo(() => {
+    if (viewMode === VIEW_MODES.WEEK) {
+      return getWeekDaysIST(today);
+    }
+    return [
+      { key: 'yesterday', label: 'Yesterday', date: addDays(today, -1) },
+      { key: 'today', label: 'Today', date: today },
+      { key: 'tomorrow', label: 'Tomorrow', date: addDays(today, 1) },
+    ];
+  }, [today, viewMode]);
 
   const rangeStart = format(dateColumns[0].date, 'yyyy-MM-dd');
-  const rangeEnd = format(dateColumns[2].date, 'yyyy-MM-dd');
+  const rangeEnd = format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
   const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit);
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit);
@@ -207,14 +284,10 @@ const AttendancePage = () => {
   const approveAttendance = useApproveAttendance();
   const approveLeave = useApproveLeaveRequest();
   const rejectLeave = useRejectLeaveRequest();
-  const batchPresent = useBatchMarkPresent();
+  const resetAttendance = useResetAttendance();
 
   const filteredUsers = useMemo(() => (
-    users.filter((u) => {
-      const label = `${u.name || ''} ${u.email || ''}`.trim();
-      if (TEST_USER_PATTERN.test(label)) return false;
-      return true;
-    })
+    users.filter((u) => !isAttendanceExcluded(u))
   ), [users]);
 
   const rowMap = useMemo(() => {
@@ -226,7 +299,8 @@ const AttendancePage = () => {
     return map;
   }, [rows]);
 
-  const resolveStatus = (entry) => {
+  const resolveStatus = (entry, date) => {
+    if (!entry && isWeekend(date)) return 'leave';
     if (!entry) return 'empty';
     if (entry.onLeave) return 'leave';
     if (entry.isHalfDay) return 'halfDay';
@@ -243,30 +317,38 @@ const AttendancePage = () => {
   };
 
   const openEditModal = (userRow, date, entry) => {
-    const status = resolveStatus(entry);
+    const status = resolveStatus(entry, date);
     setEditCell({ userRow, date, entry });
     setEditForm({
-      status: status === 'empty' ? 'present' : status,
-      timeIn: entry?.timeIn || '10:30',
-      timeOut: entry?.timeOut || '18:00',
+      status: !entry && isWeekend(date) ? 'leave' : (status === 'empty' ? 'present' : status),
+      timeIn: entry?.timeIn || '',
+      timeOut: entry?.timeOut || '',
     });
   };
 
   const saveCell = () => {
     if (!editCell) return;
     const { userRow, date } = editCell;
+    const hasTimes = !!(editForm.timeIn || editForm.timeOut);
+    const effectiveStatus = hasTimes && editForm.status === 'leave' ? 'present' : editForm.status;
     const payload = {
       userId: userRow._id,
       username: userRow.name,
       date: format(date, 'yyyy-MM-dd'),
-      onLeave: editForm.status === 'leave',
-      isHalfDay: editForm.status === 'halfDay',
-      timeIn: editForm.status === 'leave' ? '' : editForm.timeIn,
-      timeOut: editForm.status === 'leave' ? '' : editForm.timeOut,
+      onLeave: effectiveStatus === 'leave',
+      isHalfDay: effectiveStatus === 'halfDay',
+      timeIn: effectiveStatus === 'leave' ? '' : (editForm.timeIn || ''),
+      timeOut: effectiveStatus === 'leave' ? '' : (editForm.timeOut || ''),
     };
     upsertAttendance.mutate(payload, {
       onSuccess: (response) => {
         setEditCell((prev) => (prev ? { ...prev, entry: response.data } : null));
+      },
+      onError: (error) => {
+        addToast({
+          type: 'error',
+          message: error.response?.data?.error || 'Failed to save attendance',
+        });
       },
     });
   };
@@ -274,6 +356,27 @@ const AttendancePage = () => {
   const approveCell = () => {
     if (!editCell?.entry?._id) return;
     approveAttendance.mutate(editCell.entry._id, { onSuccess: () => setEditCell(null) });
+  };
+
+  const handleResetAttendance = () => {
+    resetAttendance.mutate(undefined, {
+      onSuccess: (response) => {
+        const deleted = response.data?.deleted;
+        addToast({
+          type: 'success',
+          message: deleted
+            ? `Deleted ${deleted.attendance} attendance rows and ${deleted.leaveRequests} leave requests.`
+            : 'Attendance data reset successfully.',
+        });
+        setShowResetConfirm(false);
+      },
+      onError: (error) => {
+        addToast({
+          type: 'error',
+          message: error.response?.data?.error || 'Failed to reset attendance data',
+        });
+      },
+    });
   };
 
   if (!canEdit) {
@@ -297,9 +400,44 @@ const AttendancePage = () => {
         icon={ClipboardCheck}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-[var(--color-bg-border)] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode(VIEW_MODES.COMPACT)}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  viewMode === VIEW_MODES.COMPACT
+                    ? 'bg-[var(--color-action-primary)] text-white'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                3-Day
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode(VIEW_MODES.WEEK)}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  viewMode === VIEW_MODES.WEEK
+                    ? 'bg-[var(--color-action-primary)] text-white'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Full Week
+              </button>
+            </div>
             <span className="text-xs font-bold px-3 py-1 rounded-lg bg-[var(--color-bg-secondary)]">
-              {format(dateColumns[0].date, 'MMM d')} – {format(dateColumns[2].date, 'MMM d, yyyy')}
+              {format(dateColumns[0].date, 'MMM d')} – {format(dateColumns[dateColumns.length - 1].date, 'MMM d, yyyy')}
             </span>
+            {canReset && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setShowResetConfirm(true)}
+                disabled={resetAttendance.isPending}
+              >
+                <Trash2 size={14} className="mr-1.5" />
+                Reset All Attendance
+              </Button>
+            )}
           </div>
         )}
       />
@@ -332,19 +470,9 @@ const AttendancePage = () => {
               <tr>
                 <th className="px-4 py-3 text-left sticky left-0 bg-[var(--color-bg-secondary)] z-10" rowSpan={2}>User</th>
                 {dateColumns.map((day) => (
-                  <th key={day.key} className="px-3 py-3 text-center min-w-[200px]" colSpan={2}>
+                  <th key={day.key} className={`px-3 py-3 text-center ${viewMode === VIEW_MODES.WEEK ? 'min-w-[120px]' : 'min-w-[200px]'}`} colSpan={2}>
                     <div>{day.label}</div>
                     <div className="text-[10px] text-[var(--color-text-muted)]">{format(day.date, 'EEE, MMM d')}</div>
-                    <div className="mt-1">
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        className="!text-[9px]"
-                        onClick={() => batchPresent.mutate({ date: format(day.date, 'yyyy-MM-dd'), userIds: filteredUsers.map((u) => u._id) })}
-                      >
-                        All Present
-                      </Button>
-                    </div>
                   </th>
                 ))}
               </tr>
@@ -370,50 +498,17 @@ const AttendancePage = () => {
                   {dateColumns.map(({ date, key: dayKey }) => {
                       const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
                       const entry = rowMap.get(key);
-                      const status = resolveStatus(entry);
+                      const status = resolveStatus(entry, date);
                       return (
-                        <React.Fragment key={`${dayKey}-${key}`}>
-                          <td className="px-2 py-2 align-top">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(userRow, date, entry)}
-                              className={`w-full rounded-lg border px-2 py-2 text-left transition-colors ${
-                                entry?.isApproved ? 'bg-blue-500/10 border-blue-500/30' :
-                                status === 'leave' ? 'bg-red-500/10 border-red-500/30' :
-                                status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
-                                status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                                'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'
-                              } hover:ring-2 hover:ring-[var(--color-action-primary)]/30 cursor-pointer`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
-                                <span className="text-[10px] font-bold truncate">{entry?.timeIn || '--'}</span>
-                                {entry?.timeIn && !entry?.isApproved && <Check size={10} className="text-emerald-500 shrink-0" />}
-                                {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
-                              </div>
-                            </button>
-                          </td>
-                          <td className="px-2 py-2 align-top">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(userRow, date, entry)}
-                              className={`w-full rounded-lg border px-2 py-2 text-left transition-colors ${
-                                entry?.isApproved ? 'bg-blue-500/10 border-blue-500/30' :
-                                status === 'leave' ? 'bg-red-500/10 border-red-500/30' :
-                                status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
-                                status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                                'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'
-                              } hover:ring-2 hover:ring-[var(--color-action-primary)]/30 cursor-pointer`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
-                                <span className="text-[10px] font-bold truncate">{entry?.timeOut || '--'}</span>
-                                {entry?.timeOut && !entry?.isApproved && <Check size={10} className="text-emerald-500 shrink-0" />}
-                                {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
-                              </div>
-                            </button>
-                          </td>
-                        </React.Fragment>
+                        <AttendanceDayCells
+                          key={`${dayKey}-${key}`}
+                          userRow={userRow}
+                          date={date}
+                          entry={entry}
+                          status={status}
+                          onEdit={openEditModal}
+                          statusDot={statusDot}
+                        />
                       );
                     })}
                   </tr>
@@ -453,18 +548,16 @@ const AttendancePage = () => {
                 onChange={(v) => setEditForm((f) => ({ ...f, status: v }))}
               />
             </div>
-            {editForm.status !== 'leave' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Time In</label>
-                  <input type="time" value={editForm.timeIn} onChange={(e) => setEditForm((f) => ({ ...f, timeIn: e.target.value }))} className="w-full mt-1 px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Time Out</label>
-                  <input type="time" value={editForm.timeOut} onChange={(e) => setEditForm((f) => ({ ...f, timeOut: e.target.value }))} className="w-full mt-1 px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" />
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Time In</label>
+                <input type="time" value={editForm.timeIn} onChange={(e) => setEditForm((f) => ({ ...f, timeIn: e.target.value }))} className="w-full mt-1 px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" />
               </div>
-            )}
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Time Out</label>
+                <input type="time" value={editForm.timeOut} onChange={(e) => setEditForm((f) => ({ ...f, timeOut: e.target.value }))} className="w-full mt-1 px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" />
+              </div>
+            </div>
             <div className="flex flex-wrap justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={() => setEditCell(null)}>Cancel</Button>
               <Button variant="primary" onClick={saveCell} disabled={upsertAttendance.isPending}>Save</Button>
@@ -476,6 +569,26 @@ const AttendancePage = () => {
             </div>
           </div>
         )}
+      </NexusModal>
+
+      <NexusModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="Reset All Attendance"
+        showFooter={false}
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-text-muted)]">
+            This permanently deletes all attendance records and leave requests. This cannot be undone.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleResetAttendance} disabled={resetAttendance.isPending}>
+              Delete All Attendance Data
+            </Button>
+          </div>
+        </div>
       </NexusModal>
     </PageContainer>
   );

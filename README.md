@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.34-126d5e?style=flat-square" alt="Version 1.7.34" />
+  <img src="https://img.shields.io/badge/version-1.7.35-126d5e?style=flat-square" alt="Version 1.7.35" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -60,7 +60,8 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 ## Features
 
 ### Dashboard & Productivity
-- **Three-column dashboard** — Leaderboard podium, announcements, pin board, schedule, todos today, projects today, and private notes in a single view.
+- **Three-column dashboard** — Leaderboard podium, announcements, pin board, schedule, todos today, projects today, and private notes in a single view (headerless layout for density).
+- **Weekly leaderboard** — Resets Monday 00:00 IST; lifetime XP/level unchanged; sums `XPAuditLog` per ISO work week.
 - **Pin board** — Team-wide shared notes with composer; persisted via `/api/pinboard`.
 - **Private notes** — Per-user sticky notes with project linking via `/api/notes`.
 - **Todo page** (`/todo`) — Full task list with search, status/priority/category/project filters, workspace color accents, and flash-highlight deep links.
@@ -82,6 +83,7 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 
 ### CRM & Sales
 - Lead management with CSV import, HolySheet sync, and Exly webhook ingest.
+- **Customer Leads** (`/crm/leads`) — Stat cards, left-aligned filter bar, server-side pagination.
 - Follow-up scheduling with Today / Overdue / Upcoming tabs.
 - Least-loaded sales rep auto-assignment on booked calls.
 - AiSensy WhatsApp dual integration (customer + rep alerts).
@@ -97,6 +99,10 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 - Multi-file drag-and-drop upload with batching, retries, and partial-success handling.
 - OCR/OMR document parsing (`pdf-parse`, `tesseract.js`).
 - Admin Script Runner at `/admin/scripts` for one-click server script execution.
+
+### Attendance & Gamification
+- **Attendance** (`/attendance`) — Mon–Fri work week; Sat/Sun default leave (overridable via check-in); ops 3-day or full-week grid; merged Leave / Mark Present cells; future-time validation; admin reset.
+- **Weekly leaderboard** — Monday 00:00 IST reset (query-time from `XPAuditLog`); lifetime XP/level preserved.
 
 ### Admin & Integrations
 - User/team/CRM/mail/gamification admin panels.
@@ -387,6 +393,26 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-30] v1.7.35 — Attendance Overhaul, Leaderboard Week & CRM Layout
+
+#### Attendance & Leaderboard
+- Weekly leaderboard resets **Monday 00:00 IST** (Mon–Sun window via `getCurrentWeekRange()` in `server/utils/attendanceDate.js`); lifetime `User.exp` / level unchanged.
+- Weekend Sat/Sun default **Leave** in ops grid (virtual, no DB row); users can check in to override; ops approve & lock.
+- Removed **All Present** batch action; excluded test/Sandesh/Test Admin/QA Autonomous Engineer from attendance roster.
+- Future date/time validation on check-in and ops upsert; check-out requires prior check-in.
+- Ops grid: merged **Leave** / **Mark Present** / **Half Day** cells (single row); split to Time In/Out once times exist.
+- **3-Day** vs **Full Week** view toggle in attendance header; admin **Reset All Attendance** button (`DELETE /api/attendance/reset`).
+- New utils: `server/utils/attendanceUsers.js`, `client/src/utils/attendanceUsers.js`, IST helpers in `client/src/utils/attendanceUtils.js`.
+
+#### UI Polish
+- Dashboard: removed redundant page header for denser three-column layout.
+- CRM Leads: search/filter bar left-aligned with stat cards.
+
+#### Cleanup
+- Removed unused `debugCampaignGeo.js` script; minor track/email processor tidy.
+
+---
 
 ### [2026-05-30] v1.7.34 — Campaign Metrics, Activity Stream & SMTP Resilience
 

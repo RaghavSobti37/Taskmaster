@@ -68,11 +68,6 @@ const Dashboard = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-4">
-      <PageHeader
-        icon={LayoutDashboard}
-        title="Dashboard"
-        subtitle={`Welcome back${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
-      />
       <PinBoardProvider>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:items-start">
         {/* Left: leaderboard + announcements + pin board + schedule */}

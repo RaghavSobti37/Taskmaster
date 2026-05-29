@@ -66,6 +66,85 @@ const isWeekend = (input = new Date()) => {
   return weekday === 'Sat' || weekday === 'Sun';
 };
 
+const WEEKDAY_OFFSET_FROM_MONDAY = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+const parseTimeToMinutes = (timeStr) => {
+  if (!timeStr || !String(timeStr).includes(':')) return 0;
+  const [h, m] = String(timeStr).split(':').map(Number);
+  return (h * 60) + (m || 0);
+};
+
+const toDateKeyAnchor = (dateKey) => new Date(`${dateKey}T12:00:00${getTzOffset()}`);
+
+const getMondayDateKey = (referenceInput) => {
+  const dateKey = typeof referenceInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(referenceInput.trim())
+    ? referenceInput.trim()
+    : getDateKey(referenceInput instanceof Date ? referenceInput : new Date(referenceInput || Date.now()));
+  const anchor = toDateKeyAnchor(dateKey);
+  const weekday = getWeekdayInTz(anchor);
+  const daysFromMonday = WEEKDAY_OFFSET_FROM_MONDAY[weekday] ?? 0;
+  anchor.setDate(anchor.getDate() - daysFromMonday);
+  return getDateKey(anchor);
+};
+
+const getCurrentWeekRange = (weekStartInput) => {
+  const mondayKey = weekStartInput
+    ? getMondayDateKey(weekStartInput)
+    : getMondayDateKey(getDateKey());
+
+  const weekStart = startOfDayFromKey(mondayKey);
+  const sundayAnchor = toDateKeyAnchor(mondayKey);
+  sundayAnchor.setDate(sundayAnchor.getDate() + 6);
+  const sundayKey = getDateKey(sundayAnchor);
+  const weekEnd = endOfDayFromKey(sundayKey);
+
+  return { weekStart, weekEnd, weekStartKey: mondayKey, weekEndKey: sundayKey };
+};
+
+const validateAttendanceTimes = ({ dateKey, timeIn, timeOut, onLeave, isHalfDay }) => {
+  const todayKey = getDateKey();
+  const now = new Date();
+  const normalizedDateKey = typeof dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey.trim())
+    ? dateKey.trim()
+    : getDateKey(dateKey);
+
+  if (onLeave) return { ok: true };
+
+  const hasTimes = !!(timeIn || timeOut);
+  if (normalizedDateKey > todayKey && hasTimes) {
+    return { ok: false, error: 'Cannot set times for a future date' };
+  }
+
+  const checkFuture = (time) => {
+    if (!time) return false;
+    const dt = new Date(`${normalizedDateKey}T${time}:00${getTzOffset()}`);
+    return dt > now;
+  };
+
+  if (checkFuture(timeIn)) {
+    return { ok: false, error: 'Time in cannot be in the future' };
+  }
+  if (checkFuture(timeOut)) {
+    return { ok: false, error: 'Time out cannot be in the future' };
+  }
+  if (timeIn && timeOut && parseTimeToMinutes(timeOut) < parseTimeToMinutes(timeIn)) {
+    return { ok: false, error: 'Time out must be after time in' };
+  }
+  if (isHalfDay && !timeIn && !timeOut) {
+    return { ok: false, error: 'Half day requires at least a time in or time out' };
+  }
+
+  return { ok: true };
+};
+
 module.exports = {
   APP_TIMEZONE,
   getDateKey,
@@ -75,4 +154,8 @@ module.exports = {
   todayStart,
   formatHHMM,
   isWeekend,
+  getMondayDateKey,
+  getCurrentWeekRange,
+  validateAttendanceTimes,
+  parseTimeToMinutes,
 };

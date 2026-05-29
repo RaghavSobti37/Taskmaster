@@ -226,7 +226,6 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   let usedRotationProvider = rotationProvider;
 
   const baseUrl = resolveTrackingBaseUrl();
-  logger.info('Email Processor', `Tracking base URL: ${baseUrl}`);
 
   const recipient = campaign.recipients?.id
     ? campaign.recipients.id(recipientId)

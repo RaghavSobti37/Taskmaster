@@ -87,7 +87,14 @@ flowchart LR
 
 ---
 
-## 7. Mail Engine (v1.7.33+)
+## 7. Mail Engine (v1.7.34+)
+
+### Campaign metrics
+* Stats derived from recipient statuses via `server/utils/campaignStats.js` — delivered = Sent/Opened/Clicked only.
+* Activity stream logs `Send`, `Failed`, `Skipped` events with error metadata.
+
+### SMTP send resilience
+* Rotation retries on connection timeout; falls back to Resend API when SMTP exhausted.
 
 ### Campaign create payload
 * Large HTML + base64 attachments caused `PayloadTooLargeError` when frontend proxied through Vercel (~4.5MB cap).

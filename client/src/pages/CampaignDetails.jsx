@@ -201,9 +201,14 @@ export default function CampaignDetails() {
   ];
 
   const totalRecipients = campaign.recipients?.length || 0;
-  const metrics = campaign.metrics || { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
-  const openRate = totalRecipients ? Math.round((metrics.opened / totalRecipients) * 100) : 0;
-  const clickRate = totalRecipients ? Math.round((metrics.clicked / totalRecipients) * 100) : 0;
+  const deliveredCount =
+    (recipientStatusCounts.Sent || 0) + (recipientStatusCounts.Opened || 0) + (recipientStatusCounts.Clicked || 0);
+  const failedCount =
+    (recipientStatusCounts.Failed || 0) + (recipientStatusCounts.Bounced || 0) + (recipientStatusCounts.Invalid || 0);
+  const openedCount = (recipientStatusCounts.Opened || 0) + (recipientStatusCounts.Clicked || 0);
+  const clickedCount = recipientStatusCounts.Clicked || 0;
+  const openRate = totalRecipients ? Math.round((openedCount / totalRecipients) * 100) : 0;
+  const clickRate = totalRecipients ? Math.round((clickedCount / totalRecipients) * 100) : 0;
   const pendingCount = (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Queued || 0);
   const resendableCount = (recipientStatusCounts.Failed || 0) + (recipientStatusCounts.Bounced || 0)
     + (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Invalid || 0);
@@ -243,12 +248,13 @@ export default function CampaignDetails() {
         icon={Mail}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <StatCard label="Total Recipients" value={totalRecipients} icon={Users} variant="info" />
-        <StatCard label="Sent Successfully" value={metrics.totalSent || 0} icon={CheckCircle2} variant="mint" />
+        <StatCard label="Sent Successfully" value={deliveredCount} icon={CheckCircle2} variant="mint" />
+        <StatCard label="Failed / Bounced" value={failedCount} icon={AlertCircle} variant="rose" />
         <StatCard label="Pending / Queued" value={pendingCount} icon={Clock} variant="slate" />
-        <StatCard label="Unique Open Rate" value={`${openRate}%`} subValue={`${metrics.opened || 0} Opens`} icon={Clock} variant="apricot" />
-        <StatCard label="Click-Through Rate" value={`${clickRate}%`} subValue={`${metrics.clicked || 0} Clicks`} icon={Play} variant="slate" />
+        <StatCard label="Unique Open Rate" value={`${openRate}%`} subValue={`${openedCount} Opens`} icon={Clock} variant="apricot" />
+        <StatCard label="Click-Through Rate" value={`${clickRate}%`} subValue={`${clickedCount} Clicks`} icon={Play} variant="slate" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -324,13 +330,29 @@ export default function CampaignDetails() {
                   evt.eventType === 'Open' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                   evt.eventType === 'Click' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
                   evt.eventType === 'Send' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                  'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                  evt.eventType === 'Failed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
+                  evt.eventType === 'Skipped' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                  'bg-slate-500/20 text-slate-300 border border-slate-500/30'
                 }`}>
                   [{evt.eventType}]
                 </span>
                 <span className="text-slate-200 font-semibold break-all">{evt.email}</span>
                 <span className="text-slate-400 text-[11px]">
-                  {(evt.linkClicked || evt.metadata?.url) ? `→ ${evt.linkClicked || evt.metadata?.url}` : evt.eventType === 'Click' ? '• Clicked link' : evt.eventType === 'Open' ? '• Opened email' : '• Email sent'}
+                  {evt.metadata?.error
+                    ? `→ ${evt.metadata.error}`
+                    : evt.metadata?.reason
+                      ? `→ ${evt.metadata.reason}`
+                      : (evt.linkClicked || evt.metadata?.url)
+                        ? `→ ${evt.linkClicked || evt.metadata?.url}`
+                        : evt.eventType === 'Click'
+                          ? '• Clicked link'
+                          : evt.eventType === 'Open'
+                            ? '• Opened email'
+                            : evt.eventType === 'Failed'
+                              ? '• Delivery failed'
+                              : evt.eventType === 'Skipped'
+                                ? '• Skipped'
+                                : '• Email sent'}
                 </span>
               </div>
             ))

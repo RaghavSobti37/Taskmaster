@@ -8,9 +8,8 @@ const {
 
 const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, options = {}) => {
   const pixelId = crypto.randomBytes(16).toString('hex');
-  const clickId = crypto.randomBytes(16).toString('hex');
 
-  await EmailLog.create({ campaignId, leadEmail, pixelId, clickId });
+  await EmailLog.create({ campaignId, leadEmail, pixelId });
 
   const trackingBaseUrl = resolveTrackingApiBaseUrl();
   const unsubscribeUrl = buildUnsubscribePageUrl(campaignId, leadEmail, pixelId);
@@ -30,13 +29,22 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, opti
   processedHtml = processedHtml + trackingPixel;
 
   const ctaRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"([^>]*)>/gi;
+  const linkClickIds = [];
   processedHtml = processedHtml.replace(ctaRegex, (match, originalUrl, rest) => {
     if (shouldSkipClickWrap(originalUrl)) return match;
-    const trackingUrl = `${trackingBaseUrl}/api/track/click/${clickId}?redirect=${encodeURIComponent(originalUrl)}`;
+    const linkClickId = crypto.randomBytes(16).toString('hex');
+    linkClickIds.push(linkClickId);
+    const trackingUrl = `${trackingBaseUrl}/api/track/click/${linkClickId}?redirect=${encodeURIComponent(originalUrl)}`;
     return `<a href="${trackingUrl}" ${rest}>`;
   });
 
-  return { processedHtml, pixelId, clickId };
+  if (linkClickIds.length) {
+    await EmailLog.insertMany(
+      linkClickIds.map((clickId) => ({ campaignId, leadEmail, clickId }))
+    );
+  }
+
+  return { processedHtml, pixelId, clickId: linkClickIds[0] || null };
 };
 
 module.exports = { prepareCampaignHTML };

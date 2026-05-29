@@ -109,7 +109,13 @@ app.use('/api/', SystemHealthService.middleware);
 
 // MongoDB Connection
 const isProd = process.env.NODE_ENV === 'production';
-const dbUri = (isProd ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI) : (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing')).trim();
+let dbUri = (isProd ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI) : (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing')).trim();
+
+// Local mail tests: tracking pixels hit public API which reads prod DB — opt-in sync
+if (!isProd && process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) {
+  dbUri = process.env.MONGODB_URI_PROD.trim();
+  console.log('[SYSTEM] MAIL_USE_PROD_DB=true — using production MongoDB for mail tracking sync');
+}
 
 // Mask URI for logging
 const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
@@ -122,6 +128,11 @@ mongoose.connect(dbUri, {
 })
   .then(() => {
     console.log('[SUCCESS] MongoDB Connected');
+
+    const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('./utils/trackingUrls');
+    console.log(`[MAIL] Tracking pixel base URL: ${resolveTrackingApiBaseUrl()}`);
+    const trackingWarn = getTrackingDbMismatchWarning();
+    if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
     
     // Auto-repair zero-dipped history snapshots on startup
     (async () => {

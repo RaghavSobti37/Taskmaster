@@ -35,8 +35,10 @@ const parseClientNetworkLocation = (req) => {
 
 function isAntiSpamBot(userAgent) {
   if (!userAgent) return false;
-  const botKeywords = [/bot/i, /crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i, /google/i];
-  return botKeywords.some(regex => regex.test(userAgent));
+  // Gmail/Yahoo image proxies are real opens — do not block
+  if (/GoogleImageProxy|YahooMailProxy|AppleMail/i.test(userAgent)) return false;
+  const botKeywords = [/bot/i, /crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i];
+  return botKeywords.some((regex) => regex.test(userAgent));
 }
 
 // Open Tracking Pixel Endpoint
@@ -69,6 +71,9 @@ router.get('/open/:pixelId.gif', async (req, res) => {
 
         // Query log record using the unique pixel token
         const log = await EmailLog.findOne({ pixelId });
+        // #region agent log
+        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:open:bg',message:'open pixel processed',data:{pixelId:String(pixelId).slice(0,8),logFound:!!log,alreadyOpened:!!log?.opened,botBlocked:isAntiSpamBot(userAgent),ua:(userAgent||'').slice(0,40)},timestamp:Date.now(),hypothesisId:'H-track',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
         if (!log || log.opened) return;
 
         // Mark EmailLog as opened

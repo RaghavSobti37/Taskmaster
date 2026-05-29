@@ -1,0 +1,122 @@
+const Department = require('../models/Department');
+const TaskType = require('../models/TaskType');
+const Task = require('../models/Task');
+const TaskAssignment = require('../models/TaskAssignment');
+const User = require('../models/User');
+
+const DEFAULT_DEPARTMENTS = [
+  { name: 'Admin', slug: 'admin', color: '#6366f1', sortOrder: 0, signupAllowed: false },
+  { name: 'Operations', slug: 'operations', color: '#8b5cf6', sortOrder: 1, signupAllowed: true },
+  { name: 'Sales', slug: 'sales', color: '#10b981', sortOrder: 2, signupAllowed: true },
+  { name: 'Artist Management', slug: 'artist-management', color: '#f59e0b', sortOrder: 3, signupAllowed: true },
+  { name: 'Editor', slug: 'editor', color: '#ef4444', sortOrder: 4, signupAllowed: true },
+  { name: 'Videographer', slug: 'videographer', color: '#06b6d4', sortOrder: 5, signupAllowed: true },
+  { name: 'CG Artist', slug: 'cg-artist', color: '#ec4899', sortOrder: 6, signupAllowed: true },
+];
+
+/** General task categories (replaces granular Edit/Final Cut/etc. duplicates). */
+const TASK_CATEGORIES = [
+  { value: 'bug', label: 'Bug', keywords: ['bug', 'fix', 'error', 'broken', 'defect'] },
+  { value: 'feature', label: 'Feature', keywords: ['feature', 'build', 'implement', 'add', 'new'] },
+  { value: 'content', label: 'Content', keywords: ['edit', 'cut', 'grading', 'dubbing', 'color', 'mix', 'export', 'film', 'audio', 'video', 'rushes', 'compression'] },
+  { value: 'design', label: 'Design', keywords: ['design', 'ui', 'mockup', 'layout', 'visual'] },
+  { value: 'ops', label: 'Operations', keywords: ['plan', 'planning', 'schedule', 'support', 'ops', 'operation', 'deploy'] },
+  { value: 'review', label: 'Review', keywords: ['review', 'approve', 'feedback', 'qa', 'check'] },
+  { value: 'general', label: 'General', keywords: [] },
+];
+
+const slugToDeptName = {
+  editor: 'Editor',
+  videographer: 'Videographer',
+  'cg-artist': 'CG Artist',
+  operations: 'Operations',
+  sales: 'Sales',
+  'artist-management': 'Artist Management',
+};
+
+const inferTypeFromTitle = (title) => {
+  if (!title || !String(title).trim()) return 'general';
+  const upper = String(title).toUpperCase();
+  for (const cat of TASK_CATEGORIES) {
+    if (cat.keywords.some((kw) => upper.includes(kw.toUpperCase()))) {
+      return cat.value;
+    }
+  }
+  return 'general';
+};
+
+const seedDepartments = async () => {
+  const results = [];
+  for (const dept of DEFAULT_DEPARTMENTS) {
+    const existing = await Department.findOne({ slug: dept.slug });
+    if (!existing) {
+      results.push(await Department.create(dept));
+    } else {
+      results.push(existing);
+    }
+  }
+  return results;
+};
+
+const mineTaskTypes = async () => {
+  const departments = await Department.find().lean();
+  const deptBySlug = Object.fromEntries(departments.map((d) => [d.slug, d]));
+
+  const tasks = await Task.find({}, 'title type').lean();
+  const assignments = await TaskAssignment.find({}).populate('userId', 'departmentId').lean();
+
+  const taskAssigneeDepts = {};
+  for (const a of assignments) {
+    const deptId = a.userId?.departmentId?.toString();
+    if (deptId) {
+      taskAssigneeDepts[a.taskId.toString()] = deptId;
+    }
+  }
+
+  const typeMap = new Map();
+
+  for (const task of tasks) {
+    const typeName = inferTypeFromTitle(task.title);
+    const deptId = taskAssigneeDepts[task._id.toString()] || null;
+    const key = `${typeName}::${deptId || 'global'}`;
+    typeMap.set(key, (typeMap.get(key) || 0) + 1);
+  }
+
+  const created = [];
+  for (const [key, count] of typeMap.entries()) {
+    if (count < 1) continue;
+    const sep = key.lastIndexOf('::');
+    const name = sep >= 0 ? key.slice(0, sep) : key;
+    const deptPart = sep >= 0 ? key.slice(sep + 2) : 'global';
+    const departmentId = deptPart === 'global' ? null : deptPart;
+    const exists = await TaskType.findOne({ name, ...(departmentId ? { departmentId } : { departmentId: null }) });
+    if (!exists) {
+      created.push(await TaskType.create({ name, ...(departmentId ? { departmentId } : {}), isActive: true }));
+    }
+  }
+
+  for (const cat of TASK_CATEGORIES) {
+    for (const slug of Object.keys(slugToDeptName)) {
+      const dept = deptBySlug[slug];
+      if (!dept) continue;
+      const exists = await TaskType.findOne({ name: cat.value, departmentId: dept._id });
+      if (!exists) {
+        created.push(await TaskType.create({ name: cat.value, departmentId: dept._id, isActive: true }));
+      }
+    }
+    const globalExists = await TaskType.findOne({ name: cat.value, departmentId: null });
+    if (!globalExists) {
+      created.push(await TaskType.create({ name: cat.value, departmentId: null, isActive: true }));
+    }
+  }
+
+  return { mined: typeMap.size, created: created.length, types: created };
+};
+
+module.exports = {
+  DEFAULT_DEPARTMENTS,
+  seedDepartments,
+  mineTaskTypes,
+  inferTypeFromTitle,
+  TASK_CATEGORIES,
+};

@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Mail, Circle, Plus, UserMinus } from 'lucide-react';
-import { Badge, NexusModal } from '../ui';
-import CKDropdown from '../ui/CKDropdown';
+import { Briefcase, Mail, Circle, UserMinus } from 'lucide-react';
+import { Badge, NexusModal, AddMembers } from '../ui';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { projectRoleLabel } from '../../constants/taskOptions';
 
 const ProjectTeam = ({ project, onRemoveMember }) => {
   const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: directory = [] } = useUserDirectory();
   const [allTeams, setAllTeams] = useState([]);
   const [localMembers, setLocalMembers] = useState(project.members || []);
   const [removeModal, setRemoveModal] = useState({ open: false, member: null });
   const isAdmin = currentUser?.role === 'admin';
   const isOwner = project.owner?._id === currentUser?._id || project.owner === currentUser?._id;
+  const memberRoles = project.memberRoles || [];
+
+  const teamUsers = directory.map((m) => ({
+    _id: m.user?._id || m._id,
+    name: m.user?.name || m.name,
+    email: m.user?.email || m.email,
+    role: m.user?.role || m.role,
+    avatar: m.user?.avatar || m.avatar,
+  }));
 
   const getTeamColor = (teamName) => {
-    const team = allTeams.find(t => t.name === teamName);
+    const team = allTeams.find((t) => t.name === teamName);
     if (team?.color) return { borderLeft: `3px solid ${team.color}`, color: team.color };
-    
+
     const colors = ['#3b82f6', '#a855f7', '#f97316', '#ec4899', '#06b6d4', '#10b981'];
     let hash = 0;
     if (!teamName) return { color: colors[0] };
@@ -35,6 +48,10 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   };
 
   useEffect(() => {
+    setLocalMembers(project.members || []);
+  }, [project.members]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const teamsRes = await axios.get('/api/teams');
@@ -46,22 +63,10 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
     fetchData();
   }, []);
 
-  const handleUpdateTeams = async (userId, teams) => {
-    try {
-      await axios.put(`/api/users/${userId}/teams`, { teams });
-      setLocalMembers(prev => prev.map(m => m._id === userId ? { ...m, teams } : m));
-    } catch (err) {
-      console.error('Error updating user teams:', err);
-    }
-  };
-
-  const teamOptions = allTeams.map(t => ({ value: t.name, label: t.name.toUpperCase() }));
-  const memberRoles = project.memberRoles || [];
-
   const handleConfirmRemove = () => {
     if (removeModal.member && onRemoveMember) {
       onRemoveMember(removeModal.member._id);
-      setLocalMembers(prev => prev.filter(m => m._id !== removeModal.member._id));
+      setLocalMembers((prev) => prev.filter((m) => m._id !== removeModal.member._id));
     }
     setRemoveModal({ open: false, member: null });
   };
@@ -84,112 +89,81 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         confirmLabel="Remove"
         onConfirm={handleConfirmRemove}
       />
+
       {(isAdmin || isOwner) && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-bg-workspace)] p-4 rounded-2xl border border-[var(--color-bg-border)]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-              <Plus size={18} />
-            </div>
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">Add Members</h3>
-              <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)]">Add new members to this project</p>
-            </div>
-          </div>
-          <div className="w-full md:w-80">
-            <AddMemberDropdown
-              excludeIds={localMembers.map((m) => m._id)}
-              onAdd={async (userId) => {
-              try {
-                await axios.post(`/api/projects/${project._id}/members`, { userId });
-                window.location.reload();
-              } catch (err) {
-                console.error('Error adding member:', err);
-              }
-            }} />
-          </div>
-        </div>
+        <AddMembers
+          variant="picker"
+          title="Add teammates"
+          subtitle="Search and assign a project role"
+          users={teamUsers}
+          excludeIds={localMembers.map((m) => m._id)}
+          onAdd={async (userId, role) => {
+            await axios.post(`/api/projects/${project._id}/members`, { userId, role });
+            queryClient.invalidateQueries({ queryKey: ['projects', project._id] });
+            queryClient.invalidateQueries({ queryKey: ['projects'] });
+          }}
+        />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {localMembers.map((member) => {
-          const roleEntry = memberRoles.find(r => r.user?._id === member._id || r.user === member._id);
-          const roleLabel = roleEntry ? roleEntry.role : 'Member';
+          const roleEntry = memberRoles.find((r) => r.user?._id === member._id || r.user === member._id);
+          const roleLabel = projectRoleLabel(roleEntry?.role || 'member');
           const isOnline = getMemberOnline(member);
-          
+
           return (
             <div key={member._id} className="bg-[var(--color-bg-surface)] rounded-3xl border border-[var(--color-bg-border)] p-6 shadow-sm hover:shadow-xl transition-all group relative">
               {canRemoveMember(member) && (
                 <button
                   onClick={() => setRemoveModal({ open: true, member })}
-                  className="absolute top-4 right-4 p-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
-                  title="Remove from project"
+                  className="absolute top-4 right-4 p-2 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 opacity-0 group-hover:opacity-100 transition-all"
                 >
-                  <UserMinus size={14} />
+                  <UserMinus size={16} />
                 </button>
               )}
 
-              <div className="flex items-start justify-between mb-6 pr-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-xl text-[var(--color-action-primary)] overflow-hidden relative">
+              <div className="flex items-start gap-4">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-2xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] overflow-hidden flex items-center justify-center font-black text-lg text-[var(--color-action-primary)]">
                     {member.avatar ? (
                       <img src={member.avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
                       member.name.substring(0, 2).toUpperCase()
                     )}
-                    {isOnline && (
-                      <div className="absolute bottom-1 right-1 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--color-bg-surface)] shadow-sm" />
-                    )}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors">{member.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={roleLabel === 'owner' ? 'progress' : 'todo'}>{roleLabel.toUpperCase()}</Badge>
-                    </div>
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--color-bg-surface)] ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)] transition-colors truncate">{member.name}</h3>
+                    <Badge variant="info">{roleLabel}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                    <Mail size={12} />
+                    <span className="font-medium truncate">{member.email}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-5">
-                <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] bg-[var(--color-bg-workspace)]/50 p-2 rounded-xl border border-[var(--color-bg-border)]/50">
-                  <Mail size={14} className="text-[var(--color-text-muted)]" />
-                  <span className="font-medium truncate">{member.email}</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Briefcase size={14} className="text-[var(--color-text-muted)]" />
-                    <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Teams</span>
-                  </div>
-                  
-                  {isAdmin ? (
-                    <CKDropdown 
-                      multi
-                      placeholder="Assign Teams..."
-                      options={teamOptions}
-                      value={member.teams || []}
-                      onChange={(teams) => handleUpdateTeams(member._id, teams)}
-                      className="w-full"
-                    />
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {member.teams?.length > 0 ? (
-                        member.teams.map(t => (
-                          <span 
-                            key={t} 
-                            className="px-2.5 py-1 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] text-[9px] font-black uppercase tracking-widest transition-all"
-                            style={getTeamColor(t)}
-                          >
-                            {t.toUpperCase()}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold italic">No team yet</span>
-                      )}
-                    </div>
-                  )}
-                </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {member.teams?.length > 0 ? (
+                  member.teams.map((t) => (
+                    <span
+                      key={t}
+                      className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]"
+                      style={getTeamColor(t)}
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[9px] font-black uppercase text-[var(--color-text-muted)] flex items-center gap-1">
+                    <Briefcase size={10} /> No teams
+                  </span>
+                )}
               </div>
-              
+
               <div className="mt-6 pt-6 border-t border-[var(--color-bg-border)] flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">Status</span>
                 <div className="flex items-center gap-1.5">
@@ -202,55 +176,6 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
         })}
       </div>
     </div>
-  );
-};
-
-const AddMemberDropdown = ({ onAdd, excludeIds = [] }) => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get('/api/users/team');
-        setUsers(res.data.team || []);
-      } catch (err) {
-        console.error('Error fetching users:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  const availableUsers = users.filter((u) => !excludeIds.includes(u._id));
-
-  const formatOptionLabel = (option) => {
-    const user = users.find((u) => u._id === option.value);
-    if (!user) return option.label;
-    return (
-      <div className="flex items-center gap-3">
-        <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
-          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.substring(0, 2).toUpperCase()}
-        </div>
-        <div className="flex flex-col items-start">
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
-          <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{user.role}</span>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <CKDropdown
-      options={availableUsers.map((u) => ({ value: u._id, label: u.name }))}
-      value=""
-      onChange={onAdd}
-      placeholder={loading ? 'Loading members...' : 'Select member...'}
-      renderOption={formatOptionLabel}
-      disabled={loading}
-      className="w-full"
-    />
   );
 };
 

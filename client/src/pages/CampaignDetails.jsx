@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap } from 'lucide-react';
 import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader } from '../components/ui';
@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 export default function CampaignDetails() {
   const { campaignId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backToEmails = location.state?.from || '/workspace/emails';
   const { data: campaign, isLoading, error } = useCampaignDetails(campaignId);
 
   if (isLoading) return <PageSkeleton />;
@@ -18,7 +20,7 @@ export default function CampaignDetails() {
         <AlertCircle size={48} className="mx-auto text-rose-500 mb-4" />
         <h2 className="text-base font-black uppercase tracking-widest mb-2">Campaign Data Not Found</h2>
         <p className="text-xs text-[var(--color-text-muted)] mb-6">{error?.message || 'The requested campaign identifier does not exist.'}</p>
-        <Button onClick={() => navigate('/admin?tab=mail')}>Return to Campaigns</Button>
+        <Button onClick={() => navigate(backToEmails)}>Return to Email Campaigns</Button>
       </PageContainer>
     );
   }
@@ -57,8 +59,8 @@ export default function CampaignDetails() {
   return (
     <PageContainer className="!py-6 space-y-6">
       <div className="flex items-center justify-between pb-4 border-b border-[var(--color-bg-border)]">
-        <Button size="xs" variant="ghost" onClick={() => navigate('/admin?tab=mail')} className="flex items-center gap-2">
-          <ArrowLeft size={14} /> Back to Administration
+        <Button size="xs" variant="ghost" onClick={() => navigate(backToEmails)} className="flex items-center gap-2">
+          <ArrowLeft size={14} /> Back to Email Campaigns
         </Button>
         <Badge variant={campaign.status === 'Completed' ? 'success' : campaign.status === 'Sending' ? 'warning' : 'info'}>
           {campaign.status}

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import CKDropdown from '../../components/ui/CKDropdown';
+import NexusDropdown from '../../components/ui/NexusDropdown';
+import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, UserPlus, X, Briefcase, Tag, Hash, Palette } from 'lucide-react';
+import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
+import { PROJECT_ROLE_OPTIONS, suggestProjectRole } from '../../utils/taskText';
 
 const ProjectCreate = () => {
   const queryClient = useQueryClient();
@@ -12,24 +14,10 @@ const ProjectCreate = () => {
   const [desc, setDesc] = useState('');
   const [tags, setTags] = useState([]);
   const [customTag, setCustomTag] = useState('');
-  const [color, setColor] = useState('#3b82f6');
   const [users, setUsers] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const PROJECT_COLORS = [
-    '#3b82f6', // blue
-    '#8b5cf6', // violet
-    '#ec4899', // pink
-    '#ef4444', // red
-    '#f97316', // orange
-    '#eab308', // yellow
-    '#22c55e', // green
-    '#14b8a6', // teal
-    '#06b6d4', // cyan
-    '#64748b', // slate
-  ];
 
   const predefinedTags = [
     { value: 'PR', label: 'PR' },
@@ -57,8 +45,18 @@ const ProjectCreate = () => {
   const addMember = (userId) => {
     const user = users.find(u => u._id === userId);
     if (user && !members.find(m => m.userId === user._id)) {
-      setMembers([...members, { userId: user._id, name: user.name, role: user.role, avatar: user.avatar }]);
+      setMembers([...members, {
+        userId: user._id,
+        name: user.name,
+        profileRole: user.role,
+        projectRole: suggestProjectRole(user.role),
+        avatar: user.avatar
+      }]);
     }
+  };
+
+  const updateMemberRole = (userId, projectRole) => {
+    setMembers(members.map(m => m.userId === userId ? { ...m, projectRole } : m));
   };
 
   const removeMember = (userId) => {
@@ -84,8 +82,7 @@ const ProjectCreate = () => {
         name, 
         description: desc, 
         tags: tags,
-        color,
-        members: members.map(m => ({ userId: m.userId, role: m.role }))
+        members: members.map(m => ({ userId: m.userId, role: m.projectRole }))
       });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');
@@ -146,12 +143,13 @@ const ProjectCreate = () => {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Tags</label>
-              <CKDropdown
+              <NexusDropdown
                 multi
                 options={dropdownTagOptions}
                 value={tags}
                 onChange={setTags}
                 placeholder="Select tags..."
+                searchable
               />
               <input 
                 type="text"
@@ -161,23 +159,6 @@ const ProjectCreate = () => {
                 placeholder="+ Add Custom Tag"
                 className="w-full mt-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-transparent border-b border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)] outline-none"
               />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1 flex items-center gap-1.5"><Palette size={12} /> Project Color</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {PROJECT_COLORS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full transition-all duration-200 ${color === c ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]' : 'hover:scale-110'}`}
-                  style={{ backgroundColor: c }}
-                  title={c}
-                />
-              ))}
-              <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1" style={{ color }}>{color}</span>
             </div>
           </div>
 
@@ -199,30 +180,38 @@ const ProjectCreate = () => {
           </div>
 
           <div className="space-y-6">
-            <CKDropdown
+            <NexusDropdown
               options={users.map(u => ({ value: u._id, label: u.name }))}
               value=""
               onChange={addMember}
               placeholder="Search team members..."
               renderOption={formatOptionLabel}
+              searchable
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {members.map((m) => (
-                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] group">
-                  <div className="flex items-center gap-3">
+                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] group gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] text-blue-500 uppercase overflow-hidden">
                       {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" alt="" /> : m.name.substring(0, 2)}
                     </div>
-                    <div>
-                      <p className="font-black text-xs uppercase tracking-tight text-[var(--color-text-primary)]">{m.name}</p>
-                      <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">{m.role}</p>
+                    <div className="min-w-0">
+                      <p className="font-black text-xs uppercase tracking-tight text-[var(--color-text-primary)] truncate">{m.name}</p>
+                      <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">Profile: {m.profileRole || 'user'}</p>
                     </div>
+                  </div>
+                  <div className="w-full sm:w-48 shrink-0">
+                    <RoleOptionBoxes
+                      value={m.projectRole}
+                      onChange={(role) => updateMemberRole(m.userId, role)}
+                      label=""
+                    />
                   </div>
                   <button 
                     type="button" 
                     onClick={() => removeMember(m.userId)}
-                    className="p-1.5 hover:text-red-500 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    className="p-1.5 hover:text-red-500 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0"
                   >
                     <X size={14} />
                   </button>

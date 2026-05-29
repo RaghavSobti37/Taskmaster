@@ -6,22 +6,96 @@ const LeaveRequest = require('../models/LeaveRequest');
 const User = require('../models/User');
 const XPAuditLog = require('../models/XPAuditLog');
 const GamificationService = require('../services/gamificationService');
+const {
+  getDateKey,
+  toStartOfDay,
+  endOfDayFromKey,
+  todayStart,
+  formatHHMM,
+  isWeekend,
+} = require('../utils/attendanceDate');
+const Log = require('../models/Log');
+const { createNotification } = require('../services/notificationDispatcher');
 
 const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
 
 const isOps = (user) => OPS_ROLES.has(user?.role);
-const toStartOfDay = (date) => {
-  const value = new Date(date);
-  value.setHours(0, 0, 0, 0);
-  return value;
-};
 
 const DEFAULT_CHECKIN_TIME = '10:30';
+const STANDARD_SHIFT_MINUTES = 8 * 60;
+const DISCREPANCY_THRESHOLD_MINUTES = 30;
 
-const formatHHMM = (date = new Date()) => {
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
+const getOfficeIpWhitelist = () => (process.env.OFFICE_IP_WHITELIST || '')
+  .split(',')
+  .map((ip) => ip.trim())
+  .filter(Boolean);
+
+const resolveClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return String(forwarded).split(',')[0].trim();
+  return req.ip || '';
+};
+
+const isOfficeIp = (ip) => {
+  const whitelist = getOfficeIpWhitelist();
+  if (whitelist.length === 0) return false;
+  return whitelist.some((w) => ip === w || ip.endsWith(w));
+};
+
+const parseTimeToMinutes = (timeStr) => {
+  if (!timeStr || !timeStr.includes(':')) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return (h * 60) + (m || 0);
+};
+
+const computeAttendanceMetrics = async (attendanceDoc) => {
+  if (!attendanceDoc?.timeIn || !attendanceDoc?.timeOut) return attendanceDoc;
+
+  const inMin = parseTimeToMinutes(attendanceDoc.timeIn);
+  const outMin = parseTimeToMinutes(attendanceDoc.timeOut);
+  let systemMinutes = outMin - inMin;
+  if (systemMinutes < 0) systemMinutes += 24 * 60;
+
+  const dayStart = toStartOfDay(attendanceDoc.date);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  const logs = await Log.find({
+    userId: attendanceDoc.userId,
+    action: 'DAILY_LOG',
+    createdAt: { $gte: dayStart, $lte: dayEnd },
+    'details.type': { $ne: 'TASK_COMPLETION' }
+  }).select('details').lean();
+
+  const parseHours = (str) => {
+    if (!str) return 0;
+    const match = String(str).match(/([\d.]+)/);
+    return match ? parseFloat(match[1]) : 0;
+  };
+
+  const loggedHours = logs.reduce((sum, l) => sum + parseHours(l.details?.timeSpent), 0);
+  const systemHours = systemMinutes / 60;
+  const discrepancyMinutes = Math.abs(Math.round(systemHours * 60) - Math.round(loggedHours * 60));
+  const overtimeMinutes = Math.max(0, systemMinutes - STANDARD_SHIFT_MINUTES);
+
+  attendanceDoc.systemHours = Math.round(systemHours * 100) / 100;
+  attendanceDoc.loggedHours = Math.round(loggedHours * 100) / 100;
+  attendanceDoc.discrepancyMinutes = discrepancyMinutes;
+  attendanceDoc.overtimeMinutes = overtimeMinutes;
+  await attendanceDoc.save();
+
+  if (discrepancyMinutes >= DISCREPANCY_THRESHOLD_MINUTES) {
+    await createNotification({
+      recipientId: attendanceDoc.userId,
+      title: 'Attendance Discrepancy Detected',
+      message: `Your logged hours (${loggedHours}h) differ from system hours (${systemHours.toFixed(1)}h) for ${getDateKey(attendanceDoc.date)}.`,
+      category: 'attendance',
+      type: 'alert',
+      actionUrl: '/attendance'
+    });
+  }
+
+  return attendanceDoc;
 };
 
 const isInsideWindow = (value, targetHour, targetMinute) => {
@@ -85,31 +159,31 @@ const awardAttendanceXpIfEligible = async (attendanceDoc) => {
   const dayEnd = new Date(dayStart);
   dayEnd.setHours(23, 59, 59, 999);
 
-  if (attendanceDoc.timeIn && isInsideWindow(`${dayStart.toISOString().slice(0, 10)}T${attendanceDoc.timeIn}:00`, 10, 30)) {
+  if (attendanceDoc.timeIn && isInsideWindow(`${getDateKey(attendanceDoc.date)}T${attendanceDoc.timeIn}:00+05:30`, 10, 30)) {
     const alreadyAwarded = await XPAuditLog.findOne({
       userId: attendanceDoc.userId,
       action: 'ATTENDANCE_CHECKIN_WINDOW',
-      'details.date': dayStart.toISOString().slice(0, 10),
+      'details.date': getDateKey(attendanceDoc.date),
       createdAt: { $gte: dayStart, $lte: dayEnd }
     });
     if (!alreadyAwarded) {
       await GamificationService.awardExp(attendanceDoc.userId, 1, 'ATTENDANCE_CHECKIN_WINDOW', {
-        date: dayStart.toISOString().slice(0, 10),
+        date: getDateKey(attendanceDoc.date),
         at: attendanceDoc.timeIn
       });
     }
   }
 
-  if (attendanceDoc.timeOut && isInsideWindow(`${dayStart.toISOString().slice(0, 10)}T${attendanceDoc.timeOut}:00`, 18, 30)) {
+  if (attendanceDoc.timeOut && isInsideWindow(`${getDateKey(attendanceDoc.date)}T${attendanceDoc.timeOut}:00+05:30`, 18, 30)) {
     const alreadyAwarded = await XPAuditLog.findOne({
       userId: attendanceDoc.userId,
       action: 'ATTENDANCE_CHECKOUT_WINDOW',
-      'details.date': dayStart.toISOString().slice(0, 10),
+      'details.date': getDateKey(attendanceDoc.date),
       createdAt: { $gte: dayStart, $lte: dayEnd }
     });
     if (!alreadyAwarded) {
       await GamificationService.awardExp(attendanceDoc.userId, 1, 'ATTENDANCE_CHECKOUT_WINDOW', {
-        date: dayStart.toISOString().slice(0, 10),
+        date: getDateKey(attendanceDoc.date),
         at: attendanceDoc.timeOut
       });
     }
@@ -133,9 +207,7 @@ router.get('/', async (req, res) => {
       query.date = {};
       if (start) query.date.$gte = toStartOfDay(start);
       if (end) {
-        const endDate = toStartOfDay(end);
-        endDate.setHours(23, 59, 59, 999);
-        query.date.$lte = endDate;
+        query.date.$lte = endOfDayFromKey(end);
       }
     }
 
@@ -149,7 +221,10 @@ router.get('/', async (req, res) => {
 router.post('/check', async (req, res) => {
   try {
     const now = new Date();
-    const today = toStartOfDay(now);
+    if (isWeekend(now) && req.user.role !== 'admin') {
+      return res.status(400).json({ error: 'Weekend — office is closed. Attendance not required.' });
+    }
+    const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -164,6 +239,13 @@ router.post('/check', async (req, res) => {
     }
 
     const timeValue = formatHHMM(now);
+    const clientIp = resolveClientIp(req);
+    const checkInFields = type === 'in' ? {
+      timeIn: timeValue,
+      checkInIp: clientIp,
+      workMode: isOfficeIp(clientIp) ? 'office' : 'wfh',
+    } : { timeOut: timeValue };
+
     const attendance = await Attendance.findOneAndUpdate(
       { userId: req.user._id, date: today },
       {
@@ -171,11 +253,15 @@ router.post('/check', async (req, res) => {
           userId: req.user._id,
           username: req.user.name,
           date: today,
-          ...(type === 'in' ? { timeIn: timeValue } : { timeOut: timeValue }),
+          ...checkInFields,
         },
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+
+    if (type === 'out' && attendance.timeIn && attendance.timeOut) {
+      await computeAttendanceMetrics(attendance);
+    }
 
     await awardAttendanceXpIfEligible(attendance);
     await GamificationService.awardActionXp(req.user._id, 'ATTENDANCE_ACTION', { type });
@@ -187,7 +273,7 @@ router.post('/check', async (req, res) => {
 
 router.post('/check/undo', async (req, res) => {
   try {
-    const today = toStartOfDay(new Date());
+    const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -298,6 +384,14 @@ router.patch('/leave/requests/:id/approve', async (req, res) => {
     request.reviewNote = req.body?.reviewNote || '';
     await request.save();
 
+    await createNotification({
+      recipientId: request.userId,
+      title: 'Leave Request Approved',
+      message: `Your leave from ${getDateKey(request.fromDate)} to ${getDateKey(request.toDate)} was approved.`,
+      category: 'attendance',
+      actionUrl: '/attendance'
+    });
+
     const records = await materializeApprovedLeave(request, req.user._id);
     res.json({ request, records });
   } catch (error) {
@@ -317,6 +411,16 @@ router.patch('/leave/requests/:id/reject', async (req, res) => {
     request.reviewedAt = new Date();
     request.reviewNote = req.body?.reviewNote || req.body?.reason || '';
     await request.save();
+
+    await createNotification({
+      recipientId: request.userId,
+      title: 'Leave Request Rejected',
+      message: request.reviewNote || 'Your leave request was not approved.',
+      category: 'attendance',
+      type: 'alert',
+      actionUrl: '/attendance'
+    });
+
     res.json(request);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -383,7 +487,7 @@ router.delete('/reset', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     if (!isOps(req.user)) return res.status(403).json({ error: 'Only operations can edit attendance' });
-    const allowed = ['timeIn', 'timeOut', 'isHalfDay', 'onLeave', 'reason', 'date', 'userId', 'username', 'isApproved'];
+    const allowed = ['timeIn', 'timeOut', 'isHalfDay', 'onLeave', 'reason', 'date', 'userId', 'username', 'isApproved', 'workMode'];
     const payload = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) payload[key] = req.body[key];
@@ -391,6 +495,9 @@ router.put('/:id', async (req, res) => {
     if (payload.userId && !payload.username) {
       const user = await User.findById(payload.userId).select('name');
       if (user) payload.username = user.name;
+    }
+    if (payload.workMode) {
+      payload.workModeOverrideBy = req.user._id;
     }
     const row = await Attendance.findByIdAndUpdate(req.params.id, { $set: payload }, { new: true });
     if (!row) return res.status(404).json({ error: 'Attendance record not found' });

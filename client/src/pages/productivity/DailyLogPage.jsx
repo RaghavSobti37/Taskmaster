@@ -3,7 +3,7 @@ import { format, isSameDay, startOfYear, endOfYear, eachDayOfInterval, subDays }
 import {
   Calendar as CalIcon, CheckCircle2, Clock, ChevronLeft,
   ChevronRight, Plus, Send, Timer, Zap, Target,
-  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare
+  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -183,6 +183,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       <PageHeader
         title={targetUserName ? `${targetUserName}'s History` : 'My Daily Progress'}
         subtitle="Track your work history and daily accomplishments."
+        icon={NotebookPen}
         actions={
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-xl border border-[var(--color-bg-border)]">

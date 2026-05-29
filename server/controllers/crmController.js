@@ -212,9 +212,22 @@ exports.updateLead = async (req, res) => {
     const currentLead = await Lead.findById(id);
     const wasFirstCall = !currentLead?.callStatus && updates.callStatus && updates.callStatus !== 'Pending';
 
+    const followupPatch = {};
+    if (currentLead && (updates.nextFollowupDate !== undefined || updates.nextFollowupTime !== undefined)) {
+      const dateChanged = updates.nextFollowupDate !== undefined
+        && updates.nextFollowupDate !== currentLead.nextFollowupDate;
+      const timeChanged = updates.nextFollowupTime !== undefined
+        && updates.nextFollowupTime !== currentLead.nextFollowupTime;
+      if (dateChanged || timeChanged) {
+        followupPatch.reminderSent = false;
+        followupPatch.notifiedOverdue = false;
+      }
+    }
+
     // The audit plugin handles the delta calculation and logging automatically
     const lead = await Lead.findByIdAndUpdate(id, {
       ...updates,
+      ...followupPatch,
       lockedBy: req.user._id,
       lockedAt: new Date()
     }, {

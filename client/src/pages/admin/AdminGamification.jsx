@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Input, PageHeader, PageContainer, Badge } from '../../components/ui';
-import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Card, Button, Input, PageHeader, PageContainer, Badge, PageSkeleton } from '../../components/ui';
+import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy } from 'lucide-react';
 import axios from 'axios';
 
 const AdminGamification = () => {
@@ -86,7 +86,7 @@ const AdminGamification = () => {
   };
 
   if (loading) {
-    return <PageContainer><div className="text-center py-12">Loading...</div></PageContainer>;
+    return <PageContainer><PageSkeleton /></PageContainer>;
   }
 
   const sections = [
@@ -120,6 +120,7 @@ const AdminGamification = () => {
       <PageHeader
         title="Gamification Configuration"
         description="Manage XP values and reward multipliers"
+        icon={Trophy}
       />
 
       {message.text && (

@@ -4,23 +4,26 @@ import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
+import { useDepartments } from '../../hooks/useTaskmasterQueries';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [gender, setGender] = useState('male');
+  const [departmentId, setDepartmentId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { data: departments = [] } = useDepartments(true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/register', { name, email, password, gender });
+      const res = await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
       login(res.data.token, res.data);
       navigate('/');
     } catch (err) {
@@ -104,6 +107,20 @@ const RegisterPage = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Department</label>
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none"
+            >
+              <option value="">Select department</option>
+              {departments.map((d) => (
+                <option key={d._id} value={d._id}>{d.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">

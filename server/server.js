@@ -231,7 +231,11 @@ app.use('/api/proxy', proxyRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/calendar', require('./routes/calendarRoutes'));
+app.use('/api/departments', require('./routes/departmentRoutes'));
+app.use('/api/schedule', require('./routes/scheduleRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/pinboard', require('./routes/pinBoardRoutes'));
 app.use('/api/mail', require('./routes/mailRoutes'));
 app.use('/api/ses', require('./routes/sesRoutes'));
 app.use('/api/tsc', require('./routes/tscRoutes'));
@@ -301,6 +305,8 @@ if (process.env.NODE_ENV !== 'test') {
     // Initialize Reminder Service
     const notificationService = require('./services/notificationService');
     notificationService.init();
+    const { configureWebPush } = require('./services/pushNotificationService');
+    configureWebPush();
 
     // Initialize Background Workers
     const { initWorker } = require('./workers/statsWorker');

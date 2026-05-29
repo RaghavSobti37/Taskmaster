@@ -14,11 +14,13 @@ import {
   DataTable,
   Input,
   FullScreenWorkspace,
+  PageSkeleton,
 } from '../../components/ui';
 import { format, isToday } from 'date-fns';
 import {
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats,
-  useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits
+  useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits,
+  useDepartments, useUpdateUserDepartment, usePendingDepartmentRequests, useReviewDepartmentChange
 } from '../../hooks/useTaskmasterQueries';
 
 const AdminUsers = () => {
@@ -29,6 +31,8 @@ const AdminUsers = () => {
 
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: teams = [] } = useTeams();
+  const { data: departments = [] } = useDepartments();
+  const { data: pendingDeptRequests = [] } = usePendingDepartmentRequests();
   const { data: crmStats } = useCRMStats();
   const { data: repSummary } = useRepSummary();
   const { data: mailStats } = useMailStats();
@@ -44,6 +48,8 @@ const AdminUsers = () => {
   const deleteUserMutation = useDeleteUser();
   const createTeamMutation = useCreateTeam();
   const deleteTeamMutation = useDeleteTeam();
+  const updateUserDepartment = useUpdateUserDepartment();
+  const reviewDepartmentChange = useReviewDepartmentChange();
 
   useEffect(() => {
     if (selectedUser) {
@@ -51,7 +57,8 @@ const AdminUsers = () => {
         name: selectedUser.name || '',
         email: selectedUser.email || '',
         role: selectedUser.role || 'user',
-        teams: selectedUser.teams || []
+        teams: selectedUser.teams || [],
+        departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || ''
       });
     }
   }, [selectedUser]);
@@ -63,6 +70,9 @@ const AdminUsers = () => {
         id: selectedUser._id,
         data: editUserData
       });
+      if (editUserData.departmentId !== (selectedUser.departmentId?._id || selectedUser.departmentId)) {
+        await updateUserDepartment.mutateAsync({ userId: selectedUser._id, departmentId: editUserData.departmentId || null });
+      }
       setSelectedUser(null);
     } catch (err) {
       console.error(err);
@@ -141,7 +151,7 @@ const AdminUsers = () => {
     }
   ];
 
-  if (usersLoading) return <div className="p-8 text-center text-[var(--color-text-muted)]">Loading...</div>;
+  if (usersLoading) return <PageContainer><PageSkeleton /></PageContainer>;
 
   return (
     <PageContainer className="!py-4 !space-y-6">
@@ -385,8 +395,43 @@ const AdminUsers = () => {
                   <option value="user">Standard User</option>
                 </select>
               </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Department</label>
+                <select
+                  value={editUserData.departmentId || ''}
+                  onChange={e => setEditUserData({ ...editUserData, departmentId: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
+                >
+                  <option value="">Unassigned</option>
+                  {departments.map((d) => (
+                    <option key={d._id} value={d._id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </section>
+
+          {pendingDeptRequests.length > 0 && (
+            <section>
+              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Pending Department Changes</h3>
+              <div className="space-y-2">
+                {pendingDeptRequests.map((req) => (
+                  <Card key={req._id} className="p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-sm">{req.userId?.name}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {req.currentDepartmentId?.name || 'None'} → {req.requestedDepartmentId?.name}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="xs" variant="primary" onClick={() => reviewDepartmentChange.mutate({ id: req._id, action: 'approve' })}>Approve</Button>
+                      <Button size="xs" variant="danger" onClick={() => reviewDepartmentChange.mutate({ id: req._id, action: 'reject' })}>Reject</Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">

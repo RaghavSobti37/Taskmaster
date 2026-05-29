@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const OfficeAsset = require('../models/OfficeAsset');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
@@ -68,7 +68,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', opsOrAdmin, async (req, res) => {
   try {
     await OfficeAsset.findByIdAndDelete(req.params.id);
     res.json({ message: 'Asset removed' });

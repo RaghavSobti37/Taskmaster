@@ -14,7 +14,10 @@ const NexusDropdown = ({
   variant = 'default',
   required = false,
   isMulti = false,
+  multi = false,
+  renderOption = null,
 }) => {
+  const multiSelect = isMulti || multi;
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef(null);
@@ -38,7 +41,7 @@ const NexusDropdown = ({
   }, [isOpen, searchable]);
 
   const handleSelect = (option) => {
-    if (isMulti) {
+    if (multiSelect) {
       const currentValues = Array.isArray(value) ? value : [];
       const newValues = currentValues.includes(option.value)
         ? currentValues.filter(v => v !== option.value)
@@ -52,7 +55,7 @@ const NexusDropdown = ({
   };
 
   const isSelected = (val) => {
-    if (isMulti) {
+    if (multiSelect) {
       return Array.isArray(value) && value.includes(val);
     }
     return value === val;
@@ -60,7 +63,7 @@ const NexusDropdown = ({
 
   let displayText = placeholder;
   let hasSelection = false;
-  if (isMulti) {
+  if (multiSelect) {
     const selectedLabels = options
       .filter(opt => Array.isArray(value) && value.includes(opt.value))
       .map(opt => opt.label);
@@ -83,9 +86,9 @@ const NexusDropdown = ({
   const isCompact = variant === 'compact';
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative flex flex-col gap-2 w-full min-w-0 ${className}`} ref={dropdownRef}>
       {label && (
-        <label className="block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider ml-0.5 mb-1">
+        <label className="block tm-section-label">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
@@ -95,12 +98,12 @@ const NexusDropdown = ({
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          w-full flex items-center justify-between transition-all outline-none
+          w-full min-h-[2.5rem] flex items-center justify-between transition-all outline-none
           bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]
           rounded-[var(--radius-atomic)]
           ${isCompact
-            ? 'px-2 py-1 text-[11px]'
-            : 'px-3 py-1.5 text-sm'
+            ? 'px-2 py-1 text-[11px] min-h-[2rem]'
+            : 'px-3 py-2 text-sm'
           }
           ${disabled
             ? 'opacity-50 cursor-not-allowed'
@@ -109,7 +112,7 @@ const NexusDropdown = ({
           ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
         `}
       >
-        <span className={`truncate ${!hasSelection ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+        <span className={`min-w-0 flex-1 text-left truncate ${!hasSelection ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
           {displayText}
         </span>
         <ChevronDown
@@ -165,7 +168,9 @@ const NexusDropdown = ({
                         }
                       `}
                     >
-                      <span className="truncate">{option.label}</span>
+                      <span className="truncate min-w-0 flex-1 text-left">
+                        {renderOption ? renderOption(option) : option.label}
+                      </span>
                       {selected && <Check size={12} className="text-[var(--color-action-primary)] shrink-0 ml-2" />}
                     </button>
                   );

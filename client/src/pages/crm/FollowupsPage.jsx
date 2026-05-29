@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search, RefreshCw, Clock, Target, Zap, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send, History
 } from 'lucide-react';
@@ -23,6 +24,7 @@ import axios from 'axios';
 
 export default function FollowupsPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
@@ -45,6 +47,13 @@ export default function FollowupsPage() {
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
 
   const updateMutation = useUpdateLead();
+
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (!highlightId || !leads.length) return;
+    const match = leads.find((l) => l._id === highlightId);
+    if (match) setSelectedLead(match);
+  }, [searchParams, leads]);
   const [editLeadData, setEditLeadData] = useState({
     name: '', phone: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: ''
   });
@@ -302,6 +311,7 @@ export default function FollowupsPage() {
         <DataTable
           columns={columns}
           data={filteredLeads}
+          getRowId={(row) => row._id}
           onRowClick={(row) => setSelectedLead(row)}
         />
         {filteredLeads.length === 0 && (

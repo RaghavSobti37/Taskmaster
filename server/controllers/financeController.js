@@ -638,6 +638,13 @@ const getStats = async (req, res) => {
   }
 };
 
+const OPS_FINANCE_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
+
+const canManageFinanceDoc = (user, doc) => (
+  OPS_FINANCE_ROLES.has(user?.role)
+  || doc.uploadedBy?.toString() === user._id.toString()
+);
+
 const updateDocument = async (req, res) => {
   try {
     const { title, description, project, category, metadata } = req.body;
@@ -646,17 +653,16 @@ const updateDocument = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Document not found' });
     }
 
-    // Only admin or uploader can edit
-    if (req.user.role !== 'admin' && doc.uploadedBy.toString() !== req.user._id.toString()) {
+    if (!canManageFinanceDoc(req.user, doc)) {
       return res.status(403).json({ success: false, message: 'Not authorized to edit this document' });
     }
 
-    if (title) doc.title = title;
+    if (title !== undefined) doc.title = title;
     if (description !== undefined) doc.description = description;
-    if (project) doc.project = project;
-    if (category) doc.category = category;
+    if (project !== undefined) doc.project = project || null;
+    if (category !== undefined) doc.category = category;
     if (metadata) {
-      doc.metadata = { ...doc.metadata, ...metadata };
+      doc.metadata = { ...(doc.metadata?.toObject?.() || doc.metadata || {}), ...metadata };
     }
 
     await doc.save();

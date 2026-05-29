@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Lead = require('../models/Lead');
+const { createNotification } = require('../services/notificationDispatcher');
+const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep } = require('./crmController');
 const { google } = require('googleapis');
 const path = require('path');
@@ -108,9 +110,24 @@ exports.processBookedCallLogic = async (data) => {
 
     if (lead) {
       Object.assign(lead, leadData);
+      lead.reminderSent = false;
+      lead.notifiedOverdue = false;
       await lead.save();
     } else {
-      lead = await Lead.create({ email, ...leadData });
+      lead = await Lead.create({ email, ...leadData, reminderSent: false, notifiedOverdue: false });
+    }
+
+    if (rep?._id) {
+      await createNotification({
+        recipientId: rep._id,
+        title: 'New Call Booked',
+        message: `${name} booked a ${course} call on ${istDateStr} at ${istTimeStr}.`,
+        category: 'crm',
+        type: 'alert',
+        relatedLeadId: lead._id,
+        actionUrl: buildLeadActionUrl(lead._id),
+        sendEmail: false
+      });
     }
 
     // 4. Send AiSensy to Customer

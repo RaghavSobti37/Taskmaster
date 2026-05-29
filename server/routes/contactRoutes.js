@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Contact = require('../models/Contact');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
@@ -40,7 +40,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', opsOrAdmin, async (req, res) => {
   try {
     await Contact.findByIdAndDelete(req.params.id);
     res.json({ message: 'Contact removed' });

@@ -357,18 +357,18 @@ export const useUpdateTask = () => {
     mutationFn: ({ id, data }) => axios.put(`/api/tasks/${id}`, data),
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueryData(['tasks']);
-      if (previousTasks) {
-        queryClient.setQueryData(['tasks'], (old) => 
-          (old || []).map(t => t._id === id ? { ...t, ...data } : t)
-        );
-      }
-      return { previousTasks };
+      const snapshots = queryClient.getQueriesData({ queryKey: ['tasks'] });
+      snapshots.forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          queryClient.setQueryData(key, value.map((t) => (t._id === id ? { ...t, ...data } : t)));
+        }
+      });
+      return { snapshots };
     },
     onError: (err, variables, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks'], context.previousTasks);
-      }
+      context?.snapshots?.forEach(([key, value]) => {
+        queryClient.setQueryData(key, value);
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -997,5 +997,212 @@ export const useDeleteAnnouncement = () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
+  });
+};
+
+export const useDepartments = (publicOnly = false) => {
+  return useQuery({
+    queryKey: ['departments', { publicOnly }],
+    queryFn: async () => (await axios.get(publicOnly ? '/api/departments/public' : '/api/departments')).data,
+    staleTime: 1000 * 60 * 10
+  });
+};
+
+/** @deprecated Prefer TASK_CATEGORY_OPTIONS — returns general task categories. */
+export const useTaskTypes = () => {
+  const categories = [
+    { name: 'bug', label: 'Bug' },
+    { name: 'feature', label: 'Feature' },
+    { name: 'content', label: 'Content' },
+    { name: 'design', label: 'Design' },
+    { name: 'ops', label: 'Operations' },
+    { name: 'review', label: 'Review' },
+    { name: 'general', label: 'General' },
+  ];
+  return useQuery({
+    queryKey: ['taskCategories'],
+    queryFn: async () => categories,
+    staleTime: Infinity,
+    initialData: categories,
+  });
+};
+
+export const useSchedule = ({ start, end, projectId, departmentId } = {}, enabled = true) => {
+  return useQuery({
+    queryKey: ['schedule', start, end, projectId, departmentId],
+    queryFn: async () => (await axios.get('/api/schedule', {
+      params: { start, end, projectId, departmentId }
+    })).data,
+    enabled: enabled && !!start && !!end,
+    staleTime: 1000 * 30
+  });
+};
+
+export const useProjectWorkload = (projectId, start, end, enabled = true) => {
+  return useQuery({
+    queryKey: ['projects', projectId, 'workload', start, end],
+    queryFn: async () => (await axios.get(`/api/projects/${projectId}/workload`, { params: { start, end } })).data,
+    enabled: enabled && !!projectId,
+    staleTime: 1000 * 30
+  });
+};
+
+export const useProjectHoursSummary = (projectId, enabled = true) => {
+  return useQuery({
+    queryKey: ['projects', projectId, 'hours-summary'],
+    queryFn: async () => (await axios.get(`/api/projects/${projectId}/hours-summary`)).data,
+    enabled: enabled && !!projectId,
+    staleTime: 1000 * 60
+  });
+};
+
+export const useNotifications = (enabled = true) => {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => (await axios.get('/api/notifications')).data,
+    enabled,
+    staleTime: 1000 * 15,
+    refetchInterval: 1000 * 30
+  });
+};
+
+export const useStatusCounts = (enabled = true) => {
+  return useQuery({
+    queryKey: ['statusCounts'],
+    queryFn: async () => (await axios.get('/api/notifications/status-counts')).data,
+    enabled,
+    staleTime: 1000 * 15,
+    refetchInterval: 1000 * 30
+  });
+};
+
+export const useUserNotes = (enabled = true) => {
+  return useQuery({
+    queryKey: ['notes'],
+    queryFn: async () => (await axios.get('/api/notes')).data,
+    enabled,
+    staleTime: 1000 * 30
+  });
+};
+
+export const useCreateNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/notes', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] })
+  });
+};
+
+export const useUpdateNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/notes/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] })
+  });
+};
+
+export const useDeleteNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/notes/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] })
+  });
+};
+
+export const usePinBoard = (enabled = true) => {
+  return useQuery({
+    queryKey: ['pinboard'],
+    queryFn: async () => (await axios.get('/api/pinboard')).data,
+    enabled,
+    staleTime: 1000 * 30
+  });
+};
+
+export const useCreatePin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/pinboard', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pinboard'] })
+  });
+};
+
+export const useUpdatePin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/pinboard/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pinboard'] })
+  });
+};
+
+export const useDeletePin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/pinboard/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pinboard'] })
+  });
+};
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.patch(`/api/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
+    }
+  });
+};
+
+export const useMarkAllNotificationsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.patch('/api/notifications/read-all'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
+    }
+  });
+};
+
+export const useDepartmentChangeRequests = (enabled = true) => {
+  return useQuery({
+    queryKey: ['departmentChangeRequests', 'mine'],
+    queryFn: async () => (await axios.get('/api/departments/change-requests/mine')).data,
+    enabled
+  });
+};
+
+export const usePendingDepartmentRequests = (enabled = true) => {
+  return useQuery({
+    queryKey: ['departmentChangeRequests', 'pending'],
+    queryFn: async () => (await axios.get('/api/departments/change-requests/pending')).data,
+    enabled
+  });
+};
+
+export const useSubmitDepartmentChange = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (requestedDepartmentId) => axios.post('/api/departments/change-request', { requestedDepartmentId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departmentChangeRequests'] })
+  });
+};
+
+export const useReviewDepartmentChange = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action, reviewNote }) => axios.patch(`/api/departments/change-requests/${id}/${action}`, { reviewNote }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departmentChangeRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+};
+
+export const useUpdateUserDepartment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, departmentId }) => axios.patch(`/api/departments/users/${userId}`, { departmentId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] })
   });
 };

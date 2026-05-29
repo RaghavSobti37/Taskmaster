@@ -140,6 +140,7 @@ exports.getDirectory = async (req, res) => {
 
     const users = await User.find()
       .select('-password')
+      .populate('departmentId', 'name slug color')
       .skip(skip)
       .limit(limit);
     

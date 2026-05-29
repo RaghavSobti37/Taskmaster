@@ -218,6 +218,7 @@ const ProjectsView = () => {
       <PageHeader
         title="Project Portfolio"
         subtitle="Manage and track your active projects and their progress."
+        icon={Briefcase}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={() => setCreateModalOpen(true)}>
@@ -231,65 +232,63 @@ const ProjectsView = () => {
       />
 
       <Card className="flex flex-col border-none shadow-none bg-transparent">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="mb-4 flex flex-nowrap items-center gap-2 w-full min-w-0 overflow-x-auto">
           <Input
             icon={Search}
             placeholder="Search by name, tags, or workspace..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-[280px] !py-2 !text-xs font-bold"
+            className="flex-1 min-w-[12rem] min-w-0"
           />
-          <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center rounded-xl border border-[var(--color-bg-border)] overflow-hidden">
+            <div className="inline-flex shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode('workspace')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg tm-section-label whitespace-nowrap transition-colors ${
                   viewMode === 'workspace'
-                    ? 'bg-[var(--color-action-primary)] text-white'
-                    : 'bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
               >
-                <LayoutGrid size={12} /> Workspaces
+                <LayoutGrid size={12} className="shrink-0" /> Workspaces
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('all')}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg tm-section-label whitespace-nowrap transition-colors ${
                   viewMode === 'all'
-                    ? 'bg-[var(--color-action-primary)] text-white'
-                    : 'bg-[var(--color-bg-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
               >
-                <List size={12} /> All Projects
+                <List size={12} className="shrink-0" /> All Projects
               </button>
             </div>
             <NexusDropdown
-              variant="compact"
               options={[
                 { value: 'all', label: 'All Projects' },
                 { value: 'active', label: 'Active Only' },
                 { value: 'completed', label: 'Completed' },
-                { value: 'archived', label: 'Archived' }
+                { value: 'archived', label: 'Archived' },
               ]}
               value={filterStatus}
               onChange={setFilterStatus}
-              className="w-36"
+              placeholder="Filter status"
+              className="w-[10.5rem] shrink-0"
             />
             <NexusDropdown
-              variant="compact"
               options={[
                 { value: 'newest', label: 'Newest First' },
                 { value: 'oldest', label: 'Oldest First' },
                 { value: 'progress-high', label: 'Highest Progress' },
                 { value: 'progress-low', label: 'Lowest Progress' },
-                { value: 'name', label: 'Alphabetical' }
+                { value: 'name', label: 'Alphabetical' },
               ]}
               value={sortBy}
               onChange={setSortBy}
-              className="w-40"
+              placeholder="Sort by"
+              className="w-[11rem] shrink-0"
             />
-          </div>
         </div>
 
         {isAdmin && draggingProjectId && (

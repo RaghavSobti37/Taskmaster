@@ -41,7 +41,10 @@ import ProjectSettingsModal from '../../components/ProjectSettingsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import TaskDetailModal from '../../components/TaskDetailModal';
 import TaskCompletionModal from '../../components/TaskCompletionModal';
-import { useProject, useProjectTasks, useUpdateTask, useDeleteTask } from '../../hooks/useTaskmasterQueries';
+import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { getWorkspaceColor } from '../../utils/workspaceColors';
+import ScheduleGrid from '../../components/schedule/ScheduleGrid';
+import { format, addDays } from 'date-fns';
 import { useToast } from '../../contexts/ToastContext';
 
 const ProjectDetail = () => {
@@ -50,12 +53,19 @@ const ProjectDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: project, isLoading: projectLoading } = useProject(id);
+  const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
-  const loading = projectLoading || tasksLoading;
 
   const [activeTab, setActiveTab] = useState('list');
+  const { data: scheduleData } = useSchedule({
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    projectId: id
+  }, activeTab === 'schedule');
+  const { data: hoursSummary } = useProjectHoursSummary(id, activeTab === 'schedule' || activeTab === 'finance');
+  const loading = projectLoading || tasksLoading;
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -85,6 +95,12 @@ const ProjectDetail = () => {
     const matchesFilter = filterStatus === 'all' || task.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
+
+  const displayTasks = React.useMemo(() => {
+    const active = filteredTasks.filter((t) => t.status !== 'done');
+    const completed = filteredTasks.filter((t) => t.status === 'done');
+    return [...active, ...completed];
+  }, [filteredTasks]);
 
   const handleTaskCreated = () => {};
 
@@ -161,6 +177,7 @@ const ProjectDetail = () => {
   const tabs = [
     { id: 'list', label: 'Task List' },
     { id: 'kanban', label: 'Kanban Board' },
+    { id: 'schedule', label: 'Schedule' },
     { id: 'team', label: 'Team Members' },
     { id: 'assets', label: 'Project Files' },
   ];
@@ -180,7 +197,7 @@ const ProjectDetail = () => {
           <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2">
             <ArrowLeft size={14} />
           </Button>
-          <div className="flex flex-col" style={{ borderLeft: `3px solid ${project.color || 'var(--color-action-primary)'}`, paddingLeft: '10px' }}>
+          <div className="flex flex-col" style={{ borderLeft: `3px solid ${getWorkspaceColor(project.workspace, workspaces)}`, paddingLeft: '10px' }}>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold tracking-tight uppercase">{project.name}</h1>
               </div>
@@ -306,10 +323,23 @@ const ProjectDetail = () => {
               className="h-full"
             >
               {activeTab === 'list' && (
-                <ProjectList tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
+                <ProjectList tasks={displayTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
               )}
               {activeTab === 'kanban' && (
                 <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
+              )}
+              {activeTab === 'schedule' && (
+                <div className="p-4 space-y-4">
+                  {hoursSummary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Task Hours</p><p className="text-2xl font-black">{hoursSummary.taskHours}h</p></Card>
+                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Manual Logs</p><p className="text-2xl font-black">{hoursSummary.manualLogHours}h</p></Card>
+                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Total</p><p className="text-2xl font-black">{hoursSummary.totalHours}h</p></Card>
+                      <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Planned</p><p className="text-2xl font-black">{hoursSummary.plannedHours}h</p></Card>
+                    </div>
+                  )}
+                  <ScheduleGrid data={scheduleData} projectId={id} compact onTaskClick={handleOpenDetail} />
+                </div>
               )}
               {activeTab === 'team' && (
                 <ProjectTeam project={project} onRemoveMember={handleRemoveMember} />

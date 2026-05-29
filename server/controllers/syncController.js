@@ -68,6 +68,8 @@ exports.syncBookings = async (req, res) => {
         existing.assignedRepId = assignedRepId;
         existing.nextFollowupDate = date;
         existing.nextFollowupTime = time;
+        existing.reminderSent = false;
+        existing.notifiedOverdue = false;
         existing.callStatus = 'Scheduled';
         existing.leadStatus = 'Warm';
         existing.remarks = `${existing.remarks ? existing.remarks + ' • ' : ''}${remarks}`;

@@ -375,7 +375,11 @@ const FinancePage = () => {
     }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['finance-docs'] });
-      setSelectedDoc(res.data.data);
+      if (res?.data?.data) setSelectedDoc(res.data.data);
+    },
+    onError: (err) => {
+      const message = err.response?.data?.message || err.message || 'Failed to save document';
+      alert(message);
     },
   });
 
@@ -999,7 +1003,7 @@ const FinancePage = () => {
                             setEditForm(prev => ({ ...prev, category: val }));
                             updateMutation.mutate({ id: selectedDoc._id, payload: { category: val } });
                           }}
-                          className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                          className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
                         >
                           {CATEGORIES.filter(c => c.value !== 'all').map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>

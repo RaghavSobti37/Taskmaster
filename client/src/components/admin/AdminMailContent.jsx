@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus, Edit, Eye, Save
 } from 'lucide-react';
@@ -43,6 +43,7 @@ const defaultSignatureTemplate = `<p><br></p><p><br></p><p><br></p><p><br></p><p
 export default function AdminMailContent() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useMailProfiles();
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useMailCampaigns();
   const { data: stats, refetch: refetchStats } = useMailStats();
@@ -424,6 +425,20 @@ export default function AdminMailContent() {
 
   const [removeUnsubscribe, setRemoveUnsubscribe] = useState(true);
 
+  const isRawHtmlPreview = useMemo(() => {
+    return useRawHtml
+      || isCustomHtml
+      || /^\s*<!DOCTYPE/i.test(content)
+      || /^\s*<html[\s>]/i.test(content);
+  }, [useRawHtml, isCustomHtml, content]);
+
+  const emailPreviewSrcDoc = useMemo(() => {
+    if (!content) return '';
+    if (isRawHtmlPreview) return content;
+    const sanitized = DOMPurify.sanitize(content);
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:16px;">${sanitized}</body></html>`;
+  }, [content, isRawHtmlPreview]);
+
   useEffect(() => {
     if (senderProfileId && profiles) {
       const sp = profiles.find(p => p._id === senderProfileId);
@@ -538,6 +553,7 @@ export default function AdminMailContent() {
     const reader = new FileReader();
     reader.onload = (event) => {
       setContent(event.target.result);
+      setIsCustomHtml(true);
     };
     reader.readAsText(file);
   };
@@ -611,6 +627,7 @@ export default function AdminMailContent() {
     setCsvFileName('');
     setHtmlFileName('');
     setIsCustomHtml(false);
+    setUseRawHtml(false);
     setMode('campaigns');
   };
 
@@ -774,7 +791,7 @@ export default function AdminMailContent() {
       {/* Mode: Campaigns List */}
       {mode === 'campaigns' && (
         <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-          <DataTable columns={campaignColumns} data={campaigns} onRowClick={(row) => navigate(`/campaign/${row.campaignId || row._id}`)} />
+          <DataTable columns={campaignColumns} data={campaigns} onRowClick={(row) => navigate(`/campaign/${row.campaignId || row._id}`, { state: { from: location.pathname } })} />
           {campaigns.length === 0 && (
             <div className="p-16 text-center opacity-30">
               <Mail size={48} className="mx-auto mb-4" />
@@ -1273,14 +1290,29 @@ export default function AdminMailContent() {
                   {attachments.length} files
                 </div>
               </div>
-              <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)] max-h-40 overflow-y-auto">
+              <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block">Content Preview (Raw HTML)</span>
+                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block">
+                    {isRawHtmlPreview ? 'Content Preview (Raw HTML)' : 'Content Preview'}
+                  </span>
                   <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
                     <Eye size={12} /> Visual Preview
                   </Button>
                 </div>
-                <div className="text-[10px] text-[var(--color-text-secondary)] whitespace-pre-wrap">{content.substring(0, 500)}...</div>
+                {isRawHtmlPreview ? (
+                  <div className="border border-[var(--color-bg-border)] rounded-lg overflow-hidden bg-white" style={{ height: '320px' }}>
+                    <iframe
+                      srcDoc={content}
+                      className="w-full h-full border-none"
+                      title="Email Preview"
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-[var(--color-text-secondary)] whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {content.substring(0, 500)}{content.length > 500 ? '...' : ''}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1727,21 +1759,42 @@ export default function AdminMailContent() {
       {showPreviewModal && (
         <div className="tm-modal-overlay fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm p-4">
           <div className="tm-modal-panel max-w-4xl max-h-[90vh] bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" role="dialog" aria-modal="true">
-            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between">
+            <div className="px-6 py-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)] flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-black uppercase tracking-tight">Email Preview</h2>
                 <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">
                   {subject || 'No Subject Provided'}
                 </p>
+                {isRawHtmlPreview && (
+                  <p className="text-[10px] text-emerald-600 font-bold mt-1">
+                    Raw HTML — matches what will be sent
+                  </p>
+                )}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowPreviewModal(false)}>
-                <X size={16} />
-              </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('desktop')}
+                  className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'desktop' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
+                >
+                  Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode('mobile')}
+                  className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'mobile' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
+                >
+                  Mobile
+                </button>
+                <Button variant="ghost" size="sm" onClick={() => setShowPreviewModal(false)}>
+                  <X size={16} />
+                </Button>
+              </div>
             </div>
-            <div className="flex-1 overflow-auto bg-white">
+            <div className={`flex-1 overflow-auto bg-white min-h-[400px] ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`}>
               <iframe
-                srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body>${DOMPurify.sanitize(content, { ALLOWED_TAGS: false })}</body></html>`}
-                className="w-full h-full border-none"
+                srcDoc={emailPreviewSrcDoc}
+                className="w-full h-full min-h-[400px] border-none"
                 title="Email Preview"
                 sandbox="allow-same-origin"
               />

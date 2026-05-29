@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Megaphone } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Input, Button } from '../../components/ui';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 
@@ -50,9 +51,9 @@ const AnnouncementsPage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Announcements" subtitle="Create global, selected-user, or project announcements." />
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <Card className="lg:col-span-8 p-5 space-y-4 min-h-[620px]">
+      <PageHeader title="Announcements" subtitle="Create global, selected-user, or project announcements." icon={Megaphone} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <Card className="lg:col-span-8 p-5 space-y-4">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input label="Message" value={message} onChange={(e) => setMessage(e.target.value)} />
           <div className="space-y-2">
@@ -106,54 +107,66 @@ const AnnouncementsPage = () => {
           </Button>
         </Card>
 
-        <Card className="lg:col-span-4 p-3 space-y-2">
-          <h3 className="text-sm font-black">Recent Announcements</h3>
-          <div className="space-y-2 max-h-[360px] overflow-y-auto">
-            {announcements.map((item) => (
-              <div key={item._id} className="rounded-xl border border-[var(--color-bg-border)] p-3">
-                <p className="text-sm font-bold">{item.title}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">{item.message}</p>
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                  Audience: {item.audienceType} {item.projectId?.name ? `(${item.projectId.name})` : ''}
-                </p>
-                {!!item.emailDispatch && (
-                  <div className="mt-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-2">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Email Dispatch: {item.emailDispatch.status || 'idle'}
+        <Card className="lg:col-span-4 p-4 flex flex-col gap-3 self-start w-full">
+          <h3 className="tm-section-label text-[var(--color-text-primary)]">Recent Announcements</h3>
+          {announcements.length === 0 ? (
+            <p className="tm-caption py-4 text-center">No announcements yet.</p>
+          ) : (
+            <div className="space-y-2 max-h-[min(70vh,32rem)] overflow-y-auto pr-0.5">
+              {announcements.map((item) => (
+                <div key={item._id} className="rounded-xl border border-[var(--color-bg-border)] p-3 space-y-2">
+                  <div>
+                    <p className="tm-task-title">{item.title}</p>
+                    <p className="tm-caption mt-1 line-clamp-3">{item.message}</p>
+                    <p className="tm-caption mt-1">
+                      Audience: {item.audienceType}
+                      {item.projectId?.name ? ` (${item.projectId.name})` : ''}
                     </p>
-                    <p className="text-[11px] mt-1">
-                      Total: {item.emailDispatch.total || 0} · Sent: {item.emailDispatch.sent || 0} · Opened: {item.emailDispatch.opened || 0} · Failed: {item.emailDispatch.failed || 0}
-                    </p>
-                    {!!item.emailDispatch.recipients?.length && (
-                      <div className="mt-2 max-h-28 overflow-y-auto space-y-1">
-                        {item.emailDispatch.recipients.map((r) => (
-                          <div key={r._id || r.email} className="flex items-center justify-between text-[10px]">
-                            <span className="truncate mr-2">{r.email}</span>
-                            <span className="font-bold">{r.status}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                )}
-                <div className="mt-2 flex justify-end">
-                  <Button
-                    size="xs"
-                    variant="danger"
-                    disabled={deleteAnnouncement.isPending}
-                    onClick={() => {
-                      if (window.confirm('Delete this announcement?')) {
-                        deleteAnnouncement.mutate(item._id);
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
+                  {!!item.emailDispatch && (
+                    <div className="rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] p-2 space-y-1">
+                      <p className="tm-section-label !text-[9px]">
+                        Email: {item.emailDispatch.status || 'idle'}
+                      </p>
+                      <p className="tm-caption">
+                        {item.emailDispatch.sent || 0}/{item.emailDispatch.total || 0} sent
+                        {(item.emailDispatch.failed || 0) > 0 ? ` · ${item.emailDispatch.failed} failed` : ''}
+                      </p>
+                      {!!item.emailDispatch.recipients?.length && (
+                        <details className="tm-caption">
+                          <summary className="cursor-pointer hover:text-[var(--color-text-primary)]">
+                            Recipients ({item.emailDispatch.recipients.length})
+                          </summary>
+                          <div className="mt-1 max-h-24 overflow-y-auto space-y-0.5">
+                            {item.emailDispatch.recipients.map((r) => (
+                              <div key={r._id || r.email} className="flex items-center justify-between gap-2 text-[10px]">
+                                <span className="truncate">{r.email}</span>
+                                <span className="font-semibold shrink-0">{r.status}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex justify-end pt-0.5">
+                    <Button
+                      size="xs"
+                      variant="danger"
+                      disabled={deleteAnnouncement.isPending}
+                      onClick={() => {
+                        if (window.confirm('Delete this announcement?')) {
+                          deleteAnnouncement.mutate(item._id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {announcements.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No announcements yet.</p>}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </PageContainer>

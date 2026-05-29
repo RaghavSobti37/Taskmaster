@@ -626,6 +626,20 @@ export const useCreateCampaign = () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useUploadCampaignAttachment = () => {
+  return useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await axios.post('/api/campaigns/upload-attachment', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return data;
     }
   });
 };

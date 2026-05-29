@@ -8,6 +8,19 @@ const campaignSchema = new mongoose.Schema({
   subject: { type: String },
   content: { type: String },
   senderProfileId: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile' },
+  senderMode: {
+    type: String,
+    enum: ['single', 'pool', 'system_resend', 'system_smtp'],
+    default: 'single'
+  },
+  senderProfileIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile' }],
+  systemProvider: { type: String, enum: ['resend', 'env_smtp'], default: null },
+  includeSignature: { type: Boolean, default: true },
+  attachments: [{
+    filename: String,
+    contentType: String,
+    storageKey: String
+  }],
   status: { type: String, enum: ['Draft', 'Queued', 'Sending', 'Completed', 'Failed'], default: 'Draft' },
   eventTag: { type: String, index: true }, // Ties campaign metrics back to events
   sentAt: { type: Date, default: Date.now },

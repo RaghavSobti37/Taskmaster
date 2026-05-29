@@ -56,7 +56,8 @@ const dispatchCampaignJobs = async (campaignId) => {
   }
   await campaign.save();
 
-  for (const rec of recipients) {
+  for (let i = 0; i < recipients.length; i++) {
+    const rec = recipients[i];
     const jobData = {
       campaignId: campaign._id.toString(),
       recipientId: rec._id.toString(),
@@ -64,7 +65,8 @@ const dispatchCampaignJobs = async (campaignId) => {
       subject: campaign.subject || campaign.title,
       content: campaign.content,
       profileId: campaign.senderProfileId ? campaign.senderProfileId.toString() : null,
-      isLegacy
+      isLegacy,
+      jobIndex: i
     };
 
     const triggered = await triggerEmailCampaign(jobData);

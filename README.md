@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.31-126d5e?style=flat-square" alt="Version 1.7.31" />
+  <img src="https://img.shields.io/badge/version-1.7.32-126d5e?style=flat-square" alt="Version 1.7.32" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -224,7 +224,9 @@ Frontend API URL (optional in `client/.env`):
 VITE_API_URL=http://localhost:5000
 ```
 
-When `VITE_API_URL` is blank, the frontend uses relative `/api` paths.
+**Production (Vercel + Render):** set `VITE_API_URL=https://taskmaster-api.onrender.com` on the static host so campaign creates bypass the Vercel proxy (~4.5MB body limit). Relative `/api` rewrites still work for small requests.
+
+When `VITE_API_URL` is blank, the frontend uses relative `/api` paths (proxied via `vercel.json` in production).
 
 ### 3. Seed departments (first run)
 
@@ -265,6 +267,11 @@ npm run generate-icons
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `JWT_SECRET` | Yes | Token signing secret |
 | `FRONTEND_URL` | Prod | Public app URL for email CTAs |
+| `APP_BASE_URL` | Prod | Public **API** origin for open/click tracking (e.g. `https://taskmaster-api.onrender.com`) |
+| `VITE_API_URL` | Prod | Direct API URL on static host; bypasses Vercel proxy for large payloads |
+| `TRACKING_USE_LOCAL` | Dev | Set `true` to embed localhost tracking URLs during local send tests |
+| `RESEND_API_KEY` | Optional | System Resend sender for campaigns (`senderMode: system_resend`) |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Optional | System SMTP sender (`senderMode: system_smtp`) |
 | `VAPID_PUBLIC_KEY` | Push | Web Push public key |
 | `VAPID_PRIVATE_KEY` | Push | Web Push private key |
 | `VAPID_SUBJECT` | Push | `mailto:` contact for push |
@@ -379,6 +386,28 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-30] v1.7.32 — Mail Engine Production Fixes
+
+#### Campaign Create (PayloadTooLargeError)
+- Production clients should set `VITE_API_URL=https://taskmaster-api.onrender.com` to bypass Vercel's ~4.5MB proxy limit.
+- Attachments upload separately via `POST /api/campaigns/upload-attachment` (multipart); create payload stores metadata only.
+- Client-side ~3MB safe payload guard; template auto-save is non-blocking.
+- Express returns **413** for oversized bodies instead of opaque 500.
+
+#### Open / Click Tracking
+- Fixed `ReferenceError: ip is not defined` in `track.js` (metrics now persist).
+- Fixed duplicate `$inc` keys on MailCampaign open/click updates.
+- Tracking base URL defaults to `https://taskmaster-api.onrender.com`; opt-in local via `TRACKING_USE_LOCAL=true`.
+- Resend sends include `campaign_id` and `recipient_email` tags for webhook correlation.
+
+#### SMTP & Signatures
+- **Sender modes:** single profile, rotate pool, system Resend, system env SMTP.
+- Provider presets (Gmail, Outlook, Yahoo, Zoho, Brevo, SendGrid, Custom) with daily limit defaults.
+- Per-profile send usage meters on email page and profiles tab.
+- Signature toggle, raw HTML textarea editor, server-side signature append fallback.
+
+---
 
 ### [2026-05-29] v1.7.31 — Socket.IO Realtime, Department Permissions & UI Consolidation
 

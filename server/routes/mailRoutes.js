@@ -7,6 +7,7 @@ const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { getDailyLimitForProvider } = require('../utils/smtpPresets');
 const { sendCampaign, scanBounces, updateEmailTags } = require('../services/mailService');
 const { google } = require('googleapis');
 
@@ -46,11 +47,44 @@ router.delete('/templates/:id', protect, async (req, res) => {
 });
 
 // --- PROFILES ---
+router.get('/smtp-usage', protect, async (req, res) => {
+  try {
+    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
+    const profiles = await EmailProfile.find(filter).lean();
+    const usage = profiles.map((p) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const stats = p.sendStats || { today: 0, total: 0, lastResetDate: today };
+      const used = stats.lastResetDate === today ? (stats.today || 0) : 0;
+      const limit = p.dailyLimit || getDailyLimitForProvider(p.providerType);
+      return {
+        profileId: p._id,
+        name: p.name,
+        email: p.email,
+        providerType: p.providerType || 'custom',
+        used,
+        limit,
+        total: stats.total || 0,
+        percent: limit ? Math.min(100, Math.round((used / limit) * 100)) : 0
+      };
+    });
+    res.json(usage);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/profiles', protect, async (req, res) => {
   try {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     const profiles = await EmailProfile.find(filter).lean();
-    res.json(profiles);
+    const today = new Date().toISOString().slice(0, 10);
+    const enriched = profiles.map((p) => {
+      const stats = p.sendStats || { today: 0, total: 0, lastResetDate: today };
+      const used = stats.lastResetDate === today ? (stats.today || 0) : 0;
+      const limit = p.dailyLimit || getDailyLimitForProvider(p.providerType);
+      return { ...p, usage: { used, limit, total: stats.total || 0, percent: limit ? Math.min(100, Math.round((used / limit) * 100)) : 0 } };
+    });
+    res.json(enriched);
   } catch (err) {
     console.error('Get profiles error:', err);
     res.status(500).json({ error: err.message });
@@ -63,6 +97,9 @@ router.post('/profiles', protect, async (req, res) => {
     if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
       data.smtpHost = 'smtp.gmail.com';
       data.smtpPort = 587;
+    }
+    if (data.providerType && !data.dailyLimit) {
+      data.dailyLimit = getDailyLimitForProvider(data.providerType);
     }
     const profile = await EmailProfile.create({ ...data, createdBy: req.user._id });
     res.json(profile);
@@ -98,6 +135,9 @@ router.put('/profiles/:id', protect, async (req, res) => {
     if (data.smtpHost && data.smtpHost.toLowerCase().trim() === 'gmail') {
       data.smtpHost = 'smtp.gmail.com';
       data.smtpPort = 587;
+    }
+    if (data.providerType && !data.dailyLimit) {
+      data.dailyLimit = getDailyLimitForProvider(data.providerType);
     }
     Object.assign(profile, data);
     await profile.save();
@@ -195,26 +235,42 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
 
 router.post('/test-campaign', protect, async (req, res) => {
   try {
-    const { subject, content, testEmail, senderProfileId } = req.body;
+    const { subject, content, testEmail, senderProfileId, includeSignature } = req.body;
     
-    if (!subject || !content || !testEmail || !senderProfileId) {
+    if (!subject || !content || !testEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const profile = await EmailProfile.findById(senderProfileId);
-    if (!profile) return res.status(404).json({ error: 'Sender profile not found' });
+    let html = content;
+    let profile = null;
+    if (senderProfileId) {
+      profile = await EmailProfile.findById(senderProfileId);
+      if (!profile) return res.status(404).json({ error: 'Sender profile not found' });
+      if (includeSignature !== false && profile.signature) {
+        const { appendSignatureIfMissing } = require('../utils/emailSignature');
+        html = appendSignatureIfMissing(html, profile.signature);
+      }
+    }
 
     const mailService = require('../services/mailService');
     await mailService.sendTestEmail({
       to: testEmail,
       subject,
-      html: content,
-      profile: {
+      html,
+      profile: profile ? {
         email: profile.email,
+        name: profile.name,
         smtpHost: profile.smtpHost,
         smtpPort: profile.smtpPort,
         smtpUser: profile.smtpUser,
         smtpPass: profile.smtpPass
+      } : {
+        email: process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev',
+        name: 'System',
+        smtpHost: '',
+        smtpPort: 587,
+        smtpUser: '',
+        smtpPass: ''
       }
     });
 

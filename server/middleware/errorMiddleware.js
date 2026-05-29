@@ -12,6 +12,11 @@ const errorHandler = (err, req, res, next) => {
     }, {});
   }
 
+  if (err.type === 'entity.too.large' || err.name === 'PayloadTooLargeError') {
+    statusCode = 413;
+    message = 'Request entity too large. Reduce HTML size, remove inline images, or upload attachments separately.';
+  }
+
   // Structured error logging
   const errorLog = {
     timestamp: new Date().toISOString(),

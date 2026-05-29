@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const geoip = require('geoip-lite');
+const logger = require('../utils/logger');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -75,6 +76,7 @@ router.get('/open/:pixelId.gif', async (req, res) => {
         const log = await EmailLog.findOne({ pixelId });
         // #region agent log
         fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'22f912'},body:JSON.stringify({sessionId:'22f912',location:'track.js:open:bg',message:'open pixel processed',data:{pixelId:String(pixelId).slice(0,8),logFound:!!log,alreadyOpened:!!log?.opened,botBlocked:isAntiSpamBot(userAgent),ua:(userAgent||'').slice(0,40)},timestamp:Date.now(),hypothesisId:'H-track',runId:'post-fix'})}).catch(()=>{});
+        logger.info('[Track Open]', { pixelId: String(pixelId).slice(0, 8), logFound: !!log, alreadyOpened: !!log?.opened, botBlocked: isAntiSpamBot(userAgent), ua: (userAgent || '').slice(0, 60) });
         // #endregion
         if (!log || log.opened) return;
 

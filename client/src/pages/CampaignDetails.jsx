@@ -5,6 +5,7 @@ import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, 
 import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader } from '../components/ui';
 import { useCampaignDetails, useMailProfiles, useResendCampaign, useResendFilteredCampaign } from '../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
+import { eventCityLabel } from '../utils/mailEventLocation';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -21,16 +22,6 @@ const RESEND_STATUS_OPTIONS = [
   { id: 'Bounced', label: 'Bounced' },
   { id: 'Invalid', label: 'Invalid' },
 ];
-
-const eventCityLabel = (evt) => {
-  const loc = evt?.location;
-  if (loc?.city && loc.city !== 'Unknown' && loc.city !== 'Unknown City') return loc.city;
-  if (loc?.region && loc.region !== 'Unknown') return loc.region;
-  if (loc?.country && loc.country !== 'Unknown') return loc.country;
-  if (evt?.metadata?.city) return evt.metadata.city;
-  if (typeof evt?.metadata?.location === 'string') return evt.metadata.location.split(',')[0].trim();
-  return null;
-};
 
 export default function CampaignDetails() {
   const { campaignId: routeCampaignId } = useParams();

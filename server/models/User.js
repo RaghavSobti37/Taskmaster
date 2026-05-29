@@ -6,7 +6,6 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true, index: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: false, select: false }, // Optional — Google OAuth users have no password
-  role: { type: String, enum: ['user', 'admin', 'sales', 'artist_management', 'ops', 'operations', 'Operations'], default: 'user' },
   avatar: { type: String },
   gender: { type: String, enum: ['male', 'female', 'other'], default: 'male' },
   dateOfBirth: { type: Date },

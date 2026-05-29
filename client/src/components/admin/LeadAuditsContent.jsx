@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useLeadAudits } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
 import { 
   History, Search, RefreshCw, Calendar, ArrowRight, User, FileText, Trash2
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, Input } from '../ui';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { format } from 'date-fns';
 
 const LeadAuditsContent = () => {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,9 +113,13 @@ const LeadAuditsContent = () => {
   ];
 
   const handlePurgeLogs = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete all lead change logs? This cannot be undone.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Delete all logs?',
+      message: 'Are you sure you want to permanently delete all lead change logs? This cannot be undone.',
+      confirmLabel: 'Delete all',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       setPurging(true);
       await axios.delete('/api/crm/leads/audit-logs/purge');
@@ -138,7 +145,7 @@ const LeadAuditsContent = () => {
           />
         </div>
         <div className="flex items-center gap-2">
-          {user?.role === 'admin' && (
+          {isAdminUser(user) && (
             <Button 
               variant="danger" 
               size="sm" 

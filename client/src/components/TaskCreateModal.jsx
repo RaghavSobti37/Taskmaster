@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Plus } from 'lucide-react';
-import { ModalShell } from './ui/ModalShell';
+import { ModalShell, ModalFooter } from './ui/ModalShell';
 import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProjects } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import TaskFormFields from './forms/TaskFormFields';
+import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
 
 const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
@@ -25,7 +26,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
     assignees: user ? [user._id] : [],
     dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
     scheduleDate: format(new Date(), 'yyyy-MM-dd'),
-    scheduleSlot: 'AM',
+    scheduleSlot: 'FULL',
     type: '',
   });
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         assignees: user ? [user._id] : [],
         dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
         scheduleDate: format(new Date(), 'yyyy-MM-dd'),
-        scheduleSlot: 'AM',
+        scheduleSlot: 'FULL',
         type: '',
       });
     }
@@ -62,21 +63,26 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
     e.preventDefault();
     if (!title.trim()) return;
 
+    suppressAutoToasts(5000);
     setLoading(true);
     try {
-      const res = await axios.post('/api/tasks', {
-        title,
-        description: desc,
-        priority: formValues.priority,
-        type: normalizeTaskCategory(formValues.type),
-        workspace: formValues.workspace,
-        scheduleDate: formValues.scheduleDate || null,
-        scheduleSlot: formValues.scheduleSlot,
-        projectId: formValues.projectId || null,
-        assignees: formValues.assignees,
-        dueDate: formValues.dueDate || null,
-        status: 'todo'
-      });
+      const res = await axios.post(
+        '/api/tasks',
+        {
+          title,
+          description: desc,
+          priority: formValues.priority,
+          type: normalizeTaskCategory(formValues.type),
+          workspace: formValues.workspace,
+          scheduleDate: formValues.scheduleDate || null,
+          scheduleSlot: formValues.scheduleSlot,
+          projectId: formValues.projectId || null,
+          assignees: formValues.assignees,
+          dueDate: formValues.dueDate || null,
+          status: 'todo',
+        },
+        AXIOS_SKIP_TOAST
+      );
       if (onTaskCreated) onTaskCreated(res.data);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
@@ -102,41 +108,29 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
         </button>
       </header>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Task Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold text-sm"
-            placeholder="What needs to be done?"
-            required
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="tm-modal-scroll p-6 space-y-4">
+          <TaskFormFields
+            values={formValues}
+            onChange={setFormValues}
+            projects={projects}
+            members={passedMembers}
+            showProject={!initialProjectId}
+            lockProject={!!initialProjectId}
+            showStatus={false}
+            showTitle
+            showDescription
+            title={title}
+            onTitleChange={setTitle}
+            description={desc}
+            onDescriptionChange={setDesc}
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-          <textarea
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[80px] text-sm"
-            placeholder="Add details..."
-          />
-        </div>
-
-        <TaskFormFields
-          values={formValues}
-          onChange={setFormValues}
-          projects={projects}
-          members={passedMembers}
-          showProject={!initialProjectId}
-          lockProject={!!initialProjectId}
-          showStatus={false}
-        />
-
-        <div className="pt-4 border-t border-[var(--color-bg-border)] flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)]">Cancel</button>
+        <ModalFooter className="justify-end gap-3">
+          <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)]">
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={loading || !title.trim()}
@@ -144,7 +138,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           >
             <CheckCircle2 size={18} /> {loading ? 'Creating...' : 'Create Task'}
           </button>
-        </div>
+        </ModalFooter>
       </form>
     </ModalShell>
   );

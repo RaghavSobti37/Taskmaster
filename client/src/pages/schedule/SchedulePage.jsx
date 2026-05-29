@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { format, addDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock } from 'lucide-react';
-import { PageContainer, PageHeader, Card, DataLoading } from '../../components/ui';
+import { PageContainer, PageHeader } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
+import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import { useSchedule } from '../../hooks/useTaskmasterQueries';
 import TaskDetailModal from '../../components/TaskDetailModal';
 
@@ -23,7 +24,7 @@ const SchedulePage = () => {
       />
 
       {isLoading ? (
-        <Card className="p-2"><DataLoading message="Loading schedule..." /></Card>
+        <ScheduleSkeleton />
       ) : (
         <ScheduleGrid data={data} onTaskClick={setSelectedTask} />
       )}

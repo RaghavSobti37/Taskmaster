@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FileText, Upload, Trash2, Download, Search,
+  FileText, Upload, Trash2, Download,
   FolderOpen, X, ChevronDown, File,
   FileSpreadsheet, Image as ImageIcon,
   Calendar, ChevronLeft, ChevronRight, Info, Check, Eye, ArrowLeft, ArrowUp, ArrowDown,
@@ -12,8 +12,17 @@ import {
 } from 'lucide-react';
 import { uploadFinanceFiles } from '../../utils/financeUpload';
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
-import { CenteredModal } from '../../components/ui/CenteredModal';
-import { TablePagination } from '../../components/ui/primitives';
+import {
+  PageContainer,
+  PageHeader,
+  Button,
+  SearchInput,
+  EmptyState,
+  IconButton,
+  CenteredModal,
+  TablePagination,
+} from '../../components/ui';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 
 const CATEGORIES = [
@@ -104,6 +113,7 @@ const InfoTooltip = ({ content }) => {
 };
 
 const FinancePage = () => {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentFolderId = searchParams.get('folderId') || '';
@@ -399,15 +409,19 @@ const FinancePage = () => {
     },
   });
 
-  const handleDeleteFolder = (e, folder) => {
+  const handleDeleteFolder = async (e, folder) => {
     e.stopPropagation();
     const count = folder.documentCount ?? 0;
-    const msg = count > 0
+    const message = count > 0
       ? `Delete folder "${folder.folderName}" and all ${count} document(s) inside?`
       : `Delete folder "${folder.folderName}"?`;
-    if (window.confirm(msg)) {
-      deleteFolderMutation.mutate(folder._id);
-    }
+    const ok = await confirm({
+      title: 'Delete folder?',
+      message,
+      confirmLabel: 'Delete',
+      type: 'danger',
+    });
+    if (ok) deleteFolderMutation.mutate(folder._id);
   };
 
   const handleFilesSelected = async (fileList) => {
@@ -475,48 +489,31 @@ const FinancePage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Finance Documents</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Manage project invoices, contracts, and financial records</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={openNewFolderModal}
-            className="flex items-center gap-2 px-4 py-2.5 border border-[var(--color-bg-border)] text-[var(--color-text-primary)] rounded-xl text-xs font-bold hover:bg-[var(--color-bg-border)] transition-colors"
-          >
-            <FolderPlus size={16} />
-            New Folder
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-action-primary)] text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow"
-          >
-            <Upload size={16} />
-            Upload Documents
-          </motion.button>
-        </div>
-      </div>
+    <PageContainer maxWidth="1400px" className="!py-4 !space-y-6">
+      <PageHeader
+        icon={FileText}
+        title="Finance Documents"
+        subtitle="Manage project invoices, contracts, and financial records"
+        actions={
+          <>
+            <Button variant="secondary" size="sm" onClick={openNewFolderModal}>
+              <FolderPlus size={16} /> New Folder
+            </Button>
+            <Button size="sm" onClick={() => setShowUpload(true)}>
+              <Upload size={16} /> Upload Documents
+            </Button>
+          </>
+        }
+      />
 
       {/* Filters & Search */}
       <div className="flex flex-wrap gap-3 items-center">
-        {/* Search */}
-        <div className="relative min-w-[240px] flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search title, file name, vendor..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-blue-500/50 transition-colors"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search title, file name, vendor..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="min-w-[240px] flex-1"
+        />
 
         {/* Project Select */}
         <div className="relative">
@@ -563,9 +560,7 @@ const FinancePage = () => {
             className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
           />
           {(startDate || endDate) && (
-            <button onClick={() => { setStartDate(''); setEndDate(''); }} className="p-0.5 hover:bg-[var(--color-bg-border)] rounded">
-              <X size={12} className="text-[var(--color-text-muted)]" />
-            </button>
+            <IconButton icon={X} label="Clear dates" size="sm" onClick={() => { setStartDate(''); setEndDate(''); }} />
           )}
         </div>
 
@@ -578,27 +573,13 @@ const FinancePage = () => {
         {isLoading ? (
           <div className="p-8 text-center text-sm text-[var(--color-text-muted)]">Loading documents...</div>
         ) : docs.length === 0 ? (
-          <div className="p-12 text-center space-y-4">
-            <FileText size={48} className="mx-auto text-[var(--color-text-muted)] opacity-30" />
-            <div>
-              <p className="text-sm font-bold text-[var(--color-text-muted)]">
-                {currentFolderId ? `No documents in ${activeFolder?.folderName || 'this folder'}` : 'No documents found'}
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                {currentFolderId ? 'Upload documents into this folder' : 'Select a project or upload documents'}
-              </p>
-            </div>
-            {currentFolderId && (
-              <button
-                type="button"
-                onClick={goToProjectRoot}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[var(--color-bg-border)] text-xs font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-workspace)] transition-colors"
-              >
-                <ArrowLeft size={14} />
-                Back to {selectedProjectName || 'project'}
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={FileText}
+            title={currentFolderId ? `No documents in ${activeFolder?.folderName || 'this folder'}` : 'No documents found'}
+            description={currentFolderId ? 'Upload documents into this folder' : 'Select a project or upload documents'}
+            actionLabel={currentFolderId ? `Back to ${selectedProjectName || 'project'}` : undefined}
+            onAction={currentFolderId ? goToProjectRoot : undefined}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[720px]">
@@ -754,7 +735,16 @@ const FinancePage = () => {
                               <Download size={14} />
                             </a>
                             <button
-                              onClick={(e) => { e.stopPropagation(); if (confirm('Delete document?')) deleteMutation.mutate(doc._id); }}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const ok = await confirm({
+                                  title: 'Delete document?',
+                                  message: 'Delete document?',
+                                  confirmLabel: 'Delete',
+                                  type: 'danger',
+                                });
+                                if (ok) deleteMutation.mutate(doc._id);
+                              }}
                               className="p-1 hover:bg-red-500/10 rounded text-red-500 transition-colors"
                             >
                               <Trash2 size={14} />
@@ -937,7 +927,15 @@ const FinancePage = () => {
                       <Download size={14} />
                     </a>
                     <button
-                      onClick={() => { if (confirm('Are you sure you want to delete this document?')) deleteMutation.mutate(selectedDoc._id); }}
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete document?',
+                          message: 'Are you sure you want to delete this document?',
+                          confirmLabel: 'Delete',
+                          type: 'danger',
+                        });
+                        if (ok) deleteMutation.mutate(selectedDoc._id);
+                      }}
                       className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
                       title="Delete"
                     >
@@ -1156,7 +1154,7 @@ const FinancePage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageContainer>
   );
 };
 

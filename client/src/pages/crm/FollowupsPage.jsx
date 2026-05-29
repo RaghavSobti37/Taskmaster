@@ -17,13 +17,17 @@ import {
   FullScreenWorkspace
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
 import { useLiveLeads, useSalesReps, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { format, isPast, isToday, isFuture, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
+import { useConfirm } from '../../contexts/ConfirmContext';
+
 export default function FollowupsPage() {
   const { user } = useAuth();
+  const { confirm } = useConfirm();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
   const [selectedLead, setSelectedLead] = useState(null);
@@ -35,7 +39,7 @@ export default function FollowupsPage() {
   const { data, isLoading, refetch } = useLiveLeads({
     limit: 1000,
     hasFollowup: 'true',
-    assignedRepId: user?.role === 'admin' ? undefined : user?._id
+    assignedRepId: isAdminUser(user) ? undefined : user?._id
   });
 
   const leads = data?.leads || [];
@@ -178,8 +182,14 @@ export default function FollowupsPage() {
           onClick={(e) => e.stopPropagation()}
           onChange={async (e) => {
             e.stopPropagation();
-            if (window.confirm(`Mark follow-up completed for ${row.name}?`)) {
-              try {
+            const ok = await confirm({
+              title: 'Complete follow-up?',
+              message: `Mark follow-up completed for ${row.name}?`,
+              confirmLabel: 'Complete',
+              type: 'success',
+            });
+            if (!ok) return;
+            try {
                 await updateMutation.mutateAsync({
                   id: row._id,
                   data: {
@@ -194,7 +204,6 @@ export default function FollowupsPage() {
               } catch (err) {
                 alert(err.response?.data?.error || err.message);
               }
-            }
           }}
         />
       )

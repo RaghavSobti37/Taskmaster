@@ -44,14 +44,18 @@ exports.register = async (req, res) => {
       departmentId: departmentId || undefined
     });
 
+    const populated = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name slug color');
+
     res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      gender: user.gender,
-      avatar: user.avatar,
-      token: generateToken(user._id)
+      _id: populated._id,
+      name: populated.name,
+      email: populated.email,
+      gender: populated.gender,
+      avatar: populated.avatar,
+      departmentId: populated.departmentId,
+      token: generateToken(populated._id)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -84,12 +88,15 @@ exports.login = async (req, res) => {
 
       if (isMatch) {
         console.timeEnd('LoginProcess');
+        const populated = await User.findById(user._id)
+          .select('-password')
+          .populate('departmentId', 'name slug color');
         return res.json({
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          token: generateToken(user._id)
+          _id: populated._id,
+          name: populated.name,
+          email: populated.email,
+          departmentId: populated.departmentId,
+          token: generateToken(populated._id)
         });
       }
     }
@@ -113,22 +120,24 @@ exports.googleLogin = async (req, res) => {
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      // Create new user if not exists
       user = await User.create({
         name,
         email: email.toLowerCase(),
-        password: Math.random().toString(36).slice(-8), // Random password
+        password: Math.random().toString(36).slice(-8),
         avatar: picture,
-        role: 'operative' // Default role
       });
     }
 
+    const populated = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name slug color');
+
     res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      token: generateToken(user._id)
+      _id: populated._id,
+      name: populated.name,
+      email: populated.email,
+      departmentId: populated.departmentId,
+      token: generateToken(populated._id)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -136,7 +145,9 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user._id).select('-password').populate('departmentId', 'name slug color');
+  const user = await User.findById(req.user._id)
+    .select('-password')
+    .populate('departmentId', 'name slug color signupAllowed');
   res.json(user);
 };
 
@@ -219,12 +230,15 @@ exports.googleAuthCallback = async (req, res) => {
     }
 
     const token = generateToken(user._id);
+    const freshUser = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name slug color');
     const userJson = JSON.stringify({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar
+      _id: freshUser._id,
+      name: freshUser.name,
+      email: freshUser.email,
+      avatar: freshUser.avatar,
+      departmentId: freshUser.departmentId,
     });
 
     res.redirect(`${FRONTEND_URL}/auth/google/success?token=${token}&user=${encodeURIComponent(userJson)}`);

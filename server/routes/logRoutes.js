@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
+const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
+const { broadcastRealtimeEvent } = require('../config/realtime');
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -115,6 +117,7 @@ router.post('/', protect, async (req, res) => {
       details
     });
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
+    broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
     res.status(201).json(populatedLog);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -123,7 +126,7 @@ router.post('/', protect, async (req, res) => {
 
 router.delete('/clear', protect, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
     await Log.deleteMany({});
@@ -146,11 +149,11 @@ router.put('/:id', protect, async (req, res) => {
                       logDate.getMonth() === now.getMonth() && 
                       logDate.getDate() === now.getDate();
                       
-    if (!isSameDay && req.user.role !== 'admin') {
+    if (!isSameDay && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Logs are only editable on the day they were created.' });
     }
 
-    if (log.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (log.userId.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Unauthorized to edit this log.' });
     }
 
@@ -174,11 +177,11 @@ router.delete('/:id', protect, async (req, res) => {
                       logDate.getMonth() === now.getMonth() && 
                       logDate.getDate() === now.getDate();
                       
-    if (!isSameDay && req.user.role !== 'admin') {
+    if (!isSameDay && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Logs can only be deleted on the day they were created.' });
     }
 
-    if (log.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (log.userId.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Unauthorized to delete this log.' });
     }
 

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const TaskService = require('../services/TaskService');
+const { isAdminUser } = require('../utils/departmentPermissions');
+const { broadcastRealtimeEvent } = require('../config/realtime');
 
 const ALLOWED_CREATE = [
   'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
@@ -39,6 +41,8 @@ exports.createTask = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
+    broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
+    broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
   } catch (error) {
     await session.abortTransaction();
@@ -55,7 +59,7 @@ exports.getTasks = async (req, res, next) => {
     if (projectId) {
       filter.projectId = projectId;
     } else {
-      if (req.user.role !== 'admin') {
+      if (!isAdminUser(req.user)) {
         // Find tasks where user is assignee via TaskAssignment
         const TaskAssignment = require('../models/TaskAssignment');
         const assignments = await TaskAssignment.find({ userId: req.user._id }).lean();
@@ -92,6 +96,8 @@ exports.updateTask = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
+    broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'update' });
+    broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'UPDATE_TASK' });
     res.json(taskDto);
   } catch (error) {
     await session.abortTransaction();
@@ -118,6 +124,7 @@ exports.deleteTask = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
+    broadcastRealtimeEvent('tasks', 'task_change', { taskId: req.params.id, action: 'delete' });
     res.json({ message: 'Task deleted' });
   } catch (error) {
     await session.abortTransaction();
@@ -172,6 +179,8 @@ exports.reportBug = async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
+    broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
+    broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
   } catch (error) {
     await session.abortTransaction();

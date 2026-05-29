@@ -13,12 +13,15 @@ import {
   PageContainer,
   Card,
   Button,
-  Input
+  Input,
+  NexusDropdown
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import axios from 'axios';
-import { useAttendance, useApplyLeave, useLeaveRequests, useDepartments, useDepartmentChangeRequests, useSubmitDepartmentChange } from '../../hooks/useTaskmasterQueries';
+import { useAttendance, useApplyLeave, useLeaveRequests, useDepartments } from '../../hooks/useTaskmasterQueries';
+import { isAdminUser } from '../../utils/departmentPermissions';
 import { uploadFiles } from '../../utils/uploadthing';
 import {
   getNotificationPushStatus,
@@ -56,6 +59,12 @@ const formatDateInput = (value) => {
   return new Date(value).toISOString().slice(0, 10);
 };
 
+const toDepartmentId = (dept) => {
+  if (!dept) return '';
+  if (typeof dept === 'object') return String(dept._id || '');
+  return String(dept);
+};
+
 const getAttendanceRowClass = (row) => {
   if (row.onLeave) return 'bg-red-500/15 text-red-900 dark:text-red-100';
   if (row.isHalfDay) return 'bg-yellow-500/15 text-yellow-900 dark:text-yellow-100';
@@ -63,6 +72,7 @@ const getAttendanceRowClass = (row) => {
 };
 
 const SettingsPage = () => {
+  const { confirm } = useConfirm();
   const { user, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -125,9 +135,18 @@ const SettingsPage = () => {
   const { data: myLeaveRequests = [] } = useLeaveRequests({}, !!user);
   const applyLeave = useApplyLeave();
   const { data: departments = [] } = useDepartments();
-  const { data: deptRequests = [] } = useDepartmentChangeRequests(!!user);
-  const submitDeptChange = useSubmitDepartmentChange();
-  const [requestedDeptId, setRequestedDeptId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+
+  const departmentOptions = useMemo(() => {
+    const currentId = toDepartmentId(user?.departmentId);
+    return departments
+      .filter((d) => {
+        if (isAdminUser(user)) return true;
+        if (d.signupAllowed !== false) return true;
+        return currentId && String(d._id) === currentId;
+      })
+      .map((d) => ({ value: String(d._id), label: d.name }));
+  }, [departments, user]);
 
   const pendingLeaveCount = useMemo(
     () => myLeaveRequests.filter((r) => r.status === 'pending').length,
@@ -172,6 +191,7 @@ const SettingsPage = () => {
     setPhone(user.phone || '+91 ');
     setDateOfBirth(formatDateInput(user.dateOfBirth));
     setTeams(user.teams ? user.teams.map(t => ({ value: t, label: t })) : []);
+    setDepartmentId(toDepartmentId(user.departmentId));
   }, [user]);
 
   const hasChanges = useMemo(() => {
@@ -181,15 +201,18 @@ const SettingsPage = () => {
     const teamsMatch = teamStrings.length === initialTeamStrings.length &&
       teamStrings.every(t => initialTeamStrings.includes(t));
 
+    const initialDept = toDepartmentId(user.departmentId);
+
     return (
       name !== user.name ||
       avatar !== user.avatar ||
       phone !== (user.phone || '+91 ') ||
       dateOfBirth !== formatDateInput(user.dateOfBirth) ||
+      departmentId !== initialDept ||
       (password && newPassword) ||
       !teamsMatch
     );
-  }, [name, avatar, phone, dateOfBirth, teams, password, newPassword, user]);
+  }, [name, avatar, phone, dateOfBirth, departmentId, teams, password, newPassword, user]);
 
   const handleUpdateProfile = async () => {
     if (password && newPassword) {
@@ -204,7 +227,7 @@ const SettingsPage = () => {
     setSuccess(false);
     try {
       const teamStrings = teams.map(t => typeof t === 'object' ? t.value : t);
-      const payload = { name, avatar, phone, teams: teamStrings, dateOfBirth: dateOfBirth || null };
+      const payload = { name, avatar, phone, teams: teamStrings, dateOfBirth: dateOfBirth || null, departmentId: departmentId || null };
       if (password && newPassword) {
         payload.currentPassword = password;
         payload.newPassword = newPassword;
@@ -309,10 +332,6 @@ const SettingsPage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        title="Account Settings"
-        subtitle="Manage your personal profile and preferences."
-      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
@@ -343,6 +362,13 @@ const SettingsPage = () => {
                  <Input label="Full Name" value={name} onChange={e => setName(e.target.value)} icon={User} className="!text-xs" />
                  <Input label="Phone Number" value={phone} onChange={e => setPhone(e.target.value)} icon={Smartphone} className="!text-xs" />
                  <Input type="date" label="Date of Birth" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} icon={CalendarDays} className="!text-xs" />
+                 <NexusDropdown
+                   label="Department"
+                   options={departmentOptions}
+                   value={departmentId}
+                   onChange={setDepartmentId}
+                   placeholder="Select department"
+                 />
               </div>
 
               <div className="pt-4 border-t border-[var(--color-bg-border)]">
@@ -368,41 +394,6 @@ const SettingsPage = () => {
                        );
                     })}
                  </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="overflow-hidden">
-            <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Users size={14} className="text-teal-500" /> Department
-              </h3>
-            </div>
-            <div className="p-4 space-y-3">
-              <p className="text-sm">
-                Current: <strong>{user?.departmentId?.name || 'Unassigned'}</strong>
-              </p>
-              {deptRequests.find((r) => r.status === 'pending') && (
-                <p className="text-xs text-amber-600">Department change pending admin approval.</p>
-              )}
-              <div className="flex flex-wrap gap-2 items-end">
-                <select
-                  value={requestedDeptId}
-                  onChange={(e) => setRequestedDeptId(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] text-sm"
-                >
-                  <option value="">Request new department</option>
-                  {departments.filter((d) => d.signupAllowed !== false).map((d) => (
-                    <option key={d._id} value={d._id}>{d.name}</option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  disabled={!requestedDeptId || submitDeptChange.isPending}
-                  onClick={() => submitDeptChange.mutate(requestedDeptId, { onSuccess: () => setRequestedDeptId('') })}
-                >
-                  Request Change
-                </Button>
               </div>
             </div>
           </Card>
@@ -488,40 +479,7 @@ const SettingsPage = () => {
             </div>
           </Card>
 
-          <Card className="overflow-hidden">
-            <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Clock size={14} className="text-emerald-500" /> My Attendance
-              </h3>
-            </div>
-            <div className="p-4">
-              <div className="max-h-64 overflow-y-auto border border-[var(--color-bg-border)] rounded-xl">
-                <table className="min-w-full text-xs">
-                  <thead className="bg-[var(--color-bg-secondary)] sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Date</th>
-                      <th className="px-3 py-2 text-left">Time In</th>
-                      <th className="px-3 py-2 text-left">Time Out</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {myAttendance.map((row) => (
-                      <tr key={row._id} className={`border-t border-[var(--color-bg-border)] ${getAttendanceRowClass(row)}`}>
-                        <td className="px-3 py-2">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
-                        <td className="px-3 py-2">{row.timeIn || '-'}</td>
-                        <td className="px-3 py-2">{row.timeOut || '-'}</td>
-                      </tr>
-                    ))}
-                    {myAttendance.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-2">No attendance records yet.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </Card>
+         
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
@@ -619,15 +577,55 @@ const SettingsPage = () => {
                <Button 
                  variant="danger" 
                  size="sm" 
-                 onClick={() => {
-                   if (window.confirm('Are you sure you want to sign out?')) {
-                     localStorage.clear();
-                     window.location.href = '/login';
-                   }
+                 onClick={async () => {
+                   const ok = await confirm({
+                     title: 'Sign out?',
+                     message: 'Are you sure you want to sign out?',
+                     confirmLabel: 'Sign out',
+                     type: 'warning',
+                   });
+                   if (!ok) return;
+                   localStorage.clear();
+                   window.location.href = '/login';
                  }}
                >
                  Sign Out
                </Button>
+            </div>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <Clock size={14} className="text-emerald-500" /> My Attendance
+              </h3>
+            </div>
+            <div className="p-4">
+              <div className="max-h-64 overflow-y-auto border border-[var(--color-bg-border)] rounded-xl">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-[var(--color-bg-secondary)] sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Date</th>
+                      <th className="px-3 py-2 text-left">Time In</th>
+                      <th className="px-3 py-2 text-left">Time Out</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {myAttendance.map((row) => (
+                      <tr key={row._id} className={`border-t border-[var(--color-bg-border)] ${getAttendanceRowClass(row)}`}>
+                        <td className="px-3 py-2">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
+                        <td className="px-3 py-2">{row.timeIn || '-'}</td>
+                        <td className="px-3 py-2">{row.timeOut || '-'}</td>
+                      </tr>
+                    ))}
+                    {myAttendance.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-2">No attendance records yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </Card>
         </aside>

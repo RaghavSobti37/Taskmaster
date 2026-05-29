@@ -17,9 +17,9 @@ const {
 const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
 
-const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
+const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 
-const isOps = (user) => OPS_ROLES.has(user?.role);
+const isOps = (user) => isOpsUser(user);
 
 const DEFAULT_CHECKIN_TIME = '10:30';
 const STANDARD_SHIFT_MINUTES = 8 * 60;
@@ -221,7 +221,7 @@ router.get('/', async (req, res) => {
 router.post('/check', async (req, res) => {
   try {
     const now = new Date();
-    if (isWeekend(now) && req.user.role !== 'admin') {
+    if (isWeekend(now) && !isAdminUser(req.user)) {
       return res.status(400).json({ error: 'Weekend — office is closed. Attendance not required.' });
     }
     const today = todayStart();

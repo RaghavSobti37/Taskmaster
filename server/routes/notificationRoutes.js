@@ -8,7 +8,9 @@ const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
 const { startOfDay, endOfDay, isBefore } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
+const { isAdminUser } = require('../utils/departmentPermissions');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
+const logger = require('../utils/logger');
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
@@ -53,7 +55,7 @@ router.get('/status-counts', protect, async (req, res) => {
 
     const allowed = await getAllowedCategoriesForUser(req.user);
     const unreadFilter = { recipient: req.user._id, read: false };
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       unreadFilter.category = { $in: allowed };
     }
     const unreadNotificationsCount = await Notification.countDocuments(unreadFilter);
@@ -76,20 +78,30 @@ router.get('/push/vapid-key', protect, (req, res) => {
 router.post('/push/subscribe', protect, async (req, res) => {
   try {
     const { subscription } = req.body;
-    if (!subscription?.endpoint || !subscription?.keys) {
+    const endpoint = subscription?.endpoint;
+    const p256dh = subscription?.keys?.p256dh;
+    const auth = subscription?.keys?.auth;
+    if (!endpoint || !p256dh || !auth) {
       return res.status(400).json({ error: 'Invalid subscription' });
     }
-    const user = await User.findById(req.user._id);
-    user.pushSubscriptions = user.pushSubscriptions || [];
-    user.pushSubscriptions = user.pushSubscriptions.filter((s) => s.endpoint !== subscription.endpoint);
-    user.pushSubscriptions.push({
-      endpoint: subscription.endpoint,
-      keys: subscription.keys,
-      userAgent: req.headers['user-agent'] || ''
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { pushSubscriptions: { endpoint } },
     });
-    await user.save();
+    await User.findByIdAndUpdate(req.user._id, {
+      $push: {
+        pushSubscriptions: {
+          endpoint,
+          keys: { p256dh, auth },
+          userAgent: req.headers['user-agent'] || '',
+          createdAt: new Date(),
+        },
+      },
+    });
+
     res.json({ success: true });
   } catch (error) {
+    logger.error('Push', 'Failed to save subscription', { error: error.message, userId: req.user?._id });
     res.status(500).json({ error: 'Failed to save subscription' });
   }
 });
@@ -110,7 +122,7 @@ router.get('/', protect, async (req, res) => {
   try {
     const allowed = await getAllowedCategoriesForUser(req.user);
     const filter = { recipient: req.user._id };
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       filter.category = { $in: allowed };
     }
 

@@ -8,6 +8,7 @@ const LeadService = require('../services/LeadService');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 const logger = require('../utils/logger');
+const { getDepartmentSlug } = require('../utils/departmentPermissions');
 
 const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
 const {
@@ -179,7 +180,7 @@ exports.syncExlyData = async (req, res) => {
     // Audit Logging
     await CRMAudit.create({
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: getDepartmentSlug(req.user),
       action: 'EXLY_SYNC',
       fieldChanged: 'all',
       oldValue: 'un-synced',
@@ -556,7 +557,7 @@ exports.updateOffering = async (req, res) => {
 
     await CRMAudit.create({
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: getDepartmentSlug(req.user),
       action: 'EXLY_OFFERING_UPDATE',
       fieldChanged: 'multiple',
       oldValue: 'previous_values',

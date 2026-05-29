@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.30-126d5e?style=flat-square" alt="Version 1.7.30" />
+  <img src="https://img.shields.io/badge/version-1.7.31-126d5e?style=flat-square" alt="Version 1.7.31" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -35,7 +35,7 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 |-------|-------|
 | Frontend | React 18, Vite 5, Tailwind CSS v4, TanStack Query, Framer Motion |
 | Backend | Node.js, Express, Mongoose, BullMQ, Trigger.dev |
-| Data | MongoDB Atlas, Redis (queues/cache), Supabase Realtime |
+| Data | MongoDB Atlas, Redis (queues/cache), Socket.IO realtime |
 | Auth | JWT + Google OAuth, role-based route guards |
 | Deploy | Render (web service + static CDN), tsccoreknot.com |
 
@@ -128,7 +128,7 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 │  SystemHealthService │ Rate Limiting │ Gzip │ Helmet            │
 └──────┬──────────────┬──────────────┬──────────────┬─────────────┘
        │              │              │              │
-   MongoDB         Redis/BullMQ   Supabase      External APIs
+   MongoDB         Redis/BullMQ   Socket.IO     External APIs
    (Mongoose)     (queues)       (realtime)    (Exly, Resend, Google…)
 ```
 
@@ -153,7 +153,8 @@ Taskmaster/
 │       ├── components/        # UI, dashboard, forms, schedule
 │       ├── pages/             # Route pages (dashboard, inbox, todo, schedule…)
 │       ├── hooks/             # React Query hooks, PWA install
-│       ├── contexts/          # Auth, theme, sidebar, toast
+│       ├── contexts/          # Auth, theme, sidebar, toast, confirm
+│       ├── lib/               # Socket.IO client (realtime.js)
 │       ├── constants/         # Task options, categories
 │       ├── utils/             # Notifications, workspace colors, formatting
 │       └── sw.js              # Service worker (injectManifest)
@@ -271,8 +272,6 @@ npm run generate-icons
 | `EMAIL_PASSWORD` | Mail | SMTP password |
 | `RESEND_API_KEY` | Mail | Resend API key |
 | `REDIS_URL` | Queues | Redis for BullMQ |
-| `SUPABASE_URL` | Realtime | Supabase project URL |
-| `SUPABASE_ANON_KEY` | Realtime | Supabase anon key |
 | `GOOGLE_CLIENT_ID` | OAuth | Google OAuth client |
 | `GOOGLE_CLIENT_SECRET` | OAuth | Google OAuth secret |
 | `DEBUG_BYPASS` | Dev | Enable local auth bypass |
@@ -380,6 +379,40 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-29] v1.7.31 — Socket.IO Realtime, Department Permissions & UI Consolidation
+
+#### Realtime
+- Replaced Supabase Realtime with **Socket.IO** (`server/config/realtime.js`, `client/src/lib/realtime.js`).
+- JWT-authenticated socket handshake; channel join with department/admin scope.
+- Removed `@supabase/supabase-js` and legacy `supabase.js` config on client and server.
+
+#### Access Control
+- **Department-based permissions** via `departmentPermissions.js` (admin, sales, operations, artist-management slugs).
+- Route guards (`AdminRoute`, `OpsRoute`, `ArtistRoute`) and `authMiddleware` use department slugs instead of legacy `role` strings.
+- Migration script: `server/scripts/migrateRoleToDepartment.js`.
+
+#### UI & UX
+- Removed `CKDropdown`; consolidated on enhanced **NexusDropdown**.
+- **ConfirmContext** + `globalConfirm` for imperative confirmation dialogs.
+- Streamlined **ToastContext**; settings page layout refresh.
+- Task modals/forms: improved `TaskFormFields`, create/detail flows, schedule skeleton loading.
+- Project views: Kanban, list, detail, and `ProjectsView` polish; workspace color utilities expanded.
+
+#### New Utilities & Scripts
+```text
+client/src/contexts/ConfirmContext.jsx
+client/src/lib/realtime.js
+client/src/utils/departmentPermissions.js
+client/src/utils/dashboardTasks.js
+client/src/utils/taskCompletion.js
+server/config/realtime.js
+server/utils/departmentPermissions.js
+server/scripts/migrateRoleToDepartment.js
+server/scripts/testRealtime.js
+```
+
+---
 
 ### [2026-05-29] v1.7.30 — Dashboard Redesign, Notifications, PWA & Departments
 

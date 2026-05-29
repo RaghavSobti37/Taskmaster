@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ModalShell } from './ui/ModalShell';
+import { ModalShell, ModalFooter } from './ui/ModalShell';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
   const queryClient = useQueryClient();
@@ -83,7 +83,8 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
         </button>
       </header>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="tm-modal-scroll p-6 space-y-5">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Event Name</label>
             <input 
@@ -153,23 +154,25 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
             </div>
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-3 border-t border-[var(--color-bg-border)]">
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              disabled={loading || !title}
-              className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
-            >
-              {loading ? 'Saving...' : <><CheckCircle2 size={18} /> {initialData ? 'Update Event' : 'Save Event'}</>}
-            </button>
-          </div>
-        </form>
+        </div>
+
+        <ModalFooter className="justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading || !title}
+            className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
+          >
+            {loading ? 'Saving...' : <><CheckCircle2 size={18} /> {initialData ? 'Update Event' : 'Save Event'}</>}
+          </button>
+        </ModalFooter>
+      </form>
     </ModalShell>
   );
 };

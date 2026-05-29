@@ -2,8 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { Megaphone } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Input, Button } from '../../components/ui';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AnnouncementsPage = () => {
+  const { confirm } = useConfirm();
   const { data: announcements = [] } = useAnnouncements(true, 4000, true);
   const { data: targets } = useAnnouncementTargets(true);
   const createAnnouncement = useCreateAnnouncement();
@@ -154,10 +156,14 @@ const AnnouncementsPage = () => {
                       size="xs"
                       variant="danger"
                       disabled={deleteAnnouncement.isPending}
-                      onClick={() => {
-                        if (window.confirm('Delete this announcement?')) {
-                          deleteAnnouncement.mutate(item._id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete announcement?',
+                          message: 'Delete this announcement?',
+                          confirmLabel: 'Delete',
+                          type: 'danger',
+                        });
+                        if (ok) deleteAnnouncement.mutate(item._id);
                       }}
                     >
                       Delete

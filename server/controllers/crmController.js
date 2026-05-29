@@ -9,6 +9,15 @@ const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeReg
 const followupCache = require('../services/followupCache');
 const logger = require('../utils/logger');
 const { dispatchEmailPayload } = require('../services/mailDriver');
+const { broadcastRealtimeEvent } = require('../config/realtime');
+const Department = require('../models/Department');
+const { isAdminUser, getDepartmentSlug, SALES_SLUG } = require('../utils/departmentPermissions');
+
+const getSalesRepUsers = async (session = null) => {
+  const salesDept = await Department.findOne({ slug: SALES_SLUG }).session(session);
+  if (!salesDept) return [];
+  return User.find({ departmentId: salesDept._id }).session(session);
+};
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -40,7 +49,7 @@ const pick = (src, keys) => {
  * @returns {Promise<mongoose.Types.ObjectId|null>} ObjectId of the assigned sales rep
  */
 const assignLeadToRep = async (session = null) => {
-  const reps = await User.find({ role: 'sales' }).session(session);
+  const reps = await getSalesRepUsers(session);
   if (reps.length === 0) return null;
 
   const leadCounts = await Promise.all(reps.map(async (rep) => {
@@ -61,7 +70,7 @@ exports.assignLeadToRep = assignLeadToRep;
 exports.getLeads = async (req, res) => {
   try {
     let query = {};
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
     }
 
@@ -195,6 +204,7 @@ exports.createLead = async (req, res) => {
       leadData.assignedRepId = await assignLeadToRep();
     }
     const lead = await Lead.create(leadData);
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
     res.status(201).json(lead);
   } catch (error) {
     logger.error('crmController', 'Create lead ', { error: error.message || error });
@@ -233,7 +243,7 @@ exports.updateLead = async (req, res) => {
     }, {
       new: true,
       userId: req.user._id, // Pass to audit plugin
-      userRole: req.user.role
+      userRole: getDepartmentSlug(req.user)
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
@@ -293,6 +303,7 @@ exports.updateLead = async (req, res) => {
       }
     }
 
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
     res.json(lead);
   } catch (error) {
     logger.error('crmController', 'Update lead ', { error: error.message || error });
@@ -437,7 +448,7 @@ exports.getImports = async (req, res) => {
 
 exports.deleteImport = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
     const { id } = req.params;
@@ -450,7 +461,7 @@ exports.deleteImport = async (req, res) => {
 
     await CRMAudit.create({
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: getDepartmentSlug(req.user),
       action: 'BATCH_DELETE',
       fieldChanged: 'batch',
       oldValue: batch.filename,
@@ -535,7 +546,7 @@ exports.getImportJobStatus = async (req, res) => {
 exports.resetCRM = async (req, res) => {
   try {
     const { reason } = req.body;
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
     await Lead.deleteMany({});
@@ -543,7 +554,7 @@ exports.resetCRM = async (req, res) => {
     await CRMImport.deleteMany({});
     await CRMAudit.create({
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: getDepartmentSlug(req.user),
       action: 'SYSTEM_RESET',
       fieldChanged: 'all',
       oldValue: 'active',
@@ -631,7 +642,7 @@ exports.getCRMStats = async (req, res) => {
   try {
     const CRMStatSnapshot = require('../models/CRMStatSnapshot');
     const { calculateStats } = require('../workers/statsWorker');
-    const isRep = req.user.role !== 'admin';
+    const isRep = !isAdminUser(req.user);
     const query = isRep
       ? { repId: new mongoose.Types.ObjectId(req.user._id) }
       : { repId: null };
@@ -707,13 +718,14 @@ exports.addNote = async (req, res) => {
     await CRMAudit.create({
       leadId: id,
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: getDepartmentSlug(req.user),
       fieldChanged: 'notes',
       oldValue: '',
       newValue: `Note added: "${text.trim()}"`,
       timestamp: new Date()
     });
 
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
     res.json(lead);
   } catch (error) {
     logger.error('crmController', 'Add note audit ', { error: error.message || error });
@@ -861,7 +873,7 @@ exports.deleteLead = async (req, res) => {
 
 exports.purgeAuditLogs = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
     await CRMAudit.deleteMany({});

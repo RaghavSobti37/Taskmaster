@@ -52,7 +52,7 @@ class GamificationService {
       details
     });
 
-    const { broadcastRealtimeEvent } = require('../config/supabase');
+    const { broadcastRealtimeEvent } = require('../config/realtime');
     await broadcastRealtimeEvent(`user-${userId}`, 'xp_awarded', {
       amount,
       action,

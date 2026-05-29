@@ -28,9 +28,11 @@ const upload = multer({
   limits: { fileSize: 32 * 1024 * 1024, files: 12 },
 });
 
-// Role gate: only ops or admin
+const { isOpsUser } = require('../utils/departmentPermissions');
+
+// Department gate: ops or admin
 const opsOnly = (req, res, next) => {
-  if (req.user && (req.user.role === 'ops' || req.user.role === 'admin' || req.user.role === 'operations' || req.user.role === 'Operations')) {
+  if (req.user && isOpsUser(req.user)) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized for Finance/Ops' });

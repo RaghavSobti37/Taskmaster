@@ -40,6 +40,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser, isSalesUser, isOpsUser, isArtistManagerUser, getDepartmentName } from '../utils/departmentPermissions';
 import { Menu } from 'lucide-react';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -398,9 +399,9 @@ const OutletSidebar = () => {
             />
           </NavGroup>
 
-          {(user?.role === 'admin' || user?.role === 'sales' || user?.role === 'artist_management') && (
+          {(isAdminUser(user) || isSalesUser(user) || isArtistManagerUser(user)) && (
             <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile}>
-              {(user?.role === 'admin' || user?.role === 'sales') && (
+              {(isAdminUser(user) || isSalesUser(user)) && (
                 <>
                   <NavItem
                     to="/leads"
@@ -422,7 +423,7 @@ const OutletSidebar = () => {
                   />
                 </>
               )}
-              {(user?.role === 'admin' || user?.role === 'sales') && (
+              {(isAdminUser(user) || isSalesUser(user)) && (
                 <NavItem
                   to="/bookings"
                   icon={CalendarCheck}
@@ -435,7 +436,7 @@ const OutletSidebar = () => {
             </NavGroup>
           )}
 
-          {(user?.role === 'admin' || user?.role === 'ops' || user?.role === 'operations' || user?.role === 'Operations') && (
+          {(isAdminUser(user) || isOpsUser(user)) && (
             <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile}>
               <NavItem
                 to="/finance"
@@ -452,7 +453,7 @@ const OutletSidebar = () => {
                 collapsed={!showLabels}
                 isMobile={isMobile}
               />
-              {(user?.role === 'admin' || user?.role === 'artist_management') && (
+              {(isAdminUser(user) || isArtistManagerUser(user)) && (
                 <NavItem
                   to="/artists"
                   icon={Mic2}
@@ -465,7 +466,7 @@ const OutletSidebar = () => {
 
 </NavGroup>
           )}
-              {user?.role === 'admin' && (
+              {isAdminUser(user) && (
                 <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen={false}>
                   <NavItem
                     to="/admin/users"
@@ -568,7 +569,7 @@ const OutletSidebar = () => {
                 {showLabels && (
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
-                    <p className="text-[8px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider truncate">{user.role}</p>
+                    <p className="text-[8px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider truncate">{getDepartmentName(user)}</p>
                   </div>
                 )}
               </div>

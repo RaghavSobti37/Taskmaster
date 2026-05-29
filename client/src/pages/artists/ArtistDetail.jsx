@@ -14,6 +14,7 @@ import {
 } from '../../components/ui';
 import { useArtist, useArtistAnalytics, useSyncArtistStats, useUpdateArtist, useDeleteArtist, useAddTrackedVideo } from '../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../utils/analyticsDataUtils';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const formatNumber = (num) => {
   if (num == null || isNaN(num) || num === 'N/A' || num === '—') return '—';
@@ -40,6 +41,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function ArtistDetail({ isPreview = false }) {
+  const { confirm } = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('spotify');
@@ -118,7 +120,13 @@ export default function ArtistDetail({ isPreview = false }) {
   };
 
   const handleDeleteArtist = async () => {
-    if (!window.confirm('Are you sure you want to remove this artist profile?')) return;
+    const ok = await confirm({
+      title: 'Remove artist?',
+      message: 'Are you sure you want to remove this artist profile?',
+      confirmLabel: 'Remove',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteMutation.mutateAsync(artist._id);
       navigate('/artists');

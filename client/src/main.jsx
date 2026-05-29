@@ -23,6 +23,7 @@ const queryClient = new QueryClient({
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_bW9jay1jbGVyay1wdWJsaXNoYWJsZS1rZXkuY2xlcmsuYWNjb3VudHMuZGV2JA';
 
 import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -33,7 +34,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ThemeProvider>
               <SidebarProvider>
                 <ToastProvider>
-                  <App />
+                  <ConfirmProvider>
+                    <App />
+                  </ConfirmProvider>
                 </ToastProvider>
               </SidebarProvider>
             </ThemeProvider>

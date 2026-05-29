@@ -20,6 +20,9 @@ import {
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { getWorkspaceColor as resolveWorkspaceColor } from '../../utils/workspaceColors';
 
 const WORKSPACE_COLORS = [
   '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#f97316',
@@ -63,6 +66,7 @@ const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, on
 );
 
 const ProjectsView = () => {
+  const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -75,7 +79,7 @@ const ProjectsView = () => {
   const [dragOverWorkspace, setDragOverWorkspace] = useState(null);
   const [draggingWorkspaceName, setDraggingWorkspaceName] = useState(null);
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = isAdminUser(user);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
@@ -115,18 +119,10 @@ const ProjectsView = () => {
     return result;
   }, [projects, searchTerm, filterStatus, sortBy]);
 
-  const workspaceColorMap = useMemo(() => {
-    const map = {};
-    workspaces.forEach(w => {
-      map[w.name.toUpperCase()] = w.color;
-    });
-    return map;
-  }, [workspaces]);
-
-  const getWorkspaceColor = useCallback((workspaceName) => {
-    const key = (workspaceName || 'General').toUpperCase();
-    return workspaceColorMap[key] || '#64748b';
-  }, [workspaceColorMap]);
+  const getWorkspaceColor = useCallback(
+    (workspaceName) => resolveWorkspaceColor(workspaceName, workspaces),
+    [workspaces]
+  );
 
   const workspaceGroups = useMemo(() => {
     const groups = {};
@@ -232,63 +228,70 @@ const ProjectsView = () => {
       />
 
       <Card className="flex flex-col border-none shadow-none bg-transparent">
-        <div className="mb-4 flex flex-nowrap items-center gap-2 w-full min-w-0 overflow-x-auto">
-          <Input
-            icon={Search}
-            placeholder="Search by name, tags, or workspace..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 min-w-[12rem] min-w-0"
+        <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9rem_9.5rem] lg:items-center lg:gap-2">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+            <Input
+              icon={Search}
+              placeholder="Search name, tags, workspace…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="inline-flex w-fit max-w-full shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5 justify-self-start">
+            <button
+              type="button"
+              onClick={() => setViewMode('workspace')}
+              title="Workspaces"
+              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${
+                viewMode === 'workspace'
+                  ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+              }`}
+            >
+              <LayoutGrid size={12} className="shrink-0" />
+              <span className="hidden sm:inline">Workspaces</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('all')}
+              title="All projects"
+              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${
+                viewMode === 'all'
+                  ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+              }`}
+            >
+              <List size={12} className="shrink-0" />
+              <span className="hidden sm:inline">All</span>
+            </button>
+          </div>
+          <NexusDropdown
+            variant="compact"
+            options={[
+              { value: 'all', label: 'All Projects' },
+              { value: 'active', label: 'Active Only' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'archived', label: 'Archived' },
+            ]}
+            value={filterStatus}
+            onChange={setFilterStatus}
+            placeholder="Status"
+            className="min-w-0 w-full lg:w-[9rem]"
           />
-            <div className="inline-flex shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5">
-              <button
-                type="button"
-                onClick={() => setViewMode('workspace')}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg tm-section-label whitespace-nowrap transition-colors ${
-                  viewMode === 'workspace'
-                    ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
-                }`}
-              >
-                <LayoutGrid size={12} className="shrink-0" /> Workspaces
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('all')}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg tm-section-label whitespace-nowrap transition-colors ${
-                  viewMode === 'all'
-                    ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
-                }`}
-              >
-                <List size={12} className="shrink-0" /> All Projects
-              </button>
-            </div>
-            <NexusDropdown
-              options={[
-                { value: 'all', label: 'All Projects' },
-                { value: 'active', label: 'Active Only' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'archived', label: 'Archived' },
-              ]}
-              value={filterStatus}
-              onChange={setFilterStatus}
-              placeholder="Filter status"
-              className="w-[10.5rem] shrink-0"
-            />
-            <NexusDropdown
-              options={[
-                { value: 'newest', label: 'Newest First' },
-                { value: 'oldest', label: 'Oldest First' },
-                { value: 'progress-high', label: 'Highest Progress' },
-                { value: 'progress-low', label: 'Lowest Progress' },
-                { value: 'name', label: 'Alphabetical' },
-              ]}
-              value={sortBy}
-              onChange={setSortBy}
-              placeholder="Sort by"
-              className="w-[11rem] shrink-0"
-            />
+          <NexusDropdown
+            variant="compact"
+            options={[
+              { value: 'newest', label: 'Newest First' },
+              { value: 'oldest', label: 'Oldest First' },
+              { value: 'progress-high', label: 'Highest Progress' },
+              { value: 'progress-low', label: 'Lowest Progress' },
+              { value: 'name', label: 'Alphabetical' },
+            ]}
+            value={sortBy}
+            onChange={setSortBy}
+            placeholder="Sort"
+            className="min-w-0 w-full lg:w-[9.5rem]"
+          />
         </div>
 
         {isAdmin && draggingProjectId && (
@@ -392,12 +395,17 @@ const ProjectsView = () => {
                               variant="ghost" 
                               size="xs" 
                               className="!text-red-400 hover:bg-red-500/10 !p-1"
-                              onClick={() => {
-                                if (window.confirm(`Delete workspace "${group.name}"? This action cannot be undone.`)) {
-                                  axios.delete(`/api/projects/workspaces/${group.name}`)
-                                    .then(() => queryClient.invalidateQueries({ queryKey: ['workspaces'] }))
-                                    .catch(err => alert(err.response?.data?.error || 'Failed to delete workspace'));
-                                }
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'Delete workspace?',
+                                  message: `Delete workspace "${group.name}"? This action cannot be undone.`,
+                                  confirmLabel: 'Delete',
+                                  type: 'danger',
+                                });
+                                if (!ok) return;
+                                axios.delete(`/api/projects/workspaces/${group.name}`)
+                                  .then(() => queryClient.invalidateQueries({ queryKey: ['workspaces'] }))
+                                  .catch(err => alert(err.response?.data?.error || 'Failed to delete workspace'));
                               }}
                               title="Delete workspace"
                             >

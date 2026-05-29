@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
-import { subscribeToChannel } from '../lib/supabase';
-import toast from 'react-hot-toast';
+import { subscribeToChannel, disconnectRealtime } from '../lib/realtime';
+import { notify } from '../lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 
 const AuthContext = createContext();
@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const logout = useCallback(async () => {
+    disconnectRealtime();
     localStorage.removeItem('coreknot_token');
     localStorage.removeItem('coreknot_user');
     setToken(null);
@@ -81,14 +82,15 @@ export const AuthProvider = ({ children }) => {
         queryClient.invalidateQueries({ queryKey: ['missions'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
 
-        toast.custom((t) => (
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden`}>
-             <div className="p-4 flex-1">
-               <div className="flex items-center">
-                 <div className="flex-shrink-0 bg-blue-500/10 p-2 rounded-xl">
+        notify.custom(
+          () => (
+            <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
+              <div className="p-4 flex-1">
+                <div className="flex items-center">
+                  <div className="shrink-0 bg-blue-500/10 p-2 rounded-xl">
                     <span className="text-xl">✨</span>
-                 </div>
-                 <div className="ml-3 flex-1">
+                  </div>
+                  <div className="ml-3 flex-1">
                     <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
                       XP Gained!
                     </p>
@@ -96,14 +98,18 @@ export const AuthProvider = ({ children }) => {
                       +{payload.amount} XP • {payload.action.replace(/_/g, ' ')}
                     </p>
                     <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out" 
-                           style={{ width: '100%', animation: 'fillBar 1s ease-out' }}></div>
+                      <div
+                        className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: '100%' }}
+                      />
                     </div>
-                 </div>
-               </div>
-             </div>
-          </div>
-        ), { duration: 4000 });
+                  </div>
+                </div>
+              </div>
+            </div>
+          ),
+          { id: `xp-${payload.action}`, duration: 4000 }
+        );
       });
       return () => unsubscribe();
     }

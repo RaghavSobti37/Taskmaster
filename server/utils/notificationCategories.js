@@ -10,8 +10,10 @@ const DEPT_CATEGORY_MAP = {
   'artist-management': ['task', 'review', 'system'],
 };
 
+const { isAdminUser } = require('./departmentPermissions');
+
 async function getAllowedCategoriesForUser(user) {
-  if (user?.role === 'admin') return ALL_CATEGORIES;
+  if (isAdminUser(user)) return ALL_CATEGORIES;
   const Department = require('../models/Department');
   let slug = '';
   if (user?.departmentId) {

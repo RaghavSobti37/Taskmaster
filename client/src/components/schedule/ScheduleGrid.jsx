@@ -2,12 +2,14 @@ import React from 'react';
 import { format, addDays } from 'date-fns';
 import { Badge, Card } from '../../components/ui';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
-import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+import { useProjects } from '../../hooks/useTaskmasterQueries';
+import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
 
 const SLOT_LABELS = { AM: 'AM', PM: 'PM', FULL: 'Full Day' };
 
 const ScheduleGrid = ({ data, projectId, onTaskClick, compact = false }) => {
   const { data: workspaces = [] } = useWorkspaces();
+  const { data: projects = [] } = useProjects();
   if (!data) return null;
 
   const todayKey = data.start;
@@ -92,18 +94,37 @@ const ScheduleGrid = ({ data, projectId, onTaskClick, compact = false }) => {
                                   <div className="text-[9px] font-bold text-[var(--color-text-muted)] mb-1">{count} task{count !== 1 ? 's' : ''}</div>
                                 )}
                                 <div className="space-y-1">
-                                  {items.map((task) => (
-                                    <button
-                                      key={task._id}
-                                      type="button"
-                                      onClick={() => onTaskClick?.(task)}
-                                      className="w-full text-left rounded-lg px-2 py-1.5 text-[10px] font-semibold border border-[var(--color-bg-border)] hover:border-[var(--color-brand-teal)]/50 transition-colors"
-                                      style={{ backgroundColor: `${getWorkspaceColor(getTaskWorkspace(task), workspaces)}22`, borderLeft: `3px solid ${getWorkspaceColor(getTaskWorkspace(task), workspaces)}` }}
-                                    >
-                                      <div className="truncate">{task.title}</div>
-                                      {task.type && <div className="text-[8px] opacity-70 uppercase">{task.type}</div>}
-                                    </button>
-                                  ))}
+                                  {items.map((task) => {
+                                    const isDone = task.status === 'done';
+                                    const workspaceColor = resolveTaskWorkspaceColor(task, workspaces, projects);
+                                    return (
+                                      <button
+                                        key={task._id}
+                                        type="button"
+                                        onClick={() => onTaskClick?.(task)}
+                                        style={isDone ? getCompletedTaskRowStyle(4) : getTaskRowStyle(workspaceColor, 4)}
+                                        className={`tm-task-row flex w-full text-left rounded-lg border border-[var(--color-bg-border)] overflow-hidden hover:border-[var(--color-brand-teal)]/50 transition-colors ${
+                                          isDone ? 'tm-task-row--completed' : ''
+                                        }`}
+                                      >
+                                        <div
+                                          className="w-1 shrink-0"
+                                          style={{
+                                            backgroundColor: isDone
+                                              ? 'var(--color-pastel-slate-text)'
+                                              : workspaceColor,
+                                          }}
+                                          aria-hidden
+                                        />
+                                        <div className="flex-1 min-w-0 px-2 py-1.5">
+                                          <div className="truncate text-[10px] font-semibold">{task.title}</div>
+                                          {task.type && (
+                                            <div className="text-[8px] opacity-70 uppercase">{task.type}</div>
+                                          )}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </td>
                             );

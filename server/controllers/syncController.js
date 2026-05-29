@@ -5,6 +5,7 @@ const CRMAudit = require('../models/CRMAudit');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 const logger = require('../utils/logger');
+const { getDepartmentSlug } = require('../utils/departmentPermissions');
 
 /**
   * Sync Call Bookings from HolySheet BookedCalls sheet
@@ -100,7 +101,7 @@ exports.syncBookings = async (req, res) => {
     if (addedCount > 0 || updatedCount > 0) {
       await CRMAudit.create({
         userId: req.user._id,
-        userRole: req.user.role,
+        userRole: getDepartmentSlug(req.user),
         action: 'BOOKING_SYNC',
         fieldChanged: 'leads',
         oldValue: 'holysheet_booked_calls',

@@ -6,7 +6,6 @@ import {
   ExternalLink, 
   Plus, 
   Trash2, 
-  Search, 
   Link2,
   Cloud,
   Lock,
@@ -14,7 +13,7 @@ import {
   FileText,
   X
 } from 'lucide-react';
-import { Card, Badge, NexusDropdown } from '../ui';
+import { Card, Badge, NexusDropdown, SearchInput, Button } from '../ui';
 import { format } from 'date-fns';
 
 const ProjectAssets = ({ projectId }) => {
@@ -139,27 +138,25 @@ const ProjectAssets = ({ projectId }) => {
   if (loading) return <div className="p-20 text-center animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Loading Assets...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <input 
-            type="text" 
-            placeholder="Search assets..." 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold outline-none text-[var(--color-text-primary)]"
-          />
-        </div>
-        <button 
+    <div className="p-4 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <SearchInput
+          placeholder="Search assets..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:max-w-md shrink-0"
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="shrink-0 w-full sm:w-auto"
           onClick={() => {
             setNewAsset({ name: '', link: '', type: 'other', projectIds: [projectId] });
             setShowAddModal(true);
           }}
-          className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
         >
-          <Plus size={14} strokeWidth={3} /> Add Asset Link
-        </button>
+          <Plus size={14} /> Add Asset Link
+        </Button>
       </div>
 
       <Card className="overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]">

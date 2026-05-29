@@ -16,6 +16,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
 import axios from 'axios';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { signaturePngBase64 } from '../../utils/signaturePng';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
 
@@ -41,6 +42,7 @@ const defaultSignatureTemplate = `<p><br></p><p><br></p><p><br></p><p><br></p><p
 </div>`;
 
 export default function AdminMailContent() {
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -690,16 +692,21 @@ export default function AdminMailContent() {
             size="sm"
             variant="ghost"
             className="text-rose-500 hover:bg-rose-500/10"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              if (window.confirm('Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.')) {
-                deleteCampaignMutation.mutate(row._id, {
-                  onSuccess: () => {
-                    if (selectedCampaign?._id === row._id) setSelectedCampaign(null);
-                    window.location.reload();
-                  }
-                });
-              }
+              const ok = await confirm({
+                title: 'Delete campaign?',
+                message: 'Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.',
+                confirmLabel: 'Delete',
+                type: 'danger',
+              });
+              if (!ok) return;
+              deleteCampaignMutation.mutate(row._id, {
+                onSuccess: () => {
+                  if (selectedCampaign?._id === row._id) setSelectedCampaign(null);
+                  window.location.reload();
+                }
+              });
             }}
             disabled={deleteCampaignMutation.isPending}
             title="Delete Campaign & Data"
@@ -1458,10 +1465,14 @@ export default function AdminMailContent() {
                       size="sm"
                       variant="ghost"
                       className="text-rose-500 hover:bg-rose-500/10"
-                      onClick={() => {
-                        if (window.confirm('Delete this template?')) {
-                          deleteTemplateMutation.mutate(t._id);
-                        }
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete template?',
+                          message: 'Delete this template?',
+                          confirmLabel: 'Delete',
+                          type: 'danger',
+                        });
+                        if (ok) deleteTemplateMutation.mutate(t._id);
                       }}
                       disabled={deleteTemplateMutation.isPending}
                     >
@@ -1569,15 +1580,20 @@ export default function AdminMailContent() {
                   variant="ghost"
                   size="sm"
                   className="text-rose-500 hover:bg-rose-500/10"
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.')) {
-                      deleteCampaignMutation.mutate(selectedCampaign._id, {
-                        onSuccess: () => {
-                          setSelectedCampaign(null);
-                          window.location.reload();
-                        }
-                      });
-                    }
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Delete campaign?',
+                      message: 'Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.',
+                      confirmLabel: 'Delete',
+                      type: 'danger',
+                    });
+                    if (!ok) return;
+                    deleteCampaignMutation.mutate(selectedCampaign._id, {
+                      onSuccess: () => {
+                        setSelectedCampaign(null);
+                        window.location.reload();
+                      }
+                    });
                   }}
                   disabled={deleteCampaignMutation.isPending}
                   title="Delete Campaign & Data"

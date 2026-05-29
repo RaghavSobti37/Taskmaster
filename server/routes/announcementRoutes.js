@@ -8,8 +8,8 @@ const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const { createNotification } = require('../services/notificationDispatcher');
 
-const OPS_ROLES = new Set(['admin', 'ops', 'operations', 'Operations']);
-const canManage = (user) => OPS_ROLES.has(user?.role);
+const { isOpsUser } = require('../utils/departmentPermissions');
+const canManage = (user) => isOpsUser(user);
 const FALLBACK_APP_URL = 'https://taskmaster.app';
 
 const escapeHtml = (value = '') => String(value)
@@ -96,9 +96,6 @@ const dispatchAnnouncementEmails = async (announcementId) => {
     if (!doc || !doc.sendEmail) return;
 
     const recipients = doc.emailDispatch?.recipients || [];
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H4',location:'announcementRoutes.js:dispatchAnnouncementEmails()',message:'Dispatch worker start',data:{announcementId:String(announcementId),recipientCount:recipients.length,status:doc.emailDispatch?.status||''},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (recipients.length === 0) {
       await Announcement.findByIdAndUpdate(announcementId, {
         $set: {
@@ -146,9 +143,6 @@ const dispatchAnnouncementEmails = async (announcementId) => {
           html
         });
         const messageId = sendResult?.id || sendResult?.data?.id || '';
-        // #region agent log
-        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H4',location:'announcementRoutes.js:dispatchAnnouncementEmails()',message:'Recipient send attempt complete',data:{announcementId:String(announcementId),status:'Sent',hasMessageId:!!messageId},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         await Announcement.findOneAndUpdate(
           { _id: announcementId, 'emailDispatch.recipients._id': recipient._id },
@@ -162,9 +156,6 @@ const dispatchAnnouncementEmails = async (announcementId) => {
           }
         );
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H4',location:'announcementRoutes.js:dispatchAnnouncementEmails()',message:'Recipient send failed',data:{announcementId:String(announcementId),error:String(err?.message||'unknown')},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         await Announcement.findOneAndUpdate(
           { _id: announcementId, 'emailDispatch.recipients._id': recipient._id },
           {
@@ -267,10 +258,6 @@ router.get('/', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
-
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'post-fix',hypothesisId:'H2',location:'announcementRoutes.js:get/',message:'Announcement list response summary',data:{userId:String(req.user?._id||''),role:req.user?.role||'',includeExpired,nowIso:now.toISOString(),count:rows.length,ids:rows.map(r=>String(r._id)).slice(0,5)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -288,10 +275,6 @@ router.post('/', async (req, res) => {
     if (audienceType === 'project' && !projectId) {
       return res.status(400).json({ error: 'projectId is required for project audience' });
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H1',location:'announcementRoutes.js:post/',message:'Create announcement request',data:{userId:String(req.user?._id||''),audienceType:audienceType||'all',recipientCount:Array.isArray(recipients)?recipients.length:0,hasProjectId:!!projectId,sendEmail:!!sendEmail,hasExpiresAt:!!expiresAt},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const doc = await Announcement.create({
       title,
       message,
@@ -314,10 +297,6 @@ router.post('/', async (req, res) => {
         recipients: []
       }
     });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H3',location:'announcementRoutes.js:post/',message:'Announcement created document',data:{announcementId:String(doc._id),tenantId:String(doc.tenantId||''),sendEmail:!!doc.sendEmail,expiresAt:doc.expiresAt?new Date(doc.expiresAt).toISOString():null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (sendEmail) {
       const targets = await getRecipientUsers(doc);
       const uniqueTargets = Array.from(new Map(
@@ -325,10 +304,6 @@ router.post('/', async (req, res) => {
           .filter((user) => user?.email && user.email.includes('@'))
           .map((user) => [String(user.email).toLowerCase().trim(), user])
       ).values());
-
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8bbd2d'},body:JSON.stringify({sessionId:'8bbd2d',runId:'pre-fix',hypothesisId:'H1',location:'announcementRoutes.js:post/',message:'Resolved targets for dispatch',data:{announcementId:String(doc._id),targetCount:targets.length,uniqueRecipientCount:uniqueTargets.length,audienceType:doc.audienceType},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       doc.emailDispatch.total = uniqueTargets.length;
       doc.emailDispatch.recipients = uniqueTargets.map((u) => ({
         email: String(u.email).toLowerCase().trim(),

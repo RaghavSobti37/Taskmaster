@@ -6,6 +6,7 @@ const MailTemplate = require('../models/MailTemplate');
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { isAdminUser } = require('../utils/departmentPermissions');
 const { sendCampaign, scanBounces, updateEmailTags } = require('../services/mailService');
 const { google } = require('googleapis');
 
@@ -47,7 +48,7 @@ router.delete('/templates/:id', protect, async (req, res) => {
 // --- PROFILES ---
 router.get('/profiles', protect, async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : { createdBy: req.user._id };
+    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     const profiles = await EmailProfile.find(filter).lean();
     res.json(profiles);
   } catch (err) {
@@ -75,7 +76,7 @@ router.delete('/profiles/:id', protect, async (req, res) => {
   try {
     const profile = await EmailProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
-    if (req.user.role !== 'admin' && profile.createdBy?.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && profile.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to delete this profile' });
     }
     await EmailProfile.findByIdAndDelete(req.params.id);
@@ -90,7 +91,7 @@ router.put('/profiles/:id', protect, async (req, res) => {
   try {
     const profile = await EmailProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
-    if (req.user.role !== 'admin' && profile.createdBy?.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && profile.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to edit this profile' });
     }
     const data = { ...req.body };
@@ -110,7 +111,7 @@ router.put('/profiles/:id', protect, async (req, res) => {
 // --- CAMPAIGNS ---
 router.get('/campaigns', protect, async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : { createdBy: req.user._id };
+    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     const campaigns = await MailCampaign.find(filter).sort('-createdAt').lean();
     for (const camp of campaigns) {
       let total = camp.recipients?.length || 0;
@@ -181,7 +182,7 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
   try {
     const campaign = await MailCampaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    if (req.user.role !== 'admin' && campaign.createdBy?.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && campaign.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to send this campaign' });
     }
     sendCampaign(req.params.id); // Run in background
@@ -228,7 +229,7 @@ router.delete('/campaigns/:id', protect, async (req, res) => {
   try {
     const campaign = await MailCampaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    if (req.user.role !== 'admin' && campaign.createdBy?.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && campaign.createdBy?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to delete this campaign' });
     }
     const campaignId = req.params.id;
@@ -245,7 +246,7 @@ router.delete('/campaigns/:id', protect, async (req, res) => {
 router.get('/stats', protect, async (req, res) => {
   try {
     const Campaign = require('../models/Campaign');
-    const filter = req.user.role === 'admin' ? {} : { createdBy: req.user._id };
+    const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
     const mailCampaigns = await MailCampaign.find(filter).lean();
     const coreCampaigns = await Campaign.find(filter).lean();
     const allCampaigns = [...mailCampaigns, ...coreCampaigns];

@@ -77,7 +77,7 @@ router.get('/', async (req, res) => {
     const tasks = await Task.find(taskFilter)
       .select('title status priority type scheduleSlot scheduleDate startDate dueDate projectId plannedHours createdBy color')
       .populate('createdBy', 'name avatar')
-      .populate('projectId', 'name color')
+      .populate('projectId', 'name workspace color')
       .lean();
 
     const assignmentMap = {};

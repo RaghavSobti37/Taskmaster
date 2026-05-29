@@ -3,6 +3,8 @@ const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { formatProjectName } = require('../utils/formatProjectName');
+const { broadcastRealtimeEvent } = require('../config/realtime');
+const { isAdminUser } = require('../utils/departmentPermissions');
 
 const DEFAULT_WORKSPACES = [
   { name: 'TSC ACADEMY', color: '#3498db' },
@@ -79,6 +81,7 @@ exports.createProject = async (req, res) => {
       project
     });
 
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: project._id, action: 'create' });
     res.status(201).json(project);
   } catch (error) {
     logger.error('projectController', 'Create Project ', { error: error.message || error });
@@ -88,7 +91,7 @@ exports.createProject = async (req, res) => {
 
 exports.getProjects = async (req, res) => {
   try {
-    const filter = req.user.role === 'admin' ? {} : {
+    const filter = isAdminUser(req.user) ? {} : {
       $or: [
         { owner: req.user._id },
         { members: req.user._id }
@@ -190,7 +193,7 @@ exports.updateProject = async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
     // SECURITY: Only owner or admin can update
-    if (req.user.role !== 'admin' && project.owner.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && project.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to update this project' });
     }
 
@@ -228,6 +231,7 @@ exports.updateProject = async (req, res) => {
       });
     }
 
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: updated._id, action: 'update' });
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update project' });
@@ -236,7 +240,7 @@ exports.updateProject = async (req, res) => {
 
 exports.deleteProject = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'ADMIN CLEARANCE REQUIRED' });
     }
 
@@ -249,7 +253,7 @@ exports.deleteProject = async (req, res) => {
     const CRMAudit = require('../models/CRMAudit');
     await CRMAudit.create({
       userId: req.user._id,
-      userRole: req.user.role,
+      userRole: req.user.departmentId?.slug || null,
       action: 'PROJECT_DELETE',
       fieldChanged: 'project',
       oldValue: project.name,
@@ -257,6 +261,7 @@ exports.deleteProject = async (req, res) => {
       notes: `Project ${project.name} decommissioned by root administrator.`
     });
 
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: req.params.id, action: 'delete' });
     res.json({ message: 'Project successfully purged from system deck.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete project' });
@@ -272,7 +277,7 @@ exports.removeMember = async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
     // Only admin or project owner can remove members
-    if (req.user.role !== 'admin' && project.owner.toString() !== req.user._id.toString()) {
+    if (!isAdminUser(req.user) && project.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized to remove members' });
     }
 
@@ -294,6 +299,7 @@ exports.removeMember = async (req, res) => {
       .populate('members', 'name email avatar teams online lastOnline')
       .populate('memberRoles.user', 'name email avatar');
 
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: id, action: 'update' });
     res.json(updatedProject);
   } catch (error) {
     res.status(500).json({ error: 'Failed to remove member' });
@@ -368,7 +374,7 @@ exports.reorderWorkspaces = async (req, res) => {
 
 exports.deleteWorkspace = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Only admins can delete workspaces' });
     }
 
@@ -417,12 +423,12 @@ exports.addMember = async (req, res) => {
     const project = await Project.findById(id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    const callerRole = req.user.role === 'admin' ? 'owner' : (
+    const callerRole = isAdminUser(req.user) ? 'owner' : (
       project.owner.toString() === req.user._id.toString() ? 'owner' :
       project.memberRoles?.find((r) => r.user?.toString() === req.user._id.toString())?.role
     );
 
-    if (!['owner', 'manager'].includes(callerRole) && req.user.role !== 'admin') {
+    if (!['owner', 'manager'].includes(callerRole) && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Not authorized to add members' });
     }
 
@@ -445,6 +451,7 @@ exports.addMember = async (req, res) => {
       .populate('members', 'name email avatar teams online lastOnline departmentId')
       .populate('memberRoles.user', 'name email avatar');
 
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: id, action: 'update' });
     res.json(updatedProject);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add member' });

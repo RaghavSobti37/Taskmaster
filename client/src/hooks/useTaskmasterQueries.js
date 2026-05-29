@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
-import { subscribeToChannel } from '../lib/supabase';
+import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 
 // API Fetchers
@@ -35,7 +35,7 @@ const fetchUserDirectory = async () => {
   return data.users;
 };
 
-// Hooks with Supabase Realtime Sync
+// Hooks with Socket.io realtime sync
 export const useLogs = (userId, limit = 200, enabled = true) => {
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -1160,41 +1160,6 @@ export const useMarkAllNotificationsRead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
-    }
-  });
-};
-
-export const useDepartmentChangeRequests = (enabled = true) => {
-  return useQuery({
-    queryKey: ['departmentChangeRequests', 'mine'],
-    queryFn: async () => (await axios.get('/api/departments/change-requests/mine')).data,
-    enabled
-  });
-};
-
-export const usePendingDepartmentRequests = (enabled = true) => {
-  return useQuery({
-    queryKey: ['departmentChangeRequests', 'pending'],
-    queryFn: async () => (await axios.get('/api/departments/change-requests/pending')).data,
-    enabled
-  });
-};
-
-export const useSubmitDepartmentChange = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (requestedDepartmentId) => axios.post('/api/departments/change-request', { requestedDepartmentId }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departmentChangeRequests'] })
-  });
-};
-
-export const useReviewDepartmentChange = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, action, reviewNote }) => axios.patch(`/api/departments/change-requests/${id}/${action}`, { reviewNote }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departmentChangeRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
     }
   });
 };

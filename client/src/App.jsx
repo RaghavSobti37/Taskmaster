@@ -7,7 +7,13 @@ import ArtistRoute from './components/ArtistRoute';
 import OpsRoute from './components/OpsRoute';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { useToast } from './contexts/ToastContext';
+import {
+  notify,
+  slugId,
+  parseErrorPayload,
+  shouldShowApiSuccessToast,
+  shouldShowApiErrorToast,
+} from './lib/notifications';
 import { DashboardSkeleton } from './components/ui';
 import axios from 'axios';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
@@ -95,7 +101,6 @@ const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsSho
 
 function App() {
   const { loading } = useAuth();
-  const { addToast } = useToast();
 
   React.useEffect(() => {
     const resInterceptor = axios.interceptors.response.use(
@@ -104,25 +109,32 @@ function App() {
           response.data = normalizeProjectsInResponse(response.config?.url, response.data);
         }
         const method = response.config.method?.toLowerCase();
-        const skipToast = response.config.headers?.['x-skip-toast'] || response.config.headers?.['X-Skip-Toast'];
-        if (['post', 'put', 'patch', 'delete'].includes(method) && !skipToast) {
-          const message = response.data?.message || 'Operation successful';
-          addToast({ title: 'Success', message, type: 'success' });
+        if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiSuccessToast(response)) {
+          const url = (response.config?.url || '').split('?')[0];
+          const message = response.data.message;
+          notify.success(message, slugId('api-ok', method, url));
         }
         return response;
       },
       (error) => {
         const method = error.config?.method?.toLowerCase();
-        const skipToast = error.config?.headers?.['x-skip-toast'] || error.config?.headers?.['X-Skip-Toast'];
-        if (['post', 'put', 'patch', 'delete'].includes(method) && !skipToast) {
-          const message = error.response?.data?.message || error.response?.data?.error || error.message || 'An error occurred';
-          addToast({ title: 'Error', message, type: 'error' });
+        if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiErrorToast(error)) {
+          const url = (error.config?.url || '').split('?')[0];
+          const { title, description, technicalError, errorCode, status } = parseErrorPayload(error);
+          notify.error({
+            title,
+            description,
+            technicalError,
+            errorCode,
+            status,
+            uniqueKey: slugId('api-err', method, url),
+          });
         }
         return Promise.reject(error);
       }
     );
     return () => axios.interceptors.response.eject(resInterceptor);
-  }, [addToast]);
+  }, []);
 
   if (loading) return <DashboardSkeleton />;
 

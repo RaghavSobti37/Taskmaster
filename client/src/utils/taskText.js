@@ -1,3 +1,5 @@
+import { ADMIN_SLUG, OPS_SLUG, SALES_SLUG, ARTIST_SLUG } from './departmentPermissions';
+
 /** Plain-text preview for task descriptions (markdown-ish bug reports, notes). */
 export function taskDescriptionPlainText(description) {
   if (!description || typeof description !== 'string') return '';
@@ -24,16 +26,10 @@ export function taskDescriptionPreview(description, maxLength = 140) {
   return `${plain.slice(0, maxLength).trim()}…`;
 }
 
-export const PROJECT_ROLE_OPTIONS = [
-  { value: 'owner', label: 'Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'member', label: 'User' },
-];
-
-/** Suggest project hierarchy role from user profile role. */
-export function suggestProjectRole(profileRole) {
-  const normalized = String(profileRole || '').toLowerCase();
-  if (normalized === 'admin') return 'owner';
-  if (['ops', 'operations', 'artist_management', 'sales'].includes(normalized)) return 'manager';
+/** Suggest project hierarchy role from user department slug. */
+export function suggestProjectRole(profileDepartmentSlug) {
+  const normalized = String(profileDepartmentSlug || '').toLowerCase();
+  if (normalized === ADMIN_SLUG) return 'owner';
+  if ([OPS_SLUG, ARTIST_SLUG, SALES_SLUG].includes(normalized)) return 'manager';
   return 'member';
 }

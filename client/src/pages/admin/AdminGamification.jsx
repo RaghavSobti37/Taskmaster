@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, PageHeader, PageContainer, Badge, PageSkeleton } from '../../components/ui';
 import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy } from 'lucide-react';
 import axios from 'axios';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AdminGamification = () => {
+  const { confirm } = useConfirm();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,9 +70,13 @@ const AdminGamification = () => {
   };
 
   const handleRecalculateAllLevels = async () => {
-    if (!window.confirm('This will recalculate levels for all users with the new formula. Continue?')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Recalculate levels?',
+      message: 'This will recalculate levels for all users with the new formula. Continue?',
+      confirmLabel: 'Continue',
+      type: 'warning',
+    });
+    if (!ok) return;
     try {
       setRecalculating(true);
       const res = await axios.post('/api/gamification-admin/recalculate-all-levels');

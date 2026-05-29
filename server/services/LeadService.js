@@ -3,6 +3,7 @@ const backgroundQueue = require('./backgroundQueue');
 const followupCache = require('./followupCache');
 const { parse } = require('date-fns');
 const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { broadcastRealtimeEvent } = require('../config/realtime');
 
 class LeadService {
   async createLead(rawLeadData) {
@@ -13,6 +14,7 @@ class LeadService {
     await backgroundQueue.queueHolySheetSync(newLead._id);
     await backgroundQueue.queueCsvBackup();
     await followupCache.cacheFollowup(newLead).catch(() => {});
+    broadcastRealtimeEvent('leads', 'lead_change', { leadId: newLead._id, action: 'create' });
     
     return newLead;
   }
@@ -59,6 +61,7 @@ class LeadService {
       await backgroundQueue.queueHolySheetSync(updatedLead._id);
       await backgroundQueue.queueCsvBackup();
       await followupCache.cacheFollowup(updatedLead).catch(() => {});
+      broadcastRealtimeEvent('leads', 'lead_change', { leadId: updatedLead._id, action: 'update' });
     }
     
     return updatedLead;

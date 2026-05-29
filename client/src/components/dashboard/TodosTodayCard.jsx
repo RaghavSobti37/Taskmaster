@@ -1,27 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo } from 'lucide-react';
 import { Card, Badge, DataLoading } from '../ui';
-import { isToday, startOfDay } from 'date-fns';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
-import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
+import { filterDashboardFocusTasks, isTaskOverdue } from '../../utils/dashboardTasks';
 import DashboardTaskRow from './DashboardTaskRow';
 
-const getTaskDay = (task) => {
-  const raw = task.scheduleDate || task.dueDate;
-  if (!raw) return null;
-  return startOfDay(new Date(raw));
-};
-
-const TodosTodayCard = ({ tasks = [], loading, onComplete, onOpenTodo }) => {
+const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpenTodo, completingTaskId = null }) => {
   const navigate = useNavigate();
   const { data: workspaces = [] } = useWorkspaces();
 
-  const todayTasks = tasks.filter((t) => {
-    if (t.status === 'done') return false;
-    const day = getTaskDay(t);
-    return day && isToday(day);
-  });
+  const focusTasks = useMemo(() => filterDashboardFocusTasks(tasks), [tasks]);
+  const overdueCount = useMemo(() => focusTasks.filter(isTaskOverdue).length, [focusTasks]);
 
   const openTask = (task) => {
     if (onOpenTodo) onOpenTodo(task);
@@ -29,30 +20,40 @@ const TodosTodayCard = ({ tasks = [], loading, onComplete, onOpenTodo }) => {
   };
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden flex-1 min-h-0">
+    <Card className="p-0 flex flex-col shadow-md overflow-hidden shrink-0">
       <button
         type="button"
         onClick={() => navigate('/todo')}
         className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between w-full text-left hover:bg-[var(--color-bg-border)]/30 transition-colors shrink-0"
       >
-        <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)]">
-          <ListTodo size={16} className="text-[var(--color-brand-teal)]" /> Todos for Today
-        </h4>
-        <Badge variant="info">{todayTasks.length}</Badge>
+        <div>
+          <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)]">
+            <ListTodo size={16} className="text-[var(--color-brand-teal)]" /> Today & Overdue
+          </h4>
+          {overdueCount > 0 && (
+            <p className="tm-caption mt-0.5 ml-6">{overdueCount} overdue</p>
+          )}
+        </div>
+        <Badge variant={overdueCount > 0 ? 'overdue' : 'info'}>{focusTasks.length}</Badge>
       </button>
-      <div className="p-3 space-y-2 flex-1 min-h-0 overflow-y-auto">
-        {loading && <DataLoading message="Loading tasks..." className="!py-6" />}
-        {!loading && todayTasks.length === 0 && (
-          <p className="tm-caption italic text-center py-8">Nothing due today</p>
+      <div
+        className={`p-3 space-y-2 ${
+          focusTasks.length > 5 ? 'max-h-[min(50vh,400px)] overflow-y-auto custom-scrollbar' : ''
+        }`}
+      >
+        {loading && <DataLoading message="Loading tasks..." className="!py-3" />}
+        {!loading && focusTasks.length === 0 && (
+          <p className="tm-caption italic text-center py-2">Nothing due today or overdue</p>
         )}
         {!loading &&
-          todayTasks.map((task) => (
+          focusTasks.map((task) => (
             <DashboardTaskRow
               key={task._id}
               task={task}
-              workspaceColor={getWorkspaceColor(getTaskWorkspace(task), workspaces)}
+              workspaceColor={resolveTaskWorkspaceColor(task, workspaces, projects)}
               onComplete={onComplete}
               onOpen={openTask}
+              isCompleting={completingTaskId === task._id}
             />
           ))}
       </div>

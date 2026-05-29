@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Plus, Search, Trash2, Settings, Database, TrendingUp, Inbox, Bell, Edit2,
 } from 'lucide-react';
+import { notify } from '../../lib/notifications';
 import {
   PageContainer,
   PageHeader,
@@ -18,7 +19,6 @@ import {
   DataTable,
   Skeleton,
   NexusDropdown,
-  CKDropdown,
   NexusModal,
   ModalShell,
   ModalHeader,
@@ -121,6 +121,7 @@ const ComponentsShowcase = () => {
             ['modals', 'Modals'],
             ['tables', 'Tables'],
             ['feedback', 'Feedback'],
+            ['notifications', 'Notifications'],
             ['add-members', 'Add members'],
             ['layout', 'Layout'],
           ].map(([id, label]) => (
@@ -232,6 +233,7 @@ const ComponentsShowcase = () => {
           <VariantRow label="Semantic">
             <Badge variant="success">Success</Badge>
             <Badge variant="warning">Warning</Badge>
+            <Badge variant="medium">Medium</Badge>
             <Badge variant="danger">Danger</Badge>
             <Badge variant="info">Info</Badge>
             <Badge variant="in-progress">In Progress</Badge>
@@ -265,7 +267,6 @@ const ComponentsShowcase = () => {
         <ShowcaseSection
           id="dropdowns"
           title="Dropdowns"
-          description="Two implementations today — NexusDropdown (pages) vs CKDropdown (forms). Phase 2 will merge."
         >
           <FormFieldGrid>
             <NexusDropdown
@@ -275,12 +276,7 @@ const ComponentsShowcase = () => {
               onChange={setDropdownVal}
               searchable
             />
-            <CKDropdown
-              label="CKDropdown"
-              options={SHOWCASE_DROPDOWN_OPTIONS}
-              value={ckVal}
-              onChange={setCkVal}
-            />
+           
           </FormFieldGrid>
         </ShowcaseSection>
 
@@ -370,35 +366,71 @@ const ComponentsShowcase = () => {
         </ShowcaseSection>
 
         <ShowcaseSection
+          id="notifications"
+          title="Notifications"
+          description="Central notify API — deduped by id. Spam-click buttons to verify only one toast updates."
+        >
+          <VariantRow label="Severity">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => notify.success('Task approved successfully.', 'showcase-success')}
+            >
+              Success
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                notify.warning('Task deadline is 24 hours away.', 'showcase-warning')
+              }
+            >
+              Warning
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() =>
+                notify.error({
+                  title: 'Failed to sync CSV data',
+                  description: 'Column mapping mismatch detected.',
+                  technicalError:
+                    "TypeError: Cannot read properties of undefined (reading 'map') at CSVParser.handleSync (line 42)",
+                  uniqueKey: 'showcase-error',
+                })
+              }
+            >
+              Error + details
+            </Button>
+          </VariantRow>
+          <VariantRow label="Dedupe stress test">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                for (let i = 0; i < 5; i += 1) {
+                  notify.error({
+                    title: 'Attendance Verification Failed',
+                    description: 'Unverified IP address.',
+                    technicalError: `ERR_NETWORK_IP_MISMATCH: attempt ${i + 1}`,
+                    uniqueKey: 'attendance-error-lock',
+                  });
+                }
+              }}
+            >
+              Fire 5× same error id
+            </Button>
+          </VariantRow>
+        </ShowcaseSection>
+
+        <ShowcaseSection
           id="add-members"
           title="Add members"
           description="Three layout options — pick one for Phase 2 rollout (projects, teams, etc.)."
         >
-          <div className="space-y-8">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
-                Option A — Inline bar
-              </p>
-              <AddMembers
-                variant="bar"
-                users={SHOWCASE_MOCK_USERS}
-                excludeIds={['u1']}
-                onAdd={async () => {}}
-                subtitle="Compact row for toolbars and table headers"
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
-                Option B — Card panel
-              </p>
-              <AddMembers
-                variant="card"
-                users={SHOWCASE_MOCK_USERS}
-                excludeIds={[]}
-                onAdd={async () => {}}
-                title="Invite to project"
-              />
-            </div>
+        
+
+           
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                 Option C — Search & pick list
@@ -411,7 +443,7 @@ const ComponentsShowcase = () => {
                 title="Add teammates"
                 subtitle="Best when you have many users to scroll"
               />
-            </div>
+            
           </div>
         </ShowcaseSection>
 
@@ -436,7 +468,6 @@ const ComponentsShowcase = () => {
       <Card className="p-4 border-l-4 border-l-[var(--color-action-primary)] bg-[var(--color-pastel-mint-bg)]/30">
         <p className="text-xs font-bold text-[var(--color-text-primary)]">Phase 2 migration candidates</p>
         <ul className="mt-2 text-xs text-[var(--color-text-secondary)] space-y-1 list-disc list-inside">
-          <li>Merge CKDropdown + NexusDropdown into single Select</li>
           <li>Replace inline search fields with SearchInput (AssetsPage, FinancePage, OfficeAssetsPage)</li>
           <li>Replace inline empty states with EmptyState (ProjectsView, AdminLogsPage, etc.)</li>
           <li>Pick one Button system: primitives vs Shadcn</li>

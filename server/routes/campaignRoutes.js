@@ -9,6 +9,7 @@ const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
 const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
+const { computeRecipientStats } = require('../utils/campaignStats');
 
 router.use(protect);
 
@@ -32,17 +33,10 @@ router.get('/', async (req, res) => {
     const allCampaigns = [...coreCampaigns, ...mailCampaigns].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     for (const camp of allCampaigns) {
-      let total = camp.recipients?.length || 0;
-      let sent = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, invalid = 0;
-      camp.recipients?.forEach(r => {
-        if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) sent++;
-        if (['Opened', 'Clicked'].includes(r.status)) { opened++; }
-        if (r.status === 'Clicked') { clicked++; }
-        if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) bounced++;
-        if (r.status === 'Invalid') { invalid++; }
-        if (r.status === 'Unsubscribed') unsubscribed++;
-      });
-      camp.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
+      const computed = computeRecipientStats(camp.recipients);
+      camp.recipientStatusCounts = computed.recipientStatusCounts;
+      camp.stats = computed.stats;
+      camp.metrics = computed.metrics;
     }
     res.json(allCampaigns);
   } catch (err) {
@@ -80,26 +74,11 @@ router.get('/:id', async (req, res) => {
         .lean();
     }
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    
-    let total = campaign.recipients?.length || 0;
-    let sent = 0, opened = 0, clicked = 0, bounced = 0, unsubscribed = 0, invalid = 0;
-    const recipientStatusCounts = {
-      Pending: 0, Queued: 0, Sent: 0, Opened: 0, Clicked: 0,
-      Bounced: 0, Failed: 0, Invalid: 0, Unsubscribed: 0
-    };
-    campaign.recipients?.forEach(r => {
-      const st = r.status || 'Pending';
-      if (recipientStatusCounts[st] !== undefined) recipientStatusCounts[st]++;
-      else recipientStatusCounts.Pending++;
-      if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) sent++;
-      if (['Opened', 'Clicked'].includes(r.status)) { opened++; }
-      if (r.status === 'Clicked') { clicked++; }
-      if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) bounced++;
-      if (r.status === 'Invalid') { invalid++; }
-      if (r.status === 'Unsubscribed') unsubscribed++;
-    });
-    campaign.recipientStatusCounts = recipientStatusCounts;
-    campaign.stats = { total, sent, opened, clicked, bounced, unsubscribed, invalid };
+
+    const computed = computeRecipientStats(campaign.recipients);
+    campaign.recipientStatusCounts = computed.recipientStatusCounts;
+    campaign.stats = computed.stats;
+    campaign.metrics = computed.metrics;
 
     const events = await MailEvent.find({ campaignId: campaign._id }).sort({ timestamp: -1 }).limit(100).lean();
     campaign.events = events;
@@ -153,14 +132,6 @@ router.get('/:id', async (req, res) => {
         clicks: data.clicks
       }))
       .sort((a, b) => new Date(a.time) - new Date(b.time));
-
-    const statsObj = campaign.stats || { total, sent, opened, clicked, bounced, unsubscribed, invalid };
-    campaign.metrics = {
-      totalSent: statsObj.sent || 0,
-      opened: statsObj.opened || 0,
-      clicked: statsObj.clicked || 0,
-      bounced: statsObj.bounced || 0
-    };
 
     res.json(campaign);
   } catch (err) {

@@ -5,7 +5,7 @@ const { applyMergeTags, buildRecipientValues } = require('../utils/mergeTags');
 const { stripUnsubscribe } = require('../utils/emailContentUtils');
 const { incrementProfileSendCount, incrementProviderSendCount, resolvePoolProfile, resolveRotationProvider, usesSmtpRotation, getProfileRotationProviders } = require('./profileSendStats');
 const { SMTP_PRESETS } = require('../utils/smtpPresets');
-const { isAuthError } = require('../utils/envProviderCredentials');
+const { isAuthError, isRetryableSmtpError } = require('../utils/envProviderCredentials');
 const { ENV_CONFIG } = require('../config/environment');
 const { buildProfileTransporter, buildEnvTransporter, resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
 const fs = require('fs');
@@ -17,6 +17,22 @@ const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
 const buildTransporter = (profile, providerKey = null) => buildProfileTransporter(profile, providerKey);
 
 const buildEnvSmtpTransporter = () => buildEnvTransporter();
+
+const logCampaignEvent = async (MailEvent, { eventType, email, campaignId, metadata, senderProfileId, rotationProvider }) => {
+  try {
+    await MailEvent.create({
+      eventType,
+      email,
+      timestamp: new Date(),
+      campaignId,
+      metadata: metadata || undefined,
+      senderProfileId: senderProfileId || undefined,
+      rotationProvider: rotationProvider || undefined,
+    });
+  } catch (e) {
+    logger.warn('Email Processor', 'Failed to log mail event', { eventType, error: e.message });
+  }
+};
 
 const loadAttachments = (campaign) => {
   const uploadDir = path.join(__dirname, '../uploads/campaign-attachments');
@@ -175,6 +191,12 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       campaign.metrics.bounced = (campaign.metrics.bounced || 0) + 1;
     }
     try { await campaign.save(); } catch (e) {}
+    await logCampaignEvent(MailEvent, {
+      eventType: recipient?.status === 'Unsubscribed' ? 'Skipped' : 'Failed',
+      email: cleanEmail,
+      campaignId: campaign._id,
+      metadata: { reason: recipient?.error || 'Skipped recipient', status: recipient?.status },
+    });
     await checkCompletion();
     return;
   }
@@ -189,6 +211,12 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       recipient.error = err.message;
     }
     try { await campaign.save(); } catch (e) {}
+    await logCampaignEvent(MailEvent, {
+      eventType: 'Failed',
+      email: cleanEmail,
+      campaignId: campaign._id,
+      metadata: { error: err.message, stage: 'resolveSender' },
+    });
     await checkCompletion();
     throw err;
   }
@@ -237,22 +265,31 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const campaignTag = campaign.campaignId || campaign._id.toString();
 
+  const resendPayload = {
+    from: senderFrom,
+    to: [email],
+    subject: mailSubject,
+    html: processedHtml,
+    headers: { 'X-Campaign-ID': campaignTag },
+    tags: [
+      { name: 'campaign_id', value: campaignTag.slice(0, 256) },
+      { name: 'recipient_email', value: cleanEmail.slice(0, 256) },
+    ],
+  };
+  if (mailAttachments.length) {
+    resendPayload.attachments = mailAttachments.map((a) => ({ filename: a.filename, content: a.content }));
+  }
+
+  const sendViaResend = async () => {
+    if (!resend) return false;
+    const resp = await resend.emails.send(resendPayload);
+    messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
+    return true;
+  };
+
   try {
     if (useResend && resend) {
-      const payload = {
-        from: senderFrom,
-        to: [email],
-        subject: mailSubject,
-        html: processedHtml,
-        headers: { 'X-Campaign-ID': campaignTag },
-        tags: [
-          { name: 'campaign_id', value: campaignTag.slice(0, 256) },
-          { name: 'recipient_email', value: cleanEmail.slice(0, 256) }
-        ]
-      };
-      if (mailAttachments.length) payload.attachments = mailAttachments.map((a) => ({ filename: a.filename, content: a.content }));
-      const resp = await resend.emails.send(payload);
-      messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
+      await sendViaResend();
     } else {
       const mailPayload = {
         from: senderFrom,
@@ -270,6 +307,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       const startIdx = jobIndex || 0;
       let sent = false;
       let lastErr = null;
+      const smtpErrors = [];
 
       for (let i = 0; i < providersToTry.length; i++) {
         const providerKey = providersToTry[(startIdx + i) % providersToTry.length];
@@ -288,15 +326,23 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
         } catch (smtpErr) {
           lastErr = smtpErr;
           activeTransporter.close();
+          smtpErrors.push({ provider: providerKey || 'default', host, error: smtpErr.message });
           logger.warn('Email Processor', `SMTP failed via ${providerKey || 'default'} (${host})`, { error: smtpErr.message });
-          if (isAuthError(smtpErr) && i < providersToTry.length - 1) continue;
-          throw smtpErr;
+          if (isRetryableSmtpError(smtpErr) && i < providersToTry.length - 1) continue;
+          if (i < providersToTry.length - 1) continue;
         }
       }
 
+      if (!sent && resend) {
+        logger.info('Email Processor', `SMTP exhausted for ${email}; falling back to Resend API`);
+        await sendViaResend();
+        sent = true;
+      }
+
       if (!sent) {
+        const detail = smtpErrors.map((e) => `${e.provider || 'default'}@${e.host}: ${e.error}`).join('; ');
         throw lastErr || new Error(
-          `No mail transport available for ${email}. Configure RESEND_API_KEY or valid SMTP credentials in profile or server/.env`
+          detail || `No mail transport available for ${email}. Configure RESEND_API_KEY or valid SMTP credentials.`
         );
       }
     }
@@ -321,14 +367,13 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       else await incrementProfileSendCount(profileIdForStats);
     }
 
-    await MailEvent.create({
-      messageId: messageIdStr,
+    await logCampaignEvent(MailEvent, {
       eventType: 'Send',
       email,
-      timestamp: new Date(),
       campaignId: campaign._id,
       senderProfileId: profileIdForStats || profile?._id || campaign.senderProfileId?._id || campaign.senderProfileId || null,
       rotationProvider: usedRotationProvider || null,
+      metadata: { messageId: messageIdStr },
     });
 
     await checkCompletion();
@@ -339,6 +384,14 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       recipient.error = err.message;
     }
     try { await campaign.save(); } catch (e) { if (e.name !== 'VersionError' && e.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign fail save error', { error: e.message }); }
+    await logCampaignEvent(MailEvent, {
+      eventType: 'Failed',
+      email: cleanEmail,
+      campaignId: campaign._id,
+      senderProfileId: profileIdForStats || profile?._id || campaign.senderProfileId?._id || campaign.senderProfileId || null,
+      rotationProvider: usedRotationProvider || null,
+      metadata: { error: err.message, stage: 'send' },
+    });
     await checkCompletion();
     throw err;
   } finally {

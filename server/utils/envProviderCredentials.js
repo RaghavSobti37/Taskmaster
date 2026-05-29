@@ -47,8 +47,22 @@ const isAuthError = (err) => {
     || msg.includes('auth');
 };
 
+const isRetryableSmtpError = (err) => {
+  if (isAuthError(err)) return true;
+  const msg = (err?.message || err?.code || '').toString().toLowerCase();
+  return msg.includes('timeout')
+    || msg.includes('timed out')
+    || msg.includes('econnrefused')
+    || msg.includes('econnreset')
+    || msg.includes('enotfound')
+    || msg.includes('connection')
+    || msg.includes('network')
+    || msg.includes('greeting');
+};
+
 module.exports = {
   getEnvProviderCredential,
   getEnvConfiguredProviders,
   isAuthError,
+  isRetryableSmtpError,
 };

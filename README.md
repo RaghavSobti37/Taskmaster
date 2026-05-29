@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.33-126d5e?style=flat-square" alt="Version 1.7.33" />
+  <img src="https://img.shields.io/badge/version-1.7.34-126d5e?style=flat-square" alt="Version 1.7.34" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -387,6 +387,24 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-30] v1.7.34 — Campaign Metrics, Activity Stream & SMTP Resilience
+
+#### Accurate Campaign Stats
+- Stat cards now derive from recipient status counts — **Unsubscribed no longer counted as Sent**.
+- Added **Failed / Bounced** stat card; open/click rates computed from actual delivery states.
+- Shared `server/utils/campaignStats.js` used by list and detail endpoints.
+
+#### Live Activity Stream
+- Failed sends and skipped (unsubscribed/bounced) recipients now log `Failed` / `Skipped` `MailEvent` rows.
+- Activity stream displays error messages from `metadata.error` / `metadata.reason`.
+
+#### SMTP Connection Timeout Fix
+- Retry next rotation provider on connection timeout, not just auth errors.
+- Automatic **Resend API fallback** when all SMTP providers fail and `RESEND_API_KEY` is set.
+- Tuned nodemailer timeouts (`connectionTimeout`, `greetingTimeout`, `socketTimeout`).
+
+---
 
 ### [2026-05-30] v1.7.33 — Filtered Campaign Resend & Tracking URL Fix
 

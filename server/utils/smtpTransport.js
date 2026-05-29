@@ -38,7 +38,9 @@ const buildProfileTransporter = (profile, providerKey = null) => {
     secure,
     auth: { user: auth.user, pass: auth.pass },
     tls: { rejectUnauthorized: false },
-    connectionTimeout: 20000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
 };
 
@@ -54,7 +56,9 @@ const buildEnvTransporter = () => {
     secure: port === 465,
     auth: { user, pass },
     tls: { rejectUnauthorized: false },
-    connectionTimeout: 20000
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
 };
 

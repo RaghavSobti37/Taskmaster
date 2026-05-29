@@ -40,7 +40,7 @@ const extractClientIp = (req) => {
 const lookupGeoSync = (ip) => {
   const normalized = normalizeIp(ip);
   if (!normalized || normalized === '127.0.0.1' || normalized === '::1') {
-    return { city: 'Mumbai', region: 'MH', country: 'IN', ip: normalized || '127.0.0.1' };
+    return { city: null, region: null, country: null, ip: normalized || '127.0.0.1' };
   }
   const geo = geoip.lookup(normalized);
   return {
@@ -108,11 +108,17 @@ const resolveMailEventCity = (evt) => {
   return null;
 };
 
-const resolveMailEventCityAsync = async (evt, ipCache = new Map()) => {
+const resolveMailEventCityAsync = async (evt, ipCache = new Map(), clickCityByEmail = null) => {
   const sync = resolveMailEventCity(evt);
   if (sync) return sync;
 
-  if (evt?.eventType === 'Open') return null;
+  if (evt?.eventType === 'Open') {
+    const email = evt?.email?.toLowerCase()?.trim();
+    if (email && clickCityByEmail?.get(email)) {
+      return clickCityByEmail.get(email);
+    }
+    return null;
+  }
 
   const ip = eventIp(evt);
   if (!ip || isGoogleInfrastructureIp(ip)) return null;
@@ -120,6 +126,19 @@ const resolveMailEventCityAsync = async (evt, ipCache = new Map()) => {
   if (!ipCache.has(ip)) ipCache.set(ip, lookupGeoAsync(ip));
   const geo = await ipCache.get(ip);
   return isValidDisplayCity(geo?.city) ? geo.city.trim() : null;
+};
+
+/** Resolve click cities per recipient email (used to infer Gmail open locations). */
+const buildClickCityByEmail = async (events, ipCache = new Map()) => {
+  const map = new Map();
+  for (const evt of events) {
+    if (evt.eventType !== 'Click' || !evt.email) continue;
+    const email = evt.email.toLowerCase().trim();
+    if (map.has(email)) continue;
+    const city = await resolveMailEventCityAsync(evt, ipCache, null);
+    if (city) map.set(email, city);
+  }
+  return map;
 };
 
 module.exports = {
@@ -133,4 +152,5 @@ module.exports = {
   lookupGeoAsync,
   resolveMailEventCity,
   resolveMailEventCityAsync,
+  buildClickCityByEmail,
 };

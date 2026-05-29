@@ -23,11 +23,11 @@ const RESEND_STATUS_OPTIONS = [
 ];
 
 export default function CampaignDetails() {
-  const { campaignId } = useParams();
+  const { campaignId: routeCampaignId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const backToEmails = location.state?.from || '/workspace/emails';
-  const { data: campaign, isLoading, error, refetch } = useCampaignDetails(campaignId);
+  const { data: campaign, isLoading, error, refetch } = useCampaignDetails(routeCampaignId);
   const { data: profiles = [] } = useMailProfiles();
   const resendMutation = useResendCampaign();
   const resendFilteredMutation = useResendFilteredCampaign();
@@ -39,6 +39,8 @@ export default function CampaignDetails() {
   const [resendSenderProfileId, setResendSenderProfileId] = useState('');
   const [resendSenderProfileIds, setResendSenderProfileIds] = useState([]);
   const [resendTargetStatuses, setResendTargetStatuses] = useState(['Failed', 'Bounced', 'Pending', 'Invalid']);
+
+  const campaignApiId = campaign?.campaignId || campaign?._id || routeCampaignId;
 
   const openResendModal = () => {
     setResendSenderMode(campaign?.senderMode || 'single');
@@ -111,7 +113,7 @@ export default function CampaignDetails() {
     }
     try {
       const payload = {
-        id: campaign._id,
+        id: campaignApiId,
         senderMode: resendSenderMode,
         senderProfileId: resendSenderMode === 'single' ? resendSenderProfileId : resendSenderProfileIds[0],
         senderProfileIds: resendSenderMode === 'pool' ? resendSenderProfileIds : [],
@@ -144,7 +146,7 @@ export default function CampaignDetails() {
     }
     try {
       const payload = {
-        id: campaign._id,
+        id: campaignApiId,
         recipientEmails: filteredRecipients.map((r) => r.email),
         filterLabel: activeFilterLabel,
         titleOverride: filteredResendTitle,
@@ -158,7 +160,12 @@ export default function CampaignDetails() {
       const result = await resendFilteredMutation.mutateAsync(payload);
       setShowFilteredResendModal(false);
       alert(`New campaign "${result.campaign?.title || filteredResendTitle}" queued: ${result.queuedCount ?? filteredRecipients.length} recipient(s).`);
-      navigate(`/campaign/${result.campaign?._id || result.campaign?.campaignId}`);
+      const nextId = result.campaignId || result.campaign?.campaignId || result.campaign?._id || result.campaignMongoId;
+      if (nextId) {
+        navigate(`/campaign/${nextId}`);
+      } else {
+        await refetch();
+      }
     } catch (e) {
       alert(e.response?.data?.error || e.message);
     }
@@ -254,7 +261,7 @@ export default function CampaignDetails() {
         <StatCard label="Failed / Bounced" value={failedCount} icon={AlertCircle} variant="rose" />
         <StatCard label="Pending / Queued" value={pendingCount} icon={Clock} variant="slate" />
         <StatCard label="Unique Open Rate" value={`${openRate}%`} subValue={`${openedCount} Opens`} icon={Clock} variant="apricot" />
-        <StatCard label="Click-Through Rate" value={`${clickRate}%`} subValue={`${clickedCount} Clicks`} icon={Play} variant="slate" />
+        <StatCard label="Click Rate" value={`${clickRate}%`} subValue={`${clickedCount} Clicks`} icon={Play} variant="slate" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

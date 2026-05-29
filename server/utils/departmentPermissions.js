@@ -30,11 +30,17 @@ const isArtistManagerUser = (user) => {
 /** Legacy role string → department slug (migration only). */
 const ROLE_TO_SLUG = {
   admin: ADMIN_SLUG,
+  administrator: ADMIN_SLUG,
   sales: SALES_SLUG,
   artist_management: ARTIST_SLUG,
+  'artist-management': ARTIST_SLUG,
   operations: OPS_SLUG,
   ops: OPS_SLUG,
   Operations: OPS_SLUG,
+  editor: 'editor',
+  videographer: 'videographer',
+  cg_artist: 'cg-artist',
+  'cg-artist': 'cg-artist',
   user: null,
 };
 

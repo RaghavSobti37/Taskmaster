@@ -648,10 +648,38 @@ export const useSendCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => axios.post(`/api/campaigns/${id}/dispatch`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useResendCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) => axios.post(`/api/campaigns/${id}/resend`, data),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useResendFilteredCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) => axios.post(`/api/campaigns/${id}/resend-filtered`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
     }
   });
 };

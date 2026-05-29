@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.32-126d5e?style=flat-square" alt="Version 1.7.32" />
+  <img src="https://img.shields.io/badge/version-1.7.33-126d5e?style=flat-square" alt="Version 1.7.33" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -267,7 +267,8 @@ npm run generate-icons
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `JWT_SECRET` | Yes | Token signing secret |
 | `FRONTEND_URL` | Prod | Public app URL for email CTAs |
-| `APP_BASE_URL` | Prod | Public **API** origin for open/click tracking (e.g. `https://YOUR-RENDER-SERVICE.onrender.com`) |
+| `APP_BASE_URL` | Prod | Public **API** origin for open/click tracking |
+| `TRACKING_BASE_URL` | Prod | Override API origin for email pixels/clicks (e.g. `https://YOUR-RENDER-SERVICE.onrender.com`) |
 | `VITE_API_URL` | Prod | Direct API URL on static host; bypasses Vercel proxy for large payloads |
 | `TRACKING_USE_LOCAL` | Dev | Set `true` to embed localhost tracking URLs during local send tests |
 | `RESEND_API_KEY` | Optional | System Resend sender for campaigns (`senderMode: system_resend`) |
@@ -386,6 +387,25 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-30] v1.7.33 — Filtered Campaign Resend & Tracking URL Fix
+
+#### Filtered Resend (Campaign Details)
+- **Resend [Filter]** button in Target Recipient Delivery Log — resend only to recipients matching the active status filter.
+- Preview modal shows email HTML, new campaign title `{original} [{Filter}]`, sender selection, then creates a fresh campaign and queues jobs.
+- New endpoint: `POST /api/campaigns/:id/resend-filtered`.
+
+#### Open / Click / Unsubscribe Tracking
+- Removed hardcoded fallback to suspended `taskmaster-api.onrender.com`; use `TRACKING_BASE_URL` or `APP_BASE_URL` via `server/utils/trackingUrls.js`.
+- Unsubscribe links point to `FRONTEND_URL/unsubscribe` (not API); excluded from click-tracker wrapping.
+- Unsubscribe token included in email URLs; legacy API `GET /unsubscribe` redirects to frontend.
+- Vercel proxy updated to live API `YOUR-RENDER-SERVICE.onrender.com`.
+
+#### SMTP & Profiles (v1.7.32 carry-over)
+- Multi-provider SMTP rotation with env credential precedence (Gmail, Brevo, SendGrid, Mailjet).
+- Merge tags (`{{firstname}}`), variable fallbacks, raw HTML unsubscribe blocks.
+
+---
 
 ### [2026-05-30] v1.7.32 — Mail Engine Production Fixes
 

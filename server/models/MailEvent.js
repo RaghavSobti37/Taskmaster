@@ -9,6 +9,8 @@ const MailEventSchema = new mongoose.Schema({
   timestamp: { type: Date, required: true },
   metadata: { type: mongoose.Schema.Types.Mixed },
   campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'MailCampaign', index: true },
+  senderProfileId: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile', index: true },
+  rotationProvider: { type: String, index: true },
   linkClicked: { type: String },
   ipAddress: { type: String },
   userAgent: { type: String },

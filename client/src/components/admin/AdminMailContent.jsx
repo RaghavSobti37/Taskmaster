@@ -19,28 +19,12 @@ import axios from 'axios';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { signaturePngBase64 } from '../../utils/signaturePng';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
-import { SMTP_PRESETS, applySmtpPreset, appendSignature, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
+import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
+import {
+  syncUnsubscribeInContent, appendUnsubscribe, hasUnsubscribeBlock,
+  parseTemplateVariables, insertVariable, setVariableFallbackInContent, previewMergeTags
+} from '../../utils/emailContentUtils';
 
-const defaultSignatureTemplate = `<p><br></p><p><br></p><p><br></p><p><br></p><p><br></p>
-<div>
-  <img src="${signaturePngBase64}" alt="The Shakti Collective" width="100" style="display: block; margin-bottom: 10px;">
-  <div style="font-size: 18px; font-weight: bold; color: #C15717; margin-top: 10px;">Redacted User</div>
-  <div style="font-size: 14px; color: #222222;">Founder, Cinematographer & Web Developer</div>
-  <div style="font-size: 13px; font-style: italic; color: #444444;">Automation, Production & Visual Strategy</div>
-  <div style="font-size: 13px; margin-top: 10px;">
-    <strong>P:</strong> +91 85914 99393<br>
-    <strong>E:</strong> <a href="mailto:redacted@example.com" style="color: #222222; text-decoration: underline;">redacted@example.com</a> | 
-    <a href="https://tsccoreknot.com" style="color: #C15717; text-decoration: underline;">tsccoreknot.com</a>
-  </div>
-  <div style="margin-top: 10px;">
-    <a href="https://instagram.com/theshakticollective.in" style="text-decoration: none; display: inline-block; margin-right: 4px;">
-      <img src="${iconIg}" alt="Instagram" width="24" height="24" style="border: 0;">
-    </a>
-    <a href="https://youtube.com/@theshakticollective" style="text-decoration: none; display: inline-block;">
-      <img src="${iconYt}" alt="YouTube" width="24" height="24" style="border: 0;">
-    </a>
-  </div>
-</div>`;
 
 export default function AdminMailContent({ initialMode = null, hideModeBar = false } = {}) {
   const { confirm } = useConfirm();
@@ -404,10 +388,17 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   }, []);
 
   // New Profile State
-  const [newProfile, setNewProfile] = useState({
-    name: '', email: '', smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', signature: defaultSignatureTemplate,
-    providerType: 'custom', dailyLimit: 500
+  const emptyProfile = () => ({
+    name: '',
+    email: '',
+    smtpUser: '',
+    smtpPass: '',
+    signature: '',
+    rotationEnabled: true,
   });
+  const [newProfile, setNewProfile] = useState(emptyProfile());
+  const [providerCredentials, setProviderCredentials] = useState(emptyProviderCredentials());
+  const [smtpLoginMatchesFrom, setSmtpLoginMatchesFrom] = useState(false);
 
   // New Campaign State
   const [campaignStep, setCampaignStep] = useState(1);
@@ -422,6 +413,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [senderMode, setSenderMode] = useState('single');
   const [senderProfileIds, setSenderProfileIds] = useState([]);
   const [includeSignature, setIncludeSignature] = useState(true);
+  const [signatureProfileId, setSignatureProfileId] = useState('');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [csvRecipients, setCsvRecipients] = useState([]);
   const [csvFileName, setCsvFileName] = useState('');
@@ -431,7 +423,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [excludedSources, setExcludedSources] = useState([]);
   const [excludedEmails, setExcludedEmails] = useState([]);
 
-  const [removeUnsubscribe, setRemoveUnsubscribe] = useState(true);
+  const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
 
   const isRawHtmlPreview = useMemo(() => {
     return useRawHtml
@@ -447,26 +439,105 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:16px;">${sanitized}</body></html>`;
   }, [content, isRawHtmlPreview]);
 
+  const findProfile = (id) => profiles?.find((p) => String(p._id) === String(id));
+
   const activeProfileSignature = useMemo(() => {
-    if (!profiles?.length) return '';
-    if (senderProfileId) {
-      const sp = profiles.find(p => p._id === senderProfileId);
-      return sp?.signature || '';
-    }
-    if (senderProfileIds.length) {
-      const sp = profiles.find(p => p._id === senderProfileIds[0]);
-      return sp?.signature || '';
-    }
-    return '';
-  }, [profiles, senderProfileId, senderProfileIds]);
+    const sigId = signatureProfileId
+      || senderProfileId
+      || senderProfileIds[0]
+      || profiles?.[0]?._id;
+    const sp = sigId ? findProfile(sigId) : null;
+    return (sp?.signature?.trim() );
+  }, [signatureProfileId, senderProfileId, senderProfileIds, profiles]);
+
+  const applySignatureToContent = (html, sig = activeProfileSignature, include = includeSignature) =>
+    syncSignatureInContent(html, sig, include);
+
+  const applyUnsubscribeToContent = (html, include = includeUnsubscribe) =>
+    syncUnsubscribeInContent(html, include);
+
+  const buildEditorContent = (html) => {
+    let result = html || '';
+    result = applyUnsubscribeToContent(result);
+    result = includeSignature ? applySignatureToContent(result) : stripSignature(result);
+    return result;
+  };
+
+  const detectedVariables = useMemo(() => {
+    const parsed = parseTemplateVariables(content);
+    return parsed.map((v) => ({
+      ...v,
+      fallback: v.inlineFallback ?? templateVariables[v.key] ?? null,
+      hasFallback: Boolean(v.inlineFallback ?? templateVariables[v.key]),
+    }));
+  }, [content, templateVariables]);
+
+  const insertFirstnameVariable = () => {
+    setContent((prev) => insertVariable(prev, 'firstname'));
+  };
+
+  const handleVariableClick = (varKey, currentFallback) => {
+    const fallback = window.prompt(
+      `Fallback for {{${varKey}}} when name is missing from sheet/CRM:`,
+      currentFallback || 'Friend'
+    );
+    if (fallback === null) return;
+    setTemplateVariables((prev) => ({ ...prev, [varKey]: fallback }));
+    setContent((prev) => setVariableFallbackInContent(prev, varKey, fallback));
+  };
+
+  const handleIncludeUnsubscribeChange = (checked) => {
+    setIncludeUnsubscribe(checked);
+    setContent((prev) => syncUnsubscribeInContent(prev, checked));
+  };
+
+  const insertUnsubscribeIntoContent = () => {
+    setContent((prev) => appendUnsubscribe(prev));
+  };
 
   const insertSignatureIntoContent = () => {
-    if (!activeProfileSignature) {
-      alert('Select a sender profile with a signature first.');
-      return;
-    }
-    setContent(prev => appendSignature(prev, activeProfileSignature));
+    setContent((prev) => applySignatureToContent(prev));
   };
+
+  const handleRawHtmlChange = (value) => {
+    setContent(value);
+  };
+
+  const handleIncludeSignatureChange = (checked) => {
+    setIncludeSignature(checked);
+    setContent((prev) => applySignatureToContent(prev, activeProfileSignature, checked));
+  };
+
+  const handleSignatureProfileChange = (profileId) => {
+    setSignatureProfileId(profileId);
+    const sp = findProfile(profileId);
+    const sig = sp?.signature?.trim() ;
+    setContent((prev) => syncSignatureInContent(stripSignature(prev), sig, includeSignature));
+  };
+
+  useEffect(() => {
+    if (senderProfileId && !signatureProfileId) {
+      setSignatureProfileId(senderProfileId);
+    }
+  }, [senderProfileId, signatureProfileId]);
+
+  useEffect(() => {
+    if (!includeSignature || !activeProfileSignature) return;
+    if (campaignStep !== 3 && !useRawHtml) return;
+    setContent((prev) => {
+      if (hasSignatureBlock(prev)) return prev;
+      return appendSignature(prev, activeProfileSignature);
+    });
+  }, [campaignStep, useRawHtml, includeSignature, activeProfileSignature]);
+
+  useEffect(() => {
+    if (!includeUnsubscribe) return;
+    if (campaignStep !== 3 && !useRawHtml) return;
+    setContent((prev) => {
+      if (hasUnsubscribeBlock(prev)) return prev;
+      return appendUnsubscribe(prev);
+    });
+  }, [campaignStep, useRawHtml, includeUnsubscribe]);
 
   const isSenderConfigured = () => {
     if (senderMode === 'single') return !!senderProfileId;
@@ -474,16 +545,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     return true;
   };
 
-  useEffect(() => {
-    if (!includeSignature || !senderProfileId || !profiles) return;
-    const sp = profiles.find(p => p._id === senderProfileId);
-    if (sp?.signature && senderMode === 'single') {
-      setContent(prev => {
-        if (prev.includes(sp.signature)) return prev;
-        return appendSignature(prev, sp.signature);
-      });
-    }
-  }, [senderProfileId, profiles, includeSignature, senderMode]);
+  const contentForPreview = useMemo(() => {
+    let html = buildEditorContent(content);
+    html = previewMergeTags(html, { firstname: 'Alex', name: 'Alex Smith' });
+    return html;
+  }, [content, includeSignature, includeUnsubscribe, activeProfileSignature]);
 
   // Handle CSV File Upload
   const handleCsvUpload = (e) => {
@@ -529,17 +595,35 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
   const handleCreateProfile = async (e) => {
     e.preventDefault();
-    if (!newProfile.name || !newProfile.email || !newProfile.smtpHost || !newProfile.smtpUser || !newProfile.smtpPass) {
-      alert('Please fill in all SMTP fields');
+    if (!newProfile.name || !newProfile.email) {
+      alert('Fill in profile name and From email.');
       return;
     }
+    const hasPrimary = newProfile.smtpUser && newProfile.smtpPass;
+    const hasExtra = Object.values(providerCredentials).some((c) => c.enabled && c.smtpPass);
+    if (!hasPrimary && !hasExtra) {
+      alert('Add primary SMTP credentials (Gmail etc.) or enable at least one additional provider with its key.');
+      return;
+    }
+    const payload = { ...newProfile, rotationEnabled: true, providerCredentials };
     if (editingProfileId) {
-      await updateProfileMutation.mutateAsync({ id: editingProfileId, ...newProfile });
+      await updateProfileMutation.mutateAsync({ id: editingProfileId, ...payload });
       setEditingProfileId(null);
     } else {
-      await createProfileMutation.mutateAsync(newProfile);
+      await createProfileMutation.mutateAsync(payload);
     }
-    setNewProfile({ name: '', email: '', smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', signature: defaultSignatureTemplate });
+    setNewProfile(emptyProfile());
+    setProviderCredentials(emptyProviderCredentials());
+    setSmtpLoginMatchesFrom(false);
+  };
+
+  const formatResetTime = (iso) => {
+    if (!iso) return 'Resets daily at 12:00 AM UTC';
+    try {
+      return `Resets ${new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+    } catch {
+      return 'Resets daily at 12:00 AM UTC';
+    }
   };
 
   const [activeExternalTab, setActiveExternalTab] = useState('ALL');
@@ -624,17 +708,14 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       ...selectedExlyList.map(c => ({ name: c.name, email: c.email }))
     ];
 
-    let processedContent = content;
-    if (includeSignature && activeProfileSignature) {
-      processedContent = appendSignature(processedContent, activeProfileSignature);
-    }
+    let processedContent = buildEditorContent(content);
 
-    const detectedVars = new Set();
-    const varRegex = /\{\{(\w+)\}\}/g;
-    let match;
-    while ((match = varRegex.exec(content)) !== null) {
-      detectedVars.add(match[1]);
-    }
+    const variableFallbacks = {};
+    parseTemplateVariables(processedContent).forEach((v) => {
+      const fb = v.inlineFallback ?? templateVariables[v.key];
+      if (fb) variableFallbacks[v.key] = fb;
+    });
+    Object.assign(variableFallbacks, templateVariables);
 
     const payload = {
       title,
@@ -643,14 +724,15 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       senderProfileId: senderMode === 'single' ? senderProfileId : (senderProfileIds[0] || undefined),
       senderMode,
       senderProfileIds: senderMode === 'pool' ? senderProfileIds : [],
-      systemProvider: senderMode === 'system_resend' ? 'resend' : senderMode === 'system_smtp' ? 'env_smtp' : null,
+      ...(senderMode === 'system_resend' ? { systemProvider: 'resend' } : {}),
+      ...(senderMode === 'system_smtp' ? { systemProvider: 'env_smtp' } : {}),
       includeSignature,
+      removeUnsubscribe: !includeUnsubscribe,
+      variableFallbacks,
       attachments: attachments.map(a => ({ filename: a.filename, contentType: a.contentType, storageKey: a.storageKey })),
       leadIds: [],
       customRecipients: mergedRecipients,
-      removeUnsubscribe,
       autoDispatch: false,
-      templateVariables: detectedVars.size > 0 ? Array.from(detectedVars) : []
     };
 
     const payloadSize = estimateJsonBytes(payload);
@@ -895,7 +977,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   onChange={e => setSenderMode(e.target.value)}
                   className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
                 >
-                  <option value="single">Single SMTP Profile</option>
+                  <option value="single">Single Profile (auto-rotates SMTP servers)</option>
                   <option value="pool">Rotate SMTP Pool (multi-profile)</option>
                   <option value="system_resend">System Resend (API key)</option>
                   <option value="system_smtp">System SMTP (env vars)</option>
@@ -919,7 +1001,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         <option value="">-- Select Sender Profile --</option>
                         {profiles.map(p => (
                           <option key={p._id} value={p._id}>
-                            {p.name} ({p.email}) — {p.usage?.used ?? 0}/{p.usage?.limit ?? p.dailyLimit ?? 500} today
+                            {p.name} ({p.email}) — {p.usage?.used ?? 0}/{p.usage?.limit ?? 0} today via {SMTP_PRESETS[p.usage?.rotation?.activeProviders?.[0] || getProfileRotationProviders(p)[0]]?.label || 'SMTP'}
                           </option>
                         ))}
                       </select>
@@ -927,15 +1009,25 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         const sp = profiles.find(p => p._id === senderProfileId);
                         if (!sp?.usage) return null;
                         const pct = sp.usage.percent || 0;
+                        const providers = sp.usage.rotation?.providers || [];
                         return (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]">
-                              <span>Daily SMTP usage</span>
-                              <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{sp.usage.used}/{sp.usage.limit} sent</span>
+                          <div className="space-y-2">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]">
+                                <span>Combined SMTP usage today</span>
+                                <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{sp.usage.used}/{sp.usage.limit}</span>
+                              </div>
+                              <div className="h-2 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-action-primary)]'}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[9px] text-[var(--color-text-muted)]">{formatResetTime(sp.usage.resetAt)}</span>
                             </div>
-                            <div className="h-2 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${pct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-action-primary)]'}`} style={{ width: `${pct}%` }} />
-                            </div>
+                            {providers.filter(prov => prov.used > 0).slice(0, 5).map(prov => (
+                              <div key={prov.providerKey} className="flex justify-between text-[9px] text-[var(--color-text-muted)]">
+                                <span>{prov.label}</span>
+                                <span>{prov.used}/{prov.limit}</span>
+                              </div>
+                            ))}
                           </div>
                         );
                       })()}
@@ -1218,8 +1310,12 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     type="checkbox"
                     checked={useRawHtml}
                     onChange={(e) => {
-                      setUseRawHtml(e.target.checked);
-                      setIsCustomHtml(e.target.checked);
+                      const checked = e.target.checked;
+                      setUseRawHtml(checked);
+                      setIsCustomHtml(checked);
+                      if (checked && includeSignature) {
+                        setContent((prev) => applySignatureToContent(prev));
+                      }
                     }}
                     className="w-4 h-4 rounded cursor-pointer"
                   />
@@ -1278,72 +1374,114 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </div>
               </div>
 
+              {detectedVariables.length > 0 && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg space-y-2">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-yellow-600 flex-1">
+                      <p className="font-bold mb-1">Personalization Variables</p>
+                      <p className="text-[10px]">First name pulled from HolySheet / CRM / CSV name column. Click a variable to set fallback.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {detectedVariables.map((v) => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        onClick={() => handleVariableClick(v.key, v.fallback)}
+                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold uppercase transition-all ${
+                          v.hasFallback
+                            ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-700'
+                            : 'bg-yellow-500/30 border-yellow-500 animate-pulse text-yellow-800'
+                        }`}
+                      >
+                        {`{{${v.key}${v.hasFallback ? `|${v.fallback}` : ''}}}`}
+                        {!v.hasFallback && ' — click to set fallback'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
+                  <Plus size={12} /> Insert {'{{firstname}}'}
+                </Button>
+                <span className="text-[9px] text-[var(--color-text-muted)]">Uses name from HolySheet / CSV / CRM</span>
+              </div>
+
               {useRawHtml ? (
                 <>
                   <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-600 font-bold">
-                    Raw HTML Mode — edit HTML below; signature is included when enabled.
+                    Raw HTML Mode — edit HTML below; signature and unsubscribe blocks use TASKMASTER markers.
                   </div>
-                  <div className="flex items-center gap-4 text-xs">
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={includeSignature} onChange={e => setIncludeSignature(e.target.checked)} />
-                      Include profile signature in email
+                      <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
+                      Include signature in HTML
                     </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
+                      Include unsubscribe in HTML
+                    </label>
+                    {includeSignature && profiles.length > 0 && (
+                      <select
+                        value={signatureProfileId || senderProfileId || profiles[0]?._id || ''}
+                        onChange={(e) => handleSignatureProfileChange(e.target.value)}
+                        className="px-2 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] outline-none"
+                      >
+                        {profiles.map((p) => (
+                          <option key={p._id} value={p._id}>Signature: {p.name}</option>
+                        ))}
+                      </select>
+                    )}
+                    <Button size="xs" variant="secondary" onClick={insertSignatureIntoContent}>
+                      <Plus size={12} /> Insert Signature
+                    </Button>
+                    <Button size="xs" variant="secondary" onClick={insertUnsubscribeIntoContent}>
+                      <Plus size={12} /> Insert Unsubscribe
+                    </Button>
                     <Button size="xs" variant="secondary" onClick={() => setShowHtmlPasteModal(true)}>
                       <Upload size={12} /> Paste HTML
                     </Button>
+                    {includeSignature && !hasSignatureBlock(content) && (
+                      <span className="text-amber-500 text-[10px] font-bold">Signature not in HTML yet</span>
+                    )}
+                    {includeUnsubscribe && !hasUnsubscribeBlock(content) && (
+                      <span className="text-amber-500 text-[10px] font-bold">Unsubscribe not in HTML yet</span>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <textarea
                       className="w-full h-[400px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
                       value={content}
-                      onChange={e => setContent(e.target.value)}
-                      placeholder="Paste or edit raw HTML here..."
+                      onChange={e => handleRawHtmlChange(e.target.value)}
+                      placeholder="Paste or edit raw HTML — signature/unsubscribe blocks appear between TASKMASTER markers..."
                     />
-                    <div className="border border-[var(--color-bg-border)] rounded-xl overflow-hidden">
-                      <div className="bg-[var(--color-bg-secondary)] px-3 py-2 flex gap-2">
-                        <button
-                          onClick={() => setPreviewMode('desktop')}
-                          className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'desktop' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
-                        >
-                          Desktop
-                        </button>
-                        <button
-                          onClick={() => setPreviewMode('mobile')}
-                          className={`px-3 py-1 rounded text-[10px] font-bold ${previewMode === 'mobile' ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)]'}`}
-                        >
-                          Mobile
-                        </button>
-                      </div>
+                 
+                      
                       <div className={`bg-white overflow-auto ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`} style={{ height: '400px' }}>
                         <iframe
-                          srcDoc={content}
+                          srcDoc={contentForPreview}
                           className="w-full h-full border-none"
                           title="Email Preview"
                           sandbox="allow-same-origin"
                         />
-                      </div>
+                      
                     </div>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Variable Detection Warning */}
-                  {content.includes('{{') && (
-                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-start gap-3">
-                      <AlertCircle size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <div className="text-xs text-yellow-600 flex-1">
-                        <p className="font-bold mb-1">Variables Detected</p>
-                        <p>Add fallback values for: {(content.match(/\{\{\w+\}\}/g) || []).join(', ')}</p>
-                        <p className="mt-2 font-mono text-[10px]">Format: {"{{variable_name}}"} or {"{{variable_name|fallback_value}}"}</p>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="bg-white text-black rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
                     <div className="px-3 py-2 border-b border-[var(--color-bg-border)] flex items-center gap-4 text-xs bg-[var(--color-bg-secondary)]">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={includeSignature} onChange={e => setIncludeSignature(e.target.checked)} />
+                        <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
                         Include profile signature
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
+                        Include unsubscribe footer
                       </label>
                     </div>
                     <ReactQuill theme="snow" value={content} onChange={setContent} className="h-[400px] mb-12" />
@@ -1362,15 +1500,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mt-4 text-xs">
-                <input
-                  type="checkbox"
-                  id="removeUnsubscribe"
-                  checked={removeUnsubscribe}
-                  onChange={(e) => setRemoveUnsubscribe(e.target.checked)}
-                  className="rounded border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-action-primary)] focus:ring-[var(--color-action-primary)]"
-                />
-                <label htmlFor="removeUnsubscribe" className="cursor-pointer">Remove Unsubscribe Footer (Not Recommended)</label>
+              <div className="flex items-center gap-2 mt-4 text-xs text-[var(--color-text-muted)]">
+                <span>Unsubscribe block uses {'{{unsubscribe_url}}'} — replaced per recipient at send time.</span>
               </div>
 
               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-3">
@@ -1394,12 +1525,18 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         alert('Enter test email');
                         return;
                       }
+                      if (senderMode === 'single' && !senderProfileId) {
+                        alert('Select a sender profile, or switch to System Resend / System SMTP in Step 1.');
+                        return;
+                      }
                       try {
                         await axios.post('/api/mail/test-campaign', {
                           subject,
-                          content: includeSignature && activeProfileSignature ? appendSignature(content, activeProfileSignature) : content,
+                          content: buildEditorContent(content),
                           testEmail: testCampaignEmail,
-                          senderProfileId: senderProfileId || undefined,
+                          senderProfileId: senderProfileId || senderProfileIds[0] || undefined,
+                          senderProfileIds: senderMode === 'pool' ? senderProfileIds : [],
+                          senderMode,
                           includeSignature
                         });
                         alert(`Test email sent to ${testCampaignEmail}`);
@@ -1502,38 +1639,145 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 <Zap size={16} /> {editingProfileId ? 'Edit SMTP Profile' : 'Configure SMTP Profile'}
               </h3>
               {editingProfileId && (
-                <Button size="xs" variant="ghost" onClick={() => { setEditingProfileId(null); setNewProfile({ name: '', email: '', smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', signature: defaultSignatureTemplate }); }}>
+                <Button size="xs" variant="ghost" onClick={() => { setEditingProfileId(null); setNewProfile(emptyProfile()); setProviderCredentials(emptyProviderCredentials()); setSmtpLoginMatchesFrom(false); }}>
                   Cancel Edit
                 </Button>
               )}
             </div>
             <form onSubmit={handleCreateProfile} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">SMTP Provider Preset</label>
-                <select
-                  value={newProfile.providerType || 'custom'}
+              <div className="p-3 rounded-xl border border-[var(--color-action-primary)]/30 bg-[var(--color-action-primary)]/5 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)]">SMTP Provider (auto-detected)</p>
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  Credentials only work on the matching mail server. Gmail app password → <strong>smtp.gmail.com</strong> only.
+                  Brevo/SendGrid/Mailjet each need a separate free account + their own SMTP key.
+                </p>
+                {newProfile.smtpUser && inferProviderFromEmail(newProfile.smtpUser) && (
+                  <p className="text-[10px] font-bold text-emerald-600">
+                    Detected: {SMTP_PRESETS[inferProviderFromEmail(newProfile.smtpUser)]?.label} ({SMTP_PRESETS[inferProviderFromEmail(newProfile.smtpUser)]?.smtpHost})
+                  </p>
+                )}
+                <details className="text-[10px] text-[var(--color-text-muted)]">
+                  <summary className="cursor-pointer font-bold text-[var(--color-action-primary)]">Need more daily sends? Sign up for free SMTP tiers</summary>
+                  <ul className="mt-2 space-y-1 list-disc pl-4">
+                    <li><strong>Gmail</strong> — Google Account → Security → 2-Step ON → App passwords → create &quot;Mail&quot; password</li>
+                    <li><strong>Brevo</strong> — brevo.com free → SMTP &amp; API → generate SMTP key (login = your Brevo email)</li>
+                    <li><strong>SendGrid</strong> — sendgrid.com free → Settings → API Keys → SMTP: user <code>apikey</code>, pass = API key</li>
+                    <li><strong>Mailjet</strong> — mailjet.com → SMTP credentials in account settings</li>
+                  </ul>
+                  <p className="mt-2">Enable each provider below with its own SMTP credentials — campaigns rotate across all enabled providers.</p>
+                </details>
+              </div>
+
+              <div className="p-3 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)]">Sender Identity</p>
+                <Input label="Profile Name" placeholder="e.g. TSC Marketing" value={newProfile.name} onChange={e => setNewProfile({ ...newProfile, name: e.target.value })} />
+                <Input
+                  label="From Email Address"
+                  placeholder="e.g. hello@yourdomain.com"
+                  value={newProfile.email}
                   onChange={e => {
-                    const preset = applySmtpPreset(e.target.value);
-                    setNewProfile(prev => ({ ...prev, ...preset }));
+                    const email = e.target.value;
+                    setNewProfile(prev => ({
+                      ...prev,
+                      email,
+                      smtpUser: smtpLoginMatchesFrom ? email : prev.smtpUser
+                    }));
                   }}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
-                >
-                  {Object.entries(SMTP_PRESETS).map(([key, p]) => (
-                    <option key={key} value={key}>{p.label}</option>
-                  ))}
-                </select>
+                />
               </div>
-              <Input label="Profile Name" placeholder="e.g. Master Dispatch" value={newProfile.name} onChange={e => setNewProfile({ ...newProfile, name: e.target.value })} />
-              <Input label="Sender Email Address" placeholder="e.g. notifications@company.com" value={newProfile.email} onChange={e => setNewProfile({ ...newProfile, email: e.target.value })} />
-              <Input label="SMTP Host" placeholder="e.g. smtp.sendgrid.net" value={newProfile.smtpHost} onChange={e => setNewProfile({ ...newProfile, smtpHost: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="SMTP Port" type="number" value={newProfile.smtpPort} onChange={e => setNewProfile({ ...newProfile, smtpPort: parseInt(e.target.value) })} />
-                <Input label="Daily Send Limit" type="number" value={newProfile.dailyLimit || 500} onChange={e => setNewProfile({ ...newProfile, dailyLimit: parseInt(e.target.value) || 500 })} />
+
+              <div className="p-3 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)]">SMTP Credentials</p>
+                <p className="text-[10px] text-[var(--color-text-muted)]">Primary mail account (Gmail, Outlook, etc.) — used for auto-detected provider.</p>
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smtpLoginMatchesFrom}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setSmtpLoginMatchesFrom(checked);
+                      if (checked && newProfile.email) {
+                        setNewProfile(prev => ({ ...prev, smtpUser: prev.email }));
+                      }
+                    }}
+                  />
+                  SMTP login same as From email
+                </label>
+                <Input
+                  label="SMTP Login Email"
+                  placeholder="e.g. youraccount@gmail.com"
+                  value={newProfile.smtpUser}
+                  disabled={smtpLoginMatchesFrom}
+                  onChange={e => setNewProfile({ ...newProfile, smtpUser: e.target.value })}
+                />
+                <Input
+                  label="SMTP App Password"
+                  type="password"
+                  placeholder="16-character app password"
+                  value={newProfile.smtpPass}
+                  onChange={e => setNewProfile({ ...newProfile, smtpPass: e.target.value })}
+                />
               </div>
-              <Input label="SMTP Username" value={newProfile.smtpUser} onChange={e => setNewProfile({ ...newProfile, smtpUser: e.target.value })} />
-              <Input label="Gmail App Password" type="password" value={newProfile.smtpPass} onChange={e => setNewProfile({ ...newProfile, smtpPass: e.target.value })} />
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block">Default HTML Signature</label>
+              <div className="p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Multi-provider rotation</p>
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  Primary credentials above = Gmail/Outlook/etc (auto-detected). Enable providers below with <strong>their own</strong> SMTP login + key.
+                  Campaigns rotate only across enabled providers with saved credentials.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3 max-h-[420px] overflow-y-auto">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)] sticky top-0 bg-[var(--color-bg-secondary)] py-1">
+                  Additional SMTP providers ({ADDITIONAL_ROTATION_PROVIDERS.length})
+                </p>
+                {ADDITIONAL_ROTATION_PROVIDERS.map((key) => {
+                  const preset = SMTP_PRESETS[key];
+                  const hint = SMTP_AUTH_HINTS[key];
+                  const cred = providerCredentials[key] || { smtpUser: hint?.userDefault || '', smtpPass: '', enabled: false };
+                  return (
+                    <div key={key} className={`p-3 rounded-lg border ${cred.enabled ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-[var(--color-bg-border)]'} space-y-2`}>
+                      <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!cred.enabled}
+                          onChange={(e) => setProviderCredentials((prev) => ({
+                            ...prev,
+                            [key]: { ...cred, enabled: e.target.checked },
+                          }))}
+                        />
+                        {preset?.label} <span className="font-mono text-[9px] opacity-60">({preset?.smtpHost})</span>
+                        <span className="text-[9px] text-[var(--color-text-muted)] ml-auto">{preset?.dailyLimit}/day</span>
+                      </label>
+                      {cred.enabled && (
+                        <>
+                          <Input
+                            label={hint?.userLabel || 'SMTP login'}
+                            placeholder={hint?.userPlaceholder || ''}
+                            value={cred.smtpUser}
+                            onChange={(e) => setProviderCredentials((prev) => ({
+                              ...prev,
+                              [key]: { ...cred, smtpUser: e.target.value },
+                            }))}
+                          />
+                          <Input
+                            label={hint?.passLabel || 'SMTP password / API key'}
+                            type="password"
+                            placeholder={editingProfileId ? 'Leave blank to keep saved key' : ''}
+                            value={cred.smtpPass}
+                            onChange={(e) => setProviderCredentials((prev) => ({
+                              ...prev,
+                              [key]: { ...cred, smtpPass: e.target.value },
+                            }))}
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-3 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)]">Default HTML Signature</p>
                 <textarea
                   className="w-full h-32 px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none"
                   placeholder="Enter HTML Signature template here..."
@@ -1551,13 +1795,17 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">Active Configurations ({profiles.length})</h3>
             {profiles.map(p => {
               const pct = p.usage?.percent || 0;
+              const rotationProviders = p.usage?.rotation?.providers || [];
               return (
               <Card key={p._id} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <span className="font-bold uppercase tracking-tight text-xs block">{p.name}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{p.email} • {p.smtpHost}:{p.smtpPort}</span>
-                    <span className="text-[9px] text-[var(--color-text-muted)] uppercase">{SMTP_PRESETS[p.providerType]?.label || 'Custom'}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">From: {p.email}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">SMTP login: {p.smtpUser}</span>
+                    <span className="text-[9px] text-[var(--color-text-muted)] uppercase">
+                      Rotates: {getProfileRotationProviders(p).map((k) => SMTP_PRESETS[k]?.label || k).join(', ') || 'none configured'}
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -1566,11 +1814,29 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       className="text-amber-500 hover:bg-amber-500/10"
                       onClick={() => {
                         setEditingProfileId(p._id);
+                        const loginMatches = p.smtpUser && p.email && p.smtpUser.toLowerCase() === p.email.toLowerCase();
+                        setSmtpLoginMatchesFrom(!!loginMatches);
                         setNewProfile({
-                          name: p.name, email: p.email, smtpHost: p.smtpHost, smtpPort: p.smtpPort,
-                          smtpUser: p.smtpUser, smtpPass: '', signature: p.signature || '',
-                          providerType: p.providerType || 'custom', dailyLimit: p.dailyLimit || 500
+                          name: p.name,
+                          email: p.email,
+                          smtpUser: p.smtpUser,
+                          smtpPass: '',
+                          signature: p.signature || '',
+                          rotationEnabled: true,
                         });
+                        const existing = emptyProviderCredentials();
+                        const saved = p.providerCredentials || {};
+                        for (const key of ADDITIONAL_ROTATION_PROVIDERS) {
+                          const s = saved[key];
+                          if (s) {
+                            existing[key] = {
+                              smtpUser: s.smtpUser || SMTP_AUTH_HINTS[key]?.userDefault || '',
+                              smtpPass: '',
+                              enabled: s.enabled !== false && !!s.smtpPass,
+                            };
+                          }
+                        }
+                        setProviderCredentials(existing);
                       }}
                     >
                       <Edit size={14} />
@@ -1586,16 +1852,31 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 mb-3">
                   <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]">
-                    <span>Daily usage</span>
-                    <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{p.usage?.used ?? 0}/{p.usage?.limit ?? p.dailyLimit ?? 500}</span>
+                    <span>Combined daily usage</span>
+                    <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{p.usage?.used ?? 0}/{p.usage?.limit ?? 0}</span>
                   </div>
                   <div className="h-1.5 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${pct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-action-primary)]'}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-[9px] text-[var(--color-text-muted)]">{p.usage?.total ?? 0} total sent all-time</span>
+                  <span className="text-[9px] text-[var(--color-text-muted)]">{formatResetTime(p.usage?.resetAt)}</span>
                 </div>
+                {rotationProviders.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-[var(--color-bg-border)] max-h-48 overflow-y-auto">
+                    {rotationProviders.map((prov) => (
+                      <div key={prov.providerKey} className="space-y-0.5">
+                        <div className="flex justify-between text-[9px] text-[var(--color-text-muted)]">
+                          <span>{prov.label} <span className="font-mono opacity-60">({prov.smtpHost})</span></span>
+                          <span className={prov.percent >= 80 ? 'text-amber-500 font-bold' : ''}>{prov.used}/{prov.limit}</span>
+                        </div>
+                        <div className="h-1 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${prov.percent >= 80 ? 'bg-amber-500' : 'bg-emerald-500/70'}`} style={{ width: `${prov.percent}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
             );})}
             {profiles.length === 0 && (
@@ -1925,7 +2206,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 variant="primary"
                 onClick={() => {
                   if (htmlPasteText.trim()) {
-                    setContent(htmlPasteText);
+                    const pasted = includeSignature
+                      ? applySignatureToContent(htmlPasteText)
+                      : htmlPasteText;
+                    setContent(pasted);
                     setHtmlFileName('pasted-content.html');
                     setIsCustomHtml(true);
                     setShowHtmlPasteModal(false);

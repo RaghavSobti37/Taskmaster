@@ -14,8 +14,14 @@ const campaignSchema = new mongoose.Schema({
     default: 'single'
   },
   senderProfileIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EmailProfile' }],
-  systemProvider: { type: String, enum: ['resend', 'env_smtp'], default: null },
+  systemProvider: { type: String, enum: ['resend', 'env_smtp'] },
   includeSignature: { type: Boolean, default: true },
+  removeUnsubscribe: { type: Boolean, default: false },
+  variableFallbacks: {
+    type: Map,
+    of: String,
+    default: () => new Map(),
+  },
   attachments: [{
     filename: String,
     contentType: String,
@@ -42,6 +48,7 @@ const campaignSchema = new mongoose.Schema({
   recipients: [{
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     email: String,
+    name: String,
     status: { type: String, enum: ['Pending', 'Queued', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid'], default: 'Pending' },
     sentAt: Date,
     error: String,

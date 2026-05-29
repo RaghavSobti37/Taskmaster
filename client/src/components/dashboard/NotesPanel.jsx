@@ -77,10 +77,10 @@ const NotesPanel = () => {
           projects={projects}
           value={projectId}
           onChange={setProjectId}
-          label="Project (optional)"
-          placeholder="Personal"
+          label=""
+          placeholder="Select project"
           allowEmpty
-          emptyLabel="Personal"
+          emptyLabel="Select project"
         />
         <textarea
           value={content}

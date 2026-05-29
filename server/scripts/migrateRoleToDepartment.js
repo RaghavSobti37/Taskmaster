@@ -1,6 +1,12 @@
 /**
- * One-time migration: map User.role → User.departmentId, then remove role field.
- * Usage: node server/scripts/migrateRoleToDepartment.js
+ * Map legacy User.role → User.departmentId (raw collection; role may exist off-schema).
+ *
+ * Usage:
+ *   node server/scripts/migrateRoleToDepartment.js           # local MONGODB_URI
+ *   node server/scripts/migrateRoleToDepartment.js --prod    # MONGODB_URI_PROD
+ *   node server/scripts/migrateRoleToDepartment.js --prod --force   # overwrite dept from role
+ *   node server/scripts/migrateRoleToDepartment.js --prod --dry-run
+ *   node server/scripts/migrateRoleToDepartment.js --prod --keep-role
  */
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
@@ -9,14 +15,25 @@ const Department = require('../models/Department');
 const { ROLE_TO_SLUG } = require('../utils/departmentPermissions');
 const { seedDepartments } = require('../services/departmentService');
 
+const args = new Set(process.argv.slice(2));
+const useProd = args.has('--prod');
+const force = args.has('--force');
+const dryRun = args.has('--dry-run');
+const keepRole = args.has('--keep-role');
+
 async function migrate() {
-  const uri = process.env.MONGODB_URI || process.env.MONGODB_URI_PROD;
+  const uri = useProd
+    ? process.env.MONGODB_URI_PROD
+    : (process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGODB_URI_PROD);
+
   if (!uri) {
-    console.error('MONGODB_URI not set');
+    console.error(useProd ? 'MONGODB_URI_PROD not set' : 'MONGODB_URI not set');
     process.exit(1);
   }
 
-  await mongoose.connect(uri);
+  console.log(`Target: ${useProd ? 'production' : 'local'}${dryRun ? ' (dry-run)' : ''}${force ? ' (force)' : ''}`);
+
+  await mongoose.connect(uri.trim(), { serverSelectionTimeoutMS: 20000 });
   console.log('Connected. Seeding departments if needed...');
   await seedDepartments();
 
@@ -28,33 +45,53 @@ async function migrate() {
   let backfilled = 0;
   let skipped = 0;
   let unmapped = 0;
+  let noRole = 0;
 
   for (const u of users) {
-    if (u.departmentId) {
+    const role = u.role;
+    if (!role || role === 'user') {
+      if (!u.departmentId) noRole++;
+      if (u.departmentId) skipped++;
+      continue;
+    }
+
+    if (u.departmentId && !force) {
       skipped++;
       continue;
     }
-    const slug = ROLE_TO_SLUG[u.role];
+
+    const slug = ROLE_TO_SLUG[role];
     if (!slug) {
-      if (u.role && u.role !== 'user') {
-        console.warn(`No slug mapping for role "${u.role}" on ${u.email}`);
-        unmapped++;
-      }
+      console.warn(`No slug mapping for role "${role}" on ${u.email}`);
+      unmapped++;
       continue;
     }
+
     const deptId = deptsBySlug[slug];
     if (!deptId) {
       console.warn(`Department slug "${slug}" not found for ${u.email}`);
       unmapped++;
       continue;
     }
-    await User.collection.updateOne({ _id: u._id }, { $set: { departmentId: deptId } });
+
+    if (!dryRun) {
+      await User.collection.updateOne({ _id: u._id }, { $set: { departmentId: deptId } });
+    }
     backfilled++;
-    console.log(`  ${u.email}: role "${u.role}" → department ${slug}`);
+    const action = u.departmentId && force ? 'reassigned' : 'assigned';
+    console.log(`  ${u.email}: role "${role}" → ${slug} (${action})`);
   }
 
-  const unset = await User.collection.updateMany({}, { $unset: { role: '' } });
-  console.log(`Done. backfilled=${backfilled}, already had dept=${skipped}, unmapped=${unmapped}, role unset=${unset.modifiedCount}`);
+  let unsetCount = 0;
+  if (!dryRun && !keepRole) {
+    const unset = await User.collection.updateMany({}, { $unset: { role: '' } });
+    unsetCount = unset.modifiedCount;
+  }
+
+  console.log(
+    `Done. assigned=${backfilled}, skipped(has dept${force ? '' : ', no force'})=${skipped}, ` +
+      `no mappable role=${noRole}, unmapped=${unmapped}, role unset=${unsetCount}`
+  );
   await mongoose.disconnect();
 }
 

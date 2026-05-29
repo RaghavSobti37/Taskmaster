@@ -1,42 +1,22 @@
 const logger = require('../utils/logger');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
 const { appendSignatureIfMissing } = require('../utils/emailSignature');
-const { incrementProfileSendCount, resolvePoolProfile } = require('./profileSendStats');
+const { applyMergeTags, buildRecipientValues } = require('../utils/mergeTags');
+const { stripUnsubscribe } = require('../utils/emailContentUtils');
+const { incrementProfileSendCount, incrementProviderSendCount, resolvePoolProfile, resolveRotationProvider, usesSmtpRotation, getProfileRotationProviders } = require('./profileSendStats');
+const { SMTP_PRESETS } = require('../utils/smtpPresets');
+const { isAuthError } = require('../utils/envProviderCredentials');
 const { ENV_CONFIG } = require('../config/environment');
+const { buildProfileTransporter, buildEnvTransporter, resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
 const fs = require('fs');
 const path = require('path');
 
-const resolveTrackingBaseUrl = () => {
-  let baseUrl = process.env.APP_BASE_URL || 'https://YOUR-RENDER-SERVICE.onrender.com';
-  const useLocalTracking = process.env.TRACKING_USE_LOCAL === 'true';
-  if (!useLocalTracking && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
-    baseUrl = 'https://YOUR-RENDER-SERVICE.onrender.com';
-  }
-  return baseUrl.replace(/\/$/, '');
-};
+const { resolveTrackingApiBaseUrl } = require('../utils/trackingUrls');
+const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
 
-const buildTransporter = (profile) => {
-  const nodemailer = require('nodemailer');
-  return nodemailer.createTransport({
-    host: profile.smtpHost || 'smtp.gmail.com',
-    port: profile.smtpPort || 587,
-    secure: profile.smtpPort === 465,
-    auth: { user: profile.smtpUser, pass: profile.smtpPass },
-    tls: { rejectUnauthorized: false }
-  });
-};
+const buildTransporter = (profile, providerKey = null) => buildProfileTransporter(profile, providerKey);
 
-const buildEnvSmtpTransporter = () => {
-  const nodemailer = require('nodemailer');
-  if (!ENV_CONFIG.smtp?.host || !ENV_CONFIG.smtp?.user) return null;
-  return nodemailer.createTransport({
-    host: ENV_CONFIG.smtp.host,
-    port: ENV_CONFIG.smtp.port || 587,
-    secure: ENV_CONFIG.smtp.port === 465,
-    auth: { user: ENV_CONFIG.smtp.user, pass: ENV_CONFIG.smtp.pass },
-    tls: { rejectUnauthorized: false }
-  });
-};
+const buildEnvSmtpTransporter = () => buildEnvTransporter();
 
 const loadAttachments = (campaign) => {
   const uploadDir = path.join(__dirname, '../uploads/campaign-attachments');
@@ -57,6 +37,9 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
   const mode = campaign.senderMode || 'single';
 
   if (mode === 'system_resend') {
+    if (!resend) {
+      throw new Error('RESEND_API_KEY not configured. Cannot use System Resend sender mode.');
+    }
     const fromEmail = process.env.SYSTEM_VERIFIED_FROM_EMAIL || campaign.senderProfileId?.email;
     return {
       profile: {
@@ -72,6 +55,9 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
 
   if (mode === 'system_smtp') {
     const transporter = buildEnvSmtpTransporter();
+    if (!transporter) {
+      throw new Error('System SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in server/.env');
+    }
     const fromEmail = process.env.SYSTEM_VERIFIED_FROM_EMAIL || ENV_CONFIG.smtp?.user || 'system@taskmaster.internal';
     return {
       profile: {
@@ -87,13 +73,19 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
 
   if (mode === 'pool' && campaign.senderProfileIds?.length) {
     const poolIds = campaign.senderProfileIds.map((id) => (id._id || id).toString());
-    const poolProfile = await resolvePoolProfile(poolIds, jobIndex || 0);
-    if (!poolProfile) throw new Error('All SMTP profiles in pool have reached their daily send limit');
+    const poolResult = await resolvePoolProfile(poolIds, jobIndex || 0);
+    if (!poolResult) throw new Error('All SMTP profiles in pool have reached their daily send limit');
+    const { profile: poolProfile, providerKey } = poolResult;
+    const poolTransporter = buildTransporter(poolProfile, providerKey);
+    if (!poolTransporter) {
+      throw new Error(`SMTP profile "${poolProfile.name}" could not build transporter for rotation.`);
+    }
     return {
       profile: poolProfile,
       useResend: false,
-      transporter: poolProfile.smtpHost ? buildTransporter(poolProfile) : null,
-      profileIdForStats: poolProfile._id
+      transporter: poolTransporter,
+      profileIdForStats: poolProfile._id,
+      rotationProvider: providerKey,
     };
   }
 
@@ -102,16 +94,37 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
     || { name: 'Taskmaster Core Engine', email: 'system@taskmaster.internal', smtpHost: 'mock_smtp_host' };
 
   const { resend: globalResend } = require('./mailDriver');
-  const useResend = !!globalResend;
-  const transporter = (!useResend && profile.smtpHost && profile.smtpHost !== 'mock_smtp_host')
-    ? buildTransporter(profile)
-    : null;
+  const useResend = !!globalResend && !usesSmtpRotation(profile);
+
+  let rotationProvider = null;
+  let transporter = null;
+
+  if (usesSmtpRotation(profile) && profile._id) {
+    rotationProvider = await resolveRotationProvider(profile, jobIndex || 0);
+    if (!rotationProvider) {
+      throw new Error(`All free SMTP servers have reached their daily limit for profile "${profile.name}". Resets at midnight UTC.`);
+    }
+    transporter = buildTransporter(profile, rotationProvider);
+    if (!transporter) {
+      throw new Error(`Could not build SMTP transporter for ${rotationProvider}.`);
+    }
+  } else {
+    transporter = !useResend ? buildTransporter(profile) : null;
+  }
+
+  if (!useResend && !transporter && profile.smtpHost !== 'mock_smtp_host') {
+    throw new Error(
+      `SMTP profile "${profile.name || profile.email}" has invalid host "${profile.smtpHost || ''}". ` +
+      'Enable SMTP rotation or set a valid host like smtp.gmail.com.'
+    );
+  }
 
   return {
     profile,
     useResend,
     transporter,
-    profileIdForStats: profile._id || null
+    profileIdForStats: profile._id || null,
+    rotationProvider,
   };
 };
 
@@ -180,27 +193,46 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     throw err;
   }
 
-  const { profile, useResend, transporter, profileIdForStats } = sender;
+  const { profile, useResend, transporter, profileIdForStats, rotationProvider } = sender;
   const { resend } = require('./mailDriver');
+  let usedRotationProvider = rotationProvider;
 
   const baseUrl = resolveTrackingBaseUrl();
   logger.info('Email Processor', `Tracking base URL: ${baseUrl}`);
 
+  const recipient = campaign.recipients?.id
+    ? campaign.recipients.id(recipientId)
+    : campaign.recipients?.find((r) => r._id?.toString() === recipientId?.toString() || r.email === email);
+
   let htmlContent = content || campaign.content || '';
   const shouldIncludeSignature = campaign.includeSignature !== false;
+
+  if (campaign.removeUnsubscribe) {
+    htmlContent = stripUnsubscribe(htmlContent);
+  }
+
+  const mergeValues = buildRecipientValues(recipient, leadDoc);
+  const fallbacks = campaign.variableFallbacks instanceof Map
+    ? Object.fromEntries(campaign.variableFallbacks.entries())
+    : (campaign.variableFallbacks || {});
+  htmlContent = applyMergeTags(htmlContent, mergeValues, fallbacks);
+
   if (shouldIncludeSignature && profile.signature) {
     htmlContent = appendSignatureIfMissing(htmlContent, profile.signature);
   }
+
+  const mergedSubject = applyMergeTags(subject || campaign.subject || campaign.title, mergeValues, fallbacks);
 
   const { processedHtml } = await prepareCampaignHTML(
     htmlContent,
     campaign.campaignId || campaign._id.toString(),
     email,
-    baseUrl
+    baseUrl,
+    { skipAutoFooter: campaign.removeUnsubscribe === true }
   );
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;
-  const mailSubject = subject || campaign.subject || campaign.title;
+  const mailSubject = mergedSubject;
   const mailAttachments = loadAttachments(campaign);
   let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const campaignTag = campaign.campaignId || campaign._id.toString();
@@ -221,18 +253,52 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       if (mailAttachments.length) payload.attachments = mailAttachments.map((a) => ({ filename: a.filename, content: a.content }));
       const resp = await resend.emails.send(payload);
       messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
-    } else if (transporter) {
-      const info = await transporter.sendMail({
+    } else {
+      const mailPayload = {
         from: senderFrom,
         to: email,
         subject: mailSubject,
         html: processedHtml,
         attachments: mailAttachments,
-        headers: { 'X-Campaign-ID': campaignTag }
-      });
-      messageIdStr = info.messageId;
-    } else {
-      logger.info('Memory Queue', `Simulated dispatch to ${email}`);
+        headers: { 'X-Campaign-ID': campaignTag },
+      };
+
+      const providersToTry = (usesSmtpRotation(profile) && profile._id)
+        ? getProfileRotationProviders(profile)
+        : (rotationProvider ? [rotationProvider] : [null]);
+
+      const startIdx = jobIndex || 0;
+      let sent = false;
+      let lastErr = null;
+
+      for (let i = 0; i < providersToTry.length; i++) {
+        const providerKey = providersToTry[(startIdx + i) % providersToTry.length];
+        const activeTransporter = providerKey ? buildTransporter(profile, providerKey) : transporter;
+        if (!activeTransporter) continue;
+
+        const host = providerKey ? SMTP_PRESETS[providerKey]?.smtpHost : profile.smtpHost;
+
+        try {
+          const info = await activeTransporter.sendMail(mailPayload);
+          messageIdStr = info.messageId;
+          usedRotationProvider = providerKey;
+          sent = true;
+          activeTransporter.close();
+          break;
+        } catch (smtpErr) {
+          lastErr = smtpErr;
+          activeTransporter.close();
+          logger.warn('Email Processor', `SMTP failed via ${providerKey || 'default'} (${host})`, { error: smtpErr.message });
+          if (isAuthError(smtpErr) && i < providersToTry.length - 1) continue;
+          throw smtpErr;
+        }
+      }
+
+      if (!sent) {
+        throw lastErr || new Error(
+          `No mail transport available for ${email}. Configure RESEND_API_KEY or valid SMTP credentials in profile or server/.env`
+        );
+      }
     }
 
     const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find((r) => r._id.toString() === recipientId.toString());
@@ -250,14 +316,19 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     }
     try { await campaign.save(); } catch (err) { if (err.name !== 'VersionError' && err.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign save error', { error: err.message }); }
 
-    if (profileIdForStats) await incrementProfileSendCount(profileIdForStats);
+    if (profileIdForStats) {
+      if (usedRotationProvider) await incrementProviderSendCount(profileIdForStats, usedRotationProvider);
+      else await incrementProfileSendCount(profileIdForStats);
+    }
 
     await MailEvent.create({
       messageId: messageIdStr,
       eventType: 'Send',
       email,
       timestamp: new Date(),
-      campaignId: campaign._id
+      campaignId: campaign._id,
+      senderProfileId: profileIdForStats || profile?._id || campaign.senderProfileId?._id || campaign.senderProfileId || null,
+      rotationProvider: usedRotationProvider || null,
     });
 
     await checkCompletion();

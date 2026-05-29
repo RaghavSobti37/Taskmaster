@@ -595,6 +595,13 @@ router.post('/webhooks/resend', async (req, res) => {
 });
 
 
+// Legacy GET /unsubscribe on API host → frontend page (old emails pointed at API /unsubscribe)
+router.get('/unsubscribe', (req, res) => {
+  const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(302, `${frontend}/unsubscribe${qs}`);
+});
+
 // Unsubscribe Handler
 router.post('/unsubscribe', async (req, res) => {
   const { email, reason, campaignId, recipientId, token } = req.body;

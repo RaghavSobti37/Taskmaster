@@ -218,6 +218,23 @@ router.get('/click/:clickId', async (req, res) => {
         }
 
         if (camp) {
+          const backfillOpenGeo = async () => {
+            if (!isValidDisplayCity(location?.city)) return;
+            await MailEvent.updateMany(
+              {
+                campaignId: camp._id,
+                email: log.leadEmail.toLowerCase(),
+                eventType: 'Open',
+              },
+              {
+                $set: {
+                  'location.city': location.city,
+                  ...(location.country ? { 'location.country': location.country } : {}),
+                },
+              }
+            ).setOptions({ bypassTenant: true });
+          };
+
           if (isCore) {
             const updateObj = {
               $set: { "recipients.$.status": "Clicked" },
@@ -246,7 +263,8 @@ router.get('/click/:clickId', async (req, res) => {
                 linkClicked: finalUrl,
                 userAgent,
                 ...mailEventGeoPayload(location),
-              })
+              }),
+              backfillOpenGeo(),
             ]);
           } else {
             const updateObj = {
@@ -275,7 +293,8 @@ router.get('/click/:clickId', async (req, res) => {
                 linkClicked: finalUrl,
                 userAgent,
                 ...mailEventGeoPayload(location),
-              })
+              }),
+              backfillOpenGeo(),
             ]);
           }
         }

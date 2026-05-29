@@ -11,7 +11,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
-const { resolveMailEventCityAsync, eventIp } = require('../utils/geoLookup');
+const { resolveMailEventCityAsync, buildClickCityByEmail, eventIp } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 
 router.use(protect);
@@ -75,16 +75,17 @@ router.get('/:id', async (req, res) => {
     campaign.metrics = computed.metrics;
 
     const ipCache = new Map();
-    const resolveEventCity = (evt) => resolveMailEventCityAsync(evt, ipCache);
-
     const eventQuery = { campaignId: campaign._id };
-    const eventsRaw = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).sort({ timestamp: -1 }).limit(100).lean();
+    const allEvents = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).lean();
+
+    const clickCityByEmail = await buildClickCityByEmail(allEvents, ipCache);
+    const resolveEventCity = (evt) => resolveMailEventCityAsync(evt, ipCache, clickCityByEmail);
+
+    const eventsRaw = allEvents.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
     campaign.events = await Promise.all(eventsRaw.map(async (evt) => ({
       ...evt,
       displayCity: await resolveEventCity(evt),
     })));
-
-    const allEvents = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).lean();
     
     const locationBreakdown = {};
     const timeSeriesMap = {};

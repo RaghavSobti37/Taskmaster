@@ -10,6 +10,7 @@ const ACTION_LABELS = {
   COMPLETE_TASK: 'Completed task',
   CREATE_TASK: 'Created task',
   CREATE_PROJECT: 'Created project',
+  DAILY_LOG: 'Logged daily work',
   MISSION_COMPLETE: 'Completed mission',
   CALENDAR_EVENT_CREATED: 'Created calendar event',
   ATTENDANCE_ACTION: 'Marked attendance action',

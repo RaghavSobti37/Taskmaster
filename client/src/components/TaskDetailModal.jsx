@@ -5,7 +5,7 @@ import { NexusModal, ModalShell, ModalFooter, Button } from './ui';
 import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser } from '../utils/departmentPermissions';
+import { canReviewTask } from '../utils/taskReview';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
 
@@ -29,8 +29,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const assignedById = task?.assignments?.[0]?.assignedBy?._id || task?.assignments?.[0]?.assignedBy || task?.assignedBy?._id || task?.assignedBy;
-  const canReview = assignedById?.toString() === user?._id?.toString() || isAdminUser(user);
+  const canReview = canReviewTask(task, user, projects);
   const canEditTimeline = canReview || task?.createdBy?._id?.toString() === user?._id?.toString();
 
   React.useEffect(() => {

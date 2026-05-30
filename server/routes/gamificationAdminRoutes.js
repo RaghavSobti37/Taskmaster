@@ -33,6 +33,7 @@ router.put('/config', protect, admin, async (req, res) => {
       'taskCompletion',
       'taskCreation',
       'projectCreation',
+      'dailyLog',
       'attendanceLog',
       'assetUpload',
       'commentCreation',

@@ -6,6 +6,19 @@ const GamificationConfig = require('../models/GamificationConfig');
 const BASE_XP = 100;
 const STEP_XP = 100;
 
+const ACTION_CONFIG_KEY = {
+  COMPLETE_TASK: 'taskCompletion',
+  CREATE_TASK: 'taskCreation',
+  CREATE_PROJECT: 'projectCreation',
+  DAILY_LOG: 'dailyLog',
+  ATTENDANCE_ACTION: 'attendanceLog',
+  ATTENDANCE_CHECKIN_WINDOW: 'attendanceLog',
+  ATTENDANCE_CHECKOUT_WINDOW: 'attendanceLog',
+  LEAVE_APPLIED: 'attendanceLog',
+  CALENDAR_EVENT_CREATED: 'commentCreation',
+  ANNOUNCEMENT_CREATED: 'commentCreation',
+};
+
 class GamificationService {
   static async getConfig() {
     let config = await GamificationConfig.findOne();
@@ -64,7 +77,11 @@ class GamificationService {
   }
 
   static async awardActionXp(userId, action = 'ACTION_TRACKED', details = {}) {
-    return this.awardExp(userId, 1, action, details);
+    const config = await this.getConfig();
+    const configKey = ACTION_CONFIG_KEY[action];
+    const amount = configKey ? (config[configKey] ?? 0) : 0;
+    if (!amount || amount <= 0) return null;
+    return this.awardExp(userId, amount, action, details);
   }
 
   static async generateDailyMissions(userId) {

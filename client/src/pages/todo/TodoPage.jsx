@@ -17,6 +17,7 @@ import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
+import { getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
@@ -92,7 +93,7 @@ const TodoPage = () => {
     } catch (err) {
       addToast({
         title: 'Error',
-        message: err.response?.data?.error || 'Failed',
+        message: err.response?.data?.error || err.response?.data?.message || 'Failed',
         type: 'error',
         module: MODULE.PROJECTS,
       });
@@ -106,27 +107,35 @@ const TodoPage = () => {
       return <TaskTableRowSkeleton key={task._id} colSpan={7} />;
     }
     const isDone = task.status === 'done';
+    const isInReview = task.status === 'in-review';
+    const assigner = getTaskAssignedBy(task);
     const project = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
     const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
     return (
       <tr
         key={task._id}
         data-highlight-id={task._id}
-        className={`tm-task-row cursor-pointer rounded-xl overflow-hidden ${isDone ? 'opacity-60' : ''}`}
+        className={`tm-task-row cursor-pointer rounded-xl overflow-hidden ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
         style={getTaskRowStyle(accent)}
         onClick={() => setSelectedTask(task)}
       >
         <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => (isDone ? null : setTaskToComplete(task))}
-            className={isDone ? 'text-emerald-500' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
+            onClick={() => (isDone || isInReview ? null : setTaskToComplete(task))}
+            className={isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
+            title={isInReview ? 'Awaiting reviewer approval' : undefined}
           >
             {isDone ? <CheckCircle2 size={18} /> : <Circle size={18} />}
           </button>
         </td>
         <td className="px-4 py-2">
           <p className={`text-sm font-bold ${isDone ? 'line-through' : ''}`}>{task.title}</p>
+          {assigner?.name && (
+            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700/90 dark:text-amber-400 mt-0.5">
+              Assigned by {displayPersonName(assigner)}
+            </p>
+          )}
         </td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase truncate max-w-[120px]">{project || '—'}</td>

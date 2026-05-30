@@ -6,25 +6,35 @@ const Log = require('../models/Log');
 const { scheduleRollup } = require('../utils/rollup');
 const logActivity = require('../utils/activityLogger');
 const { applyPriorityDueDate } = require('../../shared/taskPriorityDates');
+const { canUserReviewTask, getProjectRoleForUser } = require('../../shared/projectRoles');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const logger = require('../utils/logger');
+
+const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
+
+/** Project memberRoles values that may assign tasks to others on that project. */
+const PROJECT_ASSIGN_ROLES = new Set(['owner', 'manager', 'admin', 'artist_management']);
+
+const memberRoleUserId = (entry) => (entry?.user?._id || entry?.user)?.toString?.() || null;
 
 const getProjectRole = (project, userId) => {
   if (!project) return null;
   const uid = userId.toString();
-  if (project.owner?.toString() === uid) return 'owner';
-  const entry = project.memberRoles?.find((r) => r.user?.toString() === uid);
-  return entry?.role || (project.members?.some((m) => m.toString() === uid) ? 'member' : null);
+  const ownerId = (project.owner?._id || project.owner)?.toString?.();
+  if (ownerId && ownerId === uid) return 'owner';
+  const entry = project.memberRoles?.find((r) => memberRoleUserId(r) === uid);
+  return entry?.role || (project.members?.some((m) => (m?._id || m)?.toString() === uid) ? 'member' : null);
 };
 
 const canAssignTasks = (project, user) => {
   if (isAdminUser(user)) return true;
   const role = getProjectRole(project, user._id);
-  return role === 'owner' || role === 'manager';
+  return Boolean(role && PROJECT_ASSIGN_ROLES.has(role));
 };
 
 const mapTaskDTO = (taskDoc) => {
@@ -55,8 +65,6 @@ const isSelfAssigned = (assignments) => {
 };
 
 const finalizeTaskCompletion = async (task, user, session) => {
-  queueGamificationEvent('TASK_COMPLETED', { userId: user._id, task });
-
   let projectName = 'Unassigned';
   if (task.projectId) {
     const projectDoc = await Project.findById(task.projectId).session(session);
@@ -180,19 +188,27 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const assignments = existing.assignees || [];
   const isCreator = existing.createdBy?.toString() === user._id.toString();
-  const isAssignee = assignments.some((a) => (a.userId?._id || a.userId)?.toString() === user._id.toString());
-  const primaryAssignedBy = assignments[0]?.assignedBy?.toString();
-
-  if (!isCreator && !isAssignee && !isAdminUser(user)) {
-    throw new Error('Not authorized to update this task');
-  }
+  const isAssignee = assignments.some((a) => assignmentUserId(a.userId) === user._id.toString());
+  const primaryAssignedBy = assignmentUserId(assignments[0]?.assignedBy);
 
   const { assignees, reviewAction, ...coreUpdates } = updates;
 
+  let isReviewer = false;
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
-    if (primaryAssignedBy !== user._id.toString() && !isAdminUser(user)) {
-      throw new Error('Only the task assigner can approve or rollback');
+    const reviewProject = existing.projectId
+      ? await Project.findById(existing.projectId).session(session).select('owner memberRoles').lean()
+      : null;
+    isReviewer = canUserReviewTask(user, primaryAssignedBy, reviewProject, isAdminUser(user));
+    if (!isReviewer) {
+      throw new Error('Only the task assigner or a senior project role can approve or rollback');
     }
+  }
+
+  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer) {
+    throw new Error('Not authorized to update this task');
+  }
+
+  if (reviewAction === 'approve' || reviewAction === 'rollback') {
     if (reviewAction === 'approve') {
       coreUpdates.status = 'done';
     } else {
@@ -279,56 +295,69 @@ exports.updateTask = async (taskId, updates, user, session) => {
       reviewerIds.delete(user._id.toString());
 
       for (const reviewerId of reviewerIds) {
-        await createNotification({
-          recipientId: reviewerId,
-          title: 'Review Required',
-          message: `${user.name} marked "${task.title}" complete — review required.`,
-          category: 'review',
-          type: 'alert',
-          relatedTaskId: task._id,
-          relatedProjectId: task.projectId,
-          actionUrl: buildTaskActionUrl(task, { review: true }),
-          actorId: user._id,
-          iconType: 'user'
-        });
+        try {
+          await createNotification({
+            recipientId: reviewerId,
+            title: 'Review Required',
+            message: `${user.name} marked "${task.title}" complete — review required.`,
+            category: 'review',
+            type: 'alert',
+            relatedTaskId: task._id,
+            relatedProjectId: task.projectId,
+            actionUrl: buildTaskActionUrl(task, { review: true }),
+            actorId: user._id,
+            iconType: 'user'
+          });
+        } catch (err) {
+          logger.error('Task', 'Review notification failed', { taskId: task._id, error: err.message });
+        }
       }
     }
 
     if (reviewAction === 'approve' && task.status === 'done') {
       await finalizeTaskCompletion(task, user, session);
       for (const a of assignments) {
-        const assigneeId = a.userId?._id || a.userId;
-        if (assigneeId?.toString() !== user._id.toString()) {
-          await createNotification({
-            recipientId: assigneeId,
-            title: 'Task Approved',
-            message: `"${task.title}" was approved and marked complete.`,
-            category: 'review',
-            relatedTaskId: task._id,
-            relatedProjectId: task.projectId,
-            actionUrl: buildTaskActionUrl(task),
-            actorId: user._id,
-            iconType: 'user'
-          });
+        const assigneeId = assignmentUserId(a.userId);
+        if (assigneeId && assigneeId !== user._id.toString()) {
+          try {
+            await createNotification({
+              recipientId: assigneeId,
+              title: 'Task Approved',
+              message: `"${task.title}" was approved and marked complete.`,
+              category: 'review',
+              relatedTaskId: task._id,
+              relatedProjectId: task.projectId,
+              actionUrl: buildTaskActionUrl(task),
+              actorId: user._id,
+              iconType: 'user'
+            });
+          } catch (err) {
+            logger.error('Task', 'Approval notification failed', { taskId: task._id, error: err.message });
+          }
         }
       }
     }
 
     if (reviewAction === 'rollback') {
       for (const a of assignments) {
-        const assigneeId = a.userId?._id || a.userId;
-        await createNotification({
-          recipientId: assigneeId,
-          title: 'Revision Required',
-          message: `${user.name} sent "${task.title}" back to In Progress.`,
-          category: 'review',
-          type: 'alert',
-          relatedTaskId: task._id,
-          relatedProjectId: task.projectId,
-          actionUrl: buildTaskActionUrl(task),
-          actorId: user._id,
-          iconType: 'user'
-        });
+        const assigneeId = assignmentUserId(a.userId);
+        if (!assigneeId) continue;
+        try {
+          await createNotification({
+            recipientId: assigneeId,
+            title: 'Revision Required',
+            message: `${user.name} sent "${task.title}" back to In Progress.`,
+            category: 'review',
+            type: 'alert',
+            relatedTaskId: task._id,
+            relatedProjectId: task.projectId,
+            actionUrl: buildTaskActionUrl(task),
+            actorId: user._id,
+            iconType: 'user'
+          });
+        } catch (err) {
+          logger.error('Task', 'Rollback notification failed', { taskId: task._id, error: err.message });
+        }
       }
     }
 
@@ -367,5 +396,48 @@ exports.deleteTask = async (taskId, user, session) => {
   }
 };
 
+const populateTaskQuery = () => Task.find()
+  .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours createdBy color')
+  .populate('projectId', 'name workspace')
+  .populate('createdBy', 'name avatar')
+  .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+
+exports.getReviewQueue = async (user) => {
+  const baseFilter = { status: 'in-review' };
+  let tasks;
+
+  if (isAdminUser(user)) {
+    tasks = await populateTaskQuery().find(baseFilter).lean({ virtuals: true });
+    return tasks.map(mapTaskDTO);
+  }
+
+  const myAssignments = await TaskAssignment.find({ assignedBy: user._id }).select('taskId').lean();
+  const directTaskIds = myAssignments.map((a) => a.taskId);
+
+  const memberProjects = await Project.find({
+    $or: [{ owner: user._id }, { members: user._id }],
+  }).select('_id owner memberRoles').lean();
+  const projectIds = memberProjects.map((p) => p._id);
+  const projectsById = new Map(memberProjects.map((p) => [p._id.toString(), p]));
+
+  tasks = await populateTaskQuery().find({
+    ...baseFilter,
+    $or: [
+      { _id: { $in: directTaskIds } },
+      ...(projectIds.length ? [{ projectId: { $in: projectIds } }] : []),
+    ],
+  }).lean({ virtuals: true });
+
+  const mapped = tasks.map(mapTaskDTO);
+  return mapped.filter((task) => {
+    const assignerId = assignmentUserId(task.assignments?.[0]?.assignedBy)
+      || assignmentUserId(task.assignedBy);
+    const pid = task.projectId?._id || task.projectId;
+    const project = pid ? projectsById.get(String(pid)) : null;
+    return canUserReviewTask(user, assignerId, project, false);
+  });
+};
+
 exports.getProjectRole = getProjectRole;
 exports.canAssignTasks = canAssignTasks;
+exports.getProjectRoleForUser = getProjectRoleForUser;

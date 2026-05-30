@@ -58,6 +58,9 @@ exports.createTask = async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    if (error.message?.includes('authorized') || error.message?.includes('not found')) {
+      return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
+    }
     next(error);
   }
 };
@@ -65,6 +68,12 @@ exports.createTask = async (req, res, next) => {
 exports.getTasks = async (req, res, next) => {
   try {
     const { projectId, scope } = req.query;
+
+    if (scope === 'review') {
+      const reviewTasks = await TaskService.getReviewQueue(req.user);
+      return res.json(reviewTasks);
+    }
+
     const filter = {};
 
     if (projectId) {
@@ -119,7 +128,7 @@ exports.updateTask = async (req, res, next) => {
     }
 
     const updates = pick(req.body, ALLOWED_UPDATE);
-    
+
     const taskDto = await TaskService.updateTask(req.params.id, updates, req.user, session);
 
     await session.commitTransaction();

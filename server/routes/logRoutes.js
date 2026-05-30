@@ -4,6 +4,7 @@ const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
+const GamificationService = require('../services/gamificationService');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 
 router.get('/', protect, async (req, res) => {
@@ -118,6 +119,13 @@ router.post('/', protect, async (req, res) => {
     });
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
+
+    if (action === 'DAILY_LOG' && details?.type !== 'TASK_COMPLETION') {
+      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', { logId: log._id }).catch((err) => {
+        logger.error('Log', 'Daily log XP award failed', { error: err.message });
+      });
+    }
+
     res.status(201).json(populatedLog);
   } catch (err) {
     res.status(500).json({ error: err.message });

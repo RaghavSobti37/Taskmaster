@@ -38,16 +38,22 @@ const fetchDashboardTasks = async () => {
   return data;
 };
 
+const fetchReviewTasks = async () => {
+  const { data } = await axios.get('/api/tasks', { params: { scope: 'review' } });
+  return data;
+};
+
 const filterTasksForUser = (tasks, userId) => {
   if (!userId) return tasks;
+  const uid = String(userId?._id || userId);
   const resolveAssigneeId = (a) => {
     if (typeof a === 'string') return a;
-    if (a?._id) return a._id;
-    if (a?.userId?._id) return a.userId._id;
-    if (a?.userId) return a.userId;
+    if (a?._id) return String(a._id);
+    if (a?.userId?._id) return String(a.userId._id);
+    if (a?.userId) return String(a.userId);
     return null;
   };
-  return tasks.filter((t) => t.assignees?.some((a) => resolveAssigneeId(a) === userId));
+  return tasks.filter((t) => t.assignees?.some((a) => resolveAssigneeId(a) === uid));
 };
 
 const fetchUserDirectory = async () => {
@@ -138,6 +144,24 @@ export const useDashboardTasks = (userId) => {
     queryFn: fetchDashboardTasks,
     placeholderData: keepPreviousData,
     select: (tasks) => filterTasksForUser(tasks, userId),
+  });
+};
+
+export const useReviewTasks = (enabled = true) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('tasks', 'task_change', () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'review'] });
+    });
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ['tasks', 'review'],
+    queryFn: fetchReviewTasks,
+    enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -232,7 +256,7 @@ export const useCreateTask = () => {
       restoreTaskQuerySnapshots(queryClient, context?.snapshots);
       globalToast.addToast({
         title: 'Create failed',
-        message: err.response?.data?.error || 'Could not create task',
+        message: err.response?.data?.error || err.response?.data?.message || 'Could not create task',
         type: 'error',
         module: 'PROJECTS',
       });
@@ -334,6 +358,9 @@ export const useCreateLog = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
+    },
   });
 };
 
@@ -415,7 +442,7 @@ export const useUpdateTask = () => {
       restoreTaskQuerySnapshots(queryClient, context?.snapshots);
       globalToast.addToast({
         title: 'Update failed',
-        message: err.response?.data?.error || 'Could not update task',
+        message: err.response?.data?.error || err.response?.data?.message || 'Could not update task',
         type: 'error',
         module: 'PROJECTS',
       });

@@ -100,7 +100,8 @@ const AdminGamification = () => {
       title: 'Action XP Values',
       description: 'XP awarded for various user actions',
       fields: [
-        { key: 'taskCompletion', label: 'Task Completion', description: 'XP awarded when a task is marked as complete' },
+        { key: 'taskCompletion', label: 'Task Completion', description: 'XP for completing a task (set to 0 to disable)' },
+        { key: 'dailyLog', label: 'Daily Log', description: 'XP awarded for each manual daily log entry' },
         { key: 'taskCreation', label: 'Task Creation', description: 'XP awarded when a new task is created' },
         { key: 'projectCreation', label: 'Project Creation', description: 'XP awarded when a new project is created' },
         { key: 'attendanceLog', label: 'Attendance Log', description: 'XP awarded for logging attendance' },

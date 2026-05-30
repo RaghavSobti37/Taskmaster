@@ -1,5 +1,30 @@
 # Production Migration Guide
 
+## v1.7.37 — Review Workflow & Data Cleanup (2026-05-30)
+
+Run from `server/` after deploying code to Render:
+
+```bash
+# 1. Dry run — review self-review tasks + creator backfill counts
+node scripts/migrateReviewWorkflow.js --dry-run --prod
+
+# 2. Execute — mark self-review in-review → done, backfill creator TaskAssignments
+node scripts/migrateReviewWorkflow.js --execute --prod
+
+# 3. Optional — remove demo/seed tasks (NEXUS PRIME, QUANTUM SHIFT, VOID WALKER, etc.)
+node scripts/cleanupTestTasks.js --dry-run --prod
+node scripts/cleanupTestTasks.js --prod
+```
+
+**What changes (no new collections):**
+- `TaskAssignment` rows backfilled for creators missing self-assignee row
+- Legacy `in-review` tasks with only self-assignments → `done`
+- Review queue logic is code-only (`shared/taskReviewRules.js`); no schema migration required
+
+**Attendance / calendar:** client-side holiday list (`officeHolidays.js`); no DB migration.
+
+---
+
 ## Overview
 This guide provides scripts to migrate your production database to the new structure:
 - Adds `order` field to workspaces for drag-reorder functionality

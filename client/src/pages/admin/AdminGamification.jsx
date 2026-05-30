@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Input, PageHeader, PageContainer, Badge, PageSkeleton } from '../../components/ui';
+import { Card, Button, PageHeader, PageContainer, PageSkeleton } from '../../components/ui';
 import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy } from 'lucide-react';
 import axios from 'axios';
 import { useConfirm } from '../../contexts/ConfirmContext';
@@ -36,7 +36,8 @@ const AdminGamification = () => {
     setEditValue(String(value));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (field = editingField) => {
+    if (!field) return;
     try {
       setSaving(true);
       const numValue = Number(editValue);
@@ -47,16 +48,17 @@ const AdminGamification = () => {
       }
 
       await axios.put('/api/gamification-admin/config', {
-        [editingField]: numValue
+        [field]: numValue
       });
 
       setConfig(prev => ({
         ...prev,
-        [editingField]: numValue
+        [field]: numValue
       }));
 
-      setMessage({ type: 'success', text: `${editingField} updated successfully` });
+      setMessage({ type: 'success', text: `${field} updated successfully` });
       setEditingField(null);
+      setEditValue('');
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to update configuration' });
     } finally {
@@ -80,9 +82,9 @@ const AdminGamification = () => {
     try {
       setRecalculating(true);
       const res = await axios.post('/api/gamification-admin/recalculate-all-levels');
-      setMessage({ 
-        type: 'success', 
-        text: `Updated ${res.data.updatedUsers} of ${res.data.totalUsers} users with new level formula` 
+      setMessage({
+        type: 'success',
+        text: res.data.message || `Updated ${res.data.updatedUsers} of ${res.data.totalUsers} users`,
       });
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to recalculate levels' });
@@ -123,23 +125,23 @@ const AdminGamification = () => {
   ];
 
   return (
-    <PageContainer>
+    <PageContainer className="space-y-5">
       <PageHeader
         title="Gamification Configuration"
-        description="Manage XP values and reward multipliers"
+        subtitle="Manage XP values and reward multipliers"
         icon={Trophy}
       />
 
       {message.text && (
-        <div className={`mb-6 p-4 rounded-lg border flex items-center gap-2 ${
+        <div className={`p-4 rounded-lg border flex items-center gap-2 ${
           message.type === 'success'
             ? 'bg-green-500/10 border-green-500/30'
             : 'bg-red-500/10 border-red-500/30'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle size={18} className="text-green-500" />
+            <CheckCircle size={18} className="text-green-500 shrink-0" />
           ) : (
-            <AlertCircle size={18} className="text-red-500" />
+            <AlertCircle size={18} className="text-red-500 shrink-0" />
           )}
           <span className={message.type === 'success' ? 'text-green-700' : 'text-red-700'}>
             {message.text}
@@ -147,56 +149,66 @@ const AdminGamification = () => {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-5 w-full" style={{ maxWidth: '720px' }}>
         {sections.map((section, idx) => (
-          <Card key={idx}>
-            <div className="p-6 border-b border-[var(--color-bg-border)]">
-              <h3 className="text-lg font-bold">{section.title}</h3>
+          <Card key={idx} className="w-full overflow-hidden">
+            <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
+              <h3 className="text-base font-bold">{section.title}</h3>
               <p className="text-sm text-[var(--color-text-muted)]">{section.description}</p>
             </div>
 
             <div className="divide-y divide-[var(--color-bg-border)]">
               {section.fields.map(({ key, label, description }) => (
-                <div key={key} className="p-6 flex items-center justify-between hover:bg-[var(--color-bg-secondary)] transition-colors">
-                  <div className="flex-1">
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-6 px-5 py-4 hover:bg-[var(--color-bg-secondary)] transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--color-text-primary)]">{label}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{description}</p>
                   </div>
 
                   {editingField === key ? (
-                    <div className="flex items-center gap-2 w-40">
+                    <div className="flex items-center gap-2 shrink-0">
                       <input
-                        type="text"
+                        type="number"
+                        min="0"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSave(key);
+                          if (e.key === 'Escape') handleCancel();
+                        }}
+                        className="w-20 px-3 py-2 text-sm text-center rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autoFocus
                       />
                       <Button
-                        onClick={handleSave}
+                        onClick={() => handleSave(key)}
                         disabled={saving}
                         size="sm"
                         className="gap-1"
                       >
                         <Save size={14} />
-                        {saving ? 'Saving...' : 'Save'}
+                        {saving ? 'Saving…' : 'Save'}
                       </Button>
                       <Button
                         onClick={handleCancel}
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
+                        disabled={saving}
+                        aria-label="Cancel"
                       >
                         <X size={14} />
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="px-3 py-1 text-base font-bold">
-                        {config?.[key] || 0}
-                      </Badge>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-3 py-1 text-base font-bold rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] tabular-nums">
+                        {config?.[key] ?? 0}
+                      </span>
                       <Button
-                        onClick={() => handleEdit(key, config?.[key] || 0)}
-                        variant="outline"
+                        onClick={() => handleEdit(key, config?.[key] ?? 0)}
+                        variant="secondary"
                         size="sm"
                         className="gap-1"
                       >
@@ -210,31 +222,31 @@ const AdminGamification = () => {
             </div>
           </Card>
         ))}
-      </div>
 
-      <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-        <h4 className="font-bold text-sm mb-2">ℹ️ How XP Works</h4>
-        <ul className="text-sm text-[var(--color-text-muted)] space-y-1">
-          <li>• Users earn XP by completing various actions</li>
-          <li>• Reaching level thresholds is based on XP Per Level</li>
-          <li>• Daily missions provide bonus XP rewards</li>
-          <li>• All changes take effect immediately</li>
-        </ul>
-      </div>
+        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <h4 className="font-bold text-sm mb-2">ℹ️ How XP Works</h4>
+          <ul className="text-sm text-[var(--color-text-muted)] space-y-1">
+            <li>• Users earn XP by completing various actions</li>
+            <li>• Reaching level thresholds is based on XP Per Level</li>
+            <li>• Daily missions provide bonus XP rewards</li>
+            <li>• All changes take effect immediately</li>
+          </ul>
+        </div>
 
-      <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-        <h4 className="font-bold text-sm mb-3">⚠️ Recalculate All Levels</h4>
-        <p className="text-sm text-[var(--color-text-muted)] mb-3">
-          If you changed the XP Per Level value, click below to recalculate levels for all users using the new formula.
-        </p>
-        <Button
-          onClick={handleRecalculateAllLevels}
-          disabled={recalculating}
-          className="gap-2"
-        >
-          <RefreshCw size={16} />
-          {recalculating ? 'Recalculating...' : 'Recalculate All User Levels'}
-        </Button>
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <h4 className="font-bold text-sm mb-3">⚠️ Recalculate All User XP</h4>
+          <p className="text-sm text-[var(--color-text-muted)] mb-3">
+            Rebuilds each user&apos;s total XP from activity history using the current Action XP values above, then syncs levels from XP Per Level. Use this after changing XP rates — it does not affect past audit log entries, only stored user totals.
+          </p>
+          <Button
+            onClick={handleRecalculateAllLevels}
+            disabled={recalculating}
+            className="gap-2"
+          >
+            <RefreshCw size={16} />
+            {recalculating ? 'Recalculating...' : 'Recalculate All User XP'}
+          </Button>
+        </div>
       </div>
     </PageContainer>
   );

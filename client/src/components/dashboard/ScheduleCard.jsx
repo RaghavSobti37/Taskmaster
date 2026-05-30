@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Card, Badge } from '../ui';
+import { formatEventTimeLabel } from '../../utils/calendarEventTime';
 
 const ScheduleCard = ({ calendar = [], loading = false }) => {
   if (loading) {
@@ -48,7 +49,7 @@ const ScheduleCard = ({ calendar = [], loading = false }) => {
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-medium">
-                <Clock size={12} /> {event.time || 'All Day'}
+                <Clock size={12} /> {formatEventTimeLabel(event.date || event.time)}
               </div>
             </div>
           ))

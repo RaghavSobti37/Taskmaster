@@ -16,8 +16,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
-import { getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
+import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, canMarkTaskComplete, pendingReviewToast } from '../../utils/taskCompletion';
+import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
@@ -66,6 +66,18 @@ const TodoPage = () => {
 
   const activeTasks = filtered.filter((t) => t.status !== 'done');
   const doneTasks = filtered.filter((t) => t.status === 'done');
+
+  const handleCompleteRequest = (task) => {
+    const intent = resolveTaskFinishIntent(task, user, projects);
+    if (intent === 'approve') return;
+    if (intent === 'awaiting_review' || !canMarkTaskComplete(task)) {
+      if (task?.status === 'in-review') {
+        addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
+      }
+      return;
+    }
+    setTaskToComplete(task);
+  };
 
   const handleCompleteSubmit = async (task, hours) => {
     suppressAutoToasts(5000);
@@ -122,7 +134,7 @@ const TodoPage = () => {
         <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => (isDone || isInReview ? null : setTaskToComplete(task))}
+            onClick={() => (isDone || isInReview ? null : handleCompleteRequest(task))}
             className={isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
             title={isInReview ? 'Awaiting reviewer approval' : undefined}
           >

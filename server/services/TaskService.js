@@ -6,7 +6,17 @@ const Log = require('../models/Log');
 const { scheduleRollup } = require('../utils/rollup');
 const logActivity = require('../utils/activityLogger');
 const { applyPriorityDueDate } = require('../../shared/taskPriorityDates');
-const { canUserReviewTask, getProjectRoleForUser } = require('../../shared/projectRoles');
+const { getProjectRoleForUser } = require('../../shared/projectRoles');
+const {
+  requiresReviewForUser,
+  getReviewQueueAssignmentFilter,
+  canUserApproveReview,
+  filterReviewQueueTasks,
+  mergeAssigneeIdsWithCreator,
+  getAssignmentForUser,
+  assignmentAssignerId,
+  normalizeId: rulesNormalizeId,
+} = require('../../shared/taskReviewRules');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
@@ -55,12 +65,16 @@ const mapTaskDTO = (taskDoc) => {
   return task;
 };
 
-const isSelfAssigned = (assignments) => {
-  if (!assignments?.length) return true;
-  return assignments.every((a) => {
-    const assigneeId = (a.userId?._id || a.userId)?.toString();
-    const byId = (a.assignedBy?._id || a.assignedBy)?.toString();
-    return assigneeId && byId && assigneeId === byId;
+const buildAssignmentsForUser = (taskId, assigneeIds, actingUserId, creatorId) => {
+  const creator = rulesNormalizeId(creatorId || actingUserId);
+  const actor = actingUserId.toString();
+  return assigneeIds.map((userId) => {
+    const uid = rulesNormalizeId(userId);
+    return {
+      taskId,
+      userId: uid,
+      assignedBy: uid === creator ? uid : actor,
+    };
   });
 };
 
@@ -111,10 +125,13 @@ exports.createTask = async (taskData, user, session) => {
   }
   if (!coreData.workspace) coreData.workspace = 'General';
 
-  const assigneeIds = (assignees || []).map((id) => id.toString());
-  const isSelfOnly = assigneeIds.length === 0 || (assigneeIds.length === 1 && assigneeIds[0] === user._id.toString());
+  const assigneeIds = mergeAssigneeIdsWithCreator(
+    (assignees || []).map((id) => id.toString()),
+    user._id
+  );
+  const hasOthers = assigneeIds.some((id) => id !== user._id.toString());
 
-  if (!isSelfOnly && project && !canAssignTasks(project, user)) {
+  if (hasOthers && project && !canAssignTasks(project, user)) {
     throw new Error('Not authorized to assign tasks to others on this project');
   }
 
@@ -124,31 +141,25 @@ exports.createTask = async (taskData, user, session) => {
 
   applyPriorityDueDate(coreData);
 
-  const [task] = await Task.create([coreData], { session });
+  const [task] = await Task.create([{ ...coreData, createdBy: user._id }], { session });
 
   const pendingNotifications = [];
-  if (assignees && assignees.length > 0) {
-    const assignments = assignees.map((userId) => ({
-      taskId: task._id,
-      userId,
-      assignedBy: user._id
-    }));
-    await TaskAssignment.insertMany(assignments, { session });
+  const assignments = buildAssignmentsForUser(task._id, assigneeIds, user._id, user._id);
+  await TaskAssignment.insertMany(assignments, { session });
 
-    for (const userId of assignees) {
-      if (userId.toString() !== user._id.toString()) {
-        pendingNotifications.push({
-          recipientId: userId,
-          title: 'New Task Assigned',
-          message: `${user.name} assigned you: "${task.title}"`,
-          category: 'task',
-          relatedTaskId: task._id,
-          relatedProjectId: task.projectId,
-          actionUrl: buildTaskActionUrl(task),
-          actorId: user._id,
-          iconType: 'user'
-        });
-      }
+  for (const userId of assigneeIds) {
+    if (userId !== user._id.toString()) {
+      pendingNotifications.push({
+        recipientId: userId,
+        title: 'New Task Assigned',
+        message: `${user.name} assigned you: "${task.title}"`,
+        category: 'task',
+        relatedTaskId: task._id,
+        relatedProjectId: task.projectId,
+        actionUrl: buildTaskActionUrl(task),
+        actorId: user._id,
+        iconType: 'user'
+      });
     }
   }
 
@@ -159,12 +170,11 @@ exports.createTask = async (taskData, user, session) => {
   await logActivity(user._id, 'CREATE_TASK', task._id, 'Task', { title: task.title }, session);
   queueGamificationEvent('TASK_CREATED', { userId: user._id, task });
 
-  const responseAssigneeIds = assigneeIds.length > 0 ? assigneeIds : [user._id.toString()];
   const taskObj = task.toObject({ virtuals: true });
   taskObj.createdBy = { _id: user._id, name: user.name, avatar: user.avatar };
-  taskObj.assignees = responseAssigneeIds.map((userId) => ({
-    userId,
-    assignedBy: user._id,
+  taskObj.assignees = assignments.map((a) => ({
+    userId: a.userId,
+    assignedBy: a.assignedBy,
     assignedAt: new Date()
   }));
 
@@ -195,12 +205,9 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   let isReviewer = false;
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
-    const reviewProject = existing.projectId
-      ? await Project.findById(existing.projectId).session(session).select('owner memberRoles').lean()
-      : null;
-    isReviewer = canUserReviewTask(user, primaryAssignedBy, reviewProject, isAdminUser(user));
+    isReviewer = canUserApproveReview(user, assignments);
     if (!isReviewer) {
-      throw new Error('Only the task assigner or a senior project role can approve or rollback');
+      throw new Error('Only the person who assigned this task can approve or rollback');
     }
   }
 
@@ -229,9 +236,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
-    const selfAssigned = isSelfAssigned(assignments);
-    if (coreUpdates.status === 'done' && !selfAssigned && !reviewAction) {
+    const needsReview = requiresReviewForUser(assignments, user._id);
+    if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
       coreUpdates.status = 'in-review';
+    }
+    if (coreUpdates.status === 'in-review' && !reviewAction && !needsReview) {
+      coreUpdates.status = 'done';
     }
     if (coreUpdates.status === 'done') {
       coreUpdates.completedAt = new Date();
@@ -257,7 +267,11 @@ exports.updateTask = async (taskId, updates, user, session) => {
   let assigneesChanged = false;
   if (assignees) {
     const project = task.projectId ? await Project.findById(task.projectId).session(session) : null;
-    const newAssignees = assignees.map((a) => (typeof a === 'object' && a._id ? a._id : a).toString());
+    const creatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
+    const newAssignees = mergeAssigneeIdsWithCreator(
+      assignees.map((a) => (typeof a === 'object' && a._id ? a._id : a).toString()),
+      creatorId || user._id
+    );
     const oldAssignees = assignments.map((a) => (a.userId?._id || a.userId).toString());
     const addingOthers = newAssignees.some((id) => id !== user._id.toString());
 
@@ -269,11 +283,10 @@ exports.updateTask = async (taskId, updates, user, session) => {
       assigneesChanged = true;
       await TaskAssignment.deleteMany({ taskId: task._id }, { session });
       if (newAssignees.length > 0) {
-        await TaskAssignment.insertMany(newAssignees.map((userId) => ({
-          taskId: task._id,
-          userId,
-          assignedBy: user._id
-        })), { session });
+        await TaskAssignment.insertMany(
+          buildAssignmentsForUser(task._id, newAssignees, user._id, creatorId),
+          { session }
+        );
       }
     }
   }
@@ -287,14 +300,9 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (coreUpdates.status === 'in-review' && !reviewAction) {
-      const reviewerIds = new Set();
-      const creatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
-      const assignerId = (assignments[0]?.assignedBy?._id || assignments[0]?.assignedBy)?.toString();
-      if (creatorId) reviewerIds.add(creatorId);
-      if (assignerId) reviewerIds.add(assignerId);
-      reviewerIds.delete(user._id.toString());
-
-      for (const reviewerId of reviewerIds) {
+      const mine = getAssignmentForUser(assignments, user._id);
+      const reviewerId = assignmentAssignerId(mine);
+      if (reviewerId && reviewerId !== user._id.toString()) {
         try {
           await createNotification({
             recipientId: reviewerId,
@@ -362,8 +370,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (coreUpdates.status === 'done' && !reviewAction) {
-      const refreshedAssignments = await TaskAssignment.find({ taskId: task._id }).session(session);
-      if (isSelfAssigned(refreshedAssignments)) {
+      if (!requiresReviewForUser(assignments, user._id)) {
         await finalizeTaskCompletion(task, user, session);
       }
     }
@@ -403,39 +410,20 @@ const populateTaskQuery = () => Task.find()
   .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
 
 exports.getReviewQueue = async (user) => {
-  const baseFilter = { status: 'in-review' };
-  let tasks;
+  const filter = getReviewQueueAssignmentFilter(user._id);
+  const delegated = await TaskAssignment.find(filter)
+    .select('taskId userId assignedBy')
+    .lean();
 
-  if (isAdminUser(user)) {
-    tasks = await populateTaskQuery().find(baseFilter).lean({ virtuals: true });
-    return tasks.map(mapTaskDTO);
-  }
+  const taskIds = [...new Set(delegated.map((a) => a.taskId))];
+  if (!taskIds.length) return [];
 
-  const myAssignments = await TaskAssignment.find({ assignedBy: user._id }).select('taskId').lean();
-  const directTaskIds = myAssignments.map((a) => a.taskId);
-
-  const memberProjects = await Project.find({
-    $or: [{ owner: user._id }, { members: user._id }],
-  }).select('_id owner memberRoles').lean();
-  const projectIds = memberProjects.map((p) => p._id);
-  const projectsById = new Map(memberProjects.map((p) => [p._id.toString(), p]));
-
-  tasks = await populateTaskQuery().find({
-    ...baseFilter,
-    $or: [
-      { _id: { $in: directTaskIds } },
-      ...(projectIds.length ? [{ projectId: { $in: projectIds } }] : []),
-    ],
-  }).lean({ virtuals: true });
+  const tasks = await populateTaskQuery()
+    .find({ status: 'in-review', _id: { $in: taskIds } })
+    .lean({ virtuals: true });
 
   const mapped = tasks.map(mapTaskDTO);
-  return mapped.filter((task) => {
-    const assignerId = assignmentUserId(task.assignments?.[0]?.assignedBy)
-      || assignmentUserId(task.assignedBy);
-    const pid = task.projectId?._id || task.projectId;
-    const project = pid ? projectsById.get(String(pid)) : null;
-    return canUserReviewTask(user, assignerId, project, false);
-  });
+  return filterReviewQueueTasks(mapped, user, (task) => task.assignments || []);
 };
 
 exports.getProjectRole = getProjectRole;

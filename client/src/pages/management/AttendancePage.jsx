@@ -21,11 +21,12 @@ import { MODULE } from '../../lib/systemLogContract';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { Check, Lock, LogIn, LogOut, RotateCcw, Palmtree } from 'lucide-react';
 import {
-  isWeekend,
+  isAttendanceHoliday,
   getWeekDaysIST,
   shouldUseSplitLayout,
   getMergedCellLabel,
   formatDateKeyIST,
+  resolveAttendanceStatus,
 } from '../../utils/attendanceUtils';
 import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendanceGrid';
 
@@ -37,9 +38,12 @@ const VIEW_MODES = {
 
 const PASTEL_ROSE_CELL = 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/20';
 const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
+const PASTEL_VIOLET_CELL = 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/20';
+const PASTEL_VIOLET_TEXT = 'text-[var(--color-pastel-violet-text)]';
 
 const getCellButtonClass = (status, entry) => (
   entry?.isApproved ? 'bg-blue-500/10 border-blue-500/30' :
+  status === 'holiday' ? PASTEL_VIOLET_CELL :
   status === 'leave' ? PASTEL_ROSE_CELL :
   status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
   status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
@@ -55,8 +59,8 @@ const AttendanceDayCells = ({ userRow, date, entry, status, onEdit, statusDot })
       <td colSpan={2} className="px-2 py-2 align-top">
         <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} flex items-center justify-center gap-2 min-h-[36px]`}>
           {entry?.isApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
-          <span className={`text-[10px] font-bold ${status === 'empty' ? 'text-[var(--color-text-muted)]' : ''}`}>
-            {getMergedCellLabel(status)}
+          <span className={`text-[10px] font-bold ${status === 'empty' ? 'text-[var(--color-text-muted)]' : status === 'holiday' ? PASTEL_VIOLET_TEXT : ''}`}>
+            {getMergedCellLabel(status, date)}
           </span>
         </button>
       </td>
@@ -102,7 +106,7 @@ const TimeCell = ({ time, marked, locked, approved }) => (
 );
 
 const SelfAttendancePanel = ({ today, todayKey }) => {
-  const weekend = isWeekend(today);
+  const holiday = isAttendanceHoliday(today);
   const { data: rows = [], isLoading } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const checkIn = useAttendanceCheck();
   const checkOut = useAttendanceCheck();
@@ -117,7 +121,8 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
   const displayStatus = () => {
     if (isLoading) return 'Loading...';
     if (isLocked) return 'Approved';
-    if (entry?.onLeave || (weekend && !hasIn && !hasOut)) return 'On leave';
+    if (entry?.onLeave) return 'On leave';
+    if (holiday && !hasIn && !hasOut) return 'Holiday';
     if (hasIn || hasOut) return 'Pending review';
     return 'Not marked';
   };
@@ -159,10 +164,10 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
         </div>
       )}
 
-      {weekend && !hasIn && !hasOut && (
-        <div className={`flex items-center gap-2 p-4 rounded-xl ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT}`}>
+      {holiday && !hasIn && !hasOut && !entry?.onLeave && (
+        <div className={`flex items-center gap-2 p-4 rounded-xl ${PASTEL_VIOLET_CELL} ${PASTEL_VIOLET_TEXT}`}>
           <Palmtree size={18} />
-          <span className="text-sm font-bold">Weekend — on leave. Mark in if you are working.</span>
+          <span className="text-sm font-bold">Holiday — no attendance required. Mark in if you are working.</span>
         </div>
       )}
 
@@ -335,17 +340,11 @@ const AttendancePage = () => {
     return map;
   }, [selfMonthRows]);
 
-  const resolveStatus = (entry, date) => {
-    if (!entry && isWeekend(date)) return 'leave';
-    if (!entry) return 'empty';
-    if (entry.onLeave) return 'leave';
-    if (entry.isHalfDay) return 'halfDay';
-    if (entry.timeIn || entry.timeOut) return 'present';
-    return 'empty';
-  };
+  const resolveStatus = (entry, date) => resolveAttendanceStatus(entry, date);
 
   const statusDot = (status, entry) => {
     if (entry?.isApproved) return 'bg-blue-500';
+    if (status === 'holiday') return 'bg-[var(--color-pastel-violet-text)]';
     if (status === 'leave') return 'bg-[var(--color-pastel-rose-text)]';
     if (status === 'halfDay') return 'bg-amber-400';
     if (status === 'present') return 'bg-emerald-500';
@@ -356,7 +355,7 @@ const AttendancePage = () => {
     const status = resolveStatus(entry, date);
     setEditCell({ userRow, date, entry });
     setEditForm({
-      status: !entry && isWeekend(date) ? 'leave' : (status === 'empty' ? 'present' : status),
+      status: entry?.onLeave ? 'leave' : entry?.isHalfDay ? 'halfDay' : 'present',
       timeIn: entry?.timeIn || '',
       timeOut: entry?.timeOut || '',
     });
@@ -377,8 +376,8 @@ const AttendancePage = () => {
       timeOut: effectiveStatus === 'leave' ? '' : (editForm.timeOut || ''),
     };
     upsertAttendance.mutate(payload, {
-      onSuccess: (response) => {
-        setEditCell((prev) => (prev ? { ...prev, entry: response.data } : null));
+      onSuccess: () => {
+        setEditCell(null);
       },
       onError: (error) => {
         addToast({

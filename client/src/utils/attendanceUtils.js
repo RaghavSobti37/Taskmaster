@@ -1,4 +1,7 @@
 import { addDays, format } from 'date-fns';
+import { isOfficeHoliday, getHolidayLabel } from './officeHolidays';
+
+export { getHolidayLabel, isOfficeHoliday };
 
 const APP_TIMEZONE = 'Asia/Kolkata';
 
@@ -63,14 +66,27 @@ export const isWeekend = (date = new Date()) => {
   return weekday === 'Sat' || weekday === 'Sun';
 };
 
+/** Weekend or listed office holiday — not the same as approved leave. */
+export const isAttendanceHoliday = (date = new Date()) => isWeekend(date) || isOfficeHoliday(date);
+
 export const shouldUseSplitLayout = (entry, status) => {
-  if (status === 'leave' || status === 'empty') return false;
+  if (status === 'leave' || status === 'holiday' || status === 'empty') return false;
   if (!entry?.timeIn && !entry?.timeOut) return false;
   return true;
 };
 
-export const getMergedCellLabel = (status) => {
+export const getMergedCellLabel = (status, date) => {
+  if (status === 'holiday') return getHolidayLabel(date) || 'Holiday';
   if (status === 'leave') return 'Leave';
   if (status === 'halfDay') return 'Half Day';
   return 'Mark Present';
+};
+
+/** Shared status resolver for all attendance views. */
+export const resolveAttendanceStatus = (entry, date) => {
+  if (entry?.onLeave && !entry.timeIn && !entry.timeOut) return 'leave';
+  if (entry?.isHalfDay && !entry.timeIn && !entry.timeOut) return 'halfDay';
+  if (entry?.timeIn || entry?.timeOut) return 'present';
+  if (isAttendanceHoliday(date)) return 'holiday';
+  return 'empty';
 };

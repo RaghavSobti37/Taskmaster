@@ -8,12 +8,20 @@ import WorkspaceSelect from './forms/WorkspaceSelect';
 import ProjectSelect from './forms/ProjectSelect';
 import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
 import { useProjects } from '../hooks/useTaskmasterQueries';
+import { extractDateAndTime } from '../utils/calendarEventTime';
 
-const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
+const CalendarEntryModal = ({
+  isOpen,
+  onClose,
+  onEntryCreated,
+  initialData = null,
+  defaultDate = null,
+}) => {
   const queryClient = useQueryClient();
   const { data: projects = [] } = useProjects();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
+  const [time, setTime] = useState('09:00');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState('event');
   const [visibility, setVisibility] = useState('private');
@@ -24,8 +32,9 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
-      const rawDate = initialData.dueDate || initialData.date;
-      setDate(rawDate ? String(rawDate).split('T')[0] : '');
+      const parsed = extractDateAndTime(initialData.dueDate || initialData.date);
+      setDate(parsed.date);
+      setTime(parsed.time);
       setDescription(initialData.description || '');
       setEventType(initialData.eventType || 'event');
       setVisibility(initialData.visibility || 'private');
@@ -33,14 +42,16 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
       setProjectId(initialData.projectId?._id || initialData.projectId || '');
     } else {
       setTitle('');
-      setDate(new Date().toISOString().split('T')[0]);
+      const base = defaultDate || new Date();
+      setDate(formatDateInput(base));
+      setTime('09:00');
       setDescription('');
       setEventType('event');
       setVisibility('private');
       setWorkspace('General');
       setProjectId('');
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, defaultDate]);
 
   if (!isOpen) return null;
 
@@ -73,6 +84,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
     const payload = {
       title,
       date,
+      time,
       description,
       eventType,
       visibility,
@@ -89,8 +101,6 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
         if (onEntryCreated) onEntryCreated(res.data, false);
       }
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       onClose();
     } catch (err) {
@@ -137,19 +147,33 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
-            <input
-              type="date"
-              min={new Date().toISOString().split('T')[0]}
-              value={date}
-              onClick={(e) => e.target.showPicker && e.target.showPicker()}
-              onFocus={(e) => e.target.showPicker && e.target.showPicker()}
-              onKeyDown={(e) => e.preventDefault()}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
-              required
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={date}
+                onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                onKeyDown={(e) => e.preventDefault()}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time</label>
+              <input
+                type="time"
+                value={time}
+                onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -238,5 +262,12 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
     </ModalShell>
   );
 };
+
+function formatDateInput(value) {
+  if (!value) return new Date().toISOString().split('T')[0];
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+  return d.toISOString().split('T')[0];
+}
 
 export default CalendarEntryModal;

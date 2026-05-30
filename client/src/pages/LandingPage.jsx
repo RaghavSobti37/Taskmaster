@@ -46,7 +46,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
+    <div className="tm-marketing-page min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
       {/* Paper texture & Ink spill background */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
@@ -81,20 +81,20 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex-1 flex flex-col justify-center items-center relative z-10">
+      <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex-1 flex flex-col justify-center relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="space-y-8 w-full max-w-3xl mx-auto"
+          className="w-full max-w-3xl mx-auto space-y-8"
         >
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold">
             <Sparkles size={12} /> Introducing TaskMaster Workspace
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-foreground leading-tight">
+          <h1 className="w-full text-4xl sm:text-6xl font-black tracking-tight text-foreground leading-tight text-balance">
             Master Your Team <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-brand-teal)] to-[var(--color-action-primary)]">Workflows & Campaigns</span>
           </h1>
-          <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-xl sm:max-w-2xl mx-auto font-medium text-balance">
+          <p className="w-full max-w-2xl mx-auto text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed font-medium">
             TaskMaster integrates high-density project tracking, active CRM customer pipeline management, and enterprise email dispatch features into a secure, unified workspace.
           </p>
 
@@ -118,11 +118,11 @@ export default function LandingPage() {
       {/* Purpose / Feature Grid */}
       <section className="bg-card/90 backdrop-blur-sm border-y border-border py-16 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <div className="w-full max-w-2xl mx-auto mb-12 space-y-3 text-center">
+            <h2 className="w-full text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Purpose-Built for Modern Operations
             </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed text-balance">
+            <p className="w-full text-sm sm:text-base text-[var(--color-text-secondary)] leading-relaxed">
               TaskMaster provides a secure environment for business and product management, replacing fragmented tooling with specialized workflow pipelines.
             </p>
           </div>

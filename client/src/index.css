@@ -51,6 +51,8 @@
   --color-pastel-slate-text: #3C4043;
   --color-pastel-blue-bg: #E8F0FE;
   --color-pastel-blue-text: #1967D2;
+  --color-pastel-violet-bg: #F3E5F5;
+  --color-pastel-violet-text: #7B1FA2;
 
   /* Team Identifiers */
   --color-team-dev: #F3E5F5;
@@ -136,6 +138,8 @@
   --color-pastel-slate-text: #BDC1C6;
   --color-pastel-blue-bg: rgba(26, 115, 232, 0.1);
   --color-pastel-blue-text: #8AB4F8;
+  --color-pastel-violet-bg: rgba(46, 16, 64, 0.75);
+  --color-pastel-violet-text: #CE93D8;
 
   --background: #0B0F19;
   --foreground: #F8F9FA;
@@ -306,6 +310,18 @@ select option {
     bottom: 0;
     z-index: 2;
     box-shadow: 0 -4px 12px rgba(8, 61, 58, 0.06);
+  }
+
+  /* Marketing / landing pages — keep copy blocks full-width inside max-width wrappers */
+  .tm-marketing-page :where(h1, h2, h3, p).w-full,
+  .tm-marketing-page .tm-marketing-copy {
+    width: 100%;
+    min-width: 0;
+    text-wrap: pretty;
+  }
+
+  .tm-marketing-page :where(h1, h2, h3, p) {
+    text-wrap: pretty;
   }
 
   /* react-hot-toast — full-viewport fixed layer, top-right stack (portaled to body) */

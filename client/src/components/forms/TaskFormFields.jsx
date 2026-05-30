@@ -33,6 +33,7 @@ const TaskFormFields = ({
   onDescriptionChange,
   showTitle = false,
   showDescription = false,
+  lockedAssigneeIds = [],
 }) => {
   const set = (field, val) => onChange({ ...values, [field]: val });
 
@@ -136,6 +137,7 @@ const TaskFormFields = ({
             value={values.assignees || []}
             onChange={(assignees) => set('assignees', assignees)}
             disabled={disabled}
+            lockedIds={lockedAssigneeIds}
           />
           <PrioritySelect
             value={values.priority}

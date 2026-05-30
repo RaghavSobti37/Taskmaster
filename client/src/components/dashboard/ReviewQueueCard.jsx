@@ -54,7 +54,7 @@ const ReviewTaskRow = ({
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide">
           <span className="text-[var(--color-text-muted)]">
-            By {displayPersonName(assignee, 'Assignee')}
+            Assignee: {displayPersonName(assignee, 'Assignee')}
           </span>
           <span className="text-amber-600/80">·</span>
           <span className="text-amber-700 dark:text-amber-400">

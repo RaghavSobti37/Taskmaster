@@ -30,21 +30,11 @@ const getProjectRoleForUser = (project, userId) => {
 };
 
 /**
- * User may review if they assigned the task, or hold a strictly higher project role than the assigner.
- * Org admins may always review.
+ * User may review only if they assigned the task (strict assigner = reviewer).
  */
-const canUserReviewTask = (user, assignerId, project, isAdmin = false) => {
-  if (!user?._id) return false;
-  if (isAdmin) return true;
-
-  const userId = normalizeId(user._id || user);
-  const assigner = normalizeId(assignerId);
-  if (assigner && assigner === userId) return true;
-  if (!project || !assigner) return false;
-
-  const reviewerRole = getProjectRoleForUser(project, userId);
-  const assignerRole = getProjectRoleForUser(project, assigner);
-  return projectRoleRank(reviewerRole) > projectRoleRank(assignerRole);
+const canUserReviewTask = (user, assignerId, _project = null, _isAdmin = false) => {
+  if (!user?._id || !assignerId) return false;
+  return normalizeId(user._id) === normalizeId(assignerId);
 };
 
 module.exports = {

@@ -1,51 +1,54 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNotifications } from '../hooks/useTaskmasterQueries';
 import {
   sendNotification,
   subscribeToPush,
   resolveNotificationDeliveryMode,
   isPushPreferenceEnabled,
+  hasActivePushSubscription,
 } from '../utils/notifications';
 
 const NotificationBridge = () => {
   const { data } = useNotifications();
   const seenRef = useRef(new Set());
   const initializedRef = useRef(false);
-  const [deliveryMode, setDeliveryMode] = useState(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!isPushPreferenceEnabled()) {
-        if (!cancelled) setDeliveryMode('none');
-        return;
-      }
-      await subscribeToPush().catch(() => {});
-      const mode = await resolveNotificationDeliveryMode();
-      if (!cancelled) setDeliveryMode(mode);
-    })();
-    return () => { cancelled = true; };
+    if (!isPushPreferenceEnabled()) return;
+    subscribeToPush().catch(() => {});
   }, []);
 
   useEffect(() => {
     const notifications = data?.notifications || (Array.isArray(data) ? data : []);
-    if (!notifications.length || deliveryMode === null) return;
+    if (!notifications.length) return;
 
-    if (!initializedRef.current) {
-      notifications.forEach((n) => seenRef.current.add(n._id));
-      initializedRef.current = true;
-      return;
-    }
+    let cancelled = false;
 
-    notifications.forEach((n) => {
-      if (!n.read && !seenRef.current.has(n._id)) {
-        seenRef.current.add(n._id);
-        if (deliveryMode === 'polling') {
-          sendNotification(n.title, n.message, { tag: n._id });
+    (async () => {
+      if (!initializedRef.current) {
+        notifications.forEach((n) => seenRef.current.add(n._id));
+        initializedRef.current = true;
+        return;
+      }
+
+      const mode = await resolveNotificationDeliveryMode();
+      if (cancelled || mode !== 'polling') return;
+      if (await hasActivePushSubscription()) return;
+
+      for (const n of notifications) {
+        if (cancelled) break;
+        if (!n.read && !seenRef.current.has(n._id)) {
+          seenRef.current.add(n._id);
+          await sendNotification(n.title, n.message, {
+            tag: n._id,
+            actionUrl: n.actionUrl || '/inbox',
+          });
         }
       }
-    });
-  }, [data, deliveryMode]);
+    })();
+
+    return () => { cancelled = true; };
+  }, [data]);
 
   return null;
 };

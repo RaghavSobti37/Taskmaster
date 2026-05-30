@@ -10,6 +10,17 @@ const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 
+const buildEventDateTime = (dateOnly, timeStr) => {
+  const d = new Date(dateOnly);
+  if (timeStr && /^\d{1,2}:\d{2}$/.test(timeStr)) {
+    const [h, m] = timeStr.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+  } else {
+    d.setHours(0, 0, 0, 0);
+  }
+  return d;
+};
+
 router.use(protect);
 
 async function getUserProjectIds(userId) {
@@ -47,6 +58,8 @@ router.get('/', async (req, res) => {
       .populate('projectId', 'name workspace')
       .lean();
 
+    const calendarOnly = events.map((ev) => ({ ...ev, type: 'event', dueDate: ev.date }));
+
     const assignedTaskIds = await getAssignedTaskIds(req.user._id);
     const taskOr = [{ createdBy: req.user._id }];
     if (assignedTaskIds.length) {
@@ -76,7 +89,7 @@ router.get('/', async (req, res) => {
       projectId: t.projectId,
     }));
 
-    const combined = [...events, ...taskEvents].sort((a, b) => new Date(a.date || a.dueDate) - new Date(b.date || b.dueDate));
+    const combined = [...calendarOnly, ...taskEvents].sort((a, b) => new Date(a.date || a.dueDate) - new Date(b.date || b.dueDate));
     res.json(combined);
   } catch (err) {
     console.error('Error fetching calendar events:', err);
@@ -87,7 +100,7 @@ router.get('/', async (req, res) => {
 // POST /api/calendar — create new calendar event
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, visibility, eventType, workspace, projectId } = req.body;
+    const { title, description, date, time, visibility, eventType, workspace, projectId } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -97,7 +110,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Project is required for project-related visibility' });
     }
 
-    const inputDate = new Date(date);
+    const eventDateTime = buildEventDateTime(date, time);
+    const inputDate = new Date(eventDateTime);
     inputDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -109,7 +123,7 @@ router.post('/', async (req, res) => {
     const event = await CalendarEvent.create({
       title,
       description: description || '',
-      date,
+      date: eventDateTime,
       eventType: eventType || 'event',
       visibility: visibility || 'private',
       workspace: visibility === 'project' ? workspace || 'General' : '',
@@ -121,10 +135,13 @@ router.post('/', async (req, res) => {
       .populate('createdBy', 'name avatar')
       .populate('projectId', 'name workspace');
 
+    const populatedObj = populated.toObject();
+    populatedObj.type = 'event';
+
     if (visibility === 'public') {
       try {
         const allUsers = await User.find({ email: { $exists: true, $ne: '' } }, 'email name');
-        const eventDate = new Date(date).toLocaleDateString('en-US', {
+        const eventDate = eventDateTime.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -164,7 +181,7 @@ router.post('/', async (req, res) => {
       visibility: visibility || 'private',
     });
 
-    res.status(201).json(populated);
+    res.status(201).json(populatedObj);
   } catch (err) {
     console.error('Error creating calendar event:', err);
     res.status(500).json({ error: 'Failed to create calendar event' });
@@ -180,16 +197,17 @@ router.put('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this event' });
     }
 
-    const { title, description, date, visibility, eventType, workspace, projectId } = req.body;
+    const { title, description, date, time, visibility, eventType, workspace, projectId } = req.body;
     if (date) {
-      const inputDate = new Date(date);
+      const eventDateTime = buildEventDateTime(date, time);
+      const inputDate = new Date(eventDateTime);
       inputDate.setHours(0, 0, 0, 0);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (inputDate < today) {
         return res.status(400).json({ error: 'Cannot set calendar events to past dates' });
       }
-      event.date = date;
+      event.date = eventDateTime;
     }
     if (title) event.title = title;
     if (description !== undefined) event.description = description;
@@ -209,7 +227,9 @@ router.put('/:id', async (req, res) => {
     const populated = await CalendarEvent.findById(event._id)
       .populate('createdBy', 'name avatar')
       .populate('projectId', 'name workspace');
-    res.json(populated);
+    const populatedObj = populated.toObject();
+    populatedObj.type = 'event';
+    res.json(populatedObj);
   } catch (err) {
     console.error('Error updating calendar event:', err);
     res.status(500).json({ error: 'Failed to update calendar event' });

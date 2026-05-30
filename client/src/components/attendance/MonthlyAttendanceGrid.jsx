@@ -2,11 +2,13 @@ import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, Button } from '../ui';
+import { getHolidayLabel } from '../../utils/officeHolidays';
 
 const SQUARE_COLORS = {
-  leave: 'bg-red-500 border-red-500/60',
-  halfDay: 'bg-amber-400 border-amber-500/60',
-  present: 'bg-emerald-500 border-emerald-600/60',
+  holiday: 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/40',
+  leave: 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/40',
+  halfDay: 'bg-amber-400/80 border-amber-500/50',
+  present: 'bg-emerald-500/90 border-emerald-600/60',
   empty: 'bg-transparent border-[var(--color-bg-border)]',
   approved: 'ring-2 ring-blue-400 ring-offset-1 ring-offset-[var(--color-bg-primary)]',
 };
@@ -19,8 +21,15 @@ const getSquareColor = (status, entry) => {
 
 const buildTooltip = (date, entry, status) => {
   const lines = [format(date, 'EEE, MMM d, yyyy')];
+  if (status === 'holiday') {
+    lines.push(`Holiday: ${getHolidayLabel(date)}`);
+    if (entry?.timeIn || entry?.timeOut) {
+      lines.push('Status: Present (worked on holiday)');
+    }
+    return lines.join('\n');
+  }
   if (!entry) {
-    lines.push(status === 'leave' ? 'Leave (weekend)' : 'No input');
+    lines.push('No input');
     return lines.join('\n');
   }
   if (entry.onLeave || status === 'leave') lines.push('Status: Leave');
@@ -68,9 +77,10 @@ const MonthlyAttendanceGrid = ({
       </div>
 
       <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500" /> Present</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400" /> Half Day</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-500" /> Absent / Leave</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/90 border border-emerald-600/60" /> Present</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400/80 border border-amber-500/50" /> Half Day</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-violet-bg)] border border-[var(--color-pastel-violet-text)]/40" /> Holiday</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-rose-bg)] border border-[var(--color-pastel-rose-text)]/40" /> Leave</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)]" /> No input</span>
       </div>
 

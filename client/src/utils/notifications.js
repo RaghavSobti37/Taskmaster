@@ -1,4 +1,35 @@
 const PUSH_PREF_KEY = 'coreknot_push_enabled';
+const OS_NOTIF_DEDUPE_KEY = 'coreknot_os_notif_dedupe';
+const OS_NOTIF_DEDUPE_TTL_MS = 5 * 60 * 1000;
+
+export const getNotificationIconUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/icons/icon-192.png`;
+  }
+  return '/icons/icon-192.png';
+};
+
+const wasRecentlyShownOsNotification = (tag) => {
+  if (!tag) return false;
+  try {
+    const raw = sessionStorage.getItem(OS_NOTIF_DEDUPE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const ts = map[tag];
+    return ts && Date.now() - ts < OS_NOTIF_DEDUPE_TTL_MS;
+  } catch {
+    return false;
+  }
+};
+
+const markOsNotificationShown = (tag) => {
+  if (!tag) return;
+  try {
+    const raw = sessionStorage.getItem(OS_NOTIF_DEDUPE_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[tag] = Date.now();
+    sessionStorage.setItem(OS_NOTIF_DEDUPE_KEY, JSON.stringify(map));
+  } catch (_) {}
+};
 
 export const isPushPreferenceEnabled = () => {
   try {
@@ -24,14 +55,38 @@ export const requestNotificationPermission = async () => {
   return false;
 };
 
-export const sendNotification = (title, body, options = {}) => {
-  if (Notification.permission !== 'granted') return;
-  new Notification(title, {
-    ...options,
+/** Polling fallback only — skipped when web push is active (SW handles OS toasts). */
+export const sendNotification = async (title, body, options = {}) => {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if (await hasActivePushSubscription()) return;
+
+  const tag = options.tag || title;
+  if (wasRecentlyShownOsNotification(tag)) return;
+
+  const icon = getNotificationIconUrl();
+  const notifOptions = {
     body,
-    icon: '/icons/icon-192.png',
-    tag: options.tag,
-  });
+    icon,
+    badge: icon,
+    tag,
+    renotify: false,
+    data: {
+      actionUrl: options.actionUrl || '/inbox',
+      notificationId: tag,
+    },
+  };
+
+  try {
+    const registration = await navigator.serviceWorker?.ready;
+    if (registration?.showNotification) {
+      await registration.showNotification(title, notifOptions);
+      markOsNotificationShown(tag);
+      return;
+    }
+  } catch (_) {}
+
+  new Notification(title, notifOptions);
+  markOsNotificationShown(tag);
 };
 
 /** Returns 'push' | 'polling' | 'none' — only one path should show OS toasts. */

@@ -29,8 +29,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const canReview = canReviewTask(task, user, projects);
-  const canEditTimeline = canReview || task?.createdBy?._id?.toString() === user?._id?.toString();
+  const canReview = canReviewTask(task, user);
+  const creatorId = task?.createdBy?._id || task?.createdBy;
+  const canEditTimeline = canReview || creatorId?.toString() === user?._id?.toString();
 
   React.useEffect(() => {
     if (task) {
@@ -143,6 +144,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               onTitleChange={setTitle}
               description={desc}
               onDescriptionChange={setDesc}
+              lockedAssigneeIds={creatorId ? [creatorId] : []}
             />
 
             {isInReview && canReview && (

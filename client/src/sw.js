@@ -3,6 +3,8 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href;
+
 self.addEventListener('push', (event) => {
   let payload = { title: 'CoreKnot', body: 'New notification', actionUrl: '/inbox' };
   try {
@@ -12,10 +14,10 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      icon: NOTIFICATION_ICON,
+      badge: NOTIFICATION_ICON,
       tag: payload.notificationId || payload.actionUrl || 'coreknot-notification',
-      renotify: true,
+      renotify: false,
       data: {
         actionUrl: payload.actionUrl || '/inbox',
         notificationId: payload.notificationId || null,

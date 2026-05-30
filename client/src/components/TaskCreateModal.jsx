@@ -112,6 +112,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             onTitleChange={setTitle}
             description={desc}
             onDescriptionChange={setDesc}
+            lockedAssigneeIds={user?._id ? [user._id] : []}
           />
         </div>
 

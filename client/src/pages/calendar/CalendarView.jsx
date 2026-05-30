@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, Clock, CheckSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare } from 'lucide-react';
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
@@ -12,6 +12,7 @@ import {
 } from '../../components/ui';
 import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
 import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
+import { formatEventTimeLabel } from '../../utils/calendarEventTime';
 
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -162,43 +163,46 @@ const CalendarView = () => {
   };
 
   const renderSelectedDayPanel = () => (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+    <Card className="p-3">
+      <div className="grid grid-cols-2 gap-2 items-center mb-2 pb-2 border-b border-[var(--color-bg-border)]">
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">
           {selectedDay ? format(selectedDay, 'EEEE, MMM d') : 'Select a day'}
         </h4>
         {selectedDay && (
-          <Badge variant="slate">{selectedDayEvents.length} EVENTS</Badge>
+          <Badge variant="slate" className="justify-self-end shrink-0">{selectedDayEvents.length} EVENTS</Badge>
         )}
       </div>
       {!selectedDay ? (
         <p className="text-[10px] text-[var(--color-text-muted)] italic">Click a day to view all events.</p>
       ) : selectedDayEvents.length === 0 ? (
-        <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-4">No events on this day</p>
+        <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-3">No events on this day</p>
       ) : (
-        <div className="space-y-2 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-          {selectedDayEvents.map((event, idx) => (
-            <div
-              key={`${event._id}_${idx}`}
-              className={eventPillClass(event)}
-              onClick={() => {
-                if (event.type === 'holiday' || event.type === 'task') return;
-                setEditingEvent(event);
-                setIsModalOpen(true);
-              }}
-            >
-              {event.type === 'holiday' && <span>🇮🇳</span>}
-              <div className="min-w-0 flex-1">
-                <p className="text-[8px] font-black opacity-70 normal-case">{getCalendarEventTypeLabel(event)}</p>
-                <p className="truncate">{event.title}</p>
-                {event.dueDate && event.dueDate.includes('T') && (
-                  <p className="text-[8px] opacity-70 flex items-center gap-1 mt-0.5 normal-case">
-                    <Clock size={8} /> {format(parseLocalDate(event.dueDate), 'h:mm a')}
-                  </p>
-                )}
+        <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5 custom-scrollbar">
+          {selectedDayEvents.map((event, idx) => {
+            const isEditable = event.type !== 'holiday' && event.type !== 'task';
+            const typeLabel = getCalendarEventTypeLabel(event);
+            return (
+              <div
+                key={`${event._id}_${idx}`}
+                className={`py-1.5 px-2 rounded-lg border transition-colors ${getEventStyle(event)} ${isEditable ? 'cursor-pointer hover:opacity-90' : ''}`}
+                onClick={() => {
+                  if (!isEditable) return;
+                  setEditingEvent(event);
+                  setIsModalOpen(true);
+                }}
+              >
+                <div className="flex items-baseline justify-between gap-2 min-w-0">
+                  <span className="text-[11px] font-bold truncate normal-case leading-tight">{event.title}</span>
+                  <span className="text-[10px] font-semibold shrink-0 tabular-nums opacity-90">
+                    {formatEventTimeLabel(event.dueDate || event.date)}
+                  </span>
+                </div>
+                <p className="text-[9px] text-[var(--color-text-muted)] normal-case leading-tight mt-0.5 truncate">
+                  {typeLabel}
+                </p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </Card>
@@ -354,6 +358,7 @@ const CalendarView = () => {
         onClose={() => { setIsModalOpen(false); setEditingEvent(null); }}
         onEntryCreated={() => refetchAllEvents()}
         initialData={editingEvent}
+        defaultDate={selectedDay}
       />
     </PageContainer>
   );

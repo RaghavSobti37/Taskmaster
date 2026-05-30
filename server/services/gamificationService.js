@@ -43,6 +43,51 @@ class GamificationService {
     return Math.ceil(rawXp / 100) * 100;
   }
 
+  static async recalculateExpFromAudit(userId) {
+    const config = await this.getConfig();
+    const logs = await XPAuditLog.find({ userId }).select('action amount').lean();
+
+    let total = 0;
+    for (const log of logs) {
+      const configKey = ACTION_CONFIG_KEY[log.action];
+      if (configKey && config[configKey] != null) {
+        total += config[configKey];
+      } else {
+        total += log.amount || 0;
+      }
+    }
+    return total;
+  }
+
+  static async recalculateAllUsersFromConfig() {
+    const users = await User.find().select('_id exp level');
+    let updatedUsers = 0;
+    const changes = [];
+
+    for (const user of users) {
+      const newExp = await this.recalculateExpFromAudit(user._id);
+      const newLevel = await this.getLevelFromExp(newExp);
+      const prevExp = user.exp || 0;
+      const prevLevel = user.level || 1;
+
+      if (newExp !== prevExp || newLevel !== prevLevel) {
+        user.exp = newExp;
+        user.level = newLevel;
+        await user.save();
+        updatedUsers++;
+        changes.push({
+          userId: user._id,
+          prevExp,
+          newExp,
+          prevLevel,
+          newLevel,
+        });
+      }
+    }
+
+    return { totalUsers: users.length, updatedUsers, changes };
+  }
+
   static async awardExp(userId, amount, action, details = {}) {
     const user = await User.findById(userId);
     if (!user) return;

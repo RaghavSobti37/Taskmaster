@@ -6,6 +6,8 @@ import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 import { makePendingTask } from '../utils/pendingTask';
 import { getTaskQuerySnapshots, updateAllTaskQueries, restoreTaskQuerySnapshots } from '../utils/taskCache';
 import { globalToast } from '../lib/systemLogBridge';
+import { canReviewTask } from '../utils/taskReview';
+import { useAuth } from '../contexts/AuthContext';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -148,6 +150,7 @@ export const useDashboardTasks = (userId) => {
 };
 
 export const useReviewTasks = (enabled = true) => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   useEffect(() => {
     return subscribeToChannel('tasks', 'task_change', () => {
@@ -158,10 +161,11 @@ export const useReviewTasks = (enabled = true) => {
   return useQuery({
     queryKey: ['tasks', 'review'],
     queryFn: fetchReviewTasks,
-    enabled,
+    enabled: typeof enabled === 'boolean' ? enabled : enabled?.enabled !== false,
     staleTime: 0,
     refetchOnMount: 'always',
     placeholderData: keepPreviousData,
+    select: (tasks) => (tasks || []).filter((t) => canReviewTask(t, user)),
   });
 };
 
@@ -302,8 +306,6 @@ export const useCreateCalendarEvent = () => {
     mutationFn: (event) => axios.post('/api/calendar', event),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
   });
@@ -315,8 +317,6 @@ export const useUpdateCalendarEvent = () => {
     mutationFn: ({ id, data }) => axios.put(`/api/calendar/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
   });
@@ -328,8 +328,6 @@ export const useDeleteCalendarEvent = () => {
     mutationFn: (id) => axios.delete(`/api/calendar/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     }
   });

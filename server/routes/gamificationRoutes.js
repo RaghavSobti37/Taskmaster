@@ -55,8 +55,8 @@ router.get('/missions', protect, async (req, res) => {
 router.get('/progress', protect, async (req, res) => {
   try {
     const user = req.user;
-    const currentLevelExp = GamificationService.getExpForLevel(user.level || 1);
-    const nextLevelExp = GamificationService.getExpForLevel((user.level || 1) + 1);
+    const currentLevelExp = await GamificationService.getExpForLevel(user.level || 1);
+    const nextLevelExp = await GamificationService.getExpForLevel((user.level || 1) + 1);
 
     res.json({
       level: user.level || 1,

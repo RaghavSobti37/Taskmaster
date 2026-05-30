@@ -11,17 +11,29 @@ const MemberSelect = ({
   placeholder = 'Assign to team members...',
   multi = true,
   className = '',
+  lockedIds = [],
 }) => {
   const { data: fetchedMembers = [] } = useUserDirectory();
   const members = passedMembers || fetchedMembers;
+
+  const lockedSet = useMemo(
+    () => new Set((lockedIds || []).map((id) => String(id))),
+    [lockedIds]
+  );
 
   const options = useMemo(
     () => members.map((m) => ({
       value: m.user?._id || m._id,
       label: m.user?.name || m.name || 'Unknown',
+      disabled: lockedSet.has(String(m.user?._id || m._id)),
     })),
-    [members]
+    [members, lockedSet]
   );
+
+  const handleChange = (next) => {
+    const merged = [...new Set([...(lockedIds || []).map(String), ...(next || []).map(String)])];
+    onChange(merged);
+  };
 
   return (
     <NexusDropdown
@@ -29,7 +41,7 @@ const MemberSelect = ({
       label={label}
       options={options}
       value={value}
-      onChange={onChange}
+      onChange={handleChange}
       disabled={disabled}
       placeholder={placeholder}
       className={className}

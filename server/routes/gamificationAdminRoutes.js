@@ -78,29 +78,33 @@ router.get('/config/:field', protect, admin, async (req, res) => {
   }
 });
 
-// Recalculate all users' levels with new formula
+// Recalculate all users' XP from audit history using current config rates, then sync levels
 router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
   try {
-    const User = require('../models/User');
     const GamificationService = require('../services/gamificationService');
+    const config = await GamificationService.getConfig();
+    const { totalUsers, updatedUsers, changes } = await GamificationService.recalculateAllUsersFromConfig();
 
-    const users = await User.find();
-    let updateCount = 0;
-
-    for (const user of users) {
-      const currentLevel = await GamificationService.getLevelFromExp(user.exp || 0);
-      if (currentLevel !== (user.level || 1)) {
-        user.level = currentLevel;
-        await user.save();
-        updateCount++;
-      }
+    const unchanged = totalUsers - updatedUsers;
+    let message;
+    if (updatedUsers === 0) {
+      message = `No changes needed — all ${totalUsers} users already match XP totals from activity history at current config rates.`;
+    } else {
+      message = `Recalculated XP for ${updatedUsers} of ${totalUsers} users using current config (stepXp: ${config.stepXp}).`;
     }
 
-    res.json({ 
-      success: true, 
-      message: `Updated ${updateCount} users with new level formula`,
-      totalUsers: users.length,
-      updatedUsers: updateCount
+    res.json({
+      success: true,
+      message,
+      totalUsers,
+      updatedUsers,
+      unchangedUsers: unchanged,
+      stepXp: config.stepXp,
+      changes: changes.map((c) => ({
+        userId: c.userId,
+        exp: { from: c.prevExp, to: c.newExp },
+        level: { from: c.prevLevel, to: c.newLevel },
+      })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

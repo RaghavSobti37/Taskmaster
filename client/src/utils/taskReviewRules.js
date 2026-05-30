@@ -1,0 +1,64 @@
+/** Client ESM mirror of shared/taskReviewRules.js — keep in sync */
+
+export const normalizeId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  return String(value._id || value);
+};
+
+export const assignmentUserId = (assignment) =>
+  normalizeId(assignment?.userId?._id || assignment?.userId);
+
+export const assignmentAssignerId = (assignment) =>
+  normalizeId(assignment?.assignedBy?._id || assignment?.assignedBy);
+
+export const isDelegatedAssignment = (assignment) => {
+  const assigneeId = assignmentUserId(assignment);
+  const assignerId = assignmentAssignerId(assignment);
+  return Boolean(assigneeId && assignerId && assigneeId !== assignerId);
+};
+
+export const getAssignmentForUser = (assignments, userId) => {
+  const uid = normalizeId(userId);
+  if (!uid || !assignments?.length) return null;
+  return assignments.find((a) => assignmentUserId(a) === uid) || null;
+};
+
+export const requiresReviewForUser = (assignments, userId) => {
+  const mine = getAssignmentForUser(assignments, userId);
+  if (!mine) return false;
+  const assigneeId = assignmentUserId(mine);
+  const assignerId = assignmentAssignerId(mine);
+  return Boolean(assignerId && assigneeId && assignerId !== assignerId);
+};
+
+export const getDelegatedAssignments = (assignments) =>
+  (assignments || []).filter(isDelegatedAssignment);
+
+export const canUserApproveReview = (user, assignments) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return false;
+  return getDelegatedAssignments(assignments).some(
+    (a) => assignmentAssignerId(a) === uid
+  );
+};
+
+export const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => {
+  const creator = normalizeId(creatorId);
+  const ids = [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))];
+  if (creator && !ids.includes(creator)) ids.unshift(creator);
+  if (!ids.length && creator) return [creator];
+  return ids;
+};
+
+export const filterReviewQueueTasks = (tasks, user, getAssignments) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return [];
+  return (tasks || []).filter((task) => {
+    const raw = getAssignments ? getAssignments(task) : (task?.assignments || task?.assignees || []);
+    const assignments = Array.isArray(raw)
+      ? raw.map((a) => (typeof a === 'object' && a?.userId ? a : { userId: a, assignedBy: task?.assignedBy || task?.createdBy }))
+      : [];
+    return canUserApproveReview(user, assignments);
+  });
+};

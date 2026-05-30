@@ -1,20 +1,22 @@
 <p align="center">
-  <img src="client/public/favicon.svg" alt="CoreKnot" width="72" height="72" />
+  <img src="client/public/favicon.svg" alt="CoreKnot Logo" width="80" height="80" />
 </p>
 
 <h1 align="center">Taskmaster</h1>
 
 <p align="center">
   <strong>Enterprise CRM & Operations Hub</strong><br/>
-  Unified project management, sales pipeline, finance ops, and team productivity — built for high-density agency workflows.
+  An ultra-high-density operational platform integrating project execution, automated sales pipelines, robust finance operations, and real-time team gamification—explicitly engineered for agency workflows.
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#environment-variables">Environment</a> ·
-  <a href="docs/VERSION_HISTORY.md">Version History</a>
+  <a href="#-key-features">Features</a> ·
+  <a href="#%EF%B8%8F-architecture--tech-stack">Architecture</a> ·
+  <a href="#%EF%B8%8F-directory-structure">Directory Structure</a> ·
+  <a href="#%EF%B8%8F-quick-start-guide">Quick Start</a> ·
+  <a href="#-environment-configuration">Configuration</a> ·
+  <a href="#-api-architecture--routing">API Surface</a> ·
+  <a href="#-diagnostic--observability-protocol">Diagnostics</a>
 </p>
 
 <p align="center">
@@ -27,417 +29,239 @@
 
 ---
 
-## Overview
+## 📖 Executive Summary
 
-Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational platform that combines CRM, project delivery, finance document management, gamification, and internal communications in a single workspace. The codebase follows a decoupled **React + Vite** frontend and **Express + MongoDB** backend, with a secure proxy layer for third-party integrations.
+Taskmaster (branded natively as **CoreKnot** within its Progressive Web App shell) is a decoupled, multi-tenant operational workspace designed to strip out project management overhead. It streamlines complex business lines—such as financial document optical character recognition (OCR), multi-channel customer relationship management (CRM) ingestion, and department-aware workforce scheduling—into a unified, high-density dashboard.
 
-| Layer | Stack |
-|-------|-------|
-| Frontend | React 18, Vite 5, Tailwind CSS v4, TanStack Query, Framer Motion |
-| Backend | Node.js, Express, Mongoose, BullMQ, Trigger.dev |
-| Data | MongoDB Atlas, Redis (queues/cache), Socket.IO realtime |
-| Auth | JWT + Google OAuth, role-based route guards |
-| Deploy | Render (web service + static CDN), tsccoreknot.com |
+### Core Ecosystem Primitives
+
+* **Decoupled Architecture:** Vite-optimized React Single Page Application (SPA) paired with a high-performance Express REST API layer.
+* **Resilient Infrastructure:** Integrated Redis task queues (`BullMQ`), state-driven orchestration (`Trigger.dev`), real-time bidirectional state syncing (`Socket.IO`), and an autonomous system-health blocking middleware.
+* **Strict Review Pipelines:** Institutional task governance rules separating individual contributions from multi-tiered peer review workflows.
 
 ---
 
-## Table of Contents
-
-- [Features](#features)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
-- [Environment Variables](#environment-variables)
-- [Backend Proxy](#backend-proxy)
-- [Notifications & PWA](#notifications--pwa)
-- [API Surface](#api-surface)
-- [Scripts & Tooling](#scripts--tooling)
-- [Diagnostic Protocol](#diagnostic-protocol)
-- [Production Migration](#production-migration)
-- [Version History](docs/VERSION_HISTORY.md)
-
----
-
-## Features
-
-### Dashboard & Productivity
-- **Three-column dashboard** — Leaderboard podium, announcements, pin board, schedule, todos today, projects today, and private notes in a single view (headerless layout for density).
-- **Weekly leaderboard** — Resets Monday 00:00 IST; lifetime XP/level unchanged; sums `XPAuditLog` per ISO work week.
-- **Pin board** — Team-wide shared notes with composer; persisted via `/api/pinboard`.
-- **Private notes** — Per-user sticky notes with project linking via `/api/notes`.
-- **Todo page** (`/todo`) — Full task list with search, status/priority/category/project filters, workspace color accents, and flash-highlight deep links.
-- **Schedule grid** (`/schedule`) — Department-aware workload view with AM/PM/FULL slot assignment.
-- **Command palette** — Global keyboard-driven navigation and quick actions.
-- **Quick-add menu** — Floating FAB for fast task/project creation.
-
-### Notifications & Inbox
-- **Inbox page** (`/inbox`) — Category-filtered notification feed (task, CRM, attendance, announcement, department, system).
-- **Web Push (PWA)** — VAPID-based desktop push via service worker; subscribe/unsubscribe endpoints.
-- **Email dispatch** — Branded HTML notification template with CTA deep links.
-- **Status counts** — Sidebar badges for overdue/today tasks, follow-ups, calendar events, and unread notifications.
-- **Flash highlight** — Navigate from notification → target row with animated highlight.
-
-### Departments & Task Types
-- **Department model** — Signup-time department selection, color/slug/sort order, admin seeding.
-- **Task types** — Department- and project-role-scoped task categories.
-- **Change requests** — Users can request department transfers; admins approve/reject.
-
-### CRM & Sales
-- Lead management with CSV import, HolySheet sync, and Exly webhook ingest.
-- **Customer Leads** (`/crm/leads`) — Stat cards, left-aligned filter bar, server-side pagination.
-- Follow-up scheduling with Today / Overdue / Upcoming tabs.
-- Least-loaded sales rep auto-assignment on booked calls.
-- AiSensy WhatsApp dual integration (customer + rep alerts).
-- Exly analytics with paid/free booking breakdown and revenue engine.
-
-### Projects & Workspaces
-- Kanban, list, team, and Gantt views per project.
-- Workspace drag-and-drop reordering (admin).
-- Task assignment via `TaskAssignment` join model with virtual `assignees`.
-- Schedule slots (`AM`, `PM`, `FULL`) and `scheduleDate` on tasks.
-
-### Finance & Operations
-- Multi-file drag-and-drop upload with batching, retries, and partial-success handling.
-- OCR/OMR document parsing (`pdf-parse`, `tesseract.js`).
-- Admin Script Runner at `/admin/scripts` for one-click server script execution.
-
-### Tasks & Review Workflow
-- **Strict review queue** — only tasks you assigned to someone else (`shared/taskReviewRules.js`); self-work skips review.
-- Creator always an assignee; assigner-only approve/rollback; personal review badges on dashboard and projects.
-- Completion → `in-review` only for delegated assignments; migration script for legacy self-review rows.
-
-### Calendar
-- Internal events with visibility (private / public / project), event types, and **time picker**.
-- Compact day panel; tasks shown via filter (not created when saving events).
-- Google holiday feed + regional holiday toggle.
-
-### Attendance & Gamification
-- **Attendance** (`/attendance`) — 3-day, full-week, and monthly grid; IST week boundaries.
-- **Holiday vs leave** — weekends + 2026 office holidays (purple); approved leave (muted rose); present/half-day/approve-lock flows.
-- **Gamification** — configurable XP rates; daily log awards; admin recalculate-from-config.
-- **Weekly leaderboard** — Monday 00:00 IST reset (query-time from `XPAuditLog`); lifetime XP/level preserved.
-
-### Admin & Integrations
-- User/team/CRM/mail/gamification admin panels.
-- **System Logs** (`/management/ops-logs`) — unified observability feed with severity, module, trace IDs, and page analytics.
-- **Department page permissions** — per-department route access presets with `PageRoute` guards.
-- **Monthly reports** — aggregated user activity reports in admin panels.
-- Announcement dispatch with recipient-level email tracking and open pixel.
-- Artists Hub with Spotify, YouTube, Meta live analytics and unified `ArtistConnection` OAuth model.
-- Backend proxy for YouTube, OpenAI, Exly, HolySheet (auth-protected).
-- Resend/SES mail campaigns with Svix webhook verification.
-
-### Data Backup & Observability
-- **Daily MongoDB backup** — Render cron job streams production collections to `taskmaster_backups` GridFS (7-day retention).
-- **System log contract** — shared `shared/systemLogContract.js` for client/server severity, module, and toast mapping.
-- **Trace middleware** — request-scoped trace IDs propagated to logs and error responses.
-
-### PWA
-- Installable progressive web app with `manifest.json`, 192/512 icons, and injectManifest service worker.
-- App shortcuts to Inbox and Todo.
-- Install banner with deferred prompt handling.
-
----
-
-## Architecture
+## 🛠️ Architecture & Tech Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     React SPA (Vite + PWA)                      │
 │  Dashboard │ Projects │ CRM │ Finance │ Inbox │ Schedule │ Admin│
-│              TanStack Query  │  Service Worker (sw.js)          │
+│            TanStack Query  │  Service Worker (sw.js)            │
 └────────────────────────────┬────────────────────────────────────┘
-                             │  /api/*
+                             │  Secure HTTP / WSS (/api/*)
 ┌────────────────────────────▼────────────────────────────────────┐
 │                    Express API (server.js)                      │
 │  Auth │ Tasks │ Projects │ CRM │ Notifications │ Departments   │
-│  PinBoard │ Notes │ Schedule │ Finance │ Gamification │ Mail   │
+│  PinBoard │ Notes │ Schedule │ Finance │ Gamification │ Mail    │
 │  SystemHealthService │ Rate Limiting │ Gzip │ Helmet            │
 └──────┬──────────────┬──────────────┬──────────────┬─────────────┘
        │              │              │              │
-   MongoDB         Redis/BullMQ   Socket.IO     External APIs
+   MongoDB        Redis/BullMQ   Socket.IO     External APIs
    (Mongoose)     (queues)       (realtime)    (Exly, Resend, Google…)
 ```
 
-### Design System
-- **Pro-Max UI** — Semantic CSS tokens, zero-flash theme engine, Framer Motion micro-animations.
-- **Shared form components** — `MemberSelect`, `PrioritySelect`, `StatusSelect`, `ProjectSelect`, `WorkspaceSelect`, `TaskCategorySelect`.
-- **UI primitives** — `EmptyState`, `DataLoading`, `Spinner`, `SectionCard`, `SearchInput`, `IconButton`, `PageLoadGuard`, `FlashHighlight`.
+### Infrastructure Layer Spec
+
+| Layer | Component | Implementation |
+|:---|:---|:---|
+| **Frontend** | UI Shell & State | React 18, Vite 5, Tailwind CSS v4, TanStack Query, Framer Motion |
+| **Backend** | API Engine | Node.js, Express, Mongoose ODM, BullMQ, Trigger.dev |
+| **Data & Cache** | Storage Engine | MongoDB Atlas, Redis (asynchronous queues & cache clusters) |
+| **Realtime** | Transport Layer | Socket.IO WebSockets with automatic fallback protocols |
+| **Security** | Authentication | Stateless JWT, Google OAuth 2.0 Passport flow, Role-Based Access Control (RBAC) |
+| **Deployment** | CI/CD Infrastructure | Render (Web Services + Managed Static CDN handles asset distribution) |
 
 ---
 
-## Project Structure
+## 🚀 Key Features
+
+### 📊 Ultra-Density Productivity Engine
+
+* **Headerless Three-Column View:** Combines live leaderboard podiums, team announcements, a global pinboard, private sticky notes, and active schedules inside a zero-latency single screen.
+* **Dynamic Gamification:** Tracks user activity and awards Experience Points (XP) from structural configurations. Resets top-performers weekly on Monday 00:00 IST via native aggregation on `XPAuditLog` while preserving lifetime levels.
+* **Global Navigation:** Keyboard-driven command palettes (`Cmd/Ctrl + K`) and persistent floating Fast Action Buttons (FAB) for instantaneous record generation.
+
+### 💼 Automated Sales & CRM Pipelines
+
+* **Ingestion Vectors:** Multi-channel lead ingestion via structured CSV uploads, real-time Google Sheets integrations, and Exly webhook endpoints.
+* **Auto-Routing Allocations:** Automatically assigns incoming customer opportunities to the least-loaded sales representative currently online.
+* **Transactional Communication:** Dual-route AiSensy WhatsApp setups simultaneously issue real-time tracking confirmations to clients and internal alert indicators to the assigned sales team.
+
+### 🛡️ Institutional Task Review Workflow
+
+* **Governance Matrix:** Enforces strict code/task ownership logic (`shared/taskReviewRules.js`). Tasks explicitly delegated to peers are frozen upon completion and routed directly into an immutable `in-review` state queue. Self-assigned entries bypass validation rules entirely.
+* **Role Enforcement:** Restricts execution bounds; only the explicit task creator retains roll-back, state manipulation, or permanent completion override permissions.
+
+### 📑 OCR Document Parsing & Finance Ops
+
+* **Ingestion Pipelines:** Multi-file asynchronous drag-and-drop file uploaders featuring deep retries, intelligent chunk batching, and partial-success state tracking.
+* **Extraction Processing:** Leverages specialized pipelines using `pdf-parse` and `tesseract.js` engines to programmatically turn physical balance sheets or receipts into relational ledger payloads.
+
+### 🐛 Platform Bug Reporting
+
+* **Floating Report Widget:** Persistent bug-report FAB on all authenticated routes (`HelpBugButton.jsx`).
+* **Auto-Routing:** `POST /api/tasks/bug` creates tasks under **Tech Stack & Maintenance**, assigns to the platform owner, and syncs all users into the project with assign-capable roles.
+* **UX:** Title required, description optional; Enter submits from title field, Ctrl+Enter from description.
+
+---
+
+## 🗂️ Directory Structure
 
 ```
 Taskmaster/
-├── client/                    # React frontend (Vite)
-│   ├── public/
-│   │   ├── manifest.json      # PWA manifest
-│   │   └── icons/             # 192px & 512px app icons
-│   ├── scripts/
-│   │   └── generate-pwa-icons.mjs
+├── client/                     # Frontend Application Root
+│   ├── public/                 # Static Assets & PWA manifests
+│   │   ├── manifest.json       # PWA configurations & deep link schemes
+│   │   └── icons/              # Responsive multi-device application icons
+│   ├── scripts/                # Frontend automation utilities
 │   └── src/
-│       ├── components/        # UI, dashboard, forms, schedule
-│       ├── pages/             # Route pages (dashboard, inbox, todo, schedule…)
-│       ├── hooks/             # React Query hooks, PWA install
-│       ├── contexts/          # Auth, theme, sidebar, toast, confirm
-│       ├── lib/               # Socket.IO client (realtime.js)
-│       ├── constants/         # Task options, categories
-│       ├── utils/             # Notifications, workspace colors, formatting
-│       └── sw.js              # Service worker (injectManifest)
-├── server/                    # Express backend
-│   ├── routes/                # REST API routers
-│   ├── controllers/           # Business logic
-│   ├── models/                # Mongoose schemas
-│   ├── services/              # Notifications, push, departments, mail
-│   ├── middleware/            # Auth, error handling, health checks
-│   ├── scripts/               # Migrations, seeds, QA, finance sync
-│   ├── templates/             # HTML email templates
-│   └── .env.example           # Environment template
-├── shared/                    # Cross-stack contracts (systemLogContract)
-├── docs/                      # Project documentation (DATA_BACKUP.md, audits)
-├── render.yaml                # Render Blueprint (daily backup cron)
-├── docker/                    # Local Postiz env template
-├── .specify/memory/           # Architecture & agent memory
-└── GLOBAL_RULES.md            # Coding philosophy & config rules
+│       ├── components/         # Atomic UI controls, design primitives, and form modules
+│       ├── pages/              # Routed view targets (Dashboard, Inbox, Todo, CRM)
+│       ├── hooks/              # Isolated React Query abstractions & hardware listeners
+│       ├── contexts/           # Global State Hubs (Auth, Theme, Socket, Toasts)
+│       └── sw.js               # Service Worker utilizing injectManifest compilation
+├── server/                     # Backend API Application Root
+│   ├── routes/                 # Explicitly mapped REST routing topologies
+│   ├── controllers/            # Pure business logic controllers
+│   ├── models/                 # Mongoose schema primitives and indexes
+│   ├── services/               # Third-party adapters (Notification, Mail, AWS SES)
+│   ├── middleware/             # Authorization, Rate Limiting, and Health Guards
+│   ├── scripts/                # Database seed engines, backup suites, and migrations
+│   └── templates/              # Transactional MJML/HTML email layouts
+├── shared/                     # Multi-runtime definitions (Logger schemas, types)
+├── docs/                       # Architectural specs and runtime manuals
+└── render.yaml                 # Infrastructure Blueprint configurations
 ```
 
 ---
 
-## Quick Start
+## ⚙️ Quick Start Guide
 
-### Prerequisites
+### System Prerequisites
 
-| Requirement | Notes |
-|-------------|-------|
-| Node.js 18+ | LTS recommended |
-| MongoDB | Local instance or Atlas cluster |
-| Redis | Optional — required for BullMQ queues and cache |
-| API keys | See [Environment Variables](#environment-variables) |
+* **Node.js:** Runtime engine environment `v18.0.0` or higher.
+* **MongoDB:** Active localized instance or an accessible remote Atlas connection.
+* **Redis:** Standard cluster endpoint (highly recommended for processing async event queues).
 
-### 1. Clone & install
+### Step-by-Step Environment Bootstrapping
+
+#### 1. Clone Ecosystem and Local Dependencies
 
 ```bash
 git clone https://github.com/RaghavSobti37/Taskmaster.git
 cd Taskmaster
 
-# Backend
+# Install localized dependencies inside the Backend Layer
 cd server && npm install
 
-# Frontend
+# Install localized dependencies inside the Frontend Layer
 cd ../client && npm install
 ```
 
-### 2. Configure environment
+#### 2. Configure Local Environment State
 
 ```bash
-cd server
+cd ../server
 cp .env.example .env
-# Edit .env with your MongoDB URI, JWT secret, and service keys
 ```
 
-Optional — Web Push (desktop notifications):
+Open your newly created `.env` file and define your structural configurations. To spin up local hardware push alerts, generate unique cryptographic VAPID signatures:
 
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-Add to `server/.env`:
-```env
-VAPID_PUBLIC_KEY=<public key>
-VAPID_PRIVATE_KEY=<private key>
-VAPID_SUBJECT=mailto:your@email.com
-```
+#### 3. Initialize Database Seed Schemes
 
-Frontend API URL (optional in `client/.env`):
-```env
-VITE_API_URL=http://localhost:5000
-```
-
-**Production (Vercel + Render):** set `VITE_API_URL=https://taskmaster-api.onrender.com` on the static host so campaign creates bypass the Vercel proxy (~4.5MB body limit). Relative `/api` rewrites still work for small requests.
-
-When `VITE_API_URL` is blank, the frontend uses relative `/api` paths (proxied via `vercel.json` in production).
-
-### 3. Seed departments (first run)
+Populate fundamental organizational architectures, department entities, permission flags, and default system classifications into your local collection instances:
 
 ```bash
-cd server
 node scripts/seedDepartmentsAndTaskTypes.js
 ```
 
-### 4. Run locally
+#### 4. Run the Local Development Environment
 
-**Terminal 1 — Backend:**
+Execute both runtime nodes concurrently in isolated terminal shells:
+
+**Terminal 1: Node API Engine Server**
+
 ```bash
 cd server
 npm run dev
 ```
 
-**Terminal 2 — Frontend:**
+**Terminal 2: Vite Compiling Frontend**
+
 ```bash
 cd client
 npm run dev
 ```
 
-Open **http://localhost:5173** — API proxied to **http://localhost:5000**.
+* Your local frontend workspace compiles dynamically at `http://localhost:5173`.
+* Internal network communication maps directly through an automated Vite proxy straight down into the api layer listening at `http://localhost:5000`.
 
-### 5. Generate PWA icons (optional)
+---
 
-```bash
-cd client
-npm run generate-icons
+## 🔒 Environment Configuration
+
+The server relies heavily on strict system environment mappings to guarantee secure operation across multi-stage runtime environments.
+
+| Environment Variable Key | Requirements | Contextual Description |
+| --- | --- | --- |
+| `MONGODB_URI` | **Required** | Unified database connection string specifying target authorization endpoints. |
+| `JWT_SECRET` | **Required** | Cryptographic key utilized to sign statelessly managed web token tokens. |
+| `FRONTEND_URL` | Production Only | The public consumer web location utilized to build structural email CTA references. |
+| `VITE_API_URL` | Highly Recommended | Direct endpoint address pointing to the static web API host, intentionally skipping standard middle-tier routing paths during massive data payload uploads. |
+| `REDIS_URL` | Optional | Direct connection reference used to drive active state machine queues (`BullMQ`). |
+| `DEBUG_BYPASS` | Development Only | Enables a stateless internal bypass mechanism (`Authorization: Bearer bypass_token`). |
+
+---
+
+## 📡 API Architecture & Routing
+
+All application endpoints are structured beneath an explicit global `/api` gateway context pattern.
+
+```
+/api
+├── /auth         → User onboarding, token provisioning, and federated Google sign-in
+├── /tasks        → Standard task mutations, dynamic tracking states, and role assignments
+├── /projects     → Structural workspace definitions, access states, and board layouts
+├── /crm          → Third-party contact capture engines and pipeline automations
+├── /notifications→ Push delivery registries, system status counts, and message updates
+├── /finance      → Multi-file processing, metadata index arrays, and document extractions
+└── /proxy        → Monitored proxy routing to YouTube, OpenAI, and HolySheet targets
 ```
 
 ---
 
-## Environment Variables
+## 🔍 Diagnostic & Observability Protocol
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `MONGODB_URI` | Yes | MongoDB connection string |
-| `JWT_SECRET` | Yes | Token signing secret |
-| `FRONTEND_URL` | Prod | Public app URL for email CTAs |
-| `APP_BASE_URL` | Prod | Public **API** origin for open/click tracking |
-| `TRACKING_BASE_URL` | Prod | Override API origin for email pixels/clicks (e.g. `https://taskmaster-jfw0.onrender.com`) |
-| `VITE_API_URL` | Prod | Direct API URL on static host; bypasses Vercel proxy for large payloads |
-| `TRACKING_USE_LOCAL` | Dev | Set `true` to embed localhost tracking URLs during local send tests |
-| `RESEND_API_KEY` | Optional | System Resend sender for campaigns (`senderMode: system_resend`) |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Optional | System SMTP sender (`senderMode: system_smtp`) |
-| `VAPID_PUBLIC_KEY` | Push | Web Push public key |
-| `VAPID_PRIVATE_KEY` | Push | Web Push private key |
-| `VAPID_SUBJECT` | Push | `mailto:` contact for push |
-| `EMAIL_ADDRESS` | Mail | SMTP sender address |
-| `EMAIL_PASSWORD` | Mail | SMTP password |
-| `RESEND_API_KEY` | Mail | Resend API key |
-| `REDIS_URL` | Queues | Redis for BullMQ |
-| `GOOGLE_CLIENT_ID` | OAuth | Google OAuth client |
-| `GOOGLE_CLIENT_SECRET` | OAuth | Google OAuth secret |
-| `DEBUG_BYPASS` | Dev | Enable local auth bypass |
-| `CORS_ALLOWED_ORIGINS` | Prod | Comma-separated extra origins |
+Taskmaster is engineered to survive production strain with a rigorous multi-tiered observability layout:
 
-Full template: `server/.env.example`
+* **Autonomous Killswitch Protection (`SystemHealthService`):** A middle-tier system layer that constantly probes connection paths to MongoDB and Redis. If database or caching links go offline, it immediately intercepts incoming traffic with an explicit `HTTP 503 Maintenance Mode` error response to protect database integrity.
+* **Trace Propagation & Context Isolation:** Injectable correlation IDs follow requests through the execution stack. If an unhandled application error happens, the engine wraps structural metadata parameters directly into the server logs and error bodies.
+* **Telemetry Diagnostics Dashboard:** Found natively under `/management/ops-logs`. It provides live telemetry charting, page analytics tracking, structural message trace indicators, and real-time error logs sorted by severity level.
 
 ---
 
-## Backend Proxy
+## 🚀 Production Migration Sequence
 
-Mounted at `/api/proxy`. Protected by auth middleware.
-
-| Service | Path prefix |
-|---------|-------------|
-| YouTube | `/api/proxy/youtube` |
-| OpenAI | `/api/proxy/openai` |
-| Exly | `/api/proxy/exly` |
-| HolySheet | `/api/proxy/holysheet` |
-
-**Local dev bypass:**
-```env
-DEBUG_BYPASS=true
-```
-```bash
-curl -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=taskmaster&maxResults=1"
-```
-
----
-
-## Notifications & PWA
-
-### Notification categories
-| Category | Triggers |
-|----------|----------|
-| `task` | Assignment, due date, completion |
-| `crm` | Lead assignment, follow-up reminders |
-| `attendance` | Check-in/out events |
-| `announcement` | Manager broadcasts |
-| `department` | Change request status |
-| `review` | Task review requests |
-| `system` | Admin alerts |
-
-### Key endpoints
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/notifications` | List notifications (category-filtered) |
-| GET | `/api/notifications/status-counts` | Sidebar badge counts |
-| POST | `/api/notifications/push/subscribe` | Register push subscription |
-| GET | `/api/notifications/push/vapid-key` | Public VAPID key |
-| PATCH | `/api/notifications/:id/read` | Mark single read |
-| POST | `/api/notifications/read-all` | Mark all read |
-
-### PWA install
-The app registers a service worker via `vite-plugin-pwa` (injectManifest strategy). Users see an install banner on supported browsers. Shortcuts in `manifest.json` link directly to `/inbox` and `/todo`.
-
----
-
-## API Surface
-
-| Prefix | Module |
-|--------|--------|
-| `/api/auth` | Login, register, OAuth |
-| `/api/tasks` | Task CRUD, assignments |
-| `/api/projects` | Projects, workspaces, phases |
-| `/api/users` | Profiles, avatars |
-| `/api/crm` | Leads, follow-ups, imports |
-| `/api/notifications` | Inbox, push, status counts |
-| `/api/departments` | Departments, task types, change requests |
-| `/api/schedule` | Workload grid |
-| `/api/pinboard` | Team pin board |
-| `/api/notes` | Private user notes |
-| `/api/attendance` | Attendance tracking |
-| `/api/announcements` | Manager announcements + email dispatch |
-| `/api/finance` | Documents, folders, OCR upload |
-| `/api/gamification` | XP, leaderboard, streaks |
-| `/api/exly` | Exly campaigns & analytics |
-| `/api/mail` | Email campaigns |
-| `/api/admin/scripts` | Script runner (admin) |
-| `/api/system-logs` | Unified system log feed & page analytics |
-| `/api/proxy` | Third-party API proxy |
-
----
-
-## Scripts & Tooling
-
-| Command | Location | Purpose |
-|---------|----------|---------|
-| `npm run dev` | server / client | Development servers |
-| `npm run build` | client | Production frontend build |
-| `npm run generate-icons` | client | Regenerate PWA icons |
-| `npm run sync-finance-to-prod` | server | Mirror finance docs to prod |
-| `node scripts/runDailyBackup.js` | server | Manual production DB backup |
-| `node scripts/listBackups.js` | server | List backup snapshots |
-| `node scripts/seedDepartmentsAndTaskTypes.js` | server | Seed departments & task types |
-| `node scripts/runQATests.js` | server | Automated QA suite |
-| `node scripts/verify_infrastructure.js` | server | DB & env health check |
-
----
-
-## Diagnostic Protocol
-
-- **SystemHealthService** — Blocks business logic when DB/Redis is offline; returns 503 Maintenance Mode.
-- **Centralized error propagation** — Structured logging with operational vs programmer error routing.
-- **Performance logging** — Request timing written to `server/performance.log`.
-- **Graceful shutdown** — SIGTERM/SIGINT handlers reduce port conflicts on nodemon restart.
-
----
-
-## Production Migration
-
-After deploying v1.7.37+, run data migrations against production from `server/`:
+When deploying release targets `v1.7.37` or above, perform these structural database updates down against live system targets:
 
 ```bash
-# Review workflow — dry run first
+# 1. Execute a non-destructive simulation to verify existing dataset structures
 node scripts/migrateReviewWorkflow.js --dry-run --prod
+
+# 2. Execute the migration against your live database collections
 node scripts/migrateReviewWorkflow.js --execute --prod
 
-# Optional: remove demo/seed test tasks
+# 3. Clean up non-conforming test entries or legacy structural artifacts
 node scripts/cleanupTestTasks.js --prod
 ```
 
-Full guide: [docs/PRODUCTION_MIGRATION.md](docs/PRODUCTION_MIGRATION.md)
-
-Release notes: [docs/VERSION_HISTORY.md](docs/VERSION_HISTORY.md)
+For comprehensive deep-dives into platform dependencies, automated testing strategies, or data extraction workflows, review our architectural documentation housed directly within the `/docs` directory.
 
 ---
 
-## License
-
-Private — All rights reserved.
+*Distributed Private Enterprise Systems — Copyright © 2026 CoreKnot. All Rights Reserved.*

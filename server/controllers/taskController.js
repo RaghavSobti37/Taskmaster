@@ -15,6 +15,65 @@ const dispatchTaskNotifications = (payloads = []) => {
   }
 };
 
+const TECH_PROJECT_ASSIGN_ROLE = 'artist_management';
+const TECH_PROJECT_ASSIGN_ROLES = new Set(['owner', 'manager', 'admin', 'artist_management']);
+
+const memberId = (value) => (value?._id || value)?.toString?.() || null;
+
+/** Ensure every user is on the bug/tech project and can assign tasks to the owner. */
+const syncTechProjectMembers = async (techProject, ownerId, session) => {
+  const User = require('../models/User');
+  const allUsers = await User.find({}).select('_id').lean().session(session);
+  const ownerStr = memberId(ownerId);
+
+  const memberSet = new Set((techProject.members || []).map(memberId).filter(Boolean));
+  const roleMap = new Map(
+    (techProject.memberRoles || [])
+      .map((entry) => [memberId(entry.user), entry.role])
+      .filter(([id]) => id)
+  );
+
+  const newMembers = [...(techProject.members || [])];
+  const newMemberRoles = (techProject.memberRoles || []).map((entry) => ({
+    user: entry.user?._id || entry.user,
+    role: entry.role,
+  }));
+
+  let changed = false;
+
+  for (const u of allUsers) {
+    const uid = u._id.toString();
+    if (!memberSet.has(uid)) {
+      newMembers.push(u._id);
+      memberSet.add(uid);
+      changed = true;
+    }
+    if (uid === ownerStr) continue;
+    const currentRole = roleMap.get(uid);
+    if (!currentRole || !TECH_PROJECT_ASSIGN_ROLES.has(currentRole)) {
+      const existingIdx = newMemberRoles.findIndex((r) => memberId(r.user) === uid);
+      if (existingIdx >= 0) {
+        if (newMemberRoles[existingIdx].role !== TECH_PROJECT_ASSIGN_ROLE) {
+          newMemberRoles[existingIdx].role = TECH_PROJECT_ASSIGN_ROLE;
+          changed = true;
+        }
+      } else {
+        newMemberRoles.push({ user: u._id, role: TECH_PROJECT_ASSIGN_ROLE });
+        roleMap.set(uid, TECH_PROJECT_ASSIGN_ROLE);
+        changed = true;
+      }
+    }
+  }
+
+  if (!changed) return techProject;
+
+  return Project.findByIdAndUpdate(
+    techProject._id,
+    { members: newMembers, memberRoles: newMemberRoles },
+    { new: true, session }
+  ) || techProject;
+};
+
 const ALLOWED_CREATE = [
   'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
   'projectId', 'phaseId', 'parentTaskId', 'assignees', 'startDate', 'dueDate', 'duration',
@@ -179,11 +238,13 @@ exports.reportBug = async (req, res, next) => {
   session.startTransaction();
   try {
     const { page, title, description, severity } = req.body;
-    if (!title || !description) {
+    if (!title?.trim()) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ error: 'Title and description are required' });
+      return res.status(400).json({ error: 'Title is required' });
     }
+
+    const details = description?.trim() || '(No details provided)';
 
     const User = require('../models/User');
     const raghavUser = await User.findOne({ email: 'raghavraj@theshakticollective.in' }).session(session) || req.user;
@@ -202,9 +263,11 @@ exports.reportBug = async (req, res, next) => {
       techProject = techProject[0];
     }
 
+    techProject = await syncTechProjectMembers(techProject, raghavUser._id, session);
+
     const taskData = {
       title: `[BUG] ${title} (${page || 'General'})`,
-      description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${description}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
+      description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
       status: 'todo',
       priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
       projectId: techProject._id,
@@ -224,6 +287,9 @@ exports.reportBug = async (req, res, next) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    if (error.message?.includes('authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
     next(error);
   }
 };

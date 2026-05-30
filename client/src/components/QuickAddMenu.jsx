@@ -36,8 +36,9 @@ const QuickAddMenu = () => {
     });
   };
 
-  const submitBug = async () => {
-    if (!bugTitle.trim() || !bugDesc.trim()) return;
+  const submitBug = async (e) => {
+    e?.preventDefault?.();
+    if (!bugTitle.trim()) return;
     await axios.post('/api/tasks/bug', {
       page: window.location.pathname,
       title: bugTitle.trim(),
@@ -96,11 +97,35 @@ const QuickAddMenu = () => {
       </NexusModal>
 
       <NexusModal isOpen={bugOpen} onClose={() => setBugOpen(false)} title="Report Bug" showFooter={false}>
-        <div className="space-y-3 pt-2">
-          <Input value={bugTitle} onChange={(e) => setBugTitle(e.target.value)} placeholder="Issue title" />
-          <textarea value={bugDesc} onChange={(e) => setBugDesc(e.target.value)} className="w-full min-h-[100px] p-3 rounded-xl border border-[var(--color-bg-border)] text-sm" placeholder="Steps to reproduce..." />
-          <Button onClick={submitBug}>Submit</Button>
-        </div>
+        <form onSubmit={submitBug} className="space-y-3 pt-2">
+          <Input
+            value={bugTitle}
+            onChange={(e) => setBugTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="Issue title *"
+            required
+          />
+          <textarea
+            value={bugDesc}
+            onChange={(e) => setBugDesc(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            className="w-full min-h-[100px] p-3 rounded-xl border border-[var(--color-bg-border)] text-sm"
+            placeholder="Steps to reproduce (optional). Ctrl+Enter to submit."
+          />
+          <div className="flex justify-end">
+            <Button type="submit" disabled={!bugTitle.trim()}>Submit</Button>
+          </div>
+        </form>
       </NexusModal>
     </>
   );

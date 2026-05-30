@@ -23,7 +23,7 @@ const HelpBugButton = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    if (!title.trim() || submitting) return;
 
     setSubmitting(true);
     try {
@@ -112,6 +112,12 @@ const HelpBugButton = () => {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
               placeholder="e.g. Navigation bar broken on mobile screens"
               className="text-xs"
             />
@@ -132,22 +138,27 @@ const HelpBugButton = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Detailed Steps & Expected Behavior *</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Detailed Steps & Expected Behavior</label>
             <textarea
-              required
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="1. Clicked on button X&#10;2. Modal opened but closed instantly&#10;Expected: Modal stays open."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder="1. Clicked on button X&#10;2. Modal opened but closed instantly&#10;Expected: Modal stays open.&#10;Ctrl+Enter to submit."
               className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-sans text-[var(--color-text-primary)] focus:border-blue-500 outline-none resize-y"
             />
           </div>
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-[var(--color-bg-border)]">
+          <div className="pt-3 flex items-center justify-between gap-2 border-t border-[var(--color-bg-border)]">
             <Button size="sm" variant="ghost" type="button" onClick={() => setIsOpen(false)} disabled={submitting}>
               Cancel
             </Button>
-            <Button size="sm" type="submit" className="bg-rose-600 hover:bg-rose-700 font-bold px-5 py-2.5 shadow-lg shadow-rose-500/20" disabled={submitting || !title.trim() || !description.trim()}>
+            <Button size="sm" type="submit" className="bg-rose-600 hover:bg-rose-700 font-bold px-5 py-2.5 shadow-lg shadow-rose-500/20" disabled={submitting || !title.trim()}>
               {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Send size={14} /> Submit Bug Report</>}
             </Button>
           </div>

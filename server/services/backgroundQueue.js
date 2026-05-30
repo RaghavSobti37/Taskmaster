@@ -96,13 +96,12 @@ function initializeQueues() {
     const GamificationService = require('./gamificationService');
     
     if (eventType === 'TASK_COMPLETED') {
-      const { userId, tenantId, task } = payload;
-      
+      const { userId, task } = payload;
+
       logger.debug('Gamification', 'Raw Input Task', { task });
-      
+
       await GamificationService.generateDailyMissions(userId);
       await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-      await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
     } else if (eventType === 'TASK_CREATED') {
       const { userId, task } = payload;
       await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });

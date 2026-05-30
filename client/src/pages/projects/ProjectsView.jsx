@@ -17,19 +17,20 @@ import {
   NexusDropdown,
   NexusModal
 } from '../../components/ui';
-import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useProjects, useWorkspaces, useReviewTasks } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { getWorkspaceColor as resolveWorkspaceColor } from '../../utils/workspaceColors';
+import { countReviewTasksByProject } from '../../utils/taskReview';
 
 const WORKSPACE_COLORS = [
   '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#f97316',
   '#ec4899', '#06b6d4', '#eab308', '#64748b', '#8b5cf6',
 ];
 
-const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, onDragStart, onDragEnd }) => (
+const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, onDragStart, onDragEnd, reviewCount = 0 }) => (
   <div
     draggable={isAdmin}
     onDragStart={(e) => {
@@ -39,14 +40,23 @@ const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, on
       onDragStart?.(project._id);
     }}
     onDragEnd={() => onDragEnd?.()}
-    className={`p-2.5 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'} ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
     onClick={() => onNavigate(project._id)}
   >
     <div className="flex items-start justify-between gap-2 mb-2">
       <h4 className="text-[10px] font-black uppercase tracking-tight truncate group-hover/preview:text-[var(--color-action-primary)] transition-colors">
         {project.name?.toUpperCase()}
       </h4>
-      <button
+      <div className="flex items-center gap-1 shrink-0">
+        {reviewCount > 0 && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+            title={`${reviewCount} task${reviewCount === 1 ? '' : 's'} awaiting your review`}
+          >
+            Review {reviewCount}
+          </span>
+        )}
+        <button
         onClick={(e) => onToggleStar(e, project)}
         className="p-0.5 rounded shrink-0 hover:bg-[var(--color-bg-border)] transition-all"
         title={project.starred ? 'Unstar' : 'Star project'}
@@ -56,6 +66,7 @@ const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, on
           className={project.starred ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-text-muted)] hover:text-amber-400'}
         />
       </button>
+      </div>
     </div>
     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
       <span>{project.totalTasks || 0} tasks</span>
@@ -84,6 +95,10 @@ const ProjectsView = () => {
   const queryClient = useQueryClient();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
   const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
+  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
+
+  const reviewCountByProject = useMemo(() => countReviewTasksByProject(reviewTasks), [reviewTasks]);
+  const totalReviewCount = reviewTasks.length;
 
   const loading = loadingProjects || loadingWorkspaces;
 
@@ -217,6 +232,15 @@ const ProjectsView = () => {
         icon={Briefcase}
         actions={
           <div className="flex items-center gap-2">
+            {totalReviewCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40"
+                title="Tasks awaiting your review across projects"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" aria-hidden />
+                {totalReviewCount} to review
+              </span>
+            )}
             <Button variant="secondary" onClick={() => setCreateModalOpen(true)}>
               <FolderPlus size={16} /> New Workspace
             </Button>
@@ -422,6 +446,7 @@ const ProjectsView = () => {
                               key={project._id}
                               project={project}
                               accent={group.color}
+                              reviewCount={reviewCountByProject[String(project._id)] || 0}
                               onNavigate={(id) => navigate(`/projects/${id}`)}
                               onToggleStar={toggleStar}
                               isAdmin={isAdmin}
@@ -459,6 +484,7 @@ const ProjectsView = () => {
             <AnimatePresence>
               {filteredProjects.map((project, index) => {
                 const accent = getWorkspaceColor(project.workspace);
+                const reviewCount = reviewCountByProject[String(project._id)] || 0;
                 return (
                   <motion.div
                     key={project._id}
@@ -471,7 +497,7 @@ const ProjectsView = () => {
                     <Card
                       className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
                         draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
-                      } ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                      } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''} ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
                       style={{ borderColor: project.starred ? accent : undefined }}
                       draggable={isAdmin}
                       onDragStart={(e) => {
@@ -499,6 +525,14 @@ const ProjectsView = () => {
                             </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0 ml-1">
+                            {reviewCount > 0 && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                                title={`${reviewCount} task${reviewCount === 1 ? '' : 's'} awaiting your review`}
+                              >
+                                Review {reviewCount}
+                              </span>
+                            )}
                             <Badge variant={project.status === 'completed' ? 'success' : 'info'} className="!py-0 !px-1.5 !text-[8px]">
                               {project.status || 'Active'}
                             </Badge>

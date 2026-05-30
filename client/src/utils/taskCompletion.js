@@ -3,11 +3,12 @@ export function buildTaskCompletionLogPayload(task, hours, projects = []) {
   const project = projects.find(
     (p) => p._id === projectId || p._id?.toString() === projectId?.toString()
   );
+  const taskId = resolveTaskId(task);
 
   return {
     action: 'DAILY_LOG',
     targetType: 'Task',
-    targetId: task._id,
+    targetId: taskId,
     details: {
       type: 'TASK_COMPLETION',
       title: task.title,
@@ -15,6 +16,33 @@ export function buildTaskCompletionLogPayload(task, hours, projects = []) {
       project: project?.name || 'General',
       projectId: projectId || null,
     },
+  };
+}
+
+export function resolveTaskId(task) {
+  const raw = task?._id?._id || task?._id;
+  if (!raw) return null;
+  return String(raw);
+}
+
+export function canMarkTaskComplete(task) {
+  if (!task) return false;
+  const id = resolveTaskId(task);
+  if (!id || id.startsWith('pending-task-')) return false;
+  return task.status !== 'done' && task.status !== 'in-review';
+}
+
+export function normalizeCompletionHours(current, hours) {
+  const base = Number(current) || 0;
+  const added = Number(hours);
+  return base + (Number.isFinite(added) && added >= 0 ? added : 0);
+}
+
+export function pendingReviewToast(taskTitle) {
+  return {
+    title: 'Awaiting approval',
+    message: `"${truncateForToast(taskTitle)}" is in review. The person who assigned it must approve before it is marked done.`,
+    type: 'info',
   };
 }
 
@@ -35,7 +63,7 @@ export function taskCompletionToast(status, taskTitle) {
 
   if (status === 'done') {
     return {
-      title: 'Task Finished (+20 XP)',
+      title: 'Task Finished',
       message: `Completed "${title}"`,
       type: 'success',
     };
@@ -50,6 +78,15 @@ export function taskCompletionToast(status, taskTitle) {
   return {
     title: 'Task Updated',
     message: `"${title}" status: ${status}`,
+    type: 'success',
+  };
+}
+
+export function taskApprovalToast(taskTitle) {
+  const title = truncateForToast(taskTitle);
+  return {
+    title: 'Task Approved',
+    message: `"${title}" marked complete.`,
     type: 'success',
   };
 }

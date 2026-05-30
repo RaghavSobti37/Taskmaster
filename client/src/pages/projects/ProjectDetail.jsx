@@ -39,7 +39,8 @@ import { format, addDays } from 'date-fns';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
+import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast } from '../../utils/taskCompletion';
+import { resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
 import { isOpsUser } from '../../utils/departmentPermissions';
@@ -104,15 +105,61 @@ const ProjectDetail = () => {
 
   const handleTaskUpdate = (taskId, updates) => {
     if (updates.status === 'done') {
-      const task = tasks.find(t => t._id === taskId);
-      if (task) {
-        setTaskToComplete(task);
+      const task = tasks.find((t) => t._id === taskId);
+      if (!task) return;
+
+      const intent = resolveTaskFinishIntent(task, user, project ? [project] : []);
+      if (intent === 'approve') {
+        handleApproveReview(task);
         return;
       }
+      if (intent === 'awaiting_review') {
+        addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
+        return;
+      }
+      setTaskToComplete(task);
+      return;
     }
     updateTaskMutation.mutate({ id: taskId, data: updates });
     if (selectedTask?._id === taskId) {
-      setSelectedTask(prev => ({ ...prev, ...updates }));
+      setSelectedTask((prev) => ({ ...prev, ...updates }));
+    }
+  };
+
+  const handleApproveReview = async (task) => {
+    const taskId = resolveTaskId(task);
+    if (!taskId) return;
+    suppressAutoToasts(5000);
+    setCompletingTaskId(taskId);
+    try {
+      const taskRes = await axios.put(
+        `/api/tasks/${taskId}`,
+        { reviewAction: 'approve' },
+        AXIOS_SKIP_TOAST
+      );
+      addToast({
+        ...taskApprovalToast(task.title),
+        duration: 6000,
+        module: MODULE.PROJECTS,
+      });
+      updateAllTaskQueries(queryClient, (list) =>
+        (list || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
+      );
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'review'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['logs'] });
+      if (selectedTask?._id === taskId) {
+        setSelectedTask((prev) => (prev ? { ...prev, ...taskRes.data } : prev));
+      }
+    } catch (err) {
+      addToast({
+        title: 'Approval Failed',
+        message: err.response?.data?.error || err.response?.data?.message || 'Could not approve task.',
+        type: 'error',
+        module: MODULE.PROJECTS,
+      });
+    } finally {
+      setCompletingTaskId(null);
     }
   };
 
@@ -200,8 +247,8 @@ const ProjectDetail = () => {
   return (
     <PageContainer className="!py-4 !space-y-4">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-4">
+        <div className="flex items-center gap-3 min-w-0 lg:max-w-[min(100%,28rem)]">
           <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2 shrink-0">
             <ArrowLeft size={14} />
           </Button>
@@ -210,13 +257,13 @@ const ProjectDetail = () => {
             style={{ borderLeftColor: getWorkspaceColor(project.workspace, workspaces) }}
           >
             <h1 className="text-lg font-bold tracking-tight uppercase truncate">{project.name}</h1>
-            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider truncate">
               Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
             </span>
           </div>
         </div>
 
-        <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+        <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 flex-1">
           {project.status === 'active' && (
             <NexusDropdown
               variant="compact"
@@ -230,13 +277,13 @@ const ProjectDetail = () => {
                 if (val === 'archive') handleUpdateProjectStatus('archived');
                 if (val === 'close') setShowCloseWarning(true);
               }}
-              className="w-[9.5rem] shrink-0"
+              className="w-full min-[480px]:w-[9.5rem]"
             />
           )}
-          <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)} className="shrink-0">
+          <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
             <Settings size={14} /> Settings
           </Button>
-          <Button size="sm" onClick={() => setIsTaskModalOpen(true)} className="shrink-0">
+          <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
             <Plus size={14} /> Add Task
           </Button>
         </div>

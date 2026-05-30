@@ -13,6 +13,8 @@ import {
   PageContainer, Button, Input, StatCard, TabSwitcher
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useSearchParams } from 'react-router-dom';
@@ -44,6 +46,7 @@ const LOG_SORT_OPTIONS = [
 
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
+  const { addToast } = useSystemToast();
   const { confirm } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const canViewLeadAudits = isAdminUser(user) && !adminViewUserId;
@@ -165,12 +168,20 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         setTimeSpent('');
         setSelectedProject('');
         setIsDrawerOpen(false);
+        addToast({
+          title: 'Log saved (+20 XP)',
+          message: 'Daily log entry added.',
+          type: 'success',
+          module: MODULE.SYSTEM,
+        });
       }
     });
   };
 
   const dailyLogs = useMemo(() => logs.filter(l =>
-    l.action === 'DAILY_LOG' && isSameDay(new Date(l.createdAt), selectedDate)
+    l.action === 'DAILY_LOG'
+    && l.details?.type !== 'TASK_COMPLETION'
+    && isSameDay(new Date(l.createdAt), selectedDate)
   ), [logs, selectedDate]);
 
   const logProjectOptions = useMemo(() => {

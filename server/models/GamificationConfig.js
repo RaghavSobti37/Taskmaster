@@ -3,9 +3,10 @@ const mongoose = require('mongoose');
 const gamificationConfigSchema = new mongoose.Schema(
   {
     // Action XP values
-    taskCompletion: { type: Number, default: 10, description: 'XP for completing a task' },
+    taskCompletion: { type: Number, default: 0, description: 'XP for completing a task (disabled by default)' },
     taskCreation: { type: Number, default: 5, description: 'XP for creating a task' },
     projectCreation: { type: Number, default: 20, description: 'XP for creating a project' },
+    dailyLog: { type: Number, default: 20, description: 'XP for adding a manual daily log entry' },
     attendanceLog: { type: Number, default: 15, description: 'XP for logging attendance' },
     assetUpload: { type: Number, default: 25, description: 'XP for uploading an asset' },
     commentCreation: { type: Number, default: 3, description: 'XP for creating a comment' },

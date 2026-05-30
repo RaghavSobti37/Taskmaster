@@ -28,6 +28,30 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file provided' });
     }
 
+    // #region agent log
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      fs.appendFileSync(
+        path.join(__dirname, '../../debug-0c5d79.log'),
+        `${JSON.stringify({
+          sessionId: '0c5d79',
+          runId: 'post-fix',
+          timestamp: Date.now(),
+          location: 'financeController.js:uploadFile',
+          message: 'server-side invoice upload started',
+          hypothesisId: 'H2',
+          data: {
+            route: req.originalUrl,
+            fileName: req.file.originalname,
+            fileType: req.file.mimetype,
+            fileSize: req.file.size,
+          },
+        })}\n`
+      );
+    } catch (_) {}
+    // #endregion
+
     const { buffer, originalname, mimetype, size } = req.file;
     const utFile = new UTFile([buffer], originalname, { type: mimetype });
     const uploadResult = await utapi.uploadFiles([utFile]);
@@ -265,7 +289,7 @@ const uploadDocumentsBulk = async (req, res) => {
 const getDocuments = async (req, res) => {
   try {
     const { project, category, page, limit, startDate, endDate, searchQuery, folderId, sortField, sortOrder } = req.query;
-    const filter = {};
+    const filter = { approvalStatus: { $ne: 'pending' } };
 
     if (project) filter.project = project;
 
@@ -724,6 +748,7 @@ const listPendingInvoices = async (req, res) => {
     const docs = await FinanceDocument.find({ approvalStatus: 'pending', category: 'invoice' })
       .populate('uploadedBy', 'name email avatar')
       .populate('submittedBy', 'name email avatar')
+      .populate('project', 'name')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -731,6 +756,22 @@ const listPendingInvoices = async (req, res) => {
   } catch (error) {
     console.error('List pending invoices error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const applyPendingInvoiceEdits = (doc, body) => {
+  const { title, description, project, category, metadata, folderId } = body || {};
+  if (title !== undefined) doc.title = String(title).trim();
+  if (description !== undefined) doc.description = String(description).trim();
+  if (project !== undefined) doc.project = project || null;
+  if (category !== undefined) doc.category = category;
+  if (folderId !== undefined) doc.folderId = folderId || null;
+  if (metadata && typeof metadata === 'object') {
+    const base = doc.metadata?.toObject?.() || doc.metadata || {};
+    doc.metadata = { ...base, ...metadata };
+    if (metadata.amount !== undefined) doc.metadata.amount = Number(metadata.amount) || 0;
+    if (metadata.tax !== undefined) doc.metadata.tax = Number(metadata.tax) || 0;
+    if (metadata.date) doc.metadata.date = new Date(metadata.date);
   }
 };
 
@@ -744,6 +785,11 @@ const approveInvoice = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invoice already processed' });
     }
 
+    applyPendingInvoiceEdits(doc, req.body);
+    if (!doc.title?.trim()) {
+      return res.status(400).json({ success: false, message: 'Title is required' });
+    }
+
     doc.approvalStatus = 'approved';
     doc.reviewedBy = req.user._id;
     doc.reviewedAt = new Date();
@@ -754,6 +800,7 @@ const approveInvoice = async (req, res) => {
       .populate('uploadedBy', 'name email avatar')
       .populate('submittedBy', 'name email avatar')
       .populate('reviewedBy', 'name email avatar')
+      .populate('project', 'name')
       .lean();
 
     res.json({ success: true, data: populated, message: 'Invoice approved' });

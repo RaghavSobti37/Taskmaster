@@ -43,6 +43,7 @@ router.use(protect);
 
 // Any authenticated user can submit an invoice for ops review
 router.post('/submit-invoice', submitInvoice);
+router.post('/upload-invoice', upload.single('file'), uploadFile);
 
 // Ops-only invoice review routes (before /:id catch-all)
 router.get('/pending', opsOnly, listPendingInvoices);

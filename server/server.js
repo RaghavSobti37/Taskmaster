@@ -292,6 +292,35 @@ app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");
 
+// #region agent log
+app.use("/api/uploadthing", (req, res, next) => {
+  const started = Date.now();
+  res.on("finish", () => {
+    try {
+      fs.appendFileSync(
+        path.join(__dirname, "../debug-0c5d79.log"),
+        `${JSON.stringify({
+          sessionId: "0c5d79",
+          timestamp: Date.now(),
+          location: "server.js:/api/uploadthing",
+          message: "uploadthing route finished",
+          hypothesisId: "H5",
+          data: {
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            ms: Date.now() - started,
+            hasAuth: Boolean(req.headers.authorization),
+            slug: req.query?.slug || null,
+          },
+        })}\n`
+      );
+    } catch (_) {}
+  });
+  next();
+});
+// #endregion
+
 app.use(
   "/api/uploadthing",
   createRouteHandler({

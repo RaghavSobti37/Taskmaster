@@ -2,18 +2,16 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
-import AdminRoute from './components/AdminRoute';
-import ArtistRoute from './components/ArtistRoute';
-import OpsRoute from './components/OpsRoute';
+import PageRoute from './components/PageRoute';
 import { useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 import {
-  notify,
   slugId,
   parseErrorPayload,
   shouldShowApiSuccessToast,
   shouldShowApiErrorToast,
 } from './lib/notifications';
+import { emitSystemEvent, getClientTraceId, startClientTrace } from './lib/systemLogBridge';
+import { inferModuleFromRoute, SEVERITY } from './lib/systemLogContract';
 import { DashboardSkeleton } from './components/ui';
 import axios from 'axios';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
@@ -59,15 +57,14 @@ const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView')
 const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
 const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
+const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminExly = lazyWithRetry(() => import('./pages/admin/AdminExly'));
-const AdminAudits = lazyWithRetry(() => import('./pages/admin/AdminAudits'));
 const AdminMail = lazyWithRetry(() => import('./pages/admin/AdminMail'));
 const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
 const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
-const AdminLogsPage = lazyWithRetry(() => import('./pages/admin/AdminLogsPage'));
 const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
@@ -88,6 +85,7 @@ const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
 const EmailsPage = lazyWithRetry(() => import('./pages/workspace/EmailsPage'));
+const CreateCampaignPage = lazyWithRetry(() => import('./pages/workspace/CreateCampaignPage'));
 const OTPVerificationPage = lazyWithRetry(() => import('./pages/auth/OTPVerificationPage'));
 const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
@@ -98,11 +96,17 @@ const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
-
 function App() {
   const { loading } = useAuth();
 
   React.useEffect(() => {
+    const reqInterceptor = axios.interceptors.request.use((config) => {
+      if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
+        config.headers['X-Trace-Id'] = getClientTraceId();
+      }
+      return config;
+    });
+
     const resInterceptor = axios.interceptors.response.use(
       (response) => {
         if (response.data != null) {
@@ -112,7 +116,15 @@ function App() {
         if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiSuccessToast(response)) {
           const url = (response.config?.url || '').split('?')[0];
           const message = response.data.message;
-          notify.success(message, slugId('api-ok', method, url));
+          emitSystemEvent({
+            severity: SEVERITY.SUCCESS,
+            message,
+            module: inferModuleFromRoute(url),
+            id: slugId('api-ok', method, url),
+          });
+        }
+        if (response.data?.traceId) {
+          startClientTrace();
         }
         return response;
       },
@@ -120,27 +132,34 @@ function App() {
         const method = error.config?.method?.toLowerCase();
         if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiErrorToast(error)) {
           const url = (error.config?.url || '').split('?')[0];
-          const { title, description, technicalError, errorCode, status } = parseErrorPayload(error);
-          notify.error({
+          const { title, description, technicalError, errorCode, status, traceId } = parseErrorPayload(error);
+          emitSystemEvent({
+            severity: SEVERITY.ERROR,
             title,
+            message: title,
             description,
             technicalError,
             errorCode,
             status,
-            uniqueKey: slugId('api-err', method, url),
+            traceId: traceId || error.response?.headers?.['x-trace-id'] || getClientTraceId(),
+            module: inferModuleFromRoute(url),
+            timestamp: error.response?.data?.timestamp || new Date().toISOString(),
+            id: slugId('api-err', method, url),
           });
         }
         return Promise.reject(error);
       }
     );
-    return () => axios.interceptors.response.eject(resInterceptor);
+    return () => {
+      axios.interceptors.request.eject(reqInterceptor);
+      axios.interceptors.response.eject(resInterceptor);
+    };
   }, []);
 
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <ThemeProvider>
-      <Suspense fallback={<DashboardSkeleton />}>
+    <Suspense fallback={<DashboardSkeleton />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -155,49 +174,97 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/projects" element={<ProjectsView />} />
-              <Route path="/projects/new" element={<ProjectCreate />} />
-              <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/calendar" element={<CalendarView />} />
+              <Route element={<PageRoute page="dashboard" />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
+              <Route element={<PageRoute page="projects" />}>
+                <Route path="/projects" element={<ProjectsView />} />
+                <Route path="/projects/new" element={<ProjectCreate />} />
+                <Route path="/projects/:id" element={<ProjectDetail />} />
+              </Route>
+              <Route element={<PageRoute page="calendar" />}>
+                <Route path="/calendar" element={<CalendarView />} />
+              </Route>
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/logs" element={<DailyLogPage />} />
-              <Route path="/attendance" element={<AttendancePage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/inbox" element={<InboxPage />} />
-              <Route path="/todo" element={<TodoPage />} />
+              <Route element={<PageRoute page="logs" />}>
+                <Route path="/logs" element={<DailyLogPage />} />
+              </Route>
+              <Route element={<PageRoute page="attendance" />}>
+                <Route path="/attendance" element={<AttendancePage />} />
+              </Route>
+              <Route element={<PageRoute page="schedule" />}>
+                <Route path="/schedule" element={<SchedulePage />} />
+              </Route>
+              <Route element={<PageRoute page="inbox" />}>
+                <Route path="/inbox" element={<InboxPage />} />
+              </Route>
+              <Route element={<PageRoute page="todo" />}>
+                <Route path="/todo" element={<TodoPage />} />
+              </Route>
               <Route path="/components" element={<ComponentsShowcase />} />
-              <Route path="/management/equipment" element={<EquipmentPage />} />
-              <Route path="/management/contacts" element={<ContactsPage />} />
+              <Route element={<PageRoute page="equipment" />}>
+                <Route path="/management/equipment" element={<EquipmentPage />} />
+              </Route>
+              <Route element={<PageRoute page="contacts" />}>
+                <Route path="/management/contacts" element={<ContactsPage />} />
+              </Route>
               <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
-              <Route path="/assets" element={<AssetsPage />} />
+              <Route element={<PageRoute page="assets" />}>
+                <Route path="/assets" element={<AssetsPage />} />
+              </Route>
               <Route path="/office-assets" element={<OfficeAssetsPage />} />
-              <Route path="/leads" element={<LeadsPage />} />
-              <Route path="/followups" element={<FollowupsPage />} />
+              <Route element={<PageRoute page="leads" />}>
+                <Route path="/leads" element={<LeadsPage />} />
+              </Route>
+              <Route element={<PageRoute page="followups" />}>
+                <Route path="/followups" element={<FollowupsPage />} />
+              </Route>
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
-              <Route path="/bookings" element={<ExlyBookingsPage />} />
-              
-              <Route element={<AdminRoute />}>
-                <Route path="/admin" element={<AdminCRM />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
-                <Route path="/admin/audits" element={<AdminAudits />} />
-                <Route path="/admin/logs" element={<AdminLogsPage />} />
-                <Route path="/admin/scripts" element={<AdminScriptsPage />} />
-                <Route path="/admin/gamification" element={<AdminGamification />} />
-                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
-                <Route path="/workspace/emails" element={<EmailsPage />} />
+              <Route element={<PageRoute page="bookings" />}>
+                <Route path="/bookings" element={<ExlyBookingsPage />} />
               </Route>
-              
-              <Route element={<ArtistRoute />}>
+
+              <Route element={<PageRoute page="admin_data" />}>
+                <Route path="/admin" element={<AdminCRM />} />
+                <Route path="/admin/control" element={<AdminPanel />} />
+              </Route>
+              <Route element={<PageRoute page="admin_users" />}>
+                <Route path="/admin/users" element={<AdminUsers />} />
+              </Route>
+              <Route element={<PageRoute page="admin_exly" />}>
+                <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
+              </Route>
+              <Route element={<PageRoute page="admin_data" />}>
+                <Route path="/admin/audits" element={<Navigate to="/logs?view=lead-audits" replace />} />
+              </Route>
+              <Route element={<PageRoute page="admin_scripts" />}>
+                <Route path="/admin/scripts" element={<AdminScriptsPage />} />
+              </Route>
+              <Route element={<PageRoute page="admin_gamification" />}>
+                <Route path="/admin/gamification" element={<AdminGamification />} />
+              </Route>
+              <Route element={<PageRoute page="campaigns" />}>
+                <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
+              </Route>
+              <Route element={<PageRoute page="emails" />}>
+                <Route path="/workspace/emails" element={<EmailsPage />} />
+                <Route path="/workspace/emails/create" element={<CreateCampaignPage />} />
+              </Route>
+
+              <Route element={<PageRoute page="artists" />}>
                 <Route path="/artists" element={<ArtistsCollection />} />
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />
               </Route>
 
-              <Route element={<OpsRoute />}>
+              <Route element={<PageRoute page="finance" />}>
                 <Route path="/finance" element={<FinancePage />} />
+              </Route>
+              <Route element={<PageRoute page="announcements" />}>
                 <Route path="/management/announcements" element={<AnnouncementsPage />} />
+              </Route>
+              <Route element={<PageRoute page="ops_logs" />}>
+                <Route path="/management/ops-logs" element={<SystemLogsPage />} />
               </Route>
             </Route>
           </Route>
@@ -205,7 +272,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-    </ThemeProvider>
   );
 }
 

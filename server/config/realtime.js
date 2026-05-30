@@ -2,7 +2,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-const { isAdminUser } = require('../utils/departmentPermissions');
+const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 
 let io = null;
 
@@ -36,6 +36,7 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
 
       socket.userId = user._id.toString();
       socket.isAdmin = isAdminUser(user);
+      socket.isOps = isOpsUser(user);
       next();
     } catch (err) {
       next(new Error('Unauthorized'));
@@ -47,6 +48,10 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
 
     socket.on('join', (channelName) => {
       if (typeof channelName !== 'string' || !channelName.trim()) return;
+
+      if (channelName === 'system-logs') {
+        if (!socket.isAdmin && !socket.isOps) return;
+      }
 
       if (channelName.startsWith('user-')) {
         const channelUserId = channelName.slice(5);

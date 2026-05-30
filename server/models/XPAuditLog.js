@@ -8,4 +8,7 @@ const schema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+schema.index({ userId: 1, createdAt: -1 });
+schema.index({ action: 1, createdAt: -1 });
+
 module.exports = mongoose.model('XPAuditLog', schema);

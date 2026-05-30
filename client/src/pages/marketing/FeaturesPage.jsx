@@ -63,7 +63,7 @@ const FeaturesPage = () => {
     {
       icon: TrendingUp,
       title: "Artist Dashboard",
-      description: "Manage your talent roster. Track social media growth, analytics, and performance all in one unified view.",
+      description: "Manage your talent roster. Track platform growth, analytics, and performance all in one unified view.",
       variant: "info"
     }
   ], []);

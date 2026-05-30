@@ -12,30 +12,31 @@ import {
   useMailTemplates, useSaveMailTemplate, useDeleteMailTemplate, useSyncUnsubscribed, useLocationLeads, useContacts, useUpdateMailProfile
 } from '../../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
+import { isValidEmail, normalizeEmail, filterValidRecipientRows } from '../../utils/emailValidation';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
 import axios from 'axios';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import { signaturePngBase64 } from '../../utils/signaturePng';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
-import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
+import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, countSignatureBlocks, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
 import {
-  syncUnsubscribeInContent, appendUnsubscribe, hasUnsubscribeBlock,
+  syncUnsubscribeInContent, appendUnsubscribe, hasUnsubscribeBlock, stripUnsubscribe, countUnsubscribeBlocks,
   parseTemplateVariables, insertVariable, setVariableFallbackInContent, previewMergeTags
 } from '../../utils/emailContentUtils';
 
 
-export default function AdminMailContent({ initialMode = null, hideModeBar = false } = {}) {
+export default function AdminMailContent({ initialMode = null, hideModeBar = false, standaloneWizard = false } = {}) {
   const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mode, setMode] = useState(initialMode || 'campaigns');
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useMailProfiles();
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useMailCampaigns();
   const { data: stats, refetch: refetchStats } = useMailStats();
   const { data: team = [] } = useUserDirectory();
-  const { data: cumulativeAnalytics } = useCumulativeAnalytics();
+  const { data: cumulativeAnalytics } = useCumulativeAnalytics(mode === 'analytics');
 
   // Filter state for CRM leads
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,7 +139,6 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const syncUnsubscribedMutation = useSyncUnsubscribed();
 
   // Navigation within Mail tab
-  const [mode, setMode] = useState(initialMode || 'campaigns'); // 'campaigns', 'new_campaign', 'profiles'
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [selectedLocationForModal, setSelectedLocationForModal] = useState(null);
 
@@ -453,15 +453,28 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const applySignatureToContent = (html, sig = activeProfileSignature, include = includeSignature) =>
     syncSignatureInContent(html, sig, include);
 
-  const applyUnsubscribeToContent = (html, include = includeUnsubscribe) =>
-    syncUnsubscribeInContent(html, include);
+  /** Visual Quill mode: strip all blocks then re-add once (Quill drops HTML comments). */
+  const applyVisualEditorBlocks = (html, overrides = {}) => {
+    const unsub = overrides.includeUnsubscribe ?? includeUnsubscribe;
+    const sigOn = overrides.includeSignature ?? includeSignature;
+    const sig = overrides.signature ?? activeProfileSignature;
+    let result = stripUnsubscribe(stripSignature(html || ''));
+    if (unsub) result = appendUnsubscribe(result);
+    if (sigOn && sig) result = appendSignature(result, sig);
+    return result;
+  };
 
   const buildEditorContent = (html) => {
     if (useRawHtml) return html || '';
-    let result = html || '';
-    result = applyUnsubscribeToContent(result);
-    result = includeSignature ? applySignatureToContent(result) : stripSignature(result);
-    return result;
+    return applyVisualEditorBlocks(html);
+  };
+
+  const handleQuillContentChange = (value) => {
+    if (countUnsubscribeBlocks(value) > 1 || countSignatureBlocks(value) > 1) {
+      setContent(applyVisualEditorBlocks(value));
+      return;
+    }
+    setContent(value);
   };
 
   const getTemplateSavePayload = (html) => ({
@@ -494,15 +507,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
   const handleIncludeUnsubscribeChange = (checked) => {
     setIncludeUnsubscribe(checked);
-    setContent((prev) => syncUnsubscribeInContent(prev, checked));
-  };
-
-  const insertUnsubscribeIntoContent = () => {
-    setContent((prev) => appendUnsubscribe(prev));
-  };
-
-  const insertSignatureIntoContent = () => {
-    setContent((prev) => applySignatureToContent(prev));
+    setContent((prev) => (
+      useRawHtml
+        ? syncUnsubscribeInContent(prev, checked)
+        : applyVisualEditorBlocks(prev, { includeUnsubscribe: checked })
+    ));
   };
 
   const handleRawHtmlChange = (value) => {
@@ -511,14 +520,22 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
   const handleIncludeSignatureChange = (checked) => {
     setIncludeSignature(checked);
-    setContent((prev) => applySignatureToContent(prev, activeProfileSignature, checked));
+    setContent((prev) => (
+      useRawHtml
+        ? applySignatureToContent(prev, activeProfileSignature, checked)
+        : applyVisualEditorBlocks(prev, { includeSignature: checked })
+    ));
   };
 
   const handleSignatureProfileChange = (profileId) => {
     setSignatureProfileId(profileId);
     const sp = findProfile(profileId);
     const sig = sp?.signature?.trim() ;
-    setContent((prev) => syncSignatureInContent(stripSignature(prev), sig, includeSignature));
+    setContent((prev) => (
+      useRawHtml
+        ? syncSignatureInContent(stripSignature(prev), sig, includeSignature)
+        : applyVisualEditorBlocks(stripSignature(prev), { signature: sig })
+    ));
   };
 
   useEffect(() => {
@@ -528,22 +545,31 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   }, [senderProfileId, signatureProfileId]);
 
   useEffect(() => {
-    if (!includeSignature || !activeProfileSignature) return;
-    if (campaignStep !== 3 && !useRawHtml) return;
+    if (campaignStep !== 3) return;
     setContent((prev) => {
-      if (hasSignatureBlock(prev)) return prev;
-      return appendSignature(prev, activeProfileSignature);
+      if (useRawHtml) {
+        let next = prev;
+        if (includeUnsubscribe && !hasUnsubscribeBlock(next)) {
+          next = appendUnsubscribe(next);
+        }
+        if (includeSignature && activeProfileSignature && !hasSignatureBlock(next)) {
+          next = appendSignature(next, activeProfileSignature);
+        }
+        return next;
+      }
+      if (countUnsubscribeBlocks(prev) > 1 || countSignatureBlocks(prev) > 1) {
+        return applyVisualEditorBlocks(prev);
+      }
+      let next = prev;
+      if (includeUnsubscribe && !hasUnsubscribeBlock(next)) {
+        next = appendUnsubscribe(next);
+      }
+      if (includeSignature && activeProfileSignature && !hasSignatureBlock(next)) {
+        next = appendSignature(next, activeProfileSignature);
+      }
+      return next;
     });
-  }, [campaignStep, useRawHtml, includeSignature, activeProfileSignature]);
-
-  useEffect(() => {
-    if (!includeUnsubscribe) return;
-    if (campaignStep !== 3 && !useRawHtml) return;
-    setContent((prev) => {
-      if (hasUnsubscribeBlock(prev)) return prev;
-      return appendUnsubscribe(prev);
-    });
-  }, [campaignStep, useRawHtml, includeUnsubscribe]);
+  }, [campaignStep, useRawHtml, includeUnsubscribe, includeSignature, activeProfileSignature]);
 
   const isSenderConfigured = () => {
     if (senderMode === 'single') return !!senderProfileId;
@@ -578,23 +604,29 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       }
 
       const parsed = [];
+      let skipped = 0;
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].split(',').map(p => p.trim());
         const email = parts[emailIdx];
         const name = nameIdx !== -1 ? parts[nameIdx] : '';
-        if (email && email.includes('@')) {
-          const splitEmails = email.split(/[,;]/).map(e => e.trim()).filter(Boolean);
-          splitEmails.forEach(se => {
-            if (se.includes('@')) {
-              parsed.push({ name, email: se, source: 'CSV Upload' });
-            }
-          });
-        }
+        if (!email) continue;
+        const splitEmails = email.split(/[,;]/).map(e => e.trim()).filter(Boolean);
+        splitEmails.forEach(se => {
+          const normalized = normalizeEmail(se);
+          if (isValidEmail(normalized)) {
+            parsed.push({ name, email: normalized, source: 'CSV Upload' });
+          } else if (normalized) {
+            skipped += 1;
+          }
+        });
       }
       setCsvRecipients(prev => {
         const filtered = prev.filter(p => p.source !== 'CSV Upload');
         return [...filtered, ...parsed];
       });
+      if (skipped > 0) {
+        alert(`CSV loaded ${parsed.length} valid recipient(s). Skipped ${skipped} invalid email(s).`);
+      }
     };
     reader.readAsText(file);
   };
@@ -645,14 +677,18 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const res = await axios.get('/api/mail/holysheet/all');
       const rawRecs = res.data || [];
       const newRecs = [];
+      let skipped = 0;
       
       // Process and split HolySheet compound emails
       rawRecs.forEach(rec => {
         if (rec && rec.email) {
           const splitEmails = rec.email.split(/[,;]/).map(e => e.trim()).filter(Boolean);
           splitEmails.forEach(se => {
-            if (se.includes('@')) {
-              newRecs.push({ ...rec, email: se });
+            const normalized = normalizeEmail(se);
+            if (isValidEmail(normalized)) {
+              newRecs.push({ ...rec, email: normalized });
+            } else if (normalized) {
+              skipped += 1;
             }
           });
         }
@@ -664,7 +700,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       });
       const holySheetSources = Array.from(new Set(newRecs.map((r) => r.source).filter(Boolean)));
       setExcludedSources((prev) => [...new Set([...prev, ...holySheetSources])]);
-      alert(`Loaded ${newRecs.length} recipients from HolySheet (${holySheetSources.length} tabs — all deselected by default).`);
+      const skipNote = skipped > 0 ? ` Skipped ${skipped} invalid email(s).` : '';
+      alert(`Loaded ${newRecs.length} recipients from HolySheet (${holySheetSources.length} tabs — all deselected by default).${skipNote}`);
     } catch (e) {
       alert('Failed to load HolySheet: ' + (e.response?.data?.error || e.message));
     }
@@ -710,11 +747,20 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
     const selectedCrmList = allContacts.filter(c => selectedLeadIds.includes(c._id));
     const selectedExlyList = allExlyContacts.filter(c => selectedLeadIds.includes(c._id));
-    const mergedRecipients = [
+    const rawMerged = [
       ...activeCsvRecipients,
       ...selectedCrmList.map(c => ({ name: c.name, email: c.email })),
       ...selectedExlyList.map(c => ({ name: c.name, email: c.email }))
     ];
+    const { valid: mergedRecipients, skipped } = filterValidRecipientRows(rawMerged);
+    if (skipped.length > 0) {
+      const proceed = window.confirm(`Skipped ${skipped.length} invalid email(s) (phone numbers or bad format). Continue with ${mergedRecipients.length} valid recipient(s)?`);
+      if (!proceed) return;
+    }
+    if (mergedRecipients.length === 0) {
+      alert('No valid email recipients after filtering. Check CRM/CSV/HolySheet data.');
+      return;
+    }
 
     let processedContent = buildEditorContent(content);
 
@@ -774,7 +820,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     setHtmlFileName('');
     setIsCustomHtml(false);
     setUseRawHtml(false);
-    setMode('campaigns');
+    if (standaloneWizard) {
+      navigate('/workspace/emails');
+    } else {
+      setMode('campaigns');
+    }
   };
 
 
@@ -792,7 +842,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     {
       header: 'Status',
       render: (row) => (
-        <Badge variant={row.status === 'Completed' ? 'success' : row.status === 'Sending' ? 'warning' : 'info'}>
+        <Badge variant={row.status === 'Completed' ? 'success' : row.status === 'Sending' ? 'warning' : row.status === 'Stopped' ? 'danger' : 'info'}>
           {row.status}
         </Badge>
       )
@@ -878,9 +928,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <BarChart2 size={14} /> Campaigns ({campaigns.length})
           </Button>
           <Button
-            variant={mode === 'new_campaign' ? 'primary' : 'secondary'}
+            variant="secondary"
             size="sm"
-            onClick={() => setMode('new_campaign')}
+            onClick={() => navigate('/workspace/emails/create')}
           >
             <Plus size={14} /> Create Campaign
           </Button>
@@ -957,18 +1007,43 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       )}
 
       {/* Mode: New Campaign Builder */}
-      {mode === 'new_campaign' && (
+      {(mode === 'new_campaign' || standaloneWizard) && (
         <Card className="p-6 space-y-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
-          <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
+          <div className="flex flex-col gap-4 border-b border-[var(--color-bg-border)] pb-4">
             <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
               <Mail size={16} /> Campaign Architect
             </h3>
-            <div className="flex items-center gap-3">
-              {[1, 2, 3, 4].map(s => (
-                <div key={s} className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] ${campaignStep >= s ? 'bg-[var(--color-action-primary)] text-white shadow-[0_0_10px_var(--color-action-primary)]' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'}`}>
-                  {s}
-                </div>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { step: 1, label: 'Setup' },
+                { step: 2, label: 'Recipients' },
+                { step: 3, label: 'Content' },
+                { step: 4, label: 'Review' },
+              ].map(({ step, label }) => {
+                const done = campaignStep > step;
+                const active = campaignStep === step;
+                return (
+                  <button
+                    key={step}
+                    type="button"
+                    onClick={() => setCampaignStep(step)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
+                      active
+                        ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]'
+                        : done
+                          ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-600'
+                          : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'
+                    }`}
+                  >
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
+                      active ? 'bg-[var(--color-action-primary)] text-white' : done ? 'bg-emerald-500 text-white' : 'bg-[var(--color-bg-primary)]'
+                    }`}>
+                      {done ? <Check size={12} /> : step}
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1311,9 +1386,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           )}
 
           {campaignStep === 3 && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between gap-4">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-3">
+            <div className="space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
                   <input 
                     type="checkbox"
                     checked={useRawHtml}
@@ -1321,20 +1396,29 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       const checked = e.target.checked;
                       setUseRawHtml(checked);
                       setIsCustomHtml(checked);
-                      if (checked && includeSignature) {
-                        setContent((prev) => applySignatureToContent(prev));
+                      if (checked) {
+                        setContent((prev) => {
+                          let next = prev;
+                          if (includeUnsubscribe) next = syncUnsubscribeInContent(next, true);
+                          if (includeSignature) next = applySignatureToContent(next);
+                          return next;
+                        });
                       }
                     }}
                     className="w-4 h-4 rounded cursor-pointer"
                   />
                   Raw HTML Mode
                 </label>
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-wrap items-center gap-2">
+                <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
+                  <Plus size={12} /> Insert {'{{firstname}}'}
+                </Button>
+            
+              </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
                     <Eye size={12} /> Preview
-                  </Button>
-                  <Button size="xs" variant="secondary" onClick={insertSignatureIntoContent}>
-                    <Plus size={12} /> Insert Signature
                   </Button>
                   {!useRawHtml && (
                     <>
@@ -1411,24 +1495,16 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
-                  <Plus size={12} /> Insert {'{{firstname}}'}
-                </Button>
-                <span className="text-[9px] text-[var(--color-text-muted)]">Uses name from HolySheet / CSV / CRM</span>
-              </div>
+             
 
               {useRawHtml ? (
                 <>
-                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-600 font-bold">
-                    Raw HTML Mode — edit HTML below; signature and unsubscribe blocks use TASKMASTER markers.
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                       <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
                       Include signature in HTML
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                       <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
                       Include unsubscribe in HTML
                     </label>
@@ -1443,12 +1519,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         ))}
                       </select>
                     )}
-                    <Button size="xs" variant="secondary" onClick={insertSignatureIntoContent}>
-                      <Plus size={12} /> Insert Signature
-                    </Button>
-                    <Button size="xs" variant="secondary" onClick={insertUnsubscribeIntoContent}>
-                      <Plus size={12} /> Insert Unsubscribe
-                    </Button>
+                    {includeSignature && !activeProfileSignature && (
+                      <span className="text-[9px] text-[var(--color-text-muted)]">No signature on selected profile</span>
+                    )}
+                    <span className="hidden sm:inline text-[var(--color-bg-border)]">|</span>
                     <Button size="xs" variant="secondary" onClick={() => setShowHtmlPasteModal(true)}>
                       <Upload size={12} /> Paste HTML
                     </Button>
@@ -1459,7 +1533,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         onChange={(e) => {
                           const t = templates.find((temp) => temp._id === e.target.value);
                           if (t) {
-                            setContent(t.content);
+                            let next = t.content || '';
+                            if (includeUnsubscribe) next = syncUnsubscribeInContent(next, true);
+                            if (includeSignature) next = applySignatureToContent(next);
+                            setContent(next);
                             setUseRawHtml(true);
                             e.target.value = '';
                           }
@@ -1473,19 +1550,16 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                           ))}
                       </select>
                     )}
-                    {includeSignature && !hasSignatureBlock(content) && (
-                      <span className="text-amber-500 text-[10px] font-bold">Signature not in HTML yet</span>
-                    )}
-                    {includeUnsubscribe && !hasUnsubscribeBlock(content) && (
-                      <span className="text-amber-500 text-[10px] font-bold">Unsubscribe not in HTML yet</span>
-                    )}
+                    <span className="w-full sm:w-auto text-[9px] text-[var(--color-text-muted)]">
+                      Uncheck to remove blocks; TASKMASTER markers in HTML.
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <textarea
                       className="w-full h-[400px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
                       value={content}
                       onChange={e => handleRawHtmlChange(e.target.value)}
-                      placeholder="Paste or edit raw HTML — signature/unsubscribe blocks appear between TASKMASTER markers..."
+                      placeholder="Paste or edit raw HTML. Signature and unsubscribe use TASKMASTER comment markers when included."
                     />
                  
                       
@@ -1502,18 +1576,18 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </>
               ) : (
                 <>
-                  <div className="bg-white text-black rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
-                    <div className="px-3 py-2 border-b border-[var(--color-bg-border)] flex items-center gap-4 text-xs bg-[var(--color-bg-secondary)]">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                  <div className="rounded-lg overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+                    <div className="px-3 py-2 border-b border-[var(--color-bg-border)] flex items-center gap-4 text-xs text-[var(--color-text-primary)]">
+                      <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)]">
                         <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
                         Include profile signature
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)]">
                         <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
                         Include unsubscribe footer
                       </label>
                     </div>
-                    <ReactQuill theme="snow" value={content} onChange={setContent} className="h-[400px] mb-12" />
+                    <ReactQuill theme="snow" value={content} onChange={handleQuillContentChange} className="h-[400px] mb-12" />
                   </div>
                 </>
               )}
@@ -1530,7 +1604,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               )}
 
               <div className="flex items-center gap-2 mt-4 text-xs text-[var(--color-text-muted)]">
-                <span>Unsubscribe block uses {'{{unsubscribe_url}}'} — replaced per recipient at send time.</span>
+                <span>Unsubscribe link points to <code className="font-mono text-[10px]">/unsubscribe</code> — recipients enter their email on that page.</span>
               </div>
 
               <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-3">
@@ -1538,7 +1612,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Test Campaign</label>
                   <span className="text-[9px] text-[var(--color-text-muted)]">Send preview to test email</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Input 
                     type="email"
                     placeholder="Test email address"
@@ -1547,7 +1621,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     className="flex-1"
                   />
                   <Button 
-                    size="sm" 
+                    size="md" 
                     variant="secondary"
                     onClick={async () => {
                       if (!testCampaignEmail) {
@@ -1633,8 +1707,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
           <div className="flex justify-between items-center pt-4 border-t border-[var(--color-bg-border)]">
             <Button variant="ghost" onClick={() => {
-              if (campaignStep === 1) setMode('campaigns');
-              else setCampaignStep(campaignStep - 1);
+              if (campaignStep === 1) {
+                if (standaloneWizard) navigate('/workspace/emails');
+                else setMode('campaigns');
+              } else setCampaignStep(campaignStep - 1);
             }}>
               {campaignStep === 1 ? 'Cancel' : 'Back'}
             </Button>
@@ -2057,7 +2133,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-black uppercase tracking-tight">{selectedCampaign.title}</h2>
-                  <Badge variant={selectedCampaign.status === 'Completed' ? 'mint' : selectedCampaign.status === 'Sending' ? 'warning' : 'info'}>
+                  <Badge variant={selectedCampaign.status === 'Completed' ? 'mint' : selectedCampaign.status === 'Sending' ? 'warning' : selectedCampaign.status === 'Stopped' ? 'danger' : 'info'}>
                     {selectedCampaign.status}
                   </Badge>
                 </div>
@@ -2237,9 +2313,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 variant="primary"
                 onClick={() => {
                   if (htmlPasteText.trim()) {
-                    const pasted = includeSignature
-                      ? applySignatureToContent(htmlPasteText)
-                      : htmlPasteText;
+                    let pasted = htmlPasteText.trim();
+                    if (includeUnsubscribe) pasted = syncUnsubscribeInContent(pasted, true);
+                    if (includeSignature) pasted = applySignatureToContent(pasted);
                     setContent(pasted);
                     setHtmlFileName('pasted-content.html');
                     setIsCustomHtml(true);

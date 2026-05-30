@@ -7,6 +7,15 @@ const departmentSchema = new mongoose.Schema({
   color: { type: String, default: '#3b82f6' },
   sortOrder: { type: Number, default: 0 },
   signupAllowed: { type: Boolean, default: true },
+  permissionPreset: {
+    type: String,
+    enum: ['admin', 'operations', 'sales', 'artist-management', 'standard'],
+    default: 'standard',
+  },
+  pagePermissions: {
+    type: [String],
+    default: [],
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

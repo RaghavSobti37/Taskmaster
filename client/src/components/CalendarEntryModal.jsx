@@ -1,32 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock } from 'lucide-react';
+import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock, Briefcase } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
+import NexusDropdown from './ui/NexusDropdown';
+import WorkspaceSelect from './forms/WorkspaceSelect';
+import ProjectSelect from './forms/ProjectSelect';
+import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
+import { useProjects } from '../hooks/useTaskmasterQueries';
 
 const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = null }) => {
   const queryClient = useQueryClient();
+  const { data: projects = [] } = useProjects();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
+  const [eventType, setEventType] = useState('event');
   const [visibility, setVisibility] = useState('private');
+  const [workspace, setWorkspace] = useState('General');
+  const [projectId, setProjectId] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
-      setDate(initialData.dueDate ? initialData.dueDate.split('T')[0] : '');
+      const rawDate = initialData.dueDate || initialData.date;
+      setDate(rawDate ? String(rawDate).split('T')[0] : '');
       setDescription(initialData.description || '');
+      setEventType(initialData.eventType || 'event');
       setVisibility(initialData.visibility || 'private');
+      setWorkspace(initialData.workspace || 'General');
+      setProjectId(initialData.projectId?._id || initialData.projectId || '');
     } else {
       setTitle('');
       setDate(new Date().toISOString().split('T')[0]);
       setDescription('');
+      setEventType('event');
       setVisibility('private');
+      setWorkspace('General');
+      setProjectId('');
     }
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleWorkspaceChange = (ws) => {
+    setWorkspace(ws);
+    const inWs = (p) => String(p.workspace || 'General').toUpperCase() === String(ws || 'General').toUpperCase();
+    if (projectId && !projects.some((p) => p._id === projectId && inWs(p))) {
+      setProjectId('');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,27 +60,32 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
     selectedDate.setHours(0, 0, 0, 0);
 
     if (selectedDate < today) {
-      alert("Cannot create calendar events for past dates.");
+      alert('Cannot create calendar events for past dates.');
+      return;
+    }
+
+    if (visibility === 'project' && !projectId) {
+      alert('Please select a project for project-related visibility.');
       return;
     }
 
     setLoading(true);
+    const payload = {
+      title,
+      date,
+      description,
+      eventType,
+      visibility,
+      workspace: visibility === 'project' ? workspace : undefined,
+      projectId: visibility === 'project' ? projectId : undefined,
+    };
+
     try {
-      if (initialData?._id) {
-        const res = await axios.put(`/api/calendar/${initialData._id}`, {
-          title,
-          date,
-          description,
-          visibility
-        });
+      if (initialData?._id && initialData.type !== 'task') {
+        const res = await axios.put(`/api/calendar/${initialData._id}`, payload);
         if (onEntryCreated) onEntryCreated(res.data, true);
-      } else {
-        const res = await axios.post('/api/calendar', {
-          title,
-          date,
-          description,
-          visibility
-        });
+      } else if (!initialData?._id) {
+        const res = await axios.post('/api/calendar', payload);
         if (onEntryCreated) onEntryCreated(res.data, false);
       }
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
@@ -87,11 +116,11 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
         <div className="tm-modal-scroll p-6 space-y-5">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Event Name</label>
-            <input 
+            <input
               autoFocus
-              type="text" 
+              type="text"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold"
               placeholder="e.g. Team meeting"
               required
@@ -99,15 +128,25 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
           </div>
 
           <div className="space-y-2">
+            <NexusDropdown
+              label="Event Type"
+              options={CALENDAR_EVENT_TYPES}
+              value={eventType}
+              onChange={setEventType}
+              placeholder="Select type..."
+            />
+          </div>
+
+          <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               min={new Date().toISOString().split('T')[0]}
               value={date}
-              onClick={e => e.target.showPicker && e.target.showPicker()}
-              onFocus={e => e.target.showPicker && e.target.showPicker()}
-              onKeyDown={e => e.preventDefault()}
-              onChange={e => setDate(e.target.value)}
+              onClick={(e) => e.target.showPicker && e.target.showPicker()}
+              onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+              onKeyDown={(e) => e.preventDefault()}
+              onChange={(e) => setDate(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
               required
             />
@@ -115,22 +154,21 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
 
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description (optional)</label>
-            <textarea 
+            <textarea
               value={description}
-              onChange={e => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold min-h-[80px] resize-none"
               placeholder="Add details..."
             />
           </div>
 
-          {/* Visibility Toggle */}
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Who can see this?</label>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setVisibility('private')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs border transition-all ${
+                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs border transition-all ${
                   visibility === 'private'
                     ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 shadow-sm'
                     : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-purple-500/30'
@@ -142,7 +180,7 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
               <button
                 type="button"
                 onClick={() => setVisibility('public')}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs border transition-all ${
+                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs border transition-all ${
                   visibility === 'public'
                     ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 shadow-sm'
                     : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-emerald-500/30'
@@ -151,9 +189,33 @@ const CalendarEntryModal = ({ isOpen, onClose, onEntryCreated, initialData = nul
                 <Globe size={14} />
                 Everyone
               </button>
+              <button
+                type="button"
+                onClick={() => setVisibility('project')}
+                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs border transition-all ${
+                  visibility === 'project'
+                    ? 'bg-blue-500/10 text-blue-600 border-blue-500/30 shadow-sm'
+                    : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-blue-500/30'
+                }`}
+              >
+                <Briefcase size={14} />
+                Project Related
+              </button>
             </div>
           </div>
 
+          {visibility === 'project' && (
+            <div className="space-y-4 p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40">
+              <WorkspaceSelect value={workspace} onChange={handleWorkspaceChange} />
+              <ProjectSelect
+                label="Project"
+                projects={projects}
+                value={projectId}
+                onChange={setProjectId}
+                workspaceFilter={workspace}
+              />
+            </div>
+          )}
         </div>
 
         <ModalFooter className="justify-end gap-3">

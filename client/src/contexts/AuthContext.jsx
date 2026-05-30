@@ -1,10 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { subscribeToChannel, disconnectRealtime } from '../lib/realtime';
-import { notify } from '../lib/notifications';
+import { pushCustomToast } from '../lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 
-const AuthContext = createContext();
+const defaultAuthContext = {
+  user: null,
+  token: null,
+  loading: true,
+  login: () => {},
+  logout: () => {},
+};
+
+const AuthContext = createContext(defaultAuthContext);
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 }
@@ -82,7 +90,7 @@ export const AuthProvider = ({ children }) => {
         queryClient.invalidateQueries({ queryKey: ['missions'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
 
-        notify.custom(
+        pushCustomToast(
           () => (
             <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
               <div className="p-4 flex-1">
@@ -138,4 +146,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext) ?? defaultAuthContext;

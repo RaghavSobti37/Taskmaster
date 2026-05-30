@@ -1,7 +1,23 @@
+const {
+  isAdminUser,
+  isSalesUser,
+  isOpsUser,
+  isArtistManagerUser,
+  hasPageAccess,
+  hasAnyPageAccess,
+  getUserPagePermissions,
+  resolveDepartmentPages,
+  PRESET_PAGES,
+  ALL_PAGE_KEYS,
+} = require('./pagePermissions');
+
 const ADMIN_SLUG = 'admin';
 const SALES_SLUG = 'sales';
 const OPS_SLUG = 'operations';
 const ARTIST_SLUG = 'artist-management';
+const STANDARD_PRESET = 'standard';
+
+const PRESET_VALUES = new Set([ADMIN_SLUG, SALES_SLUG, OPS_SLUG, ARTIST_SLUG, STANDARD_PRESET]);
 
 const getDepartmentSlug = (user) => {
   const dept = user?.departmentId;
@@ -10,21 +26,12 @@ const getDepartmentSlug = (user) => {
   return null;
 };
 
-const isAdminUser = (user) => getDepartmentSlug(user) === ADMIN_SLUG;
-
-const isSalesUser = (user) => {
-  const slug = getDepartmentSlug(user);
-  return slug === SALES_SLUG || slug === ADMIN_SLUG;
-};
-
-const isOpsUser = (user) => {
-  const slug = getDepartmentSlug(user);
-  return slug === OPS_SLUG || slug === ADMIN_SLUG;
-};
-
-const isArtistManagerUser = (user) => {
-  const slug = getDepartmentSlug(user);
-  return slug === ARTIST_SLUG || slug === ADMIN_SLUG;
+const getPermissionPreset = (user) => {
+  const dept = user?.departmentId;
+  if (!dept || typeof dept !== 'object') return null;
+  if (dept.permissionPreset) return dept.permissionPreset;
+  if (dept.slug && PRESET_VALUES.has(dept.slug)) return dept.slug;
+  return dept.slug || null;
 };
 
 /** Legacy role string → department slug (migration only). */
@@ -49,10 +56,19 @@ module.exports = {
   SALES_SLUG,
   OPS_SLUG,
   ARTIST_SLUG,
+  STANDARD_PRESET,
+  PRESET_VALUES,
   ROLE_TO_SLUG,
   getDepartmentSlug,
+  getPermissionPreset,
   isAdminUser,
   isSalesUser,
   isOpsUser,
   isArtistManagerUser,
+  hasPageAccess,
+  hasAnyPageAccess,
+  getUserPagePermissions,
+  resolveDepartmentPages,
+  PRESET_PAGES,
+  ALL_PAGE_KEYS,
 };

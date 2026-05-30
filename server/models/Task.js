@@ -44,6 +44,8 @@ taskSchema.index({ projectId: 1, status: 1 });
 taskSchema.index({ phaseId: 1, status: 1 });
 taskSchema.index({ projectId: 1, dueDate: 1 });
 taskSchema.index({ tenantId: 1, createdAt: -1 });
+taskSchema.index({ status: 1, dueDate: 1, notifiedWarning: 1 });
+taskSchema.index({ status: 1, dueDate: 1, notifiedOverdue: 1 });
 
 taskSchema.virtual('assignees', {
   ref: 'TaskAssignment',

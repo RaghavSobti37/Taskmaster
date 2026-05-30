@@ -9,7 +9,8 @@ import {
   Badge, PageHeader, Card, PageContainer, DataTable, Button,
   TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input, NexusModal
 } from '../../components/ui';
-import { useArtists, useCreateArtist, useUpdateArtist, useDeleteArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
+import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
+import { formatNumber } from '../../config/integrations.config';
 
 const getArtistEmoji = (name = '') => {
   if (name.includes('Yugm')) return '🎸';
@@ -18,11 +19,9 @@ const getArtistEmoji = (name = '') => {
   return '✨';
 };
 
-const formatNumber = (num) => {
+const formatNumberLocal = (num) => {
   if (num == null || isNaN(num)) return 'N/A';
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toString();
+  return formatNumber(num);
 };
 
 export default function ArtistsCollection() {
@@ -89,11 +88,12 @@ export default function ArtistsCollection() {
     let totalSpotify = 0;
     let totalViews = 0;
     artists.forEach(a => {
+      const unified = a.normalized?.unified?.reach;
       const sp = a.analytics?.spotify?.followers || 0;
       const yt = a.analytics?.youtube?.subscribers || 0;
       const ig = a.analytics?.instagram?.followers || 0;
       const views = a.analytics?.youtube?.views || 0;
-      totalReach += (sp + yt + ig);
+      totalReach += unified ?? (sp + yt + ig);
       totalSpotify += sp;
       totalViews += views;
     });
@@ -121,15 +121,15 @@ export default function ArtistsCollection() {
       )
     },
     {
-      header: 'Spotify Feed',
-      info: 'Spotify Followers and Monthly Listeners metrics',
+      header: 'Reach',
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <FaSpotify size={14} className="text-emerald-500 shrink-0" />
-          <span className="text-xs font-bold text-[var(--color-text-primary)]">
-            {formatNumber(row.analytics?.spotify?.followers)} <span className="text-[10px] font-normal text-[var(--color-text-muted)]">flw</span>
-          </span>
-        </div>
+        <span className="text-xs font-bold text-[var(--color-text-primary)]">
+          {formatNumber(row.normalized?.unified?.reach ?? (
+            (row.analytics?.spotify?.followers || 0) +
+            (row.analytics?.youtube?.subscribers || 0) +
+            (row.analytics?.instagram?.followers || 0)
+          ))}
+        </span>
       )
     },
     {
@@ -139,7 +139,7 @@ export default function ArtistsCollection() {
         <div className="flex items-center gap-2">
           <FaYoutube size={14} className="text-red-500 shrink-0" />
           <span className="text-xs font-bold text-[var(--color-text-primary)]">
-            {formatNumber(row.analytics?.youtube?.views)} <span className="text-[10px] font-normal text-[var(--color-text-muted)]">views</span>
+            {formatNumberLocal(row.analytics?.youtube?.views)} <span className="text-[10px] font-normal text-[var(--color-text-muted)]">views</span>
           </span>
         </div>
       )
@@ -151,7 +151,7 @@ export default function ArtistsCollection() {
         <div className="flex items-center gap-2">
           <FaInstagram size={14} className="text-pink-500 shrink-0" />
           <span className="text-xs font-bold text-[var(--color-text-primary)]">
-            {formatNumber(row.analytics?.instagram?.followers)} <span className="text-[10px] font-normal text-[var(--color-text-muted)]">flw</span>
+            {formatNumberLocal(row.analytics?.instagram?.followers)} <span className="text-[10px] font-normal text-[var(--color-text-muted)]">flw</span>
           </span>
         </div>
       )
@@ -195,9 +195,9 @@ export default function ArtistsCollection() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Artists" value={stats.totalArtists} icon={Users} variant="slate" />
-        <StatCard label="Collective Reach" value={formatNumber(stats.totalReach)} icon={TrendingUp} variant="mint" info="Aggregated followers across Spotify, YouTube, and Instagram." />
-        <StatCard label="Spotify Followers" value={formatNumber(stats.totalSpotify)} icon={FaSpotify} variant="info" />
-        <StatCard label="YouTube Views" value={formatNumber(stats.totalViews)} icon={FaYoutube} variant="rose" />
+        <StatCard label="Collective Reach" value={formatNumberLocal(stats.totalReach)} icon={TrendingUp} variant="mint" info="Aggregated followers across connected platforms." />
+        <StatCard label="Spotify Followers" value={formatNumberLocal(stats.totalSpotify)} icon={FaSpotify} variant="info" />
+        <StatCard label="YouTube Views" value={formatNumberLocal(stats.totalViews)} icon={FaYoutube} variant="rose" />
       </div>
 
       <div className="space-y-4">

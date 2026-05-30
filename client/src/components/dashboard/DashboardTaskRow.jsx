@@ -5,6 +5,7 @@ import { formatDueDate } from '../../utils/formatDueDate';
 import { getTaskRowStyle } from '../../utils/workspaceColors';
 import { isTaskOverdue } from '../../utils/dashboardTasks';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
+import { isPendingTask } from '../../utils/pendingTask';
 
 /**
  * Dashboard task row — workspace color bar, title, due label, priority badge.
@@ -21,7 +22,7 @@ const DashboardTaskRow = ({
   const dueLabel = formatDueDate(task.dueDate || task.scheduleDate, { emptyLabel: 'No date' });
   const overdue = isTaskOverdue(task);
 
-  if (isCompleting) {
+  if (isCompleting || isPendingTask(task) || task._updating) {
     return (
       <div
         data-highlight-id={task._id}

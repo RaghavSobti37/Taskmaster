@@ -19,6 +19,8 @@ const notificationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
+
 notificationSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Notification', notificationSchema);

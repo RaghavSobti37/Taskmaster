@@ -1,0 +1,16 @@
+services:
+  - type: cron
+    name: taskmaster-daily-backup
+    schedule: "31 18 * * *"
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node scripts/runDailyBackup.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKUP_ENABLED
+        value: "true"
+      - key: BACKUP_RETENTION_DAYS
+        value: "7"
+      - key: MONGODB_BACKUP_DB
+        value: taskmaster_backups

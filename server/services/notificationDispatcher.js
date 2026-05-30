@@ -20,9 +20,17 @@ const escapeHtml = (str) => String(str || '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
+const templatePath = path.join(__dirname, '../templates/notification.html');
+let notificationTemplateHtml = null;
+
+const getNotificationTemplate = () => {
+  if (notificationTemplateHtml) return notificationTemplateHtml;
+  notificationTemplateHtml = fs.readFileSync(templatePath, 'utf8');
+  return notificationTemplateHtml;
+};
+
 const buildNotificationHtml = ({ title, message, category, actionUrl, recipientName }) => {
-  const templatePath = path.join(__dirname, '../templates/notification.html');
-  let html = fs.readFileSync(templatePath, 'utf8');
+  let html = getNotificationTemplate();
   const appUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
   const ctaLink = actionUrl ? (actionUrl.startsWith('http') ? actionUrl : `${appUrl}${actionUrl}`) : `${appUrl}/inbox`;
   html = html

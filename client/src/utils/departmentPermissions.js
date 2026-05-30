@@ -2,6 +2,25 @@ export const ADMIN_SLUG = 'admin';
 export const SALES_SLUG = 'sales';
 export const OPS_SLUG = 'operations';
 export const ARTIST_SLUG = 'artist-management';
+export const STANDARD_PRESET = 'standard';
+
+export {
+  PAGE_GROUPS,
+  ALL_PAGE_KEYS,
+  BASE_PAGE_KEYS,
+  PRESET_PAGES,
+  PERMISSION_PRESET_OPTIONS,
+  isDepartmentAdmin,
+  resolveDepartmentPages,
+  getUserPagePermissions,
+  hasPageAccess,
+  hasAnyPageAccess,
+  isAdminUser,
+  isSalesUser,
+  isOpsUser,
+  isArtistManagerUser,
+  groupHasVisiblePages,
+} from './pagePermissions';
 
 export function getDepartmentSlug(user) {
   const dept = user?.departmentId;
@@ -17,23 +36,11 @@ export function getDepartmentName(user) {
   return 'Unassigned';
 }
 
-export function isAdminUser(user) {
-  return getDepartmentSlug(user) === ADMIN_SLUG;
-}
-
-export function isSalesUser(user) {
-  const slug = getDepartmentSlug(user);
-  return slug === SALES_SLUG || slug === ADMIN_SLUG;
-}
-
-export function isOpsUser(user) {
-  const slug = getDepartmentSlug(user);
-  return slug === OPS_SLUG || slug === ADMIN_SLUG;
-}
-
-export function isArtistManagerUser(user) {
-  const slug = getDepartmentSlug(user);
-  return slug === ARTIST_SLUG || slug === ADMIN_SLUG;
+export function getPermissionPreset(user) {
+  const dept = user?.departmentId;
+  if (!dept || typeof dept !== 'object') return null;
+  if (dept.permissionPreset) return dept.permissionPreset;
+  return null;
 }
 
 /** @deprecated use OPS_SLUG checks via isOpsUser */

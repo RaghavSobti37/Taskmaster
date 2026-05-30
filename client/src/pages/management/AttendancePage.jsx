@@ -16,8 +16,9 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { isOpsUser, isAdminUser } from '../../utils/departmentPermissions';
 import { isAttendanceExcluded } from '../../utils/attendanceUsers';
-import { useToast } from '../../contexts/ToastContext';
-import { addDays, format } from 'date-fns';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { Check, Lock, LogIn, LogOut, RotateCcw, Palmtree } from 'lucide-react';
 import {
   isWeekend,
@@ -26,15 +27,20 @@ import {
   getMergedCellLabel,
   formatDateKeyIST,
 } from '../../utils/attendanceUtils';
+import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendanceGrid';
 
 const VIEW_MODES = {
   COMPACT: 'compact',
   WEEK: 'week',
+  MONTH: 'month',
 };
+
+const PASTEL_ROSE_CELL = 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/20';
+const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
 
 const getCellButtonClass = (status, entry) => (
   entry?.isApproved ? 'bg-blue-500/10 border-blue-500/30' :
-  status === 'leave' ? 'bg-red-500/10 border-red-500/30' :
+  status === 'leave' ? PASTEL_ROSE_CELL :
   status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
   status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
   'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'
@@ -146,7 +152,7 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
             </span>
           )}
           {entry.discrepancyMinutes >= 30 && (
-            <span className="px-2 py-1 rounded-lg bg-red-500/10 text-red-600 border border-red-500/20 font-bold">
+            <span className={`px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} font-bold`}>
               Discrepancy: {entry.discrepancyMinutes}m
             </span>
           )}
@@ -154,7 +160,7 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
       )}
 
       {weekend && !hasIn && !hasOut && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400">
+        <div className={`flex items-center gap-2 p-4 rounded-xl ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT}`}>
           <Palmtree size={18} />
           <span className="text-sm font-bold">Weekend — on leave. Mark in if you are working.</span>
         </div>
@@ -249,12 +255,13 @@ const SelfAttendancePanel = ({ today, todayKey }) => {
 
 const AttendancePage = () => {
   const { user } = useAuth();
-  const { addToast } = useToast();
+  const { addToast } = useSystemToast();
   const canEdit = isOpsUser(user);
   const canReset = isAdminUser(user);
   const [editCell, setEditCell] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.COMPACT);
+  const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
   const [editForm, setEditForm] = useState({ status: 'present', timeIn: '', timeOut: '' });
 
   const today = useMemo(() => {
@@ -268,16 +275,36 @@ const AttendancePage = () => {
     if (viewMode === VIEW_MODES.WEEK) {
       return getWeekDaysIST(today);
     }
+    if (viewMode === VIEW_MODES.MONTH) {
+      const start = startOfMonth(monthView);
+      const end = endOfMonth(monthView);
+      return eachDayOfInterval({ start, end }).map((date) => ({
+        key: format(date, 'yyyy-MM-dd'),
+        label: format(date, 'd'),
+        date,
+      }));
+    }
     return [
       { key: 'yesterday', label: 'Yesterday', date: addDays(today, -1) },
       { key: 'today', label: 'Today', date: today },
       { key: 'tomorrow', label: 'Tomorrow', date: addDays(today, 1) },
     ];
-  }, [today, viewMode]);
+  }, [today, viewMode, monthView]);
 
-  const rangeStart = format(dateColumns[0].date, 'yyyy-MM-dd');
-  const rangeEnd = format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
+  const rangeStart = viewMode === VIEW_MODES.MONTH
+    ? format(startOfMonth(monthView), 'yyyy-MM-dd')
+    : format(dateColumns[0].date, 'yyyy-MM-dd');
+  const rangeEnd = viewMode === VIEW_MODES.MONTH
+    ? format(endOfMonth(monthView), 'yyyy-MM-dd')
+    : format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
+
+  const selfMonthStart = format(startOfMonth(monthView), 'yyyy-MM-dd');
+  const selfMonthEnd = format(endOfMonth(monthView), 'yyyy-MM-dd');
   const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit);
+  const { data: selfMonthRows = [] } = useAttendance(
+    { start: selfMonthStart, end: selfMonthEnd, mine: 'true' },
+    !canEdit
+  );
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit);
   const upsertAttendance = useUpsertAttendance();
@@ -299,6 +326,15 @@ const AttendancePage = () => {
     return map;
   }, [rows]);
 
+  const selfRowMap = useMemo(() => {
+    const map = new Map();
+    selfMonthRows.forEach((entry) => {
+      const key = `${String(entry.userId)}_${format(new Date(entry.date), 'yyyy-MM-dd')}`;
+      map.set(key, entry);
+    });
+    return map;
+  }, [selfMonthRows]);
+
   const resolveStatus = (entry, date) => {
     if (!entry && isWeekend(date)) return 'leave';
     if (!entry) return 'empty';
@@ -310,7 +346,7 @@ const AttendancePage = () => {
 
   const statusDot = (status, entry) => {
     if (entry?.isApproved) return 'bg-blue-500';
-    if (status === 'leave') return 'bg-red-500';
+    if (status === 'leave') return 'bg-[var(--color-pastel-rose-text)]';
     if (status === 'halfDay') return 'bg-amber-400';
     if (status === 'present') return 'bg-emerald-500';
     return 'bg-[var(--color-bg-border)]';
@@ -348,6 +384,7 @@ const AttendancePage = () => {
         addToast({
           type: 'error',
           message: error.response?.data?.error || 'Failed to save attendance',
+          module: MODULE.ATTENDANCE,
         });
       },
     });
@@ -367,6 +404,7 @@ const AttendancePage = () => {
           message: deleted
             ? `Deleted ${deleted.attendance} attendance rows and ${deleted.leaveRequests} leave requests.`
             : 'Attendance data reset successfully.',
+          module: MODULE.ATTENDANCE,
         });
         setShowResetConfirm(false);
       },
@@ -374,6 +412,7 @@ const AttendancePage = () => {
         addToast({
           type: 'error',
           message: error.response?.data?.error || 'Failed to reset attendance data',
+          module: MODULE.ATTENDANCE,
         });
       },
     });
@@ -388,6 +427,15 @@ const AttendancePage = () => {
           icon={ClipboardCheck}
         />
         <SelfAttendancePanel today={today} todayKey={todayKey} />
+        <MonthlyAttendanceGrid
+          month={monthView}
+          onMonthChange={setMonthView}
+          rowMap={selfRowMap}
+          singleUser={user}
+          resolveStatus={resolveStatus}
+          onEdit={() => {}}
+          title="My Monthly Attendance"
+        />
       </PageContainer>
     );
   }
@@ -423,9 +471,22 @@ const AttendancePage = () => {
               >
                 Full Week
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode(VIEW_MODES.MONTH)}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  viewMode === VIEW_MODES.MONTH
+                    ? 'bg-[var(--color-action-primary)] text-white'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Monthly
+              </button>
             </div>
             <span className="text-xs font-bold px-3 py-1 rounded-lg bg-[var(--color-bg-secondary)]">
-              {format(dateColumns[0].date, 'MMM d')} – {format(dateColumns[dateColumns.length - 1].date, 'MMM d, yyyy')}
+              {viewMode === VIEW_MODES.MONTH
+                ? format(monthView, 'MMMM yyyy')
+                : `${format(dateColumns[0].date, 'MMM d')} – ${format(dateColumns[dateColumns.length - 1].date, 'MMM d, yyyy')}`}
             </span>
             {canReset && (
               <Button
@@ -463,6 +524,17 @@ const AttendancePage = () => {
         </Card>
       )}
 
+      {viewMode === VIEW_MODES.MONTH ? (
+        <MonthlyAttendanceGrid
+          month={monthView}
+          onMonthChange={setMonthView}
+          rowMap={rowMap}
+          users={filteredUsers}
+          resolveStatus={resolveStatus}
+          onEdit={openEditModal}
+          title="Team Monthly Attendance"
+        />
+      ) : (
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
@@ -517,6 +589,7 @@ const AttendancePage = () => {
           </table>
         </div>
       </Card>
+      )}
 
       <NexusModal
         isOpen={!!editCell}

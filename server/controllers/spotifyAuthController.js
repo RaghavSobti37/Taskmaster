@@ -10,6 +10,7 @@
 
 const axios = require('axios');
 const Artist = require('../models/Artist');
+const { upsertConnection } = require('../services/connectionService');
 const { Mutex } = require('async-mutex');
 const logger = require('../utils/logger');
 
@@ -99,24 +100,23 @@ exports.spotifyAuthCallback = async (req, res) => {
       headers: { Authorization: `Bearer ${access_token}` }
     });
     const profile = profileRes.data;
-    logger.info('Spotify OAuth', '✅ [Spotify OAuth] Connected Spotify account: ${profile.display_name} (${profile.id})');
+    logger.info('Spotify OAuth', `✅ Connected: ${profile.display_name} (${profile.id})`);
 
-    // Save credentials to artist
-    if (!artist.oauthCredentials) artist.oauthCredentials = {};
-    artist.oauthCredentials.spotify = {
-      ...artist.oauthCredentials.spotify,
+    const raw = await Artist.collection.findOne({ _id: artistId });
+    const existingArtistId = raw?.oauthCredentials?.spotify?.artistId || '';
+
+    await upsertConnection({
+      artistId,
+      provider: 'spotify',
+      accountHandle: existingArtistId,
+      accountLabel: profile.display_name || 'Spotify',
       accessToken: access_token,
       refreshToken: refresh_token,
-      tokenExpiry: new Date(Date.now() + expires_in * 1000),
-      spotifyUserId: profile.id,
-      displayName: profile.display_name,
-      connectedAt: new Date()
-    };
+      expiresAt: new Date(Date.now() + expires_in * 1000),
+      metadata: { spotifyUserId: profile.id, displayName: profile.display_name, artistId: existingArtistId },
+    });
 
-    artist.markModified('oauthCredentials');
-    await artist.save();
-
-    logger.info('Spotify OAuth', '🎉 [Spotify OAuth] Artist ${artist.name} Spotify account connected! Triggering sync...');
+    logger.info('Spotify OAuth', `🎉 Artist ${artist.name} Spotify connected — syncing...`);
 
     // Auto-trigger sync
     try {

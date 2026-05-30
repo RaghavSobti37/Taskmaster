@@ -24,11 +24,9 @@ import {
 } from '../../components/ui';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
-import { AdminLogsContent } from './AdminLogsPage';
 import TscDataContent from '../../components/admin/TscDataContent';
-import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useLogs, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam, useLeadAudits 
+  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
 } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
@@ -51,13 +49,6 @@ const AdminPanel = () => {
   const { data: crmStats } = useCRMStats();
   const { data: repSummary } = useRepSummary();
   const { data: mailStats } = useMailStats();
-  const { data: allLogs = [] } = useLogs('all', 100);
-
-  const { data: userAuditsData } = useLeadAudits(
-    { userId: selectedUser?._id, limit: 50 },
-    !!selectedUser?._id
-  );
-  const userAudits = userAuditsData?.logs || [];
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -115,11 +106,10 @@ const AdminPanel = () => {
     }
   };
 
-  const loginAlerts = useMemo(() => {
-    return allLogs
-      .filter(log => log.action === 'LOGIN' && isToday(new Date(log.createdAt)))
-      .slice(0, 5);
-  }, [allLogs]);
+  const pageMeta = {
+    users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
+    crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
+  };
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -166,13 +156,6 @@ const AdminPanel = () => {
     }
   ];
 
-  const pageMeta = {
-    users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
-    crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
-    audits: { title: "Lead Logs", subtitle: "Track edits made to leads, including what changed, by whom, and when." },
-    logs: { title: "System Logs", subtitle: "Review chronological activity trails, security events, and system transactions." }
-  };
-
   const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, and system data." };
 
   if (usersLoading) return <PageSkeleton />;
@@ -191,8 +174,6 @@ const AdminPanel = () => {
                tabs={[
                  { id: 'users', label: 'Users' }, 
                  { id: 'crm', label: 'All Data' },
-                 { id: 'audits', label: 'Lead Logs' },
-                 { id: 'logs', label: 'Logs' }
                ]} 
              />
            </div>
@@ -277,8 +258,6 @@ const AdminPanel = () => {
                     />
                   )}
                   {activeTab === 'crm' && <TscDataContent />}
-                  {activeTab === 'audits' && <LeadAuditsContent />}
-                  {activeTab === 'logs' && <AdminLogsContent />}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -344,33 +323,6 @@ const AdminPanel = () => {
                      </div>
                    );
                  })}
-              </div>
-            </Card>
-
-            <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed h-fit">
-              <div className="flex items-center gap-2 mb-4">
-                 <ShieldAlert size={14} className="text-rose-500" />
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Security Alerts</h4>
-              </div>
-              <div className="space-y-4">
-                {loginAlerts.length === 0 ? (
-                  <div className="text-center py-6 opacity-30">
-                    <p className="text-[9px] font-black uppercase tracking-widest">No alerts today</p>
-                  </div>
-                ) : loginAlerts.map(log => (
-                  <div key={log._id} className="flex gap-3">
-                    <div className="w-1 h-8 bg-rose-500/40 rounded-full" />
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5">
-                        <LogIn size={10} className="text-rose-500" />
-                        {log.userId?.name || 'System User'}
-                      </p>
-                      <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
-                        Logged in at {format(new Date(log.createdAt), 'h:mm a')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </Card>
           </aside>
@@ -495,34 +447,6 @@ const AdminPanel = () => {
                  })}
               </div>
            </section>
-
-           {userAudits.length > 0 && (
-             <section>
-                <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                   <History size={14} /> CRM Lead Audit Trail
-                </h3>
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                   {userAudits.map(log => (
-                      <div key={log._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between text-xs">
-                         <div>
-                            <p className="font-bold">
-                               Lead: <span className="text-[var(--color-text-primary)]">{log.leadId?.name || 'Unknown'}</span>
-                            </p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                               Field <span className="font-mono text-blue-400">{log.fieldChanged}</span> modified: 
-                               <span className="line-through mx-1">{log.oldValue || '(empty)'}</span> 
-                               &rarr; 
-                               <span className="text-emerald-400 ml-1">{log.newValue || '(empty)'}</span>
-                            </p>
-                         </div>
-                         <span className="text-[9px] font-mono text-[var(--color-text-muted)] shrink-0 pl-2">
-                            {log.timestamp ? format(new Date(log.timestamp), 'dd-MM-yyyy HH:mm') : ''}
-                         </span>
-                      </div>
-                   ))}
-                </div>
-             </section>
-           )}
         </div>
       </FullScreenWorkspace>
     </PageContainer>

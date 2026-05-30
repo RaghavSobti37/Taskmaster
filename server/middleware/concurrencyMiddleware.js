@@ -8,7 +8,7 @@ const checkLock = (Model) => async (req, res, next) => {
     const userId = req.user?._id || req.body.userId; // Current user
     if (!userId) return next();
 
-    const lockDuration = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes
+    const lockDuration = new Date(Date.now() - 60 * 1000); // 60 seconds — stale after crash
 
     // Attempt to claim or renew lock atomically
     const lockedLead = await Model.findOneAndUpdate(

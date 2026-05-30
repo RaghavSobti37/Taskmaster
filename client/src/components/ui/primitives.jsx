@@ -1,4 +1,3 @@
-import { motion, AnimatePresence } from 'framer-motion';
 import React, { useState, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
@@ -37,7 +36,7 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
 
   return (
     <button 
-      className={`rounded-[var(--radius-atomic)] font-semibold transition-all flex items-center justify-center gap-2 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
@@ -116,7 +115,7 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
         {label}
       </label>
     )}
-    <div className="relative w-full min-w-0">
+    <div className="relative isolate w-full min-w-0 overflow-hidden">
       {Icon && !multiline && (
         <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]" />
       )}
@@ -435,7 +434,7 @@ export const DataTable = ({
   );
 };
 
-export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, extraActions }) => {
+export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, extraActions, mainClassName = 'max-w-4xl' }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -449,14 +448,10 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
   }, [isOpen, onClose]);
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col"
+        <div
+          className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
         >
           {/* Top Bar Navigation */}
           <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between px-4 sm:px-6 shrink-0">
@@ -482,7 +477,7 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
              {/* Left Column: Canvas */}
              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
-                <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8">
+             <div className={`${mainClassName} mx-auto space-y-6 lg:space-y-8`}>
                    {children}
                 </div>
              </div>
@@ -494,9 +489,9 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
                 </div>
              </aside>
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
@@ -514,22 +509,15 @@ export const InputFormDrawer = ({ isOpen, onClose, title, children }) => {
   }, [isOpen, onClose]);
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100]"
+            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100] animate-in fade-in duration-200"
           />
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl z-[101] overflow-y-auto"
+          <div
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl z-[101] overflow-y-auto animate-in slide-in-from-right duration-300"
           >
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
@@ -540,19 +528,18 @@ export const InputFormDrawer = ({ isOpen, onClose, title, children }) => {
               </div>
               {children}
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
 export const ProgressBar = ({ progress, color = 'bg-[var(--color-action-primary)]' }) => (
   <div className="w-full h-1 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
-    <motion.div 
-      initial={{ width: 0 }}
-      animate={{ width: `${progress}%` }}
-      className={`h-full ${color}`}
+    <div
+      className={`h-full ${color} transition-all duration-300 ease-out`}
+      style={{ width: `${progress}%` }}
     />
   </div>
 );
@@ -566,11 +553,8 @@ export const Switch = ({ checked, onChange, disabled = false, className = '' }) 
     onClick={() => !disabled && onChange(!checked)}
     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-text-muted)]'} ${className}`}
   >
-    <motion.span
-      layout
-      transition={{ type: "spring", stiffness: 700, damping: 30 }}
-      className="pointer-events-none block h-4 w-4 rounded-full bg-[var(--color-bg-surface)] shadow-sm ring-0"
-      style={{ x: checked ? 16 : 0 }}
+    <span
+      className={`pointer-events-none block h-4 w-4 rounded-full bg-[var(--color-bg-surface)] shadow-sm ring-0 transition-transform duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`}
     />
   </button>
 );
@@ -587,28 +571,17 @@ export const Accordion = ({ items, className = '' }) => {
             className="w-full flex items-center justify-between p-4 text-sm font-bold text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors focus:outline-none"
           >
             {item.title}
-            <motion.div
-              animate={{ rotate: openIndex === i ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div className={`transition-transform duration-200 ${openIndex === i ? 'rotate-180' : ''}`}>
               <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
-            </motion.div>
+            </div>
           </button>
-          <AnimatePresence>
-            {openIndex === i && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden bg-[var(--color-bg-secondary)]"
-              >
-                <div className="p-4 pt-2 text-sm text-[var(--color-text-secondary)]">
-                  {item.content}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {openIndex === i && (
+            <div className="overflow-hidden bg-[var(--color-bg-secondary)] animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="p-4 pt-2 text-sm text-[var(--color-text-secondary)]">
+                {item.content}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Plus, Search, Trash2, Settings, Database, TrendingUp, Inbox, Bell, Edit2,
 } from 'lucide-react';
-import { notify } from '../../lib/notifications';
+import { emitSystemEvent } from '../../lib/systemLogBridge';
+import { SEVERITY, MODULE } from '../../lib/systemLogContract';
 import {
   PageContainer,
   PageHeader,
@@ -368,13 +369,20 @@ const ComponentsShowcase = () => {
         <ShowcaseSection
           id="notifications"
           title="Notifications"
-          description="Central notify API — deduped by id. Spam-click buttons to verify only one toast updates."
+          description="emitSystemEvent — deduped by id. Spam-click buttons to verify only one toast updates."
         >
           <VariantRow label="Severity">
             <Button
               size="sm"
               variant="primary"
-              onClick={() => notify.success('Task approved successfully.', 'showcase-success')}
+              onClick={() =>
+                emitSystemEvent({
+                  severity: SEVERITY.SUCCESS,
+                  message: 'Task approved successfully.',
+                  module: MODULE.SYSTEM,
+                  id: 'showcase-success',
+                })
+              }
             >
               Success
             </Button>
@@ -382,7 +390,12 @@ const ComponentsShowcase = () => {
               size="sm"
               variant="secondary"
               onClick={() =>
-                notify.warning('Task deadline is 24 hours away.', 'showcase-warning')
+                emitSystemEvent({
+                  severity: SEVERITY.WARN,
+                  message: 'Task deadline is 24 hours away.',
+                  module: MODULE.SYSTEM,
+                  id: 'showcase-warning',
+                })
               }
             >
               Warning
@@ -391,12 +404,15 @@ const ComponentsShowcase = () => {
               size="sm"
               variant="danger"
               onClick={() =>
-                notify.error({
+                emitSystemEvent({
+                  severity: SEVERITY.ERROR,
                   title: 'Failed to sync CSV data',
+                  message: 'Failed to sync CSV data',
                   description: 'Column mapping mismatch detected.',
                   technicalError:
                     "TypeError: Cannot read properties of undefined (reading 'map') at CSVParser.handleSync (line 42)",
-                  uniqueKey: 'showcase-error',
+                  module: MODULE.SYSTEM,
+                  id: 'showcase-error',
                 })
               }
             >
@@ -409,11 +425,14 @@ const ComponentsShowcase = () => {
               variant="secondary"
               onClick={() => {
                 for (let i = 0; i < 5; i += 1) {
-                  notify.error({
+                  emitSystemEvent({
+                    severity: SEVERITY.ERROR,
                     title: 'Attendance Verification Failed',
+                    message: 'Attendance Verification Failed',
                     description: 'Unverified IP address.',
                     technicalError: `ERR_NETWORK_IP_MISMATCH: attempt ${i + 1}`,
-                    uniqueKey: 'attendance-error-lock',
+                    module: MODULE.ATTENDANCE,
+                    id: 'attendance-error-lock',
                   });
                 }
               }}

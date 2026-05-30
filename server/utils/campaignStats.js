@@ -10,6 +10,7 @@ const computeRecipientStats = (recipients = []) => {
     Failed: 0,
     Invalid: 0,
     Unsubscribed: 0,
+    Cancelled: 0,
   };
 
   (recipients || []).forEach((r) => {

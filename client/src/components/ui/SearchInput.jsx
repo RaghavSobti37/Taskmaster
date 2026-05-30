@@ -20,7 +20,7 @@ const SearchInput = ({
   };
 
   return (
-    <div className={`w-full min-w-0 ${className}`}>
+    <div className={`w-full min-w-0 overflow-hidden ${className}`}>
       <Input
         {...(label ? { label } : {})}
         icon={Search}

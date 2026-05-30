@@ -8,5 +8,6 @@ const taskAssignmentSchema = new mongoose.Schema({
 });
 
 taskAssignmentSchema.index({ taskId: 1, userId: 1 }, { unique: true });
+taskAssignmentSchema.index({ userId: 1, taskId: 1 });
 
 module.exports = mongoose.model('TaskAssignment', taskAssignmentSchema);

@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const EmailLog = require('../models/EmailLog');
 const {
   resolveTrackingApiBaseUrl,
-  buildUnsubscribePageUrl,
+  buildStaticUnsubscribePageUrl,
   shouldSkipClickWrap
 } = require('./trackingUrls');
 
@@ -24,7 +24,7 @@ const prepareCampaignHTML = async (rawHtml, campaignId, leadEmail, baseUrl, opti
   await EmailLog.create({ campaignId, leadEmail, pixelId });
 
   const trackingBaseUrl = resolveTrackingApiBaseUrl();
-  const unsubscribeUrl = buildUnsubscribePageUrl(campaignId, leadEmail, pixelId);
+  const unsubscribeUrl = buildStaticUnsubscribePageUrl();
 
   let processedHtml = rawHtml || '';
   if (processedHtml.includes('{{unsubscribe_url}}')) {

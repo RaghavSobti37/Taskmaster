@@ -24,7 +24,7 @@ exports.getAssets = async (req, res) => {
 
 exports.createAsset = async (req, res) => {
   try {
-    const { projectId, projectIds, name, link, type } = req.body;
+    const { projectId, projectIds, name, link, type, notes } = req.body;
     let finalProjectIds = [];
     if (Array.isArray(projectIds)) {
       finalProjectIds = projectIds.filter(Boolean);
@@ -37,6 +37,7 @@ exports.createAsset = async (req, res) => {
       name,
       link: link || '',
       type: type || 'other',
+      notes: notes?.trim() || '',
       createdBy: req.user._id
     });
 
@@ -60,10 +61,11 @@ exports.updateAsset = async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const { name, link, projectId, projectIds, type } = req.body;
+    const { name, link, projectId, projectIds, type, notes } = req.body;
     if (name !== undefined) asset.name = name;
     if (link !== undefined) asset.link = link;
     if (type !== undefined) asset.type = type;
+    if (notes !== undefined) asset.notes = notes.trim();
     if (projectIds !== undefined) {
       asset.projectIds = Array.isArray(projectIds) ? projectIds.filter(Boolean) : [];
     } else if (projectId !== undefined) {

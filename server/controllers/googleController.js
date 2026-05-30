@@ -163,16 +163,6 @@ exports.getIndianHolidays = async (req, res) => {
   }
 };
 
-exports.createCalendarEvent = async (req, res) => {
-  try {
-    const { summary, start, end, visibility } = req.body;
-    // Integration logic here
-    res.json({ message: 'Event created', event: { summary, start, visibility } });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 exports.getDriveFiles = async (req, res) => {
   try {
     // Similar to calendar, handle real or mock

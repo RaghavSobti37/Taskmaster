@@ -14,7 +14,12 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      data: { actionUrl: payload.actionUrl || '/inbox' }
+      tag: payload.notificationId || payload.actionUrl || 'coreknot-notification',
+      renotify: true,
+      data: {
+        actionUrl: payload.actionUrl || '/inbox',
+        notificationId: payload.notificationId || null,
+      },
     })
   );
 });

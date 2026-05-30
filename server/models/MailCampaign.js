@@ -12,11 +12,12 @@ const mailCampaignSchema = new mongoose.Schema({
     content: String,
     contentType: String
   }],
-  status: { type: String, enum: ['Draft', 'Sending', 'Completed', 'Failed'], default: 'Draft' },
+  status: { type: String, enum: ['Draft', 'Sending', 'Stopped', 'Completed', 'Failed'], default: 'Draft' },
+  stoppedAt: { type: Date },
   recipients: [{
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     email: String,
-    status: { type: String, enum: ['Pending', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Queued', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid', 'Cancelled'], default: 'Pending' },
     sentAt: Date,
     error: String,
     messageId: String // SES Message ID
@@ -40,6 +41,7 @@ const mailCampaignSchema = new mongoose.Schema({
 
 mailCampaignSchema.index({ 'recipients.messageId': 1 });
 mailCampaignSchema.index({ 'recipients.email': 1 });
+mailCampaignSchema.index({ createdBy: 1, createdAt: -1 });
 
 mailCampaignSchema.plugin(tenantPlugin);
 

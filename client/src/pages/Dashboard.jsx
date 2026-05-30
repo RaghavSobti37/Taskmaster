@@ -4,10 +4,12 @@ import { LayoutDashboard } from 'lucide-react';
 import { PageContainer, DashboardSkeleton, PageHeader } from '../components/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
+import { useSystemToast } from '../lib/systemLogBridge';
+import { MODULE } from '../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../lib/notifications';
 import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../utils/taskCompletion';
-import { useTasks, useProjects, useDashboardSummary } from '../hooks/useTaskmasterQueries';
+import { updateAllTaskQueries } from '../utils/taskCache';
+import { useTasks, useDashboardTasks, useProjects, useDashboardSummary } from '../hooks/useTaskmasterQueries';
 import {
   AnnouncementsCard,
   ScheduleCard,
@@ -24,9 +26,9 @@ import TaskCompletionModal from '../components/TaskCompletionModal';
 const Dashboard = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { addToast } = useToast();
+  const { addToast } = useSystemToast();
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks(user?._id);
+  const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [completingTaskId, setCompletingTaskId] = useState(null);
@@ -46,19 +48,26 @@ const Dashboard = () => {
       );
       const returnedStatus = taskRes.data?.status;
       if (shouldClientCreateCompletionLog(returnedStatus)) {
-        await axios.post(
+        axios.post(
           '/api/logs',
           buildTaskCompletionLogPayload(task, hours, projects),
           AXIOS_SKIP_TOAST
-        );
+        ).catch(() => {});
       }
       const toast = taskCompletionToast(returnedStatus, task.title);
-      addToast({ ...toast, duration: 5000 });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      addToast({ ...toast, duration: 5000, module: MODULE.PROJECTS });
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
+      );
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     } catch (err) {
-      addToast({ title: 'Error', message: err.response?.data?.error || 'Failed', type: 'error' });
+      addToast({
+        title: 'Error',
+        message: err.response?.data?.error || 'Failed',
+        type: 'error',
+        module: MODULE.PROJECTS,
+      });
     } finally {
       setCompletingTaskId(null);
     }

@@ -19,17 +19,20 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useLiveLeads, useSalesReps, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
-import { format, isPast, isToday, isFuture, isValid } from 'date-fns';
+import { format, isPast, isToday, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { useConfirm } from '../../contexts/ConfirmContext';
+
+const FOLLOWUP_PAGE_SIZE = 50;
 
 export default function FollowupsPage() {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
+  const [followupPage, setFollowupPage] = useState(1);
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -37,12 +40,17 @@ export default function FollowupsPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useLiveLeads({
-    limit: 1000,
+    page: followupPage,
+    limit: FOLLOWUP_PAGE_SIZE,
+    sort: 'nextFollowupDate',
+    order: 'asc',
     hasFollowup: 'true',
+    followupTab: activeTab,
     assignedRepId: isAdminUser(user) ? undefined : user?._id
   });
 
   const leads = data?.leads || [];
+  const followupPages = data?.pages || 1;
   const { data: team = [] } = useSalesReps();
   const { data: crmConfig } = useCRMConfig();
 
@@ -51,6 +59,10 @@ export default function FollowupsPage() {
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
 
   const updateMutation = useUpdateLead();
+
+  useEffect(() => {
+    setFollowupPage(1);
+  }, [activeTab]);
 
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
@@ -151,25 +163,19 @@ export default function FollowupsPage() {
   }, [leads]);
 
   const filteredLeads = useMemo(() => {
-    return processedLeads.filter(lead => {
-      const date = lead.followupFullDate;
-      if (activeTab === 'today') return isToday(date);
-      if (activeTab === 'overdue') return isPast(date) && !isToday(date);
-      if (activeTab === 'upcoming') return isFuture(date);
-      return true;
-    }).sort((a, b) => a.followupFullDate - b.followupFullDate);
-  }, [processedLeads, activeTab]);
+    return [...processedLeads].sort((a, b) => a.followupFullDate - b.followupFullDate);
+  }, [processedLeads]);
 
   const stats = useMemo(() => {
-    const counts = { today: 0, overdue: 0, upcoming: 0 };
-    processedLeads.forEach(lead => {
-      const date = lead.followupFullDate;
-      if (isToday(date)) counts.today++;
-      else if (isPast(date)) counts.overdue++;
-      else if (isFuture(date)) counts.upcoming++;
-    });
-    return counts;
-  }, [processedLeads]);
+    if (data?.tabStats) {
+      return {
+        today: data.tabStats.today || 0,
+        overdue: data.tabStats.overdue || 0,
+        upcoming: data.tabStats.upcoming || 0,
+      };
+    }
+    return { today: 0, overdue: 0, upcoming: 0 };
+  }, [data?.tabStats]);
 
   const columns = [
     {
@@ -322,6 +328,13 @@ export default function FollowupsPage() {
           data={filteredLeads}
           getRowId={(row) => row._id}
           onRowClick={(row) => setSelectedLead(row)}
+          serverSide
+          paginated
+          currentPage={followupPage}
+          totalPages={followupPages}
+          totalItems={data?.total || 0}
+          pageSize={FOLLOWUP_PAGE_SIZE}
+          onPageChange={setFollowupPage}
         />
         {filteredLeads.length === 0 && (
           <div className="p-20 text-center opacity-30">

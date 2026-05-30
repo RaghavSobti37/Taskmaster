@@ -1,71 +1,34 @@
-import React, { createContext, useContext, useCallback, useEffect } from 'react';
-import { ERPNotificationProvider, notify } from '../lib/notifications';
+import React, { useEffect } from 'react';
+import { ERPNotificationProvider } from '../lib/notifications';
+import { emitSystemEvent } from '../lib/systemLogBridge';
+import { SEVERITY, MODULE, makeToastId } from '../lib/systemLogContract';
 
-const ToastContext = createContext(null);
-
-export const globalToast = {
-  addToast: () => console.warn('globalToast called before ToastProvider initialized'),
-};
-
+/** Mounts toast portal + patches window.alert to unified pipeline */
 export const ToastProvider = ({ children }) => {
-  const addToast = useCallback((arg1, arg2) => {
-    const legacyTypes = ['success', 'error', 'warning', 'info'];
-    if (typeof arg1 === 'string' && typeof arg2 === 'string' && legacyTypes.includes(arg1)) {
-      return notify.fromLegacy({
-        title: arg1 === 'error' ? 'Error' : arg1 === 'success' ? 'Success' : 'Notice',
-        message: arg2,
-        type: arg1,
-        id: `legacy-${arg1}-${arg2}`,
-      });
-    }
-    if (typeof arg1 === 'object' && arg1 !== null) {
-      return notify.fromLegacy(arg1);
-    }
-    if (typeof arg1 === 'string') {
-      return notify.fromLegacy({ message: arg1, type: 'info' });
-    }
-    return null;
-  }, []);
-
-  const removeToast = useCallback((id) => {
-    notify.dismiss(id);
-  }, []);
-
   useEffect(() => {
-    globalToast.addToast = addToast;
+    const previousAlert = window.alert;
     window.alert = (msg) => {
       const text = String(msg);
-      const isErr =
-        /fail|error|required|mandatory/i.test(text);
-      addToast({
+      const isErr = /fail|error|required|mandatory/i.test(text);
+      emitSystemEvent({
         title: isErr ? 'Action Failed' : 'System Message',
         message: text,
-        type: isErr ? 'error' : 'info',
-        id: slugIdForAlert(text, isErr),
+        severity: isErr ? SEVERITY.ERROR : SEVERITY.INFO,
+        module: MODULE.SYSTEM,
+        id: makeToastId(MODULE.SYSTEM, text, isErr ? SEVERITY.ERROR : SEVERITY.INFO),
       });
     };
     return () => {
-      delete window.alert;
+      window.alert = previousAlert;
     };
-  }, [addToast]);
+  }, []);
 
   return (
-    <ToastContext.Provider value={{ addToast, removeToast, notify }}>
+    <>
       {children}
       <ERPNotificationProvider />
-    </ToastContext.Provider>
+    </>
   );
 };
 
-function slugIdForAlert(msg, isErr) {
-  const prefix = isErr ? 'alert-err' : 'alert-info';
-  return `${prefix}-${msg.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80)}`;
-}
-
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-};
+export { useSystemToast, useToast, globalToast, emitSystemEvent, emitFromLegacy } from '../lib/systemLogBridge';

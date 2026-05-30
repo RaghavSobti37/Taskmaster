@@ -11,6 +11,7 @@ import NotificationBridge from './NotificationBridge';
 import PwaInstallBanner from './PwaInstallBanner';
 import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
+import PageAnalyticsTracker from './PageAnalyticsTracker';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
@@ -55,6 +56,7 @@ const MainLayout = () => {
       )}
 
       <NotificationBridge />
+      <PageAnalyticsTracker />
       <PwaInstallBanner />
       <FlashHighlightListener />
       <QuickAddMenu />

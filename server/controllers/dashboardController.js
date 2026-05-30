@@ -8,10 +8,15 @@ const MailCampaign = require('../models/MailCampaign');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { getCache, setCache } = require('../services/cacheService');
 
 exports.getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
+    const cacheKey = `dashboard:summary:${userId}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -100,7 +105,7 @@ exports.getDashboardSummary = async (req, res) => {
     const completionRate = tasks.total > 0 ? Math.round((tasks.completed / tasks.total) * 100) : 0;
     const conversionRate = leads.total > 0 ? Math.round((leads.converted / leads.total) * 100) : 0;
 
-    res.json({
+    const payload = {
       metrics: {
         completionRate,
         criticalTasks: tasks.critical,
@@ -114,7 +119,10 @@ exports.getDashboardSummary = async (req, res) => {
       },
       calendar,
       velocity: completionRate > 75 ? 'Optimal' : completionRate > 50 ? 'Stable' : 'Critical'
-    });
+    };
+
+    await setCache(cacheKey, payload, 60);
+    res.json(payload);
   } catch (error) {
     logger.error('dashboardController', 'Dashboard Summary ', { error: error.message || error });
     res.status(500).json({ error: 'System error during operational aggregation.' });

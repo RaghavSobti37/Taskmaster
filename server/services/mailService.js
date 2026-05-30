@@ -13,18 +13,8 @@ const logger = require('../utils/logger');
 const resendApiKey = process.env.RESEND_API_KEY;
 const globalResend = resendApiKey && resendApiKey !== 'mock_resend_api_key' ? new Resend(resendApiKey) : null;
 
-const Redis = require('ioredis');
-const redisOptions = {
-  maxRetriesPerRequest: 1,
-  retryStrategy(times) {
-    if (times > 3) return null; // Stop retrying after 3 attempts
-    return Math.min(times * 100, 2000);
-  }
-};
-const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL, redisOptions) : new Redis(redisOptions);
-redis.on('error', (err) => {
-  // Suppress connection errors to prevent log flooding
-});
+const { getSharedRedis } = require('../utils/sharedRedis');
+const redis = getSharedRedis();
 
 const updateEmailTags = async (email, tag, status) => {
   if (!email) return;

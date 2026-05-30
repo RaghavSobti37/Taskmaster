@@ -4,6 +4,7 @@ const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const { parse, addMinutes, addHours, isBefore, isAfter } = require('date-fns');
 const logger = require('../utils/logger');
+const { MODULE } = require('../../shared/systemLogContract');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl, buildLeadActionUrl } = require('../utils/notificationActionUrl');
 
@@ -46,7 +47,7 @@ const checkFollowups = async () => {
       }
     }
   } catch (err) {
-    logger.error('Reminder', 'Error in checkFollowups', { error: err.message });
+    logger.error('Reminder', 'Error in checkFollowups', { error: err.message, persist: true, module: MODULE.SYSTEM });
   }
 };
 
@@ -144,7 +145,7 @@ const checkOverdue = async () => {
       }
     }
   } catch (err) {
-    logger.error('Overdue', 'Error in checkOverdue', { error: err.message });
+    logger.error('Overdue', 'Error in checkOverdue', { error: err.message, persist: true, module: MODULE.SYSTEM });
   }
 };
 
@@ -157,4 +158,4 @@ const init = () => {
   });
 };
 
-module.exports = { init };
+module.exports = { init, checkOverdue, checkTaskWarnings, checkFollowups };

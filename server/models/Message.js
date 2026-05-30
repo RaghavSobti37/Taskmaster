@@ -12,6 +12,8 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
+messageSchema.index({ outletId: 1, channel: 1 });
+
 messageSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('Message', messageSchema);

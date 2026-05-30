@@ -82,6 +82,7 @@ projectSchema.pre('findOneAndUpdate', function (next) {
 projectSchema.index({ outletId: 1, createdAt: -1 });
 projectSchema.index({ owner: 1 });
 projectSchema.index({ members: 1 });
+projectSchema.index({ workspace: 1 });
 
 projectSchema.plugin(tenantPlugin);
 

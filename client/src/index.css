@@ -160,6 +160,11 @@ select option {
     font-size: var(--size-text-body);
   }
 
+  button,
+  [role="button"] {
+    white-space: nowrap;
+  }
+
   h1 {
     @apply text-[var(--size-text-header)] font-bold tracking-tight;
   }
@@ -303,25 +308,19 @@ select option {
     box-shadow: 0 -4px 12px rgba(8, 61, 58, 0.06);
   }
 
-  /* react-hot-toast — top-right stack */
+  /* react-hot-toast — full-viewport fixed layer, top-right stack (portaled to body) */
   .tm-toast-container {
-    top: 16px !important;
-    right: 16px !important;
-    left: auto !important;
-    bottom: auto !important;
-    width: min(420px, calc(100vw - 2rem)) !important;
-    max-width: calc(100vw - 2rem) !important;
+    z-index: 10060 !important;
+    overflow: visible !important;
+    pointer-events: none;
   }
 
   .tm-toast-container > div {
-    max-width: min(420px, calc(100vw - 2rem)) !important;
     justify-content: flex-end !important;
+    overflow: visible !important;
   }
 
-  /* react-hot-toast — prevent custom cards collapsing to icon-width column */
-
   .tm-toast-host {
-    min-width: min(300px, calc(100vw - 2rem)) !important;
     max-width: min(420px, calc(100vw - 2rem)) !important;
     width: min(420px, calc(100vw - 2rem)) !important;
     display: block !important;
@@ -331,6 +330,7 @@ select option {
   .tm-toast-host > * {
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box;
   }
 
   /* Full-screen panels inside overlays keep viewport size */

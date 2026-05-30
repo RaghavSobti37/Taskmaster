@@ -19,6 +19,12 @@ const {
   roundMoney
 } = require('../utils/exlyMetrics');
 const { recalculateOfferingMetrics } = require('../services/exlyOfferingMetrics');
+const { getCache, setCache } = require('../services/cacheService');
+const {
+  scheduleExlyOfferingMigrationIfNeeded,
+  IGNORED_TITLE_PATTERNS,
+  IGNORED_OFFERING_IDS,
+} = require('../services/exlyOfferingMigration');
 
 // Helper to extract nested or flexible case-insensitive keys from a payload object
 const getPayloadValue = (payload, possibleKeys) => {
@@ -64,58 +70,15 @@ const getPayloadValue = (payload, possibleKeys) => {
 
 exports.getOfferings = async (req, res) => {
   try {
-    // Proactive Purge of ignored offerings from DB
-    await ExlyOffering.deleteMany({
-      $or: [
-        { title: { $in: [/testing BR community/i, /Program Name/i, /testing/i, /demo community/i, /demo day- results/i] } },
-        { offeringId: { $in: ['demo-community', 'demo-day--results'] } }
-      ]
-    });
+    scheduleExlyOfferingMigrationIfNeeded();
 
-    // Auto-migrate and clean existing offering titles, separating date and time
-    const allOfferings = await ExlyOffering.find();
-    for (const off of allOfferings) {
-      if (shouldIgnoreOffering(off.title, off.offeringId)) {
-        await ExlyOffering.deleteOne({ _id: off._id });
-        continue;
-      }
-      if (off.title.includes('|')) {
-        const { cleanTitle, dateStr, timeStr } = parseOfferingTitle(off.title);
-        off.title = cleanTitle;
-        off.eventDate = dateStr;
-        off.eventTime = timeStr;
-        await off.save();
-      }
-    }
-
-    // Auto-migrate booking titles
-    const allBookings = await ExlyBooking.find();
-    for (const b of allBookings) {
-      if (shouldIgnoreOffering(b.offeringTitle, b.offeringId)) {
-        await ExlyBooking.deleteOne({ _id: b._id });
-        continue;
-      }
-      if (b.offeringTitle && b.offeringTitle.includes('|')) {
-        const { cleanTitle } = parseOfferingTitle(b.offeringTitle);
-        b.offeringTitle = cleanTitle;
-        await b.save();
-      }
-    }
-
-    // Auto-migrate CRM Leads referencing offerings
-    const allLeads = await Lead.find();
-    for (const l of allLeads) {
-      if (l.exlyOfferingTitle && l.exlyOfferingTitle.includes('|')) {
-        const { cleanTitle } = parseOfferingTitle(l.exlyOfferingTitle);
-        l.exlyOfferingTitle = cleanTitle;
-        l.source = cleanTitle;
-        await l.save();
-      }
-    }
+    const cacheKey = 'exly:offerings:list';
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
 
     const offerings = await ExlyOffering.find({
-      title: { $nin: [/testing BR community/i, /Program Name/i, /testing/i, /demo community/i, /demo day- results/i] },
-      offeringId: { $nin: ['demo-community', 'demo-day--results'] }
+      title: { $nin: IGNORED_TITLE_PATTERNS },
+      offeringId: { $nin: IGNORED_OFFERING_IDS },
     }).sort({ totalRevenue: -1 }).lean();
 
     const bookingStats = await ExlyBooking.aggregate([
@@ -153,6 +116,7 @@ exports.getOfferings = async (req, res) => {
       return { ...offering, ...stats };
     });
 
+    await setCache(cacheKey, enrichedOfferings, 120);
     res.json(enrichedOfferings);
   } catch (err) {
     logger.error('Exly', 'getOfferings error', { error: err.message });

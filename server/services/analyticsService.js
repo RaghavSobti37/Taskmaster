@@ -235,72 +235,13 @@ const fetchLiveAnalytics = async (artist) => {
 
     // ─── 3. META ─────────────────────────────────────────────────────────────
     (async () => {
-      const activeMetaId = metaAccountId || process.env.META_DEFAULT_IG_ID;
-      const activeMetaToken = metaUserToken || process.env.META_USER_TOKEN;
-      const fbPageId = artist.oauthCredentials?.meta?.fbPageId || process.env.META_DEFAULT_PAGE_ID;
-
-      if (!activeMetaToken) {
-        console.log(`⚠️ [Meta] No accessToken configured for ${artist.name} — skipping`);
+      const { fetchMetaAnalytics } = require('./metaGraphService');
+      const metaCreds = artist.oauthCredentials?.meta || {};
+      if (!metaCreds.accessToken && !metaCreds.igAccountId && !metaCreds.fbPageId && !process.env.META_USER_TOKEN) {
+        console.log(`⚠️ [Meta] No credentials for ${artist.name} — connect Instagram/Facebook via OAuth`);
         return null;
       }
-
-      let mediaData = [];
-      let followersCount = null;
-      let facebookData = null;
-
-      // 3a. Fetch Instagram followers & profile details
-      if (activeMetaId) {
-        try {
-          const r = await axios.get(
-            `https://graph.facebook.com/v20.0/${activeMetaId}?fields=followers_count&access_token=${activeMetaToken}`,
-            { timeout: 5000 }
-          );
-          if (r.data?.followers_count != null) followersCount = r.data.followers_count;
-        } catch (err) {
-          console.error('❌ [Meta] Instagram followers error:', err?.response?.data?.error || err.message);
-        }
-
-        // 3b. Fetch Instagram media with nested reach insights
-        try {
-          const r = await axios.get(
-            `https://graph.facebook.com/v20.0/${activeMetaId}/media?fields=id,caption,media_type,like_count,comments_count,permalink,insights.metric(reach)&access_token=${activeMetaToken}`,
-            { timeout: 10000 }
-          );
-          mediaData = r.data;
-        } catch (err) {
-          console.error('❌ [Meta] Instagram media error:', err?.response?.data?.error || err.message);
-          // Fallback to basic media if insights query fails due to permission blocks
-          try {
-            const rFallback = await axios.get(
-              `https://graph.facebook.com/v20.0/${activeMetaId}/media?fields=id,caption,media_type,like_count,comments_count,permalink&access_token=${activeMetaToken}`,
-              { timeout: 10000 }
-            );
-            mediaData = rFallback.data;
-          } catch (fbErr) {
-            console.error('❌ [Meta] Instagram media fallback error:', fbErr.message);
-          }
-        }
-      }
-
-      // 3c. Fetch Facebook Page stats
-      if (fbPageId) {
-        try {
-          const r = await axios.get(
-            `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,followers_count,name&access_token=${activeMetaToken}`,
-            { timeout: 5000 }
-          );
-          facebookData = {
-            likes: r.data?.fan_count ?? 0,
-            followers: r.data?.followers_count ?? 0,
-            name: r.data?.name || ''
-          };
-          console.log(`✅ [Meta] Facebook Page stats fetched: ${facebookData.name} | Followers: ${facebookData.followers}`);
-        } catch (err) {
-          console.error('❌ [Meta] Facebook Page stats error:', err?.response?.data?.error || err.message);
-        }
-      }
-
-      return { media: mediaData, followers: followersCount, facebook: facebookData };
+      return fetchMetaAnalytics(metaCreds);
     })()
   ]);
 

@@ -102,15 +102,26 @@ export const applySmtpPreset = (presetKey) => {
   };
 };
 
-export const hasSignatureBlock = (html) =>
-  Boolean(html && html.includes(SIGNATURE_START) && html.includes(SIGNATURE_END));
+const SIGNATURE_MARKER_BLOCK_RE = new RegExp(
+  `${SIGNATURE_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${SIGNATURE_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+  'gi'
+);
+
+const DATA_ATTR_SIG_RE = /<div[^>]*data-taskmaster-signature\s*=\s*["']?true["']?[^>]*>[\s\S]*?<\/div>/gi;
+
+export const countSignatureBlocks = (html) => {
+  if (!html) return 0;
+  const markerCount = (html.match(SIGNATURE_MARKER_BLOCK_RE) || []).length;
+  if (markerCount > 0) return markerCount;
+  return (html.match(DATA_ATTR_SIG_RE) || []).length;
+};
+
+export const hasSignatureBlock = (html) => countSignatureBlocks(html) > 0;
 
 export const stripSignature = (html) => {
   if (!html) return '';
-  let result = html.replace(
-    new RegExp(`${SIGNATURE_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${SIGNATURE_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
-    ''
-  );
+  let result = html.replace(SIGNATURE_MARKER_BLOCK_RE, '');
+  result = result.replace(DATA_ATTR_SIG_RE, '');
   result = result.replace(/(<br\s*\/?>\s*){2,}$/i, '');
   return result.trimEnd();
 };
@@ -119,7 +130,10 @@ export const wrapSignatureBlock = (signature) => {
   if (!signature?.trim()) return '';
   const trimmed = signature.trim();
   if (hasSignatureBlock(trimmed)) return trimmed;
-  return `${SIGNATURE_START}\n${trimmed}\n${SIGNATURE_END}`;
+  const body = trimmed.includes('data-taskmaster-signature=')
+    ? trimmed
+    : `<div data-taskmaster-signature="true">${trimmed}</div>`;
+  return `${SIGNATURE_START}\n${body}\n${SIGNATURE_END}`;
 };
 
 export const appendSignature = (html, signature) => {

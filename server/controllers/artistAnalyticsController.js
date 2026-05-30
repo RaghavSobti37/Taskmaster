@@ -1,14 +1,27 @@
 const axios = require('axios');
 const Artist = require('../models/Artist');
+const ArtistMetrics = require('../models/ArtistMetrics');
+const ArtistAuth = require('../models/ArtistAuth');
 const { fetchLiveAnalytics } = require('../services/analyticsService');
 const { validateMetric } = require('../utils/nullishValidator');
+const { enrichArtistById } = require('../services/artistEnrichmentService');
+const { upsertConnection, getCredentialsForSync } = require('../services/connectionService');
+const { normalizeAll } = require('../services/metricsNormalizer');
 const logger = require('../utils/logger');
 
 exports.syncArtistStats = async (req, res) => {
   try {
     const { id } = req.params;
-    const artist = await Artist.findById(id);
-    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+    const enriched = await enrichArtistById(id);
+    if (!enriched) return res.status(404).json({ message: 'Artist not found' });
+
+    const oauthCredentials = await getCredentialsForSync(id);
+    const artist = {
+      _id: enriched._id,
+      name: enriched.name,
+      oauthCredentials,
+      trackedVideos: enriched.trackedVideos || [],
+    };
 
     const { spotifyRes, youtubeRes, metaRes } = await fetchLiveAnalytics(artist);
 
@@ -118,8 +131,27 @@ exports.syncArtistStats = async (req, res) => {
     let fbName = '';
 
     if (metaRes?.status === 'fulfilled' && metaRes.value !== null) {
-      const { media, followers, facebook } = metaRes.value;
+      const { media, followers, facebook, igAccountId, igUsername } = metaRes.value;
       metaFollowers = validateMetric(followers, true);
+
+      // Persist resolved IG account back to connections
+      if (igAccountId) {
+        try {
+          await upsertConnection({
+            artistId: id,
+            provider: 'instagram',
+            accountHandle: igAccountId,
+            accountLabel: igUsername ? `@${igUsername}` : 'Instagram',
+            metadata: {
+              igAccountId,
+              igUsername,
+              fbPageId: oauthCredentials?.meta?.fbPageId,
+            },
+          });
+        } catch (connErr) {
+          logger.warn('artistAnalytics', 'IG connection update skipped', { error: connErr.message });
+        }
+      }
       const mediaItems = media?.data || [];
 
       let hasValidShares = false;
@@ -226,10 +258,10 @@ exports.syncArtistStats = async (req, res) => {
       }
     };
 
-    const ArtistMetrics = require('../models/ArtistMetrics');
-    const ArtistAuth = require('../models/ArtistAuth');
+    const ArtistMetricsModel = require('../models/ArtistMetrics');
+    const ArtistAuthModel = require('../models/ArtistAuth');
 
-    const updatedMetrics = await ArtistMetrics.findOneAndUpdate(
+    const updatedMetrics = await ArtistMetricsModel.findOneAndUpdate(
       { artistId: id },
       {
         $set: {
@@ -243,20 +275,17 @@ exports.syncArtistStats = async (req, res) => {
       { new: true, upsert: true }
     );
 
-    const updatedAuth = await ArtistAuth.findOneAndUpdate(
+    const updatedAuth = await ArtistAuthModel.findOneAndUpdate(
       { artistId: id },
       { $set: { isSynced: true } },
       { new: true, upsert: true }
     );
 
-    // Provide a mocked combined object matching frontend expectation
-    const payload = {
-      ...artist.toObject ? artist.toObject() : artist,
-      analytics: updatedMetrics.analytics,
-      trackedVideos: updatedMetrics.trackedVideos,
-      isSynced: updatedAuth.isSynced
-    };
+    // Mark connections as synced
+    const ArtistConnection = require('../models/ArtistConnection');
+    await ArtistConnection.updateMany({ artistId: id, status: 'active' }, { $set: { lastSyncedAt: new Date() } });
 
+    const payload = await enrichArtistById(id);
     res.json(payload);
   } catch (err) {
     logger.error('artistAnalyticsController', 'in syncArtistStats:', { error: err.message || err });
@@ -266,26 +295,18 @@ exports.syncArtistStats = async (req, res) => {
 
 exports.getPlatformAnalytics = async (req, res) => {
   try {
-    const { id, platform } = req.params;
-    const mongoose = require('mongoose');
+    const { id } = req.params;
+    let { platform } = req.params;
+    const { accountId, timeframe } = req.query;
 
-    const result = await Artist.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(id) } },
-      { $lookup: { from: 'artistmetrics', localField: '_id', foreignField: 'artistId', as: 'metricsData' } },
-      { $lookup: { from: 'artistauths', localField: '_id', foreignField: 'artistId', as: 'authData' } },
-      { $unwind: { path: '$metricsData', preserveNullAndEmptyArrays: true } },
-      { $unwind: { path: '$authData', preserveNullAndEmptyArrays: true } }
-    ]);
+    if (platform === 'instagram') platform = 'instagram';
+    const historyPlatform = platform === 'instagram' ? 'meta' : platform;
 
-    if (!result || result.length === 0) return res.status(404).json({ message: 'Artist not found' });
-    const artist = result[0];
-    
-    // Polyfill the virtual structure for backwards compatibility with the rest of the controller logic
-    artist.analytics = artist.metricsData?.analytics || {};
-    artist.analyticsHistory = artist.metricsData?.analyticsHistory || [];
-    artist.trackedVideos = artist.metricsData?.trackedVideos || [];
-    artist.isSynced = artist.authData?.isSynced || false;
-    artist.oauthCredentials = artist.authData?.oauthCredentials || {};
+    const enriched = await enrichArtistById(id);
+    if (!enriched) return res.status(404).json({ message: 'Artist not found' });
+
+    const artist = enriched;
+    const analytics = artist.analytics || {};
 
     // Only use real history — no fake data generation
     const historyMap = { spotify: [], youtube: [], meta: [] };
@@ -336,6 +357,8 @@ exports.getPlatformAnalytics = async (req, res) => {
     const discography = artist.analytics?.spotify?.discography || [];
     const relatedArtists = artist.analytics?.spotify?.relatedArtists || [];
 
+    const normalized = normalizeAll(analytics, artist.analyticsHistory || [], artist.connections || []);
+
     res.json({
       current: currentStats,
       history: historyMap,
@@ -346,6 +369,10 @@ exports.getPlatformAnalytics = async (req, res) => {
       discography,
       relatedArtists,
       trackedVideos: artist.trackedVideos || [],
+      normalized,
+      connections: artist.connections || [],
+      timeframe: timeframe || '30d',
+      accountId: accountId || null,
       artist: {
         _id: artist._id,
         name: artist.name,
@@ -355,7 +382,9 @@ exports.getPlatformAnalytics = async (req, res) => {
         website: artist.website,
         oauthCredentials: artist.oauthCredentials,
         trackedVideos: artist.trackedVideos || [],
-        isSynced: artist.isSynced || false
+        isSynced: artist.isSynced || false,
+        connections: artist.connections || [],
+        normalized: artist.normalized,
       }
     });
   } catch (err) {
@@ -388,15 +417,14 @@ exports.addTrackedVideo = async (req, res) => {
 
     if (!videoId) return res.status(400).json({ message: 'Invalid YouTube URL' });
 
-    const artist = await Artist.findById(id);
-    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+    const metricsDoc = await ArtistMetrics.findOne({ artistId: id });
+    const trackedVideos = metricsDoc?.trackedVideos || [];
 
-    if (!artist.trackedVideos) artist.trackedVideos = [];
-    if (artist.trackedVideos.some(v => v.videoId === videoId)) {
+    if (trackedVideos.some(v => v.videoId === videoId)) {
       return res.status(400).json({ message: 'Video already tracked' });
     }
 
-    artist.trackedVideos.push({
+    trackedVideos.push({
       videoId,
       title: title || 'Featured Video',
       channelName: channelName || 'External Channel',
@@ -405,8 +433,11 @@ exports.addTrackedVideo = async (req, res) => {
       addedAt: new Date()
     });
 
-    artist.markModified('trackedVideos');
-    await artist.save();
+    await ArtistMetrics.findOneAndUpdate(
+      { artistId: id },
+      { $set: { trackedVideos } },
+      { upsert: true }
+    );
 
     // Trigger sync stats to immediately pull data
     return exports.syncArtistStats(req, res);
@@ -599,8 +630,36 @@ exports.metaOAuthCallback = async (req, res) => {
     const activeIgAccountId = firstWithIg ? firstWithIg.igAccountId : (availableAccounts[0]?.igAccountId || '');
     const activeFbPageId = firstWithIg ? firstWithIg.fbPageId : (availableAccounts[0]?.fbPageId || '');
 
-    // 5. Update Artist Profile with permanent credentials and available accounts using findOneAndUpdate to bypass Mongoose version conflicts
-    const updatedArtist = await Artist.findOneAndUpdate(
+    await upsertConnection({
+      artistId: id,
+      provider: 'instagram',
+      accountHandle: activeIgAccountId,
+      accountLabel: firstWithIg?.igUsername ? `@${firstWithIg.igUsername}` : 'Instagram',
+      accessToken: longToken,
+      expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      metadata: {
+        igAccountId: activeIgAccountId,
+        fbPageId: activeFbPageId,
+        igUsername: firstWithIg?.igUsername,
+        availableAccounts,
+      },
+    });
+
+    if (activeFbPageId) {
+      const fbAcc = availableAccounts.find((a) => a.fbPageId === activeFbPageId);
+      await upsertConnection({
+        artistId: id,
+        provider: 'facebook',
+        accountHandle: activeFbPageId,
+        accountLabel: fbAcc?.fbPageName || 'Facebook Page',
+        accessToken: longToken,
+        expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        metadata: { fbPageId: activeFbPageId, fbPageName: fbAcc?.fbPageName },
+      });
+    }
+
+    // Legacy Artist doc update for backwards compatibility
+    await Artist.findOneAndUpdate(
       { _id: id },
       {
         $set: {
@@ -608,13 +667,14 @@ exports.metaOAuthCallback = async (req, res) => {
             accessToken: longToken,
             igAccountId: activeIgAccountId,
             fbPageId: activeFbPageId,
-            tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-            availableAccounts: availableAccounts
-          }
-        }
-      },
-      { new: true }
+            tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            availableAccounts,
+          },
+        },
+      }
     );
+
+    const updatedArtist = await Artist.findById(id);
 
     logger.info('OAuth', `🎉 [OAuth] ${updatedArtist?.name || 'Artist'} Meta credentials updated successfully! Triggering live stats sync...`);
 

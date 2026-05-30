@@ -24,11 +24,13 @@ import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, 
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatExlyTag } from '../../utils/crmUtils';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export default function LeadsPage() {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -181,11 +183,11 @@ export default function LeadsPage() {
   const queryParams = useMemo(() => ({
     page,
     limit: pageSize,
-    search: searchTerm,
+    search: debouncedSearch,
     sort: sortField,
     order: sortOrder,
     ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all'))
-  }), [page, pageSize, searchTerm, filters, sortField, sortOrder]);
+  }), [page, pageSize, debouncedSearch, filters, sortField, sortOrder]);
 
 
 

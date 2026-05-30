@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.35-126d5e?style=flat-square" alt="Version 1.7.35" />
+  <img src="https://img.shields.io/badge/version-1.7.36-126d5e?style=flat-square" alt="Version 1.7.36" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -106,10 +106,18 @@ Taskmaster (branded **CoreKnot** in the PWA shell) is a full-stack operational p
 
 ### Admin & Integrations
 - User/team/CRM/mail/gamification admin panels.
+- **System Logs** (`/management/ops-logs`) — unified observability feed with severity, module, trace IDs, and page analytics.
+- **Department page permissions** — per-department route access presets with `PageRoute` guards.
+- **Monthly reports** — aggregated user activity reports in admin panels.
 - Announcement dispatch with recipient-level email tracking and open pixel.
-- Artists Hub with Spotify, YouTube, Meta live analytics.
+- Artists Hub with Spotify, YouTube, Meta live analytics and unified `ArtistConnection` OAuth model.
 - Backend proxy for YouTube, OpenAI, Exly, HolySheet (auth-protected).
 - Resend/SES mail campaigns with Svix webhook verification.
+
+### Data Backup & Observability
+- **Daily MongoDB backup** — Render cron job streams production collections to `taskmaster_backups` GridFS (7-day retention).
+- **System log contract** — shared `shared/systemLogContract.js` for client/server severity, module, and toast mapping.
+- **Trace middleware** — request-scoped trace IDs propagated to logs and error responses.
 
 ### PWA
 - Installable progressive web app with `manifest.json`, 192/512 icons, and injectManifest service worker.
@@ -173,7 +181,10 @@ Taskmaster/
 │   ├── scripts/               # Migrations, seeds, QA, finance sync
 │   ├── templates/             # HTML email templates
 │   └── .env.example           # Environment template
-├── docs/                      # Project documentation
+├── shared/                    # Cross-stack contracts (systemLogContract)
+├── docs/                      # Project documentation (DATA_BACKUP.md, audits)
+├── render.yaml                # Render Blueprint (daily backup cron)
+├── docker/                    # Local Postiz env template
 ├── .specify/memory/           # Architecture & agent memory
 └── GLOBAL_RULES.md            # Coding philosophy & config rules
 ```
@@ -365,6 +376,7 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 | `/api/exly` | Exly campaigns & analytics |
 | `/api/mail` | Email campaigns |
 | `/api/admin/scripts` | Script runner (admin) |
+| `/api/system-logs` | Unified system log feed & page analytics |
 | `/api/proxy` | Third-party API proxy |
 
 ---
@@ -377,6 +389,8 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 | `npm run build` | client | Production frontend build |
 | `npm run generate-icons` | client | Regenerate PWA icons |
 | `npm run sync-finance-to-prod` | server | Mirror finance docs to prod |
+| `node scripts/runDailyBackup.js` | server | Manual production DB backup |
+| `node scripts/listBackups.js` | server | List backup snapshots |
 | `node scripts/seedDepartmentsAndTaskTypes.js` | server | Seed departments & task types |
 | `node scripts/runQATests.js` | server | Automated QA suite |
 | `node scripts/verify_infrastructure.js` | server | DB & env health check |
@@ -393,6 +407,39 @@ The app registers a service worker via `vite-plugin-pwa` (injectManifest strateg
 ---
 
 ## Changelog
+
+### [2026-05-30] v1.7.36 — System Logs, Page Permissions, Backup & Artists Refactor
+
+#### System Logs & Observability
+- Unified **SystemLog** model with severity (`INFO`/`SUCCESS`/`WARN`/`ERROR`) and module scoping (CRM, PROJECTS, EMAIL, BACKUP, etc.).
+- Shared contract at `shared/systemLogContract.js`; client bridge in `systemLogBridge.js` + axios interceptors in `App.jsx`.
+- Ops Logs page at `/management/ops-logs` with filters, trace drill-down, top-pages analytics, and admin sandbox.
+- Trace middleware assigns request-scoped IDs; errors and API toasts emit structured log entries.
+
+#### Department Page Permissions
+- Departments store `pagePermissions` array and `permissionPreset` (admin, operations, sales, artist-management, standard).
+- `PageRoute` component guards routes; `pagePermissions.js` on client and server.
+- Migration script: `migrateDepartmentPagePermissions.js`.
+
+#### Database Backup
+- `databaseBackupService.js` streams prod collections to GridFS in `taskmaster_backups` (gzip NDJSON, 7-day retention).
+- Render cron in `render.yaml` runs `runDailyBackup.js` at 12:01 AM IST; email notification on success/failure.
+- Docs: `docs/DATA_BACKUP.md`; restore via `restoreBackupCollection.js`.
+
+#### Artists Hub Refactor
+- New `ArtistConnection` model replaces per-platform token sprawl; unified OAuth via `connectionService.js`.
+- Extracted components: `AccountSwitcher`, `MetricChart`, `PlatformSummaryCards`, `UnifiedReachCard`, `AssetTable`.
+- Meta Graph API service; artist enrichment pipeline.
+
+#### Admin & Reports
+- `DepartmentsPanel`, `MonthlyReportPanel`, `AggregatedMonthlyReportPanel`, `DailyLogsTable`.
+- Removed legacy `AdminAudits.jsx` and `AdminLogsPage.jsx` in favor of System Logs.
+
+#### Task & UX Improvements
+- Task priority date helpers, pending-task skeleton, task cache utilities, `ProjectMultiSelect`.
+- Page analytics tracker; calendar options constants; email validation utils.
+
+---
 
 ### [2026-05-30] v1.7.35 — Attendance Overhaul, Leaderboard Week & CRM Layout
 

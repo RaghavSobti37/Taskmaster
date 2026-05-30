@@ -123,6 +123,8 @@ LeadSchema.index({ tenantId: 1, email: 1, unsubscribed: 1, bounceCount: 1 });
 LeadSchema.index({ tenantId: 1, assignedRepId: 1, nextFollowupDate: 1, nextFollowupTime: 1 });
 LeadSchema.index({ tenantId: 1, assignedRepId: 1, leadStatus: 1 });
 LeadSchema.index({ tenantId: 1, createdAt: -1 });
+LeadSchema.index({ reminderSent: 1, nextFollowupDate: 1 });
+LeadSchema.index({ leadStatus: 1, notifiedOverdue: 1, nextFollowupDate: 1 });
 
 // Index for full-text search across multiple fields
 LeadSchema.index({ name: 'text', email: 'text', phone: 'text', remarks: 'text' });

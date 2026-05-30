@@ -228,7 +228,7 @@ const ProjectsView = () => {
       />
 
       <Card className="flex flex-col border-none shadow-none bg-transparent">
-        <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9rem_9.5rem] lg:items-center lg:gap-2">
+        <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9.5rem_10rem] lg:items-center lg:gap-2">
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <Input
               icon={Search}
@@ -276,7 +276,7 @@ const ProjectsView = () => {
             value={filterStatus}
             onChange={setFilterStatus}
             placeholder="Status"
-            className="min-w-0 w-full lg:w-[9rem]"
+            className="min-w-0 w-full lg:w-[9.5rem]"
           />
           <NexusDropdown
             variant="compact"
@@ -290,7 +290,7 @@ const ProjectsView = () => {
             value={sortBy}
             onChange={setSortBy}
             placeholder="Sort"
-            className="min-w-0 w-full lg:w-[9.5rem]"
+            className="min-w-0 w-full lg:w-[10rem]"
           />
         </div>
 

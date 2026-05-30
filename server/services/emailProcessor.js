@@ -14,6 +14,38 @@ const path = require('path');
 const { resolveTrackingApiBaseUrl } = require('../utils/trackingUrls');
 const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
 
+/** Per-campaign base HTML (signature/unsubscribe) — merge tags applied per recipient. */
+const campaignHtmlCache = new Map();
+
+const clearCampaignHtmlCache = (campaignId) => {
+  const prefix = `${campaignId}:`;
+  for (const key of campaignHtmlCache.keys()) {
+    if (key.startsWith(prefix)) campaignHtmlCache.delete(key);
+  }
+};
+
+const updateRecipientFields = async (Model, campaignId, recipientId, fields, inc = null) => {
+  const $set = {};
+  for (const [k, v] of Object.entries(fields)) {
+    $set[`recipients.$[elem].${k}`] = v;
+  }
+  const update = { $set };
+  if (inc) update.$inc = inc;
+  await Model.findByIdAndUpdate(
+    campaignId,
+    update,
+    { arrayFilters: [{ 'elem._id': recipientId }] }
+  );
+};
+
+const incrementCampaignCounter = async (Model, campaignId, isLegacy, legacyField, coreField) => {
+  if (isLegacy) {
+    await Model.findByIdAndUpdate(campaignId, { $inc: { [`stats.${legacyField}`]: 1 } });
+  } else {
+    await Model.findByIdAndUpdate(campaignId, { $inc: { [`metrics.${coreField}`]: 1 } });
+  }
+};
+
 const buildTransporter = (profile, providerKey = null) => buildProfileTransporter(profile, providerKey);
 
 const buildEnvSmtpTransporter = () => buildEnvTransporter();
@@ -34,17 +66,25 @@ const logCampaignEvent = async (MailEvent, { eventType, email, campaignId, metad
   }
 };
 
-const loadAttachments = (campaign) => {
+const loadAttachments = async (campaign) => {
+  const fsPromises = fs.promises;
   const uploadDir = path.join(__dirname, '../uploads/campaign-attachments');
-  return (campaign.attachments || []).map((att) => {
+  const rows = await Promise.all((campaign.attachments || []).map(async (att) => {
     const filePath = path.join(uploadDir, att.storageKey);
-    if (!att.storageKey || !fs.existsSync(filePath)) return null;
+    if (!att.storageKey) return null;
+    try {
+      await fsPromises.access(filePath);
+    } catch {
+      return null;
+    }
+    const content = await fsPromises.readFile(filePath);
     return {
       filename: att.filename,
-      content: fs.readFileSync(filePath),
-      contentType: att.contentType || 'application/octet-stream'
+      content,
+      contentType: att.contentType || 'application/octet-stream',
     };
-  }).filter(Boolean);
+  }));
+  return rows.filter(Boolean);
 };
 
 const resolveSender = async (campaign, profileId, jobIndex) => {
@@ -148,6 +188,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   const Campaign = require('../models/Campaign');
   const MailCampaign = require('../models/MailCampaign');
   const MailEvent = require('../models/MailEvent');
+  const { isCampaignStopped } = require('./queueService');
 
   let Model = Campaign;
   let campaign = await Campaign.findById(campaignId).populate('senderProfileId').populate('senderProfileIds');
@@ -158,44 +199,87 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   }
   if (!campaign) return;
 
+  const getRecipient = () => (
+    campaign.recipients?.id
+      ? campaign.recipients.id(recipientId)
+      : campaign.recipients?.find((r) => r._id?.toString() === recipientId?.toString() || r.email === email)
+  );
+
+  const skipRecipientAsCancelled = async (reason) => {
+    const recipient = getRecipient();
+    if (recipient && (recipient.status === 'Pending' || recipient.status === 'Queued')) {
+      await updateRecipientFields(Model, campaign._id, recipient._id, {
+        status: 'Cancelled',
+        error: reason,
+      });
+    }
+    await checkCompletion();
+  };
+
   const checkCompletion = async () => {
-    const freshCamp = await Model.findById(campaignId);
+    const freshCamp = await Model.findById(campaignId).select('recipients status').lean();
     if (freshCamp?.recipients) {
       const isDone = freshCamp.recipients.every((r) => r.status !== 'Pending' && r.status !== 'Queued');
-      if (isDone) {
-        freshCamp.status = 'Completed';
-        try { await freshCamp.save(); } catch (e) {}
+      if (isDone && freshCamp.status !== 'Stopped') {
+        await Model.findByIdAndUpdate(campaignId, { $set: { status: 'Completed' } });
+        clearCampaignHtmlCache(campaignId);
       }
     }
   };
 
+  const freshCamp = await Model.findById(campaignId).select('status').lean();
+  if (freshCamp?.status === 'Stopped' || isCampaignStopped(campaignId)) {
+    logger.info('Email Processor', `Skipping send — campaign ${campaignId} is stopped`);
+    await skipRecipientAsCancelled('Campaign stopped');
+    return;
+  }
+
   const Lead = require('../models/Lead');
-  const cleanEmail = email.toLowerCase().trim();
+  const { isValidEmail, normalizeEmail } = require('../utils/emailValidation');
+  const cleanEmail = normalizeEmail(email);
+
+  if (!isValidEmail(cleanEmail)) {
+    logger.info('Email Processor', `Skipping invalid recipient format: ${email}`);
+    const recipient = getRecipient();
+    if (recipient) {
+      await updateRecipientFields(Model, campaign._id, recipient._id, {
+        status: 'Invalid',
+        error: 'Invalid email address',
+      });
+    }
+    await logCampaignEvent(MailEvent, {
+      eventType: 'Skipped',
+      email: cleanEmail || String(email || ''),
+      campaignId: campaign._id,
+      metadata: { reason: 'Invalid email address', status: 'Invalid' },
+    });
+    await checkCompletion();
+    return;
+  }
+
   const leadDoc = await Lead.findOne({ email: cleanEmail });
   if (leadDoc && (leadDoc.unsubscribed === true || leadDoc.emailStatus === 'Unsubscribed' || leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid')) {
     logger.info('Queue Service', `Skipping bad/unsubscribed recipient: ${email}`);
-    const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find((r) => r._id.toString() === recipientId.toString() || r.email === email);
+    const skipStatus = (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) ? 'Unsubscribed' : 'Bounced';
+    const skipError = 'Unsubscribed or Bounced recipient';
+    const recipient = getRecipient();
     if (recipient) {
-      recipient.status = (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) ? 'Unsubscribed' : 'Bounced';
-      recipient.error = 'Unsubscribed or Bounced recipient';
+      await updateRecipientFields(Model, campaign._id, recipient._id, {
+        status: skipStatus,
+        error: skipError,
+      });
     }
     if (isLegacy) {
-      if (leadDoc.emailStatus === 'Unsubscribed' || leadDoc.unsubscribed === true) {
-        campaign.stats.unsubscribed = (campaign.stats.unsubscribed || 0) + 1;
-      } else {
-        campaign.stats.bounced = (campaign.stats.bounced || 0) + 1;
-      }
-    } else if (!campaign.metrics) {
-      campaign.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
+      const legacyField = skipStatus === 'Unsubscribed' ? 'unsubscribed' : 'bounced';
+      await incrementCampaignCounter(Model, campaign._id, true, legacyField, legacyField);
     } else if (leadDoc.emailStatus === 'Bounced' || leadDoc.emailStatus === 'Invalid') {
-      campaign.metrics.bounced = (campaign.metrics.bounced || 0) + 1;
+      await incrementCampaignCounter(Model, campaign._id, false, 'bounced', 'bounced');
     }
-    try { await campaign.save(); } catch (e) {}
     await logCampaignEvent(MailEvent, {
-      eventType: recipient?.status === 'Unsubscribed' ? 'Skipped' : 'Failed',
+      eventType: skipStatus === 'Unsubscribed' ? 'Skipped' : 'Failed',
       email: cleanEmail,
       campaignId: campaign._id,
-      metadata: { reason: recipient?.error || 'Skipped recipient', status: recipient?.status },
+      metadata: { reason: skipError, status: skipStatus },
     });
     await checkCompletion();
     return;
@@ -205,12 +289,13 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   try {
     sender = await resolveSender(campaign, profileId, jobIndex);
   } catch (err) {
-    const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find((r) => r._id.toString() === recipientId.toString());
+    const recipient = getRecipient();
     if (recipient) {
-      recipient.status = 'Failed';
-      recipient.error = err.message;
+      await updateRecipientFields(Model, campaign._id, recipient._id, {
+        status: 'Failed',
+        error: err.message,
+      });
     }
-    try { await campaign.save(); } catch (e) {}
     await logCampaignEvent(MailEvent, {
       eventType: 'Failed',
       email: cleanEmail,
@@ -227,26 +312,27 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 
   const baseUrl = resolveTrackingBaseUrl();
 
-  const recipient = campaign.recipients?.id
-    ? campaign.recipients.id(recipientId)
-    : campaign.recipients?.find((r) => r._id?.toString() === recipientId?.toString() || r.email === email);
-
-  let htmlContent = content || campaign.content || '';
+  const recipient = getRecipient();
   const shouldIncludeSignature = campaign.includeSignature !== false;
 
-  if (campaign.removeUnsubscribe) {
-    htmlContent = stripUnsubscribe(htmlContent);
+  const cacheKey = `${campaign._id}:${content || campaign.content || ''}:${campaign.removeUnsubscribe}:${shouldIncludeSignature}:${profile.signature || ''}`;
+  let baseHtml = campaignHtmlCache.get(cacheKey);
+  if (!baseHtml) {
+    baseHtml = content || campaign.content || '';
+    if (campaign.removeUnsubscribe) {
+      baseHtml = stripUnsubscribe(baseHtml);
+    }
+    if (shouldIncludeSignature && profile.signature) {
+      baseHtml = appendSignatureIfMissing(baseHtml, profile.signature);
+    }
+    campaignHtmlCache.set(cacheKey, baseHtml);
   }
 
   const mergeValues = buildRecipientValues(recipient, leadDoc);
   const fallbacks = campaign.variableFallbacks instanceof Map
     ? Object.fromEntries(campaign.variableFallbacks.entries())
     : (campaign.variableFallbacks || {});
-  htmlContent = applyMergeTags(htmlContent, mergeValues, fallbacks);
-
-  if (shouldIncludeSignature && profile.signature) {
-    htmlContent = appendSignatureIfMissing(htmlContent, profile.signature);
-  }
+  const htmlContent = applyMergeTags(baseHtml, mergeValues, fallbacks);
 
   const mergedSubject = applyMergeTags(subject || campaign.subject || campaign.title, mergeValues, fallbacks);
 
@@ -260,7 +346,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;
   const mailSubject = mergedSubject;
-  const mailAttachments = loadAttachments(campaign);
+  const mailAttachments = await loadAttachments(campaign);
   let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const campaignTag = campaign.campaignId || campaign._id.toString();
 
@@ -287,6 +373,13 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   };
 
   try {
+    const preSendCamp = await Model.findById(campaignId).select('status').lean();
+    if (preSendCamp?.status === 'Stopped' || isCampaignStopped(campaignId)) {
+      logger.info('Email Processor', `Aborting send — campaign ${campaignId} stopped before dispatch`);
+      await skipRecipientAsCancelled('Campaign stopped');
+      return;
+    }
+
     if (useResend && resend) {
       await sendViaResend();
     } else {
@@ -346,20 +439,20 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       }
     }
 
-    const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find((r) => r._id.toString() === recipientId.toString());
-    if (recipient) {
-      recipient.status = 'Sent';
-      recipient.sentAt = new Date();
-      recipient.messageId = messageIdStr;
+    const sentRecipient = getRecipient();
+    if (sentRecipient) {
+      await updateRecipientFields(Model, campaign._id, sentRecipient._id, {
+        status: 'Sent',
+        sentAt: new Date(),
+        messageId: messageIdStr,
+      });
     }
 
     if (isLegacy) {
-      campaign.stats.sent = (campaign.stats.sent || 0) + 1;
+      await incrementCampaignCounter(Model, campaign._id, true, 'sent', 'totalSent');
     } else {
-      if (!campaign.metrics) campaign.metrics = { totalSent: 0, opened: 0, clicked: 0, bounced: 0 };
-      campaign.metrics.totalSent = (campaign.metrics.totalSent || 0) + 1;
+      await incrementCampaignCounter(Model, campaign._id, false, 'sent', 'totalSent');
     }
-    try { await campaign.save(); } catch (err) { if (err.name !== 'VersionError' && err.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign save error', { error: err.message }); }
 
     if (profileIdForStats) {
       if (usedRotationProvider) await incrementProviderSendCount(profileIdForStats, usedRotationProvider);
@@ -377,12 +470,13 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
 
     await checkCompletion();
   } catch (err) {
-    const recipient = campaign.recipients?.id ? campaign.recipients.id(recipientId) : campaign.recipients?.find((r) => r._id.toString() === recipientId.toString());
-    if (recipient) {
-      recipient.status = 'Failed';
-      recipient.error = err.message;
+    const failedRecipient = getRecipient();
+    if (failedRecipient) {
+      await updateRecipientFields(Model, campaign._id, failedRecipient._id, {
+        status: 'Failed',
+        error: err.message,
+      });
     }
-    try { await campaign.save(); } catch (e) { if (e.name !== 'VersionError' && e.name !== 'DocumentNotFoundError') logger.error('Queue Service', 'Campaign fail save error', { error: e.message }); }
     await logCampaignEvent(MailEvent, {
       eventType: 'Failed',
       email: cleanEmail,

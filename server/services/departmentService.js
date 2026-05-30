@@ -4,14 +4,16 @@ const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const User = require('../models/User');
 
+const { PRESET_PAGES } = require('../utils/pagePermissions');
+
 const DEFAULT_DEPARTMENTS = [
-  { name: 'Admin', slug: 'admin', color: '#6366f1', sortOrder: 0, signupAllowed: false },
-  { name: 'Operations', slug: 'operations', color: '#8b5cf6', sortOrder: 1, signupAllowed: true },
-  { name: 'Sales', slug: 'sales', color: '#10b981', sortOrder: 2, signupAllowed: true },
-  { name: 'Artist Management', slug: 'artist-management', color: '#f59e0b', sortOrder: 3, signupAllowed: true },
-  { name: 'Editor', slug: 'editor', color: '#ef4444', sortOrder: 4, signupAllowed: true },
-  { name: 'Videographer', slug: 'videographer', color: '#06b6d4', sortOrder: 5, signupAllowed: true },
-  { name: 'CG Artist', slug: 'cg-artist', color: '#ec4899', sortOrder: 6, signupAllowed: true },
+  { name: 'Admin', slug: 'admin', sortOrder: 0, signupAllowed: false, permissionPreset: 'admin', pagePermissions: PRESET_PAGES.admin },
+  { name: 'Operations', slug: 'operations', sortOrder: 1, signupAllowed: true, permissionPreset: 'operations', pagePermissions: PRESET_PAGES.operations },
+  { name: 'Sales', slug: 'sales', sortOrder: 2, signupAllowed: true, permissionPreset: 'sales', pagePermissions: PRESET_PAGES.sales },
+  { name: 'Artist Management', slug: 'artist-management', sortOrder: 3, signupAllowed: true, permissionPreset: 'artist-management', pagePermissions: PRESET_PAGES['artist-management'] },
+  { name: 'Editor', slug: 'editor', sortOrder: 4, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
+  { name: 'Videographer', slug: 'videographer', sortOrder: 5, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
+  { name: 'CG Artist', slug: 'cg-artist', sortOrder: 6, signupAllowed: true, permissionPreset: 'standard', pagePermissions: PRESET_PAGES.standard },
 ];
 
 /** General task categories (replaces granular Edit/Final Cut/etc. duplicates). */
@@ -52,6 +54,16 @@ const seedDepartments = async () => {
     if (!existing) {
       results.push(await Department.create(dept));
     } else {
+      let changed = false;
+      if (dept.permissionPreset && !existing.permissionPreset) {
+        existing.permissionPreset = dept.permissionPreset;
+        changed = true;
+      }
+      if (dept.pagePermissions?.length && (!existing.pagePermissions || existing.pagePermissions.length === 0)) {
+        existing.pagePermissions = dept.pagePermissions;
+        changed = true;
+      }
+      if (changed) await existing.save();
       results.push(existing);
     }
   }

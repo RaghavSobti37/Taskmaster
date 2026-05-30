@@ -3,8 +3,9 @@ const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
 const Log = require('../models/Log');
-const { calculateRollup } = require('../utils/rollup');
+const { scheduleRollup } = require('../utils/rollup');
 const logActivity = require('../utils/activityLogger');
+const { applyPriorityDueDate } = require('../../shared/taskPriorityDates');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
@@ -113,8 +114,11 @@ exports.createTask = async (taskData, user, session) => {
     coreData.scheduleDate = coreData.dueDate;
   }
 
+  applyPriorityDueDate(coreData);
+
   const [task] = await Task.create([coreData], { session });
 
+  const pendingNotifications = [];
   if (assignees && assignees.length > 0) {
     const assignments = assignees.map((userId) => ({
       taskId: task._id,
@@ -125,7 +129,7 @@ exports.createTask = async (taskData, user, session) => {
 
     for (const userId of assignees) {
       if (userId.toString() !== user._id.toString()) {
-        await createNotification({
+        pendingNotifications.push({
           recipientId: userId,
           title: 'New Task Assigned',
           message: `${user.name} assigned you: "${task.title}"`,
@@ -147,11 +151,16 @@ exports.createTask = async (taskData, user, session) => {
   await logActivity(user._id, 'CREATE_TASK', task._id, 'Task', { title: task.title }, session);
   queueGamificationEvent('TASK_CREATED', { userId: user._id, task });
 
-  const populatedTask = await Task.findById(task._id).session(session)
-    .populate('createdBy', 'name avatar')
-    .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+  const responseAssigneeIds = assigneeIds.length > 0 ? assigneeIds : [user._id.toString()];
+  const taskObj = task.toObject({ virtuals: true });
+  taskObj.createdBy = { _id: user._id, name: user.name, avatar: user.avatar };
+  taskObj.assignees = responseAssigneeIds.map((userId) => ({
+    userId,
+    assignedBy: user._id,
+    assignedAt: new Date()
+  }));
 
-  return mapTaskDTO(populatedTask);
+  return { taskDto: mapTaskDTO(taskObj), pendingNotifications };
 };
 
 exports.getTasks = async (filter) => {
@@ -159,7 +168,8 @@ exports.getTasks = async (filter) => {
     .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours createdBy color')
     .populate('projectId', 'name workspace')
     .populate('createdBy', 'name avatar')
-    .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+    .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] })
+    .lean({ virtuals: true });
 
   return tasks.map(mapTaskDTO);
 };
@@ -219,11 +229,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
     coreUpdates.completedAt = null;
   }
 
-  let dueDateChanged = false;
   const oldDueDate = existing.dueDate;
-  if (coreUpdates.dueDate && new Date(coreUpdates.dueDate).getTime() !== new Date(existing.dueDate || 0).getTime()) {
-    dueDateChanged = true;
-  }
+  applyPriorityDueDate(coreUpdates, existing);
+  const dueDateChanged = Boolean(
+    coreUpdates.dueDate
+    && new Date(coreUpdates.dueDate).getTime() !== new Date(oldDueDate || 0).getTime()
+  );
 
   const task = await Task.findByIdAndUpdate(taskId, coreUpdates, { new: true, runValidators: true, session });
 
@@ -252,7 +263,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   if (task) {
-    await calculateRollup(task.projectId, task.phaseId, session);
+    await scheduleRollup(task.projectId, task.phaseId, session);
     await logActivity(user._id, 'UPDATE_TASK', task._id, 'Task', { title: task.title, status: task.status }, session);
 
     if (dueDateChanged) {

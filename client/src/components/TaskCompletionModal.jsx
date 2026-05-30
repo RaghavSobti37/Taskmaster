@@ -3,13 +3,18 @@ import { Input, Button, ModalShell, ModalBody, ModalFooter } from './ui';
 
 const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit }) => {
   const [hours, setHours] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) setHours(1);
   }, [isOpen]);
 
   if (!task) return null;
+
+  const handleMarkDone = () => {
+    const parsedHours = Number(hours);
+    onSubmit(task, parsedHours);
+    onClose();
+  };
 
   return (
     <ModalShell isOpen={isOpen && !!task} onClose={onClose} size="md" zIndex={9999}>
@@ -34,16 +39,8 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit }) => {
         </ModalBody>
         <ModalFooter className="flex-shrink-0 flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button
-            onClick={async () => {
-              setIsSubmitting(true);
-              await onSubmit(task, Number(hours));
-              setIsSubmitting(false);
-            }}
-            disabled={isSubmitting}
-            className="flex-1"
-          >
-            {isSubmitting ? 'Saving...' : 'Mark Done'}
+          <Button onClick={handleMarkDone} className="flex-1">
+            Mark Done
           </Button>
         </ModalFooter>
       </div>

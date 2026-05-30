@@ -26,10 +26,9 @@ import {
   Users,
   Database,
   BarChart2,
-  FileSearch,
-  ScrollText,
   Brackets,
   Trophy,
+  Activity,
   ChevronDown,
   X,
   Moon,
@@ -40,7 +39,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser, isSalesUser, isOpsUser, isArtistManagerUser, getDepartmentName } from '../utils/departmentPermissions';
+import { hasPageAccess, groupHasVisiblePages, getDepartmentName } from '../utils/departmentPermissions';
 import { Menu } from 'lucide-react';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -302,7 +301,9 @@ const OutletSidebar = () => {
         </div>
 
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
+          {groupHasVisiblePages(user, ['dashboard', 'calendar', 'todo', 'inbox']) && (
           <NavGroup title="Platform" collapsed={!showLabels} isMobile={isMobile}>
+            {hasPageAccess(user, 'dashboard') && (
             <NavItem
               to="/dashboard"
               icon={LayoutDashboard}
@@ -311,6 +312,8 @@ const OutletSidebar = () => {
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
             />
+            )}
+            {hasPageAccess(user, 'calendar') && (
             <NavItem
               to="/calendar"
               icon={CalendarDays}
@@ -323,6 +326,8 @@ const OutletSidebar = () => {
                 queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
               }}
             />
+            )}
+            {hasPageAccess(user, 'todo') && (
             <NavItem
               to="/todo"
               icon={ListTodo}
@@ -330,6 +335,8 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
+            {hasPageAccess(user, 'inbox') && (
             <NavItem
               to="/inbox"
               icon={Inbox}
@@ -338,9 +345,13 @@ const OutletSidebar = () => {
               isMobile={isMobile}
               count={statusCounts.notifications?.unread}
             />
+            )}
           </NavGroup>
+          )}
 
+          {groupHasVisiblePages(user, ['projects', 'assets', 'schedule', 'logs', 'emails']) && (
           <NavGroup title="Workspace" collapsed={!showLabels} isMobile={isMobile}>
+            {hasPageAccess(user, 'projects') && (
             <NavItem
               to="/projects"
               icon={Briefcase}
@@ -349,6 +360,8 @@ const OutletSidebar = () => {
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
             />
+            )}
+            {hasPageAccess(user, 'assets') && (
             <NavItem
               to="/assets"
               end
@@ -358,6 +371,8 @@ const OutletSidebar = () => {
               isMobile={isMobile}
               onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
             />
+            )}
+            {hasPageAccess(user, 'schedule') && (
             <NavItem
               to="/schedule"
               icon={CalendarClock}
@@ -365,7 +380,11 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
+            {hasPageAccess(user, 'logs') && (
             <NavItem to="/logs" icon={NotebookPen} label="Daily Logs" collapsed={!showLabels} isMobile={isMobile} />
+            )}
+            {hasPageAccess(user, 'emails') && (
             <NavItem
               to="/workspace/emails"
               icon={Mail}
@@ -373,9 +392,13 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
           </NavGroup>
+          )}
 
+          {groupHasVisiblePages(user, ['equipment', 'contacts', 'attendance']) && (
           <NavGroup title="Office" collapsed={!showLabels} isMobile={isMobile}>
+            {hasPageAccess(user, 'equipment') && (
             <NavItem
               to="/management/equipment"
               icon={Wrench}
@@ -383,6 +406,8 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
+            {hasPageAccess(user, 'contacts') && (
             <NavItem
               to="/management/contacts"
               icon={Contact}
@@ -390,6 +415,8 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
+            {hasPageAccess(user, 'attendance') && (
             <NavItem
               to="/attendance"
               icon={ClipboardCheck}
@@ -397,12 +424,13 @@ const OutletSidebar = () => {
               collapsed={!showLabels}
               isMobile={isMobile}
             />
+            )}
           </NavGroup>
+          )}
 
-          {(isAdminUser(user) || isSalesUser(user) || isArtistManagerUser(user)) && (
+          {groupHasVisiblePages(user, ['leads', 'followups', 'bookings']) && (
             <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile}>
-              {(isAdminUser(user) || isSalesUser(user)) && (
-                <>
+              {hasPageAccess(user, 'leads') && (
                   <NavItem
                     to="/leads"
                     icon={UserPlus}
@@ -411,6 +439,8 @@ const OutletSidebar = () => {
                     isMobile={isMobile}
                     onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
                   />
+              )}
+              {hasPageAccess(user, 'followups') && (
                   <NavItem
                     to="/followups"
                     icon={PhoneCall}
@@ -421,9 +451,8 @@ const OutletSidebar = () => {
                     todayCount={statusCounts.followups.today}
                     onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
                   />
-                </>
               )}
-              {(isAdminUser(user) || isSalesUser(user)) && (
+              {hasPageAccess(user, 'bookings') && (
                 <NavItem
                   to="/bookings"
                   icon={CalendarCheck}
@@ -436,8 +465,9 @@ const OutletSidebar = () => {
             </NavGroup>
           )}
 
-          {(isAdminUser(user) || isOpsUser(user)) && (
+          {groupHasVisiblePages(user, ['finance', 'announcements', 'ops_logs', 'artists']) && (
             <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile}>
+              {hasPageAccess(user, 'finance') && (
               <NavItem
                 to="/finance"
                 icon={CircleDollarSign}
@@ -446,6 +476,8 @@ const OutletSidebar = () => {
                 isMobile={isMobile}
                 onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
               />
+              )}
+              {hasPageAccess(user, 'announcements') && (
               <NavItem
                 to="/management/announcements"
                 icon={Megaphone}
@@ -453,7 +485,17 @@ const OutletSidebar = () => {
                 collapsed={!showLabels}
                 isMobile={isMobile}
               />
-              {(isAdminUser(user) || isArtistManagerUser(user)) && (
+              )}
+              {hasPageAccess(user, 'ops_logs') && (
+              <NavItem
+                to="/management/ops-logs"
+                icon={Activity}
+                label="Ops Logs"
+                collapsed={!showLabels}
+                isMobile={isMobile}
+              />
+              )}
+              {hasPageAccess(user, 'artists') && (
                 <NavItem
                   to="/artists"
                   icon={Mic2}
@@ -463,11 +505,12 @@ const OutletSidebar = () => {
                   onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
                 />
               )}
-
-</NavGroup>
+            </NavGroup>
           )}
-              {isAdminUser(user) && (
-                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen={false}>
+
+          {groupHasVisiblePages(user, ['admin_users', 'admin_data', 'admin_exly', 'admin_scripts', 'admin_gamification']) && (
+                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen>
+                  {hasPageAccess(user, 'admin_users') && (
                   <NavItem
                     to="/admin/users"
                     icon={Users}
@@ -479,6 +522,8 @@ const OutletSidebar = () => {
                       queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
                     }}
                   />
+                  )}
+                  {hasPageAccess(user, 'admin_data') && (
                   <NavItem
                     to="/admin"
                     end
@@ -487,6 +532,8 @@ const OutletSidebar = () => {
                     collapsed={!showLabels}
                     isMobile={isMobile}
                   />
+                  )}
+                  {hasPageAccess(user, 'admin_exly') && (
                   <NavItem
                     to="/admin/exly-campaigns"
                     icon={BarChart2}
@@ -494,21 +541,8 @@ const OutletSidebar = () => {
                     collapsed={!showLabels}
                     isMobile={isMobile}
                   />
-                  <NavItem
-                    to="/admin/audits"
-                    icon={FileSearch}
-                    label="Lead Audits"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
-
-                  <NavItem
-                    to="/admin/logs"
-                    icon={ScrollText}
-                    label="System Logs"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
+                  )}
+                  {hasPageAccess(user, 'admin_scripts') && (
                   <NavItem
                     to="/admin/scripts"
                     icon={Brackets}
@@ -516,6 +550,8 @@ const OutletSidebar = () => {
                     collapsed={!showLabels}
                     isMobile={isMobile}
                   />
+                  )}
+                  {hasPageAccess(user, 'admin_gamification') && (
                   <NavItem
                     to="/admin/gamification"
                     icon={Trophy}
@@ -523,6 +559,7 @@ const OutletSidebar = () => {
                     collapsed={!showLabels}
                     isMobile={isMobile}
                   />
+                  )}
                 </NavGroup>
               )}
             

@@ -264,7 +264,7 @@ const NexusDropdown = ({
         onClick={handleToggle}
         title={hasSelection ? displayText : undefined}
         className={`
-          w-full min-h-[2.5rem] flex items-center justify-between gap-2 transition-all outline-none
+          w-full min-h-[2.5rem] flex items-center justify-between gap-2 transition-all outline-none overflow-hidden whitespace-nowrap
           bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]
           rounded-[var(--radius-atomic)]
           ${isCompact ? 'px-2 py-1 text-[11px] min-h-[2rem]' : 'px-3 py-2 text-sm'}
@@ -273,7 +273,7 @@ const NexusDropdown = ({
         `}
       >
         <span
-          className={`min-w-0 flex-1 text-left leading-snug line-clamp-2 ${
+          className={`min-w-0 flex-1 truncate text-left ${
             !hasSelection ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'
           }`}
         >

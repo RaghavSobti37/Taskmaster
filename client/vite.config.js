@@ -30,12 +30,22 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@shared": path.resolve(__dirname, "../shared"),
     },
   },
   server: {
     // Proxy removed for production setup
   },
   build: {
-    chunkSizeWarningLimit: 600
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          recharts: ['recharts'],
+          quill: ['react-quill', 'quill'],
+        },
+      },
+    },
   }
 })

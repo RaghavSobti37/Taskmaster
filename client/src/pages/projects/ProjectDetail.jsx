@@ -36,9 +36,11 @@ import { getWorkspaceColor } from '../../utils/workspaceColors';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import { format, addDays } from 'date-fns';
-import { useToast } from '../../contexts/ToastContext';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
+import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
 import { isOpsUser } from '../../utils/departmentPermissions';
 
@@ -69,7 +71,8 @@ const ProjectDetail = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [taskToComplete, setTaskToComplete] = useState(null);
-  const { addToast } = useToast();
+  const [completingTaskId, setCompletingTaskId] = useState(null);
+  const { addToast } = useSystemToast();
 
   const handleUpdateProjectStatus = async (status) => {
     try {
@@ -115,6 +118,8 @@ const ProjectDetail = () => {
 
   const handleCompleteTaskSubmit = async (task, hours) => {
     suppressAutoToasts(5000);
+    setCompletingTaskId(task._id);
+    setTaskToComplete(null);
     try {
       const taskRes = await axios.put(
         `/api/tasks/${task._id}`,
@@ -122,30 +127,34 @@ const ProjectDetail = () => {
         AXIOS_SKIP_TOAST
       );
       if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
-        await axios.post(
+        axios.post(
           '/api/logs',
           buildTaskCompletionLogPayload(task, hours, project ? [project] : []),
           AXIOS_SKIP_TOAST
-        );
+        ).catch(() => {});
       }
-      
+
       addToast({
         ...taskCompletionToast(taskRes.data?.status, task.title),
-        duration: 6000
+        duration: 6000,
+        module: MODULE.PROJECTS,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['projects', id, 'tasks'] });
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
+      );
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
-      setTaskToComplete(null);
     } catch (err) {
       console.error('Task completion failed:', err);
       addToast({
         title: 'Completion Failed',
         message: err.response?.data?.error || 'Could not finish task.',
-        type: 'error'
+        type: 'error',
+        module: MODULE.PROJECTS,
       });
+    } finally {
+      setCompletingTaskId(null);
     }
   };
 
@@ -207,7 +216,7 @@ const ProjectDetail = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end shrink-0">
+        <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
           {project.status === 'active' && (
             <NexusDropdown
               variant="compact"
@@ -221,13 +230,13 @@ const ProjectDetail = () => {
                 if (val === 'archive') handleUpdateProjectStatus('archived');
                 if (val === 'close') setShowCloseWarning(true);
               }}
-              className="w-40"
+              className="w-[9.5rem] shrink-0"
             />
           )}
-          <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)} className="shrink-0">
             <Settings size={14} /> Settings
           </Button>
-          <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
+          <Button size="sm" onClick={() => setIsTaskModalOpen(true)} className="shrink-0">
             <Plus size={14} /> Add Task
           </Button>
         </div>
@@ -283,36 +292,39 @@ const ProjectDetail = () => {
       {/* Workspace Controls */}
       <Card className="flex flex-col overflow-hidden">
         <div className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-          <div className="p-3 overflow-x-auto">
-            <TabSwitcher
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
-          </div>
-
-          {showTaskFilters && (
-            <div className="px-3 pb-3 pt-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-end border-t border-[var(--color-bg-border)]">
-              <SearchInput
-                placeholder="Search tasks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:max-w-xs"
-              />
-              <NexusDropdown
-                variant="compact"
-                options={[
-                  { value: 'all', label: 'All Status' },
-                  { value: 'todo', label: 'Todo' },
-                  { value: 'in-progress', label: 'Active' },
-                  { value: 'done', label: 'Done' },
-                ]}
-                value={filterStatus}
-                onChange={setFilterStatus}
-                className="w-full sm:w-40 shrink-0"
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3">
+            <div className="flex-1 min-w-0 overflow-x-auto">
+              <TabSwitcher
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={setActiveTab}
               />
             </div>
-          )}
+
+            {showTaskFilters && (
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
+                <SearchInput
+                  placeholder="Search tasks..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="min-w-0 w-full sm:w-52 shrink"
+                />
+                <NexusDropdown
+                  variant="compact"
+                  options={[
+                    { value: 'all', label: 'All Status' },
+                    { value: 'todo', label: 'Todo' },
+                    { value: 'in-progress', label: 'Active' },
+                    { value: 'done', label: 'Done' },
+                  ]}
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  placeholder="Status"
+                  className="w-full sm:w-[9.5rem] shrink-0"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-0 min-h-fit">
@@ -326,10 +338,10 @@ const ProjectDetail = () => {
               className={activeTab === 'team' || activeTab === 'assets' ? 'w-full' : 'h-full'}
             >
               {activeTab === 'list' && (
-                <ProjectList tasks={displayTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
+                <ProjectList tasks={displayTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} completingTaskId={completingTaskId} />
               )}
               {activeTab === 'kanban' && (
-                <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} />
+                <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} completingTaskId={completingTaskId} />
               )}
               {activeTab === 'schedule' && (
                 <div className="p-4 space-y-4">

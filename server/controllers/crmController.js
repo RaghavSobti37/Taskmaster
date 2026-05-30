@@ -12,6 +12,12 @@ const { dispatchEmailPayload } = require('../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const Department = require('../models/Department');
 const { isAdminUser, getDepartmentSlug, SALES_SLUG } = require('../utils/departmentPermissions');
+const {
+  FOLLOWUP_DATE_FIELD,
+  followupDateExistsStage,
+  buildFollowupTabMatch,
+  buildFollowupStatsGroupStage,
+} = require('../utils/followupDateQuery');
 
 const getSalesRepUsers = async (session = null) => {
   const salesDept = await Department.findOne({ slug: SALES_SLUG }).session(session);
@@ -130,10 +136,42 @@ exports.getLeads = async (req, res) => {
     const sortField = req.query.sort || 'createdAt';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
 
-    const total = await Lead.countDocuments(query);
+    const hasFollowupQuery = req.query.hasFollowup === 'true';
+    const followupTab = ['today', 'overdue', 'upcoming'].includes(req.query.followupTab)
+      ? req.query.followupTab
+      : null;
+    const followupStages = hasFollowupQuery
+      ? [{ $addFields: FOLLOWUP_DATE_FIELD }, followupDateExistsStage]
+      : [];
+    const tabMatchStage = hasFollowupQuery && followupTab ? buildFollowupTabMatch(followupTab) : null;
+
+    let total;
+    let tabStats = null;
+
+    if (hasFollowupQuery) {
+      const [statsResult, countResult] = await Promise.all([
+        Lead.aggregate([
+          { $match: query },
+          ...followupStages,
+          buildFollowupStatsGroupStage(),
+        ]),
+        Lead.aggregate([
+          { $match: query },
+          ...followupStages,
+          ...(tabMatchStage ? [tabMatchStage] : []),
+          { $count: 'total' },
+        ]),
+      ]);
+      tabStats = statsResult[0] || { today: 0, overdue: 0, upcoming: 0 };
+      total = countResult[0]?.total || 0;
+    } else {
+      total = await Lead.countDocuments(query);
+    }
 
     const pipeline = [
       { $match: query },
+      ...followupStages,
+      ...(tabMatchStage ? [tabMatchStage] : []),
       { $sort: { [sortField]: sortOrder, _id: 1 } },
       { $skip: skip },
       { $limit: limit },
@@ -172,7 +210,8 @@ exports.getLeads = async (req, res) => {
       leads,
       total,
       page,
-      pages: Math.ceil(total / limit)
+      pages: Math.max(1, Math.ceil(total / limit)),
+      ...(tabStats ? { tabStats } : {}),
     });
   } catch (error) {
     logger.error('crmController', 'in getLeads:', { error: error.message || error });

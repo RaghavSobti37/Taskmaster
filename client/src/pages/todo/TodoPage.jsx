@@ -13,16 +13,20 @@ import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspac
 import TaskDetailModal from '../../components/TaskDetailModal';
 import TaskCompletionModal from '../../components/TaskCompletionModal';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '../../contexts/ToastContext';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast } from '../../utils/taskCompletion';
+import { updateAllTaskQueries } from '../../utils/taskCache';
+import { isPendingTask } from '../../utils/pendingTask';
+import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
 import { Circle, CheckCircle2 } from 'lucide-react';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 
 const TodoPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { addToast } = useToast();
+  const { addToast } = useSystemToast();
   const { data: tasks = [], isLoading } = useTasks(user?._id);
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
@@ -34,6 +38,7 @@ const TodoPage = () => {
   const [projectFilter, setProjectFilter] = useState('all');
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [completingTaskId, setCompletingTaskId] = useState(null);
 
   const typeOptions = useMemo(
     () => [{ value: 'all', label: 'All categories' }, ...TASK_CATEGORY_OPTIONS],
@@ -63,6 +68,8 @@ const TodoPage = () => {
 
   const handleCompleteSubmit = async (task, hours) => {
     suppressAutoToasts(5000);
+    setCompletingTaskId(task._id);
+    setTaskToComplete(null);
     try {
       const taskRes = await axios.put(
         `/api/tasks/${task._id}`,
@@ -70,23 +77,34 @@ const TodoPage = () => {
         AXIOS_SKIP_TOAST
       );
       if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
-        await axios.post(
+        axios.post(
           '/api/logs',
           buildTaskCompletionLogPayload(task, hours, projects),
           AXIOS_SKIP_TOAST
-        );
+        ).catch(() => {});
       }
       const toast = taskCompletionToast(taskRes.data?.status, task.title);
-      addToast(toast);
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      addToast({ ...toast, module: MODULE.PROJECTS });
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
+      );
       queryClient.invalidateQueries({ queryKey: ['logs'] });
-      setTaskToComplete(null);
     } catch (err) {
-      addToast({ title: 'Error', message: err.response?.data?.error || 'Failed', type: 'error' });
+      addToast({
+        title: 'Error',
+        message: err.response?.data?.error || 'Failed',
+        type: 'error',
+        module: MODULE.PROJECTS,
+      });
+    } finally {
+      setCompletingTaskId(null);
     }
   };
 
   const renderRow = (task) => {
+    if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
+      return <TaskTableRowSkeleton key={task._id} colSpan={7} />;
+    }
     const isDone = task.status === 'done';
     const project = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
     const accent = resolveTaskWorkspaceColor(task, workspaces, projects);

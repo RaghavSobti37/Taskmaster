@@ -6,6 +6,8 @@ import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
+import { isPendingTask } from '../../utils/pendingTask';
+import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
 
 const STATUS_OPTIONS = [
   { value: 'todo', label: 'To Do', letter: 'T' },
@@ -51,7 +53,7 @@ const TaskStatusSwitcher = ({ task, onUpdate }) => (
   </div>
 );
 
-const ProjectList = ({ tasks, onUpdate, onDetail }) => {
+const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => {
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
   const activeTasks = tasks.filter((t) => t.status !== 'done');
@@ -59,6 +61,10 @@ const ProjectList = ({ tasks, onUpdate, onDetail }) => {
   const hasBothSections = activeTasks.length > 0 && doneTasks.length > 0;
 
   const renderRow = (task) => {
+    if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
+      return <TaskTableRowSkeleton key={task._id} colSpan={6} className="!border-0" />;
+    }
+
     const isDone = task.status === 'done';
 
     return (

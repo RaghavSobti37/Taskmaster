@@ -58,6 +58,8 @@ let gamificationQueue = null;
 const pendingHolySheetIds = new Set();
 let csvBackupPending = false;
 let batchTimeout = null;
+const HOLY_SHEET_BATCH_MAX = 100;
+const HOLY_SHEET_BATCH_DELAY_MS = 10000;
 
 function initializeQueues() {
   holySheetQueue = new Queue('holySheetQueue', { connection: redisConnection });
@@ -74,7 +76,7 @@ function initializeQueues() {
     const holySheetService = require('./holySheetService');
     
     // Fetch fresh copies of all leads in this batch
-    const leads = await Lead.find({ _id: { $in: leadIds } });
+    const leads = await Lead.find({ _id: { $in: leadIds } }).lean();
     for (const lead of leads) {
       await holySheetService.syncLeadToSheet(lead);
       // Brief delay to respect Google Sheets rate limit
@@ -128,16 +130,43 @@ function initializeMemoryQueues() {
   logger.info('Queue', 'In-memory scheduler initialized.');
 }
 
+function flushHolySheetBatchNow() {
+  if (redisBatchTimeout) {
+    clearTimeout(redisBatchTimeout);
+    redisBatchTimeout = null;
+  }
+  if (batchTimeout) {
+    clearTimeout(batchTimeout);
+    batchTimeout = null;
+  }
+
+  const idsToSync = Array.from(pendingHolySheetIds);
+  pendingHolySheetIds.clear();
+  if (idsToSync.length === 0) return;
+
+  if (redisAvailable && holySheetQueue) {
+    holySheetQueue.add('batchSync', { leadIds: idsToSync }, {
+      removeOnComplete: true,
+      removeOnFail: true,
+    }).catch((err) => {
+      logger.error('Queue', 'Failed to flush HolySheet batch to BullMQ', { error: err.message });
+      executeHolySheetSyncDirect(idsToSync);
+    });
+  } else {
+    executeHolySheetSyncDirect(idsToSync);
+  }
+}
+
 // Main API to queue HolySheet sync
 const queueHolySheetSync = (leadId) => {
   const cleanId = String(leadId);
+  if (pendingHolySheetIds.size >= HOLY_SHEET_BATCH_MAX) {
+    flushHolySheetBatchNow();
+  }
+  pendingHolySheetIds.add(cleanId);
   if (redisAvailable && holySheetQueue) {
-    // Accumulate in memory first and schedule a batch write
-    pendingHolySheetIds.add(cleanId);
     scheduleRedisBatch();
   } else {
-    // Memory fallback
-    pendingHolySheetIds.add(cleanId);
     scheduleMemoryBatch();
   }
 };
@@ -175,7 +204,7 @@ function scheduleRedisBatch() {
         executeHolySheetSyncDirect(idsToSync);
       }
     }
-  }, 10000); // 10 seconds batch
+  }, HOLY_SHEET_BATCH_DELAY_MS);
 }
 
 let redisCsvTimeout = null;
@@ -211,7 +240,7 @@ function scheduleMemoryBatch() {
       logger.info('Memory Queue', `Executing batch sync for ${idsToSync.length} leads.`);
       executeHolySheetSyncDirect(idsToSync);
     }
-  }, 10000);
+  }, HOLY_SHEET_BATCH_DELAY_MS);
 }
 
 let memoryCsvTimeout = null;
@@ -233,7 +262,7 @@ async function executeHolySheetSyncDirect(ids) {
   try {
     const Lead = require('../models/Lead');
     const holySheetService = require('./holySheetService');
-    const leads = await Lead.find({ _id: { $in: ids } });
+    const leads = await Lead.find({ _id: { $in: ids } }).lean();
     for (const lead of leads) {
       await holySheetService.syncLeadToSheet(lead);
       await new Promise(r => setTimeout(r, 100)); // Sleep to prevent rate limit

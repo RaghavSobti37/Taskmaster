@@ -105,7 +105,6 @@ router.get('/smtp-usage', protect, async (req, res) => {
 router.get('/profiles', protect, async (req, res) => {
   try {
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
-    await syncProviderUsageFromEvents();
     const todayCounts = await getTodaySendCountsByProfileProvider();
     const profiles = await EmailProfile.find(filter).lean();
     const enriched = profiles.map((p) => ({
@@ -380,20 +379,20 @@ router.get('/stats', protect, async (req, res) => {
   try {
     const Campaign = require('../models/Campaign');
     const filter = isAdminUser(req.user) ? {} : { createdBy: req.user._id };
-    const mailCampaigns = await MailCampaign.find(filter).lean();
-    const coreCampaigns = await Campaign.find(filter).lean();
+    const mailCampaigns = await MailCampaign.find(filter).select('-recipients -content').lean();
+    const coreCampaigns = await Campaign.find(filter).select('-recipients -content').lean();
     const allCampaigns = [...mailCampaigns, ...coreCampaigns];
 
     let totalCampaigns = allCampaigns.length;
     let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsubscribed = 0;
 
     allCampaigns.forEach(camp => {
-      camp.recipients?.forEach(r => {
-        if (['Sent', 'Opened', 'Clicked', 'Unsubscribed'].includes(r.status)) totalSent++;
-        if (['Opened', 'Clicked'].includes(r.status)) totalOpened++;
-        if (r.status === 'Clicked') totalClicked++;
-        if (['Bounced', 'Failed', 'Invalid'].includes(r.status)) totalBounced++;
-      });
+      const stats = camp.stats || {};
+      const metrics = camp.metrics || {};
+      totalSent += metrics.totalSent ?? stats.sent ?? 0;
+      totalOpened += metrics.opened ?? stats.opened ?? 0;
+      totalClicked += metrics.clicked ?? stats.clicked ?? 0;
+      totalBounced += metrics.bounced ?? stats.bounced ?? 0;
     });
     const Contact = require('../models/Contact');
     totalUnsubscribed = await Contact.countDocuments({ unsubscribed: true });

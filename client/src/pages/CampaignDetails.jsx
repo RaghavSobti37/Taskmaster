@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap, RefreshCw, Filter, X, Eye } from 'lucide-react';
-import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader } from '../components/ui';
-import { useCampaignDetails, useMailProfiles, useResendCampaign, useResendFilteredCampaign } from '../hooks/useTaskmasterQueries';
+import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
+import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader, TablePagination } from '../components/ui';
+import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { format } from 'date-fns';
 import { eventCityLabel } from '../utils/mailEventLocation';
 
@@ -14,10 +14,12 @@ const STATUS_FILTERS = [
   { id: 'opened', label: 'Opened', match: ['Opened'] },
   { id: 'clicked', label: 'Clicked', match: ['Clicked'] },
   { id: 'bounced', label: 'Bounced', match: ['Bounced', 'Failed', 'Invalid'] },
+  { id: 'cancelled', label: 'Cancelled', match: ['Cancelled'] },
 ];
 
 const RESEND_STATUS_OPTIONS = [
   { id: 'Pending', label: 'Pending' },
+  { id: 'Cancelled', label: 'Cancelled' },
   { id: 'Failed', label: 'Failed' },
   { id: 'Bounced', label: 'Bounced' },
   { id: 'Invalid', label: 'Invalid' },
@@ -32,16 +34,40 @@ export default function CampaignDetails() {
   const { data: profiles = [] } = useMailProfiles();
   const resendMutation = useResendCampaign();
   const resendFilteredMutation = useResendFilteredCampaign();
+  const stopMutation = useStopCampaign();
 
   const [statusFilter, setStatusFilter] = useState('all');
+  const [recipientPage, setRecipientPage] = useState(1);
+  const [recipientPageSize, setRecipientPageSize] = useState(25);
+  const [hideInvalidEmails, setHideInvalidEmails] = useState(false);
   const [showResendModal, setShowResendModal] = useState(false);
   const [showFilteredResendModal, setShowFilteredResendModal] = useState(false);
+  const [showStopModal, setShowStopModal] = useState(false);
   const [resendSenderMode, setResendSenderMode] = useState('single');
   const [resendSenderProfileId, setResendSenderProfileId] = useState('');
   const [resendSenderProfileIds, setResendSenderProfileIds] = useState([]);
   const [resendTargetStatuses, setResendTargetStatuses] = useState(['Failed', 'Bounced', 'Pending', 'Invalid']);
 
   const campaignApiId = campaign?.campaignId || campaign?._id || routeCampaignId;
+
+  const {
+    data: recipientsData,
+    isLoading: recipientsLoading,
+    isFetching: recipientsFetching,
+  } = useCampaignRecipients(campaignApiId, {
+    page: recipientPage,
+    limit: recipientPageSize,
+    status: statusFilter,
+    hideInvalid: hideInvalidEmails,
+  });
+
+  useEffect(() => {
+    setRecipientPage(1);
+  }, [statusFilter, hideInvalidEmails, recipientPageSize]);
+
+  const paginatedRecipients = recipientsData?.recipients || [];
+  const recipientPagination = recipientsData?.pagination || { page: 1, limit: recipientPageSize, total: 0, pages: 1 };
+  const invalidEmailCount = recipientsData?.invalidCount ?? campaign?.invalidEmailCount ?? 0;
 
   const openResendModal = () => {
     setResendSenderMode(campaign?.senderMode || 'single');
@@ -63,26 +89,21 @@ export default function CampaignDetails() {
 
   const recipientStatusCounts = useMemo(() => {
     const counts = campaign?.recipientStatusCounts || {};
-    const fallback = { Pending: 0, Queued: 0, Sent: 0, Opened: 0, Clicked: 0, Bounced: 0, Failed: 0, Invalid: 0, Unsubscribed: 0 };
+    const fallback = { Pending: 0, Queued: 0, Sent: 0, Opened: 0, Clicked: 0, Bounced: 0, Failed: 0, Invalid: 0, Unsubscribed: 0, Cancelled: 0 };
     return { ...fallback, ...counts };
   }, [campaign?.recipientStatusCounts]);
 
   const filterCounts = useMemo(() => {
-    const map = { all: campaign?.recipients?.length || 0 };
+    const total = campaign?.recipientCount ?? campaign?.stats?.total ?? 0;
+    const map = { all: total };
     STATUS_FILTERS.forEach((f) => {
       if (f.id === 'all') return;
       map[f.id] = f.match.reduce((sum, st) => sum + (recipientStatusCounts[st] || 0), 0);
     });
     return map;
-  }, [campaign?.recipients, recipientStatusCounts]);
+  }, [campaign?.recipientCount, campaign?.stats?.total, recipientStatusCounts]);
 
-  const filteredRecipients = useMemo(() => {
-    const list = campaign?.recipients || [];
-    if (statusFilter === 'all') return list;
-    const def = STATUS_FILTERS.find((f) => f.id === statusFilter);
-    if (!def?.match) return list;
-    return list.filter((r) => def.match.includes(r.status || 'Pending'));
-  }, [campaign?.recipients, statusFilter]);
+  const filteredRecipientTotal = recipientPagination.total ?? filterCounts[statusFilter] ?? 0;
 
   const activeFilterLabel = useMemo(() => {
     const def = STATUS_FILTERS.find((f) => f.id === statusFilter);
@@ -95,9 +116,8 @@ export default function CampaignDetails() {
   }, [campaign?.title, activeFilterLabel]);
 
   const resendPreviewCount = useMemo(() => {
-    if (!campaign?.recipients) return 0;
-    return campaign.recipients.filter((r) => resendTargetStatuses.includes(r.status)).length;
-  }, [campaign?.recipients, resendTargetStatuses]);
+    return resendTargetStatuses.reduce((sum, st) => sum + (recipientStatusCounts[st] || 0), 0);
+  }, [recipientStatusCounts, resendTargetStatuses]);
 
   const handleResend = async () => {
     if (resendPreviewCount === 0) {
@@ -132,9 +152,33 @@ export default function CampaignDetails() {
     }
   };
 
+  const handleStopCampaign = async () => {
+    try {
+      const result = await stopMutation.mutateAsync(campaignApiId);
+      setShowStopModal(false);
+      await refetch();
+      alert(`Campaign stopped. ${result.cancelledCount ?? 0} pending recipient(s) cancelled.`);
+    } catch (e) {
+      alert(e.response?.data?.error || e.message);
+    }
+  };
+
+  const campaignStatusVariant = (status) => {
+    if (status === 'Completed') return 'success';
+    if (status === 'Sending' || status === 'Queued') return 'warning';
+    if (status === 'Stopped') return 'danger';
+    return 'info';
+  };
+
+  const isCampaignActive = campaign?.status === 'Sending' || campaign?.status === 'Queued';
+
   const handleFilteredResend = async () => {
-    if (filteredRecipients.length === 0) {
+    if (filteredRecipientTotal === 0) {
       alert('No recipients in the current filter.');
+      return;
+    }
+    if (statusFilter === 'all') {
+      alert('Select a status filter before resending.');
       return;
     }
     if (resendSenderMode === 'single' && !resendSenderProfileId) {
@@ -148,7 +192,8 @@ export default function CampaignDetails() {
     try {
       const payload = {
         id: campaignApiId,
-        recipientEmails: filteredRecipients.map((r) => r.email),
+        statusFilter,
+        hideInvalid: hideInvalidEmails,
         filterLabel: activeFilterLabel,
         titleOverride: filteredResendTitle,
         senderMode: resendSenderMode,
@@ -160,7 +205,7 @@ export default function CampaignDetails() {
       };
       const result = await resendFilteredMutation.mutateAsync(payload);
       setShowFilteredResendModal(false);
-      alert(`New campaign "${result.campaign?.title || filteredResendTitle}" queued: ${result.queuedCount ?? filteredRecipients.length} recipient(s).`);
+      alert(`New campaign "${result.campaign?.title || filteredResendTitle}" queued: ${result.queuedCount ?? filteredRecipientTotal} recipient(s).`);
       const nextId = result.campaignId || result.campaign?.campaignId || result.campaign?._id || result.campaignMongoId;
       if (nextId) {
         navigate(`/campaign/${nextId}`);
@@ -205,7 +250,7 @@ export default function CampaignDetails() {
     .filter((r) => r.opens > 0 || r.clicks > 0)
     .sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks));
 
-  const totalRecipients = campaign.recipients?.length || 0;
+  const totalRecipients = campaign?.recipientCount ?? campaign?.stats?.total ?? 0;
   const deliveredCount =
     (recipientStatusCounts.Sent || 0) + (recipientStatusCounts.Opened || 0) + (recipientStatusCounts.Clicked || 0);
   const failedCount =
@@ -216,7 +261,8 @@ export default function CampaignDetails() {
   const clickRate = totalRecipients ? Math.round((clickedCount / totalRecipients) * 100) : 0;
   const pendingCount = (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Queued || 0);
   const resendableCount = (recipientStatusCounts.Failed || 0) + (recipientStatusCounts.Bounced || 0)
-    + (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Invalid || 0);
+    + (recipientStatusCounts.Pending || 0) + (recipientStatusCounts.Invalid || 0)
+    + (recipientStatusCounts.Cancelled || 0);
 
   const currentSenderLabel = (() => {
     if (campaign.senderMode === 'system_resend') return 'System Resend (API)';
@@ -238,10 +284,15 @@ export default function CampaignDetails() {
           <Button size="xs" variant="secondary" onClick={() => refetch()} className="flex items-center gap-1">
             <RefreshCw size={12} /> Refresh
           </Button>
+          {isCampaignActive && (
+            <Button size="xs" variant="danger" onClick={() => setShowStopModal(true)} className="flex items-center gap-1">
+              <Octagon size={12} /> Stop Campaign
+            </Button>
+          )}
           <Button size="xs" variant="primary" onClick={openResendModal} className="flex items-center gap-1" disabled={resendableCount === 0}>
             <RefreshCw size={12} /> Resend Campaign
           </Button>
-          <Badge variant={campaign.status === 'Completed' ? 'success' : campaign.status === 'Sending' ? 'warning' : 'info'}>
+          <Badge variant={campaignStatusVariant(campaign.status)}>
             {campaign.status}
           </Badge>
         </div>
@@ -249,7 +300,7 @@ export default function CampaignDetails() {
 
       <PageHeader 
         title={campaign.title} 
-        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Sender: ${currentSenderLabel} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}`}
+        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Sender: ${currentSenderLabel} • Created: ${format(new Date(campaign.createdAt), 'MMM dd, yyyy')}${campaign.stoppedAt ? ` • Stopped: ${format(new Date(campaign.stoppedAt), 'MMM dd, yyyy HH:mm')}` : ''}`}
         icon={Mail}
       />
 
@@ -382,17 +433,20 @@ export default function CampaignDetails() {
             <Users size={14} /> Target Recipient Delivery Log
           </h3>
           <div className="flex items-center gap-2">
-            <Badge variant="info">{filteredRecipients.length} shown</Badge>
+            <Badge variant="info">{filteredRecipientTotal} shown</Badge>
             <Badge variant="slate">{totalRecipients} total</Badge>
+            {invalidEmailCount > 0 && (
+              <Badge variant="rose">{invalidEmailCount} invalid email{invalidEmailCount === 1 ? '' : 's'}</Badge>
+            )}
             <Button
               size="xs"
               variant="primary"
               onClick={openFilteredResendModal}
-              disabled={filteredRecipients.length === 0 || statusFilter === 'all'}
+              disabled={filteredRecipientTotal === 0 || statusFilter === 'all'}
               className="flex items-center gap-1"
               title={statusFilter === 'all' ? 'Select a status filter first' : `Resend to ${activeFilterLabel} recipients`}
             >
-              <RefreshCw size={12} /> Resend [{activeFilterLabel}] ({filteredRecipients.length})
+              <RefreshCw size={12} /> Resend [{activeFilterLabel}] ({filteredRecipientTotal})
             </Button>
           </div>
         </div>
@@ -413,6 +467,15 @@ export default function CampaignDetails() {
               {f.label} ({filterCounts[f.id] ?? 0})
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideInvalidEmails}
+              onChange={(e) => setHideInvalidEmails(e.target.checked)}
+              className="rounded border-[var(--color-bg-border)]"
+            />
+            Hide invalid emails
+          </label>
         </div>
 
         <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-primary)] custom-scrollbar">
@@ -426,30 +489,62 @@ export default function CampaignDetails() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-bg-border)]">
-              {filteredRecipients.length === 0 ? (
+              {recipientsLoading && paginatedRecipients.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic">
+                    Loading recipients…
+                  </td>
+                </tr>
+              ) : paginatedRecipients.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic">
                     No recipients match this filter.
                   </td>
                 </tr>
-              ) : filteredRecipients.map((r, idx) => (
-                <tr key={r._id || idx} className="hover:bg-[var(--color-bg-secondary)]/50">
-                  <td className="px-4 py-3 font-semibold">{r.email}</td>
+              ) : paginatedRecipients.map((r, idx) => {
+                const displayStatus = r.displayStatus || r.status || 'Pending';
+                return (
+                <tr key={r._id || idx} className={`hover:bg-[var(--color-bg-secondary)]/50 ${r.invalidEmail ? 'opacity-80' : ''}`}>
+                  <td className="px-4 py-3 font-semibold">
+                    <span className={r.invalidEmail ? 'text-rose-400 line-through decoration-rose-400/50' : ''}>{r.email}</span>
+                    {r.invalidEmail && (
+                      <Badge variant="rose" className="ml-2 text-[9px]">Bad email</Badge>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
-                    <Badge variant={r.status === 'Opened' ? 'mint' : r.status === 'Clicked' ? 'success' : r.status === 'Sent' ? 'info' : r.status === 'Bounced' || r.status === 'Failed' ? 'rose' : 'slate'}>
-                      {r.status || 'Pending'}
+                    <Badge variant={displayStatus === 'Opened' ? 'mint' : displayStatus === 'Clicked' ? 'success' : displayStatus === 'Sent' ? 'info' : displayStatus === 'Bounced' || displayStatus === 'Failed' || displayStatus === 'Invalid' ? 'rose' : 'slate'}>
+                      {displayStatus}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)]">
                     {r.sentAt ? format(new Date(r.sentAt), 'MMM dd, HH:mm:ss') : '—'}
                   </td>
                   <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] truncate max-w-xs">
-                    {r.error || r.messageId || 'Ready for tracking'}
+                    {r.invalidEmail ? (r.error || 'Invalid email address') : (r.error || r.messageId || 'Ready for tracking')}
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
+          {recipientPagination.total > 0 && (
+            <TablePagination
+              pageSize={recipientPageSize}
+              currentPage={recipientPagination.page}
+              totalPages={recipientPagination.pages}
+              totalItems={recipientPagination.total}
+              rowCount={paginatedRecipients.length}
+              onPageChange={setRecipientPage}
+              onPageSizeChange={(size) => {
+                setRecipientPageSize(size);
+                setRecipientPage(1);
+              }}
+            />
+          )}
+          {recipientsFetching && !recipientsLoading && (
+            <div className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-bg-border)]">
+              Refreshing…
+            </div>
+          )}
         </div>
       </Card>
 
@@ -466,13 +561,13 @@ export default function CampaignDetails() {
             </div>
 
             <p className="text-xs text-[var(--color-text-muted)]">
-              Creates a new campaign named <strong className="text-white">{filteredResendTitle}</strong> and sends only to the {filteredRecipients.length} recipient(s) matching the <strong className="text-white">{activeFilterLabel}</strong> filter.
+              Creates a new campaign named <strong className="text-white">{filteredResendTitle}</strong> and sends only to the {filteredRecipientTotal} recipient(s) matching the <strong className="text-white">{activeFilterLabel}</strong> filter.
             </p>
 
             <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl text-xs space-y-1 font-mono">
               <div><span className="text-[var(--color-text-muted)]">Subject:</span> {campaign.subject || '—'}</div>
               <div><span className="text-[var(--color-text-muted)]">New campaign:</span> {filteredResendTitle}</div>
-              <div className="text-[var(--color-action-primary)] font-bold">Recipients: {filteredRecipients.length}</div>
+              <div className="text-[var(--color-action-primary)] font-bold">Recipients: {filteredRecipientTotal}</div>
             </div>
 
             <div className="space-y-2">
@@ -541,9 +636,34 @@ export default function CampaignDetails() {
 
             <div className="flex gap-2 pt-2">
               <Button variant="ghost" className="flex-1" onClick={() => setShowFilteredResendModal(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={handleFilteredResend} disabled={resendFilteredMutation.isPending || filteredRecipients.length === 0}>
+              <Button className="flex-1" onClick={handleFilteredResend} disabled={resendFilteredMutation.isPending || filteredRecipientTotal === 0}>
                 <RefreshCw size={14} className={resendFilteredMutation.isPending ? 'animate-spin' : ''} />
-                {resendFilteredMutation.isPending ? 'Creating…' : `Send ${filteredRecipients.length} as "${activeFilterLabel}"`}
+                {resendFilteredMutation.isPending ? 'Creating…' : `Send ${filteredRecipientTotal} as "${activeFilterLabel}"`}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showStopModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-rose-500 flex items-center gap-2">
+                <Octagon size={16} /> Stop Campaign
+              </h3>
+              <button type="button" onClick={() => setShowStopModal(false)} className="text-[var(--color-text-muted)] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Stop this campaign immediately. {pendingCount} pending/queued recipient(s) will not be sent. Already-delivered emails and tracking data are preserved.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setShowStopModal(false)}>Keep Sending</Button>
+              <Button variant="danger" className="flex-1" onClick={handleStopCampaign} disabled={stopMutation.isPending}>
+                <Octagon size={14} />
+                {stopMutation.isPending ? 'Stopping…' : 'Stop Now'}
               </Button>
             </div>
           </Card>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   CheckCircle,
@@ -8,7 +9,13 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  Info,
 } from 'lucide-react';
+import {
+  SEVERITY,
+  buildErrorCopyText as buildCopyFromContract,
+  TOAST_DURATION,
+} from './systemLogContract';
 
 /** Generic API messages — interceptor must not toast these */
 const GENERIC_API_MESSAGES = new Set([
@@ -57,7 +64,7 @@ export function shouldShowApiErrorToast(error) {
   return true;
 }
 
-/** Deterministic id from strings — prevents toast spam on repeated calls */
+/** @deprecated Prefer makeToastId from systemLogContract — kept for axios slug helpers */
 export function slugId(...parts) {
   return parts
     .filter(Boolean)
@@ -68,29 +75,70 @@ export function slugId(...parts) {
     .slice(0, 120);
 }
 
-const TOAST_WIDTH_CLASS = 'w-[min(420px,calc(100vw-2rem))] min-w-[300px] max-w-[420px]';
+const TOAST_WIDTH_CLASS = 'w-full max-w-[min(420px,calc(100vw-2rem))]';
 
 const cardBase =
   `pointer-events-auto ${TOAST_WIDTH_CLASS} shadow-lg rounded-xl border transition-all duration-300`;
 
-export function buildErrorCopyText({ title, description, technicalError, errorCode, status }) {
-  const lines = [];
-  if (title) lines.push(`Error: ${title}`);
-  if (description && description !== title) lines.push(`Message: ${description}`);
-  if (errorCode) lines.push(`Code: ${errorCode}`);
-  if (status) lines.push(`HTTP: ${status}`);
-  if (technicalError) {
-    lines.push('', '--- Details ---', technicalError);
-  }
-  return lines.join('\n').trim() || 'Unknown error';
+export function buildErrorCopyText(props) {
+  return buildCopyFromContract(props);
 }
 
-const ErrorToastCard = ({ t, title, description, technicalError, errorCode, status }) => {
+const SEVERITY_UI = {
+  [SEVERITY.SUCCESS]: {
+    Icon: CheckCircle,
+    iconClass: 'text-[var(--color-pastel-mint-text)]',
+    borderClass: 'border-[var(--color-pastel-mint-text)]/25',
+  },
+  [SEVERITY.INFO]: {
+    Icon: Info,
+    iconClass: 'text-[var(--color-pastel-blue-text)]',
+    borderClass: 'border-[var(--color-pastel-apricot-text)]/25',
+  },
+  [SEVERITY.WARN]: {
+    Icon: AlertTriangle,
+    iconClass: 'text-[var(--color-pastel-apricot-text)]',
+    borderClass: 'border-[var(--color-pastel-apricot-text)]/25',
+  },
+  [SEVERITY.ERROR]: {
+    Icon: OctagonX,
+    iconClass: 'text-[var(--color-pastel-rose-text)]',
+    borderClass: 'border-[var(--color-pastel-rose-text)]/30 dark:border-red-900/50',
+  },
+};
+
+const SystemToastCard = ({
+  t,
+  severity,
+  module: logModule,
+  message,
+  title,
+  description,
+  technicalError,
+  errorCode,
+  status,
+  traceId,
+  timestamp,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const copyPayload = buildErrorCopyText({ title, description, technicalError, errorCode, status });
+  const ui = SEVERITY_UI[severity] || SEVERITY_UI[SEVERITY.INFO];
+  const Icon = ui.Icon;
+  const displayTitle = title || message;
   const hasExpandableDetails = Boolean(technicalError && technicalError.length > 0);
+  const showDiagnostics = severity === SEVERITY.ERROR || (hasExpandableDetails && severity === SEVERITY.WARN);
+
+  const copyPayload = buildErrorCopyText({
+    title: displayTitle,
+    description,
+    technicalError,
+    errorCode,
+    status,
+    traceId,
+    module: logModule,
+    timestamp,
+    severity,
+  });
 
   const handleCopy = async (e) => {
     e.stopPropagation();
@@ -105,20 +153,26 @@ const ErrorToastCard = ({ t, title, description, technicalError, errorCode, stat
 
   return (
     <div
-      className={`${cardBase} bg-[var(--color-bg-surface)] border-[var(--color-pastel-rose-text)]/30 dark:border-red-900/50 p-4 flex flex-col gap-3`}
+      className={`${cardBase} bg-[var(--color-bg-surface)] ${ui.borderClass} p-4 flex flex-col gap-3`}
       role="alert"
     >
       <div className="flex items-start gap-3 w-full">
-        <OctagonX className="w-5 h-5 text-[var(--color-pastel-rose-text)] shrink-0 mt-0.5" />
+        <Icon className={`w-5 h-5 ${ui.iconClass} shrink-0 mt-0.5`} />
         <div className="flex-1 min-w-0 overflow-hidden">
-          <p className="text-sm font-semibold text-[var(--color-text-primary)] break-words">{title}</p>
-          {description && description !== title && (
+          {logModule && (
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">
+              {logModule}
+            </p>
+          )}
+          <p className="text-sm font-semibold text-[var(--color-text-primary)] break-words">{displayTitle}</p>
+          {description && description !== displayTitle && (
             <p className="text-xs text-[var(--color-text-secondary)] mt-1 break-words">{description}</p>
           )}
           {errorCode && (
-            <p className="text-[10px] font-mono text-[var(--color-pastel-rose-text)] mt-1.5">
+            <p className="text-[10px] font-mono text-[var(--color-text-muted)] mt-1.5">
               Code: {errorCode}
               {status ? ` · HTTP ${status}` : ''}
+              {traceId ? ` · Trace ${traceId.slice(0, 8)}…` : ''}
             </p>
           )}
         </div>
@@ -132,58 +186,41 @@ const ErrorToastCard = ({ t, title, description, technicalError, errorCode, stat
         </button>
       </div>
 
-      <div className="pt-3 border-t border-[var(--color-bg-border)] flex flex-col gap-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          {hasExpandableDetails && (
+      {showDiagnostics && (
+        <div className="pt-3 border-t border-[var(--color-bg-border)] flex flex-col gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
+            {hasExpandableDetails && (
+              <button
+                type="button"
+                onClick={() => setIsOpen((v) => !v)}
+                className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:underline"
+              >
+                {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {isOpen ? 'Hide technical logs' : 'Show technical logs'}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setIsOpen((v) => !v)}
-              className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] hover:underline"
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-pastel-rose-text)] transition-colors"
             >
-              {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              {isOpen ? 'Hide Details' : 'Show Details'}
+              <Copy className="w-3.5 h-3.5" />
+              {copied ? 'Copied!' : 'Copy diagnostics'}
             </button>
+          </div>
+          {isOpen && hasExpandableDetails && (
+            <pre className="p-2 bg-[var(--color-bg-primary)] text-[10px] font-mono text-[var(--color-pastel-rose-text)] overflow-x-auto rounded border border-[var(--color-bg-border)] max-h-32 whitespace-pre-wrap break-words">
+              {technicalError}
+            </pre>
           )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-pastel-rose-text)] transition-colors"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            {copied ? 'Copied!' : 'Copy Error'}
-          </button>
         </div>
-        {isOpen && hasExpandableDetails && (
-          <pre className="p-2 bg-[var(--color-bg-primary)] text-[10px] font-mono text-[var(--color-pastel-rose-text)] overflow-x-auto rounded border border-[var(--color-bg-border)] max-h-32 whitespace-pre-wrap break-words">
-            {technicalError}
-          </pre>
-        )}
-      </div>
+      )}
     </div>
   );
 };
 
-const SimpleToastCard = ({ icon: Icon, iconClass, borderClass, message, onDismiss }) => (
-  <div
-    className={`${cardBase} flex items-center gap-3 bg-[var(--color-bg-surface)] ${borderClass} p-4`}
-    role="status"
-  >
-    <Icon className={`w-5 h-5 shrink-0 ${iconClass}`} />
-    <span className="text-sm font-medium text-[var(--color-text-primary)] flex-1">{message}</span>
-    {onDismiss && (
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors shrink-0"
-        aria-label="Dismiss"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    )}
-  </div>
-);
-
 function pushCustom(render, { id, duration = 4000 }) {
+  toast.dismiss(id);
   toast.custom(render, { id, duration, position: 'top-right' });
 }
 
@@ -205,156 +242,99 @@ export function parseErrorPayload(error, fallbackTitle = 'Something went wrong')
     (typeof data?.errorCode === 'string' && data.errorCode) ||
     (typeof data?.error_code === 'string' && data.error_code) ||
     (status ? `HTTP_${status}` : null);
+  const traceId = typeof data?.traceId === 'string' ? data.traceId : null;
   const technicalError =
     (typeof data?.stack === 'string' && data.stack) ||
     (import.meta.env.DEV && error?.stack ? error.stack : null) ||
     (typeof data?.technical === 'string' && data.technical) ||
     null;
 
-  return { title, description, technicalError, errorCode, status };
+  return { title, description, technicalError, errorCode, status, traceId };
 }
 
-export const notify = {
-  success(message, customId, options = {}) {
-    const toastId = customId || slugId('success', message);
-    const duration = options.duration ?? 4000;
-    pushCustom(
-      (t) => (
-        <SimpleToastCard
-          icon={CheckCircle}
-          iconClass="text-[var(--color-pastel-mint-text)]"
-          borderClass="border border-[var(--color-pastel-mint-text)]/25"
-          message={message}
-          onDismiss={() => toast.dismiss(t.id)}
-        />
-      ),
-      { id: toastId, duration }
-    );
-  },
+/**
+ * @internal — only systemLogBridge should call this for standard toasts.
+ */
+export function showSystemToast({
+  id,
+  severity,
+  module,
+  message,
+  title,
+  description,
+  technicalError,
+  errorCode,
+  status,
+  traceId,
+  timestamp,
+  duration,
+  customRender,
+}) {
+  const resolvedDuration = duration ?? TOAST_DURATION[severity] ?? 5000;
 
-  warning(message, customId, options = {}) {
-    const toastId = customId || slugId('warning', message);
-    const duration = options.duration ?? 5000;
-    pushCustom(
-      (t) => (
-        <SimpleToastCard
-          icon={AlertTriangle}
-          iconClass="text-[var(--color-pastel-apricot-text)]"
-          borderClass="border border-[var(--color-pastel-apricot-text)]/25"
-          message={message}
-          onDismiss={() => toast.dismiss(t.id)}
-        />
-      ),
-      { id: toastId, duration }
-    );
-  },
+  if (customRender) {
+    pushCustom(customRender, { id, duration: resolvedDuration });
+    return id;
+  }
 
-  info(message, customId, options = {}) {
-    const toastId = customId || slugId('info', message);
-    const duration = options.duration ?? 5000;
-    pushCustom(
-      (t) => (
-        <SimpleToastCard
-          icon={AlertTriangle}
-          iconClass="text-[var(--color-pastel-blue-text)]"
-          borderClass="border border-[var(--color-pastel-blue-text)]/25"
-          message={message}
-          onDismiss={() => toast.dismiss(t.id)}
-        />
-      ),
-      { id: toastId, duration }
-    );
-  },
+  pushCustom(
+    (t) => (
+      <SystemToastCard
+        t={t}
+        severity={severity}
+        module={module}
+        message={message}
+        title={title}
+        description={description}
+        technicalError={technicalError}
+        errorCode={errorCode}
+        status={status}
+        traceId={traceId}
+        timestamp={timestamp}
+      />
+    ),
+    { id, duration: resolvedDuration }
+  );
+  return id;
+}
 
-  error({ title, description, technicalError, errorCode, status, uniqueKey, duration = Infinity }) {
-    const toastId = uniqueKey || slugId('error', title);
-    pushCustom(
-      (t) => (
-        <ErrorToastCard
-          t={t}
-          title={title}
-          description={description}
-          technicalError={technicalError}
-          errorCode={errorCode}
-          status={status}
-        />
-      ),
-      { id: toastId, duration }
-    );
-  },
+/** Custom render escape hatch (e.g. XP awards) — not for standard severity toasts */
+export function pushCustomToast(render, options = {}) {
+  return toast.custom(render, { position: 'top-right', ...options });
+}
 
-  /** Map legacy ToastContext shape to notify */
-  fromLegacy({ title, message, type = 'info', id, duration, technicalError, errorCode, status }) {
-    suppressAutoToasts(duration ?? 5000);
-    const toastId = id || slugId(type, title, message);
-    const text = message || title || 'Notification';
+export function dismissSystemToast(id) {
+  toast.dismiss(id);
+}
 
-    if (type === 'error') {
-      const errorTitle = title || 'Error';
-      notify.error({
-        title: errorTitle,
-        description: message && message !== errorTitle ? message : null,
-        technicalError,
-        errorCode,
-        status,
-        uniqueKey: toastId,
-        duration: duration ?? Infinity,
-      });
-      return toastId;
-    }
-    if (type === 'success') {
-      notify.success(text, toastId, { duration: duration ?? 4000 });
-      return toastId;
-    }
-    if (type === 'warning') {
-      notify.warning(text, toastId, { duration: duration ?? 5000 });
-      return toastId;
-    }
-    notify.info(text, toastId, { duration: duration ?? 5000 });
-    return toastId;
-  },
+export function dismissAllSystemToasts() {
+  toast.dismiss();
+}
 
-  dismiss(id) {
-    toast.dismiss(id);
-  },
+export const ERPNotificationProvider = () => {
+  if (typeof document === 'undefined') return null;
 
-  dismissAll() {
-    toast.dismiss();
-  },
-
-  custom(render, options = {}) {
-    return toast.custom(render, { position: 'top-right', ...options });
-  },
+  return createPortal(
+    <Toaster
+      position="top-right"
+      reverseOrder={false}
+      gutter={8}
+      containerClassName="tm-toast-container"
+      containerStyle={{
+        zIndex: 10060,
+      }}
+      toastOptions={{
+        className: 'tm-toast-host',
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          padding: 0,
+          margin: 0,
+          maxWidth: 'min(420px, calc(100vw - 2rem))',
+          width: 'max-content',
+        },
+      }}
+    />,
+    document.body
+  );
 };
-
-export function useNotification() {
-  return notify;
-}
-
-export const ERPNotificationProvider = () => (
-  <Toaster
-    position="top-right"
-    reverseOrder={false}
-    gutter={8}
-    containerClassName="tm-toast-container"
-    containerStyle={{
-      top: 16,
-      right: 16,
-      left: 'auto',
-      bottom: 'auto',
-      zIndex: 10060,
-    }}
-    toastOptions={{
-      className: 'tm-toast-host',
-      style: {
-        background: 'transparent',
-        boxShadow: 'none',
-        padding: 0,
-        margin: 0,
-        minWidth: 'min(420px, calc(100vw - 2rem))',
-        maxWidth: '420px',
-        width: 'min(420px, calc(100vw - 2rem))',
-      },
-    }}
-  />
-);

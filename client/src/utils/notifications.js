@@ -26,7 +26,20 @@ export const requestNotificationPermission = async () => {
 
 export const sendNotification = (title, body, options = {}) => {
   if (Notification.permission !== 'granted') return;
-  new Notification(title, { body, icon: '/favicon.svg', ...options });
+  new Notification(title, {
+    ...options,
+    body,
+    icon: '/icons/icon-192.png',
+    tag: options.tag,
+  });
+};
+
+/** Returns 'push' | 'polling' | 'none' — only one path should show OS toasts. */
+export const resolveNotificationDeliveryMode = async () => {
+  if (!isPushPreferenceEnabled()) return 'none';
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return 'none';
+  const subscribed = await hasActivePushSubscription();
+  return subscribed ? 'push' : 'polling';
 };
 
 export const registerServiceWorker = async () => {

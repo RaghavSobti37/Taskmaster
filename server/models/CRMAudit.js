@@ -18,6 +18,8 @@ const AuditSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
+AuditSchema.index({ leadId: 1, timestamp: -1 });
+
 AuditSchema.plugin(tenantPlugin);
 
 module.exports = mongoose.model('CRMAudit', AuditSchema);

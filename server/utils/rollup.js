@@ -2,6 +2,9 @@ const Task = require('../models/Task');
 const Phase = require('../models/Phase');
 const logger = require('../utils/logger');
 
+const rollupTimers = new Map();
+const ROLLUP_DEBOUNCE_MS = 500;
+
 /**
  * Calculates weighted progress for a parent entity based on children.
  * Formula: Sum(Progress * Weight) / Sum(Weight)
@@ -39,4 +42,19 @@ const calculateRollup = async (projectId, phaseId = null, session = null) => {
   }
 };
 
-module.exports = { calculateRollup };
+const scheduleRollup = (projectId, phaseId = null, session = null) => {
+  if (session) return calculateRollup(projectId, phaseId, session);
+
+  const key = `${projectId}:${phaseId || ''}`;
+  if (rollupTimers.has(key)) clearTimeout(rollupTimers.get(key));
+  rollupTimers.set(
+    key,
+    setTimeout(() => {
+      rollupTimers.delete(key);
+      calculateRollup(projectId, phaseId, null).catch(() => {});
+    }, ROLLUP_DEBOUNCE_MS)
+  );
+  return Promise.resolve();
+};
+
+module.exports = { calculateRollup, scheduleRollup };

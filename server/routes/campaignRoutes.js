@@ -8,9 +8,15 @@ const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
 const { protect } = require('../middleware/authMiddleware');
-const { dispatchCampaignJobs } = require('../services/queueService');
+const { dispatchCampaignJobs, stopCampaign } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
 const { resolveCampaignByParam, isObjectIdHex } = require('../utils/resolveCampaign');
+const {
+  normalizeEmail,
+  isValidEmail,
+  filterRecipientsByStatus,
+  annotateRecipient,
+} = require('../utils/emailValidation');
 const { resolveMailEventCityAsync, buildClickCityByEmail } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 
@@ -31,15 +37,33 @@ const upload = multer({
 
 router.get('/', async (req, res) => {
   try {
-    const coreCampaigns = await Campaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
-    const mailCampaigns = await MailCampaign.find({ createdBy: req.user._id }).sort('-createdAt').lean();
+    const listProjection = '-recipients -content';
+    const coreCampaigns = await Campaign.find({ createdBy: req.user._id }).select(listProjection).sort('-createdAt').lean();
+    const mailCampaigns = await MailCampaign.find({ createdBy: req.user._id }).select(listProjection).sort('-createdAt').lean();
     const allCampaigns = [...coreCampaigns, ...mailCampaigns].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     for (const camp of allCampaigns) {
-      const computed = computeRecipientStats(camp.recipients);
-      camp.recipientStatusCounts = computed.recipientStatusCounts;
-      camp.stats = computed.stats;
-      camp.metrics = computed.metrics;
+      const stats = camp.stats || {};
+      const metrics = camp.metrics || {};
+      camp.recipientCount = stats.total ?? metrics.totalRecipients ?? camp.recipientCount ?? 0;
+      if (!camp.stats) {
+        camp.stats = {
+          total: camp.recipientCount,
+          sent: metrics.totalSent ?? 0,
+          opened: metrics.opened ?? 0,
+          clicked: metrics.clicked ?? 0,
+          bounced: metrics.bounced ?? 0,
+          unsubscribed: stats.unsubscribed ?? 0,
+        };
+      }
+      if (!camp.metrics) {
+        camp.metrics = {
+          totalSent: stats.sent ?? 0,
+          opened: stats.opened ?? 0,
+          clicked: stats.clicked ?? 0,
+          bounced: stats.bounced ?? 0,
+        };
+      }
     }
     res.json(allCampaigns);
   } catch (err) {
@@ -54,6 +78,49 @@ router.post('/upload-attachment', upload.single('file'), async (req, res) => {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
       storageKey: req.file.filename
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/recipients', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const statusFilter = String(req.query.status || 'all').toLowerCase();
+    const hideInvalid = req.query.hideInvalid === 'true';
+
+    const resolved = await resolveCampaignByParam(req.params.id, { lean: true });
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+
+    let recipients = (resolved.campaign.recipients || []).map((r) => annotateRecipient(
+      typeof r.toObject === 'function' ? r.toObject() : r
+    ));
+
+    const invalidCount = recipients.filter((r) => r.invalidEmail).length;
+
+    if (hideInvalid) {
+      recipients = recipients.filter((r) => !r.invalidEmail);
+    }
+
+    recipients = filterRecipientsByStatus(recipients, statusFilter);
+
+    const total = recipients.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(page, pages);
+    const start = (safePage - 1) * limit;
+    const slice = recipients.slice(start, start + limit);
+
+    res.json({
+      recipients: slice,
+      pagination: {
+        page: safePage,
+        limit,
+        total,
+        pages,
+      },
+      invalidCount,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -76,41 +143,56 @@ router.get('/:id', async (req, res) => {
 
     const ipCache = new Map();
     const eventQuery = { campaignId: campaign._id };
-    const allEvents = await MailEvent.find(eventQuery).setOptions({ bypassTenant: true }).lean();
+    const EVENT_STREAM_LIMIT = 100;
 
-    const clickCityByEmail = await buildClickCityByEmail(allEvents, ipCache);
-    const resolveEventCity = (evt) => resolveMailEventCityAsync(evt, ipCache, clickCityByEmail);
+    const [recentEvents, geoEvents] = await Promise.all([
+      MailEvent.find(eventQuery)
+        .sort({ timestamp: -1 })
+        .limit(EVENT_STREAM_LIMIT)
+        .setOptions({ bypassTenant: true })
+        .lean(),
+      MailEvent.find({ ...eventQuery, eventType: { $in: ['Open', 'Click'] } })
+        .select('eventType timestamp email ipAddress location metadata')
+        .setOptions({ bypassTenant: true })
+        .lean(),
+    ]);
 
-    const eventsRaw = allEvents.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
-    campaign.events = await Promise.all(eventsRaw.map(async (evt) => ({
+    const clickCityByEmail = await buildClickCityByEmail(geoEvents, ipCache);
+    const cityByEventId = new Map();
+
+    const resolveEventCityCached = async (evt) => {
+      const key = String(evt._id);
+      if (cityByEventId.has(key)) return cityByEventId.get(key);
+      const city = await resolveMailEventCityAsync(evt, ipCache, clickCityByEmail);
+      cityByEventId.set(key, city);
+      return city;
+    };
+
+    campaign.events = await Promise.all(recentEvents.map(async (evt) => ({
       ...evt,
-      displayCity: await resolveEventCity(evt),
+      displayCity: await resolveEventCityCached(evt),
     })));
-    
+
     const locationBreakdown = {};
     const timeSeriesMap = {};
-    
-    for (const evt of allEvents) {
-      if (evt.eventType === 'Open' || evt.eventType === 'Click') {
-        const city = await resolveEventCity(evt);
-        if (city) {
-          if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
-          if (evt.eventType === 'Open') locationBreakdown[city].opens++;
-          else locationBreakdown[city].clicks++;
-        }
+
+    for (const evt of geoEvents) {
+      const city = await resolveEventCityCached(evt);
+      if (city) {
+        if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
+        if (evt.eventType === 'Open') locationBreakdown[city].opens++;
+        else locationBreakdown[city].clicks++;
       }
-      
-      if (evt.eventType === 'Open' || evt.eventType === 'Click') {
-        const date = new Date(evt.timestamp);
-        const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
-        if (!timeSeriesMap[hourStr]) {
-          timeSeriesMap[hourStr] = { time: date, opens: 0, clicks: 0 };
-        }
-        if (evt.eventType === 'Open') {
-          timeSeriesMap[hourStr].opens++;
-        } else if (evt.eventType === 'Click') {
-          timeSeriesMap[hourStr].clicks++;
-        }
+
+      const date = new Date(evt.timestamp);
+      const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
+      if (!timeSeriesMap[hourStr]) {
+        timeSeriesMap[hourStr] = { time: date, opens: 0, clicks: 0 };
+      }
+      if (evt.eventType === 'Open') {
+        timeSeriesMap[hourStr].opens++;
+      } else if (evt.eventType === 'Click') {
+        timeSeriesMap[hourStr].clicks++;
       }
     }
     
@@ -122,6 +204,10 @@ router.get('/:id', async (req, res) => {
         clicks: data.clicks
       }))
       .sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    campaign.recipientCount = computed.total;
+    campaign.invalidEmailCount = (campaign.recipients || []).filter((r) => !isValidEmail(r.email)).length;
+    delete campaign.recipients;
 
     res.json(campaign);
   } catch (err) {
@@ -139,25 +225,41 @@ router.post('/', async (req, res) => {
     const campaignId = crypto.randomBytes(12).toString('hex');
 
     const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds }, unsubscribed: { $ne: true }, emailStatus: { $ne: 'Bounced' } }) : [];
-    const recipients = leads.map(l => ({
-      leadId: l._id,
-      email: l.email ? l.email.toLowerCase().trim() : '',
-      name: l.name || '',
-      status: 'Pending'
-    })).filter(r => r.email);
+    const buildRecipientRow = (row) => {
+      const email = normalizeEmail(row.email);
+      if (!email) return null;
+      const base = {
+        leadId: row.leadId,
+        email,
+        name: (row.name || '').trim(),
+      };
+      if (!isValidEmail(email)) {
+        return { ...base, status: 'Invalid', error: 'Invalid email address' };
+      }
+      return { ...base, status: 'Pending' };
+    };
 
-    const custom = (Array.isArray(customRecipients) ? customRecipients : []).map(r => ({
-      email: r && r.email ? String(r.email).toLowerCase().trim() : '',
-      name: (r?.name || r?.firstName || '').trim(),
-      status: 'Pending'
-    })).filter(r => r.email);
+    const recipients = leads.map((l) => buildRecipientRow({
+      leadId: l._id,
+      email: l.email,
+      name: l.name || '',
+    })).filter(Boolean);
+
+    const custom = (Array.isArray(customRecipients) ? customRecipients : [])
+      .map((r) => buildRecipientRow({
+        email: r?.email,
+        name: (r?.name || r?.firstName || '').trim(),
+      }))
+      .filter(Boolean);
 
     const uniqueEmails = new Set();
-    const allRecipients = [...recipients, ...custom].filter(r => {
+    const allRecipients = [...recipients, ...custom].filter((r) => {
       if (uniqueEmails.has(r.email)) return false;
       uniqueEmails.add(r.email);
       return true;
     });
+
+    const skippedInvalidCount = allRecipients.filter((r) => r.status === 'Invalid').length;
 
     const mode = senderMode || 'single';
     if (mode === 'single' && !senderProfileId) {
@@ -184,7 +286,7 @@ router.post('/', async (req, res) => {
       })),
       eventTag: eventTag || 'General',
       recipients: allRecipients,
-      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },
+      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0, totalRecipients: allRecipients.length },
       createdBy: req.user._id
     };
     if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
@@ -196,11 +298,13 @@ router.post('/', async (req, res) => {
 
     const campaign = await Campaign.create(campaignPayload);
 
-    if (allRecipients.length > 0) {
+    const sendableCount = allRecipients.filter((r) => r.status === 'Pending').length;
+    if (sendableCount > 0) {
       dispatchCampaignJobs(campaign._id);
     }
 
-    res.status(201).json(campaign);
+    const campaignObj = campaign.toObject ? campaign.toObject() : campaign;
+    res.status(201).json({ ...campaignObj, skippedInvalidCount });
   } catch (err) {
     console.error('Create campaign error:', err);
     res.status(500).json({ error: err.message });
@@ -301,6 +405,8 @@ router.post('/:id/resend-filtered', async (req, res) => {
   try {
     const {
       recipientEmails,
+      statusFilter,
+      hideInvalid,
       filterLabel,
       titleOverride,
       senderMode,
@@ -310,23 +416,42 @@ router.post('/:id/resend-filtered', async (req, res) => {
       includeSignature,
     } = req.body;
 
-    if (!Array.isArray(recipientEmails) || recipientEmails.length === 0) {
-      return res.status(400).json({ error: 'recipientEmails required' });
-    }
-
     const resolved = await resolveCampaignByParam(req.params.id);
     if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
     const source = resolved.campaign;
 
-    const emailSet = new Set(recipientEmails.map((e) => String(e).toLowerCase().trim()).filter(Boolean));
-    const filteredRecipients = (source.recipients || [])
-      .filter((r) => emailSet.has((r.email || '').toLowerCase().trim()))
-      .map((r) => ({
-        leadId: r.leadId,
-        email: (r.email || '').toLowerCase().trim(),
-        name: r.name || '',
-        status: 'Pending',
-      }));
+    let filteredRecipients = [];
+
+    if (statusFilter && statusFilter !== 'all') {
+      let pool = (source.recipients || []).map((r) => annotateRecipient(
+        typeof r.toObject === 'function' ? r.toObject() : r
+      ));
+      if (hideInvalid) {
+        pool = pool.filter((r) => !r.invalidEmail);
+      }
+      pool = filterRecipientsByStatus(pool, String(statusFilter).toLowerCase());
+      filteredRecipients = pool
+        .filter((r) => isValidEmail(r.email))
+        .map((r) => ({
+          leadId: r.leadId,
+          email: normalizeEmail(r.email),
+          name: r.name || '',
+          status: 'Pending',
+        }));
+    } else if (Array.isArray(recipientEmails) && recipientEmails.length > 0) {
+      const emailSet = new Set(recipientEmails.map((e) => normalizeEmail(e)).filter(Boolean));
+      filteredRecipients = (source.recipients || [])
+        .filter((r) => emailSet.has(normalizeEmail(r.email)))
+        .filter((r) => isValidEmail(r.email))
+        .map((r) => ({
+          leadId: r.leadId,
+          email: normalizeEmail(r.email),
+          name: r.name || '',
+          status: 'Pending',
+        }));
+    } else {
+      return res.status(400).json({ error: 'recipientEmails or statusFilter required' });
+    }
 
     if (filteredRecipients.length === 0) {
       return res.status(400).json({ error: 'No matching recipients found in source campaign' });
@@ -397,6 +522,19 @@ router.post('/:id/resend-filtered', async (req, res) => {
   } catch (err) {
     console.error('Resend filtered campaign error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/stop', async (req, res) => {
+  try {
+    const resolved = await resolveCampaignByParam(req.params.id);
+    if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
+
+    const result = await stopCampaign(resolved.campaign._id);
+    res.json(result);
+  } catch (err) {
+    const status = err.message?.includes('Cannot stop') ? 400 : 500;
+    res.status(status).json({ error: err.message });
   }
 });
 

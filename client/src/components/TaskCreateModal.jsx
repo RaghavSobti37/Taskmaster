@@ -1,35 +1,38 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { X, CheckCircle2, Plus } from 'lucide-react';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
-import { addDays, format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
-import { useProjects } from '../hooks/useTaskmasterQueries';
+import { useCreateTask, useProjects } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
+import { computeDueDateFromStart, todayDateString } from '../utils/taskPriorityDates';
 import TaskFormFields from './forms/TaskFormFields';
-import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
+import { suppressAutoToasts } from '../lib/notifications';
 
 const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const createTaskMutation = useCreateTask();
 
   const { data: fetchedProjects = [] } = useProjects();
   const projects = passedProjects || fetchedProjects;
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [formValues, setFormValues] = useState({
-    priority: 'medium',
-    projectId: initialProjectId || '',
-    workspace: 'General',
-    assignees: user ? [user._id] : [],
-    dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-    scheduleDate: format(new Date(), 'yyyy-MM-dd'),
-    scheduleSlot: 'FULL',
-    type: '',
-  });
-  const [loading, setLoading] = useState(false);
+  const initialFormValues = () => {
+    const scheduleDate = todayDateString();
+    return {
+      priority: 'medium',
+      projectId: initialProjectId || '',
+      workspace: 'General',
+      assignees: user ? [user._id] : [],
+      scheduleDate,
+      dueDate: computeDueDateFromStart(scheduleDate, 'medium'),
+      dueDateManual: false,
+      scheduleSlot: 'FULL',
+      type: '',
+    };
+  };
+
+  const [formValues, setFormValues] = useState(initialFormValues);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -37,14 +40,9 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       setTitle('');
       setDesc('');
       setFormValues({
-        priority: 'medium',
+        ...initialFormValues(),
         projectId: initialProjectId || '',
         workspace: project?.workspace || 'General',
-        assignees: user ? [user._id] : [],
-        dueDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-        scheduleDate: format(new Date(), 'yyyy-MM-dd'),
-        scheduleSlot: 'FULL',
-        type: '',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,41 +57,31 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     suppressAutoToasts(5000);
-    setLoading(true);
-    try {
-      const res = await axios.post(
-        '/api/tasks',
-        {
-          title,
-          description: desc,
-          priority: formValues.priority,
-          type: normalizeTaskCategory(formValues.type),
-          workspace: formValues.workspace,
-          scheduleDate: formValues.scheduleDate || null,
-          scheduleSlot: formValues.scheduleSlot,
-          projectId: formValues.projectId || null,
-          assignees: formValues.assignees,
-          dueDate: formValues.dueDate || null,
-          status: 'todo',
-        },
-        AXIOS_SKIP_TOAST
-      );
-      if (onTaskCreated) onTaskCreated(res.data);
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-      onClose();
-    } catch (err) {
-      console.error('Error creating task:', err);
-    } finally {
-      setLoading(false);
-    }
+    const payload = {
+      title,
+      description: desc,
+      priority: formValues.priority,
+      type: normalizeTaskCategory(formValues.type),
+      workspace: formValues.workspace,
+      scheduleDate: formValues.scheduleDate || null,
+      scheduleSlot: formValues.scheduleSlot,
+      projectId: formValues.projectId || null,
+      assignees: formValues.assignees,
+      dueDate: formValues.dueDate || null,
+      status: 'todo',
+    };
+
+    createTaskMutation.mutate(payload, {
+      onSuccess: (created) => {
+        if (onTaskCreated) onTaskCreated(created);
+      },
+    });
+    onClose();
   };
 
   return (
@@ -133,10 +121,10 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           </button>
           <button
             type="submit"
-            disabled={loading || !title.trim()}
+            disabled={!title.trim()}
             className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
           >
-            <CheckCircle2 size={18} /> {loading ? 'Creating...' : 'Create Task'}
+            <CheckCircle2 size={18} /> Create Task
           </button>
         </ModalFooter>
       </form>

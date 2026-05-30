@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import axios from 'axios';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
+import { makePendingTask } from '../utils/pendingTask';
+import { getTaskQuerySnapshots, updateAllTaskQueries, restoreTaskQuerySnapshots } from '../utils/taskCache';
+import { globalToast } from '../lib/systemLogBridge';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -28,6 +31,23 @@ const fetchProjectById = async (id) => {
 const fetchTasks = async () => {
   const { data } = await axios.get('/api/tasks');
   return data;
+};
+
+const fetchDashboardTasks = async () => {
+  const { data } = await axios.get('/api/tasks', { params: { scope: 'dashboard' } });
+  return data;
+};
+
+const filterTasksForUser = (tasks, userId) => {
+  if (!userId) return tasks;
+  const resolveAssigneeId = (a) => {
+    if (typeof a === 'string') return a;
+    if (a?._id) return a._id;
+    if (a?.userId?._id) return a.userId._id;
+    if (a?.userId) return a.userId;
+    return null;
+  };
+  return tasks.filter((t) => t.assignees?.some((a) => resolveAssigneeId(a) === userId));
 };
 
 const fetchUserDirectory = async () => {
@@ -99,19 +119,25 @@ export const useTasks = (userId) => {
   return useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    select: (tasks) => {
-      if (!userId) return tasks;
-      const resolveAssigneeId = (a) => {
-        if (typeof a === 'string') return a;
-        if (a?._id) return a._id;
-        if (a?.userId?._id) return a.userId._id;
-        if (a?.userId) return a.userId;
-        return null;
-      };
-      return tasks.filter(t =>
-        t.assignees?.some(a => resolveAssigneeId(a) === userId)
-      );
-    }
+    placeholderData: keepPreviousData,
+    select: (tasks) => filterTasksForUser(tasks, userId),
+  });
+};
+
+export const useDashboardTasks = (userId) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    return subscribeToChannel('tasks', 'task_change', () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    });
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ['tasks', 'dashboard'],
+    queryFn: fetchDashboardTasks,
+    placeholderData: keepPreviousData,
+    select: (tasks) => filterTasksForUser(tasks, userId),
   });
 };
 
@@ -144,13 +170,15 @@ export const useCalendarEvents = () => {
         _id: ev._id,
         title: ev.title,
         description: ev.description,
-        dueDate: ev.date,
+        dueDate: ev.date || ev.dueDate,
         visibility: ev.visibility,
         createdBy: ev.createdBy,
         type: ev.type || 'event',
+        eventType: ev.eventType || 'event',
+        workspace: ev.workspace,
         status: ev.status,
         priority: ev.priority,
-        projectId: ev.projectId
+        projectId: ev.projectId,
       }));
       const googleEvents = googleRes.data.map(ev => ({
         _id: ev.id,
@@ -174,36 +202,47 @@ export const useProjectTasks = (projectId) => {
     queryFn: async () => (await axios.get(`/api/tasks?projectId=${projectId}`)).data,
     enabled: !!projectId,
     staleTime: 1000 * 60 * 2,
+    placeholderData: keepPreviousData,
   });
 };
 
-// Mutations with Zero-Latency Optimistic Updates
+// Mutations with optimistic updates + minimal refetch
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (newTask) => axios.post('/api/tasks', newTask),
+    mutationFn: async (newTask) => {
+      const { data } = await axios.post('/api/tasks', newTask);
+      return data;
+    },
     onMutate: async (newTask) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueryData(['tasks']);
-      if (previousTasks) {
-        queryClient.setQueryData(['tasks'], (old) => [
-          { _id: `temp-${Date.now()}`, createdAt: new Date().toISOString(), status: 'Todo', priority: 'Medium', ...newTask },
-          ...(old || [])
-        ]);
-      }
-      return { previousTasks };
+      const snapshots = getTaskQuerySnapshots(queryClient);
+      const tempId = `pending-task-${Date.now()}`;
+      const optimistic = makePendingTask(newTask, tempId);
+      updateAllTaskQueries(queryClient, (tasks) => [optimistic, ...(tasks || [])]);
+      return { snapshots, tempId };
     },
-    onError: (err, newTask, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks'], context.previousTasks);
+    onSuccess: (createdTask, _variables, context) => {
+      if (!context?.tempId) return;
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === context.tempId ? { ...createdTask, _pending: false } : t))
+      );
+    },
+    onError: (err, _variables, context) => {
+      restoreTaskQuerySnapshots(queryClient, context?.snapshots);
+      globalToast.addToast({
+        title: 'Create failed',
+        message: err.response?.data?.error || 'Could not create task',
+        type: 'error',
+        module: 'PROJECTS',
+      });
+    },
+    onSettled: (_data, error) => {
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+        queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    }
   });
 };
 
@@ -354,28 +393,39 @@ export const useUpdateProject = () => {
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => axios.put(`/api/tasks/${id}`, data),
+    mutationFn: async ({ id, data }) => {
+      const res = await axios.put(`/api/tasks/${id}`, data);
+      return res.data;
+    },
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const snapshots = queryClient.getQueriesData({ queryKey: ['tasks'] });
-      snapshots.forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          queryClient.setQueryData(key, value.map((t) => (t._id === id ? { ...t, ...data } : t)));
-        }
-      });
+      const snapshots = getTaskQuerySnapshots(queryClient);
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === id ? { ...t, ...data, _updating: true } : t))
+      );
       return { snapshots };
     },
-    onError: (err, variables, context) => {
-      context?.snapshots?.forEach(([key, value]) => {
-        queryClient.setQueryData(key, value);
+    onSuccess: (updatedTask) => {
+      if (!updatedTask?._id) return;
+      updateAllTaskQueries(queryClient, (tasks) =>
+        (tasks || []).map((t) => (t._id === updatedTask._id ? { ...updatedTask, _updating: false } : t))
+      );
+    },
+    onError: (err, _variables, context) => {
+      restoreTaskQuerySnapshots(queryClient, context?.snapshots);
+      globalToast.addToast({
+        title: 'Update failed',
+        message: err.response?.data?.error || 'Could not update task',
+        type: 'error',
+        module: 'PROJECTS',
       });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    }
+    onSettled: (_data, error) => {
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+        queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+      }
+    },
   });
 };
 
@@ -483,6 +533,25 @@ export const useCampaignDetails = (id) => {
     queryFn: async () => (await axios.get(`/api/campaigns/${id}`)).data,
     enabled: !!id,
     staleTime: 1000 * 30,
+  });
+};
+
+export const useCampaignRecipients = (id, { page = 1, limit = 25, status = 'all', hideInvalid = false } = {}) => {
+  return useQuery({
+    queryKey: ['campaign', id, 'recipients', page, limit, status, hideInvalid],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        status,
+        hideInvalid: hideInvalid ? 'true' : 'false',
+      });
+      const { data } = await axios.get(`/api/campaigns/${id}/recipients?${params}`);
+      return data;
+    },
+    enabled: !!id,
+    staleTime: 1000 * 15,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -625,8 +694,6 @@ export const useCreateCampaign = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
-      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
     }
   });
 };
@@ -651,9 +718,19 @@ export const useSendCampaign = () => {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', 'cumulative'] });
       queryClient.invalidateQueries({ queryKey: ['campaign', id] });
-      queryClient.invalidateQueries({ queryKey: ['mail', 'profiles'] });
+    }
+  });
+};
+
+export const useStopCampaign = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.post(`/api/campaigns/${id}/stop`),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['mail', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
     }
   });
 };
@@ -746,20 +823,33 @@ export const useArtists = () => {
   });
 };
 
-export const useArtist = (id) => {
+export const useArtist = (id, enabled = true) => {
   return useQuery({
     queryKey: ['artist', id],
     queryFn: async () => (await axios.get(`/api/artists/${id}`)).data,
-    enabled: !!id,
+    enabled: !!id && enabled,
     staleTime: 1000 * 60 * 5,
   });
 };
 
-export const useArtistAnalytics = (id, platform, timeframe = '30d') => {
+export const useArtistPreview = (id, token, enabled = true) => {
   return useQuery({
-    queryKey: [`artist-${platform}`, id, timeframe],
-    queryFn: async () => (await axios.get(`/api/artists/${id}/analytics/${platform}?timeframe=${timeframe}`)).data,
-    enabled: !!id && !!platform,
+    queryKey: ['artist-preview', id, token],
+    queryFn: async () => (await axios.get(`/api/artists/${id}/preview`, { params: { token } })).data,
+    enabled: !!id && !!token && enabled,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useArtistAnalytics = (id, platform, timeframe = '30d', accountId = null, enabled = true) => {
+  return useQuery({
+    queryKey: [`artist-${platform}`, id, timeframe, accountId],
+    queryFn: async () => {
+      const params = { timeframe };
+      if (accountId) params.accountId = accountId;
+      return (await axios.get(`/api/artists/${id}/analytics/${platform}`, { params })).data;
+    },
+    enabled: !!id && !!platform && enabled,
     staleTime: 1000 * 60 * 5,
   });
 };
@@ -819,7 +909,27 @@ export const useAddTrackedVideo = () => {
       queryClient.invalidateQueries({ queryKey: ['artists'] });
       queryClient.invalidateQueries({ queryKey: ['artist', id] });
       queryClient.invalidateQueries({ queryKey: ['artist-youtube', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-spotify', id] });
+      queryClient.invalidateQueries({ queryKey: ['artist-instagram', id] });
     }
+  });
+};
+
+export const useCreateShareLink = () => {
+  return useMutation({
+    mutationFn: (id) => axios.post(`/api/artists/${id}/share-link`).then((r) => r.data),
+  });
+};
+
+export const useSetPrimaryConnection = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artistId, connectionId }) =>
+      axios.put(`/api/artists/${artistId}/connections/${connectionId}/primary`).then((r) => r.data),
+    onSuccess: (_data, { artistId }) => {
+      queryClient.invalidateQueries({ queryKey: ['artist', artistId] });
+      queryClient.invalidateQueries({ queryKey: ['artists'] });
+    },
   });
 };
 
@@ -1037,6 +1147,49 @@ export const useDepartments = (publicOnly = false) => {
     queryKey: ['departments', { publicOnly }],
     queryFn: async () => (await axios.get(publicOnly ? '/api/departments/public' : '/api/departments')).data,
     staleTime: 1000 * 60 * 10
+  });
+};
+
+export const useCreateDepartment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => axios.post('/api/departments', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
+  });
+};
+
+export const useUpdateDepartment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.patch(`/api/departments/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const useDeleteDepartment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.delete(`/api/departments/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
+  });
+};
+
+export const useDepartmentMonthlyReport = (departmentId, month, enabled = true) => {
+  return useQuery({
+    queryKey: ['departmentMonthlyReport', departmentId, month],
+    queryFn: async () => (await axios.get(`/api/departments/${departmentId}/monthly-report`, { params: { month } })).data,
+    enabled: enabled && !!departmentId && !!month,
+  });
+};
+
+export const useTeamMonthlyReport = (month, enabled = true) => {
+  return useQuery({
+    queryKey: ['teamMonthlyReport', month],
+    queryFn: async () => (await axios.get('/api/departments/team/monthly-report', { params: { month } })).data,
+    enabled: enabled && !!month,
   });
 };
 

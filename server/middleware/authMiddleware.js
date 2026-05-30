@@ -2,7 +2,13 @@ const jwt = require('jsonwebtoken');
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
 const Department = require('../models/Department');
-const { runWithContext } = require('../utils/tenantContext');
+const { runWithContext, getTraceId } = require('../utils/tenantContext');
+
+const authContext = (req, user) => ({
+  tenantId: user.tenantId,
+  userId: user._id?.toString?.() || user._id,
+  traceId: req.traceId || getTraceId(),
+});
 const {
   isAdminUser,
   isOpsUser,
@@ -11,7 +17,21 @@ const {
 } = require('../utils/departmentPermissions');
 
 const populateDepartment = (query) =>
-  query.populate('departmentId', 'name slug color signupAllowed');
+  query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
+
+const lastOnlineWrites = new Map();
+const LAST_ONLINE_INTERVAL_MS = 5 * 60 * 1000;
+
+const touchLastOnline = (userId) => {
+  const key = userId.toString();
+  const now = Date.now();
+  const lastWrite = lastOnlineWrites.get(key) || 0;
+  if (now - lastWrite < LAST_ONLINE_INTERVAL_MS) return;
+  lastOnlineWrites.set(key, now);
+  User.findByIdAndUpdate(userId, {
+    $set: { lastOnline: new Date(), online: true },
+  }).catch(() => {});
+};
 
 const protect = async (req, res, next) => {
   let token;
@@ -37,7 +57,7 @@ const protect = async (req, res, next) => {
       if (adminUser) {
         req.user = adminUser;
         req.tenantId = adminUser.tenantId;
-        return runWithContext({ tenantId: adminUser.tenantId, userId: adminUser._id }, next);
+        return runWithContext(authContext(req, adminUser), next);
       }
       return res.status(503).json({ error: 'No admin user available for bypass' });
     }
@@ -76,12 +96,10 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ error: 'User no longer exists' });
     }
 
-    await User.findByIdAndUpdate(req.user._id, {
-      $set: { lastOnline: new Date(), online: true },
-    });
+    touchLastOnline(req.user._id);
 
     req.tenantId = req.user.tenantId;
-    runWithContext({ tenantId: req.user.tenantId, userId: req.user._id }, next);
+    runWithContext(authContext(req, req.user), next);
   } catch (error) {
     res.status(401).json({ error: 'Not authorized, token failed' });
   }

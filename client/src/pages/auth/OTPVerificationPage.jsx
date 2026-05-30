@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, ArrowRight, Check, Copy, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import { useToast } from '../../contexts/ToastContext';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
 
 const OTPVerificationPage = () => {
   const [verificationMode, setVerificationMode] = useState('email'); // 'email' or 'phone'
@@ -14,7 +15,7 @@ const OTPVerificationPage = () => {
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const { addToast } = useToast();
+  const { addToast } = useSystemToast();
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -33,14 +34,16 @@ const OTPVerificationPage = () => {
       addToast({
         title: 'OTP Sent',
         message: `Verification code sent to your ${verificationMode}.`,
-        type: 'success'
+        type: 'success',
+        module: MODULE.AUTH,
       });
     } catch (err) {
       setError(err.response?.data?.error || `Failed to send OTP to ${verificationMode}`);
       addToast({
         title: 'Error',
-        message: error,
-        type: 'error'
+        message: err.response?.data?.error || `Failed to send OTP to ${verificationMode}`,
+        type: 'error',
+        module: MODULE.AUTH,
       });
     } finally {
       setLoading(false);
@@ -64,7 +67,8 @@ const OTPVerificationPage = () => {
       addToast({
         title: 'Verified',
         message: 'Your identity has been verified successfully.',
-        type: 'success'
+        type: 'success',
+        module: MODULE.AUTH,
       });
 
       // Could redirect or store verification state
@@ -75,8 +79,9 @@ const OTPVerificationPage = () => {
       setError(err.response?.data?.error || 'Invalid OTP. Please try again.');
       addToast({
         title: 'Verification Failed',
-        message: error,
-        type: 'error'
+        message: err.response?.data?.error || 'Invalid OTP. Please try again.',
+        type: 'error',
+        module: MODULE.AUTH,
       });
     } finally {
       setLoading(false);

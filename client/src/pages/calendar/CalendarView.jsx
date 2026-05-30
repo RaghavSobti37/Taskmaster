@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, Clock, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, Clock, CheckSquare } from 'lucide-react';
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
@@ -11,6 +11,7 @@ import {
   Button
 } from '../../components/ui';
 import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
+import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
 
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -19,6 +20,9 @@ const CalendarView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showHolidays, setShowHolidays] = useState(true);
+  const [showInternal, setShowInternal] = useState(true);
+  const [showPublic, setShowPublic] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
   const [selectedDay, setSelectedDay] = useState(new Date());
 
   const loading = eventsLoading && calendarEvents.length === 0;
@@ -52,28 +56,47 @@ const CalendarView = () => {
   };
 
   const allEvents = useMemo(() => {
-    const combined = [...calendarEvents];
+    const filtered = calendarEvents.filter((e) => {
+      if (e.type === 'task') return showTasks;
+      if (e.type === 'google') return showInternal;
+      if (e.visibility === 'public') return showPublic;
+      return showInternal;
+    });
+    const combined = [...filtered];
     if (showHolidays) combined.push(...holidays);
     return combined;
-  }, [calendarEvents, holidays, showHolidays]);
+  }, [calendarEvents, holidays, showHolidays, showInternal, showPublic, showTasks]);
 
   const getEventsForDay = (day) => allEvents.filter(e => {
     const d = parseLocalDate(e.dueDate);
     return d && isSameDay(d, day);
   });
 
+  const EVENT_PILL_COLOR = 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border-[var(--color-pastel-rose-text)]/20';
+
+  const TASK_PILL_COLOR = 'bg-[var(--color-pastel-slate-bg)] text-[var(--color-pastel-slate-text)] border-[var(--color-pastel-slate-text)]/25';
+
   const getEventStyle = (event) => {
     if (event.type === 'holiday') {
-      return 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border-[var(--color-pastel-rose-text)]/20';
+      return EVENT_PILL_COLOR;
+    }
+    if (event.type === 'task') {
+      return TASK_PILL_COLOR;
     }
     if (event.visibility === 'public') {
       return 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border-[var(--color-pastel-mint-text)]/20';
     }
-    return 'bg-[var(--color-pastel-info-bg)] text-[var(--color-pastel-info-text)] border-[var(--color-pastel-info-text)]/20';
+    return EVENT_PILL_COLOR;
   };
+
+  const eventPillClass = (event, compact = false) =>
+    compact
+      ? `px-1.5 py-0.5 text-[8px] font-bold uppercase truncate border rounded-lg flex items-center gap-1 cursor-pointer hover:opacity-90 ${getEventStyle(event)}`
+      : `px-2.5 py-2 text-[9px] font-bold uppercase border rounded-lg flex items-start gap-2 cursor-pointer hover:opacity-90 ${getEventStyle(event)}`;
 
   const getDotColor = (event) => {
     if (event.type === 'holiday') return 'bg-rose-500';
+    if (event.type === 'task') return 'bg-zinc-300';
     if (event.visibility === 'public') return 'bg-emerald-500';
     return 'bg-blue-500';
   };
@@ -153,20 +176,20 @@ const CalendarView = () => {
       ) : selectedDayEvents.length === 0 ? (
         <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-4">No events on this day</p>
       ) : (
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
           {selectedDayEvents.map((event, idx) => (
             <div
               key={`${event._id}_${idx}`}
-              className={`px-2.5 py-2 text-[9px] font-bold uppercase border rounded-lg flex items-start gap-2 cursor-pointer hover:opacity-90 ${getEventStyle(event)}`}
+              className={eventPillClass(event)}
               onClick={() => {
-                if (event.type !== 'holiday') {
-                  setEditingEvent(event);
-                  setIsModalOpen(true);
-                }
+                if (event.type === 'holiday' || event.type === 'task') return;
+                setEditingEvent(event);
+                setIsModalOpen(true);
               }}
             >
               {event.type === 'holiday' && <span>🇮🇳</span>}
               <div className="min-w-0 flex-1">
+                <p className="text-[8px] font-black opacity-70 normal-case">{getCalendarEventTypeLabel(event)}</p>
                 <p className="truncate">{event.title}</p>
                 {event.dueDate && event.dueDate.includes('T') && (
                   <p className="text-[8px] opacity-70 flex items-center gap-1 mt-0.5 normal-case">
@@ -184,15 +207,7 @@ const CalendarView = () => {
   return (
     <PageContainer className="!py-4 !space-y-4 flex flex-col min-h-[calc(100vh-6rem)]">
       <PageHeader
-        title="Calendar"
-        subtitle="Schedule meetings, follow-ups, and track holidays."
-        icon={CalendarDays}
-        actions={
-          <div className="flex items-center gap-2">
-             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>
-             <Button size="sm" onClick={() => { setEditingEvent(null); setIsModalOpen(true); }}><Plus size={14} /> Create Event</Button>
-          </div>
-        }
+        
       />
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
@@ -202,19 +217,35 @@ const CalendarView = () => {
            <Card className="p-4 space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Calendar Filters</h4>
               <div className="space-y-2">
-                 <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer">
+                 <div
+                   className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer"
+                   onClick={() => setShowInternal(!showInternal)}
+                 >
                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded bg-blue-500" />
+                       <div className={`w-3 h-3 rounded border border-blue-500 ${showInternal ? 'bg-blue-500' : 'bg-transparent'}`} />
                        <span className="text-[10px] font-bold uppercase">Internal Events</span>
                     </div>
-                    <Lock size={10} className="text-[var(--color-text-muted)]" />
+                    <Lock size={10} className={showInternal ? 'text-blue-500' : 'text-[var(--color-text-muted)]'} />
                  </div>
-                 <div className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer">
+                 <div
+                   className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer"
+                   onClick={() => setShowPublic(!showPublic)}
+                 >
                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded bg-emerald-500" />
+                       <div className={`w-3 h-3 rounded border border-emerald-500 ${showPublic ? 'bg-emerald-500' : 'bg-transparent'}`} />
                        <span className="text-[10px] font-bold uppercase">Public Visibility</span>
                     </div>
-                    <Globe size={10} className="text-[var(--color-text-muted)]" />
+                    <Globe size={10} className={showPublic ? 'text-emerald-500' : 'text-[var(--color-text-muted)]'} />
+                 </div>
+                 <div
+                   className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer"
+                   onClick={() => setShowTasks(!showTasks)}
+                 >
+                    <div className="flex items-center gap-3">
+                       <div className={`w-3 h-3 rounded border border-zinc-300 ${showTasks ? 'bg-zinc-300' : 'bg-transparent'}`} />
+                       <span className="text-[10px] font-bold uppercase">Tasks</span>
+                    </div>
+                    <CheckSquare size={10} className={showTasks ? 'text-zinc-300' : 'text-[var(--color-text-muted)]'} />
                  </div>
                  <div 
                    className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer"
@@ -241,6 +272,13 @@ const CalendarView = () => {
                     </div>
                     <h3 className="text-xs font-black uppercase tracking-tight ml-2">{format(currentMonth, 'MMMM yyyy')}</h3>
                  </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>
+             <Button size="sm" onClick={() => { setEditingEvent(null); setIsModalOpen(true); }}><Plus size={14} /> Create Event</Button>
+          </div>
+          </div>
               </div>
 
               <div className="grid grid-cols-7 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/30 shrink-0">
@@ -284,18 +322,17 @@ const CalendarView = () => {
                             {visibleEvents.map((event, eIdx) => (
                               <div 
                                 key={`${event._id}_${eIdx}`}
-                                className={`px-1.5 py-0.5 text-[8px] font-black uppercase truncate border rounded-sm flex items-center gap-1 ${getEventStyle(event)}`}
+                                className={eventPillClass(event, true)}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedDay(day);
-                                  if (event.type !== 'holiday') {
-                                    setEditingEvent(event);
-                                    setIsModalOpen(true);
-                                  }
+                                  if (event.type === 'holiday' || event.type === 'task') return;
+                                  setEditingEvent(event);
+                                  setIsModalOpen(true);
                                 }}
                               >
                                  {event.type === 'holiday' && <span>🇮🇳</span>}
-                                 <span className="truncate">{event.title}</span>
+                                 <span className="truncate">{getCalendarEventTypeLabel(event)} · {event.title}</span>
                               </div>
                             ))}
                             {hiddenCount > 0 && (

@@ -8,6 +8,7 @@ import TaskCategorySelect from './TaskCategorySelect';
 import NexusDropdown from '../ui/NexusDropdown';
 import { SLOT_OPTIONS } from '../../constants/taskOptions';
 import { normalizeTaskCategory } from '../../constants/taskOptions';
+import { computeDueDateFromStart, todayDateString } from '../../utils/taskPriorityDates';
 
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 const fieldInputClass =
@@ -34,6 +35,29 @@ const TaskFormFields = ({
   showDescription = false,
 }) => {
   const set = (field, val) => onChange({ ...values, [field]: val });
+
+  const resolveStartDate = () => values.scheduleDate || todayDateString();
+
+  const syncDueFromPriorityStart = (nextValues, { clearManualOverride = true } = {}) => {
+    const start = nextValues.scheduleDate || resolveStartDate();
+    return {
+      ...nextValues,
+      dueDate: computeDueDateFromStart(start, nextValues.priority),
+      ...(clearManualOverride ? { dueDateManual: false } : {}),
+    };
+  };
+
+  const handlePriorityChange = (priority) => {
+    onChange(syncDueFromPriorityStart({ ...values, priority }));
+  };
+
+  const handleScheduleDateChange = (scheduleDate) => {
+    onChange(syncDueFromPriorityStart({ ...values, scheduleDate: scheduleDate || todayDateString() }));
+  };
+
+  const handleDueDateChange = (dueDate) => {
+    onChange({ ...values, dueDate, dueDateManual: true });
+  };
 
   const handleWorkspaceChange = (workspace) => {
     const ws = String(workspace || 'General').toUpperCase();
@@ -115,7 +139,7 @@ const TaskFormFields = ({
           />
           <PrioritySelect
             value={values.priority}
-            onChange={(priority) => set('priority', priority)}
+            onChange={handlePriorityChange}
             disabled={disabled}
           />
         </div>
@@ -124,7 +148,7 @@ const TaskFormFields = ({
       {!showAssignees && (
         <PrioritySelect
           value={values.priority}
-          onChange={(priority) => set('priority', priority)}
+          onChange={handlePriorityChange}
           disabled={disabled}
         />
       )}
@@ -156,7 +180,7 @@ const TaskFormFields = ({
                 type="date"
                 value={values.scheduleDate || ''}
                 disabled={disabled || timelineDisabled}
-                onChange={(e) => set('scheduleDate', e.target.value)}
+                onChange={(e) => handleScheduleDateChange(e.target.value)}
                 className={fieldInputClass}
               />
             </div>
@@ -167,7 +191,7 @@ const TaskFormFields = ({
               type="date"
               value={values.dueDate || ''}
               disabled={disabled || timelineDisabled}
-              onChange={(e) => set('dueDate', e.target.value)}
+              onChange={(e) => handleDueDateChange(e.target.value)}
               className={fieldInputClass}
             />
           </div>

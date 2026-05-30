@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const CalendarEvent = require('../models/CalendarEvent');
 const Task = require('../models/Task');
+const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
@@ -11,52 +12,71 @@ const GamificationService = require('../services/gamificationService');
 
 router.use(protect);
 
+async function getUserProjectIds(userId) {
+  const projects = await Project.find({ members: userId }).select('_id').lean();
+  return projects.map((p) => p._id);
+}
+
+async function getAssignedTaskIds(userId) {
+  const rows = await TaskAssignment.find({ userId }).select('taskId').lean();
+  return rows.map((r) => r.taskId);
+}
+
 // GET /api/calendar — fetch all events visible to current user
-// Returns: public events from everyone + private events from current user
 router.get('/', async (req, res) => {
   try {
-    // Default to -30 days to +60 days if bounds aren't provided
     const now = new Date();
     const startDate = req.query.start ? new Date(req.query.start) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const endDate = req.query.end ? new Date(req.query.end) : new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+    const userProjectIds = await getUserProjectIds(req.user._id);
 
     const eventQuery = {
       date: { $gte: startDate, $lte: endDate },
       $or: [
         { visibility: 'public' },
-        { createdBy: req.user._id }
-      ]
+        { createdBy: req.user._id },
+        ...(userProjectIds.length
+          ? [{ visibility: 'project', projectId: { $in: userProjectIds } }]
+          : []),
+      ],
     };
 
     const events = await CalendarEvent.find(eventQuery)
-    .populate('createdBy', 'name avatar')
-    .lean();
+      .populate('createdBy', 'name avatar')
+      .populate('projectId', 'name workspace')
+      .lean();
+
+    const assignedTaskIds = await getAssignedTaskIds(req.user._id);
+    const taskOr = [{ createdBy: req.user._id }];
+    if (assignedTaskIds.length) {
+      taskOr.push({ _id: { $in: assignedTaskIds } });
+    }
 
     const taskQuery = {
       dueDate: { $gte: startDate, $lte: endDate, $ne: null },
       status: { $ne: 'done' },
-      $or: [
-        { createdBy: req.user._id },
-        { assignees: req.user._id }
-      ]
+      $or: taskOr,
     };
 
     const tasks = await Task.find(taskQuery).populate('createdBy', 'name avatar').lean();
 
-    const taskEvents = tasks.map(t => ({
+    const taskEvents = tasks.map((t) => ({
       _id: t._id,
       title: `[Task] ${t.title}`,
       description: t.description || '',
       date: t.dueDate,
+      dueDate: t.dueDate,
       visibility: 'private',
       createdBy: t.createdBy,
       type: 'task',
+      eventType: 'event',
       status: t.status,
       priority: t.priority,
-      projectId: t.projectId
+      projectId: t.projectId,
     }));
 
-    const combined = [...events, ...taskEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const combined = [...events, ...taskEvents].sort((a, b) => new Date(a.date || a.dueDate) - new Date(b.date || b.dueDate));
     res.json(combined);
   } catch (err) {
     console.error('Error fetching calendar events:', err);
@@ -67,10 +87,14 @@ router.get('/', async (req, res) => {
 // POST /api/calendar — create new calendar event
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, visibility } = req.body;
+    const { title, description, date, visibility, eventType, workspace, projectId } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
+    }
+
+    if (visibility === 'project' && !projectId) {
+      return res.status(400).json({ error: 'Project is required for project-related visibility' });
     }
 
     const inputDate = new Date(date);
@@ -86,24 +110,28 @@ router.post('/', async (req, res) => {
       title,
       description: description || '',
       date,
+      eventType: eventType || 'event',
       visibility: visibility || 'private',
-      createdBy: req.user._id
+      workspace: visibility === 'project' ? workspace || 'General' : '',
+      projectId: visibility === 'project' ? projectId : null,
+      createdBy: req.user._id,
     });
 
-    const populated = await event.populate('createdBy', 'name avatar');
+    const populated = await CalendarEvent.findById(event._id)
+      .populate('createdBy', 'name avatar')
+      .populate('projectId', 'name workspace');
 
-    // Send email notification for public events
     if (visibility === 'public') {
       try {
         const allUsers = await User.find({ email: { $exists: true, $ne: '' } }, 'email name');
-        const eventDate = new Date(date).toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        const eventDate = new Date(date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
         });
-        
-        const emailPromises = allUsers.map(user => 
+
+        const emailPromises = allUsers.map((user) =>
           dispatchEmailPayload({
             to: user.email,
             subject: `📅 New Public Event: ${title}`,
@@ -114,57 +142,27 @@ router.post('/', async (req, res) => {
                 <p><strong>Created by:</strong> ${populated.createdBy.name}</p>
                 ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
                 <p>
-                  <a href="${process.env.CLIENT_URL || 'https://taskmaster.app'}/calendar" 
+                  <a href="${process.env.CLIENT_URL || 'https://taskmaster.app'}/calendar"
                      style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     View Event
                   </a>
                 </p>
               </div>
             `,
-            from: 'events@taskmaster.io'
-          }).catch(err => console.error(`Failed to send event email to ${user.email}:`, err))
+            from: 'events@taskmaster.io',
+          }).catch((err) => console.error(`Failed to send event email to ${user.email}:`, err))
         );
-        
+
         await Promise.all(emailPromises);
-        console.log(`✅ Public event emails sent to ${allUsers.length} users`);
       } catch (emailErr) {
         console.error('Error sending public event emails:', emailErr);
-        // Don't fail the event creation if emails fail
       }
     }
+
     await GamificationService.awardActionXp(req.user._id, 'CALENDAR_EVENT_CREATED', {
       eventId: event._id,
-      visibility: visibility || 'private'
+      visibility: visibility || 'private',
     });
-
-    // Also create a task for this event
-    try {
-      // Find or create "Google Calendar" project
-      let project = await Project.findOne({ name: 'Google Calendar' });
-      if (!project) {
-        project = await Project.create({
-          name: 'Google Calendar',
-          description: 'Tasks synced from calendar inputs',
-          outletId: 'SYSTEM', // System-level project
-          owner: req.user._id,
-          status: 'active'
-        });
-      }
-
-      await Task.create({
-        title: title,
-        description: description || 'Calendar Event',
-        projectId: project._id,
-        dueDate: date,
-        createdBy: req.user._id,
-        assignees: [req.user._id],
-        status: 'todo',
-        priority: 'medium'
-      });
-    } catch (taskErr) {
-      console.error('Failed to create task for calendar event:', taskErr);
-      // We don't fail the event creation if task creation fails
-    }
 
     res.status(201).json(populated);
   } catch (err) {
@@ -182,7 +180,7 @@ router.put('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this event' });
     }
 
-    const { title, description, date, visibility } = req.body;
+    const { title, description, date, visibility, eventType, workspace, projectId } = req.body;
     if (date) {
       const inputDate = new Date(date);
       inputDate.setHours(0, 0, 0, 0);
@@ -195,10 +193,22 @@ router.put('/:id', async (req, res) => {
     }
     if (title) event.title = title;
     if (description !== undefined) event.description = description;
-    if (visibility) event.visibility = visibility;
+    if (eventType) event.eventType = eventType;
+    if (visibility) {
+      event.visibility = visibility;
+      if (visibility === 'project') {
+        event.workspace = workspace || 'General';
+        event.projectId = projectId || null;
+      } else {
+        event.workspace = '';
+        event.projectId = null;
+      }
+    }
 
     await event.save();
-    const populated = await event.populate('createdBy', 'name avatar');
+    const populated = await CalendarEvent.findById(event._id)
+      .populate('createdBy', 'name avatar')
+      .populate('projectId', 'name workspace');
     res.json(populated);
   } catch (err) {
     console.error('Error updating calendar event:', err);

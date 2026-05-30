@@ -27,7 +27,8 @@ const campaignSchema = new mongoose.Schema({
     contentType: String,
     storageKey: String
   }],
-  status: { type: String, enum: ['Draft', 'Queued', 'Sending', 'Completed', 'Failed'], default: 'Draft' },
+  status: { type: String, enum: ['Draft', 'Queued', 'Sending', 'Stopped', 'Completed', 'Failed'], default: 'Draft' },
+  stoppedAt: { type: Date },
   eventTag: { type: String, index: true }, // Ties campaign metrics back to events
   sentAt: { type: Date, default: Date.now },
   metrics: {
@@ -49,7 +50,7 @@ const campaignSchema = new mongoose.Schema({
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     email: String,
     name: String,
-    status: { type: String, enum: ['Pending', 'Queued', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Queued', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid', 'Cancelled'], default: 'Pending' },
     sentAt: Date,
     error: String,
     messageId: String

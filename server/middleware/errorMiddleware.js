@@ -1,3 +1,5 @@
+const { logFromError } = require('../services/systemLogService');
+
 const errorHandler = (err, req, res, next) => {
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   let message = err.message;
@@ -17,7 +19,6 @@ const errorHandler = (err, req, res, next) => {
     message = 'Request entity too large. Reduce HTML size, remove inline images, or upload attachments separately.';
   }
 
-  // Structured error logging
   const errorLog = {
     timestamp: new Date().toISOString(),
     route: req.originalUrl,
@@ -25,15 +26,21 @@ const errorHandler = (err, req, res, next) => {
     userId: req.user ? req.user._id : 'unauthenticated',
     error: message,
     errors,
-    status: statusCode
+    status: statusCode,
+    traceId: req.traceId,
   };
-  
+
   if (statusCode >= 500) {
     errorLog.stack = err.stack;
     console.error('[ERROR_MIDDLEWARE] Server Error:', JSON.stringify(errorLog, null, 2));
   } else {
     console.log(`[CLIENT_ERROR] Route: ${req.method} ${req.originalUrl} | Status: ${statusCode} | Message: ${message}`);
   }
+
+  logFromError(req, err, {
+    statusCode,
+    userVisible: true,
+  });
 
   res.status(statusCode).json({
     success: false,
@@ -42,9 +49,9 @@ const errorHandler = (err, req, res, next) => {
     code: err.name || 'ServerError',
     path: req.originalUrl,
     timestamp: new Date().toISOString(),
-    stack: process.env.NODE_ENV === 'production' ? null : (statusCode >= 500 ? err.stack : null)
+    traceId: req.traceId,
+    stack: process.env.NODE_ENV === 'production' ? null : (statusCode >= 500 ? err.stack : null),
   });
 };
-
 
 module.exports = errorHandler;

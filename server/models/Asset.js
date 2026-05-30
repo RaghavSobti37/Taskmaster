@@ -19,8 +19,13 @@ const assetSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['drive', 'sheet', 'presentation', 'docs', 'meet', 'other'],
+    enum: ['drive', 'sheet', 'presentation', 'docs', 'meet', 'zoom', 'other'],
     default: 'other'
+  },
+  notes: {
+    type: String,
+    trim: true,
+    default: ''
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

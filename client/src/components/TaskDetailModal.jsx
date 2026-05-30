@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
 import { NexusModal, ModalShell, ModalFooter, Button } from './ui';
-import { globalToast } from '../contexts/ToastContext';
-import { useProjects } from '../hooks/useTaskmasterQueries';
+import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
 import { isAdminUser } from '../utils/departmentPermissions';
@@ -13,6 +12,7 @@ import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate }) => {
   const { user } = useAuth();
   const { data: projects = [] } = useProjects();
+  const updateTaskMutation = useUpdateTask();
   const [title, setTitle] = useState(task?.title || '');
   const [desc, setDesc] = useState(task?.description || '');
   const [formValues, setFormValues] = useState({
@@ -25,8 +25,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     scheduleDate: task?.scheduleDate ? new Date(task.scheduleDate).toISOString().split('T')[0] : '',
     assignees: task?.assignees?.map((a) => (typeof a === 'object' ? a._id : a)) || [],
     dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+    dueDateManual: true,
   });
-  const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const assignedById = task?.assignments?.[0]?.assignedBy?._id || task?.assignments?.[0]?.assignedBy || task?.assignedBy?._id || task?.assignedBy;
@@ -47,6 +47,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         scheduleDate: task.scheduleDate ? new Date(task.scheduleDate).toISOString().split('T')[0] : '',
         assignees: task.assignees?.map((a) => (typeof a === 'object' ? a._id : a)) || [],
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+        dueDateManual: true,
       });
     }
   }, [task]);
@@ -58,14 +59,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     if (onUpdate) onUpdate(data);
   };
 
-  const handleSubmit = async (e, reviewAction) => {
-    if (e) e.preventDefault();
+  const submitUpdate = (reviewAction) => {
     suppressAutoToasts(5000);
-    setLoading(true);
-    try {
-      const res = await axios.put(
-        `/api/tasks/${task._id}`,
-        {
+    updateTaskMutation.mutate(
+      {
+        id: task._id,
+        data: {
           title,
           description: desc,
           status: reviewAction ? undefined : formValues.status,
@@ -78,15 +77,15 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
           dueDate: formValues.dueDate || null,
           reviewAction,
         },
-        AXIOS_SKIP_TOAST
-      );
-      notifyUpdate(res.data);
-      onClose();
-    } catch (err) {
-      globalToast.addToast({ title: 'Error', message: err.response?.data?.error || 'Update failed', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
+      },
+      { onSuccess: (data) => notifyUpdate(data) }
+    );
+    onClose();
+  };
+
+  const handleSubmit = (e, reviewAction) => {
+    if (e) e.preventDefault();
+    submitUpdate(reviewAction);
   };
 
   const handleDelete = async () => {
@@ -149,10 +148,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
 
             {isInReview && canReview && (
               <div className="flex gap-3 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5">
-                <Button type="button" variant="primary" size="sm" onClick={(e) => handleSubmit(e, 'approve')} disabled={loading}>
+                <Button type="button" variant="primary" size="sm" onClick={(e) => handleSubmit(e, 'approve')}>
                   <Check size={14} className="mr-1" /> Approve & Close
                 </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={(e) => handleSubmit(e, 'rollback')} disabled={loading}>
+                <Button type="button" variant="secondary" size="sm" onClick={(e) => handleSubmit(e, 'rollback')}>
                   <RotateCcw size={14} className="mr-1" /> Rollback
                 </Button>
               </div>
@@ -178,7 +177,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               {!isDone && !isInReview && (
                 <button
                   type="submit"
-                  disabled={loading || !title}
+                  disabled={!title}
                   className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
                 >
                   <CheckCircle2 size={18} /> Save

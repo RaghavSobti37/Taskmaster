@@ -2,8 +2,18 @@ const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const TaskService = require('../services/TaskService');
+const { createNotification } = require('../services/notificationDispatcher');
+const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+
+const dispatchTaskNotifications = (payloads = []) => {
+  for (const payload of payloads) {
+    createNotification(payload).catch((err) => {
+      logger.error('Task', 'Deferred notification failed', { error: err.message });
+    });
+  }
+};
 
 const ALLOWED_CREATE = [
   'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
@@ -36,11 +46,12 @@ exports.createTask = async (req, res, next) => {
       taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
     }
 
-    const taskDto = await TaskService.createTask(taskData, req.user, session);
-    
+    const { taskDto, pendingNotifications } = await TaskService.createTask(taskData, req.user, session);
+
     await session.commitTransaction();
     session.endSession();
 
+    dispatchTaskNotifications(pendingNotifications);
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
@@ -53,23 +64,41 @@ exports.createTask = async (req, res, next) => {
 
 exports.getTasks = async (req, res, next) => {
   try {
-    const { projectId } = req.query;
+    const { projectId, scope } = req.query;
     const filter = {};
 
     if (projectId) {
       filter.projectId = projectId;
     } else {
       if (!isAdminUser(req.user)) {
-        // Find tasks where user is assignee via TaskAssignment
         const TaskAssignment = require('../models/TaskAssignment');
         const assignments = await TaskAssignment.find({ userId: req.user._id }).lean();
         const taskIds = assignments.map(a => a.taskId);
-        
+
         filter.$or = [
           { createdBy: req.user._id },
           { _id: { $in: taskIds } }
         ];
       }
+    }
+
+    if (scope === 'dashboard') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+      filter.status = { $nin: ['done', 'in-review'] };
+      filter.$expr = {
+        $let: {
+          vars: { taskDay: { $ifNull: ['$scheduleDate', '$dueDate'] } },
+          in: {
+            $and: [
+              { $ne: ['$$taskDay', null] },
+              { $lt: ['$$taskDay', tomorrow] },
+            ],
+          },
+        },
+      };
     }
 
     const tasksDto = await TaskService.getTasks(filter);
@@ -174,11 +203,12 @@ exports.reportBug = async (req, res, next) => {
       createdBy: req.user._id
     };
 
-    const taskDto = await TaskService.createTask(taskData, req.user, session);
+    const { taskDto, pendingNotifications } = await TaskService.createTask(taskData, req.user, session);
 
     await session.commitTransaction();
     session.endSession();
 
+    dispatchTaskNotifications(pendingNotifications);
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);

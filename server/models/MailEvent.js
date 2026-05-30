@@ -21,6 +21,8 @@ const MailEventSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 MailEventSchema.index({ 'location.country': 1, 'location.city': 1 });
+MailEventSchema.index({ campaignId: 1, timestamp: -1 });
+MailEventSchema.index({ campaignId: 1, eventType: 1, timestamp: -1 });
 
 MailEventSchema.plugin(tenantPlugin);
 

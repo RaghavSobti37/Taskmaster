@@ -1,27 +1,60 @@
 import React, { useState, useMemo } from 'react';
-import { format, isSameDay, startOfYear, endOfYear, eachDayOfInterval, subDays } from 'date-fns';
+import { format, isSameDay, eachDayOfInterval } from 'date-fns';
+
+const ACTIVITY_GRID_START = new Date(2026, 4, 12); // 12 May 2026
 import {
   Calendar as CalIcon, CheckCircle2, Clock, ChevronLeft,
   ChevronRight, Plus, Send, Timer, Zap, Target,
-  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen
+  Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, History, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Badge, NexusModal, NexusDropdown, PageHeader, Card, 
-  PageContainer, Button, Input, StatCard 
+  PageContainer, Button, Input, StatCard, TabSwitcher
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useSearchParams } from 'react-router-dom';
+import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
   useLogs, useProjects, useTasks, useUserDirectory, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
 
+const parseLogMinutes = (raw = '') => {
+  const str = String(raw || '').trim().toLowerCase();
+  if (!str) return 0;
+  let total = 0;
+  const hours = str.match(/(\d+(?:\.\d+)?)\s*h/);
+  const mins = str.match(/(\d+)\s*m/);
+  if (hours) total += parseFloat(hours[1]) * 60;
+  if (mins) total += parseInt(mins[1], 10);
+  if (!hours && !mins && !Number.isNaN(Number(str))) total += parseInt(str, 10);
+  return total;
+};
+
+const LOG_SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'time-desc', label: 'Most time logged' },
+  { value: 'time-asc', label: 'Least time logged' },
+  { value: 'title', label: 'Title A–Z' },
+  { value: 'project', label: 'Project A–Z' },
+];
+
 const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canViewLeadAudits = isAdminUser(user) && !adminViewUserId;
+  const activeView = canViewLeadAudits && searchParams.get('view') === 'lead-audits' ? 'lead-audits' : 'daily';
+
+  const handleViewChange = (viewId) => {
+    const next = new URLSearchParams(searchParams);
+    if (viewId === 'lead-audits') next.set('view', 'lead-audits');
+    else next.delete('view');
+    setSearchParams(next, { replace: true });
+  };
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ? new Date(searchParams.get('date')) : new Date());
 
   const [title, setTitle] = useState('');
@@ -35,6 +68,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [editMessage, setEditMessage] = useState('');
   const [editTimeSpent, setEditTimeSpent] = useState('');
   const [editProject, setEditProject] = useState('');
+
+  const [logSearch, setLogSearch] = useState('');
+  const [logSort, setLogSort] = useState('newest');
+  const [logProjectFilter, setLogProjectFilter] = useState('all');
 
   const targetUserId = adminViewUserId || searchParams.get('user') || user?._id;
 
@@ -136,6 +173,48 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     l.action === 'DAILY_LOG' && isSameDay(new Date(l.createdAt), selectedDate)
   ), [logs, selectedDate]);
 
+  const logProjectOptions = useMemo(() => {
+    const names = new Set(
+      dailyLogs.map((l) => l.details?.project || 'GENERAL').filter(Boolean)
+    );
+    return [
+      { value: 'all', label: 'All projects' },
+      ...[...names].sort().map((p) => ({ value: p, label: p })),
+    ];
+  }, [dailyLogs]);
+
+  const displayedLogs = useMemo(() => {
+    let rows = [...dailyLogs];
+    const term = logSearch.trim().toLowerCase();
+    if (term) {
+      rows = rows.filter((l) =>
+        (l.details?.title || '').toLowerCase().includes(term)
+        || (l.details?.message || '').toLowerCase().includes(term)
+        || (l.details?.project || '').toLowerCase().includes(term)
+      );
+    }
+    if (logProjectFilter !== 'all') {
+      rows = rows.filter((l) => (l.details?.project || 'GENERAL') === logProjectFilter);
+    }
+    rows.sort((a, b) => {
+      switch (logSort) {
+        case 'oldest':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'time-desc':
+          return parseLogMinutes(b.details?.timeSpent) - parseLogMinutes(a.details?.timeSpent);
+        case 'time-asc':
+          return parseLogMinutes(a.details?.timeSpent) - parseLogMinutes(b.details?.timeSpent);
+        case 'title':
+          return (a.details?.title || '').localeCompare(b.details?.title || '');
+        case 'project':
+          return (a.details?.project || '').localeCompare(b.details?.project || '');
+        default:
+          return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
+    return rows;
+  }, [dailyLogs, logSearch, logSort, logProjectFilter]);
+
   const dailyTasks = useMemo(() => tasks.filter(t => {
     const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
     return isSameDay(taskDate, selectedDate);
@@ -173,8 +252,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   // Activity Grid Logic
   const gridDays = useMemo(() => {
     const end = new Date();
-    const start = subDays(end, 364); // 52 weeks
-    const days = eachDayOfInterval({ start, end });
+    const days = eachDayOfInterval({ start: ACTIVITY_GRID_START, end });
     
     return days.map(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -190,25 +268,51 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
-        title={targetUserName ? `${targetUserName}'s History` : 'My Daily Progress'}
-        subtitle="Track your work history and daily accomplishments."
-        icon={NotebookPen}
+        title={
+          activeView === 'lead-audits'
+            ? 'Lead Audits'
+            : (targetUserName ? `${targetUserName}'s History` : 'My Daily Progress')
+        }
+        subtitle={
+          activeView === 'lead-audits'
+            ? 'Track edits made to leads, including what changed, by whom, and when.'
+            : 'Track your work history and daily accomplishments.'
+        }
+        icon={activeView === 'lead-audits' ? History : NotebookPen}
         actions={
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-xl border border-[var(--color-bg-border)]">
-               <Button variant="ghost" size="xs" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
-               <div className="px-3 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                  <CalIcon size={12} className="text-blue-500" /> {format(selectedDate, 'MMM dd')}
-               </div>
-               <Button variant="ghost" size="xs" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
-            </div>
-            {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
-              <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Log Work</Button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {canViewLeadAudits && (
+              <TabSwitcher
+                activeTab={activeView}
+                onChange={handleViewChange}
+                tabs={[
+                  { id: 'daily', label: 'Daily Logs' },
+                  { id: 'lead-audits', label: 'Lead Audits' },
+                ]}
+              />
+            )}
+            {activeView === 'daily' && (
+              <>
+                <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-xl border border-[var(--color-bg-border)]">
+                  <Button variant="ghost" size="xs" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
+                  <div className="px-3 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                    <CalIcon size={12} className="text-blue-500" /> {format(selectedDate, 'MMM dd')}
+                  </div>
+                  <Button variant="ghost" size="xs" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
+                </div>
+                {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
+                  <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Log Work</Button>
+                )}
+              </>
             )}
           </div>
         }
       />
 
+      {activeView === 'lead-audits' ? (
+        <LeadAuditsContent />
+      ) : (
+        <>
       {/* Analytical Ribbon - Plain English */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Total Time" value={formatTime(totalMinutes)} icon={Timer} variant="mint" info="Total hours logged on this date." />
@@ -220,11 +324,38 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           <Card className="flex flex-col min-h-[400px]">
-             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                  <Activity size={14} className="text-blue-500" /> Work History
-                </h3>
-                <Badge variant="slate">{dailyLogs.length} LOGS</Badge>
+             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <Activity size={14} className="text-blue-500" /> Work History
+                  </h3>
+                  <Badge variant="slate">
+                    {displayedLogs.length}{displayedLogs.length !== dailyLogs.length ? ` / ${dailyLogs.length}` : ''} LOGS
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Input
+                    icon={Search}
+                    placeholder="Search logs…"
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                    className="!py-1.5 !text-xs"
+                  />
+                  <NexusDropdown
+                    variant="compact"
+                    options={logProjectOptions}
+                    value={logProjectFilter}
+                    onChange={setLogProjectFilter}
+                    placeholder="Project"
+                  />
+                  <NexusDropdown
+                    variant="compact"
+                    options={LOG_SORT_OPTIONS}
+                    value={logSort}
+                    onChange={setLogSort}
+                    placeholder="Sort"
+                  />
+                </div>
              </div>
              
              <div className="p-6 space-y-4">
@@ -233,8 +364,13 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                      <Activity size={48} className="mb-4" />
                      <p className="text-xs font-black uppercase tracking-widest">No activity recorded for this date</p>
                   </div>
+                ) : displayedLogs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 opacity-40 text-center">
+                     <Search size={32} className="mb-3" />
+                     <p className="text-xs font-black uppercase tracking-widest">No logs match your filters</p>
+                  </div>
                 ) : (
-                  dailyLogs.map((log, idx) => {
+                  displayedLogs.map((log, idx) => {
                     const isEditable = isSameDay(new Date(log.createdAt), new Date()) || isAdminUser(user);
                     if (editingLogId === log._id) {
                       return (
@@ -386,6 +522,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       </NexusModal>
 
       <NexusModal isOpen={createLogMutation.isSuccess} onClose={() => createLogMutation.reset()} title="Work Logged" message="Your work has been saved successfully." type="success" />
+        </>
+      )}
     </PageContainer>
   );
 };

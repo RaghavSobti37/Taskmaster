@@ -3,7 +3,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, Send, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { NexusModal, Button, Input } from './ui';
-import { useToast } from '../contexts/ToastContext';
+import { useSystemToast } from '../lib/systemLogBridge';
+import { MODULE } from '../lib/systemLogContract';
 
 const HelpBugButton = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +13,7 @@ const HelpBugButton = () => {
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState('medium');
   const [submitting, setSubmitting] = useState(false);
-  const { addToast } = useToast();
+  const { addToast } = useSystemToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -37,6 +38,7 @@ const HelpBugButton = () => {
         message: 'Task created under Tech Project for Raghav.',
         type: 'success',
         id: 'bug-report-success',
+        module: MODULE.PROJECTS,
       });
       setIsOpen(false);
       setTitle('');
@@ -48,6 +50,7 @@ const HelpBugButton = () => {
         message: err.response?.data?.error || 'Failed to report bug. Please try again.',
         type: 'error',
         id: 'bug-report-error',
+        module: MODULE.PROJECTS,
         technicalError: import.meta.env.DEV ? err.stack : undefined,
       });
     } finally {

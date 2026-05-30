@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const Task = require('../models/Task');
+const TaskAssignment = require('../models/TaskAssignment');
 const Lead = require('../models/Lead');
 const CalendarEvent = require('../models/CalendarEvent');
 const User = require('../models/User');
@@ -18,35 +19,64 @@ router.get('/status-counts', protect, async (req, res) => {
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
 
+    const assignedTaskIds = await TaskAssignment.distinct('taskId', { userId: req.user._id });
+    const taskScope = assignedTaskIds.length ? { _id: { $in: assignedTaskIds } } : { _id: null };
+
     const overdueTasksCount = await Task.countDocuments({
-      assignees: req.user._id,
+      ...taskScope,
       status: { $ne: 'done' },
-      dueDate: { $lt: now }
+      dueDate: { $lt: now },
     });
 
     const todayTasksCount = await Task.countDocuments({
-      assignees: req.user._id,
+      ...taskScope,
       status: { $ne: 'done' },
-      dueDate: { $gte: todayStart, $lte: todayEnd }
+      dueDate: { $gte: todayStart, $lte: todayEnd },
     });
 
-    const leads = await Lead.find({
-      assignedRepId: req.user._id,
-      leadStatus: { $ne: 'Converted' },
-      nextFollowupDate: { $exists: true, $ne: '' }
-    });
+    const [followupAgg] = await Lead.aggregate([
+      {
+        $match: {
+          assignedRepId: req.user._id,
+          leadStatus: { $ne: 'Converted' },
+          nextFollowupDate: { $exists: true, $ne: '' },
+        },
+      },
+      {
+        $addFields: {
+          followupDate: {
+            $dateFromString: {
+              dateString: '$nextFollowupDate',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+      },
+      { $match: { followupDate: { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          today: {
+            $sum: {
+              $cond: [
+                { $and: [{ $gte: ['$followupDate', todayStart] }, { $lte: ['$followupDate', todayEnd] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          overdue: {
+            $sum: {
+              $cond: [{ $lt: ['$followupDate', todayStart] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
 
-    let overdueFollowupsCount = 0;
-    let todayFollowupsCount = 0;
-
-    leads.forEach((lead) => {
-      try {
-        const followupDate = new Date(lead.nextFollowupDate);
-        if (isNaN(followupDate.getTime())) return;
-        if (followupDate >= todayStart && followupDate <= todayEnd) todayFollowupsCount++;
-        else if (followupDate < now) overdueFollowupsCount++;
-      } catch (e) {}
-    });
+    const overdueFollowupsCount = followupAgg?.overdue || 0;
+    const todayFollowupsCount = followupAgg?.today || 0;
 
     const todayCalendarCount = await CalendarEvent.countDocuments({
       $or: [{ createdBy: req.user._id }, { visibility: 'public' }],
@@ -168,5 +198,66 @@ router.patch('/read-all', protect, async (req, res) => {
     res.status(500).json({ error: 'Failed to update notifications' });
   }
 });
+
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/test/overdue', protect, async (req, res) => {
+    try {
+      if (!isAdminUser(req.user)) {
+        return res.status(403).json({ error: 'Admin only' });
+      }
+      const TaskAssignment = require('../models/TaskAssignment');
+      const { checkOverdue } = require('../services/notificationService');
+      const testTitle = `[TEST-OVERDUE] ${Date.now()}`;
+      const task = await Task.create({
+        title: testTitle,
+        status: 'todo',
+        dueDate: new Date(Date.now() - 60 * 60 * 1000),
+        notifiedOverdue: false,
+        createdBy: req.user._id,
+      });
+      await TaskAssignment.create({ taskId: task._id, userId: req.user._id, role: 'assignee' });
+
+      const before = await Notification.countDocuments({
+        recipient: req.user._id,
+        relatedTaskId: task._id,
+        title: 'Overdue Task Alert',
+      });
+      await checkOverdue();
+      const after = await Notification.countDocuments({
+        recipient: req.user._id,
+        relatedTaskId: task._id,
+        title: 'Overdue Task Alert',
+      });
+      const created = after - before;
+
+      await checkOverdue();
+      const afterSecond = await Notification.countDocuments({
+        recipient: req.user._id,
+        relatedTaskId: task._id,
+        title: 'Overdue Task Alert',
+      });
+
+      const user = await User.findById(req.user._id).select('pushSubscriptions');
+      const pushSubscriptions = user?.pushSubscriptions?.length || 0;
+
+      await Notification.deleteMany({ relatedTaskId: task._id });
+      await TaskAssignment.deleteMany({ taskId: task._id });
+      await Task.findByIdAndDelete(task._id);
+
+      res.json({
+        success: created === 1 && afterSecond === after,
+        notificationsCreated: created,
+        idempotent: afterSecond === after,
+        pushSubscriptions,
+        message: created === 1
+          ? 'Exactly one overdue notification created. Expect one OS toast if push subscribed.'
+          : `Expected 1 notification, got ${created}`,
+      });
+    } catch (error) {
+      logger.error('Notification', 'test/overdue failed', { error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+}
 
 module.exports = router;

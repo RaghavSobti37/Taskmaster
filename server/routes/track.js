@@ -626,15 +626,16 @@ router.post('/unsubscribe', async (req, res) => {
   const { email, reason, campaignId, recipientId, token } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
-  // Token verification for mass-unsubscribe protection
-  if (!token) return res.status(403).json({ error: 'Unsubscribe token missing' });
-  const crypto = require('crypto');
-  const expectedToken = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
-    .update(email.toLowerCase().trim())
-    .digest('hex');
+  // Token verification for legacy pre-signed links; email-only self-service allowed
+  if (token) {
+    const crypto = require('crypto');
+    const expectedToken = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback_secret')
+      .update(email.toLowerCase().trim())
+      .digest('hex');
 
-  if (token !== expectedToken) {
-    return res.status(403).json({ error: 'Invalid unsubscribe token' });
+    if (token !== expectedToken) {
+      return res.status(403).json({ error: 'Invalid unsubscribe token' });
+    }
   }
 
   try {

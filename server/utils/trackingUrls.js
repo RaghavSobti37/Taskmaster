@@ -57,7 +57,13 @@ const getTrackingDbMismatchWarning = () => {
   );
 };
 
-/** Frontend unsubscribe page — never the API host. */
+/** Static frontend unsubscribe page — user enters email on the page. */
+const buildStaticUnsubscribePageUrl = () => {
+  const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
+  return `${frontend}/unsubscribe`;
+};
+
+/** @deprecated Legacy per-recipient links — prefer buildStaticUnsubscribePageUrl */
 const buildUnsubscribePageUrl = (campaignId, leadEmail, recipientId) => {
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const token = crypto
@@ -86,6 +92,7 @@ const shouldSkipClickWrap = (url = '') => {
 
 module.exports = {
   resolveTrackingApiBaseUrl,
+  buildStaticUnsubscribePageUrl,
   buildUnsubscribePageUrl,
   shouldSkipClickWrap,
   isLocalHostUrl,

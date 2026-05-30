@@ -15,14 +15,19 @@ const dispatchEmailPayload = async ({ to, subject, html, from }) => {
 
   if (resend) {
     // Primary modern production pipeline via Resend
+    // Resend SDK returns { data, error } — does not throw on API errors.
     try {
-      const data = await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: senderEmail,
         to: [to],
         subject: subject,
         html: html,
       });
-      console.log(`📡 [Resend API] Email dispatched successfully to: ${to} (ID: ${data?.id || data?.data?.id})`);
+      if (error) {
+        console.error(`❌ [Resend Error] Failed to dispatch email to ${to}:`, error.message);
+        throw new Error(error.message || 'Resend send failed');
+      }
+      console.log(`📡 [Resend API] Email dispatched successfully to: ${to} (ID: ${data?.id})`);
       return data;
     } catch (err) {
       console.error(`❌ [Resend Error] Failed to dispatch email to ${to}:`, err.message);

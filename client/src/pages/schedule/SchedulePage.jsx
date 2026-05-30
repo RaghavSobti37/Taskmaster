@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { format, addDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarClock } from 'lucide-react';
-import { PageContainer, PageHeader } from '../../components/ui';
+import { PageContainer } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import { useSchedule } from '../../hooks/useTaskmasterQueries';
@@ -17,12 +16,6 @@ const SchedulePage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-4">
-      <PageHeader
-        title="Team Schedule"
-        subtitle="Today and tomorrow — half-day blocks split at 2pm. Only tasks from your projects are shown."
-        icon={CalendarClock}
-      />
-
       {isLoading ? (
         <ScheduleSkeleton />
       ) : (

@@ -4,6 +4,8 @@ import { User, Clock, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-rea
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
+import { isPendingTask } from '../../utils/pendingTask';
+import { TaskKanbanCardSkeleton } from '../tasks/TaskPendingSkeleton';
 
 const progressForStatus = (status) => {
   if (status === 'done') return 100;
@@ -11,7 +13,11 @@ const progressForStatus = (status) => {
   return 50;
 };
 
-const KanbanCard = ({ task, onMove, onDetail, workspaces, projects }) => {
+const KanbanCard = ({ task, onMove, onDetail, workspaces, projects, completingTaskId }) => {
+  if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
+    return <TaskKanbanCardSkeleton />;
+  }
+
   const statuses = ['todo', 'in-progress', 'in-review', 'done'];
   const currentIndex = statuses.indexOf(task.status);
   const isDone = task.status === 'done';
@@ -85,7 +91,7 @@ const KanbanCard = ({ task, onMove, onDetail, workspaces, projects }) => {
   );
 };
 
-const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
+const ProjectKanban = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => {
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
   const columns = [
@@ -120,7 +126,7 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail }) => {
             
             <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3 overflow-y-auto custom-scrollbar">
               {columnTasks.map(task => (
-                <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} workspaces={workspaces} projects={projects} />
+                <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} workspaces={workspaces} projects={projects} completingTaskId={completingTaskId} />
               ))}
               {columnTasks.length === 0 && (
                 <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-bg-border)] rounded-xl">

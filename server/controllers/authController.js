@@ -46,7 +46,7 @@ exports.register = async (req, res) => {
 
     const populated = await User.findById(user._id)
       .select('-password')
-      .populate('departmentId', 'name slug color');
+      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
     res.status(201).json({
       _id: populated._id,
@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
         console.timeEnd('LoginProcess');
         const populated = await User.findById(user._id)
           .select('-password')
-          .populate('departmentId', 'name slug color');
+          .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
         return res.json({
           _id: populated._id,
           name: populated.name,
@@ -130,7 +130,7 @@ exports.googleLogin = async (req, res) => {
 
     const populated = await User.findById(user._id)
       .select('-password')
-      .populate('departmentId', 'name slug color');
+      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
     res.json({
       _id: populated._id,
@@ -147,7 +147,7 @@ exports.googleLogin = async (req, res) => {
 exports.getMe = async (req, res) => {
   const user = await User.findById(req.user._id)
     .select('-password')
-    .populate('departmentId', 'name slug color signupAllowed');
+    .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
   res.json(user);
 };
 
@@ -232,7 +232,7 @@ exports.googleAuthCallback = async (req, res) => {
     const token = generateToken(user._id);
     const freshUser = await User.findById(user._id)
       .select('-password')
-      .populate('departmentId', 'name slug color');
+      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
     const userJson = JSON.stringify({
       _id: freshUser._id,
       name: freshUser.name,

@@ -11,7 +11,8 @@
     "sync-db": "node scripts/sync-prod-to-local.js",
     "sync-finance-to-prod": "node scripts/syncFinanceToProd.js",
     "import-finance": "node scripts/importInvoices.js --skip-ocr",
-    "import-finance:fresh": "node scripts/importInvoices.js --fresh --skip-ocr"
+    "import-finance:fresh": "node scripts/importInvoices.js --fresh --skip-ocr",
+    "backup:daily": "node scripts/runDailyBackup.js"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",

@@ -73,7 +73,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast', 'X-Trace-Id', 'x-trace-id']
 };
 
 app.use(cors(corsOptions));
@@ -103,9 +103,34 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/', authLimiter);
 
+// Rate limit public tracking endpoints (outside /api/ limiter scope)
+const trackLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 300 : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many tracking requests, please try again later.' },
+});
+app.use((req, res, next) => {
+  const path = req.path || '';
+  if (
+    path.startsWith('/open/')
+    || path.startsWith('/click/')
+    || path === '/unsubscribe'
+    || path.startsWith('/webhooks/')
+    || path.startsWith('/api/track')
+  ) {
+    return trackLimiter(req, res, next);
+  }
+  return next();
+});
+
 // System Health Check Middleware
 const SystemHealthService = require('./services/SystemHealthService');
 app.use('/api/', SystemHealthService.middleware);
+
+const traceMiddleware = require('./middleware/traceMiddleware');
+app.use(traceMiddleware);
 
 // MongoDB Connection
 const isProd = process.env.NODE_ENV === 'production';
@@ -134,29 +159,30 @@ mongoose.connect(dbUri, {
     const trackingWarn = getTrackingDbMismatchWarning();
     if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
     
-    // Auto-repair zero-dipped history snapshots on startup
-    (async () => {
+    // Auto-repair zero-dipped history snapshots in background (non-blocking)
+    setImmediate(async () => {
       try {
+        if (mongoose.connection.readyState !== 1) return;
         const Artist = require('./models/Artist');
-        const artists = await Artist.find();
+        const artists = await Artist.find().select('_id name analytics analyticsHistory').lean();
         for (const artist of artists) {
           if (artist.analyticsHistory && artist.analyticsHistory.length > 0) {
             const currentIg = artist.analytics?.instagram?.followers || 0;
             const currentSp = artist.analytics?.spotify?.followers || 0;
-            
-            const cleanHistory = artist.analyticsHistory.filter(h => {
+
+            const cleanHistory = artist.analyticsHistory.filter((h) => {
               const ig = h.metrics?.instagram?.followers;
               const sp = h.metrics?.spotify?.followers;
               if (currentIg > 0 && ig === 0) return false;
               if (currentSp > 0 && sp === 0) return false;
               return true;
             });
-            
+
             if (cleanHistory.length !== artist.analyticsHistory.length) {
               const removedCount = artist.analyticsHistory.length - cleanHistory.length;
-              artist.analyticsHistory = cleanHistory;
-              artist.markModified('analyticsHistory');
-              await artist.save();
+              await Artist.findByIdAndUpdate(artist._id, {
+                $set: { analyticsHistory: cleanHistory },
+              });
               console.log(`🧹 [Database Repair] Cleaned ${removedCount} corrupted snapshots for ${artist.name}`);
             }
           }
@@ -164,7 +190,7 @@ mongoose.connect(dbUri, {
       } catch (err) {
         console.error('❌ [Database Repair] Error during startup scan:', err.message);
       }
-    })();
+    });
   })
   .catch(err => {
     console.error('[ERROR] Initial MongoDB connection failed:', err.message);
@@ -195,10 +221,12 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/system-logs', require('./routes/systemLogRoutes'));
 app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/artists', artistRoutes);
-    app.use('/api/v2/artists', require('./routes/artistV2Routes'));
+app.use('/api/auth', require('./routes/authConnectRoutes'));
+app.use('/api/v2/artists', require('./routes/artistV2Routes'));
     app.use('/api/gamification', require('./routes/gamificationRoutes'));
     app.use('/api/gamification-admin', require('./routes/gamificationAdminRoutes'));
 
@@ -239,7 +267,6 @@ app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/google', googleRoutes);
 app.use('/api/google/accounts', require('./routes/googleAccounts'));
 app.use('/api/proxy', proxyRoutes);
-app.use('/api/artists', artistRoutes);
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/calendar', require('./routes/calendarRoutes'));
 app.use('/api/departments', require('./routes/departmentRoutes'));
@@ -300,6 +327,32 @@ if (process.env.NODE_ENV === 'production') {
 // Centralized structured error handling middleware
 const errorHandler = require('./middleware/errorMiddleware');
 app.use(errorHandler);
+
+const { writeSystemLog } = require('./services/systemLogService');
+const { SEVERITY, MODULE } = require('../shared/systemLogContract');
+
+function logProcessCrash(label, err) {
+  writeSystemLog({
+    severity: SEVERITY.ERROR,
+    module: MODULE.SYSTEM,
+    message: `${label}: ${err?.message || 'Unknown'}`,
+    userVisible: false,
+    actorId: 'SYSTEM',
+    payload: { stack: err?.stack },
+    errorCode: label,
+  });
+}
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException', err);
+  logProcessCrash('uncaughtException', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  console.error('[FATAL] unhandledRejection', err);
+  logProcessCrash('unhandledRejection', err);
+});
 
 const backupJob = require('./jobs/backupJob');
 

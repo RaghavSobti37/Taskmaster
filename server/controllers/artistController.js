@@ -1,11 +1,14 @@
 const Artist = require('../models/Artist');
-
-let cachedSpotifyToken = null;
-let spotifyTokenExpiry = null;
+const ArtistMetrics = require('../models/ArtistMetrics');
+const ArtistAuth = require('../models/ArtistAuth');
+const ArtistConnection = require('../models/ArtistConnection');
+const { enrichArtistById, enrichAllArtists } = require('../services/artistEnrichmentService');
+const { upsertConnection } = require('../services/connectionService');
+const { INTEGRATIONS } = require('../config/integrations.config');
 
 exports.getArtists = async (req, res) => {
   try {
-    const artists = await Artist.find().lean();
+    const artists = await enrichAllArtists();
     res.json(artists);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -14,7 +17,7 @@ exports.getArtists = async (req, res) => {
 
 exports.getArtistById = async (req, res) => {
   try {
-    const artist = await Artist.findById(req.params.id).lean();
+    const artist = await enrichArtistById(req.params.id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
     res.json(artist);
   } catch (err) {
@@ -22,15 +25,67 @@ exports.getArtistById = async (req, res) => {
   }
 };
 
+exports.getIntegrationsConfig = async (_req, res) => {
+  res.json({ integrations: INTEGRATIONS });
+};
+
+exports.getArtistConnections = async (req, res) => {
+  try {
+    const artist = await enrichArtistById(req.params.id);
+    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+    res.json({ connections: artist.connections, normalized: artist.normalized });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.createArtist = async (req, res) => {
   try {
-    const data = { ...req.body, isSynced: false, analytics: {}, analyticsHistory: [] };
-    if (!data.profileImage) {
-      data.profileImage = '/hnd-posing.jpeg';
+    const { name, bio, website, oauthCredentials, profileImage } = req.body;
+    const artist = await Artist.create({
+      name,
+      bio: bio || `${name} official roster artist.`,
+      website,
+      profileImage: profileImage || '/hnd-posing.jpeg',
+    });
+
+    const creds = oauthCredentials || {};
+    if (creds.spotify?.artistId) {
+      await upsertConnection({
+        artistId: artist._id,
+        provider: 'spotify',
+        accountHandle: creds.spotify.artistId,
+        accountLabel: name,
+        metadata: { artistId: creds.spotify.artistId },
+      });
     }
-    const artist = new Artist(data);
-    const newArtist = await artist.save();
-    res.status(201).json(newArtist);
+    if (creds.youtube?.channelId) {
+      await upsertConnection({
+        artistId: artist._id,
+        provider: 'youtube',
+        accountHandle: creds.youtube.channelId,
+        accountLabel: 'YouTube',
+        metadata: { channelId: creds.youtube.channelId },
+      });
+    }
+    if (creds.meta?.igAccountId) {
+      await upsertConnection({
+        artistId: artist._id,
+        provider: 'instagram',
+        accountHandle: creds.meta.igAccountId,
+        accountLabel: 'Instagram',
+        metadata: { igAccountId: creds.meta.igAccountId },
+      });
+    }
+
+    await ArtistAuth.findOneAndUpdate(
+      { artistId: artist._id },
+      { $set: { isSynced: false } },
+      { upsert: true }
+    );
+
+    const enriched = await enrichArtistById(artist._id);
+    res.status(201).json(enriched);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -41,7 +96,6 @@ exports.updateArtist = async (req, res) => {
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
 
-    // Update general fields
     if (req.body.name !== undefined) artist.name = req.body.name;
     if (req.body.bio !== undefined) artist.bio = req.body.bio;
     if (req.body.profileImage !== undefined) artist.profileImage = req.body.profileImage;
@@ -49,45 +103,63 @@ exports.updateArtist = async (req, res) => {
     if (req.body.socials !== undefined) {
       artist.socials = { ...artist.socials, ...req.body.socials };
     }
-    
-    // Update oauthCredentials IDs safely without wiping out OAuth tokens
+    if (req.body.events !== undefined) artist.events = req.body.events;
+    if (req.body.discography !== undefined) artist.discography = req.body.discography;
+
+    await artist.save();
+
     if (req.body.oauthCredentials) {
-      if (!artist.oauthCredentials) artist.oauthCredentials = {};
-      
-      if (req.body.oauthCredentials.spotify) {
-        if (!artist.oauthCredentials.spotify) artist.oauthCredentials.spotify = {};
-        if (req.body.oauthCredentials.spotify.artistId !== undefined) {
-          artist.oauthCredentials.spotify.artistId = req.body.oauthCredentials.spotify.artistId;
-        }
-        if (req.body.oauthCredentials.spotify.chartmetricId !== undefined) {
-          artist.oauthCredentials.spotify.chartmetricId = req.body.oauthCredentials.spotify.chartmetricId;
-        }
+      const creds = req.body.oauthCredentials;
+      if (creds.spotify?.artistId !== undefined) {
+        await upsertConnection({
+          artistId: artist._id,
+          provider: 'spotify',
+          accountHandle: creds.spotify.artistId,
+          accountLabel: artist.name,
+          metadata: { artistId: creds.spotify.artistId },
+        });
       }
-
-      if (req.body.oauthCredentials.youtube) {
-        if (!artist.oauthCredentials.youtube) artist.oauthCredentials.youtube = {};
-        if (req.body.oauthCredentials.youtube.channelId !== undefined) {
-          artist.oauthCredentials.youtube.channelId = req.body.oauthCredentials.youtube.channelId;
-        }
+      if (creds.youtube?.channelId !== undefined) {
+        await upsertConnection({
+          artistId: artist._id,
+          provider: 'youtube',
+          accountHandle: creds.youtube.channelId,
+          metadata: { channelId: creds.youtube.channelId },
+        });
       }
-
-      if (req.body.oauthCredentials.meta) {
-        if (!artist.oauthCredentials.meta) artist.oauthCredentials.meta = {};
-        if (req.body.oauthCredentials.meta.igAccountId !== undefined) {
-          artist.oauthCredentials.meta.igAccountId = req.body.oauthCredentials.meta.igAccountId;
+      if (creds.meta?.igAccountId !== undefined || creds.meta?.fbPageId !== undefined) {
+        if (creds.meta.igAccountId !== undefined) {
+          await upsertConnection({
+            artistId: artist._id,
+            provider: 'instagram',
+            accountHandle: creds.meta.igAccountId,
+            metadata: {
+              igAccountId: creds.meta.igAccountId,
+              fbPageId: creds.meta.fbPageId,
+            },
+          });
         }
-        if (req.body.oauthCredentials.meta.fbPageId !== undefined) {
-          artist.oauthCredentials.meta.fbPageId = req.body.oauthCredentials.meta.fbPageId;
+        if (creds.meta.fbPageId !== undefined) {
+          await upsertConnection({
+            artistId: artist._id,
+            provider: 'facebook',
+            accountHandle: creds.meta.fbPageId,
+            metadata: { fbPageId: creds.meta.fbPageId },
+          });
         }
       }
     }
 
-    if (req.body.trackedVideos !== undefined) artist.trackedVideos = req.body.trackedVideos;
-    if (req.body.events !== undefined) artist.events = req.body.events;
-    if (req.body.discography !== undefined) artist.discography = req.body.discography;
+    if (req.body.trackedVideos !== undefined) {
+      await ArtistMetrics.findOneAndUpdate(
+        { artistId: artist._id },
+        { $set: { trackedVideos: req.body.trackedVideos } },
+        { upsert: true }
+      );
+    }
 
-    const savedArtist = await artist.save();
-    res.json(savedArtist);
+    const enriched = await enrichArtistById(artist._id);
+    res.json(enriched);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -95,7 +167,13 @@ exports.updateArtist = async (req, res) => {
 
 exports.deleteArtist = async (req, res) => {
   try {
-    await Artist.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    await Promise.all([
+      Artist.findByIdAndDelete(id),
+      ArtistMetrics.deleteMany({ artistId: id }),
+      ArtistAuth.deleteMany({ artistId: id }),
+      ArtistConnection.deleteMany({ artistId: id }),
+    ]);
     res.json({ message: 'Artist deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -108,13 +186,32 @@ exports.injectEvent = async (req, res) => {
     const event = req.body;
     const artist = await Artist.findById(id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
-    
-    artist.events.unshift(event); // Add to beginning
+
+    artist.events.unshift(event);
     await artist.save();
-    res.status(201).json(artist);
+    const enriched = await enrichArtistById(id);
+    res.status(201).json(enriched);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
+exports.setPrimaryConnection = async (req, res) => {
+  try {
+    const { id, connectionId } = req.params;
+    const conn = await ArtistConnection.findOne({ _id: connectionId, artistId: id });
+    if (!conn) return res.status(404).json({ message: 'Connection not found' });
 
+    await ArtistConnection.updateMany(
+      { artistId: id, provider: conn.provider },
+      { $set: { isPrimary: false } }
+    );
+    conn.isPrimary = true;
+    await conn.save();
+
+    const enriched = await enrichArtistById(id);
+    res.json(enriched);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};

@@ -17,6 +17,18 @@ export const PRIORITY_OPTIONS = [
   { value: 'critical', label: 'Critical' },
 ];
 
+/** Calendar days between start date and due date, keyed by priority. */
+export const PRIORITY_DAY_SPAN = {
+  critical: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+};
+
+export function getPriorityDaySpan(priority) {
+  return PRIORITY_DAY_SPAN[String(priority || 'medium').toLowerCase()] ?? PRIORITY_DAY_SPAN.medium;
+}
+
 export const PRIORITY_FILTER_OPTIONS = [
   { value: 'all', label: 'All priorities' },
   ...PRIORITY_OPTIONS,

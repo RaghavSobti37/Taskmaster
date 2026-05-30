@@ -81,20 +81,20 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center flex-1 flex flex-col justify-center items-center relative z-10">
+      <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex-1 flex flex-col justify-center items-center relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="space-y-6 max-w-3xl"
+          className="space-y-8 w-full max-w-3xl mx-auto"
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold">
             <Sparkles size={12} /> Introducing TaskMaster Workspace
           </div>
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-foreground leading-tight">
             Master Your Team <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-brand-teal)] to-[var(--color-action-primary)]">Workflows & Campaigns</span>
           </h1>
-          <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-2xl mx-auto font-medium">
+          <p className="text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed max-w-xl sm:max-w-2xl mx-auto font-medium text-balance">
             TaskMaster integrates high-density project tracking, active CRM customer pipeline management, and enterprise email dispatch features into a secure, unified workspace.
           </p>
 
@@ -116,29 +116,29 @@ export default function LandingPage() {
       </section>
 
       {/* Purpose / Feature Grid */}
-      <section className="bg-card/90 backdrop-blur-sm border-y border-border py-20 relative z-10">
+      <section className="bg-card/90 backdrop-blur-sm border-y border-border py-16 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+          <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Purpose-Built for Modern Operations
             </h2>
-            <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
+            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed text-balance">
               TaskMaster provides a secure environment for business and product management, replacing fragmented tooling with specialized workflow pipelines.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {features.map((feat, index) => (
               <div 
                 key={index}
-                className="p-6 rounded-2xl bg-background border border-border flex gap-4 hover:border-[var(--color-brand-teal)] transition shadow-sm hover:shadow-md"
+                className="p-6 rounded-2xl bg-background border border-border flex gap-4 items-start hover:border-[var(--color-brand-teal)] transition shadow-sm hover:shadow-md"
               >
                 <div className="w-12 h-12 rounded-xl bg-[var(--color-brand-teal)]/10 border border-[var(--color-brand-teal)]/20 text-[var(--color-brand-teal)] flex items-center justify-center shrink-0">
                   <feat.icon size={24} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <h3 className="font-bold text-base text-foreground">{feat.title}</h3>
-                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed font-medium">{feat.desc}</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{feat.desc}</p>
                 </div>
               </div>
             ))}
@@ -148,7 +148,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-background border-t border-border py-12 relative z-10">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row sm:items-start items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[var(--color-brand-teal)] rounded-lg flex items-center justify-center font-bold text-sm text-[var(--color-brand-cream)]">
               CK

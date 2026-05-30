@@ -9,6 +9,7 @@
 
 const axios = require('axios');
 const Artist = require('../models/Artist');
+const { upsertConnection } = require('../services/connectionService');
 const logger = require('../utils/logger');
 
 const CLIENT_ID     = process.env.YOUTUBE_CLIENT_ID?.replace(/['"]/g, '').trim();
@@ -89,25 +90,20 @@ exports.youTubeAuthCallback = async (req, res) => {
 
     const channelId = channel.id;
     const channelTitle = channel.snippet?.title;
-    logger.info('YouTube OAuth', '✅ [YouTube OAuth] Connected channel: ${channelTitle} (${channelId})');
-    logger.info('youtubeAuthController', '   Subscribers: ${channel.statistics?.subscriberCount} | Videos: ${channel.statistics?.videoCount}');
+    logger.info('YouTube OAuth', `✅ Connected: ${channelTitle} (${channelId})`);
 
-    // Save to artist
-    if (!artist.oauthCredentials) artist.oauthCredentials = {};
-    artist.oauthCredentials.youtube = {
-      ...artist.oauthCredentials.youtube,
-      channelId,
-      channelTitle,
+    await upsertConnection({
+      artistId,
+      provider: 'youtube',
+      accountHandle: channelId,
+      accountLabel: channelTitle || 'YouTube',
       accessToken: access_token,
       refreshToken: refresh_token,
-      tokenExpiry: new Date(Date.now() + expires_in * 1000),
-      connectedAt: new Date()
-    };
+      expiresAt: new Date(Date.now() + expires_in * 1000),
+      metadata: { channelId, channelTitle },
+    });
 
-    artist.markModified('oauthCredentials');
-    await artist.save();
-
-    logger.info('YouTube OAuth', '🎉 [YouTube OAuth] Artist ${artist.name} YouTube connected! Triggering sync...');
+    logger.info('YouTube OAuth', `🎉 Artist ${artist.name} YouTube connected — syncing...`);
 
     // Auto-sync
     try {

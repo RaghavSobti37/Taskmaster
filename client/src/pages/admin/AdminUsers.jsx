@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ShieldCheck, Users, Search, Trash2, UserCheck, TrendingUp,
-  Database, Zap, Clock, ShieldAlert, LogIn, CalendarDays
+  Database, Zap, CalendarDays, KeyRound
 } from 'lucide-react';
 import {
   Badge,
@@ -14,10 +14,12 @@ import {
   FullScreenWorkspace,
   PageSkeleton,
 } from '../../components/ui';
-import { format, isToday } from 'date-fns';
+import { formatLastActivity } from '../../utils/formatLastActivity';
+import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
+import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 import {
   useUserDirectory, useCRMStats, useRepSummary, useMailStats,
-  useLogs, useUpdateUser, useDeleteUser, useLeadAudits,
+  useUpdateUser, useDeleteUser,
   useDepartments
 } from '../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -39,13 +41,6 @@ const AdminUsers = () => {
   const { data: crmStats } = useCRMStats();
   const { data: repSummary } = useRepSummary();
   const { data: mailStats } = useMailStats();
-  const { data: allLogs = [] } = useLogs('all', 100);
-
-  const { data: userAuditsData } = useLeadAudits(
-    { userId: selectedUser?._id, limit: 50 },
-    !!selectedUser?._id
-  );
-  const userAudits = userAuditsData?.logs || [];
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -58,28 +53,37 @@ const AdminUsers = () => {
         phone: selectedUser.phone || '',
         dateOfBirth: formatDateInput(selectedUser.dateOfBirth),
         departmentId: selectedUser.departmentId?._id || selectedUser.departmentId || '',
+        newPassword: '',
+        confirmPassword: '',
       });
     }
   }, [selectedUser]);
 
   const handleSaveUser = async () => {
     if (!selectedUser) return;
+    if (editUserData.newPassword && editUserData.newPassword !== editUserData.confirmPassword) {
+      alert('Passwords do not match.');
+      return;
+    }
+    if (editUserData.newPassword && editUserData.newPassword.length < 8) {
+      alert('Password must be at least 8 characters.');
+      return;
+    }
     try {
-      await updateUserMutation.mutateAsync({
-        id: selectedUser._id,
-        data: {
-          name: editUserData.name,
-          email: editUserData.email,
-          phone: editUserData.phone,
-          departmentId: editUserData.departmentId || null,
-          dateOfBirth: editUserData.dateOfBirth || null,
-          teams: [],
-        },
-      });
+      const payload = {
+        name: editUserData.name,
+        email: editUserData.email,
+        phone: editUserData.phone,
+        departmentId: editUserData.departmentId || null,
+        dateOfBirth: editUserData.dateOfBirth || null,
+        teams: [],
+      };
+      if (editUserData.newPassword) payload.newPassword = editUserData.newPassword;
+      await updateUserMutation.mutateAsync({ id: selectedUser._id, data: payload });
       setSelectedUser(null);
     } catch (err) {
       console.error(err);
-      alert(`User modification error: ${err.message}`);
+      alert(err.response?.data?.error || err.message || 'User modification error');
     }
   };
 
@@ -98,12 +102,6 @@ const AdminUsers = () => {
       alert(err.response?.data?.error || 'Failed to delete user');
     }
   };
-
-  const loginAlerts = useMemo(() => {
-    return allLogs
-      .filter(log => log.action === 'LOGIN' && isToday(new Date(log.createdAt)))
-      .slice(0, 5);
-  }, [allLogs]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u =>
@@ -133,18 +131,10 @@ const AdminUsers = () => {
       )
     },
     {
-      header: 'Date of Birth',
-      render: (u) => (
-        <span className="text-[11px] font-mono text-[var(--color-text-secondary)]">
-          {u.dateOfBirth ? format(new Date(u.dateOfBirth), 'MMM dd, yyyy') : '—'}
-        </span>
-      )
-    },
-    {
       header: 'Last Activity',
       render: (u) => (
         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-          {u.lastOnline ? format(new Date(u.lastOnline), 'MMM dd, yyyy h:mm a') : 'No record'}
+          {formatLastActivity(u.lastOnline)}
         </span>
       )
     }
@@ -220,33 +210,8 @@ const AdminUsers = () => {
           </Card>
         </div>
 
-        <aside className="lg:col-span-4 space-y-6">
-          <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed h-fit">
-            <div className="flex items-center gap-2 mb-4">
-              <ShieldAlert size={14} className="text-rose-500" />
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Security Alerts</h4>
-            </div>
-            <div className="space-y-4">
-              {loginAlerts.length === 0 ? (
-                <div className="text-center py-6 opacity-30">
-                  <p className="text-[9px] font-black uppercase tracking-widest">No alerts today</p>
-                </div>
-              ) : loginAlerts.map(log => (
-                <div key={log._id} className="flex gap-3">
-                  <div className="w-1 h-8 bg-rose-500/40 rounded-full" />
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5">
-                      <LogIn size={10} className="text-rose-500" />
-                      {log.userId?.name || 'System User'}
-                    </p>
-                    <p className="text-[8px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
-                      Logged in at {format(new Date(log.createdAt), 'h:mm a')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+        <aside className="lg:col-span-4">
+          <DepartmentsPanel users={users} departments={departments} />
         </aside>
       </div>
 
@@ -256,58 +221,13 @@ const AdminUsers = () => {
         title={selectedUser?.name || 'User Profile'}
         subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Department:', selectedUser?.departmentId?.name || 'Unassigned'].join(' ')}
         onSave={handleSaveUser}
-        isSaving={updateUserMutation.isPending}
+        mainClassName="max-w-6xl"
         sidebar={
           <>
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Trail</h4>
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex gap-3">
-                    <Clock size={12} className="text-[var(--color-text-muted)] mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold">Modified Project Settings</p>
-                      <p className="text-[8px] text-[var(--color-text-muted)] uppercase tracking-widest">Oct 24, 2023 • 14:00</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Security Configuration</h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold">Two-Factor Auth</span>
-                  <Badge variant="success">Enabled</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold">Access Token</span>
-                  <span className="text-[9px] font-mono opacity-50">••••••••</span>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Danger Zone</h4>
-              <Button
-                variant="danger"
-                size="sm"
-                className="w-full justify-center !py-2"
-                onClick={() => handleDeleteUser(selectedUser._id)}
-                disabled={deleteUserMutation.isPending}
-              >
-                <Trash2 size={14} className="mr-2" />
-                {deleteUserMutation.isPending ? 'Removing...' : 'Remove User Account'}
-              </Button>
-            </Card>
-          </>
-        }
-      >
-        <div className="space-y-8">
-          <section>
-            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-              <UserCheck size={14} /> User Details
-            </h3>
-            <div className="grid grid-cols-2 gap-6">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                <UserCheck size={12} /> User Details
+              </h4>
               <Input
                 label="Full Name"
                 value={editUserData.name || ''}
@@ -344,35 +264,50 @@ const AdminUsers = () => {
                   ))}
                 </select>
               </div>
-            </div>
-          </section>
+            </Card>
 
-          {userAudits.length > 0 && (
-            <section>
-              <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-                CRM Lead Audit Trail
-              </h3>
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                {userAudits.map(log => (
-                  <div key={log._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between text-xs">
-                    <div>
-                      <p className="font-bold">
-                        Lead: <span className="text-[var(--color-text-primary)]">{log.leadId?.name || 'Unknown'}</span>
-                      </p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                        Field <span className="font-mono text-blue-400">{log.fieldChanged}</span> modified:
-                        <span className="line-through mx-1">{log.oldValue || '(empty)'}</span>
-                        &rarr;
-                        <span className="text-emerald-400 ml-1">{log.newValue || '(empty)'}</span>
-                      </p>
-                    </div>
-                    <span className="text-[9px] font-mono text-[var(--color-text-muted)] shrink-0 pl-2">
-                      {log.timestamp ? format(new Date(log.timestamp), 'dd-MM-yyyy HH:mm') : ''}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                <KeyRound size={12} /> Password
+              </h4>
+              <p className="text-[10px] text-[var(--color-text-muted)]">
+                {selectedUser?.hasPassword ? 'Password is set for this account.' : 'OAuth only — no password on file.'}
+              </p>
+              <Input
+                type="password"
+                label="New Password"
+                placeholder="Leave blank to keep current"
+                value={editUserData.newPassword || ''}
+                onChange={e => setEditUserData({ ...editUserData, newPassword: e.target.value })}
+              />
+              <Input
+                type="password"
+                label="Confirm Password"
+                placeholder="Repeat new password"
+                value={editUserData.confirmPassword || ''}
+                onChange={e => setEditUserData({ ...editUserData, confirmPassword: e.target.value })}
+              />
+            </Card>
+
+            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Danger Zone</h4>
+              <Button
+                variant="danger"
+                size="sm"
+                className="w-full justify-center !py-2"
+                onClick={() => handleDeleteUser(selectedUser._id)}
+                disabled={deleteUserMutation.isPending}
+              >
+                <Trash2 size={14} className="mr-2" />
+                {deleteUserMutation.isPending ? 'Removing...' : 'Remove User Account'}
+              </Button>
+            </Card>
+          </>
+        }
+      >
+        <div className="space-y-8">
+          {selectedUser && (
+            <MonthlyReportPanel userId={selectedUser._id} userName={selectedUser.name} />
           )}
         </div>
       </FullScreenWorkspace>

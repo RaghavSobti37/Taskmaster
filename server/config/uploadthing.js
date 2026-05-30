@@ -1,4 +1,13 @@
 const { createUploadthing } = require('uploadthing/express');
+const fs = require('fs');
+const path = require('path');
+
+const DEBUG_LOG = path.join(__dirname, '../../debug-0c5d79.log');
+const agentLog = (location, message, hypothesisId, data) => {
+  try {
+    fs.appendFileSync(DEBUG_LOG, `${JSON.stringify({ sessionId: '0c5d79', timestamp: Date.now(), location, message, hypothesisId, data })}\n`);
+  } catch (_) {}
+};
 
 const f = createUploadthing();
 
@@ -37,10 +46,22 @@ const uploadRouter = {
   })
     .middleware(async ({ req }) => {
       const authHeader = req?.headers?.authorization ? String(req.headers.authorization) : null;
-      if (!authHeader) throw new Error("Unauthorized");
+      agentLog('uploadthing.js:financeDocUploader:middleware', 'middleware entered', 'H3', {
+        hasAuth: Boolean(authHeader),
+        hasUploadthingToken: Boolean(process.env.UPLOADTHING_TOKEN || process.env.UPLOADTHING_SECRET),
+      });
+      if (!authHeader) {
+        agentLog('uploadthing.js:financeDocUploader:middleware', 'unauthorized - missing auth header', 'H3', {});
+        throw new Error("Unauthorized");
+      }
       return { userId: "authenticated-user" };
     })
     .onUploadComplete(async ({ metadata, file }) => {
+      agentLog('uploadthing.js:financeDocUploader:onUploadComplete', 'upload complete callback', 'H2', {
+        fileName: file?.name || null,
+        hasUrl: Boolean(file?.url),
+        hasKey: Boolean(file?.key),
+      });
       console.log("Finance doc uploaded:", file.url);
       return { url: file.url, key: file.key, name: file.name, size: file.size };
     }),

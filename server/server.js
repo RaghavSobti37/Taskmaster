@@ -134,10 +134,25 @@ app.use(traceMiddleware);
 
 // MongoDB Connection
 const isProd = process.env.NODE_ENV === 'production';
-let dbUri = (isProd ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI) : (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing')).trim();
+const isVercelPreview = process.env.VERCEL_ENV === 'preview';
+const vercelBranch = process.env.VERCEL_GIT_COMMIT_REF;
+
+let dbUri;
+
+if (isVercelPreview && process.env.MONGODB_URI) {
+  // Vercel preview deployments use local database
+  dbUri = process.env.MONGODB_URI.trim();
+  console.log(`[VERCEL PREVIEW] Using local MongoDB for branch: ${vercelBranch}`);
+} else if (isProd) {
+  // Production uses production database
+  dbUri = (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI).trim();
+} else {
+  // Development uses local or specified database
+  dbUri = (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing').trim();
+}
 
 // Local mail tests: tracking pixels hit public API which reads prod DB — opt-in sync
-if (!isProd && process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) {
+if (!isProd && !isVercelPreview && process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) {
   dbUri = process.env.MONGODB_URI_PROD.trim();
   console.log('[SYSTEM] MAIL_USE_PROD_DB=true — using production MongoDB for mail tracking sync');
 }
@@ -229,6 +244,8 @@ app.use('/api/auth', require('./routes/authConnectRoutes'));
 app.use('/api/v2/artists', require('./routes/artistV2Routes'));
     app.use('/api/gamification', require('./routes/gamificationRoutes'));
     app.use('/api/gamification-admin', require('./routes/gamificationAdminRoutes'));
+app.use('/api/projects', require('./routes/qaRoutes'));
+app.use('/api/customization', require('./routes/customizationRoutes'));
 
 // Public tracking webhooks & unsubscribe endpoints
 app.use(require('./routes/track')); // Mounts /webhooks/bounces and /unsubscribe at root

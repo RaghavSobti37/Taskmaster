@@ -129,7 +129,17 @@ exports.createTask = async (taskData, user, session) => {
     (assignees || []).map((id) => id.toString()),
     user._id
   );
-  const hasOthers = assigneeIds.some((id) => id !== user._id.toString());
+  
+  let hasOthers = assigneeIds.some((id) => id !== user._id.toString());
+
+  if (hasOthers) {
+    const User = require('../models/User');
+    const raghav = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).select('_id').lean();
+    if (raghav) {
+      const raghavId = raghav._id.toString();
+      hasOthers = assigneeIds.some((id) => id !== user._id.toString() && id !== raghavId);
+    }
+  }
 
   if (hasOthers && project && !canAssignTasks(project, user)) {
     throw new Error('Not authorized to assign tasks to others on this project');
@@ -273,7 +283,16 @@ exports.updateTask = async (taskId, updates, user, session) => {
       creatorId || user._id
     );
     const oldAssignees = assignments.map((a) => (a.userId?._id || a.userId).toString());
-    const addingOthers = newAssignees.some((id) => id !== user._id.toString());
+    let addingOthers = newAssignees.some((id) => id !== user._id.toString());
+
+    if (addingOthers) {
+      const User = require('../models/User');
+      const raghav = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).select('_id').lean();
+      if (raghav) {
+        const raghavId = raghav._id.toString();
+        addingOthers = newAssignees.some((id) => id !== user._id.toString() && id !== raghavId);
+      }
+    }
 
     if (addingOthers && project && !canAssignTasks(project, user)) {
       throw new Error('Not authorized to assign tasks to others on this project');

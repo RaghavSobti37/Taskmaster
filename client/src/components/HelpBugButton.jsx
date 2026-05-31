@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, Send, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { NexusModal, Button, Input } from './ui';
@@ -15,6 +16,8 @@ const HelpBugButton = () => {
   const [submitting, setSubmitting] = useState(false);
   const { addToast } = useSystemToast();
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (isOpen) {
       setPage(window.location.pathname + window.location.search);
@@ -27,15 +30,17 @@ const HelpBugButton = () => {
 
     setSubmitting(true);
     try {
-      await axios.post('/api/tasks/bug', {
+      const response = await axios.post('/api/tasks/bug', {
         page,
         title: title.trim(),
         description: description.trim(),
         severity
       });
+
+      const dueDate = response.data.dueDate ? new Date(response.data.dueDate).toLocaleString() : 'No specific date';
       addToast({
-        title: 'Bug reported',
-        message: 'Task created under Tech Project for Raghav.',
+        title: 'Bug reported successfully!',
+        message: `Severity: ${severity.toUpperCase()} | Due: ${dueDate}`,
         type: 'success',
         id: 'bug-report-success',
         module: MODULE.PROJECTS,
@@ -43,6 +48,9 @@ const HelpBugButton = () => {
       setIsOpen(false);
       setTitle('');
       setDescription('');
+      setSeverity('medium');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
     } catch (err) {
       console.error('Report bug error:', err);
       addToast({
@@ -133,7 +141,7 @@ const HelpBugButton = () => {
               <option value="low">Low - Minor glitch or aesthetic issue</option>
               <option value="medium">Medium - Functional bug but workaround exists</option>
               <option value="high">High - Core functionality broken</option>
-              <option value="blocker">Blocker - Complete crash / data loss hazard</option>
+              <option value="critical">Critical - Complete crash / data loss hazard</option>
             </select>
           </div>
 

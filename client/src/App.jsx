@@ -51,6 +51,7 @@ const lazyWithRetry = (componentImport) =>
 
 // Lazy loaded pages
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const QATestingPage = lazyWithRetry(() => import('./pages/admin/QATestingPage'));
 const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
 const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView'));
@@ -64,6 +65,7 @@ const AdminMail = lazyWithRetry(() => import('./pages/admin/AdminMail'));
 const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
 const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView'));
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
+
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
 const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
@@ -186,6 +188,7 @@ function App() {
                 <Route path="/calendar" element={<CalendarView />} />
               </Route>
               <Route path="/settings" element={<SettingsPage />} />
+
               <Route element={<PageRoute page="logs" />}>
                 <Route path="/logs" element={<DailyLogPage />} />
               </Route>
@@ -228,6 +231,7 @@ function App() {
               <Route element={<PageRoute page="admin_data" />}>
                 <Route path="/admin" element={<AdminCRM />} />
                 <Route path="/admin/control" element={<AdminPanel />} />
+                <Route path="/admin/qa" element={<QATestingPage />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />

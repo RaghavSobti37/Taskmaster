@@ -5,7 +5,7 @@ export function combineDateAndTime(dateStr, timeStr = '09:00') {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split('-').map(Number);
   const [hh = 9, mm = 0] = (timeStr || '09:00').split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm, 0, 0);
+  return new Date(Date.UTC(y, m - 1, d, hh, mm, 0, 0));
 }
 
 export function extractDateAndTime(raw) {
@@ -15,7 +15,7 @@ export function extractDateAndTime(raw) {
   if (!str.includes('T')) return { date: datePart, time: '09:00' };
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return { date: datePart, time: '09:00' };
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const time = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
   return { date: datePart, time };
 }
 
@@ -25,5 +25,8 @@ export function formatEventTimeLabel(raw) {
   if (!str.includes('T')) return 'All day';
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return 'All day';
-  return format(d, 'h:mma').toUpperCase();
+  
+  // Use UTC time to avoid local timezone offset shifts
+  const utcDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), 0, 0);
+  return format(utcDate, 'h:mma').toUpperCase();
 }

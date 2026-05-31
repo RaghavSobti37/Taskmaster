@@ -66,14 +66,19 @@ const DashboardTaskRow = ({
         <button
           type="button"
           onClick={() => onOpen?.(task)}
-          className="flex-1 min-w-0 text-left"
+          className="flex-1 flex items-center gap-3 min-w-0 text-left"
         >
-          <p className="tm-task-title truncate">{task.title}</p>
-          <p className={`tm-caption mt-0.5 ${overdue ? 'text-[var(--color-pastel-rose-text)] font-bold' : ''}`}>{dueLabel}</p>
+          <p className="tm-task-title truncate flex-1">{task.title}</p>
+          
+          <div className="flex items-center gap-3 shrink-0">
+            <Badge variant={getPriorityBadgeVariant(task.priority)} className="uppercase !text-[10px] !font-bold tracking-wide">
+              {task.priority || 'medium'}
+            </Badge>
+            <p className={`text-xs whitespace-nowrap ${overdue ? 'text-[var(--color-pastel-rose-text)] font-bold' : 'text-[var(--color-text-muted)]'}`}>
+              {dueLabel}
+            </p>
+          </div>
         </button>
-        <Badge variant={getPriorityBadgeVariant(task.priority)} className="shrink-0 uppercase !text-[10px] !font-bold tracking-wide">
-          {task.priority || 'medium'}
-        </Badge>
       </div>
     </div>
   );

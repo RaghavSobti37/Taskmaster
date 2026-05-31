@@ -39,9 +39,19 @@ exports.createProject = async (req, res) => {
     const { name, description, tags, members, color, starred, workspace } = req.body;
     
     const providedMembers = members?.map(m => m.userId) || [];
+    
+    const userDocs = await User.find({ _id: { $in: providedMembers } }).populate('departmentId');
+    const userRoleMap = new Map();
+    userDocs.forEach(u => {
+      const slug = u.departmentId?.slug || '';
+      if (slug === 'admin') userRoleMap.set(u._id.toString(), 'admin');
+      else if (['sales', 'artist-management'].includes(slug)) userRoleMap.set(u._id.toString(), 'manager');
+      else userRoleMap.set(u._id.toString(), 'member');
+    });
+
     const providedRoles = members?.map(m => ({
       user: m.userId,
-      role: m.role || 'member'
+      role: userRoleMap.get(m.userId) || 'member'
     })) || [];
 
     // Ensure owner is always in members and roles
@@ -436,14 +446,16 @@ exports.addMember = async (req, res) => {
       return res.status(400).json({ error: 'User is already a member of this project' });
     }
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate('departmentId');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const validRoles = ['owner', 'manager', 'member'];
-    const projectRole = validRoles.includes(role) ? role : 'member';
+    const deptSlug = user.departmentId?.slug || '';
+    let autoRole = 'member';
+    if (deptSlug === 'admin') autoRole = 'admin';
+    else if (['sales', 'artist-management'].includes(deptSlug)) autoRole = 'manager';
 
     project.members.push(userId);
-    project.memberRoles.push({ user: userId, role: projectRole });
+    project.memberRoles.push({ user: userId, role: autoRole });
     await project.save();
 
     const updatedProject = await Project.findById(id)

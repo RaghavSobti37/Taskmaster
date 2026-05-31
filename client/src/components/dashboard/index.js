@@ -12,4 +12,7 @@ export { default as NotesPanel } from './NotesPanel';
 export { default as PinBoardMessages } from './PinBoardMessages';
 export { default as PinBoardComposer } from './PinBoardComposer';
 export { default as ReviewQueueCard } from './ReviewQueueCard';
+export { default as TodosOverdueCard } from './TodosOverdueCard';
+export { default as PipelineSummaryCard } from './PipelineSummaryCard';
+export { default as GenericDashboardCard } from './GenericDashboardCard';
 export { PinBoardProvider } from './PinBoardContext';

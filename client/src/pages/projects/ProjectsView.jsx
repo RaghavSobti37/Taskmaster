@@ -32,15 +32,14 @@ const WORKSPACE_COLORS = [
 
 const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, onDragStart, onDragEnd, reviewCount = 0 }) => (
   <div
-    draggable={isAdmin}
+    draggable={true}
     onDragStart={(e) => {
-      if (!isAdmin) return;
       e.dataTransfer.setData('application/project-id', project._id);
       e.dataTransfer.effectAllowed = 'move';
       onDragStart?.(project._id);
     }}
     onDragEnd={() => onDragEnd?.()}
-    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'} ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'} cursor-grab active:cursor-grabbing`}
     onClick={() => onNavigate(project._id)}
   >
     <div className="flex items-start justify-between gap-2 mb-2">
@@ -57,15 +56,15 @@ const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, on
           </span>
         )}
         <button
-        onClick={(e) => onToggleStar(e, project)}
-        className="p-0.5 rounded shrink-0 hover:bg-[var(--color-bg-border)] transition-all"
-        title={project.starred ? 'Unstar' : 'Star project'}
-      >
-        <Star
-          size={11}
-          className={project.starred ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-text-muted)] hover:text-amber-400'}
-        />
-      </button>
+          onClick={(e) => onToggleStar(e, project)}
+          className="p-0.5 rounded shrink-0 hover:bg-[var(--color-bg-border)] transition-all"
+          title={project.starred ? 'Unstar' : 'Star project'}
+        >
+          <Star
+            size={11}
+            className={project.starred ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-text-muted)] hover:text-amber-400'}
+          />
+        </button>
       </div>
     </div>
     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
@@ -181,13 +180,12 @@ const ProjectsView = () => {
 
   const handleWorkspaceDrop = useCallback((e, workspaceName) => {
     e.preventDefault();
-    if (!isAdmin) return;
     const projectId = e.dataTransfer.getData('application/project-id');
     if (projectId) moveProjectToWorkspace(projectId, workspaceName);
-  }, [isAdmin, moveProjectToWorkspace]);
+  }, [moveProjectToWorkspace]);
 
   const handleWorkspaceReorder = useCallback(async (sourceIndex, destIndex) => {
-    if (!isAdmin || sourceIndex === destIndex) return;
+    if (sourceIndex === destIndex) return;
     try {
       const reordered = [...workspaceGroups];
       const [moved] = reordered.splice(sourceIndex, 1);
@@ -226,30 +224,7 @@ const ProjectsView = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        title="Project Portfolio"
-        subtitle="Manage and track your active projects and their progress."
-        icon={Briefcase}
-        actions={
-          <div className="flex items-center gap-2">
-            {totalReviewCount > 0 && (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40"
-                title="Tasks awaiting your review across projects"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" aria-hidden />
-                {totalReviewCount} to review
-              </span>
-            )}
-            <Button variant="secondary" onClick={() => setCreateModalOpen(true)}>
-              <FolderPlus size={16} /> New Workspace
-            </Button>
-            <Button onClick={() => navigate('/projects/new')}>
-              <Plus size={16} /> New Project
-            </Button>
-          </div>
-        }
-      />
+
 
       <Card className="flex flex-col border-none shadow-none bg-transparent">
         <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9.5rem_10rem] lg:items-center lg:gap-2">
@@ -266,11 +241,10 @@ const ProjectsView = () => {
               type="button"
               onClick={() => setViewMode('workspace')}
               title="Workspaces"
-              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${
-                viewMode === 'workspace'
+              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
                   ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
-              }`}
+                }`}
             >
               <LayoutGrid size={12} className="shrink-0" />
               <span className="hidden sm:inline">Workspaces</span>
@@ -279,11 +253,10 @@ const ProjectsView = () => {
               type="button"
               onClick={() => setViewMode('all')}
               title="All projects"
-              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${
-                viewMode === 'all'
+              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
                   ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
-              }`}
+                }`}
             >
               <List size={12} className="shrink-0" />
               <span className="hidden sm:inline">All</span>
@@ -318,7 +291,7 @@ const ProjectsView = () => {
           />
         </div>
 
-        {isAdmin && draggingProjectId && (
+        {draggingProjectId && (
           <div className="mb-4 p-3 rounded-xl border-2 border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)] mb-2">
               Drop project into workspace
@@ -331,11 +304,10 @@ const ProjectsView = () => {
                   onDragOver={(e) => { e.preventDefault(); setDragOverWorkspace(group.name); }}
                   onDragLeave={() => setDragOverWorkspace(null)}
                   onDrop={(e) => handleWorkspaceDrop(e, group.name)}
-                  className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${
-                    dragOverWorkspace === group.name
+                  className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${dragOverWorkspace === group.name
                       ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/15 scale-105'
                       : 'border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]'
-                  }`}
+                    }`}
                   style={{ borderLeftColor: group.color, borderLeftWidth: 4 }}
                 >
                   {group.name}
@@ -345,9 +317,9 @@ const ProjectsView = () => {
           </div>
         )}
 
-        {isAdmin && viewMode === 'workspace' && (
+        {viewMode === 'workspace' && (
           <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-            Admin: drag project cards between workspaces • drag workspace headers to reorder
+            Drag project cards between workspaces • drag workspace headers to reorder
           </p>
         )}
 
@@ -364,11 +336,9 @@ const ProjectsView = () => {
                   transition={{ duration: 0.2, delay: index * 0.04 }}
                 >
                   <Card
-                    className={`p-0 flex flex-col h-full overflow-hidden transition-all ${
-                      dragOverWorkspace === group.name ? 'ring-2 ring-[var(--color-action-primary)] scale-[1.01]' : ''
-                    }`}
+                    className={`p-0 flex flex-col h-full overflow-hidden transition-all ${dragOverWorkspace === group.name ? 'ring-2 ring-[var(--color-action-primary)] scale-[1.01]' : ''
+                      }`}
                     onDragOver={(e) => {
-                      if (!isAdmin) return;
                       e.preventDefault();
                       setDragOverWorkspace(group.name);
                     }}
@@ -376,16 +346,15 @@ const ProjectsView = () => {
                     onDrop={(e) => handleWorkspaceDrop(e, group.name)}
                   >
                     <div className="h-1.5 w-full" style={{ backgroundColor: group.color }} />
-                    <div 
-                      className={`p-4 space-y-3 ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                      draggable={isAdmin}
+                    <div
+                      className={`p-4 space-y-3 cursor-grab active:cursor-grabbing`}
+                      draggable={true}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('application/workspace-index', workspaceGroups.findIndex(w => w.name === group.name));
                         setDraggingWorkspaceName(group.name);
                       }}
                       onDragEnd={() => setDraggingWorkspaceName(null)}
                       onDragOver={(e) => {
-                        if (!isAdmin) return;
                         e.preventDefault();
                         if (e.dataTransfer.types.includes('application/project-id')) {
                           setDragOverWorkspace(group.name);
@@ -415,9 +384,9 @@ const ProjectsView = () => {
                             {group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'}
                           </Badge>
                           {isAdmin && group.projects.length === 0 && !['TSC ACADEMY', 'TSC ARTISTS', 'TSC FILMS', 'TSC TECH', 'GENERAL'].includes(group.name) && (
-                            <Button 
-                              variant="ghost" 
-                              size="xs" 
+                            <Button
+                              variant="ghost"
+                              size="xs"
                               className="!text-red-400 hover:bg-red-500/10 !p-1"
                               onClick={async () => {
                                 const ok = await confirm({
@@ -449,7 +418,6 @@ const ProjectsView = () => {
                               reviewCount={reviewCountByProject[String(project._id)] || 0}
                               onNavigate={(id) => navigate(`/projects/${id}`)}
                               onToggleStar={toggleStar}
-                              isAdmin={isAdmin}
                               onDragStart={setDraggingProjectId}
                               onDragEnd={() => setDraggingProjectId(null)}
                             />
@@ -495,13 +463,11 @@ const ProjectsView = () => {
                     transition={{ duration: 0.2, delay: index * 0.04 }}
                   >
                     <Card
-                      className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
-                        draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
-                      } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''} ${isAdmin ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                      className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-grab active:cursor-grabbing ${draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
+                        } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''}`}
                       style={{ borderColor: project.starred ? accent : undefined }}
-                      draggable={isAdmin}
+                      draggable={true}
                       onDragStart={(e) => {
-                        if (!isAdmin) return;
                         e.dataTransfer.setData('application/project-id', project._id);
                         e.dataTransfer.effectAllowed = 'move';
                         setDraggingProjectId(project._id);
@@ -603,11 +569,10 @@ const ProjectsView = () => {
                   key={c}
                   type="button"
                   onClick={() => setNewWorkspaceColor(c)}
-                  className={`w-7 h-7 rounded-full transition-all duration-200 ${
-                    newWorkspaceColor === c
+                  className={`w-7 h-7 rounded-full transition-all duration-200 ${newWorkspaceColor === c
                       ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]'
                       : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
+                    }`}
                   style={{ backgroundColor: c }}
                 />
               ))}

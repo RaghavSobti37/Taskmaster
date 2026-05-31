@@ -40,6 +40,19 @@ export function filterTodayTasks(tasks = [], today = startOfDay(new Date())) {
   );
 }
 
+export function filterTasksByTimeframe(tasks = [], timeframe = '7d', today = startOfDay(new Date())) {
+  const days = timeframe === '1d' ? 1 : timeframe === '7d' ? 7 : 30;
+  return tasks.filter((t) => {
+    if (t?.status === 'done' || t?.status === 'in-review') return false;
+    const day = getTaskDay(t);
+    if (!day) return false;
+    // Difference in days (0 for today, 1 for tomorrow, etc.)
+    const diff = (day.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+    // Include tasks that are overdue or due within the timeframe
+    return diff < days;
+  });
+}
+
 export function filterOverdueTasks(tasks = [], today = startOfDay(new Date())) {
   return tasks.filter(
     (t) =>

@@ -40,7 +40,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
 import { hasPageAccess, groupHasVisiblePages, getDepartmentName } from '../utils/departmentPermissions';
-import { Menu } from 'lucide-react';
+import { Menu, Settings } from 'lucide-react';
+import { useNavbarPreferences } from '../hooks/useTaskmasterQueries';
 
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -62,6 +63,33 @@ const useWindowSize = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   return windowSize;
+};
+
+const PAGE_CONFIG = {
+  '/dashboard': { icon: LayoutDashboard, label: 'Dashboard', accessKey: 'dashboard' },
+  '/calendar': { icon: CalendarDays, label: 'Calendar', accessKey: 'calendar' },
+  '/todo': { icon: ListTodo, label: 'Todo', accessKey: 'todo' },
+  '/inbox': { icon: Inbox, label: 'Inbox', accessKey: 'inbox' },
+  '/projects': { icon: Briefcase, label: 'Projects', accessKey: 'projects' },
+  '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
+  '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
+  '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
+  '/workspace/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
+  '/management/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
+  '/management/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
+  '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
+  '/leads': { icon: UserPlus, label: 'Leads', accessKey: 'leads' },
+  '/followups': { icon: PhoneCall, label: 'Followups', accessKey: 'followups' },
+  '/bookings': { icon: CalendarCheck, label: 'Bookings', accessKey: 'bookings' },
+  '/finance': { icon: CircleDollarSign, label: 'Finance', accessKey: 'finance' },
+  '/management/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
+  '/management/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
+  '/artists': { icon: Mic2, label: 'Artists', accessKey: 'artists' },
+  '/admin/users': { icon: Users, label: 'Users & Teams', accessKey: 'admin_users' },
+  '/admin': { icon: Database, label: 'All Data', accessKey: 'admin_data', end: true },
+  '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
+  '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
+  '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },
 };
 
 const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {
@@ -219,6 +247,7 @@ const OutletSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { width } = useWindowSize();
+  const { data: navbarPreferences } = useNavbarPreferences();
   const { data: statusCounts = {
     tasks: { overdue: 0, today: 0 },
     followups: { overdue: 0, today: 0 },
@@ -301,272 +330,110 @@ const OutletSidebar = () => {
         </div>
 
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
-          {groupHasVisiblePages(user, ['dashboard', 'calendar', 'todo', 'inbox']) && (
-          <NavGroup title="Platform" collapsed={!showLabels} isMobile={isMobile}>
-            {hasPageAccess(user, 'dashboard') && (
-            <NavItem
-              to="/dashboard"
-              icon={LayoutDashboard}
-              label="Dashboard"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data })}
-            />
-            )}
-            {hasPageAccess(user, 'calendar') && (
-            <NavItem
-              to="/calendar"
-              icon={CalendarDays}
-              label="Calendar"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-              todayCount={statusCounts.calendar?.today}
-              onMouseEnter={() => {
-                queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
-                queryClient.prefetchQuery({ queryKey: ['holidays', new Date().getFullYear()], queryFn: async () => (await axios.get(`/api/google/holidays?year=${new Date().getFullYear()}`)).data });
-              }}
-            />
-            )}
-            {hasPageAccess(user, 'todo') && (
-            <NavItem
-              to="/todo"
-              icon={ListTodo}
-              label="Todo"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-            {hasPageAccess(user, 'inbox') && (
-            <NavItem
-              to="/inbox"
-              icon={Inbox}
-              label="Inbox"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-              count={statusCounts.notifications?.unread}
-            />
-            )}
-          </NavGroup>
-          )}
+          {(navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
+            { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
+            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/workspace/emails'}] },
+            { id: 'office', title: 'Office', visible: true, pages: [{path: '/management/equipment'}, {path: '/management/contacts'}, {path: '/attendance'}] },
+            { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
+            { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/management/announcements'}, {path: '/management/ops-logs'}, {path: '/artists'}] },
+            { id: 'admin', title: 'Admin', visible: true, pages: [{path: '/admin/users'}, {path: '/admin'}, {path: '/admin/exly-campaigns'}, {path: '/admin/scripts'}, {path: '/admin/gamification'}] }
+          ])
+            .filter(group => group.visible)
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map(group => {
+              const visiblePages = (group.pages || [])
+                .filter(page => (page.visible !== false) && PAGE_CONFIG[page.path] && hasPageAccess(user, PAGE_CONFIG[page.path].accessKey))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+                
+              if (visiblePages.length === 0) return null;
 
-          {groupHasVisiblePages(user, ['projects', 'assets', 'schedule', 'logs', 'emails']) && (
-          <NavGroup title="Workspace" collapsed={!showLabels} isMobile={isMobile}>
-            {hasPageAccess(user, 'projects') && (
-            <NavItem
-              to="/projects"
-              icon={Briefcase}
-              label="Projects"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data })}
-            />
-            )}
-            {hasPageAccess(user, 'assets') && (
-            <NavItem
-              to="/assets"
-              end
-              icon={FolderArchive}
-              label="Assets"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-              onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data })}
-            />
-            )}
-            {hasPageAccess(user, 'schedule') && (
-            <NavItem
-              to="/schedule"
-              icon={CalendarClock}
-              label="Schedule"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-            {hasPageAccess(user, 'logs') && (
-            <NavItem to="/logs" icon={NotebookPen} label="Daily Logs" collapsed={!showLabels} isMobile={isMobile} />
-            )}
-            {hasPageAccess(user, 'emails') && (
-            <NavItem
-              to="/workspace/emails"
-              icon={Mail}
-              label="Emails"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-          </NavGroup>
-          )}
-
-          {groupHasVisiblePages(user, ['equipment', 'contacts', 'attendance']) && (
-          <NavGroup title="Office" collapsed={!showLabels} isMobile={isMobile}>
-            {hasPageAccess(user, 'equipment') && (
-            <NavItem
-              to="/management/equipment"
-              icon={Wrench}
-              label="Equipment"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-            {hasPageAccess(user, 'contacts') && (
-            <NavItem
-              to="/management/contacts"
-              icon={Contact}
-              label="Contacts"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-            {hasPageAccess(user, 'attendance') && (
-            <NavItem
-              to="/attendance"
-              icon={ClipboardCheck}
-              label="Attendance"
-              collapsed={!showLabels}
-              isMobile={isMobile}
-            />
-            )}
-          </NavGroup>
-          )}
-
-          {groupHasVisiblePages(user, ['leads', 'followups', 'bookings']) && (
-            <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile}>
-              {hasPageAccess(user, 'leads') && (
-                  <NavItem
-                    to="/leads"
-                    icon={UserPlus}
-                    label="Leads"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                    onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
-                  />
-              )}
-              {hasPageAccess(user, 'followups') && (
-                  <NavItem
-                    to="/followups"
-                    icon={PhoneCall}
-                    label="Followups"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                    count={statusCounts.followups.overdue}
-                    todayCount={statusCounts.followups.today}
-                    onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data })}
-                  />
-              )}
-              {hasPageAccess(user, 'bookings') && (
-                <NavItem
-                  to="/bookings"
-                  icon={CalendarCheck}
-                  label="Bookings"
-                  collapsed={!showLabels}
-                  isMobile={isMobile}
-                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['bookings'], queryFn: async () => (await axios.get('/api/bookings')).data })}
-                />
-              )}
-            </NavGroup>
-          )}
-
-          {groupHasVisiblePages(user, ['finance', 'announcements', 'ops_logs', 'artists']) && (
-            <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile}>
-              {hasPageAccess(user, 'finance') && (
-              <NavItem
-                to="/finance"
-                icon={CircleDollarSign}
-                label="Finance"
-                collapsed={!showLabels}
-                isMobile={isMobile}
-                onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['finance-docs'], queryFn: async () => (await axios.get('/api/finance')).data })}
-              />
-              )}
-              {hasPageAccess(user, 'announcements') && (
-              <NavItem
-                to="/management/announcements"
-                icon={Megaphone}
-                label="Announcements"
-                collapsed={!showLabels}
-                isMobile={isMobile}
-              />
-              )}
-              {hasPageAccess(user, 'ops_logs') && (
-              <NavItem
-                to="/management/ops-logs"
-                icon={Activity}
-                label="Ops Logs"
-                collapsed={!showLabels}
-                isMobile={isMobile}
-              />
-              )}
-              {hasPageAccess(user, 'artists') && (
-                <NavItem
-                  to="/artists"
-                  icon={Mic2}
-                  label="Artists"
-                  collapsed={!showLabels}
-                  isMobile={isMobile}
-                  onMouseEnter={() => queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data })}
-                />
-              )}
-            </NavGroup>
-          )}
-
-          {groupHasVisiblePages(user, ['admin_users', 'admin_data', 'admin_exly', 'admin_scripts', 'admin_gamification']) && (
-                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen>
-                  {hasPageAccess(user, 'admin_users') && (
-                  <NavItem
-                    to="/admin/users"
-                    icon={Users}
-                    label="Users & Teams"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                    onMouseEnter={() => {
-                      queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-                      queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-                    }}
-                  />
-                  )}
-                  {hasPageAccess(user, 'admin_data') && (
-                  <NavItem
-                    to="/admin"
-                    end
-                    icon={Database}
-                    label="All Data"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
-                  )}
-                  {hasPageAccess(user, 'admin_exly') && (
-                  <NavItem
-                    to="/admin/exly-campaigns"
-                    icon={BarChart2}
-                    label="Exly Data"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
-                  )}
-                  {hasPageAccess(user, 'admin_scripts') && (
-                  <NavItem
-                    to="/admin/scripts"
-                    icon={Brackets}
-                    label="Script Runner"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
-                  )}
-                  {hasPageAccess(user, 'admin_gamification') && (
-                  <NavItem
-                    to="/admin/gamification"
-                    icon={Trophy}
-                    label="Gamification"
-                    collapsed={!showLabels}
-                    isMobile={isMobile}
-                  />
-                  )}
+              return (
+                <NavGroup key={group.id} title={group.title} collapsed={!showLabels} isMobile={isMobile}>
+                  {visiblePages.map(page => {
+                    const config = PAGE_CONFIG[page.path];
+                    return (
+                      <NavItem
+                        key={page.path}
+                        to={page.path}
+                        icon={config.icon}
+                        label={page.label || config.label}
+                        collapsed={!showLabels}
+                        isMobile={isMobile}
+                        end={config.end}
+                        count={
+                          page.path === '/inbox' ? statusCounts.notifications?.unread :
+                          page.path === '/followups' ? statusCounts.followups?.overdue : 0
+                        }
+                        todayCount={
+                          page.path === '/calendar' ? statusCounts.calendar?.today : 0
+                        }
+                        onMouseEnter={() => {
+                          if (page.path === '/dashboard') {
+                            queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data });
+                          } else if (page.path === '/calendar') {
+                            queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
+                          } else if (page.path === '/projects') {
+                            queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data });
+                          } else if (page.path === '/assets') {
+                            queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data });
+                          } else if (page.path === '/leads') {
+                            queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data });
+                          } else if (page.path === '/artists') {
+                            queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data });
+                          } else if (page.path === '/admin/users') {
+                            queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+                            queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </NavGroup>
-              )}
-            
+              );
+            })}
         </nav>
 
         <div className="p-2 border-t border-[var(--color-bg-border)] space-y-1.5">
-          <ThemeToggle theme={theme} toggleTheme={toggleTheme} collapsed={!showLabels} isMobile={isMobile} />
+          {!(!showLabels && !isMobile) && (
+            <div className="flex gap-1.5 w-full">
+              <button
+                onClick={() => navigate('/settings')}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
+                title="Settings"
+              >
+                <Settings size={16} className="text-[var(--color-text-secondary)] group-hover:text-blue-500 transition-colors" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+                  Settings
+                </span>
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all flex items-center justify-center shrink-0"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
+              </button>
+            </div>
+          )}
+
+          {(!showLabels && !isMobile) && (
+            <div className="flex flex-col gap-1.5 w-full">
+              <button
+                onClick={() => navigate('/settings')}
+                title="Settings"
+                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-blue-500/50 transition-colors"
+              >
+                <Settings size={16} className="text-[var(--color-text-secondary)] hover:text-blue-500 transition-colors" />
+              </button>
+              <button
+                onClick={toggleTheme}
+                title="Toggle Theme"
+                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-blue-500/50 transition-colors"
+              >
+                {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
+              </button>
+            </div>
+          )}
 
           <div
             onClick={() => navigate('/settings')}

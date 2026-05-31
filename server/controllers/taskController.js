@@ -6,6 +6,8 @@ const { createNotification } = require('../services/notificationDispatcher');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const { todayStart, todayEnd, getDateKey, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
+const { addDays } = require('date-fns');
 
 const dispatchTaskNotifications = (payloads = []) => {
   for (const payload of payloads) {
@@ -153,7 +155,7 @@ exports.getTasks = async (req, res, next) => {
     if (scope === 'dashboard') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      const futureLimit = new Date(today.getTime() + 35 * 24 * 60 * 60 * 1000); // 35 days ahead
 
       filter.status = { $nin: ['done', 'in-review'] };
       filter.$expr = {
@@ -162,7 +164,7 @@ exports.getTasks = async (req, res, next) => {
           in: {
             $and: [
               { $ne: ['$$taskDay', null] },
-              { $lt: ['$$taskDay', tomorrow] },
+              { $lt: ['$$taskDay', futureLimit] },
             ],
           },
         },
@@ -233,6 +235,46 @@ exports.deleteTask = async (req, res, next) => {
   }
 };
 
+/** Calculate due date based on bug severity using IST timezone */
+const calculateBugDueDate = (severity) => {
+  const today = startOfDayFromKey(getDateKey());
+  const now = new Date();
+  
+  switch (severity) {
+    case 'critical':
+      // Critical: NOW (same day, current time)
+      return now;
+    
+    case 'high':
+      // High: TODAY 2:00 PM IST (14:00)
+      const todayPM = new Date(today);
+      todayPM.setHours(14, 0, 0, 0);
+      // If it's already past 2 PM, use tomorrow 2 PM
+      if (todayPM < now) {
+        const tomorrowStart = startOfDayFromKey(getDateKey(addDays(today, 1)));
+        const tomorrowPM = new Date(tomorrowStart);
+        tomorrowPM.setHours(14, 0, 0, 0);
+        return tomorrowPM;
+      }
+      return todayPM;
+    
+    case 'medium':
+      // Medium: TOMORROW 9:00 AM IST (09:00)
+      const tomorrow = addDays(today, 1);
+      const tomorrowAM = new Date(startOfDayFromKey(getDateKey(tomorrow)));
+      tomorrowAM.setHours(9, 0, 0, 0);
+      return tomorrowAM;
+    
+    case 'low':
+    default:
+      // Low: DAY AFTER TOMORROW 9:00 AM IST (09:00)
+      const dayAfter = addDays(today, 2);
+      const dayAfterAM = new Date(startOfDayFromKey(getDateKey(dayAfter)));
+      dayAfterAM.setHours(9, 0, 0, 0);
+      return dayAfterAM;
+  }
+};
+
 exports.reportBug = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -272,7 +314,9 @@ exports.reportBug = async (req, res, next) => {
       priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
       projectId: techProject._id,
       assignees: [raghavUser._id.toString()],
-      createdBy: req.user._id
+      createdBy: req.user._id,
+      dueDate: calculateBugDueDate(severity),
+      scheduleSlot: severity === 'high' ? 'PM' : 'AM'
     };
 
     const { taskDto, pendingNotifications } = await TaskService.createTask(taskData, req.user, session);

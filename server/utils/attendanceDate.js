@@ -43,6 +43,32 @@ const toStartOfDay = (date) => {
 
 const todayStart = () => startOfDayFromKey(getDateKey());
 
+const todayEnd = () => endOfDayFromKey(getDateKey());
+
+const getISTDate = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(now);
+  const date = new Date(
+    parseInt(parts.find(p => p.type === 'year').value),
+    parseInt(parts.find(p => p.type === 'month').value) - 1,
+    parseInt(parts.find(p => p.type === 'day').value),
+    parseInt(parts.find(p => p.type === 'hour').value),
+    parseInt(parts.find(p => p.type === 'minute').value),
+    parseInt(parts.find(p => p.type === 'second').value)
+  );
+  return date;
+};
+
 const formatHHMM = (date = new Date()) => {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: APP_TIMEZONE,
@@ -152,6 +178,8 @@ module.exports = {
   endOfDayFromKey,
   toStartOfDay,
   todayStart,
+  todayEnd,
+  getISTDate,
   formatHHMM,
   isWeekend,
   getMondayDateKey,

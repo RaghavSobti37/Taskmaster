@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { getCache, setCache } = require('../services/cacheService');
+const { todayStart, todayEnd, getDateKey } = require('../utils/attendanceDate');
 
 exports.getDashboardSummary = async (req, res) => {
   try {
@@ -17,8 +18,8 @@ exports.getDashboardSummary = async (req, res) => {
     const cached = await getCache(cacheKey);
     if (cached) return res.json(cached);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = todayStart();
+    const todayEndTime = todayEnd();
 
     const assignments = await TaskAssignment.find({ userId }).select('taskId').lean();
     const assignedTaskIds = assignments.map(a => a.taskId);
@@ -81,7 +82,7 @@ exports.getDashboardSummary = async (req, res) => {
           { visibility: 'public' },
           { createdBy: userId }
         ],
-        date: { $gte: today, $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+        date: { $gte: today, $lte: todayEndTime }
       }).lean(),
 
       // 6. Campaign Data for Bounces

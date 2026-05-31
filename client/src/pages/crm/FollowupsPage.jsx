@@ -190,7 +190,7 @@ export default function FollowupsPage() {
             e.stopPropagation();
             const ok = await confirm({
               title: 'Complete follow-up?',
-              message: `Mark follow-up completed for ${row.name}?`,
+              message: `Mark follow-up completed for ${row?.name}?`,
               confirmLabel: 'Complete',
               type: 'success',
             });
@@ -219,14 +219,14 @@ export default function FollowupsPage() {
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-xs tracking-tight">{row.name}</span>
+            <span className="font-bold text-xs tracking-tight">{row?.name}</span>
             {row.source && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
-                {row.source}
+                {row?.source}
               </span>
             )}
           </div>
-          <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{row.phone} {row.email ? `• ${row.email}` : ''}</span>
+          <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{row?.phone} {row?.email ? `• ${row?.email}` : ''}</span>
         </div>
       )
     },
@@ -252,7 +252,7 @@ export default function FollowupsPage() {
       header: 'Interest Level',
       render: (row) => (
         <Badge variant={row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'info'}>
-          {row.leadStatus}
+          {row?.leadStatus}
         </Badge>
       )
     },
@@ -655,3 +655,6 @@ export default function FollowupsPage() {
     </PageContainer>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

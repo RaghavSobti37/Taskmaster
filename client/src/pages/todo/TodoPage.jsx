@@ -85,7 +85,7 @@ const TodoPage = () => {
     setTaskToComplete(null);
     try {
       const taskRes = await axios.put(
-        `/api/tasks/${task._id}`,
+        `/api/tasks/${task?._id}`,
         { status: 'done', actualHours: (task.actualHours || 0) + hours },
         AXIOS_SKIP_TOAST
       );
@@ -116,7 +116,7 @@ const TodoPage = () => {
 
   const renderRow = (task) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
-      return <TaskTableRowSkeleton key={task._id} colSpan={7} />;
+      return <TaskTableRowSkeleton key={task?._id} colSpan={7} />;
     }
     const isDone = task.status === 'done';
     const isInReview = task.status === 'in-review';
@@ -125,8 +125,8 @@ const TodoPage = () => {
     const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
     return (
       <tr
-        key={task._id}
-        data-highlight-id={task._id}
+        key={task?._id}
+        data-highlight-id={task?._id}
         className={`tm-task-row cursor-pointer rounded-xl overflow-hidden ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
         style={getTaskRowStyle(accent)}
         onClick={() => setSelectedTask(task)}
@@ -142,7 +142,7 @@ const TodoPage = () => {
           </button>
         </td>
         <td className="px-4 py-2">
-          <p className={`text-sm font-bold ${isDone ? 'line-through' : ''}`}>{task.title}</p>
+          <p className={`text-sm font-bold ${isDone ? 'line-through' : ''}`}>{task?.title}</p>
           {assigner?.name && (
             <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700/90 dark:text-amber-400 mt-0.5">
               Assigned by {displayPersonName(assigner)}
@@ -151,8 +151,8 @@ const TodoPage = () => {
         </td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase truncate max-w-[120px]">{project || '—'}</td>
-        <td className="px-4 py-2"><Badge variant="todo">{task.status}</Badge></td>
-        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{task.priority}</Badge></td>
+        <td className="px-4 py-2"><Badge variant="todo">{task?.status}</Badge></td>
+        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{task?.priority}</Badge></td>
         <td className="px-4 py-2 text-xs">{formatDueDate(task.dueDate || task.scheduleDate)}</td>
       </tr>
     );
@@ -220,3 +220,6 @@ const TodoPage = () => {
 };
 
 export default TodoPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

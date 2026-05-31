@@ -93,7 +93,7 @@ const ComponentsShowcase = () => {
     {
       header: 'Status',
       key: 'status',
-      render: (row) => <Badge variant={row.status}>{row.status}</Badge>,
+      render: (row) => <Badge variant={row?.status}>{row?.status}</Badge>,
     },
   ];
 

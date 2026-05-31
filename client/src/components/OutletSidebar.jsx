@@ -90,6 +90,7 @@ const PAGE_CONFIG = {
   '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
   '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
   '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },
+  '/admin/qa': { icon: Activity, label: 'QA Testing', accessKey: 'admin_data' },
 };
 
 const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {
@@ -330,14 +331,27 @@ const OutletSidebar = () => {
         </div>
 
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
-          {(navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
-            { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
-            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/workspace/emails'}] },
-            { id: 'office', title: 'Office', visible: true, pages: [{path: '/management/equipment'}, {path: '/management/contacts'}, {path: '/attendance'}] },
-            { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
-            { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/management/announcements'}, {path: '/management/ops-logs'}, {path: '/artists'}] },
-            { id: 'admin', title: 'Admin', visible: true, pages: [{path: '/admin/users'}, {path: '/admin'}, {path: '/admin/exly-campaigns'}, {path: '/admin/scripts'}, {path: '/admin/gamification'}] }
-          ])
+          {(() => {
+            const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
+              { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
+              { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/workspace/emails'}] },
+              { id: 'office', title: 'Office', visible: true, pages: [{path: '/management/equipment'}, {path: '/management/contacts'}, {path: '/attendance'}] },
+              { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
+              { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/management/announcements'}, {path: '/management/ops-logs'}, {path: '/artists'}] },
+              { id: 'admin', title: 'Admin', visible: true, pages: [{path: '/admin/users'}, {path: '/admin'}, {path: '/admin/exly-campaigns'}, {path: '/admin/scripts'}, {path: '/admin/gamification'}, {path: '/admin/qa'}] }
+            ];
+            
+            // Force inject new pages if missing from user's custom preferences
+            const hasQA = rawGroups.some(g => g.pages?.some(p => p.path === '/admin/qa'));
+            if (!hasQA) {
+              const adminGroup = rawGroups.find(g => g.id === 'admin');
+              if (adminGroup) {
+                adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/qa', visible: true }];
+              }
+            }
+            
+            return rawGroups;
+          })()
             .filter(group => group.visible)
             .sort((a, b) => (a.order || 0) - (b.order || 0))
             .map(group => {

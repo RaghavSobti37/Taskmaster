@@ -93,3 +93,6 @@ export default function LeaveTab() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

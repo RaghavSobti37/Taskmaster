@@ -6,22 +6,20 @@ const { broadcastRealtimeEvent } = require('../config/realtime');
 /** Start a new QA testing session */
 exports.startQATesting = async (req, res, next) => {
   try {
-    const projectId = req.params.projectId;
     const userId = req.user._id;
     const { testAgentName, testRole, permissions } = req.body || {};
 
-    // Check if test already running for this project
+    // Check if test already running globally
     const existingRun = await QATestRun.findOne({
-      projectId,
       status: { $in: ['pending', 'in-progress'] }
     });
 
     if (existingRun) {
-      return res.status(400).json({ error: 'A QA test is already running for this project' });
+      return res.status(400).json({ error: 'A QA test is already running' });
     }
 
     // Start testing service
-    const qaService = new QATestingService(projectId, userId, {
+    const qaService = new QATestingService(null, userId, {
       testAgentName: testAgentName || 'QA Agent',
       testRole: testRole || 'user',
       permissions: permissions || []
@@ -33,9 +31,8 @@ exports.startQATesting = async (req, res, next) => {
     });
 
     // Broadcast that testing started
-    broadcastRealtimeEvent(`qa-test:${projectId}`, 'started', {
+    broadcastRealtimeEvent(`qa-test:global`, 'started', {
       testRunId: qaService.testRunId,
-      projectId,
       initiatedBy: userId
     });
 
@@ -53,10 +50,9 @@ exports.startQATesting = async (req, res, next) => {
 /** Get current test progress */
 exports.getTestProgress = async (req, res, next) => {
   try {
-    const { projectId } = req.params;
     const testRunId = req.query.testRunId;
 
-    let query = { projectId };
+    let query = {};
     if (testRunId) {
       query._id = testRunId;
     } else {
@@ -69,7 +65,7 @@ exports.getTestProgress = async (req, res, next) => {
     );
 
     if (!testRun) {
-      return res.status(404).json({ error: 'No active test run found' });
+      return res.json({ status: 'idle', testRunId: null, progress: null, testCases: [], pagesTestedCount: 0 });
     }
 
     res.json({
@@ -90,11 +86,10 @@ exports.getTestProgress = async (req, res, next) => {
 /** Get test results */
 exports.getTestResults = async (req, res, next) => {
   try {
-    const { projectId, testRunId } = req.params;
+    const { testRunId } = req.params;
 
     const testRun = await QATestRun.findOne({
-      _id: testRunId,
-      projectId
+      _id: testRunId
     }).populate('bugsCreated', 'title priority status');
 
     if (!testRun) {
@@ -125,10 +120,10 @@ exports.getTestResults = async (req, res, next) => {
 /** Cancel ongoing test */
 exports.cancelTest = async (req, res, next) => {
   try {
-    const { projectId, testRunId } = req.params;
+    const { testRunId } = req.params;
 
     const testRun = await QATestRun.findOneAndUpdate(
-      { _id: testRunId, projectId },
+      { _id: testRunId },
       { status: 'cancelled', completedAt: new Date() },
       { new: true }
     );
@@ -137,7 +132,7 @@ exports.cancelTest = async (req, res, next) => {
       return res.status(404).json({ error: 'Test run not found' });
     }
 
-    broadcastRealtimeEvent(`qa-test:${projectId}`, 'cancelled', {
+    broadcastRealtimeEvent(`qa-test:global`, 'cancelled', {
       testRunId: testRunId
     });
 
@@ -151,15 +146,15 @@ exports.cancelTest = async (req, res, next) => {
 /** Manual cleanup of test data */
 exports.cleanupTestData = async (req, res, next) => {
   try {
-    const { projectId, testRunId } = req.params;
+    const { testRunId } = req.params;
 
-    const testRun = await QATestRun.findOne({ _id: testRunId, projectId });
+    const testRun = await QATestRun.findOne({ _id: testRunId });
     if (!testRun) {
       return res.status(404).json({ error: 'Test run not found' });
     }
 
     // Trigger cleanup
-    const qaService = new QATestingService(projectId, req.user._id);
+    const qaService = new QATestingService(null, req.user._id);
     qaService.testRunId = testRunId;
     await qaService.cleanupTestData();
 
@@ -173,16 +168,15 @@ exports.cleanupTestData = async (req, res, next) => {
 /** List all test runs for a project */
 exports.listTestRuns = async (req, res, next) => {
   try {
-    const { projectId } = req.params;
     const { limit = 10, skip = 0 } = req.query;
 
-    const testRuns = await QATestRun.find({ projectId })
+    const testRuns = await QATestRun.find({})
       .sort({ startedAt: -1 })
       .skip(parseInt(skip))
       .limit(parseInt(limit))
       .select('status progress testCases pagesTestedCount bugsIdentified startedAt completedAt');
 
-    const total = await QATestRun.countDocuments({ projectId });
+    const total = await QATestRun.countDocuments({});
 
     res.json({
       testRuns,
@@ -192,6 +186,30 @@ exports.listTestRuns = async (req, res, next) => {
     });
   } catch (error) {
     logger.error('QA', 'Error listing test runs', { error: error.message });
+    next(error);
+  }
+};
+
+/** Mark a specific bug as resolved */
+exports.resolveBug = async (req, res, next) => {
+  try {
+    const { testRunId, testCaseId } = req.params;
+    const testRun = await QATestRun.findOne({ _id: testRunId });
+    if (!testRun) {
+      return res.status(404).json({ error: 'Test run not found' });
+    }
+    
+    const testCaseIndex = testRun.testCases.findIndex(tc => tc._id.toString() === testCaseId);
+    if (testCaseIndex === -1) {
+      return res.status(404).json({ error: 'Test case bug not found' });
+    }
+
+    testRun.testCases[testCaseIndex].resolved = true;
+    await testRun.save();
+
+    res.json({ success: true, message: 'Bug marked as resolved' });
+  } catch (error) {
+    logger.error('QA', 'Error resolving bug', { error: error.message });
     next(error);
   }
 };

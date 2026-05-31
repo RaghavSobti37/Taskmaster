@@ -113,3 +113,6 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

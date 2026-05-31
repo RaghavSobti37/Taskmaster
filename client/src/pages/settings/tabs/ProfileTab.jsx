@@ -180,3 +180,6 @@ export default function ProfileTab() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

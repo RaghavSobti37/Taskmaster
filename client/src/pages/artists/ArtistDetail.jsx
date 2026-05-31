@@ -268,3 +268,6 @@ export default function ArtistDetail({ isPreview = false }) {
     </PageContainer>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

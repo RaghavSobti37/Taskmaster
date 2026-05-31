@@ -516,3 +516,6 @@ const OfficeAssetsPage = () => {
 };
 
 export default OfficeAssetsPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

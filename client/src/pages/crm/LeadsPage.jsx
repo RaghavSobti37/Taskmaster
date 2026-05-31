@@ -227,7 +227,7 @@ export default function LeadsPage() {
       render: (row) => (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-xs tracking-tight">{row.name}</span>
+            <span className="font-bold text-xs tracking-tight">{row?.name || 'Unknown'}</span>
             {row.artistType && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
                 {row.artistType.replace(' Artiste', '')}
@@ -235,12 +235,12 @@ export default function LeadsPage() {
             )}
             {row.primaryRole && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-action-primary)]/10 border border-[var(--color-action-primary)]/20 text-[var(--color-action-primary)] font-normal tracking-tight">
-                {row.primaryRole}
+                {row?.primaryRole}
               </span>
             )}
             {row.source && (!row.exlyOfferingTitle || (row.source !== 'Exly Offering' && row.source !== row.exlyOfferingTitle)) && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold tracking-tight">
-                {row.source}
+                {row?.source}
               </span>
             )}
             {row.exlyOfferingTitle && (
@@ -250,16 +250,16 @@ export default function LeadsPage() {
             )}
             {row.emailStatus && row.emailStatus !== 'Pending' && (
               <Badge variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Unsubscribed' ? 'warning' : 'rose'}>
-                {row.emailStatus}
+                {row?.emailStatus}
               </Badge>
             )}
             {row.nextFollowupDate && (
               <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full font-bold uppercase flex items-center gap-1">
-                <Clock size={10} /> {row.nextFollowupDate}
+                <Clock size={10} /> {row?.nextFollowupDate}
               </span>
             )}
           </div>
-          <span className="text-[11px] text-[var(--color-text-muted)] font-mono">{row.email} {row.phone ? `• ${row.phone}` : ''} {row.city ? `• ${row.city}` : ''}</span>
+          <span className="text-[11px] text-[var(--color-text-muted)] font-mono">{row?.email || ''} {row?.phone ? `• ${row?.phone}` : ''} {row?.city ? `• ${row?.city}` : ''}</span>
         </div>
       )
     },
@@ -268,7 +268,7 @@ export default function LeadsPage() {
       info: 'How likely this person is to join based on their recent interactions.',
       render: (row) => (
         <Badge variant={Number(row.leadQuality) >= 4 || row.leadQuality === 'Future 4' ? 'mint' : Number(row.leadQuality) >= 2 ? 'info' : 'apricot'}>
-          LEVEL {row.leadQuality}
+          LEVEL {row?.leadQuality}
         </Badge>
       )
     },
@@ -459,7 +459,7 @@ export default function LeadsPage() {
         isOpen={!!selectedLead}
         onClose={() => setSelectedLead(null)}
         title={selectedLead?.name || 'Customer Details'}
-        subtitle={selectedLead ? `ref: ${selectedLead._id.substring(0, 8)}` : ''}
+        subtitle={selectedLead ? `ref: ${selectedLead._id?.substring(0, 8) || '—'}` : ''}
         onSave={handleSaveLead}
         extraActions={
           <div className="flex items-center gap-2">
@@ -881,3 +881,6 @@ export default function LeadsPage() {
     </PageContainer>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

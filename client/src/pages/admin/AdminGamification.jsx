@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Button, PageHeader, PageContainer, PageSkeleton } from '../../components/ui';
 import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy } from 'lucide-react';
 import axios from 'axios';
@@ -31,12 +31,12 @@ const AdminGamification = () => {
     }
   };
 
-  const handleEdit = (field, value) => {
+  const handleEdit = useCallback((field, value) => {
     setEditingField(field);
     setEditValue(String(value));
-  };
+  }, []);
 
-  const handleSave = async (field = editingField) => {
+  const handleSave = useCallback(async (field = editingField) => {
     if (!field) return;
     try {
       setSaving(true);
@@ -64,14 +64,14 @@ const AdminGamification = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [editingField, editValue]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditingField(null);
     setEditValue('');
-  };
+  }, []);
 
-  const handleRecalculateAllLevels = async () => {
+  const handleRecalculateAllLevels = useCallback(async () => {
     const ok = await confirm({
       title: 'Recalculate levels?',
       message: 'This will recalculate levels for all users with the new formula. Continue?',
@@ -91,7 +91,7 @@ const AdminGamification = () => {
     } finally {
       setRecalculating(false);
     }
-  };
+  }, [confirm]);
 
   if (loading) {
     return <PageContainer><PageSkeleton /></PageContainer>;

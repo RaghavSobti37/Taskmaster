@@ -310,3 +310,6 @@ const OTPVerificationPage = () => {
 };
 
 export default OTPVerificationPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

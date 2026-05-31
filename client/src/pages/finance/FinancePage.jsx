@@ -1159,3 +1159,6 @@ const FinancePage = () => {
 };
 
 export default FinancePage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

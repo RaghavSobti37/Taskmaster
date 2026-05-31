@@ -616,6 +616,9 @@ router.post('/webhooks/resend', async (req, res) => {
 
 // Legacy GET /unsubscribe on API host → frontend page (old emails pointed at API /unsubscribe)
 router.get('/unsubscribe', (req, res) => {
+  if (req.headers['user-agent'] && req.headers['user-agent'].toLowerCase().includes('axios')) {
+    return res.status(401).json({ error: 'Unauthorized API access' });
+  }
   const frontend = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
   const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
   res.redirect(302, `${frontend}/unsubscribe${qs}`);

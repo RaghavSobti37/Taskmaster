@@ -8,11 +8,15 @@ const { MODULE } = require('../../shared/systemLogContract');
 const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl, buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { getISTDate } = require('../utils/attendanceDate');
-const redis = require('../utils/sharedRedis');
+const { getSharedRedis } = require('../utils/sharedRedis');
+const redis = getSharedRedis();
 
 // Redis lock helpers
 const acquireLock = async (lockKey, ttlSeconds = 90) => {
   try {
+    if (!redis || typeof redis.set !== 'function' || redis.status !== 'ready') {
+      return true; // Bypass lock when redis is unavailable to allow local execution
+    }
     const result = await redis.set(lockKey, 'locked', 'PX', ttlSeconds * 1000, 'NX');
     return result === 'OK';
   } catch (err) {
@@ -23,6 +27,9 @@ const acquireLock = async (lockKey, ttlSeconds = 90) => {
 
 const releaseLock = async (lockKey) => {
   try {
+    if (!redis || typeof redis.del !== 'function' || redis.status !== 'ready') {
+      return; // Skip when redis is unavailable
+    }
     await redis.del(lockKey);
   } catch (err) {
     logger.warn('Lock', `Failed to release lock ${lockKey}`, { error: err.message });

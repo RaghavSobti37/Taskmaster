@@ -4,6 +4,9 @@ const Log = require('../models/Log');
 const logger = require('../utils/logger');
 const { getISTDate } = require('../utils/attendanceDate');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const fs = require('fs').promises;
+const path = require('path');
+const axios = require('axios');
 
 class QATestingService {
   constructor(projectId, userId, config = {}) {
@@ -56,10 +59,20 @@ class QATestingService {
 
   async executeTests() {
     try {
-      await QATestRun.findByIdAndUpdate(this.testRunId, { status: 'in-progress', startedAt: new Date() });
-
-      const testCases = this.getTestCases();
+      const testCases = await this.getTestCases();
       this.totalTestCases = testCases.length;
+
+      // Initialize test cases in the database to prevent defaulting to 'backend'
+      await QATestRun.findByIdAndUpdate(this.testRunId, { 
+        status: 'in-progress', 
+        startedAt: new Date(),
+        testCases: testCases.map(tc => ({
+          name: tc.name,
+          category: tc.category,
+          severity: tc.severity,
+          status: 'pending'
+        }))
+      });
 
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
@@ -71,8 +84,8 @@ class QATestingService {
         // Execute test
         await this.runTestCase(testCase, i);
 
-        // Broadcast update
-        broadcastRealtimeEvent(`qa-test:${this.projectId}`, 'progress', {
+        // Broadcast update (global instead of project specific)
+        broadcastRealtimeEvent(`qa-test:global`, 'progress', {
           testRunId: this.testRunId,
           progress,
           currentPage: testCase.name,
@@ -112,101 +125,105 @@ class QATestingService {
     }
   }
 
-  getTestCases() {
-    return [
-      {
-        name: 'Dashboard loads without errors',
-        category: 'frontend',
-        test: async () => {
-          try {
-            // Simulate dashboard load check
-            return { passed: true, message: 'Dashboard rendered successfully' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'Task creation works',
-        category: 'backend',
-        test: async () => {
-          try {
-            // Simulate task creation test
-            return { passed: true, message: 'Task created successfully' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'Task update propagates to all views',
-        category: 'data',
-        test: async () => {
-          try {
-            // Simulate task update consistency check
-            return { passed: true, message: 'Task updates are consistent' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'Permission checks block unauthorized access',
-        category: 'permission',
-        test: async () => {
-          try {
-            // Simulate permission test
-            return { passed: true, message: 'Permissions enforced correctly' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'API response times acceptable',
-        category: 'backend',
-        test: async () => {
-          try {
-            const startTime = Date.now();
-            // Simulate API call
-            const endTime = Date.now();
-            const responseTime = endTime - startTime;
-            const passed = responseTime < 3000; // 3 second threshold
-            return { 
-              passed, 
-              message: `Response time: ${responseTime}ms`,
-              responseTime 
-            };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'Mobile responsive layout works',
-        category: 'frontend',
-        test: async () => {
-          try {
-            // Simulate mobile layout check
-            return { passed: true, message: 'Mobile layout renders correctly' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
-        }
-      },
-      {
-        name: 'Error handling displays user-friendly messages',
-        category: 'backend',
-        test: async () => {
-          try {
-            // Simulate error message test
-            return { passed: true, message: 'Error messages are informative' };
-          } catch (err) {
-            return { passed: false, error: err.message };
-          }
+  async getTestCases() {
+    const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Taskmaster/client/src/pages');
+    const testCases = [];
+    
+    // Recursive directory reader
+    const walk = async (dir) => {
+      const files = await fs.readdir(dir, { withFileTypes: true });
+      for (const file of files) {
+        const fullPath = path.join(dir, file.name);
+        if (file.isDirectory()) {
+          await walk(fullPath);
+        } else if (/\.(js|jsx|tsx)$/.test(file.name)) {
+          const content = await fs.readFile(fullPath, 'utf8');
+          const routeName = file.name;
+          
+          testCases.push({
+            name: `[${routeName}] Dynamic QA Scan`,
+            category: 'frontend',
+            severity: 'low',
+            test: async () => {
+              const errors = [];
+              
+              // 1. AST/Regex Code Evaluation: Optional Chaining Guard Check
+              if (content.includes('return (')) {
+                // Matches patterns like `row.email` or `data.user` without `?.` inside JSX curlies
+                const riskyChaining = /\{\s*(row|data|lead|user|task)\.([a-zA-Z0-9_]+)\s*\}/g;
+                let match;
+                while ((match = riskyChaining.exec(content)) !== null) {
+                  errors.push({ 
+                    error: `Missing optional chaining guard (?. ) on ${match[0]}`, 
+                    category: 'data', 
+                    severity: 'medium',
+                    codeApproximation: match[0]
+                  });
+                }
+              }
+
+              // 2. AST/Regex Code Evaluation: Performance Re-render Check
+              const handlerRegex = /const handle[A-Z][a-zA-Z0-9_]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g;
+              if (handlerRegex.test(content) && !content.includes('useCallback(')) {
+                errors.push({ 
+                  error: 'Unmemoized event handler detected without useCallback.', 
+                  category: 'bottleneck', 
+                  severity: 'medium',
+                  codeApproximation: 'Event Handler Definition'
+                });
+              }
+
+              // 3. Extract Target API Routes & Live Backend Probes
+              const apiEndpointsMatch = content.match(/\/api\/[a-zA-Z0-9_/-]+/g) || [];
+              const endpoints = [...new Set(apiEndpointsMatch)];
+              
+              for (const endpoint of endpoints) {
+                try {
+                  const probeUrl = `http://localhost:5000${endpoint}`;
+                  // Unauthenticated Probe Request
+                  const res = await axios.get(probeUrl, { validateStatus: () => true });
+                  
+                  // Evaluate Security Status Codes
+                  if (res.status === 200 || res.status === 201) {
+                    errors.push({ 
+                      error: `Unauthenticated API access allowed on ${endpoint} (Status ${res.status}).`,
+                      category: 'permission', 
+                      severity: 'high',
+                      endpointValidation: probeUrl
+                    });
+                  }
+                } catch (err) {
+                  // Ignore network failures for probe
+                }
+              }
+
+              if (errors.length > 0) {
+                // Return the highest severity error
+                const highest = errors.find(e => e.severity === 'high') || errors.find(e => e.severity === 'medium') || errors[0];
+                return {
+                  passed: false,
+                  error: highest.error,
+                  description: `Dynamic test found ${errors.length} issue(s) in ${routeName}. Code snippet: ${highest.codeApproximation || highest.endpointValidation || 'N/A'}`,
+                  category: highest.category,
+                  severity: highest.severity,
+                  details: highest
+                };
+              }
+
+              return { passed: true, message: `${routeName} passed all dynamic checks and probes.` };
+            }
+          });
         }
       }
-    ];
+    };
+
+    try {
+      await walk(targetDir);
+    } catch (err) {
+      logger.error('QA', 'Failed to read directory', { error: err.message });
+    }
+
+    return testCases;
   }
 
   async runTestCase(testCase, index) {
@@ -231,7 +248,11 @@ class QATestingService {
           $set: {
             [`testCases.${index}.status`]: status,
             [`testCases.${index}.duration`]: duration,
-            [`testCases.${index}.result`]: result
+            [`testCases.${index}.result`]: result,
+            [`testCases.${index}.severity`]: result.severity || testCase.severity || 'medium',
+            [`testCases.${index}.category`]: result.category || testCase.category,
+            [`testCases.${index}.error`]: result.error || null,
+            [`testCases.${index}.description`]: result.description || null
           }
         }
       );
@@ -249,7 +270,9 @@ class QATestingService {
           details: {
             testName: testCase.name,
             errorMessage: result.error,
-            category: testCase.category
+            category: result.category || testCase.category,
+            codeApproximation: result.details?.codeApproximation || null,
+            endpointValidation: result.details?.endpointValidation || null
           }
         });
       }
@@ -259,7 +282,11 @@ class QATestingService {
       logger.error('QA', `Error running test case: ${testCase.name}`, { error: error.message });
       await QATestRun.updateOne(
         { _id: this.testRunId },
-        { $set: { [`testCases.${index}.status`]: 'failed', [`testCases.${index}.error`]: error.message } }
+        { $set: { 
+            [`testCases.${index}.status`]: 'failed', 
+            [`testCases.${index}.error`]: error.message,
+            [`testCases.${index}.severity`]: testCase.severity || 'medium'
+          } }
       );
     }
   }
@@ -275,16 +302,17 @@ class QATestingService {
       // Create tasks for critical/high bugs
       for (const failedTest of failedTests) {
         try {
-          const bugTask = await Task.create({
+          const bugTaskData = {
             title: `[QA BUG] ${failedTest.name}`,
             description: `**Test Category:** ${failedTest.category}\n**Error:** ${failedTest.error || 'Unknown'}\n\nThis bug was detected during automated QA testing.`,
             status: 'todo',
             priority: failedTest.category === 'permission' ? 'critical' : 'high',
-            projectId: this.projectId,
             createdBy: this.userId,
             assignees: [],
             type: 'Bug'
-          });
+          };
+          if (this.projectId) bugTaskData.projectId = this.projectId;
+          const bugTask = await Task.create(bugTaskData);
 
           await QATestRun.findByIdAndUpdate(this.testRunId, {
             $push: { bugsCreated: bugTask._id },

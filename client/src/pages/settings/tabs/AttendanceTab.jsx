@@ -39,7 +39,7 @@ export default function AttendanceTab() {
               </thead>
               <tbody>
                 {myAttendance.map((row) => (
-                  <tr key={row._id} className={`border-t border-[var(--color-bg-border)] ${getAttendanceRowClass(row)}`}>
+                  <tr key={row?._id} className={`border-t border-[var(--color-bg-border)] ${getAttendanceRowClass(row)}`}>
                     <td className="px-4 py-3">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
                     <td className="px-4 py-3">{row.timeIn || '-'}</td>
                     <td className="px-4 py-3">{row.timeOut || '-'}</td>

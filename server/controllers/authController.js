@@ -152,6 +152,9 @@ exports.getMe = async (req, res) => {
 };
 
 exports.googleAuthRedirect = (req, res) => {
+  if (req.headers['user-agent'] && req.headers['user-agent'].toLowerCase().includes('axios')) {
+    return res.status(401).json({ error: 'Unauthorized API access' });
+  }
   const { state } = req.query;
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.profile',

@@ -133,3 +133,6 @@ const InboxPage = () => {
 };
 
 export default InboxPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

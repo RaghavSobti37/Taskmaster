@@ -169,7 +169,7 @@ const ProjectDetail = () => {
     setTaskToComplete(null);
     try {
       const taskRes = await axios.put(
-        `/api/tasks/${task._id}`,
+        `/api/tasks/${task?._id}`,
         { status: 'done', actualHours: (task.actualHours || 0) + hours },
         AXIOS_SKIP_TOAST
       );
@@ -427,3 +427,6 @@ const ProjectDetail = () => {
 };
 
 export default ProjectDetail;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

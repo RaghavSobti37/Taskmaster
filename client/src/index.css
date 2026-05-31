@@ -464,3 +464,10 @@ select option {
   --color-input: var(--input);
   --color-primary: var(--color-action-primary);
 }
+
+@media (min-width: 1024px) {
+  .dashboard-grid-item {
+    grid-column-start: var(--lg-col);
+    grid-row-start: var(--lg-row);
+  }
+}

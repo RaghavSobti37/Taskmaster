@@ -426,14 +426,14 @@ export const useUpdateTask = () => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       const snapshots = getTaskQuerySnapshots(queryClient);
       updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === id ? { ...t, ...data, _updating: true } : t))
+        (tasks || []).map((t) => (resolveTaskId(t) === String(id) ? { ...t, ...data, _updating: true } : t))
       );
       return { snapshots };
     },
     onSuccess: (updatedTask) => {
       if (!updatedTask?._id) return;
       updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === updatedTask._id ? { ...updatedTask, _updating: false } : t))
+        (tasks || []).map((t) => (resolveTaskId(t) === resolveTaskId(updatedTask) ? { ...updatedTask, _updating: false } : t))
       );
     },
     onError: (err, _variables, context) => {
@@ -1379,5 +1379,27 @@ export const useUpdateUserDepartment = () => {
   return useMutation({
     mutationFn: ({ userId, departmentId }) => axios.patch(`/api/departments/users/${userId}`, { departmentId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] })
+  });
+};
+
+export const useDashboardPreset = () => {
+  return useQuery({
+    queryKey: ['dashboardPreset'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/customization/dashboard/preset');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+};
+
+export const useNavbarPreferences = () => {
+  return useQuery({
+    queryKey: ['navbarPreferences'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/customization/navbar');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000
   });
 };

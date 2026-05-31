@@ -86,9 +86,9 @@ const ReviewQueueCard = ({
 }) => {
   const { data: workspaces = [] } = useWorkspaces();
   return (
-  <Card className="p-0 flex flex-col shadow-md overflow-hidden shrink-0 border-amber-500/20">
-    <div className="p-4 border-b border-amber-500/20 bg-amber-500/[0.06] flex items-center justify-between gap-2">
-      <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)]">
+  <Card className="p-0 flex flex-col justify-between shadow-md overflow-hidden shrink-0 border-[rgba(255,255,255,0.08)]">
+    <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between gap-2 shrink-0">
+      <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)] mb-0">
         <ClipboardCheck size={16} className="text-amber-500" />
         Awaiting Your Review
       </h4>
@@ -97,7 +97,9 @@ const ReviewQueueCard = ({
     <div className={`p-3 space-y-2 ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}>
       {loading && <DataLoading message="Loading reviews..." className="!py-3" />}
       {!loading && tasks.length === 0 && (
-        <p className="tm-caption italic text-center py-3">No tasks waiting for your review</p>
+        <div className="flex items-center justify-center py-2 bg-emerald-500/10 rounded border border-emerald-500/20">
+          <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
+        </div>
       )}
       {!loading &&
         tasks.map((task) => (

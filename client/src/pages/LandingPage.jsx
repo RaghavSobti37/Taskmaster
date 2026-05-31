@@ -94,8 +94,8 @@ export default function LandingPage() {
           <h1 className="w-full text-4xl sm:text-6xl font-black tracking-tight text-foreground leading-tight text-balance">
             Master Your Team <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-brand-teal)] to-[var(--color-action-primary)]">Workflows & Campaigns</span>
           </h1>
-          <p className="w-full max-w-2xl mx-auto text-base sm:text-lg text-[var(--color-text-secondary)] leading-relaxed font-medium">
-            TaskMaster integrates high-density project tracking, active CRM customer pipeline management, and enterprise email dispatch features into a secure, unified workspace.
+          <p className="block w-full mx-auto text-base md:text-lg text-[var(--color-text-secondary)] text-center leading-relaxed font-medium" style={{ maxWidth: '700px' }}>
+            TaskMaster integrates high-density project tracking, senior CRM operations pipeline management, and enterprise-ready dispatch features in a secure, unified workspace.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
@@ -118,12 +118,12 @@ export default function LandingPage() {
       {/* Purpose / Feature Grid */}
       <section className="bg-card/90 backdrop-blur-sm border-y border-border py-16 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="w-full max-w-2xl mx-auto mb-12 space-y-3 text-center">
-            <h2 className="w-full text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <div className="flex flex-col md:flex-row gap-8 items-start w-full max-w-6xl mx-auto mb-12">
+            <h2 className="w-full md:w-1/3 text-3xl md:text-4xl font-bold tracking-tight text-foreground">
               Purpose-Built for Modern Operations
             </h2>
-            <p className="w-full text-sm sm:text-base text-[var(--color-text-secondary)] leading-relaxed">
-              TaskMaster provides a secure environment for business and product management, replacing fragmented tooling with specialized workflow pipelines.
+            <p className="w-full md:w-2/3 text-[var(--color-text-secondary)] text-base md:text-lg leading-relaxed whitespace-normal">
+              TaskMaster provides a secure environment for business and product management, replacing fragmented tooling with coordinated workflows and optimized pipelines.
             </p>
           </div>
 

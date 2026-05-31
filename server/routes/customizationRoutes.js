@@ -1,0 +1,79 @@
+const express = require('express');
+const customizationController = require('../controllers/customizationController');
+const { protect } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+// All customization routes require authentication
+router.use(protect);
+
+// ============ DASHBOARD ROUTES ============
+
+/**
+ * @GET /api/customization/dashboard/preset
+ * Get user's current dashboard preset
+ */
+router.get('/dashboard/preset', customizationController.getDashboardPreset);
+
+/**
+ * @POST /api/customization/dashboard/preset
+ * Save/update dashboard preset
+ * Body: { name, elements: [{componentId, size, order, visible}], department }
+ */
+router.post('/dashboard/preset', customizationController.saveDashboardPreset);
+
+/**
+ * @GET /api/customization/dashboard/presets/department
+ * Get list of available department presets
+ */
+router.get('/dashboard/presets/department', customizationController.getDepartmentPresets);
+
+/**
+ * @POST /api/customization/dashboard/preset/department/:department
+ * Load a department preset
+ */
+router.post('/dashboard/preset/department/:department', customizationController.loadDepartmentPreset);
+
+/**
+ * @PATCH /api/customization/dashboard/element/visibility
+ * Update single element visibility
+ * Body: { componentId, visible }
+ */
+router.patch('/dashboard/element/visibility', customizationController.updateElementVisibility);
+
+/**
+ * @PUT /api/customization/dashboard/reorder
+ * Reorder dashboard elements
+ * Body: { elements: [{componentId, size, visible}] }
+ */
+router.put('/dashboard/reorder', customizationController.reorderDashboardElements);
+
+// ============ NAVBAR ROUTES ============
+
+/**
+ * @GET /api/customization/navbar
+ * Get user's navbar preferences
+ */
+router.get('/navbar', customizationController.getNavbarPreferences);
+
+/**
+ * @POST /api/customization/navbar
+ * Save navbar preferences (reorder pages)
+ * Body: { pageOrder: [{path, label, visible}] }
+ */
+router.post('/navbar', customizationController.saveNavbarPreferences);
+
+/**
+ * @POST /api/customization/navbar/reset
+ * Reset navbar to default order
+ */
+router.post('/navbar/reset', customizationController.resetNavbarToDefaults);
+
+/**
+ * @PATCH /api/customization/navbar/page-visibility
+ * Toggle visibility of a page
+ * Body: { path, visible }
+ */
+router.patch('/navbar/page-visibility', customizationController.togglePageVisibility);
+
+module.exports = router;

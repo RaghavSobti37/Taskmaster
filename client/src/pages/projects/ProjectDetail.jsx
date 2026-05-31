@@ -188,7 +188,7 @@ const ProjectDetail = () => {
       });
 
       updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
+        (tasks || []).map((t) => (resolveTaskId(t) === resolveTaskId(task) ? { ...t, ...taskRes.data } : t))
       );
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });

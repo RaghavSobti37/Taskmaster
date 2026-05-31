@@ -15,6 +15,10 @@ const defaultAuthContext = {
 const AuthContext = createContext(defaultAuthContext);
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+} else if (window.location.hostname.includes('taskmaster-git-') && window.location.hostname.includes('-raghavsobti37s-projects.vercel.app')) {
+  // If the user's PR preview on Vercel explicitly wants to hit a local proxy tunneling
+  // or a specific testing backend, the vercel.json rewrite takes care of it,
+  // or they can inject VITE_API_URL during the Vercel build step for that branch.
 }
 
 export const AuthProvider = ({ children }) => {

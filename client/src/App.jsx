@@ -66,6 +66,7 @@ const CalendarView = lazyWithRetry(() => import('./pages/calendar/CalendarView')
 const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage'));
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
 const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
+const QATestingPage = lazyWithRetry(() => import('./pages/admin/QATestingPage'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
 const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
@@ -240,6 +241,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_scripts" />}>
                 <Route path="/admin/scripts" element={<AdminScriptsPage />} />
+                <Route path="/admin/qa" element={<QATestingPage />} />
               </Route>
               <Route element={<PageRoute page="admin_gamification" />}>
                 <Route path="/admin/gamification" element={<AdminGamification />} />

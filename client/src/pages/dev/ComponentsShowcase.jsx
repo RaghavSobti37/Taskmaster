@@ -392,7 +392,7 @@ const ComponentsShowcase = () => {
               onClick={() =>
                 emitSystemEvent({
                   severity: SEVERITY.WARN,
-                  message: 'Task deadline is 24 hours away.',
+                  message: 'Task deadline is approaching.',
                   module: MODULE.SYSTEM,
                   id: 'showcase-warning',
                 })

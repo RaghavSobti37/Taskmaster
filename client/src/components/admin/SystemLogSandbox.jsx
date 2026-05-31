@@ -74,7 +74,7 @@ const SystemLogSandbox = () => {
             emitSystemEvent({
               severity: SEVERITY.WARN,
               module: MODULE.PROJECTS,
-              message: 'Sandbox: task deadline in 24 hours',
+              message: 'Sandbox: task deadline approaching',
               userVisible: true,
             })
           }

@@ -58,6 +58,7 @@ const PAGE_GROUPS = [
       { key: 'admin_data', label: 'All Data', path: '/admin' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
+      { key: 'admin_qa', label: 'QA Agent Runner', path: '/admin/qa' },
       { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },
       { key: 'campaigns', label: 'Campaign Details', path: '/campaign' },
     ],

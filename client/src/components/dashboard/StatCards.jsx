@@ -57,7 +57,7 @@ const StatCards = ({ metrics = {}, loading = false, onCardClick = () => {}, acti
           value={`${metrics.focusHours || 0}h`} 
           icon={TrendingUp} 
           variant="info" 
-          info="Total time logged on tasks within the last 24 hours." 
+          info="Total time logged on tasks within the last day."
           className="border-0"
         />
       </div>

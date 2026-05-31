@@ -118,23 +118,31 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
   );
 };
 
-const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true }) => {
+const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpen = true, order = 1, onMoveUp, onMoveDown }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const iconOnly = collapsed && !isMobile;
   return (
-    <div className="flex flex-col mb-2">
+    <div className="flex flex-col mb-2" style={{ order }}>
       {!iconOnly && (
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
-      >
-        <div className="flex items-center gap-1.5">
-          {Icon && <Icon size={12} />}
-          <span>{title}</span>
-        </div>
-        <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      <div className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider group">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex flex-1 items-center justify-between hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
+        >
+          <div className="flex items-center gap-1.5">
+            {Icon && <Icon size={12} />}
+            <span>{title}</span>
+          </div>
+          <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {onMoveUp && onMoveDown && (
+          <div className="flex flex-col ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button type="button" onClick={(e) => { e.stopPropagation(); onMoveUp(); }} className="text-[8px] hover:text-[var(--color-action-primary)] leading-none px-1 py-0.5" title="Move Up">▲</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onMoveDown(); }} className="text-[8px] hover:text-[var(--color-action-primary)] leading-none px-1 py-0.5" title="Move Down">▼</button>
+          </div>
+        )}
+      </div>
       )}
       <AnimatePresence>
         {isOpen && (!collapsed || isMobile) && (
@@ -228,6 +236,32 @@ const OutletSidebar = () => {
 
   const isMobile = width < 1024;
 
+  const [navOrder, setNavOrder] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('coreknot_nav_order')) || ['Platform', 'Workspace', 'Office', 'CRM', 'Management', 'Admin'];
+    } catch {
+      return ['Platform', 'Workspace', 'Office', 'CRM', 'Management', 'Admin'];
+    }
+  });
+
+  const getOrder = (groupName) => {
+    const idx = navOrder.indexOf(groupName);
+    return idx === -1 ? 99 : idx;
+  };
+
+  const handleReorder = (groupName, dir) => {
+    const idx = navOrder.indexOf(groupName);
+    if (idx === -1) return;
+    const newOrder = [...navOrder];
+    if (dir === 'up' && idx > 0) {
+      [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+    } else if (dir === 'down' && idx < navOrder.length - 1) {
+      [newOrder[idx + 1], newOrder[idx]] = [newOrder[idx], newOrder[idx + 1]];
+    }
+    setNavOrder(newOrder);
+    localStorage.setItem('coreknot_nav_order', JSON.stringify(newOrder));
+  };
+
   useEffect(() => {
     closeMobileSidebar();
   }, [location]);
@@ -300,9 +334,9 @@ const OutletSidebar = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
+        <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4" style={{ display: 'flex', flexDirection: 'column' }}>
           {groupHasVisiblePages(user, ['dashboard', 'calendar', 'todo', 'inbox']) && (
-          <NavGroup title="Platform" collapsed={!showLabels} isMobile={isMobile}>
+          <NavGroup title="Platform" collapsed={!showLabels} isMobile={isMobile} order={getOrder('Platform')} onMoveUp={() => handleReorder('Platform', 'up')} onMoveDown={() => handleReorder('Platform', 'down')}>
             {hasPageAccess(user, 'dashboard') && (
             <NavItem
               to="/dashboard"
@@ -350,7 +384,7 @@ const OutletSidebar = () => {
           )}
 
           {groupHasVisiblePages(user, ['projects', 'assets', 'schedule', 'logs', 'emails']) && (
-          <NavGroup title="Workspace" collapsed={!showLabels} isMobile={isMobile}>
+          <NavGroup title="Workspace" collapsed={!showLabels} isMobile={isMobile} order={getOrder('Workspace')} onMoveUp={() => handleReorder('Workspace', 'up')} onMoveDown={() => handleReorder('Workspace', 'down')}>
             {hasPageAccess(user, 'projects') && (
             <NavItem
               to="/projects"
@@ -397,7 +431,7 @@ const OutletSidebar = () => {
           )}
 
           {groupHasVisiblePages(user, ['equipment', 'contacts', 'attendance']) && (
-          <NavGroup title="Office" collapsed={!showLabels} isMobile={isMobile}>
+          <NavGroup title="Office" collapsed={!showLabels} isMobile={isMobile} order={getOrder('Office')} onMoveUp={() => handleReorder('Office', 'up')} onMoveDown={() => handleReorder('Office', 'down')}>
             {hasPageAccess(user, 'equipment') && (
             <NavItem
               to="/management/equipment"
@@ -429,7 +463,7 @@ const OutletSidebar = () => {
           )}
 
           {groupHasVisiblePages(user, ['leads', 'followups', 'bookings']) && (
-            <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile}>
+            <NavGroup title="CRM" collapsed={!showLabels} isMobile={isMobile} order={getOrder('CRM')} onMoveUp={() => handleReorder('CRM', 'up')} onMoveDown={() => handleReorder('CRM', 'down')}>
               {hasPageAccess(user, 'leads') && (
                   <NavItem
                     to="/leads"
@@ -466,7 +500,7 @@ const OutletSidebar = () => {
           )}
 
           {groupHasVisiblePages(user, ['finance', 'announcements', 'ops_logs', 'artists']) && (
-            <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile}>
+            <NavGroup title="Management" collapsed={!showLabels} isMobile={isMobile} order={getOrder('Management')} onMoveUp={() => handleReorder('Management', 'up')} onMoveDown={() => handleReorder('Management', 'down')}>
               {hasPageAccess(user, 'finance') && (
               <NavItem
                 to="/finance"
@@ -509,7 +543,7 @@ const OutletSidebar = () => {
           )}
 
           {groupHasVisiblePages(user, ['admin_users', 'admin_data', 'admin_exly', 'admin_scripts', 'admin_gamification']) && (
-                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen>
+                <NavGroup title="Admin" collapsed={!showLabels} isMobile={isMobile} defaultOpen order={getOrder('Admin')} onMoveUp={() => handleReorder('Admin', 'up')} onMoveDown={() => handleReorder('Admin', 'down')}>
                   {hasPageAccess(user, 'admin_users') && (
                   <NavItem
                     to="/admin/users"

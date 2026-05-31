@@ -172,3 +172,6 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

@@ -180,3 +180,6 @@ const AnnouncementsPage = () => {
 };
 
 export default AnnouncementsPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

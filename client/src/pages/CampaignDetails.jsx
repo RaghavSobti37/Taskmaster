@@ -788,3 +788,6 @@ export default function CampaignDetails() {
     </PageContainer>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

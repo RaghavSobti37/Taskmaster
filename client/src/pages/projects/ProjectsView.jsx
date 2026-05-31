@@ -242,8 +242,8 @@ const ProjectsView = () => {
               onClick={() => setViewMode('workspace')}
               title="Workspaces"
               className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
-                  ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+                ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
             >
               <LayoutGrid size={12} className="shrink-0" />
@@ -254,8 +254,8 @@ const ProjectsView = () => {
               onClick={() => setViewMode('all')}
               title="All projects"
               className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
-                  ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+                ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
             >
               <List size={12} className="shrink-0" />
@@ -305,8 +305,8 @@ const ProjectsView = () => {
                   onDragLeave={() => setDragOverWorkspace(null)}
                   onDrop={(e) => handleWorkspaceDrop(e, group.name)}
                   className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${dragOverWorkspace === group.name
-                      ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/15 scale-105'
-                      : 'border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]'
+                    ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/15 scale-105'
+                    : 'border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]'
                     }`}
                   style={{ borderLeftColor: group.color, borderLeftWidth: 4 }}
                 >
@@ -317,11 +317,7 @@ const ProjectsView = () => {
           </div>
         )}
 
-        {viewMode === 'workspace' && (
-          <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-            Drag project cards between workspaces • drag workspace headers to reorder
-          </p>
-        )}
+
 
         {viewMode === 'workspace' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -570,8 +566,8 @@ const ProjectsView = () => {
                   type="button"
                   onClick={() => setNewWorkspaceColor(c)}
                   className={`w-7 h-7 rounded-full transition-all duration-200 ${newWorkspaceColor === c
-                      ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]'
-                      : 'hover:scale-105 opacity-80 hover:opacity-100'
+                    ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]'
+                    : 'hover:scale-105 opacity-80 hover:opacity-100'
                     }`}
                   style={{ backgroundColor: c }}
                 />

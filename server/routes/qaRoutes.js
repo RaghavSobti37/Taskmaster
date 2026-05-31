@@ -8,41 +8,47 @@ const router = express.Router();
 router.use(protect);
 
 /**
- * @POST /api/projects/:projectId/qa/start
- * Start a new QA testing session for a project
+ * @POST /api/qa/start
+ * Start a new global QA testing session
  */
-router.post('/:projectId/qa/start', qaTestingController.startQATesting);
+router.post('/start', qaTestingController.startQATesting);
 
 /**
- * @GET /api/projects/:projectId/qa/progress
+ * @GET /api/qa/progress
  * Get real-time progress of ongoing test
  * Query: ?testRunId={id} (optional, otherwise gets latest)
  */
-router.get('/:projectId/qa/progress', qaTestingController.getTestProgress);
+router.get('/progress', qaTestingController.getTestProgress);
 
 /**
- * @GET /api/projects/:projectId/qa/results/:testRunId
+ * @GET /api/qa/results/:testRunId
  * Get final test results and bugs created
  */
-router.get('/:projectId/qa/results/:testRunId', qaTestingController.getTestResults);
+router.get('/results/:testRunId', qaTestingController.getTestResults);
 
 /**
- * @POST /api/projects/:projectId/qa/cancel/:testRunId
+ * @POST /api/qa/cancel/:testRunId
  * Cancel an ongoing or pending test
  */
-router.post('/:projectId/qa/cancel/:testRunId', qaTestingController.cancelTest);
+router.post('/cancel/:testRunId', qaTestingController.cancelTest);
 
 /**
- * @POST /api/projects/:projectId/qa/cleanup/:testRunId
+ * @POST /api/qa/cleanup/:testRunId
  * Manually trigger cleanup of test data
  */
-router.post('/:projectId/qa/cleanup/:testRunId', qaTestingController.cleanupTestData);
+router.post('/cleanup/:testRunId', qaTestingController.cleanupTestData);
 
 /**
- * @GET /api/projects/:projectId/qa/history
- * Get list of all test runs for a project
+ * @GET /api/qa/history
+ * Get list of all test runs
  * Query: ?limit=10&skip=0
  */
-router.get('/:projectId/qa/history', qaTestingController.listTestRuns);
+router.get('/history', qaTestingController.listTestRuns);
+
+/**
+ * @POST /api/qa/resolve/:testRunId/:testCaseId
+ * Mark a bug as solved
+ */
+router.post('/resolve/:testRunId/:testCaseId', qaTestingController.resolveBug);
 
 module.exports = router;

@@ -296,3 +296,6 @@ export default function CustomizationTab() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

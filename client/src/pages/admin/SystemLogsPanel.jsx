@@ -61,13 +61,13 @@ const TopPagesCard = ({ pages = [], isLoading }) => (
     )}
     <ul className="space-y-2">
       {pages.map((row, i) => (
-        <li key={row.path} className="flex items-center justify-between gap-2 text-sm">
+        <li key={row?.path} className="flex items-center justify-between gap-2 text-sm">
           <span className="truncate text-[var(--color-text-primary)] font-medium">
             <span className="text-[var(--color-text-muted)] mr-2">{i + 1}.</span>
-            {row.path}
+            {row?.path}
           </span>
           <span className="shrink-0 text-[10px] font-mono text-[var(--color-text-muted)]">
-            {row.count} · {row.uniqueUsers} users
+            {row?.count} · {row?.uniqueUsers} users
           </span>
         </li>
       ))}

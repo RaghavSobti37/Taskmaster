@@ -487,20 +487,57 @@ export default function DashboardCustomizationTab() {
               const cCol = clampCol(el.col, el.size);
               const isDragging = dragId === el.componentId;
 
+              if (isDragging) {
+                const origCol = clampCol(dragRef.current.origCol, el.size);
+                const origRow = dragRef.current.origRow || 1;
+
+                return (
+                  <React.Fragment key={el.componentId}>
+                    {/* Placeholder Outline */}
+                    <div
+                      className={`${colSpanClass(el.size)} bg-blue-500/10 border-2 border-dashed border-blue-500/50 rounded-xl transition-all duration-200`}
+                      style={{
+                        gridColumnStart: cCol,
+                        gridRowStart: el.row || 1,
+                      }}
+                    />
+                    
+                    {/* The actual dragged element */}
+                    <div
+                      data-comp={el.componentId}
+                      className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-xl flex flex-col pt-3 pb-2 px-3 relative group select-none border-blue-500 z-50 shadow-2xl pointer-events-none`}
+                      style={{
+                        gridColumnStart: origCol,
+                        gridRowStart: origRow,
+                        transform: `translate(${dragDelta.dx}px, ${dragDelta.dy}px) scale(1.03)`,
+                        transition: 'none'
+                      }}
+                    >
+                      <div className="flex items-start justify-between w-full mb-2">
+                        <span className="font-bold text-sm md:text-base text-[var(--color-text-primary)] tracking-tight capitalize">
+                          {el.componentId.replace(/-/g, ' ')}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <GripVertical size={16} className="text-[var(--color-text-muted)]" />
+                        </div>
+                      </div>
+                      <div className="flex-1 w-full flex items-center justify-center py-2 px-1">
+                        {renderDummyContent(el.componentId)}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              }
+
               return (
                 <div
                   key={el.componentId}
                   data-comp={el.componentId}
-                  className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-xl flex flex-col pt-3 pb-2 px-3 shadow-sm relative group select-none
-                    ${isDragging ? 'border-blue-500 z-50 shadow-2xl pointer-events-none' : 'border-[var(--color-text-primary)]'}
-                    ${!isDragging ? 'transition-transform duration-200 cubic-bezier(0.2, 0.8, 0.2, 1)' : ''}`}
+                  className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-xl flex flex-col pt-3 pb-2 px-3 shadow-sm relative group select-none border-[var(--color-text-primary)] transition-all duration-300`}
                   style={{
                     gridColumnStart: cCol,
                     gridRowStart: el.row || 1,
-                    ...(isDragging ? { 
-                      transform: `translate(${dragDelta.dx}px, ${dragDelta.dy}px) scale(1.03)`,
-                      transition: 'none'
-                    } : { transform: 'scale(1)' }),
+                    transform: 'scale(1)'
                   }}
                 >
                   <div className="flex items-start justify-between w-full mb-2">

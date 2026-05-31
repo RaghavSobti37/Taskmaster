@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Settings, LayoutDashboard } from 'lucide-react';
 import { PageContainer, DashboardSkeleton, PageHeader, Button } from '../components/ui';
@@ -44,9 +44,9 @@ const Dashboard = () => {
   const [approvingReviewId, setApprovingReviewId] = useState(null);
 
   const loading = summaryLoading || tasksLoading || projectsLoading || presetLoading;
-  const { calendar = [] } = summary || {};
+  const calendar = useMemo(() => summary?.calendar || [], [summary]);
 
-  const handleCompleteRequest = (task) => {
+  const handleCompleteRequest = useCallback((task) => {
     const intent = resolveTaskFinishIntent(task, user, projects);
     if (intent === 'approve') {
       handleApproveReview(task);
@@ -59,9 +59,9 @@ const Dashboard = () => {
       return;
     }
     setTaskToComplete(task);
-  };
+  }, [user, projects, addToast]);
 
-  const handleCompleteSubmit = async (task, hours) => {
+  const handleCompleteSubmit = useCallback(async (task, hours) => {
     suppressAutoToasts(5000);
     const taskId = resolveTaskId(task);
     if (!taskId) {
@@ -101,9 +101,9 @@ const Dashboard = () => {
     } finally {
       setCompletingTaskId(null);
     }
-  };
+  }, [projects, queryClient, addToast]);
 
-  const handleApproveReview = async (task) => {
+  const handleApproveReview = useCallback(async (task) => {
     const taskId = resolveTaskId(task);
     if (!taskId) return;
     suppressAutoToasts(5000);
@@ -135,7 +135,7 @@ const Dashboard = () => {
     } finally {
       setApprovingReviewId(null);
     }
-  };
+  }, [queryClient, addToast]);
 
   if (loading && !tasks.length) return <PageContainer><DashboardSkeleton /></PageContainer>;
 

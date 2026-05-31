@@ -244,7 +244,7 @@ app.use('/api/auth', require('./routes/authConnectRoutes'));
 app.use('/api/v2/artists', require('./routes/artistV2Routes'));
     app.use('/api/gamification', require('./routes/gamificationRoutes'));
     app.use('/api/gamification-admin', require('./routes/gamificationAdminRoutes'));
-app.use('/api/projects', require('./routes/qaRoutes'));
+app.use('/api/qa', require('./routes/qaRoutes'));
 app.use('/api/customization', require('./routes/customizationRoutes'));
 
 // Public tracking webhooks & unsubscribe endpoints

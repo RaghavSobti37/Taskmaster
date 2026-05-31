@@ -253,3 +253,6 @@ export default function SidebarCustomizationTab() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

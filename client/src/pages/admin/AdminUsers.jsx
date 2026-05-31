@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ShieldCheck, Users, Search, Trash2, UserCheck, TrendingUp,
   Database, Zap, CalendarDays, KeyRound
@@ -59,7 +59,7 @@ const AdminUsers = () => {
     }
   }, [selectedUser]);
 
-  const handleSaveUser = async () => {
+  const handleSaveUser = useCallback(async () => {
     if (!selectedUser) return;
     if (editUserData.newPassword && editUserData.newPassword !== editUserData.confirmPassword) {
       alert('Passwords do not match.');
@@ -85,9 +85,9 @@ const AdminUsers = () => {
       console.error(err);
       alert(err.response?.data?.error || err.message || 'User modification error');
     }
-  };
+  }, [selectedUser, editUserData, updateUserMutation]);
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = useCallback(async (userId) => {
     const ok = await confirm({
       title: 'Remove user?',
       message: 'Are you sure you want to permanently remove this user account?',
@@ -101,7 +101,7 @@ const AdminUsers = () => {
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete user');
     }
-  };
+  }, [confirm, deleteUserMutation]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u =>

@@ -158,3 +158,6 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

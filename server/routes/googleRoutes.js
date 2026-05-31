@@ -8,8 +8,8 @@ const {
   getIndianHolidays
 } = require('../controllers/googleController');
 
-// Public route — no auth needed for public holiday data
-router.get('/holidays', getIndianHolidays);
+// Protected route for holiday data
+router.get('/holidays', protect, getIndianHolidays);
 
 router.post('/link', protect, linkGoogleAccount);
 router.get('/calendar/events', protect, getCalendarEvents);

@@ -156,8 +156,16 @@ router.get('/', protect, opsOrAdmin, async (req, res) => {
       SystemLog.countDocuments(filter),
     ]);
 
+    // Ops users can view system logs, but strip admin-scoped entries
+    const { isAdminUser } = require('../utils/departmentPermissions');
+    const isAdmin = isAdminUser(req.user);
+    const ADMIN_ONLY_MODULES = new Set(['ADMIN', 'SCRIPTS', 'GAMIFICATION', 'USERS']);
+    const filtered = isAdmin
+      ? logs
+      : logs.filter(l => !ADMIN_ONLY_MODULES.has(l.module));
+
     res.json({
-      logs: await enrichLogsWithActorNames(logs),
+      logs: await enrichLogsWithActorNames(filtered),
       pagination: {
         page: pageNum,
         limit: limitNum,

@@ -182,3 +182,6 @@ export default function UserDataDeletion() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

@@ -245,6 +245,15 @@ Taskmaster is engineered to survive production strain with a rigorous multi-tier
 
 ---
 
+## 🧪 Global Autonomous QA System & Auditing
+
+Taskmaster features a project-wide autonomous auditing infrastructure powered by React Doctor and Omni-Security verification models:
+* **AST & Static Analysis:** Checks all routed page files (`client/src/pages`) for unsafe property chains (`row.property` access missing optional chaining) and unmemoized event handler declarations (`const handleSomething = ...` missing `useCallback`).
+* **Swarm Probing:** Automatically identifies target endpoints inside component files and executes unauthenticated API probes to detect privilege escalation vectors.
+* **CLI Testing Harness:** Integrated test scripts (`server/scripts/runQAScan.js`) compile AST patterns and run automated sweeps to ensure clean, 100% bug-free reports before production deployment.
+
+---
+
 ## 🚀 Production Migration Sequence
 
 When deploying release targets `v1.7.37` or above, perform these structural database updates down against live system targets:

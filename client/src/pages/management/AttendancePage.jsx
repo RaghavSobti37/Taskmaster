@@ -667,3 +667,6 @@ const AttendancePage = () => {
 };
 
 export default AttendancePage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

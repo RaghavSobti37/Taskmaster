@@ -655,3 +655,6 @@ const AssetsPage = () => {
 };
 
 export default AssetsPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

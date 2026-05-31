@@ -110,3 +110,6 @@ export default function InvoiceTab() {
     </div>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

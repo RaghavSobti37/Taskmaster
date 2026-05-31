@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
 import { Card, TimeframeFilter } from '../ui';
@@ -94,7 +94,7 @@ export default function GenericDashboardCard({ componentId }) {
         </div>
       </div>
 
-      <div className="flex-1 p-0 flex flex-col items-center justify-center relative min-h-[200px]">
+      <div className="flex-1 p-0 flex flex-col items-center justify-center relative" style={{ minHeight: 200, height: 200 }}>
         {!hasData ? (
           <div className="flex flex-col items-center justify-center opacity-40 grayscale h-full w-full py-8">
             <div className="w-full max-w-[200px] space-y-2 mb-3">
@@ -107,8 +107,8 @@ export default function GenericDashboardCard({ componentId }) {
             </p>
           </div>
         ) : (
-          <div className="w-full h-full pt-4">
-            <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+          <div className="w-full" style={{ height: 200 }}>
+            <ResponsiveContainer width="100%" height={200}>
               {type === 'bar' ? (
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -122,13 +122,15 @@ export default function GenericDashboardCard({ componentId }) {
                   <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               ) : (
-                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id={`colorValue-${componentId}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} width={35} />
                   <Tooltip
                     contentStyle={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-bg-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}
                     itemStyle={{ color: 'var(--color-text-primary)' }}

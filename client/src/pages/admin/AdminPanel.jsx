@@ -1,5 +1,5 @@
 // UDIF 2.0 - Admin Control Center
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import {
@@ -39,10 +39,10 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
 
-  const handleTabChange = (tabId) => {
+  const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
     setSearchParams({ tab: tabId });
-  };
+  }, [setSearchParams]);
   
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: teams = [] } = useTeams();
@@ -66,7 +66,7 @@ const AdminPanel = () => {
     }
   }, [selectedUser]);
 
-  const handleSaveUser = async () => {
+  const handleSaveUser = useCallback(async () => {
     if (!selectedUser) return;
     try {
       await updateUserMutation.mutateAsync({
@@ -78,9 +78,9 @@ const AdminPanel = () => {
       console.error(err);
       alert(`User modification error: ${err.message}`);
     }
-  };
+  }, [selectedUser, editUserData, updateUserMutation]);
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = useCallback(async (userId) => {
     const ok = await confirm({
       title: 'Remove user?',
       message: 'Are you sure you want to permanently remove this user account?',
@@ -94,9 +94,9 @@ const AdminPanel = () => {
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete user');
     }
-  };
+  }, [confirm, deleteUserMutation]);
 
-  const handleCreateTeam = async () => {
+  const handleCreateTeam = useCallback(async () => {
     if (!newTeamName) return;
     try {
       await createTeamMutation.mutateAsync({ name: newTeamName });
@@ -104,7 +104,7 @@ const AdminPanel = () => {
     } catch (err) {
       alert('Failed to create team: ' + err.message);
     }
-  };
+  }, [newTeamName, createTeamMutation]);
 
   const pageMeta = {
     users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },

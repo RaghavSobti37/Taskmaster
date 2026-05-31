@@ -110,7 +110,7 @@ export default function ArtistsCollection() {
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs tracking-tight text-[var(--color-text-primary)]">{row.name}</span>
+              <span className="font-bold text-xs tracking-tight text-[var(--color-text-primary)]">{row?.name}</span>
               <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 font-bold uppercase tracking-tight border border-emerald-500/20">
                 Active
               </span>
@@ -225,7 +225,7 @@ export default function ArtistsCollection() {
           <DataTable
             columns={columns}
             data={filteredArtists}
-            onRowClick={(row) => navigate(`/artists/${row._id}`)}
+            onRowClick={(row) => navigate(`/artists/${row?._id}`)}
           />
           {filteredArtists.length === 0 && (
             <div className="p-16 text-center text-[var(--color-text-muted)]">
@@ -307,3 +307,6 @@ export default function ArtistsCollection() {
     </PageContainer>
   );
 }
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

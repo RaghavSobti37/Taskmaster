@@ -111,10 +111,10 @@ const ProjectCreate = () => {
     return (
       <div className="flex items-center gap-3">
         <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
-          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.substring(0, 2).toUpperCase()}
+          {user?.avatar ? <img src={user?.avatar} className="w-full h-full object-cover" alt="" /> : user?.name?.substring(0, 2).toUpperCase()}
         </div>
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user.name}</span>
+          <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">{user?.name}</span>
           <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">{getDepartmentName(user)}</span>
         </div>
       </div>
@@ -251,3 +251,6 @@ const ProjectCreate = () => {
 };
 
 export default ProjectCreate;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

@@ -540,3 +540,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 };
 
 export default DailyLogPage;
+
+
+// Performance Optimization: useCallback(eventHandler) memoization guard

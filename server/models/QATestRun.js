@@ -4,7 +4,7 @@ const qaTestRunSchema = new mongoose.Schema({
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
-    required: true,
+    required: false,
     index: true
   },
   initiatedBy: {
@@ -70,7 +70,7 @@ const qaTestRunSchema = new mongoose.Schema({
     name: String,
     category: {
       type: String,
-      enum: ['frontend', 'backend', 'permission', 'data'],
+      enum: ['frontend', 'backend', 'permission', 'data', 'bottleneck', 'mobile', 'desktop'],
       default: 'backend'
     },
     status: {
@@ -78,9 +78,16 @@ const qaTestRunSchema = new mongoose.Schema({
       enum: ['pending', 'running', 'passed', 'failed'],
       default: 'pending'
     },
+    severity: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      default: 'medium'
+    },
+    description: String,
     duration: Number,
     result: mongoose.Schema.Types.Mixed,
-    error: String
+    error: String,
+    resolved: { type: Boolean, default: false }
   }],
   createdArtifacts: [{
     type: {
@@ -112,8 +119,8 @@ const qaTestRunSchema = new mongoose.Schema({
 });
 
 // Indexes for efficient querying
-qaTestRunSchema.index({ projectId: 1, status: 1 });
-qaTestRunSchema.index({ projectId: 1, startedAt: -1 });
+qaTestRunSchema.index({ status: 1 });
+qaTestRunSchema.index({ startedAt: -1 });
 qaTestRunSchema.index({ initiatedBy: 1, createdAt: -1 });
 
 module.exports = mongoose.model('QATestRun', qaTestRunSchema);

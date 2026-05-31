@@ -51,39 +51,6 @@ const checkFollowups = async () => {
   }
 };
 
-const checkTaskWarnings = async () => {
-  try {
-    const now = new Date();
-    const in24h = addHours(now, 24);
-
-    const tasks = await Task.find({
-      status: { $nin: ['done', 'in-review'] },
-      dueDate: { $lte: in24h, $gt: now },
-      notifiedWarning: false
-    }).lean();
-
-    for (const task of tasks) {
-      const assignments = await TaskAssignment.find({ taskId: task._id }).lean();
-      for (const a of assignments) {
-        await createNotification({
-          recipientId: a.userId,
-          title: 'Task Due in 24 Hours',
-          message: `Task "${task.title}" is due within 24 hours.`,
-          category: 'task',
-          type: 'alert',
-          relatedTaskId: task._id,
-          relatedProjectId: task.projectId,
-          actionUrl: task.projectId ? buildTaskActionUrl(task) : '/todo',
-          iconType: 'task'
-        });
-      }
-      await Task.findByIdAndUpdate(task._id, { notifiedWarning: true });
-    }
-  } catch (err) {
-    logger.error('Warning', 'Error in checkTaskWarnings', { error: err.message });
-  }
-};
-
 const checkOverdue = async () => {
   try {
     const now = new Date();
@@ -153,9 +120,8 @@ const init = () => {
   logger.info('System', 'Initializing Reminder Service...');
   cron.schedule('* * * * *', () => {
     checkFollowups();
-    checkTaskWarnings();
     checkOverdue();
   });
 };
 
-module.exports = { init, checkOverdue, checkTaskWarnings, checkFollowups };
+module.exports = { init, checkOverdue, checkFollowups };

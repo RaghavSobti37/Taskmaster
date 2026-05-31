@@ -83,7 +83,9 @@ const Dashboard = () => {
       updateAllTaskQueries(queryClient, (tasks) =>
         (tasks || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
       );
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     } catch (err) {
       addToast({
@@ -116,8 +118,9 @@ const Dashboard = () => {
       updateAllTaskQueries(queryClient, (list) =>
         (list || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
       );
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'review'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     } catch (err) {
       addToast({
@@ -137,38 +140,101 @@ const Dashboard = () => {
     <PageContainer className="!py-4 !space-y-4">
       <PinBoardProvider>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:items-start">
-        {/* Left: leaderboard + announcements + pin board + schedule */}
-        <aside className="lg:col-span-3 flex flex-col gap-4">
-          <LeaderboardPodium />
-          <AnnouncementsCard />
-          <PinBoardMessages />
-          <ScheduleCard calendar={calendar} loading={summaryLoading} />
-        </aside>
+        {(() => {
+          const preset = localStorage.getItem('dashboard-preset') || 'default';
+          const isLarge = localStorage.getItem('dashboard-scale') === 'large';
 
-        {/* Center: todos + projects today */}
-        <section className="lg:col-span-5 flex flex-col gap-4">
-          <ReviewQueueCard
-            tasks={reviewTasks}
-            projects={projects}
-            loading={reviewLoading}
-            onApprove={handleApproveReview}
-            approvingTaskId={approvingReviewId}
-          />
-          <TodosTodayCard
-            tasks={tasks}
-            projects={projects}
-            loading={tasksLoading}
-            onComplete={handleCompleteRequest}
-            completingTaskId={completingTaskId}
-          />
-          <ProjectsTodayCard tasks={tasks} projects={projects} loading={tasksLoading} />
-        </section>
+          if (preset === 'sales') {
+            return (
+              <>
+                <aside className={isLarge ? "lg:col-span-6 flex flex-col gap-4" : "lg:col-span-3 flex flex-col gap-4"}>
+                  <LeaderboardPodium />
+                  <PinBoardMessages />
+                </aside>
+                <section className={isLarge ? "lg:col-span-12 flex flex-col gap-4" : "lg:col-span-6 flex flex-col gap-4"}>
+                  <TodosTodayCard tasks={tasks} projects={projects} loading={tasksLoading} onComplete={handleCompleteRequest} completingTaskId={completingTaskId} />
+                  <ProjectsTodayCard projects={projects} tasks={tasks} loading={projectsLoading} />
+                </section>
+                <aside className={isLarge ? "lg:col-span-6 flex flex-col gap-4" : "lg:col-span-3 flex flex-col gap-4"}>
+                  <ScheduleCard calendar={calendar} loading={summaryLoading} />
+                  <PinBoardComposer />
+                </aside>
+              </>
+            );
+          }
 
-        {/* Right: private notes + pin composer */}
-        <aside className="lg:col-span-4 flex flex-col gap-4">
-          <NotesPanel />
-          <PinBoardComposer />
-        </aside>
+          if (preset === 'tech') {
+            return (
+              <>
+                <aside className={isLarge ? "lg:col-span-6 flex flex-col gap-4" : "lg:col-span-4 flex flex-col gap-4"}>
+                  <ReviewQueueCard tasks={reviewTasks} projects={projects} loading={reviewLoading} onApprove={handleApproveReview} approvingTaskId={approvingReviewId} />
+                  <NotesPanel />
+                </aside>
+                <section className={isLarge ? "lg:col-span-6 flex flex-col gap-4" : "lg:col-span-5 flex flex-col gap-4"}>
+                  <TodosTodayCard tasks={tasks} projects={projects} loading={tasksLoading} onComplete={handleCompleteRequest} completingTaskId={completingTaskId} />
+                  <ProjectsTodayCard projects={projects} tasks={tasks} loading={projectsLoading} />
+                </section>
+                <aside className={isLarge ? "lg:col-span-12 flex flex-col gap-4 md:grid md:grid-cols-2" : "lg:col-span-3 flex flex-col gap-4"}>
+                  <AnnouncementsCard />
+                  <ScheduleCard calendar={calendar} loading={summaryLoading} />
+                </aside>
+              </>
+            );
+          }
+
+          if (preset === 'ops') {
+            return (
+              <>
+                <aside className={isLarge ? "lg:col-span-12 flex flex-col gap-4 md:grid md:grid-cols-2" : "lg:col-span-3 flex flex-col gap-4"}>
+                  <AnnouncementsCard />
+                  <ScheduleCard calendar={calendar} loading={summaryLoading} />
+                </aside>
+                <section className={isLarge ? "lg:col-span-12 flex flex-col gap-4" : "lg:col-span-9 flex flex-col gap-4"}>
+                  <TodosTodayCard tasks={tasks} projects={projects} loading={tasksLoading} onComplete={handleCompleteRequest} completingTaskId={completingTaskId} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ProjectsTodayCard projects={projects} tasks={tasks} loading={projectsLoading} />
+                    <ReviewQueueCard tasks={reviewTasks} projects={projects} loading={reviewLoading} onApprove={handleApproveReview} approvingTaskId={approvingReviewId} />
+                  </div>
+                </section>
+              </>
+            );
+          }
+
+          return (
+            <>
+              {/* Left: leaderboard + announcements + pin board + schedule */}
+              <aside className={isLarge ? "lg:col-span-12 md:grid md:grid-cols-2 gap-4" : "lg:col-span-3 flex flex-col gap-4"}>
+                <div className="flex flex-col gap-4"><LeaderboardPodium /><AnnouncementsCard /></div>
+                <div className="flex flex-col gap-4"><PinBoardMessages /><ScheduleCard calendar={calendar} loading={summaryLoading} /></div>
+              </aside>
+
+              {/* Center: todos + projects today */}
+              <section className={isLarge ? "lg:col-span-12 flex flex-col gap-4" : "lg:col-span-5 flex flex-col gap-4"}>
+                <ReviewQueueCard
+                  tasks={reviewTasks}
+                  projects={projects}
+                  loading={reviewLoading}
+                  onApprove={handleApproveReview}
+                  approvingTaskId={approvingReviewId}
+                />
+                <TodosTodayCard
+                  tasks={tasks}
+                  projects={projects}
+                  loading={tasksLoading}
+                  onComplete={handleCompleteRequest}
+                  completingTaskId={completingTaskId}
+                />
+                <ProjectsTodayCard projects={projects} tasks={tasks} loading={projectsLoading} />
+              </section>
+
+              {/* Right: pin board composer + notes */}
+              <aside className={isLarge ? "lg:col-span-12 md:grid md:grid-cols-2 gap-4" : "lg:col-span-4 flex flex-col gap-4"}>
+                <PinBoardComposer />
+                <NotesPanel />
+              </aside>
+            </>
+          );
+        })()}
       </div>
       </PinBoardProvider>
 

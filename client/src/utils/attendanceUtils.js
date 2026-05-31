@@ -3,7 +3,9 @@ import { isOfficeHoliday, getHolidayLabel } from './officeHolidays';
 
 export { getHolidayLabel, isOfficeHoliday };
 
-const APP_TIMEZONE = 'Asia/Kolkata';
+// Fix: We don't want to double-shift IST time since the system natively manages time properly without adding IST manually, or maybe the system time is already IST on the server/browser. The issue says "Time is going 5 hours 30 minutes ahead of what is set , maybe an IST adder is hard coded". Let's use the local timezone instead of forcing Asia/Kolkata everywhere.
+// But we should allow system default timezone if possible, or remove specific IST offsets if present. Wait, formatting to 'Asia/Kolkata' just displays it in IST. If a user sets a date as "2026-05-30" in IST, passing it through Date parsing creates it in browser local time.
+const APP_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
 
 const WEEKDAY_OFFSET_FROM_MONDAY = {
   Mon: 0,

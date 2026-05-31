@@ -2,6 +2,16 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": ".*taskmaster-git-.*-raghavsobti37s-projects\\.vercel\\.app"
+        }
+      ],
+      "destination": "https://taskmaster-test-jfw0.onrender.com/api/$1"
+    },
+    {
+      "source": "/api/(.*)",
       "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
     },
     {

@@ -265,11 +265,27 @@ exports.reportBug = async (req, res, next) => {
 
     techProject = await syncTechProjectMembers(techProject, raghavUser._id, session);
 
+    const now = new Date();
+    let dueDate = new Date();
+
+    if (severity === 'critical' || severity === 'blocker') {
+      dueDate = now;
+    } else if (severity === 'high') {
+      dueDate.setHours(23, 59, 59, 999);
+    } else if (severity === 'medium') {
+      dueDate.setDate(dueDate.getDate() + 1);
+      dueDate.setHours(13, 0, 0, 0); // tomorrow first half
+    } else {
+      dueDate.setDate(dueDate.getDate() + 2);
+      dueDate.setHours(13, 0, 0, 0); // day after tomorrow first half
+    }
+
     const taskData = {
       title: `[BUG] ${title} (${page || 'General'})`,
       description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
       status: 'todo',
       priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
+      dueDate,
       projectId: techProject._id,
       assignees: [raghavUser._id.toString()],
       createdBy: req.user._id

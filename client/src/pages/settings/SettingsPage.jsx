@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Bell, Shield, Palette, Save, Lock,
   Sun, Moon, Smartphone, Users, Camera, X, Sparkles, Cpu, Gamepad2, Shapes, UserSquare2,
-  Key, Target, Clock, FileText, Upload, CalendarDays, Receipt
+  Key, Target, Clock, FileText, Upload, CalendarDays, Receipt, LayoutDashboard
 } from 'lucide-react';
 import {
   Badge,
@@ -534,6 +534,64 @@ const SettingsPage = () => {
                      />
                   </button>
                </div>
+
+               <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+                  <div className="flex flex-col gap-1 min-w-0">
+                     <div className="flex items-center gap-3">
+                        <Lock size={16} className="text-blue-500" />
+                        <span className="text-[11px] font-black uppercase tracking-wider">Navbar Groups Order</span>
+                     </div>
+                     <p className="text-[9px] text-[var(--color-text-muted)] pl-7">Rearrange top-level sidebar groups.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="xs" onClick={() => {
+                        localStorage.setItem('nav-Platform', '1');
+                        localStorage.setItem('nav-Workspace', '2');
+                        localStorage.setItem('nav-Office', '3');
+                        localStorage.setItem('nav-CRM', '4');
+                        localStorage.setItem('nav-Management', '5');
+                        localStorage.setItem('nav-Admin', '6');
+                        window.location.reload();
+                    }}>Reset Default</Button>
+                  </div>
+               </div>
+
+               <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+                  <div className="flex flex-col gap-1 min-w-0">
+                     <div className="flex items-center gap-3">
+                        <LayoutDashboard size={16} className="text-amber-500" />
+                        <span className="text-[11px] font-black uppercase tracking-wider">Dashboard Config</span>
+                     </div>
+                     <p className="text-[9px] text-[var(--color-text-muted)] pl-7">Change layout presets and scale elements (1-col to 3-col resize).</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="text-xs p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]"
+                      value={localStorage.getItem('dashboard-scale') || 'normal'}
+                      onChange={(e) => {
+                        localStorage.setItem('dashboard-scale', e.target.value);
+                        window.location.reload();
+                      }}
+                    >
+                      <option value="normal">Small Scale</option>
+                      <option value="large">Large Scale</option>
+                    </select>
+                    <select
+                      className="text-xs p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]"
+                      value={localStorage.getItem('dashboard-preset') || 'default'}
+                      onChange={(e) => {
+                        localStorage.setItem('dashboard-preset', e.target.value);
+                        window.location.reload();
+                      }}
+                    >
+                      <option value="default">Default 3-Column</option>
+                      <option value="sales">Sales & CRM Focus</option>
+                      <option value="tech">Tech & Review Focus</option>
+                      <option value="ops">Operations Focus</option>
+                    </select>
+                  </div>
+               </div>
+
                <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                   <div className="flex flex-col gap-1 min-w-0">
                      <div className="flex items-center gap-3">

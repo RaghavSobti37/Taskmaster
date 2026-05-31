@@ -43,6 +43,12 @@ const HelpBugButton = () => {
       setIsOpen(false);
       setTitle('');
       setDescription('');
+
+      // Fix: Refresh state globally
+      window.dispatchEvent(new CustomEvent('coreknot:refresh-tasks'));
+      if (window.location.pathname.includes('/projects')) {
+        window.location.reload();
+      }
     } catch (err) {
       console.error('Report bug error:', err);
       addToast({

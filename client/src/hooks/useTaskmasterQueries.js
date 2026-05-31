@@ -137,7 +137,8 @@ export const useDashboardTasks = (userId) => {
   useEffect(() => {
     return subscribeToChannel('tasks', 'task_change', () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     });
   }, [queryClient]);
 
@@ -295,7 +296,7 @@ export const useDeleteTask = () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 };

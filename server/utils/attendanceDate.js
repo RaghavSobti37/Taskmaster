@@ -1,11 +1,18 @@
-const APP_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+const APP_TIMEZONE = process.env.APP_TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
 
 const TZ_OFFSETS = {
   'Asia/Kolkata': '+05:30',
   UTC: '+00:00',
 };
 
-const getTzOffset = () => TZ_OFFSETS[APP_TIMEZONE] || '+05:30';
+// Fix: The previous default tz offset forced an additional 5 hours 30 mins even if the host environment already resolved the native offset or was passing local time strings. We should dynamically fetch the offset from the host if available.
+const getTzOffset = () => {
+  const pad = (n) => (n < 10 ? '0' : '') + n;
+  const offset = -(new Date().getTimezoneOffset());
+  const sign = offset >= 0 ? '+' : '-';
+  const absOffset = Math.abs(offset);
+  return `${sign}${pad(Math.floor(absOffset / 60))}:${pad(absOffset % 60)}`;
+};
 
 const getDateKey = (input = new Date()) => {
   const value = input instanceof Date ? input : new Date(input);

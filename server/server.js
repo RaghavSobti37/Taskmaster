@@ -132,9 +132,16 @@ app.use('/api/', SystemHealthService.middleware);
 const traceMiddleware = require('./middleware/traceMiddleware');
 app.use(traceMiddleware);
 
+// Vercel Preview Environments target testing schema
+const isVercelPreview = process.env.VERCEL_ENV === 'preview' || process.env.NODE_ENV === 'test';
 // MongoDB Connection
 const isProd = process.env.NODE_ENV === 'production';
 let dbUri = (isProd ? (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI) : (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing')).trim();
+
+if (isVercelPreview && process.env.MONGODB_URI_LOCAL_TESTING) {
+  dbUri = process.env.MONGODB_URI_LOCAL_TESTING.trim();
+  console.log('[SYSTEM] Detected Vercel Preview / Testing - targeting testing schema DB');
+}
 
 // Local mail tests: tracking pixels hit public API which reads prod DB — opt-in sync
 if (!isProd && process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) {

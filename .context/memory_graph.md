@@ -1,5 +1,5 @@
 # Active State & Milestones
-- [Current Focus]: QA Bug Remediation — 100% pass rate achieved on all global security and performance scanning test cases.
+- [Current Focus]: PWA migration, mobile-native UX optimizations, and Attendance Daily View default implementation.
 - [Last Modified]: May 31, 2026
 
 # Node Graph (Entities & Components)
@@ -9,7 +9,9 @@
 - [Node: QATestingPage.jsx] -> (Memoized handleStart, handleCopyErrors with useCallback)
 - [Node: ArtistsCollection.jsx] -> (Added optional chaining guard for row?._id inside navigate template string)
 - [Node: SystemLogsPanel.jsx] -> (Added optional chaining guard for row?.path, row?.count, and row?.uniqueUsers)
-
+- [Node: BottomNavigation.jsx] -> (Frontend UI / Mobile bottom app bar for PWA navigation)
+- [Node: MainLayout.jsx] -> (Replaced floating hamburger menu with BottomNavigation on mobile, updated safe-area padding)
+- [Node: AttendancePage.jsx] -> (Added DAILY view mode as the default for immediate today-only attendance visualization)
 # Edge Graph (Dependencies & Data Flow)
 - [QATestingPage.jsx] --(triggers)--> [/api/qa/start]
 - [AdminPanel.jsx] --(mutates users/teams)--> [useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam]

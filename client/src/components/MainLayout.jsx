@@ -12,6 +12,7 @@ import PwaInstallBanner from './PwaInstallBanner';
 import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
+import BottomNavigation from './BottomNavigation';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
@@ -45,21 +46,12 @@ const MainLayout = () => {
       <OutletSidebar />
       <CommandPalette />
 
-      {/* Mobile Toggle Button */}
-      {!isMobileOpen && (
-        <button
-          onClick={toggleMobileSidebar}
-          className="fixed bottom-6 right-24 z-50 p-4 bg-[var(--color-action-primary)] text-white rounded-2xl shadow-2xl shadow-blue-500/40 lg:hidden active:scale-95 transition-transform"
-        >
-          <Menu size={24} />
-        </button>
-      )}
-
       <NotificationBridge />
       <PageAnalyticsTracker />
       <PwaInstallBanner />
       <FlashHighlightListener />
       <QuickAddMenu />
+      <BottomNavigation />
 
       {/* Main Content Area */}
       <div
@@ -68,7 +60,7 @@ const MainLayout = () => {
           marginLeft: isDesktop ? (isOpen ? 160 : 56) : 0,
         }}
       >
-        <main className="flex-1 p-4 lg:p-5">
+        <main className="flex-1 p-4 pb-24 lg:p-5">
           <div className="w-full">
             <Outlet />
           </div>

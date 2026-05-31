@@ -31,6 +31,7 @@ import {
 import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendanceGrid';
 
 const VIEW_MODES = {
+  DAILY: 'daily',
   COMPACT: 'compact',
   WEEK: 'week',
   MONTH: 'month',
@@ -265,7 +266,7 @@ const AttendancePage = () => {
   const canReset = isAdminUser(user);
   const [editCell, setEditCell] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState(VIEW_MODES.COMPACT);
+  const [viewMode, setViewMode] = useState(VIEW_MODES.DAILY);
   const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
   const [editForm, setEditForm] = useState({ status: 'present', timeIn: '', timeOut: '' });
 
@@ -277,6 +278,9 @@ const AttendancePage = () => {
   const todayKey = formatDateKeyIST(today);
 
   const dateColumns = useMemo(() => {
+    if (viewMode === VIEW_MODES.DAILY) {
+      return [{ key: 'today', label: 'Today', date: today }];
+    }
     if (viewMode === VIEW_MODES.WEEK) {
       return getWeekDaysIST(today);
     }
@@ -448,6 +452,17 @@ const AttendancePage = () => {
         actions={(
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-lg border border-[var(--color-bg-border)] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode(VIEW_MODES.DAILY)}
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                  viewMode === VIEW_MODES.DAILY
+                    ? 'bg-[var(--color-action-primary)] text-white'
+                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Daily
+              </button>
               <button
                 type="button"
                 onClick={() => setViewMode(VIEW_MODES.COMPACT)}

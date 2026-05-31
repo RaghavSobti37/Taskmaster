@@ -1,6 +1,6 @@
 import React from 'react';
 import { Shield, Lock, Eye, Database, Globe, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 
 export default function PrivacyPolicy() {
   return (

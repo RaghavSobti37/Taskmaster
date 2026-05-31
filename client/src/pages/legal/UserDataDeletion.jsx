@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, Mail, ExternalLink, Shield } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 import axios from 'axios';
 
 export default function UserDataDeletion() {

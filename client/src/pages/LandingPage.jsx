@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { Link000 as Link } from '../components/ui/skiper-ui/skiper40';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 

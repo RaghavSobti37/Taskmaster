@@ -471,3 +471,19 @@ select option {
     grid-row-start: var(--lg-row);
   }
 }
+
+/* Mobile App Native Feel Optimizations */
+@media (max-width: 1023px) {
+  body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+}

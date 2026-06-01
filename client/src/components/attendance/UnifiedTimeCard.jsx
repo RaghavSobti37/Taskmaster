@@ -12,6 +12,7 @@ const UnifiedTimeCard = ({
   title,
   subTitle,
   isSelfMode,
+  editScope,
   onCheckIn,
   onCheckOut,
   onUndo,
@@ -104,7 +105,7 @@ const UnifiedTimeCard = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare In-Time</label>
-              <input type="time" disabled={hasIn || inAppr} value={form?.inTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
+              <input type="time" disabled={inAppr} value={form?.inTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
               <Button
                 variant="primary"
                 className="!py-3 w-full"
@@ -117,11 +118,11 @@ const UnifiedTimeCard = ({
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare Out-Time</label>
-              <input type="time" disabled={hasOut || outAppr || !hasIn} value={form?.outTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
+              <input type="time" disabled={outAppr} value={form?.outTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
               <Button
                 variant="primary"
                 className="!py-3 w-full"
-                disabled={hasOut || outAppr || !hasIn || !form?.outTime || isLoading}
+                disabled={hasOut || outAppr || !form?.outTime || isLoading}
                 onClick={() => onCheckOut && onCheckOut(form?.outTime)}
               >
                 {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : <LogOut size={16} className="mr-2" />}
@@ -149,83 +150,87 @@ const UnifiedTimeCard = ({
         </>
       ) : (
         <div className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
-              <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">MORNING CHECK-IN DATA</p>
-              {inAppr && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
-                  <Lock size={12} /> Locked
-                </span>
+          {(!editScope || editScope === 'in') && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
+                <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">MORNING CHECK-IN DATA</p>
+                {inAppr && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
+                    <Lock size={12} /> Locked
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
+                  <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+                    <span className="text-sm font-bold block">{entry?.inTimeRecord?.systemTimestamp ? new Date(entry.inTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.inTimeRecord?.workMode || 'NONE'} - {entry?.inTimeRecord?.verificationMethod || 'NONE'}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">User Declared</label>
+                  <input type="time" disabled={inAppr} value={form?.inTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))} className="w-full mt-1 px-3 py-[9px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] font-bold text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
+                  <div className="mt-1">
+                    <NexusDropdown
+                      options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
+                      value={form?.inMode || 'wfh'}
+                      onChange={(v) => setForm && setForm((f) => ({ ...f, inMode: v }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              {!inAppr && form?.inTime && (
+                <Button size="sm" variant="primary" className="w-full mt-2" onClick={handleApproveIn}>
+                  ⚡ APPROVE IN-TIME ONLY
+                </Button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
-                <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
-                  <span className="text-sm font-bold block">{entry?.inTimeRecord?.systemTimestamp ? new Date(entry.inTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.inTimeRecord?.workMode || 'NONE'} - {entry?.inTimeRecord?.verificationMethod || 'NONE'}</span>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">User Declared</label>
-                <input type="time" disabled={inAppr} value={form?.inTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))} className="w-full mt-1 px-3 py-[9px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] font-bold text-sm" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
-                <div className="mt-1">
-                  <NexusDropdown
-                    options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
-                    value={form?.inMode || 'wfh'}
-                    onChange={(v) => setForm && setForm((f) => ({ ...f, inMode: v }))}
-                  />
-                </div>
-              </div>
-            </div>
-            {!inAppr && form?.inTime && (
-              <Button size="sm" variant="primary" className="w-full mt-2" onClick={handleApproveIn}>
-                ⚡ APPROVE IN-TIME ONLY
-              </Button>
-            )}
-          </div>
+          )}
 
-          <div className="space-y-3 pt-4">
-            <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
-              <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">EVENING CHECK-OUT DATA</p>
-              {outAppr && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
-                  <Lock size={12} /> Locked
-                </span>
+          {(!editScope || editScope === 'out') && (
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
+                <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">EVENING CHECK-OUT DATA</p>
+                {outAppr && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600">
+                    <Lock size={12} /> Locked
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
+                  <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+                    <span className="text-sm font-bold block">{entry?.outTimeRecord?.systemTimestamp ? new Date(entry.outTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.outTimeRecord?.workMode || 'NONE'} - {entry?.outTimeRecord?.verificationMethod || 'NONE'}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">User Declared</label>
+                  <input type="time" disabled={outAppr} value={form?.outTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))} className="w-full mt-1 px-3 py-[9px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] font-bold text-sm" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
+                  <div className="mt-1">
+                    <NexusDropdown
+                      options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
+                      value={form?.outMode || 'wfh'}
+                      onChange={(v) => setForm && setForm((f) => ({ ...f, outMode: v }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              {!outAppr && form?.outTime && (
+                <Button size="sm" variant="primary" className="w-full mt-2" onClick={handleApproveOut}>
+                  ⚡ APPROVE OUT-TIME ONLY
+                </Button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
-                <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
-                  <span className="text-sm font-bold block">{entry?.outTimeRecord?.systemTimestamp ? new Date(entry.outTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.outTimeRecord?.workMode || 'NONE'} - {entry?.outTimeRecord?.verificationMethod || 'NONE'}</span>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">User Declared</label>
-                <input type="time" disabled={outAppr} value={form?.outTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))} className="w-full mt-1 px-3 py-[9px] rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] font-bold text-sm" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
-                <div className="mt-1">
-                  <NexusDropdown
-                    options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
-                    value={form?.outMode || 'wfh'}
-                    onChange={(v) => setForm && setForm((f) => ({ ...f, outMode: v }))}
-                  />
-                </div>
-              </div>
-            </div>
-            {!outAppr && form?.outTime && (
-              <Button size="sm" variant="primary" className="w-full mt-2" onClick={handleApproveOut}>
-                ⚡ APPROVE OUT-TIME ONLY
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       )}
     </Wrapper>

@@ -207,9 +207,6 @@ router.post('/check', async (req, res) => {
     if (targetRecord?.systemTimestamp) {
       return res.status(400).json({ error: `Already marked ${type} for today` });
     }
-    if (type === 'out' && !existing?.inTimeRecord?.timestamp) {
-      return res.status(400).json({ error: 'Must check in before checking out' });
-    }
 
     const timeValue = req.body?.manualTime || formatHHMM(now);
 
@@ -253,7 +250,7 @@ router.post('/check', async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    if (type === 'out' && attendance.inTimeRecord?.timestamp && attendance.outTimeRecord?.timestamp) {
+    if (attendance.inTimeRecord?.manualTimestamp && attendance.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(attendance);
       await awardAttendanceXpIfEligible(attendance);
     }
@@ -361,7 +358,7 @@ router.put('/upsert/by-user-date', async (req, res) => {
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    if (row.inTimeRecord?.timestamp && row.outTimeRecord?.timestamp) {
+    if (row.inTimeRecord?.manualTimestamp && row.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(row);
       await awardAttendanceXpIfEligible(row);
     }

@@ -82,6 +82,12 @@ export const getMergedCellLabel = (status, date) => {
   return 'Mark Present';
 };
 
+export const inferEditScope = (entry) => {
+  if (!entry?.inTimeRecord?.manualTimestamp) return 'in';
+  if (!entry?.outTimeRecord?.manualTimestamp) return 'out';
+  return 'in';
+};
+
 /** Shared status resolver for all attendance views. */
 export const resolveAttendanceStatus = (entry, date) => {
   if (entry?.onLeave && !entry.inTimeRecord?.manualTimestamp && !entry.outTimeRecord?.manualTimestamp) return 'leave';

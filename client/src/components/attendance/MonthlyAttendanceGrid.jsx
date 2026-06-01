@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, Button } from '../ui';
 import { getHolidayLabel } from '../../utils/officeHolidays';
+import { inferEditScope } from '../../utils/attendanceUtils';
 
 const SQUARE_COLORS = {
   holiday: 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/40',
@@ -138,7 +139,7 @@ const MonthlyAttendanceGrid = ({
                       <button
                         type="button"
                         title={buildTooltip(date, entry, status)}
-                        onClick={() => onEdit(userRow, date, entry)}
+                        onClick={() => onEdit(userRow, date, entry, inferEditScope(entry))}
                         className={`w-7 h-7 rounded-md border transition-transform hover:scale-110 hover:z-10 mx-auto block ${getSquareColor(status, entry)}`}
                         aria-label={`${userRow.name} — ${format(date, 'MMM d')}`}
                       />

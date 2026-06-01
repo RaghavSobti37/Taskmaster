@@ -27,6 +27,7 @@ import {
   getMergedCellLabel,
   formatDateKeyIST,
   resolveAttendanceStatus,
+  inferEditScope,
 } from '../../utils/attendanceUtils';
 import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendanceGrid';
 import SelfMonthlyAttendanceCalendar from '../../components/attendance/SelfMonthlyAttendanceCalendar';
@@ -44,10 +45,24 @@ const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
 const PASTEL_VIOLET_CELL = 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/20';
 const PASTEL_VIOLET_TEXT = 'text-[var(--color-pastel-violet-text)]';
 
-const getCellButtonClass = (status, entry) => {
-  const fullyApproved = entry?.inTimeRecord?.isApproved && entry?.outTimeRecord?.isApproved;
-  return fullyApproved ? 'bg-blue-500/10 border-blue-500/30' :
-  status === 'holiday' ? PASTEL_VIOLET_CELL :
+const preserveTimeRecord = (record) => {
+  if (!record?.manualTimestamp) return undefined;
+  return {
+    manualTimestamp: record.manualTimestamp,
+    workMode: record.workMode || 'wfh',
+    verificationMethod: record.verificationMethod || 'MANUAL',
+    isApproved: !!record.isApproved,
+    ...(record.systemTimestamp ? { systemTimestamp: record.systemTimestamp } : {}),
+    ...(record.approvedBy ? { approvedBy: record.approvedBy } : {}),
+  };
+};
+
+
+const APPROVED_CELL = 'bg-blue-500/10 border-blue-500/30';
+
+const getCellButtonClass = (status, entry, approved = false) => {
+  if (approved) return APPROVED_CELL;
+  return status === 'holiday' ? PASTEL_VIOLET_CELL :
   status === 'leave' ? PASTEL_ROSE_CELL :
   status === 'halfDay' ? 'bg-amber-500/10 border-amber-500/30' :
   status === 'present' ? 'bg-emerald-500/10 border-emerald-500/30' :
@@ -56,13 +71,15 @@ const getCellButtonClass = (status, entry) => {
 
 const AttendanceDayCells = ({ userRow, date, entry, status, onEdit, statusDot }) => {
   const split = shouldUseSplitLayout(entry, status);
-  const baseClass = `w-full rounded-lg border px-2 py-2 transition-colors hover:ring-2 hover:ring-[var(--color-action-primary)]/30 cursor-pointer ${getCellButtonClass(status, entry)}`;
+  const cellButtonClass = (approved) =>
+    `w-full rounded-lg border px-2 py-2 transition-colors hover:ring-2 hover:ring-[var(--color-action-primary)]/30 cursor-pointer ${getCellButtonClass(status, entry, approved)}`;
 
   if (!split) {
     const fullyApproved = entry?.inTimeRecord?.isApproved && entry?.outTimeRecord?.isApproved;
+    const defaultScope = !entry?.inTimeRecord?.manualTimestamp ? 'in' : !entry?.outTimeRecord?.manualTimestamp ? 'out' : 'in';
     return (
       <td colSpan={2} className="px-2 py-2 align-top">
-        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} flex items-center justify-center gap-2 min-h-[36px]`}>
+        <button type="button" onClick={() => onEdit(userRow, date, entry, defaultScope)} className={`${cellButtonClass(fullyApproved)} flex items-center justify-center gap-2 min-h-[36px]`}>
           {fullyApproved && <Lock size={10} className="text-blue-500 shrink-0" />}
           <span className={`text-[10px] font-bold ${status === 'empty' ? 'text-[var(--color-text-muted)]' : status === 'holiday' ? PASTEL_VIOLET_TEXT : ''}`}>
             {getMergedCellLabel(status, date)}
@@ -78,7 +95,7 @@ const AttendanceDayCells = ({ userRow, date, entry, status, onEdit, statusDot })
   return (
     <>
       <td className="px-2 py-2 align-top">
-        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} text-left`}>
+        <button type="button" onClick={() => onEdit(userRow, date, entry, 'in')} className={`${cellButtonClass(inAppr)} text-left`}>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
             <span className="text-[10px] font-bold truncate">{entry?.inTimeRecord?.manualTimestamp || '--'}</span>
@@ -88,7 +105,7 @@ const AttendanceDayCells = ({ userRow, date, entry, status, onEdit, statusDot })
         </button>
       </td>
       <td className="px-2 py-2 align-top">
-        <button type="button" onClick={() => onEdit(userRow, date, entry)} className={`${baseClass} text-left`}>
+        <button type="button" onClick={() => onEdit(userRow, date, entry, 'out')} className={`${cellButtonClass(outAppr)} text-left`}>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(status, entry)}`} />
             <span className="text-[10px] font-bold truncate">{entry?.outTimeRecord?.manualTimestamp || '--'}</span>
@@ -108,7 +125,8 @@ const AttendancePage = () => {
   const { addToast } = useSystemToast();
   const canEdit = isOpsUser(user);
   const canReset = isAdminUser(user);
-  const [editCell, setEditCell] = useState(null);
+  const [editInCell, setEditInCell] = useState(null);
+  const [editOutCell, setEditOutCell] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -116,7 +134,8 @@ const AttendancePage = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.DAILY);
   const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
-  const [editForm, setEditForm] = useState({ status: 'present', inTime: '', outTime: '', inMode: 'wfh', outMode: 'wfh' });
+  const [editInForm, setEditInForm] = useState({ inTime: '', inMode: 'wfh' });
+  const [editOutForm, setEditOutForm] = useState({ outTime: '', outMode: 'wfh' });
 
   const today = useMemo(() => {
     const value = new Date();
@@ -199,34 +218,62 @@ const AttendancePage = () => {
     return 'bg-[var(--color-bg-border)]';
   };
 
-  const openEditModal = (userRow, date, entry) => {
-    const status = resolveStatus(entry, date);
-    setEditCell({ userRow, date, entry });
-    setEditForm({
-      status: entry?.onLeave ? 'leave' : entry?.isHalfDay ? 'halfDay' : 'present',
-      inTime: entry?.inTimeRecord?.manualTimestamp || '',
-      outTime: entry?.outTimeRecord?.manualTimestamp || '',
-      inMode: entry?.inTimeRecord?.workMode || 'wfh',
-      outMode: entry?.outTimeRecord?.workMode || 'wfh',
-    });
+  const openEditModal = (userRow, date, entry, scope) => {
+    const resolvedScope = scope || inferEditScope(entry);
+    const cell = { userRow, date, entry };
+    if (resolvedScope === 'out') {
+      setEditOutCell(cell);
+      setEditOutForm({
+        outTime: entry?.outTimeRecord?.manualTimestamp || '',
+        outMode: entry?.outTimeRecord?.workMode || 'wfh',
+      });
+      setEditInCell(null);
+    } else {
+      setEditInCell(cell);
+      setEditInForm({
+        inTime: entry?.inTimeRecord?.manualTimestamp || '',
+        inMode: entry?.inTimeRecord?.workMode || 'wfh',
+      });
+      setEditOutCell(null);
+    }
   };
 
-  const saveCell = () => {
-    if (!editCell) return;
-    const { userRow, date } = editCell;
-    const hasTimes = !!(editForm.inTime || editForm.outTime);
-    const effectiveStatus = hasTimes && editForm.status === 'leave' ? 'present' : editForm.status;
+  const saveInCell = () => {
+    if (!editInCell) return;
+    const { userRow, date, entry } = editInCell;
     const payload = {
       userId: userRow._id,
       username: userRow.name,
       date: format(date, 'yyyy-MM-dd'),
-      onLeave: effectiveStatus === 'leave',
-      isHalfDay: effectiveStatus === 'halfDay',
-      inTimeRecord: effectiveStatus === 'leave' ? undefined : { timestamp: editForm.inTime || '', workMode: editForm.inMode },
-      outTimeRecord: effectiveStatus === 'leave' ? undefined : { timestamp: editForm.outTime || '', workMode: editForm.outMode },
+      onLeave: !!entry?.onLeave,
+      isHalfDay: !!entry?.isHalfDay,
+      inTimeRecord: editInForm.inTime
+        ? { manualTimestamp: editInForm.inTime, workMode: editInForm.inMode, verificationMethod: 'MANUAL' }
+        : undefined,
+      outTimeRecord: preserveTimeRecord(entry?.outTimeRecord),
     };
     upsertAttendance.mutate(payload, {
-      onSuccess: () => setEditCell(null),
+      onSuccess: () => setEditInCell(null),
+      onError: (error) => addToast({ type: 'error', message: error.response?.data?.error || 'Failed to save', module: MODULE.ATTENDANCE }),
+    });
+  };
+
+  const saveOutCell = () => {
+    if (!editOutCell) return;
+    const { userRow, date, entry } = editOutCell;
+    const payload = {
+      userId: userRow._id,
+      username: userRow.name,
+      date: format(date, 'yyyy-MM-dd'),
+      onLeave: !!entry?.onLeave,
+      isHalfDay: !!entry?.isHalfDay,
+      inTimeRecord: preserveTimeRecord(entry?.inTimeRecord),
+      outTimeRecord: editOutForm.outTime
+        ? { manualTimestamp: editOutForm.outTime, workMode: editOutForm.outMode, verificationMethod: 'MANUAL' }
+        : undefined,
+    };
+    upsertAttendance.mutate(payload, {
+      onSuccess: () => setEditOutCell(null),
       onError: (error) => addToast({ type: 'error', message: error.response?.data?.error || 'Failed to save', module: MODULE.ATTENDANCE }),
     });
   };
@@ -371,22 +418,49 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      <NexusModal isOpen={!!editCell} onClose={() => setEditCell(null)} title="Attendance Control Panel — User Timecard" showFooter={true} size="md" footerActions={
+      <NexusModal isOpen={!!editInCell} onClose={() => setEditInCell(null)} title="Morning Check-In — User Timecard" showFooter={true} size="md" footerActions={
           <>
-            <Button variant="ghost" onClick={() => setEditCell(null)}>Cancel</Button>
-            <Button variant="primary" onClick={saveCell} disabled={upsertAttendance.isPending}>Save Changes</Button>
+            <Button variant="ghost" onClick={() => setEditInCell(null)}>Cancel</Button>
+            <Button variant="primary" onClick={saveInCell} disabled={upsertAttendance.isPending}>Save Changes</Button>
           </>
       }>
-        {editCell && (
+        {editInCell && (
           <UnifiedTimeCard
-            entry={editCell.entry}
-            title={format(editCell.date, 'EEE, MMM d, yyyy')}
-            subTitle={editCell.userRow.name}
+            entry={editInCell.entry}
+            title={format(editInCell.date, 'EEE, MMM d, yyyy')}
+            subTitle={editInCell.userRow.name}
             isSelfMode={false}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            onApproveIn={() => approveAttendance.mutate({ id: editCell.entry._id, approvalTarget: 'IN', manualTime: editForm.inTime, workMode: editForm.inMode }, { onSuccess: () => setEditCell(null) })}
-            onApproveOut={() => approveAttendance.mutate({ id: editCell.entry._id, approvalTarget: 'OUT', manualTime: editForm.outTime, workMode: editForm.outMode }, { onSuccess: () => setEditCell(null) })}
+            editScope="in"
+            editForm={editInForm}
+            setEditForm={setEditInForm}
+            onApproveIn={() => approveAttendance.mutate(
+              { id: editInCell.entry._id, approvalTarget: 'IN', manualTime: editInForm.inTime, workMode: editInForm.inMode },
+              { onSuccess: () => setEditInCell(null) }
+            )}
+            isLoading={approveAttendance.isPending}
+          />
+        )}
+      </NexusModal>
+
+      <NexusModal isOpen={!!editOutCell} onClose={() => setEditOutCell(null)} title="Evening Check-Out — User Timecard" showFooter={true} size="md" footerActions={
+          <>
+            <Button variant="ghost" onClick={() => setEditOutCell(null)}>Cancel</Button>
+            <Button variant="primary" onClick={saveOutCell} disabled={upsertAttendance.isPending}>Save Changes</Button>
+          </>
+      }>
+        {editOutCell && (
+          <UnifiedTimeCard
+            entry={editOutCell.entry}
+            title={format(editOutCell.date, 'EEE, MMM d, yyyy')}
+            subTitle={editOutCell.userRow.name}
+            isSelfMode={false}
+            editScope="out"
+            editForm={editOutForm}
+            setEditForm={setEditOutForm}
+            onApproveOut={() => approveAttendance.mutate(
+              { id: editOutCell.entry._id, approvalTarget: 'OUT', manualTime: editOutForm.outTime, workMode: editOutForm.outMode },
+              { onSuccess: () => setEditOutCell(null) }
+            )}
             isLoading={approveAttendance.isPending}
           />
         )}

@@ -1,5 +1,29 @@
 export const DEFAULT_WORKSPACE_COLOR = '#64748b';
 
+export const PRESET_WORKSPACE_COLORS = [
+  '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#f97316',
+  '#ec4899', '#06b6d4', '#eab308', '#64748b', '#8b5cf6',
+];
+
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/** Normalize #RGB / #RRGGBB to lowercase #rrggbb. Returns null if invalid. */
+export function normalizeHexColor(value, fallback = null) {
+  const trimmed = String(value ?? '').trim();
+  if (!HEX_COLOR_RE.test(trimmed)) {
+    return fallback;
+  }
+  if (trimmed.length === 4) {
+    const [, r, g, b] = trimmed;
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return trimmed.toLowerCase();
+}
+
+export function isValidHexColor(value) {
+  return normalizeHexColor(value) !== null;
+}
+
 export function normalizeWorkspaceKey(name) {
   return String(name ?? '')
     .trim()

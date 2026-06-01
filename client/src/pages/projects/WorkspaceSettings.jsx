@@ -5,18 +5,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Settings, UserPlus, X, Briefcase } from 'lucide-react';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
+import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { Badge, PageHeader, PageContainer, Card, Button, PageSkeleton } from '../../components/ui';
-import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPermissions';
+import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { suggestProjectRole } from '../../utils/taskText';
-import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
+import { useAuth } from '../../contexts/AuthContext';
 
 const WorkspaceSettings = () => {
   const { name: nameParam } = useParams();
   const workspaceName = decodeURIComponent(nameParam || '').trim();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: workspaces = [] } = useWorkspaces();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -25,8 +26,14 @@ const WorkspaceSettings = () => {
   const [users, setUsers] = useState([]);
   const [members, setMembers] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [workspaceColor, setWorkspaceColor] = useState(DEFAULT_WORKSPACE_COLOR);
+  const [initialColor, setInitialColor] = useState(DEFAULT_WORKSPACE_COLOR);
+  const [createdById, setCreatedById] = useState(null);
 
   const apiPath = `/api/projects/workspaces/${encodeURIComponent(workspaceName)}`;
+  const isAdmin = isAdminUser(user);
+  const canManageMembers = isAdmin || (createdById && user?._id && String(createdById) === String(user._id));
+  const accentColor = normalizeHexColor(workspaceColor) || DEFAULT_WORKSPACE_COLOR;
 
   const loadWorkspace = useCallback(async () => {
     if (!workspaceName) {
@@ -52,6 +59,10 @@ const WorkspaceSettings = () => {
       }).filter((d) => d.userId);
       setMembers(defaults);
       setProjects(data.projects || []);
+      const loadedColor = normalizeHexColor(data.color) || DEFAULT_WORKSPACE_COLOR;
+      setWorkspaceColor(loadedColor);
+      setInitialColor(loadedColor);
+      setCreatedById(data.createdBy?._id || data.createdBy || null);
     } catch (err) {
       if (err.response?.status === 404) {
         setError('Workspace not found');
@@ -80,16 +91,16 @@ const WorkspaceSettings = () => {
   }, []);
 
   const addMember = (userId) => {
-    const user = users.find((u) => u._id === userId);
-    if (user && !members.find((m) => m.userId === user._id)) {
+    const memberUser = users.find((u) => u._id === userId);
+    if (memberUser && !members.find((m) => m.userId === memberUser._id)) {
       setMembers([
         ...members,
         {
-          userId: user._id,
-          name: user.name,
-          profileRole: getDepartmentSlug(user),
-          projectRole: suggestProjectRole(getDepartmentSlug(user)),
-          avatar: user.avatar,
+          userId: memberUser._id,
+          name: memberUser.name,
+          profileRole: getDepartmentSlug(memberUser),
+          projectRole: suggestProjectRole(getDepartmentSlug(memberUser)),
+          avatar: memberUser.avatar,
         },
       ]);
     }
@@ -104,12 +115,20 @@ const WorkspaceSettings = () => {
   };
 
   const handleSave = async () => {
+    if (isAdmin && workspaceColor !== initialColor && !isValidHexColor(workspaceColor)) {
+      alert('Enter a valid hex color (e.g. #3498db).');
+      return;
+    }
     setSaving(true);
     setForbidden(false);
     try {
-      await axios.patch(apiPath, {
+      const payload = {
         defaultMembers: members.map((m) => ({ userId: m.userId, role: m.projectRole })),
-      });
+      };
+      if (isAdmin && workspaceColor !== initialColor) {
+        payload.color = normalizeHexColor(workspaceColor);
+      }
+      await axios.patch(apiPath, payload);
       await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
       navigate('/projects');
@@ -125,23 +144,23 @@ const WorkspaceSettings = () => {
   };
 
   const formatOptionLabel = ({ value, label }) => {
-    const user = users.find((u) => u._id === value);
-    if (!user) return label;
+    const optionUser = users.find((u) => u._id === value);
+    if (!optionUser) return label;
     return (
       <div className="flex items-center gap-3">
         <div className="w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center text-[10px] font-black text-blue-500 overflow-hidden">
-          {user?.avatar ? (
-            <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+          {optionUser?.avatar ? (
+            <img src={optionUser.avatar} className="w-full h-full object-cover" alt="" />
           ) : (
-            user?.name?.substring(0, 2).toUpperCase()
+            optionUser?.name?.substring(0, 2).toUpperCase()
           )}
         </div>
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-[var(--color-text-primary)] leading-none mb-0.5">
-            {user?.name}
+            {optionUser?.name}
           </span>
           <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">
-            {getDepartmentName(user)}
+            {getDepartmentName(optionUser)}
           </span>
         </div>
       </div>
@@ -149,7 +168,7 @@ const WorkspaceSettings = () => {
   };
 
   const displayName = workspaceName.toUpperCase();
-  const accentColor = getWorkspaceColor(displayName, workspaces);
+  const canSave = (canManageMembers || (isAdmin && workspaceColor !== initialColor)) && !forbidden;
 
   if (loading) {
     return (
@@ -204,6 +223,33 @@ const WorkspaceSettings = () => {
         </Card>
       )}
 
+      <Card className="p-8 space-y-4 mb-6">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
+            Workspace Color
+          </label>
+          <div
+            className="w-4 h-4 rounded-full shrink-0 border border-[var(--color-bg-border)]"
+            style={{ backgroundColor: accentColor }}
+            title="Current workspace color"
+          />
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] -mt-2">
+          Used across projects, task lists, badges, and dashboard cards for this workspace.
+        </p>
+        {isAdmin ? (
+          <WorkspaceColorPicker
+            value={workspaceColor}
+            onChange={setWorkspaceColor}
+            disabled={forbidden}
+          />
+        ) : (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Only admins can change workspace color.
+          </p>
+        )}
+      </Card>
+
       <Card className="p-8 space-y-6 mb-6">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
@@ -223,7 +269,7 @@ const WorkspaceSettings = () => {
           placeholder="Search team members..."
           renderOption={formatOptionLabel}
           searchable
-          disabled={forbidden}
+          disabled={!canManageMembers || forbidden}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -254,13 +300,13 @@ const WorkspaceSettings = () => {
                   value={m.projectRole}
                   onChange={(role) => updateMemberRole(m.userId, role)}
                   label=""
-                  disabled={forbidden}
+                  disabled={!canManageMembers || forbidden}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => removeMember(m.userId)}
-                disabled={forbidden}
+                disabled={!canManageMembers || forbidden}
                 className="p-1.5 hover:text-red-500 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg transition-all opacity-0 group-hover:opacity-100 shrink-0 disabled:opacity-30"
               >
                 <X size={14} />
@@ -311,10 +357,10 @@ const WorkspaceSettings = () => {
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || forbidden}
+          disabled={saving || !canSave}
           className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20"
         >
-          {saving ? 'Saving...' : 'Save Defaults'}
+          {saving ? 'Saving...' : 'Save Settings'}
         </button>
       </div>
     </PageContainer>

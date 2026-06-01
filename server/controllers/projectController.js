@@ -18,6 +18,18 @@ const DEFAULT_WORKSPACES = [
 
 const normalizeWorkspaceName = (name) => String(name || '').toUpperCase().trim();
 
+const HEX_COLOR_RE = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/;
+
+const normalizeHexColor = (value) => {
+  const raw = String(value ?? '').trim();
+  if (!HEX_COLOR_RE.test(raw)) return null;
+  if (raw.length === 4) {
+    const [, r, g, b] = raw;
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return raw.toLowerCase();
+};
+
 /** Default tenant order, then name */
 const sortWorkspacesGlobal = (workspaces) =>
   [...workspaces].sort(
@@ -455,9 +467,14 @@ exports.createWorkspace = async (req, res) => {
       return res.status(400).json({ error: 'Workspace name is required' });
     }
 
+    const normalizedColor = color ? normalizeHexColor(color) : null;
+    if (color && !normalizedColor) {
+      return res.status(400).json({ error: 'Invalid workspace color. Use a hex value like #3498db.' });
+    }
+
     const workspace = await Workspace.create({
       name: name.toUpperCase().trim(),
-      color: color || '#64748b',
+      color: normalizedColor || '#64748b',
       createdBy: req.user._id,
     });
 
@@ -535,11 +552,9 @@ exports.updateWorkspace = async (req, res) => {
     const workspace = await Workspace.findOne({ name });
     if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
 
-    const canManage = isAdminUser(req.user)
-      || workspace.createdBy?.toString() === req.user._id.toString();
-    if (!canManage) {
-      return res.status(403).json({ error: 'Not authorized to update this workspace' });
-    }
+    const isAdmin = isAdminUser(req.user);
+    const isCreator = workspace.createdBy?.toString() === req.user._id.toString();
+    const canManageMembers = isAdmin || isCreator;
 
     const previousDefaults = (workspace.defaultMembers || []).map((d) => ({
       user: d.user,
@@ -548,9 +563,21 @@ exports.updateWorkspace = async (req, res) => {
 
     const { color, defaultMembers } = req.body;
 
-    if (color) workspace.color = color;
+    if (color !== undefined && color !== null && String(color).trim() !== '') {
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Only admins can change workspace color' });
+      }
+      const normalizedColor = normalizeHexColor(color);
+      if (!normalizedColor) {
+        return res.status(400).json({ error: 'Invalid workspace color. Use a hex value like #3498db.' });
+      }
+      workspace.color = normalizedColor;
+    }
 
     if (Array.isArray(defaultMembers)) {
+      if (!canManageMembers) {
+        return res.status(403).json({ error: 'Not authorized to update this workspace' });
+      }
       const sanitized = defaultMembers
         .filter((entry) => entry?.userId || entry?.user)
         .map((entry) => {

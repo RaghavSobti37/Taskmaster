@@ -22,13 +22,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import { getWorkspaceColor as resolveWorkspaceColor } from '../../utils/workspaceColors';
+import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS } from '../../utils/workspaceColors';
+import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { countReviewTasksByProject } from '../../utils/taskReview';
-
-const WORKSPACE_COLORS = [
-  '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#f97316',
-  '#ec4899', '#06b6d4', '#eab308', '#64748b', '#8b5cf6',
-];
 
 const ProjectPreview = ({
   project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd, reviewCount = 0,
@@ -98,7 +94,7 @@ const ProjectsView = () => {
   const [viewMode, setViewMode] = useState('workspace');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [newWorkspaceColor, setNewWorkspaceColor] = useState(WORKSPACE_COLORS[0]);
+  const [newWorkspaceColor, setNewWorkspaceColor] = useState(PRESET_WORKSPACE_COLORS[0]);
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [draggingProjectId, setDraggingProjectId] = useState(null);
   const [dragOverWorkspace, setDragOverWorkspace] = useState(null);
@@ -274,7 +270,7 @@ const ProjectsView = () => {
       queryClient.invalidateQueries({ queryKey: ['workspaces'] });
       setCreateModalOpen(false);
       setNewWorkspaceName('');
-      setNewWorkspaceColor(WORKSPACE_COLORS[0]);
+      setNewWorkspaceColor(PRESET_WORKSPACE_COLORS[0]);
     } catch (err) {
       console.error('Failed to create workspace:', err);
     } finally {
@@ -693,20 +689,10 @@ const ProjectsView = () => {
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
               Workspace Color
             </label>
-            <div className="flex items-center gap-2 flex-wrap p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)]">
-              {WORKSPACE_COLORS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setNewWorkspaceColor(c)}
-                  className={`w-7 h-7 rounded-full transition-all duration-200 ${newWorkspaceColor === c
-                    ? 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-workspace)] scale-110 ring-[var(--color-text-primary)]'
-                    : 'hover:scale-105 opacity-80 hover:opacity-100'
-                    }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
+            <WorkspaceColorPicker
+              value={newWorkspaceColor}
+              onChange={setNewWorkspaceColor}
+            />
           </div>
           <div className="flex items-center justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setCreateModalOpen(false)}>

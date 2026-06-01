@@ -37,6 +37,7 @@
     "helmet": "^6.0.1",
     "imap-simple": "^1.6.3",
     "ioredis": "^5.11.0",
+    "ipaddr.js": "^2.4.0",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.0",
     "juice": "^11.1.1",

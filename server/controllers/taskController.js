@@ -98,31 +98,32 @@ const pick = (src, keys) => {
 
 exports.createTask = async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const taskData = { ...pick(req.body, ALLOWED_CREATE), createdBy: req.user._id };
-    if (!taskData.projectId || taskData.projectId === '[object Object]') delete taskData.projectId;
-    
-    if (taskData.assignees) {
-      taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
-    }
+    let taskDto, pendingNotifications;
+    await session.withTransaction(async () => {
+      const taskData = { ...pick(req.body, ALLOWED_CREATE), createdBy: req.user._id };
+      if (!taskData.projectId || taskData.projectId === '[object Object]') delete taskData.projectId;
+      
+      if (taskData.assignees) {
+        taskData.assignees = taskData.assignees.filter(a => typeof a === 'string' && mongoose.Types.ObjectId.isValid(a));
+      }
 
-    const { taskDto, pendingNotifications } = await TaskService.createTask(taskData, req.user, session);
-
-    await session.commitTransaction();
-    session.endSession();
+      const result = await TaskService.createTask(taskData, req.user, session);
+      taskDto = result.taskDto;
+      pendingNotifications = result.pendingNotifications;
+    });
 
     dispatchTaskNotifications(pendingNotifications);
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     if (error.message?.includes('authorized') || error.message?.includes('not found')) {
       return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
     }
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -139,6 +140,15 @@ exports.getTasks = async (req, res, next) => {
 
     if (projectId) {
       filter.projectId = projectId;
+      if (!isAdminUser(req.user)) {
+        const Project = require('../models/Project');
+        const project = await Project.findById(projectId).lean();
+        const { getProjectRole } = require('../services/TaskService');
+        const role = getProjectRole(project, req.user._id);
+        if (!role) {
+          return res.status(403).json({ error: 'Not authorized to view tasks for this project' });
+        }
+      }
     } else {
       if (!isAdminUser(req.user)) {
         const TaskAssignment = require('../models/TaskAssignment');
@@ -180,58 +190,51 @@ exports.getTasks = async (req, res, next) => {
 
 exports.updateTask = async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id) || req.params.id === '[object Object]') {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ error: 'Invalid task ID format' });
     }
 
     const updates = pick(req.body, ALLOWED_UPDATE);
+    let taskDto;
 
-    const taskDto = await TaskService.updateTask(req.params.id, updates, req.user, session);
-
-    await session.commitTransaction();
-    session.endSession();
+    await session.withTransaction(async () => {
+      taskDto = await TaskService.updateTask(req.params.id, updates, req.user, session);
+    });
 
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'update' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'UPDATE_TASK' });
     res.json(taskDto);
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    if (error.message.includes('authorized') || error.message.includes('not found')) {
+    if (error.message?.includes('authorized') || error.message?.includes('not found')) {
       return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
     }
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
 exports.deleteTask = async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id) || req.params.id === '[object Object]') {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ error: 'Invalid task ID format' });
     }
 
-    await TaskService.deleteTask(req.params.id, req.user, session);
-
-    await session.commitTransaction();
-    session.endSession();
+    await session.withTransaction(async () => {
+      await TaskService.deleteTask(req.params.id, req.user, session);
+    });
 
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: req.params.id, action: 'delete' });
     res.json({ message: 'Task deleted' });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    if (error.message.includes('authorized') || error.message.includes('not found')) {
+    if (error.message?.includes('authorized') || error.message?.includes('not found')) {
       return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
     }
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -277,63 +280,63 @@ const calculateBugDueDate = (severity) => {
 
 exports.reportBug = async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { page, title, description, severity } = req.body;
     if (!title?.trim()) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    const details = description?.trim() || '(No details provided)';
+    let taskDto, pendingNotifications;
 
-    const User = require('../models/User');
-    const raghavUser = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).session(session) || req.user;
+    await session.withTransaction(async () => {
+      const details = description?.trim() || '(No details provided)';
 
-    let techProject = await Project.findOne({ name: /tech|maintenance/i }).session(session);
-    if (!techProject) {
-      techProject = await Project.create([{
-        name: 'Tech Stack & Maintenance',
-        description: 'Core application infrastructure, bug tracking, and continuous refactoring pipeline.',
-        status: 'active',
-        outletId: 'coreknot',
-        owner: raghavUser._id,
-        members: [raghavUser._id],
-        memberRoles: [{ user: raghavUser._id, role: 'manager' }]
-      }], { session });
-      techProject = techProject[0];
-    }
+      const User = require('../models/User');
+      const raghavUser = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).session(session) || req.user;
 
-    techProject = await syncTechProjectMembers(techProject, raghavUser._id, session);
+      let techProject = await Project.findOne({ name: /tech|maintenance/i }).session(session);
+      if (!techProject) {
+        techProject = await Project.create([{
+          name: 'Tech Stack & Maintenance',
+          description: 'Core application infrastructure, bug tracking, and continuous refactoring pipeline.',
+          status: 'active',
+          outletId: 'coreknot',
+          owner: raghavUser._id,
+          members: [raghavUser._id],
+          memberRoles: [{ user: raghavUser._id, role: 'manager' }]
+        }], { session });
+        techProject = techProject[0];
+      }
 
-    const taskData = {
-      title: `[BUG] ${title} (${page || 'General'})`,
-      description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
-      status: 'todo',
-      priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
-      projectId: techProject._id,
-      assignees: [raghavUser._id.toString()],
-      createdBy: req.user._id,
-      dueDate: calculateBugDueDate(severity),
-      scheduleSlot: severity === 'high' ? 'PM' : 'AM'
-    };
+      techProject = await syncTechProjectMembers(techProject, raghavUser._id, session);
 
-    const { taskDto, pendingNotifications } = await TaskService.createTask(taskData, req.user, session);
+      const taskData = {
+        title: `[BUG] ${title} (${page || 'General'})`,
+        description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
+        status: 'todo',
+        priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
+        projectId: techProject._id,
+        assignees: [raghavUser._id.toString()],
+        createdBy: req.user._id,
+        dueDate: calculateBugDueDate(severity),
+        scheduleSlot: severity === 'high' ? 'PM' : 'AM'
+      };
 
-    await session.commitTransaction();
-    session.endSession();
+      const result = await TaskService.createTask(taskData, req.user, session);
+      taskDto = result.taskDto;
+      pendingNotifications = result.pendingNotifications;
+    });
 
     dispatchTaskNotifications(pendingNotifications);
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     if (error.message?.includes('authorized')) {
       return res.status(403).json({ error: error.message });
     }
     next(error);
+  } finally {
+    session.endSession();
   }
 };

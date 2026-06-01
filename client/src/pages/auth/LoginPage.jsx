@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 import axios from 'axios';
@@ -15,6 +15,8 @@ const LoginPage = () => {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [remainingAttempts, setRemainingAttempts] = useState(null);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -39,7 +41,17 @@ const LoginPage = () => {
       login(res.data.token, res.data);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed. Please check your credentials.');
+      const remaining = err.response?.headers?.['x-ratelimit-remaining'] || err.response?.headers?.['ratelimit-remaining'];
+      
+      if (err.response?.status === 429) {
+        setError('Too many authentication attempts, please try again after 15 minutes.');
+        setRemainingAttempts(0);
+      } else {
+        if (remaining !== undefined) {
+          setRemainingAttempts(Number(remaining));
+        }
+        setError(err.response?.data?.error || 'Authentication failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -67,8 +79,16 @@ const LoginPage = () => {
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse">
-            {error}
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+            {remainingAttempts !== null && remainingAttempts > 0 && (
+              <span className="text-xs text-red-500 font-semibold ml-6">
+                {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining before a 15-minute timeout.
+              </span>
+            )}
           </div>
         )}
 
@@ -93,13 +113,20 @@ const LoginPage = () => {
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
-                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
+                className="w-full pl-12 pr-12 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-brand-teal)] transition-colors focus:outline-none"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 

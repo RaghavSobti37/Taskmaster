@@ -71,7 +71,7 @@ export const isAttendanceHoliday = (date = new Date()) => isWeekend(date) || isO
 
 export const shouldUseSplitLayout = (entry, status) => {
   if (status === 'leave' || status === 'holiday' || status === 'empty') return false;
-  if (!entry?.timeIn && !entry?.timeOut) return false;
+  if (!entry?.inTimeRecord?.manualTimestamp && !entry?.outTimeRecord?.manualTimestamp) return false;
   return true;
 };
 
@@ -84,9 +84,9 @@ export const getMergedCellLabel = (status, date) => {
 
 /** Shared status resolver for all attendance views. */
 export const resolveAttendanceStatus = (entry, date) => {
-  if (entry?.onLeave && !entry.timeIn && !entry.timeOut) return 'leave';
-  if (entry?.isHalfDay && !entry.timeIn && !entry.timeOut) return 'halfDay';
-  if (entry?.timeIn || entry?.timeOut) return 'present';
+  if (entry?.onLeave && !entry.inTimeRecord?.manualTimestamp && !entry.outTimeRecord?.manualTimestamp) return 'leave';
+  if (entry?.isHalfDay && !entry.inTimeRecord?.manualTimestamp && !entry.outTimeRecord?.manualTimestamp) return 'halfDay';
+  if (entry?.inTimeRecord?.manualTimestamp || entry?.outTimeRecord?.manualTimestamp) return 'present';
   if (isAttendanceHoliday(date)) return 'holiday';
   return 'empty';
 };

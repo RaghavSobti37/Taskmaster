@@ -14,8 +14,9 @@ const SQUARE_COLORS = {
 };
 
 const getSquareColor = (status, entry) => {
-  if (entry?.isApproved && status === 'present') return `${SQUARE_COLORS.present} ${SQUARE_COLORS.approved}`;
-  if (entry?.isApproved && status === 'halfDay') return `${SQUARE_COLORS.halfDay} ${SQUARE_COLORS.approved}`;
+  const isFullyApproved = entry?.inTimeRecord?.isApproved && entry?.outTimeRecord?.isApproved;
+  if (isFullyApproved && status === 'present') return `${SQUARE_COLORS.present} ${SQUARE_COLORS.approved}`;
+  if (isFullyApproved && status === 'halfDay') return `${SQUARE_COLORS.halfDay} ${SQUARE_COLORS.approved}`;
   return SQUARE_COLORS[status] || SQUARE_COLORS.empty;
 };
 
@@ -23,7 +24,7 @@ const buildTooltip = (date, entry, status) => {
   const lines = [format(date, 'EEE, MMM d, yyyy')];
   if (status === 'holiday') {
     lines.push(`Holiday: ${getHolidayLabel(date)}`);
-    if (entry?.timeIn || entry?.timeOut) {
+    if (entry?.inTimeRecord?.timestamp || entry?.outTimeRecord?.timestamp) {
       lines.push('Status: Present (worked on holiday)');
     }
     return lines.join('\n');
@@ -34,12 +35,13 @@ const buildTooltip = (date, entry, status) => {
   }
   if (entry.onLeave || status === 'leave') lines.push('Status: Leave');
   else if (entry.isHalfDay) lines.push('Status: Half Day');
-  else if (entry.timeIn || entry.timeOut) lines.push('Status: Present');
+  else if (entry.inTimeRecord?.timestamp || entry.outTimeRecord?.timestamp) lines.push('Status: Present');
   else lines.push('Status: No input');
-  if (entry.timeIn) lines.push(`In: ${entry.timeIn}`);
-  if (entry.timeOut) lines.push(`Out: ${entry.timeOut}`);
+  
+  if (entry.inTimeRecord?.timestamp) lines.push(`In: ${entry.inTimeRecord.timestamp} ${entry.inTimeRecord.isApproved ? '(Approved)' : ''}`);
+  if (entry.outTimeRecord?.timestamp) lines.push(`Out: ${entry.outTimeRecord.timestamp} ${entry.outTimeRecord.isApproved ? '(Approved)' : ''}`);
+  
   if (entry.reason) lines.push(`Note: ${entry.reason}`);
-  if (entry.isApproved) lines.push('Approved & locked');
   return lines.join('\n');
 };
 

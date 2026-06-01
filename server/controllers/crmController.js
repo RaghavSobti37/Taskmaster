@@ -255,6 +255,11 @@ exports.updateLead = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
+    
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No valid tracking/audit properties provided for mutation' });
+    }
+
     if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
 
     // Fetch the current lead to check if this is a first call

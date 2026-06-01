@@ -1029,7 +1029,7 @@ export const useUndoAttendanceCheck = () => {
 export const useApproveAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id) => axios.patch(`/api/attendance/${id}/approve`),
+    mutationFn: ({ id, approvalTarget, manualTime, workMode }) => axios.patch(`/api/attendance/${id}/approve`, { approvalTarget, manualTime, workMode }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },

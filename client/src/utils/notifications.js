@@ -100,8 +100,14 @@ export const resolveNotificationDeliveryMode = async () => {
 export const registerServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) return null;
   try {
-    return await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    const isDev = import.meta.env?.DEV || false;
+    const swUrl = isDev ? '/dev-sw.js?dev-sw' : '/sw.js';
+    return await navigator.serviceWorker.register(swUrl, { 
+      scope: '/',
+      type: isDev ? 'module' : 'classic'
+    });
   } catch (err) {
+    if (import.meta.env?.DEV) return null; // Suppress noise in dev if SW fails
     console.error('SW registration failed', err);
     return null;
   }

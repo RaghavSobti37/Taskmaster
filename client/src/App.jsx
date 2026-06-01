@@ -194,6 +194,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="attendance" />}>
                 <Route path="/attendance" element={<AttendancePage />} />
+                <Route path="/attendance/all" element={<AttendancePage />} />
               </Route>
               <Route element={<PageRoute page="schedule" />}>
                 <Route path="/schedule" element={<SchedulePage />} />

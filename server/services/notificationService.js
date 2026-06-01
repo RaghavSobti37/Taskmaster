@@ -102,69 +102,65 @@ const checkOverdue = async () => {
     const now = getISTDate();
 
     const session = await Task.startSession();
-    session.startTransaction();
-
     try {
-      const overdueTasks = await Task.find({
-        status: { $ne: 'done' },
-        dueDate: { $lt: now },
-        notifiedOverdue: false
-      }).lean().session(session);
+      await session.withTransaction(async () => {
+        const overdueTasks = await Task.find({
+          status: { $ne: 'done' },
+          dueDate: { $lt: now },
+          notifiedOverdue: false
+        }).lean().session(session);
 
-      for (const task of overdueTasks) {
-        const assignments = await TaskAssignment.find({ taskId: task._id }).lean().session(session);
-        for (const a of assignments) {
-          await createNotification({
-            recipientId: a.userId,
-            title: 'Overdue Task Alert',
-            message: `Task "${task.title}" is overdue. Please resolve it as soon as possible.`,
-            category: 'task',
-            type: 'alert',
-            relatedTaskId: task._id,
-            relatedProjectId: task.projectId,
-            actionUrl: task.projectId ? buildTaskActionUrl(task) : '/todo',
-            iconType: 'task'
-          });
-        }
-        await Task.findByIdAndUpdate(task._id, { notifiedOverdue: true }, { session });
-      }
-
-      const overdueLeads = await Lead.find({
-        leadStatus: { $ne: 'Converted' },
-        nextFollowupDate: { $exists: true, $ne: '' },
-        notifiedOverdue: false
-      }).populate('assignedRepId').session(session);
-
-      for (const lead of overdueLeads) {
-        try {
-          const followupDate = new Date(lead.nextFollowupDate);
-          if (isNaN(followupDate.getTime())) continue;
-
-          if (followupDate < now) {
-            const rep = lead.assignedRepId;
-            if (!rep) continue;
-
+        for (const task of overdueTasks) {
+          const assignments = await TaskAssignment.find({ taskId: task._id }).lean().session(session);
+          for (const a of assignments) {
             await createNotification({
-              recipientId: rep._id,
-              title: 'Overdue Follow-up',
-              message: `Follow-up with ${lead.name} is overdue (scheduled ${lead.nextFollowupDate}).`,
-              category: 'crm',
+              recipientId: a.userId,
+              title: 'Overdue Task Alert',
+              message: `Task "${task.title}" is overdue. Please resolve it as soon as possible.`,
+              category: 'task',
               type: 'alert',
-              relatedLeadId: lead._id,
-              actionUrl: buildLeadActionUrl(lead._id)
+              relatedTaskId: task._id,
+              relatedProjectId: task.projectId,
+              actionUrl: task.projectId ? buildTaskActionUrl(task) : '/todo',
+              iconType: 'task'
             });
-
-            lead.notifiedOverdue = true;
-            await lead.save({ session });
           }
-        } catch (err) {
-          logger.error('Overdue', `Error processing overdue lead ${lead._id}`, { error: err.message });
+          await Task.findByIdAndUpdate(task._id, { notifiedOverdue: true }, { session });
         }
-      }
 
-      await session.commitTransaction();
+        const overdueLeads = await Lead.find({
+          leadStatus: { $ne: 'Converted' },
+          nextFollowupDate: { $exists: true, $ne: '' },
+          notifiedOverdue: false
+        }).populate('assignedRepId').session(session);
+
+        for (const lead of overdueLeads) {
+          try {
+            const followupDate = new Date(lead.nextFollowupDate);
+            if (isNaN(followupDate.getTime())) continue;
+
+            if (followupDate < now) {
+              const rep = lead.assignedRepId;
+              if (!rep) continue;
+
+              await createNotification({
+                recipientId: rep._id,
+                title: 'Overdue Follow-up',
+                message: `Follow-up with ${lead.name} is overdue (scheduled ${lead.nextFollowupDate}).`,
+                category: 'crm',
+                type: 'alert',
+                relatedLeadId: lead._id,
+                actionUrl: buildLeadActionUrl(lead._id)
+              });
+
+              await Lead.findByIdAndUpdate(lead._id, { $set: { notifiedOverdue: true } }, { session });
+            }
+          } catch (err) {
+            logger.error('Overdue', `Error processing overdue lead ${lead._id}`, { error: err.message });
+          }
+        }
+      });
     } catch (err) {
-      await session.abortTransaction();
       throw err;
     } finally {
       session.endSession();

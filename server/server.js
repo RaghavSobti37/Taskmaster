@@ -73,7 +73,8 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast', 'X-Trace-Id', 'x-trace-id']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast', 'X-Trace-Id', 'x-trace-id'],
+  exposedHeaders: ['x-ratelimit-remaining', 'x-ratelimit-reset', 'ratelimit-remaining', 'ratelimit-reset']
 };
 
 app.use(cors(corsOptions));

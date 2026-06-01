@@ -27,6 +27,10 @@ import {
 } from '../components/dashboard';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import TaskCompletionModal from '../components/TaskCompletionModal';
+import UnifiedTimeCard from '../components/attendance/UnifiedTimeCard';
+import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
+import { formatDateKeyIST } from '../utils/attendanceUtils';
+import { format } from 'date-fns';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES } from '../lib/componentRegistry';
 
 const Dashboard = () => {
@@ -38,6 +42,35 @@ const Dashboard = () => {
   const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(!!user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
+
+  const today = useMemo(() => {
+    const value = new Date();
+    value.setHours(0, 0, 0, 0);
+    return value;
+  }, []);
+  const todayKey = formatDateKeyIST(today);
+  const { data: attendanceRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
+  const checkIn = useAttendanceCheck();
+  const undoCheck = useUndoAttendanceCheck();
+  const [isLocating, setIsLocating] = useState(false);
+
+  const executeGeolocationCheck = (type, manualTime) => {
+    setIsLocating(true);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          checkIn.mutate({ type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime }, { onSettled: () => setIsLocating(false) });
+        },
+        (error) => {
+          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) }); // Fallback
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      );
+    } else {
+      checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
+    }
+  };
+
 
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [completingTaskId, setCompletingTaskId] = useState(null);
@@ -153,17 +186,16 @@ const Dashboard = () => {
       case 'composer': return <PinBoardComposer />;
       case 'mark-attendance':
         return (
-          <div className="bg-[var(--color-bg-primary)] p-6 rounded-xl flex flex-col items-center justify-center border border-[var(--color-bg-border)] h-full gap-3 shadow-sm relative overflow-hidden group">
-            <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="text-3xl">⏰</div>
-            <div className="text-center">
-              <h3 className="font-bold text-[var(--color-text-primary)]">Ready for the day?</h3>
-              <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-3">You haven't clocked in yet.</p>
-            </div>
-            <button className="h-10 w-32 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform active:scale-95">
-              <span className="text-white text-sm font-bold tracking-wide">Clock In</span>
-            </button>
-          </div>
+          <UnifiedTimeCard 
+            entry={attendanceRows[0]}
+            title={format(today, 'EEEE, MMMM d')}
+            subTitle="Today"
+            isSelfMode={true}
+            onCheckIn={(t) => executeGeolocationCheck('in', t)}
+            onCheckOut={(t) => executeGeolocationCheck('out', t)}
+            onUndo={(type) => undoCheck.mutate({ type })}
+            isLoading={isLocating || checkIn.isPending}
+          />
         );
 
       case 'pipeline-summary':

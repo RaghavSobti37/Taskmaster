@@ -293,7 +293,7 @@ const QATestingPage = () => {
                   </h3>
                   <p className="text-sm text-blue-600 dark:text-blue-400">Executing multi-layered autonomous test suite.</p>
                 </div>
-                <Button variant="outline" onClick={() => cancelMutation.mutate(currentRun._id)} className="text-rose-500 border-rose-200 hover:bg-rose-50">
+                <Button variant="outline" onClick={() => cancelMutation.mutate(currentRun.testRunId || currentRun._id)} className="text-rose-500 border-rose-200 hover:bg-rose-50">
                   <XCircle size={16} className="mr-2" /> Cancel Test
                 </Button>
               </div>

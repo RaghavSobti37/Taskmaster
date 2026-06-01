@@ -7,6 +7,11 @@ const { broadcastRealtimeEvent } = require('../config/realtime');
 const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const Project = require('../models/Project');
+const Lead = require('../models/Lead');
+const FinanceDocument = require('../models/FinanceDocument');
 
 class QATestingService {
   constructor(projectId, userId, config = {}) {
@@ -62,16 +67,13 @@ class QATestingService {
       const testCases = await this.getTestCases();
       this.totalTestCases = testCases.length;
 
-      // Initialize test cases in the database to prevent defaulting to 'backend'
+      // Initialize test cases in the database (start empty, push atomically)
       await QATestRun.findByIdAndUpdate(this.testRunId, { 
         status: 'in-progress', 
         startedAt: new Date(),
-        testCases: testCases.map(tc => ({
-          name: tc.name,
-          category: tc.category,
-          severity: tc.severity,
-          status: 'pending'
-        }))
+        testCases: [],
+        progress: { current: 0, currentPage: 'Starting...', totalPages: testCases.length },
+        pagesTestedCount: 0
       });
 
       for (let i = 0; i < testCases.length; i++) {
@@ -126,7 +128,7 @@ class QATestingService {
   }
 
   async getTestCases() {
-    const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Coreknot/client/src/pages');
+    const targetDir = path.join(__dirname, '../../client/src/pages');
     const testCases = [];
     
     // Recursive directory reader
@@ -142,75 +144,114 @@ class QATestingService {
           
           testCases.push({
             name: `[${routeName}] Dynamic QA Scan`,
-            category: 'frontend',
-            severity: 'low',
+            category: 'backend',
+            severity: 'high',
             test: async () => {
               const errors = [];
-              
-              // 1. AST/Regex Code Evaluation: Optional Chaining Guard Check
-              if (content.includes('return (')) {
-                // Matches patterns like `row.email` or `data.user` without `?.` inside JSX curlies
-                const riskyChaining = /\{\s*(row|data|lead|user|task)\.([a-zA-Z0-9_]+)\s*\}/g;
-                let match;
-                while ((match = riskyChaining.exec(content)) !== null) {
-                  errors.push({ 
-                    error: `Missing optional chaining guard (?. ) on ${match[0]}`, 
-                    category: 'data', 
-                    severity: 'medium',
-                    codeApproximation: match[0]
-                  });
-                }
-              }
+              const routeLower = routeName.toLowerCase();
+              let payloadMatrix = {};
+              let endpoint = '/api/system/ping';
 
-              // 2. AST/Regex Code Evaluation: Performance Re-render Check
-              const handlerRegex = /const handle[A-Z][a-zA-Z0-9_]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g;
-              if (handlerRegex.test(content) && !content.includes('useCallback(')) {
-                errors.push({ 
-                  error: 'Unmemoized event handler detected without useCallback.', 
-                  category: 'bottleneck', 
-                  severity: 'medium',
-                  codeApproximation: 'Event Handler Definition'
-                });
-              }
+              // 1. True Authentication (JWT Injection)
+              const testRole = this.config.testRole || 'user';
+              let testUser = await User.findOne({ role: testRole }) || await User.findOne();
+              const testToken = jwt.sign({ id: testUser._id }, process.env.JWT_SECRET || 'secret');
+              const authHeaders = { Authorization: `Bearer ${testToken}` };
 
-              // 3. Extract Target API Routes & Live Backend Probes
-              const apiEndpointsMatch = content.match(/\/api\/[a-zA-Z0-9_/-]+/g) || [];
-              const endpoints = [...new Set(apiEndpointsMatch)];
+              // Dynamic Business & Transactional Assertions
+              let dynamicId = '123';
               
-              for (const endpoint of endpoints) {
+              if (routeLower.includes('crm') || routeLower.includes('lead') || routeLower.includes('exly')) {
+                const lead = await Lead.findOne();
+                if(lead) dynamicId = lead._id;
+                endpoint = `/api/crm/leads/${dynamicId}`;
+                payloadMatrix = { status: 'won' }; // Intentionally missing tracking props
+                const probeUrl = `http://localhost:5000${endpoint}`;
+                
                 try {
-                  const probeUrl = `http://localhost:5000${endpoint}`;
-                  // Unauthenticated Probe Request
-                  const res = await axios.get(probeUrl, { validateStatus: () => true });
+                  const resCRM = await axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  if (resCRM.status === 200 || resCRM.status === 201) {
+                    errors.push({
+                      error: `Automation Breach! Lead mutated without audit/tracking integrity on ${endpoint}.`,
+                      category: 'bottleneck',
+                      severity: 'critical',
+                      endpointValidation: probeUrl
+                    });
+                  }
+                } catch(err) {}
+              } 
+              else if (routeLower.includes('finance') || routeLower.includes('invoice')) {
+                const doc = await FinanceDocument.findOne({ category: 'invoice', approvalStatus: 'pending' }) || await FinanceDocument.findOne();
+                if(doc) dynamicId = doc._id;
+                endpoint = `/api/finance/${dynamicId}/approve`;
+                payloadMatrix = { amount: 5000, status: 'approved', tenantId: 'spoofed_tenant_999' };
+                const probeUrl = `http://localhost:5000${endpoint}`;
+                
+                try {
+                  const resFin = await axios.patch(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  if (resFin.status !== 403) {
+                    errors.push({
+                      error: `Multi-Tenant Leakage! Finance mutation bypassed tenant isolation (Expected 403, got ${resFin.status}) on ${endpoint}.`,
+                      category: 'permission',
+                      severity: 'critical',
+                      endpointValidation: probeUrl
+                    });
+                  }
+                } catch(err) {}
+              }
+              else if (routeLower.includes('project') || routeLower.includes('workspace')) {
+                const project = await Project.findOne();
+                if(project) dynamicId = project._id;
+                endpoint = `/api/projects/${dynamicId}`;
+                payloadMatrix = { visibility: 'public', assignedUsers: [testUser._id] };
+                const probeUrl = `http://localhost:5000${endpoint}`;
+                
+                try {
+                  const [resP1, resP2] = await Promise.all([
+                    axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true }),
+                    axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true })
+                  ]);
                   
-                  // Evaluate Security Status Codes
-                  if (res.status === 200 || res.status === 201) {
-                    errors.push({ 
-                      error: `Unauthenticated API access allowed on ${endpoint} (Status ${res.status}).`,
-                      category: 'permission', 
+                  if (resP1.status === 200 && resP2.status === 200) {
+                    errors.push({
+                      error: `Concurrency Breach! Project allowed overlapping identical mutations without version conflict (__v) on ${endpoint}.`,
+                      category: 'bottleneck',
                       severity: 'high',
                       endpointValidation: probeUrl
                     });
                   }
-                } catch (err) {
-                  // Ignore network failures for probe
-                }
+                } catch(err) {}
+              } else {
+                endpoint = '/api/general/ping';
+                payloadMatrix = { data: 'test' };
+                const probeUrl = `http://localhost:5000${endpoint}`;
+                
+                try {
+                  const resPing = await axios.post(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  if (resPing.status === 500) {
+                     errors.push({
+                       error: `State Desync! Unhandled server rejection (500) instead of 400 on ${endpoint}.`,
+                       category: 'data',
+                       severity: 'medium',
+                       endpointValidation: probeUrl
+                     });
+                  }
+                } catch(err) {}
               }
 
               if (errors.length > 0) {
-                // Return the highest severity error
-                const highest = errors.find(e => e.severity === 'high') || errors.find(e => e.severity === 'medium') || errors[0];
+                const highest = errors.find(e => e.severity === 'critical') || errors.find(e => e.severity === 'high') || errors[0];
                 return {
                   passed: false,
                   error: highest.error,
-                  description: `Dynamic test found ${errors.length} issue(s) in ${routeName}. Code snippet: ${highest.codeApproximation || highest.endpointValidation || 'N/A'}`,
+                  description: `Dynamic tests found ${errors.length} issue(s) in ${routeName}. Snippet: ${highest.endpointValidation}`,
                   category: highest.category,
                   severity: highest.severity,
                   details: highest
                 };
               }
 
-              return { passed: true, message: `${routeName} passed all dynamic checks and probes.` };
+              return { passed: true, message: `${routeName} passed dynamic payload matrices.` };
             }
           });
         }
@@ -230,29 +271,26 @@ class QATestingService {
     try {
       const startTime = Date.now();
       
-      // Update test case status to running
-      await QATestRun.updateOne(
-        { _id: this.testRunId },
-        { $set: { [`testCases.${index}.status`]: 'running' } }
-      );
-
       // Execute test
       const result = await testCase.test();
       const duration = Date.now() - startTime;
-
-      // Update test case with result
       const status = result.passed ? 'passed' : 'failed';
+
+      // Atomic push of completed test
       await QATestRun.updateOne(
         { _id: this.testRunId },
         {
-          $set: {
-            [`testCases.${index}.status`]: status,
-            [`testCases.${index}.duration`]: duration,
-            [`testCases.${index}.result`]: result,
-            [`testCases.${index}.severity`]: result.severity || testCase.severity || 'medium',
-            [`testCases.${index}.category`]: result.category || testCase.category,
-            [`testCases.${index}.error`]: result.error || null,
-            [`testCases.${index}.description`]: result.description || null
+          $push: {
+            testCases: {
+              name: testCase.name,
+              status: status,
+              duration: duration,
+              result: result,
+              severity: result.severity || testCase.severity || 'medium',
+              category: result.category || testCase.category,
+              error: result.error || null,
+              description: result.description || null
+            }
           }
         }
       );
@@ -278,16 +316,25 @@ class QATestingService {
       }
 
       logger.info('QA', `Test case executed: ${testCase.name} - ${status}`, { duration });
+      
+      // Intentional mechanical delay to stabilize React Query refetch loops and UI progress bar
+      await new Promise(resolve => setTimeout(resolve, 200));
     } catch (error) {
       logger.error('QA', `Error running test case: ${testCase.name}`, { error: error.message });
       await QATestRun.updateOne(
         { _id: this.testRunId },
-        { $set: { 
-            [`testCases.${index}.status`]: 'failed', 
-            [`testCases.${index}.error`]: error.message,
-            [`testCases.${index}.severity`]: testCase.severity || 'medium'
-          } }
+        { 
+          $push: { 
+            testCases: {
+              name: testCase.name,
+              status: 'failed',
+              error: error.message,
+              severity: testCase.severity || 'medium'
+            }
+          } 
+        }
       );
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
 

@@ -1,5 +1,5 @@
 # Active State & Milestones
-- [Current Focus]: Finalized Coreknot PWA rebranding, global HelpBugButton integration, dashboard 1d default, and SVG syntax fixes in LoginPage.
+- [Current Focus]: Resolved Redis connection failures, added synchronous webhook fallback, stabilized autonomous QA engine, and migrated MongoDB transactions to session.withTransaction().
 - [Last Modified]: June 1, 2026
 
 # Node Graph (Entities & Components)

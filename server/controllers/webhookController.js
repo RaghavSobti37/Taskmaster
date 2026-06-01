@@ -19,10 +19,10 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379'
   }
 });
 
-connection.on('error', () => {});
+connection.on('error', () => { });
 
 const webhookQueue = new Queue('WebhookQueue', { connection });
-webhookQueue.on('error', () => {});
+webhookQueue.on('error', () => { });
 
 exports.processBookedCallLogic = async (data) => {
   try {
@@ -35,7 +35,7 @@ exports.processBookedCallLogic = async (data) => {
     if (lead && lead.assignedRepId) {
       rep = await User.findById(lead.assignedRepId);
     }
-    
+
     if (!rep) {
       const repId = await assignLeadToRep();
       if (repId) rep = await User.findById(repId);
@@ -52,7 +52,7 @@ exports.processBookedCallLogic = async (data) => {
         if (period === 'AM' && hours === 12) hours = 0;
 
         const localClockUTC = Date.UTC(year, month - 1, day, hours, minutes);
-        
+
         const getOffset = (timestamp, timeZone) => {
           const date = new Date(timestamp);
           const parts = new Intl.DateTimeFormat('en-US', {
@@ -61,7 +61,7 @@ exports.processBookedCallLogic = async (data) => {
             hour: 'numeric', minute: 'numeric', second: 'numeric',
             hour12: false
           }).formatToParts(date);
-          
+
           const getVal = (type) => parseInt(parts.find(p => p.type === type).value);
           const utcAtParts = Date.UTC(getVal('year'), getVal('month') - 1, getVal('day'), getVal('hour'), getVal('minute'));
           return (utcAtParts - timestamp) / 60000;
@@ -78,21 +78,21 @@ exports.processBookedCallLogic = async (data) => {
 
     const istSlotDate = convertToIST(date, time, timezone);
     if (isNaN(istSlotDate.getTime())) {
-      return res.status(400).json({ success: false, error: 'Invalid date or time format provided.' });
+      throw new Error('Invalid date or time format provided.');
     }
 
     const now = new Date();
     const bufferTime = 90 * 60 * 1000; // 1.5 hours
     if (istSlotDate.getTime() < now.getTime() + bufferTime) {
-      return res.status(400).json({ success: false, error: 'This slot is no longer available in your timezone.' });
+      throw new Error('This slot is no longer available in your timezone.');
     }
 
     const istDateStr = istSlotDate.toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
-    const istTimeStr = istSlotDate.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
+    const istTimeStr = istSlotDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: true,
-      timeZone: 'Asia/Kolkata' 
+      timeZone: 'Asia/Kolkata'
     });
 
     // 2. Upsert Lead in CRM
@@ -132,8 +132,8 @@ exports.processBookedCallLogic = async (data) => {
 
     // 4. Send AiSensy to Customer
     await sendAiSensyMessage(
-      whatsapp || phone, 
-      'final_book_call_confirmation', 
+      whatsapp || phone,
+      'final_book_call_confirmation',
       [name.split(' ')[0], course, istDateStr, istTimeStr, whatsapp || phone],
       {
         "FirstName": name.split(' ')[0],
@@ -148,7 +148,7 @@ exports.processBookedCallLogic = async (data) => {
     // 5. Send AiSensy to Assigned Rep
     if (rep.phone) {
       await sendAiSensyMessage(
-        rep.phone, 
+        rep.phone,
         'sales_rep_new_booking_alert',
         [rep.name.split(' ')[0], name, course, istDateStr, istTimeStr],
         {
@@ -188,16 +188,27 @@ exports.processBookedCallLogic = async (data) => {
 
 exports.handleBookedCall = async (req, res) => {
   try {
-    // Return 202 Accepted immediately, eliminate write lock
-    await webhookQueue.add('book-call', req.body, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 1000 }
-    });
-    
-    res.status(202).json({ success: true, message: 'Webhook received and queued for processing' });
+    if (connection.status === 'ready') {
+      await webhookQueue.add('book-call', req.body, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 }
+      });
+      return res.status(202).json({ success: true, message: 'Webhook received and queued for processing' });
+    } else {
+      console.warn('Redis is not ready, falling back to synchronous processing');
+      await exports.processBookedCallLogic(req.body);
+      return res.status(200).json({ success: true, message: 'Call booked and synced synchronously' });
+    }
   } catch (error) {
     console.error('Queue Enqueue Error:', error);
-    res.status(500).json({ error: 'Failed to queue webhook' });
+    try {
+      console.warn('Falling back to synchronous processing after enqueue error');
+      await exports.processBookedCallLogic(req.body);
+      return res.status(200).json({ success: true, message: 'Call booked and synced synchronously' });
+    } catch (syncError) {
+      console.error('Sync Fallback Error:', syncError);
+      return res.status(500).json({ error: 'Failed to queue webhook and sync processing failed', details: syncError.message, stack: syncError.stack });
+    }
   }
 };
 
@@ -213,10 +224,10 @@ async function sendAiSensyMessage(destination, campaign, params, attributes, use
   if (attributes) {
     body.attributes = attributes;
   }
-  
+
   if (!process.env.AISENSY_API_KEY) {
-      console.warn('[Warning] AISENSY_API_KEY not found in environment, skipping fetch');
-      return;
+    console.warn('[Warning] AISENSY_API_KEY not found in environment, skipping fetch');
+    return;
   }
 
   try {
@@ -228,7 +239,7 @@ async function sendAiSensyMessage(destination, campaign, params, attributes, use
     const json = await res.json();
     console.log(`[AiSensy Webhook Response for ${campaign}]:`, json);
   } catch (e) {
-      console.error('[AiSensy] Fetch Error:', e);
+    console.error('[AiSensy] Fetch Error:', e);
   }
 }
 
@@ -238,7 +249,7 @@ async function pushToGoogleSheets(row) {
 
   let serviceAccount;
   const serviceAccountPath = 'c:\\Users\\ragha\\OneDrive\\Desktop\\TSC-Website\\google_service_account.json';
-  
+
   if (fs.existsSync(serviceAccountPath)) {
     serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
   } else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
@@ -256,7 +267,7 @@ async function pushToGoogleSheets(row) {
   });
 
   const sheets = google.sheets({ version: 'v4', auth });
-  
+
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SHEET_NAME}!A:I`,

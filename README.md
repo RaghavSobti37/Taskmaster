@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="client/public/favicon.svg" alt="CoreKnot Logo" width="80" height="80" />
 </p>
 
@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.42-126d5e?style=flat-square" alt="Version 1.7.42" />
+  <img src="https://img.shields.io/badge/version-1.7.43-126d5e?style=flat-square" alt="Version 1.7.43" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -125,7 +125,9 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 * **Dedicated Route:** `/projects/workspaces/:name/settings` — manage workspace members, linked projects, and metadata from a single settings page.
 * **API:** `GET/PATCH /api/projects/workspaces/:name` with member add/remove and role assignment.
-* **UI:** `WorkspaceSettings.jsx` with department-aware role suggestions and workspace color theming.
+* **UI:** `WorkspaceSettings.jsx` with department-aware role suggestions, member management for workspace creators and admins, and workspace accent colors.
+* **Admin workspace colors:** Platform admins can set workspace accent color on Workspace Settings via `WorkspaceColorPicker` (preset swatches plus `#RRGGBB` / `#RGB` hex input). Colors normalize client-side in `workspaceColors.js` and server-side in `projectController.js`; non-admins cannot PATCH `color`.
+* **Create workspace:** New workspace modal on Projects uses the same picker and shared `PRESET_WORKSPACE_COLORS`.
 
 ### 💳 Office Subscriptions
 
@@ -340,6 +342,13 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 ## 🚀 Production Migration Sequence
 
 
+### v1.7.43 - Admin Workspace Colors & Hex Picker
+
+- **WorkspaceColorPicker:** Reusable preset swatches and validated hex input (`client/src/components/ui/WorkspaceColorPicker.jsx`).
+- **workspaceColors.js:** Shared `PRESET_WORKSPACE_COLORS`, `normalizeHexColor`, and `isValidHexColor`.
+- **Workspace Settings:** Admins edit workspace color; creators/admins manage members (`WorkspaceSettings.jsx`).
+- **API:** Workspace create/update validates hex; only admins may change color on PATCH (`projectController.js`).
+- **Projects view:** Create-workspace flow uses shared picker and presets (`ProjectsView.jsx`).
 ### v1.7.42 - Daily Logs, Projects UX and Per-User Workspaces
 
 - **Daily logs:** Daily log list includes `TASK_COMPLETION` activity entries for the selected day (`DailyLogPage.jsx` filter fix).

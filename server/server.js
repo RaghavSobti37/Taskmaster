@@ -51,7 +51,9 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://tsccoreknot.com',
-  'https://www.tsccoreknot.com'
+  'https://www.tsccoreknot.com',
+  'https://theshakticollective.in',
+  'https://www.theshakticollective.in'
 ];
 
 const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')

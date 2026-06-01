@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.37-126d5e?style=flat-square" alt="Version 1.7.37" />
+  <img src="https://img.shields.io/badge/version-1.7.38-126d5e?style=flat-square" alt="Version 1.7.38" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -214,7 +214,20 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `FRONTEND_URL` | Production Only | The public consumer web location utilized to build structural email CTA references. |
 | `VITE_API_URL` | Highly Recommended | Direct endpoint address pointing to the static web API host, intentionally skipping standard middle-tier routing paths during massive data payload uploads. |
 | `REDIS_URL` | Optional | Direct connection reference used to drive active state machine queues (`BullMQ`). |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Webhook Integrations | Google Sheets append credentials for public booking webhooks (`BookedCalls` tab). |
+| `GOOGLE_PRIVATE_KEY` | Webhook Integrations | PEM private key paired with the service account email (newline-escaped). |
+| `AISENSY_API_KEY` | Webhook Integrations | WhatsApp campaign dispatch for booked-call confirmations and rep alerts. |
+| `CORS_ALLOWED_ORIGINS` | Optional | Comma-separated extra browser origins; `theshakticollective.in` is allowlisted by default. |
 | `DEBUG_BYPASS` | Development Only | Enables a stateless internal bypass mechanism (`Authorization: Bearer bypass_token`). |
+
+### Production API Host
+
+| Service | URL |
+| --- | --- |
+| **Render API** | `https://YOUR-RENDER-SERVICE.onrender.com` |
+| **Book-a-Call Webhook** | `POST https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call` |
+
+The public marketing site (`theshakticollective.in`) proxies bookings through its Next.js route `POST /api/book-call`, which forwards payloads to the webhook above. Set `TASKMASTER_WEBHOOK_URL` on the website host to override the default.
 
 ---
 
@@ -228,6 +241,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 ├── /tasks        → Standard task mutations, dynamic tracking states, and role assignments
 ├── /projects     → Structural workspace definitions, access states, and board layouts
 ├── /crm          → Third-party contact capture engines and pipeline automations
+├── /webhooks     → Public ingress (book-call, Exly, Meta, Resend) with queue-backed processing
 ├── /notifications→ Push delivery registries, system status counts, and message updates
 ├── /finance      → Multi-file processing, metadata index arrays, and document extractions
 └── /proxy        → Monitored proxy routing to YouTube, OpenAI, and HolySheet targets
@@ -255,6 +269,12 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.38 — Website Book-a-Call Webhook
+
+- `POST /api/webhooks/book-call` accepts public bookings from [theshakticollective.in/book-a-call](https://theshakticollective.in/book-a-call).
+- BullMQ queue `WebhookQueue` processes IST conversion, rep assignment, AiSensy, and Google Sheets (`BookedCalls`) asynchronously; Redis-down paths fall back to synchronous processing.
+- Google service account resolution no longer depends on a developer-local file path.
 
 When deploying release targets `v1.7.37` or above, perform these structural database updates down against live system targets:
 

@@ -248,9 +248,15 @@ async function pushToGoogleSheets(row) {
   const SHEET_NAME = 'BookedCalls';
 
   let serviceAccount;
-  const serviceAccountPath = 'c:\\Users\\ragha\\OneDrive\\Desktop\\TSC-Website\\google_service_account.json';
+  const serviceAccountCandidates = [
+    process.env.GOOGLE_SERVICE_ACCOUNT_PATH,
+    path.join(process.cwd(), 'google_service_account.json'),
+    path.join(__dirname, '../../google_service_account.json'),
+  ].filter(Boolean);
 
-  if (fs.existsSync(serviceAccountPath)) {
+  const serviceAccountPath = serviceAccountCandidates.find((candidate) => fs.existsSync(candidate));
+
+  if (serviceAccountPath) {
     serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
   } else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
     serviceAccount = {

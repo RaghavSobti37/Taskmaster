@@ -4,6 +4,7 @@ const { DEPARTMENT_PRESETS } = require('../models/DashboardPreset');
 const logger = require('../utils/logger');
 
 const LEGACY_NAV_PATHS = {
+  '/workspace/emails': '/emails',
   '/office/subscriptions': '/subscriptions',
   '/management/equipment': '/equipment',
   '/management/contacts': '/contacts',
@@ -11,6 +12,17 @@ const LEGACY_NAV_PATHS = {
 };
 
 const normalizeNavPath = (path) => LEGACY_NAV_PATHS[path] || path;
+
+const dedupeNavPages = (pages) => {
+  const seen = new Set();
+  return (pages || []).filter((page) => {
+    const path = normalizeNavPath(page.path);
+    if (seen.has(path)) return false;
+    seen.add(path);
+    page.path = path;
+    return true;
+  });
+};
 
 /** Add default pages missing from saved navbar groups (e.g. new features after user saved prefs). */
 const mergeNavbarWithDefaults = (userGroups) => {
@@ -32,7 +44,8 @@ const mergeNavbarWithDefaults = (userGroups) => {
       merged.push({ ...defaultGroup, pages: [...defaultGroup.pages] });
       continue;
     }
-    const existingPaths = new Set((userGroup.pages || []).map((p) => normalizeNavPath(p.path)));
+    userGroup.pages = dedupeNavPages(userGroup.pages);
+    const existingPaths = new Set((userGroup.pages || []).map((p) => p.path));
     for (const defaultPage of defaultGroup.pages) {
       const path = normalizeNavPath(defaultPage.path);
       if (!existingPaths.has(path)) {
@@ -40,9 +53,13 @@ const mergeNavbarWithDefaults = (userGroups) => {
         existingPaths.add(path);
       }
     }
+    userGroup.pages = dedupeNavPages(userGroup.pages);
   }
 
-  return merged;
+  return merged.map((group) => ({
+    ...group,
+    pages: dedupeNavPages(group.pages),
+  }));
 };
 
 // ============ DASHBOARD ENDPOINTS ============

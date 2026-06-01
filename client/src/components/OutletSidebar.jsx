@@ -383,13 +383,20 @@ const OutletSidebar = () => {
               }
             }
 
-            return rawGroups.map((group) => ({
-              ...group,
-              pages: (group.pages || []).map((page) => ({
-                ...page,
-                path: normalizeNavPagePath(page.path),
-              })),
-            }));
+            return rawGroups.map((group) => {
+              const seen = new Set();
+              const pages = (group.pages || [])
+                .map((page) => ({
+                  ...page,
+                  path: normalizeNavPagePath(page.path),
+                }))
+                .filter((page) => {
+                  if (seen.has(page.path)) return false;
+                  seen.add(page.path);
+                  return true;
+                });
+              return { ...group, pages };
+            });
           })()
             .filter(group => group.visible)
             .sort((a, b) => (a.order || 0) - (b.order || 0))

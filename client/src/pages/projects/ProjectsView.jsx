@@ -172,37 +172,43 @@ const ProjectsView = () => {
 
   const workspaceGroups = useMemo(() => {
     const groups = {};
-    const knownNames = new Set(workspaces.map(w => w.name.toUpperCase()));
 
-    workspaces.forEach(w => {
+    workspaces.forEach((w) => {
       groups[w.name.toUpperCase()] = [];
     });
 
-    filteredProjects.forEach(project => {
+    filteredProjects.forEach((project) => {
       const key = (project.workspace || 'General').toUpperCase();
       if (!groups[key]) groups[key] = [];
       groups[key].push(project);
     });
 
-    knownNames.forEach(name => {
-      if (!groups[name]) groups[name] = [];
+    const seen = new Set();
+    const orderedNames = [];
+    workspaces.forEach((w) => {
+      const name = w.name.toUpperCase();
+      if (!seen.has(name)) {
+        seen.add(name);
+        orderedNames.push(name);
+      }
+    });
+    Object.keys(groups).forEach((name) => {
+      if (!seen.has(name)) {
+        seen.add(name);
+        orderedNames.push(name);
+      }
     });
 
-    return Object.entries(groups)
-      .map(([name, items]) => {
-        const ws = workspaces.find((w) => w.name.toUpperCase() === name);
-        return {
-          name,
-          color: getWorkspaceColor(name),
-          projects: items,
-          defaultMemberCount: ws?.defaultMembers?.length || 0,
-        };
-      })
-      .sort((a, b) => {
-        if (a.name === 'GENERAL') return 1;
-        if (b.name === 'GENERAL') return -1;
-        return a.name.localeCompare(b.name);
-      });
+    return orderedNames.map((name) => {
+      const ws = workspaces.find((w) => w.name.toUpperCase() === name);
+      return {
+        name,
+        color: getWorkspaceColor(name),
+        projects: groups[name] || [],
+        defaultMemberCount: ws?.defaultMembers?.length || 0,
+        order: ws?.order ?? 999,
+      };
+    });
   }, [filteredProjects, workspaces, getWorkspaceColor]);
 
   const moveProjectToWorkspace = useCallback(async (projectId, workspaceName) => {
@@ -228,20 +234,33 @@ const ProjectsView = () => {
   }, [moveProjectToWorkspace]);
 
   const handleWorkspaceReorder = useCallback(async (sourceIndex, destIndex) => {
-    if (sourceIndex === destIndex) return;
+    if (sourceIndex === destIndex || sourceIndex < 0 || destIndex < 0) return;
+    const reordered = [...workspaceGroups];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(destIndex, 0, moved);
+    const order = reordered.map((w) => w.name);
+    const previousWorkspaces = queryClient.getQueryData(['workspaces']);
+
+    queryClient.setQueryData(['workspaces'], (old = []) => {
+      const byName = new Map(old.map((w) => [w.name.toUpperCase(), w]));
+      return order
+        .map((name, idx) => {
+          const ws = byName.get(name.toUpperCase());
+          return ws ? { ...ws, order: idx } : null;
+        })
+        .filter(Boolean);
+    });
+
     try {
-      const reordered = [...workspaceGroups];
-      const [moved] = reordered.splice(sourceIndex, 1);
-      reordered.splice(destIndex, 0, moved);
-      const order = reordered.map(w => w.name);
-      await axios.put('/api/projects/workspaces', { order });
-      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      const { data } = await axios.put('/api/projects/workspaces', { order });
+      queryClient.setQueryData(['workspaces'], data);
     } catch (err) {
       console.error('Failed to reorder workspaces:', err);
+      if (previousWorkspaces) queryClient.setQueryData(['workspaces'], previousWorkspaces);
     } finally {
       setDraggingWorkspaceName(null);
     }
-  }, [isAdmin, workspaceGroups, queryClient]);
+  }, [workspaceGroups, queryClient]);
 
   const handleCreateWorkspace = async (e) => {
     e.preventDefault();
@@ -271,7 +290,7 @@ const ProjectsView = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           title="Projects"
-          subtitle="Organize work by workspace — drag the grip icon on any project to move it."
+          subtitle="Drag a workspace grip to reorder (saved for you). Drag a project grip to move it between workspaces."
           icon={Briefcase}
           className="!mb-0"
         />
@@ -402,8 +421,10 @@ const ProjectsView = () => {
                   transition={{ duration: 0.2, delay: index * 0.04 }}
                 >
                   <Card
-                    className={`p-0 flex flex-col h-full overflow-hidden transition-all ${dragOverWorkspace === group.name ? 'ring-2 ring-[var(--color-action-primary)] scale-[1.01]' : ''
-                      }`}
+                    className={`p-0 flex flex-col h-full overflow-hidden transition-all ${dragOverWorkspace === group.name
+                      ? `ring-2 scale-[1.01] ${draggingWorkspaceName ? 'ring-amber-500/60' : 'ring-[var(--color-action-primary)]'}`
+                      : ''
+                      } ${draggingWorkspaceName === group.name ? 'opacity-70' : ''}`}
                     onDragOver={(e) => {
                       e.preventDefault();
                       setDragOverWorkspace(group.name);
@@ -413,21 +434,17 @@ const ProjectsView = () => {
                   >
                     <div className="h-1.5 w-full" style={{ backgroundColor: group.color }} />
                     <div
-                      className={`p-4 space-y-3 cursor-grab active:cursor-grabbing`}
-                      draggable={true}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('application/workspace-index', workspaceGroups.findIndex(w => w.name === group.name));
-                        setDraggingWorkspaceName(group.name);
-                      }}
-                      onDragEnd={() => setDraggingWorkspaceName(null)}
+                      className="p-4 space-y-3"
                       onDragOver={(e) => {
                         e.preventDefault();
                         if (e.dataTransfer.types.includes('application/project-id')) {
                           setDragOverWorkspace(group.name);
+                        } else if (e.dataTransfer.types.includes('application/workspace-index')) {
+                          setDragOverWorkspace(group.name);
                         }
                       }}
                       onDragLeave={() => {
-                        if (draggingProjectId) setDragOverWorkspace(null);
+                        if (draggingProjectId || draggingWorkspaceName) setDragOverWorkspace(null);
                       }}
                       onDrop={(e) => {
                         const projectId = e.dataTransfer.getData('application/project-id');
@@ -435,16 +452,36 @@ const ProjectsView = () => {
                         if (projectId) {
                           handleWorkspaceDrop(e, group.name);
                         } else if (workspaceIndex !== '') {
-                          const destIndex = workspaceGroups.findIndex(w => w.name === group.name);
+                          const destIndex = workspaceGroups.findIndex((w) => w.name === group.name);
                           handleWorkspaceReorder(Number(workspaceIndex), destIndex);
                         }
                       }}
                     >
                       <div className="flex items-center justify-between gap-3">
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.setData(
+                              'application/workspace-index',
+                              String(workspaceGroups.findIndex((w) => w.name === group.name))
+                            );
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggingWorkspaceName(group.name);
+                          }}
+                          onDragEnd={() => setDraggingWorkspaceName(null)}
+                          className={`cursor-grab active:cursor-grabbing p-1 rounded-lg shrink-0 transition-colors ${draggingWorkspaceName === group.name
+                            ? 'text-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10'
+                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-border)]'
+                            }`}
+                          title="Drag to reorder workspace"
+                        >
+                          <GripVertical size={16} />
+                        </div>
                         <button
                           type="button"
                           onClick={() => navigate(`/workspaces/${encodeURIComponent(group.name)}`)}
-                          className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity"
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
                         >
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
                           <h3 className="text-sm font-black uppercase tracking-tight truncate">{group.name}</h3>
@@ -494,7 +531,7 @@ const ProjectsView = () => {
 
                       {group.projects.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {group.projects.slice(0, 6).map(project => (
+                          {group.projects.map(project => (
                             <ProjectPreview
                               key={project._id}
                               project={project}
@@ -512,12 +549,6 @@ const ProjectsView = () => {
                         <div className="py-8 text-center border border-dashed border-[var(--color-bg-border)] rounded-xl">
                           <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No projects yet</p>
                         </div>
-                      )}
-
-                      {group.projects.length > 6 && (
-                        <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest text-center">
-                          +{group.projects.length - 6} more
-                        </p>
                       )}
                     </div>
                   </Card>

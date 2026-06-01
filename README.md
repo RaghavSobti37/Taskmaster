@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.41-126d5e?style=flat-square" alt="Version 1.7.41" />
+  <img src="https://img.shields.io/badge/version-1.7.42-126d5e?style=flat-square" alt="Version 1.7.42" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -339,6 +339,13 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 
 ## 🚀 Production Migration Sequence
 
+
+### v1.7.42 - Daily Logs, Projects UX and Per-User Workspaces
+
+- **Daily logs:** Daily log list includes `TASK_COMPLETION` activity entries for the selected day (`DailyLogPage.jsx` filter fix).
+- **Navigation:** Removed duplicate **Emails** sidebar entry when customization already exposes mail routes (`OutletSidebar.jsx`, `customizationController.js`).
+- **Workspace order:** Per-user workspace column order in `WorkspacePreference`; workspaces API returns order for the signed-in user (`projectController.js`, `WorkspacePreference.js`).
+- **Projects view:** All projects show in each workspace card (removed six-project cap); workspace grip reorder with optimistic cache updates (`ProjectsView.jsx`).
 ### v1.7.40 — Subscriptions, Workspace Settings & Dev Safeguards
 
 - Office **Subscriptions** module: model, CRUD API, `/office/subscriptions` page, and daily Render cron for due-date reminders.

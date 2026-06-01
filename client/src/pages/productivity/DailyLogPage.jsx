@@ -180,7 +180,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 
   const dailyLogs = useMemo(() => logs.filter(l =>
     l.action === 'DAILY_LOG'
-    && l.details?.type !== 'TASK_COMPLETION'
     && isSameDay(new Date(l.createdAt), selectedDate)
   ), [logs, selectedDate]);
 

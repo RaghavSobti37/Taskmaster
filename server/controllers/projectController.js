@@ -1,5 +1,6 @@
 const Project = require('../models/Project');
 const Workspace = require('../models/Workspace');
+const WorkspacePreference = require('../models/WorkspacePreference');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { formatProjectName } = require('../utils/formatProjectName');
@@ -14,6 +15,60 @@ const DEFAULT_WORKSPACES = [
   { name: 'TSC TECH', color: '#2ecc71' },
   { name: 'GENERAL', color: '#64748b' },
 ];
+
+const normalizeWorkspaceName = (name) => String(name || '').toUpperCase().trim();
+
+/** Default tenant order, then name */
+const sortWorkspacesGlobal = (workspaces) =>
+  [...workspaces].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)
+  );
+
+/** Per-user order with fallback for workspaces missing from saved prefs */
+const sortWorkspacesForUser = (workspaces, userOrder) => {
+  const list = [...workspaces];
+  if (!Array.isArray(userOrder) || userOrder.length === 0) {
+    return sortWorkspacesGlobal(list);
+  }
+
+  const byName = new Map(list.map((w) => [normalizeWorkspaceName(w.name), w]));
+  const result = [];
+  const seen = new Set();
+
+  for (const raw of userOrder) {
+    const name = normalizeWorkspaceName(raw);
+    if (!name || seen.has(name)) continue;
+    const ws = byName.get(name);
+    if (ws) {
+      result.push(ws);
+      seen.add(name);
+    }
+  }
+
+  const remainder = list
+    .filter((w) => !seen.has(normalizeWorkspaceName(w.name)))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+
+  return [...result, ...remainder].map((w, idx) => ({ ...w, order: idx }));
+};
+
+async function getSortedWorkspacesForUser(userId) {
+  let workspaces = await Workspace.find().lean();
+  if (workspaces.length === 0) {
+    await Workspace.insertMany(
+      DEFAULT_WORKSPACES.map((w, idx) => ({
+        name: w.name,
+        color: w.color,
+        order: idx,
+        createdBy: userId,
+      }))
+    );
+    workspaces = await Workspace.find().lean();
+  }
+
+  const pref = await WorkspacePreference.findOne({ userId }).lean();
+  return sortWorkspacesForUser(workspaces, pref?.order);
+}
 
 // 20 perceptually-spaced hues converted to saturated hex colors
 const PALETTE = [
@@ -385,20 +440,7 @@ exports.removeMember = async (req, res) => {
 };
 exports.getWorkspaces = async (req, res) => {
   try {
-    let workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
-
-    if (workspaces.length === 0) {
-      await Workspace.insertMany(
-        DEFAULT_WORKSPACES.map((w, idx) => ({
-          name: w.name,
-          color: w.color,
-          order: idx,
-          createdBy: req.user._id,
-        }))
-      );
-      workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
-    }
-
+    const workspaces = await getSortedWorkspacesForUser(req.user._id);
     res.json(workspaces);
   } catch (error) {
     logger.error('projectController', 'Get Workspaces ', { error: error.message || error });
@@ -436,13 +478,25 @@ exports.reorderWorkspaces = async (req, res) => {
       return res.status(400).json({ error: 'Order must be an array of workspace names' });
     }
 
-    await Promise.all(
-      order.map((name, index) => 
-        Workspace.updateOne({ name }, { order: index })
-      )
+    const normalizedOrder = order
+      .map((name) => normalizeWorkspaceName(name))
+      .filter(Boolean);
+
+    const existing = await Workspace.find().select('name').lean();
+    const validNames = new Set(existing.map((w) => normalizeWorkspaceName(w.name)));
+    const savedOrder = normalizedOrder.filter((name) => validNames.has(name));
+
+    for (const name of existing.map((w) => normalizeWorkspaceName(w.name))) {
+      if (!savedOrder.includes(name)) savedOrder.push(name);
+    }
+
+    await WorkspacePreference.findOneAndUpdate(
+      { userId: req.user._id },
+      { order: savedOrder, updatedAt: new Date() },
+      { upsert: true, new: true }
     );
 
-    const workspaces = await Workspace.find().sort({ order: 1, name: 1 }).lean();
+    const workspaces = await getSortedWorkspacesForUser(req.user._id);
     res.json(workspaces);
   } catch (error) {
     logger.error('projectController', 'Reorder Workspaces', { error: error.message || error });

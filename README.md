@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.38-126d5e?style=flat-square" alt="Version 1.7.38" />
+  <img src="https://img.shields.io/badge/version-1.7.39-126d5e?style=flat-square" alt="Version 1.7.39" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -104,6 +104,13 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Auto-Routing:** `POST /api/tasks/bug` creates tasks under **Tech Stack & Maintenance**, assigns to the platform owner, and syncs all users into the project with assign-capable roles.
 * **UX:** Title required, description optional; Enter submits from title field, Ctrl+Enter from description.
 
+### 👥 Project Team Roles
+
+* **Canonical Roles:** `admin`, `manager`, and `member` (legacy `owner` values normalize to `admin`).
+* **Inline Role Editing:** Project owners and admins can change member roles directly from the Team tab via `NexusDropdown`.
+* **API:** `PATCH /api/projects/:id/members/:userId/role` — restricted to project admin/manager or platform admin.
+* **Shared Logic:** Role rank and assignment permissions live in `shared/projectRoles.js` (consumed by both client and server).
+
 ---
 
 ## 🗂️ Directory Structure
@@ -122,6 +129,7 @@ CoreKnot/
 │       ├── contexts/           # Global State Hubs (Auth, Theme, Socket, Toasts)
 │       └── sw.js               # Service Worker utilizing injectManifest compilation
 ├── server/                     # Backend API Application Root
+│   ├── config/                 # Database URI resolution & dev/prod safety guards
 │   ├── routes/                 # Explicitly mapped REST routing topologies
 │   ├── controllers/            # Pure business logic controllers
 │   ├── models/                 # Mongoose schema primitives and indexes
@@ -129,8 +137,8 @@ CoreKnot/
 │   ├── middleware/             # Authorization, Rate Limiting, and Health Guards
 │   ├── scripts/                # Database seed engines, backup suites, and migrations
 │   └── templates/              # Transactional MJML/HTML email layouts
-├── shared/                     # Multi-runtime definitions (Logger schemas, types)
-├── docs/                       # Architectural specs and runtime manuals
+├── shared/                     # Multi-runtime definitions (Logger schemas, types, projectRoles)
+├── docs/                       # Architectural specs, startup guides, and AI agent context
 └── render.yaml                 # Infrastructure Blueprint configurations
 ```
 
@@ -219,6 +227,15 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `AISENSY_API_KEY` | Webhook Integrations | WhatsApp campaign dispatch for booked-call confirmations and rep alerts. |
 | `CORS_ALLOWED_ORIGINS` | Optional | Comma-separated extra browser origins; `theshakticollective.in` is allowlisted by default. |
 | `DEBUG_BYPASS` | Development Only | Enables a stateless internal bypass mechanism (`Authorization: Bearer bypass_token`). |
+| `MONGODB_DB_LOCAL` | Optional | Database name override for sync scripts (default: `taskmaster_local`). |
+| `MONGODB_DB_PROD` | Optional | Production database name override for sync scripts (default: `taskmaster_production`). |
+| `ALLOW_PROD_DB_IN_DEV` | Development Only | Permits connecting to a production-like database name from local dev (default: blocked). |
+
+### Local vs Production Database Isolation
+
+Local development should use **`taskmaster_local`**; production uses **`taskmaster_production`**. The server resolves the correct URI via `server/config/database.js` and throws on startup if a dev runtime targets a production-like database name unless explicitly allowed.
+
+See [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) for the full isolation checklist.
 
 ### Production API Host
 
@@ -268,7 +285,28 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 
 ---
 
+---
+
+## 📚 Documentation Index
+
+| Document | Purpose |
+| --- | --- |
+| [`docs/STARTUP_GUIDE.md`](docs/STARTUP_GUIDE.md) | Step-by-step local environment bootstrap |
+| [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) | Local vs production MongoDB isolation |
+| [`docs/AI_AGENT_PROJECT_CONTEXT.md`](docs/AI_AGENT_PROJECT_CONTEXT.md) | Complete AI agent reference (routes, models, rules) |
+| [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
+
+---
+
 ## 🚀 Production Migration Sequence
+
+### v1.7.39 — Project Roles & Local DB Isolation
+
+- Canonical project roles: `admin` / `manager` / `member` with legacy `owner` → `admin` normalization in `shared/projectRoles.js`.
+- `PATCH /api/projects/:id/members/:userId/role` for inline team role updates; UI in `ProjectTeam.jsx`.
+- `server/config/database.js` centralizes MongoDB URI resolution with production-like DB name guards for local dev.
+- Sync scripts default to `taskmaster_local` / `taskmaster_production` database names.
+- New docs: `LOCAL_DEV_DATABASE.md`, `AI_AGENT_PROJECT_CONTEXT.md`.
 
 ### v1.7.38 — Website Book-a-Call Webhook
 
@@ -288,8 +326,6 @@ node scripts/migrateReviewWorkflow.js --execute --prod
 # 3. Clean up non-conforming test entries or legacy structural artifacts
 node scripts/cleanupTestTasks.js --prod
 ```
-
-For comprehensive deep-dives into platform dependencies, automated testing strategies, or data extraction workflows, review our architectural documentation housed directly within the `/docs` directory.
 
 ---
 

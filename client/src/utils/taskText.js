@@ -29,7 +29,7 @@ export function taskDescriptionPreview(description, maxLength = 140) {
 /** Suggest project hierarchy role from user department slug. */
 export function suggestProjectRole(profileDepartmentSlug) {
   const normalized = String(profileDepartmentSlug || '').toLowerCase();
-  if (normalized === ADMIN_SLUG) return 'owner';
+  if (normalized === ADMIN_SLUG) return 'admin';
   if ([OPS_SLUG, ARTIST_SLUG, SALES_SLUG].includes(normalized)) return 'manager';
   return 'member';
 }

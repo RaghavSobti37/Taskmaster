@@ -8,7 +8,13 @@ const SNAPSHOTS_COLLECTION = 'backup_snapshots';
 const COLLECTION_PAUSE_MS = 100;
 const CURSOR_BATCH_SIZE = 500;
 
-const LOCAL_DB_NAMES = new Set(['coreknot_local', 'testing', 'coreknot']);
+const LOCAL_DB_NAMES = new Set([
+  'coreknot_local',
+  'coreknot',
+  'testing',
+  'taskmaster',
+  'taskmaster_local',
+]);
 
 const extractDbNameFromUri = (uri) => {
   const withoutQuery = uri.split('?')[0];

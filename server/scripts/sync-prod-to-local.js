@@ -19,8 +19,11 @@ async function main() {
         await localClient.connect();
         console.log('Connected DBs.');
 
-        const prodDb = prodClient.db('coreknot_production');
-        const localDb = localClient.db('coreknot_local');
+        const prodDbName = process.env.MONGODB_DB_PROD || 'taskmaster_production';
+        const localDbName = process.env.MONGODB_DB_LOCAL || 'taskmaster_local';
+        const prodDb = prodClient.db(prodDbName);
+        const localDb = localClient.db(localDbName);
+        console.log(`Sync: ${prodDbName} -> ${localDbName}`);
 
         // Initial copy
         console.log('Start initial clone Prod -> Local...');

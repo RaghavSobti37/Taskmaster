@@ -98,14 +98,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Strict Rate Limiting for Auth Routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 10 : 100, // Relaxed for dev
-  message: { error: 'Too many authentication attempts, please try again after 15 minutes.' }
-});
-app.use('/api/auth/', authLimiter);
-
 // Rate limit public tracking endpoints (outside /api/ limiter scope)
 const trackLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -136,33 +128,22 @@ const traceMiddleware = require('./middleware/traceMiddleware');
 app.use(traceMiddleware);
 
 // MongoDB Connection
-const isProd = process.env.NODE_ENV === 'production';
-const isVercelPreview = process.env.VERCEL_ENV === 'preview';
-const vercelBranch = process.env.VERCEL_GIT_COMMIT_REF;
+const {
+  resolveMongoUri,
+  getDbNameFromUri,
+  maskMongoUri,
+  assertSafeDbTarget,
+} = require('./config/database');
 
-let dbUri;
+const { dbUri, source: dbSource } = resolveMongoUri();
+assertSafeDbTarget(dbUri, { source: dbSource });
 
-if (isVercelPreview && process.env.MONGODB_URI) {
-  // Vercel preview deployments use local database
-  dbUri = process.env.MONGODB_URI.trim();
-  console.log(`[VERCEL PREVIEW] Using local MongoDB for branch: ${vercelBranch}`);
-} else if (isProd) {
-  // Production uses production database
-  dbUri = (process.env.MONGODB_URI_PROD || process.env.MONGODB_URI).trim();
-} else {
-  // Development uses local or specified database
-  dbUri = (process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/testing').trim();
+const maskedUri = maskMongoUri(dbUri);
+const resolvedDbName = getDbNameFromUri(dbUri);
+console.log(`[SYSTEM] Initializing DB Connection (${dbSource}): ${maskedUri}`);
+if (resolvedDbName) {
+  console.log(`[SYSTEM] Target database name: ${resolvedDbName}`);
 }
-
-// Local mail tests: tracking pixels hit public API which reads prod DB — opt-in sync
-if (!isProd && !isVercelPreview && process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) {
-  dbUri = process.env.MONGODB_URI_PROD.trim();
-  console.log('[SYSTEM] MAIL_USE_PROD_DB=true — using production MongoDB for mail tracking sync');
-}
-
-// Mask URI for logging
-const maskedUri = dbUri.replace(/\/\/.*:.*@/, '//****:****@');
-console.log(`[SYSTEM] Initializing DB Connection: ${maskedUri}`);
 
 mongoose.connect(dbUri, {
   serverSelectionTimeoutMS: 30000,
@@ -170,7 +151,8 @@ mongoose.connect(dbUri, {
   heartbeatFrequencyMS: 10000,
 })
   .then(() => {
-    console.log('[SUCCESS] MongoDB Connected');
+    const connectedDb = mongoose.connection.db?.databaseName || resolvedDbName || 'unknown';
+    console.log(`[SUCCESS] MongoDB Connected — database: ${connectedDb}`);
 
     const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('./utils/trackingUrls');
     console.log(`[MAIL] Tracking pixel base URL: ${resolveTrackingApiBaseUrl()}`);

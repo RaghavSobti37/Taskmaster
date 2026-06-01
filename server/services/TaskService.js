@@ -28,17 +28,18 @@ const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
 
 /** Project memberRoles values that may assign tasks to others on that project. */
-const PROJECT_ASSIGN_ROLES = new Set(['owner', 'manager', 'admin', 'artist_management']);
+const PROJECT_ASSIGN_ROLES = new Set(['admin', 'manager', 'artist_management']);
 
 const memberRoleUserId = (entry) => (entry?.user?._id || entry?.user)?.toString?.() || null;
 
 const getProjectRole = (project, userId) => {
-  if (!project) return null;
+  if (!project || !userId) return null;
   const uid = userId.toString();
   const ownerId = (project.owner?._id || project.owner)?.toString?.();
-  if (ownerId && ownerId === uid) return 'owner';
-  const entry = project.memberRoles?.find((r) => memberRoleUserId(r) === uid);
-  return entry?.role || (project.members?.some((m) => (m?._id || m)?.toString() === uid) ? 'member' : null);
+  if (ownerId && ownerId === uid) return 'admin';
+  const isMember = project.members?.some((m) => (m?._id || m)?.toString() === uid);
+  if (!isMember) return null;
+  return getProjectRoleForUser(project, userId);
 };
 
 const canAssignTasks = (project, user) => {

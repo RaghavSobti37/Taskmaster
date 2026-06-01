@@ -19,7 +19,11 @@ cp .env.example .env
 ```
 
 Update `server/.env` with your values for:
-- `MONGODB_URI`
+- `MONGODB_URI` (local dev — e.g. `.../taskmaster_local`)
+- `MONGODB_URI_PROD` (production Atlas — e.g. `.../taskmaster_production`)
+- `NODE_ENV=development` when running locally
+
+See [LOCAL_DEV_DATABASE.md](./LOCAL_DEV_DATABASE.md) for full local vs production isolation.
 - `JWT_SECRET`
 - `APP_BASE_URL`
 - `FRONTEND_URL`
@@ -31,13 +35,18 @@ Update `server/.env` with your values for:
 - `UPLOADTHING_TOKEN`
 
 ### Client
-Ensure `client/.env` exists and optionally configure the frontend API URL:
+Copy the template for local development:
+
+```bash
+cd client
+cp .env.example .env
+```
 
 ```env
 VITE_API_URL=http://localhost:5000
 ```
 
-If `VITE_API_URL` is empty, the client will use relative `/api` routes and rely on the Vite proxy.
+If `VITE_API_URL` is empty, the client uses relative `/api` routes via the Vite proxy to `localhost:5000`.
 
 **Production (Vercel frontend + Render API):** set `VITE_API_URL=https://CoreKnot-api.onrender.com` on the static host. Set `APP_BASE_URL` to the same API URL on Render for email open/click tracking.
 

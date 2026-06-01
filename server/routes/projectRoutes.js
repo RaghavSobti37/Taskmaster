@@ -8,6 +8,7 @@ const {
   deleteProject,
   removeMember,
   addMember,
+  updateMemberRole,
   getWorkspaces,
   createWorkspace,
   reorderWorkspaces,
@@ -38,6 +39,7 @@ router.route('/:id')
   .delete(deleteProject);
 
 router.post('/:id/members', addMember);
+router.patch('/:id/members/:userId/role', updateMemberRole);
 router.put('/:id/remove-member', removeMember);
 router.get('/:id/workload', getProjectWorkload);
 router.get('/:id/hours-summary', getProjectHoursSummary);

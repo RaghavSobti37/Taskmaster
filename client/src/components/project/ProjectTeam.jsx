@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Mail, Circle, UserMinus, Users } from 'lucide-react';
-import { Badge, NexusModal, AddMembers, EmptyState } from '../ui';
+import { Badge, NexusModal, AddMembers, EmptyState, NexusDropdown } from '../ui';
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { projectRoleLabel } from '../../constants/taskOptions';
+import { projectRoleLabel, PROJECT_ROLE_OPTIONS, normalizeProjectRoleValue } from '../../constants/taskOptions';
 
 const ProjectTeam = ({ project, onRemoveMember }) => {
   const { user: currentUser } = useAuth();
@@ -14,11 +14,13 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   const { data: directory = [] } = useUserDirectory();
   const [allTeams, setAllTeams] = useState([]);
   const [localMembers, setLocalMembers] = useState(project.members || []);
+  const [localMemberRoles, setLocalMemberRoles] = useState(project.memberRoles || []);
   const [removeModal, setRemoveModal] = useState({ open: false, member: null });
+  const [roleUpdating, setRoleUpdating] = useState(null);
   const isAdmin = isAdminUser(currentUser);
   const isOwner = project.owner?._id === currentUser?._id || project.owner === currentUser?._id;
   const canManageTeam = isAdmin || isOwner;
-  const memberRoles = project.memberRoles || [];
+  const ownerId = project.owner?._id || project.owner;
 
   const teamUsers = directory.map((m) => ({
     _id: m.user?._id || m._id,
@@ -51,7 +53,8 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
 
   useEffect(() => {
     setLocalMembers(project.members || []);
-  }, [project.members]);
+    setLocalMemberRoles(project.memberRoles || []);
+  }, [project.members, project.memberRoles]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,9 +77,41 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
   };
 
   const canRemoveMember = (member) => {
-    const ownerId = project.owner?._id || project.owner;
     if (member._id === ownerId) return false;
     return canManageTeam;
+  };
+
+  const canEditMemberRole = (member) => {
+    if (member._id === ownerId) return false;
+    return canManageTeam;
+  };
+
+  const getMemberRole = (memberId) => {
+    const roleEntry = localMemberRoles.find((r) => r.user?._id === memberId || r.user === memberId);
+    return normalizeProjectRoleValue(roleEntry?.role || 'member');
+  };
+
+  const handleRoleChange = async (memberId, role) => {
+    const previousRoles = localMemberRoles;
+    setRoleUpdating(memberId);
+    setLocalMemberRoles((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((r) => r.user?._id === memberId || r.user === memberId);
+      if (idx >= 0) next[idx] = { ...next[idx], role };
+      else next.push({ user: memberId, role });
+      return next;
+    });
+
+    try {
+      await axios.patch(`/api/projects/${project._id}/members/${memberId}/role`, { role });
+      queryClient.invalidateQueries({ queryKey: ['projects', project._id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } catch (err) {
+      console.error('Error updating member role:', err);
+      setLocalMemberRoles(previousRoles);
+    } finally {
+      setRoleUpdating(null);
+    }
   };
 
   const onlineCount = localMembers.filter((m) => getMemberOnline(m)).length;
@@ -125,9 +160,10 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {localMembers.map((member) => {
-                const roleEntry = memberRoles.find((r) => r.user?._id === member._id || r.user === member._id);
-                const roleLabel = projectRoleLabel(roleEntry?.role || 'member');
+                const roleValue = getMemberRole(member._id);
+                const roleLabel = projectRoleLabel(roleValue);
                 const isOnline = getMemberOnline(member);
+                const editableRole = canEditMemberRole(member);
 
                 return (
                   <div
@@ -164,7 +200,20 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                       <div className="flex-1 min-w-0 pr-6">
                         <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                           <h3 className="font-bold text-sm text-[var(--color-text-primary)] truncate">{member.name}</h3>
-                          <Badge variant="info">{roleLabel}</Badge>
+                          {editableRole ? (
+                            <div className="w-[5.5rem] shrink-0">
+                              <NexusDropdown
+                                options={PROJECT_ROLE_OPTIONS}
+                                value={roleValue}
+                                onChange={(role) => handleRoleChange(member._id, role)}
+                                disabled={roleUpdating === member._id}
+                                variant="compact"
+                                className="text-[10px] font-black uppercase"
+                              />
+                            </div>
+                          ) : (
+                            <Badge variant="info">{roleLabel}</Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                           <Mail size={11} className="shrink-0" />

@@ -45,15 +45,16 @@ export function getPriorityBadgeVariant(priority) {
 }
 
 export const PROJECT_ROLE_OPTIONS = [
-  { value: 'owner', label: 'Admin' },
+  { value: 'admin', label: 'Admin' },
   { value: 'manager', label: 'Manager' },
   { value: 'member', label: 'User' },
 ];
 
 export const PROJECT_ROLE_LABELS = {
-  owner: 'Admin',
+  admin: 'Admin',
   manager: 'Manager',
   member: 'User',
+  owner: 'Admin',
 };
 
 export const TASK_CATEGORY_OPTIONS = [
@@ -114,4 +115,12 @@ export const SLOT_OPTIONS = [
 
 export function projectRoleLabel(role) {
   return PROJECT_ROLE_LABELS[role] || role || 'User';
+}
+
+/** Map stored role to picker value (admin / manager / member). */
+export function normalizeProjectRoleValue(role) {
+  if (role === 'owner') return 'admin';
+  if (role === 'artist_management') return 'manager';
+  if (PROJECT_ROLE_OPTIONS.some((o) => o.value === role)) return role;
+  return 'member';
 }

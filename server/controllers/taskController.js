@@ -18,7 +18,7 @@ const dispatchTaskNotifications = (payloads = []) => {
 };
 
 const TECH_PROJECT_ASSIGN_ROLE = 'artist_management';
-const TECH_PROJECT_ASSIGN_ROLES = new Set(['owner', 'manager', 'admin', 'artist_management']);
+const TECH_PROJECT_ASSIGN_ROLES = new Set(['admin', 'manager', 'artist_management', 'owner']);
 
 const memberId = (value) => (value?._id || value)?.toString?.() || null;
 

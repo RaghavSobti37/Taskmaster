@@ -34,7 +34,12 @@ export default defineConfig({
     },
   },
   server: {
-    // Proxy removed for production setup
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     chunkSizeWarningLimit: 600,

@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const { formatProjectName } = require('../utils/formatProjectName');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { normalizeStoredProjectRole } = require('../../shared/projectRoles');
 
 const DEFAULT_WORKSPACES = [
   { name: 'TSC ACADEMY', color: '#3498db' },
@@ -57,7 +58,7 @@ exports.createProject = async (req, res) => {
     // Ensure owner is always in members and roles
     if (!providedMembers.includes(req.user._id.toString())) {
       providedMembers.push(req.user._id);
-      providedRoles.push({ user: req.user._id, role: 'owner' });
+      providedRoles.push({ user: req.user._id, role: 'admin' });
     }
 
     // Ensure redacted-staff@example.com is automatically added to all new projects
@@ -433,12 +434,14 @@ exports.addMember = async (req, res) => {
     const project = await Project.findById(id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    const callerRole = isAdminUser(req.user) ? 'owner' : (
-      project.owner.toString() === req.user._id.toString() ? 'owner' :
-      project.memberRoles?.find((r) => r.user?.toString() === req.user._id.toString())?.role
+    const callerRole = isAdminUser(req.user) ? 'admin' : (
+      project.owner.toString() === req.user._id.toString() ? 'admin' :
+      normalizeStoredProjectRole(
+        project.memberRoles?.find((r) => r.user?.toString() === req.user._id.toString())?.role
+      )
     );
 
-    if (!['owner', 'manager'].includes(callerRole) && !isAdminUser(req.user)) {
+    if (!['admin', 'manager'].includes(callerRole) && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Not authorized to add members' });
     }
 
@@ -467,6 +470,66 @@ exports.addMember = async (req, res) => {
     res.json(updatedProject);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add member' });
+  }
+};
+
+const VALID_PROJECT_ROLES = ['admin', 'manager', 'member'];
+
+function getCallerProjectRole(req, project) {
+  if (isAdminUser(req.user)) return 'admin';
+  if (project.owner.toString() === req.user._id.toString()) return 'admin';
+  const raw = project.memberRoles?.find((r) => r.user?.toString() === req.user._id.toString())?.role;
+  return normalizeStoredProjectRole(raw);
+}
+
+exports.updateMemberRole = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    const { role } = req.body;
+
+    if (!role || !VALID_PROJECT_ROLES.includes(role)) {
+      return res.status(400).json({ error: 'Invalid project role' });
+    }
+
+    const project = await Project.findById(id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const callerRole = getCallerProjectRole(req, project);
+    if (!['admin', 'manager'].includes(callerRole) && !isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Not authorized to update member roles' });
+    }
+
+    if (project.owner.toString() === userId) {
+      return res.status(400).json({ error: 'Cannot change the project owner role' });
+    }
+
+    if (!project.members.some((m) => m.toString() === userId)) {
+      return res.status(404).json({ error: 'User is not a member of this project' });
+    }
+
+    const roles = project.memberRoles || [];
+    const idx = roles.findIndex((r) => {
+      const rUserId = r.user?._id ? r.user._id.toString() : r.user?.toString();
+      return rUserId === userId;
+    });
+
+    if (idx >= 0) {
+      roles[idx].role = role;
+    } else {
+      roles.push({ user: userId, role });
+    }
+    project.memberRoles = roles;
+    await project.save();
+
+    const updatedProject = await Project.findById(id)
+      .populate('owner', 'name email avatar teams departmentId')
+      .populate('members', 'name email avatar teams online lastOnline departmentId')
+      .populate('memberRoles.user', 'name email avatar');
+
+    broadcastRealtimeEvent('projects', 'project_change', { projectId: id, action: 'update' });
+    res.json(updatedProject);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update member role' });
   }
 };
 

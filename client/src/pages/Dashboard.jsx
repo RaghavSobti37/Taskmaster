@@ -31,10 +31,16 @@ import UnifiedTimeCard from '../components/attendance/UnifiedTimeCard';
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
 import { format } from 'date-fns';
-import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES } from '../lib/componentRegistry';
+import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent } from '../lib/componentRegistry';
+import { isAdminUser } from '../utils/departmentPermissions';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const permissionPreset = useMemo(() => {
+    if (isAdminUser(user)) return 'admin';
+    const dept = user?.departmentId;
+    return dept?.permissionPreset || dept?.slug || 'standard';
+  }, [user]);
   const queryClient = useQueryClient();
   const { addToast } = useSystemToast();
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
@@ -220,7 +226,7 @@ const Dashboard = () => {
   const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'coreknot')?.elements || [];
 
   const elementsToRender = (dashboardPreset?.elements && dashboardPreset.elements.length > 0 ? dashboardPreset.elements : defaultElements)
-    .filter(el => el.visible);
+    .filter((el) => el.visible && canAccessComponent(el.componentId, permissionPreset));
 
   return (
     <PageContainer className="!py-4">

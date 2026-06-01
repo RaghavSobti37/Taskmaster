@@ -1,6 +1,9 @@
 const PUSH_PREF_KEY = 'coreknot_push_enabled';
 const OS_NOTIF_DEDUPE_KEY = 'coreknot_os_notif_dedupe';
 const OS_NOTIF_DEDUPE_TTL_MS = 5 * 60 * 1000;
+const NOTIF_BC_CHANNEL = 'coreknot-notif';
+
+let notifBroadcastChannel = null;
 
 export const getNotificationIconUrl = () => {
   if (typeof window !== 'undefined' && window.location?.origin) {
@@ -9,25 +12,63 @@ export const getNotificationIconUrl = () => {
   return '/icons/icon-192.png';
 };
 
-const wasRecentlyShownOsNotification = (tag) => {
+const readDedupeMap = () => {
+  try {
+    const raw = localStorage.getItem(OS_NOTIF_DEDUPE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeDedupeMap = (map) => {
+  try {
+    localStorage.setItem(OS_NOTIF_DEDUPE_KEY, JSON.stringify(map));
+  } catch (_) {}
+};
+
+const pruneDedupeMap = (map) => {
+  const now = Date.now();
+  const pruned = {};
+  for (const [tag, ts] of Object.entries(map)) {
+    if (now - ts < OS_NOTIF_DEDUPE_TTL_MS) pruned[tag] = ts;
+  }
+  return pruned;
+};
+
+const getNotifBroadcastChannel = () => {
+  if (typeof BroadcastChannel === 'undefined') return null;
+  if (!notifBroadcastChannel) {
+    notifBroadcastChannel = new BroadcastChannel(NOTIF_BC_CHANNEL);
+    notifBroadcastChannel.onmessage = (event) => {
+      if (event.data?.type === 'shown' && event.data.tag) {
+        markOsNotificationShown(event.data.tag, false);
+      }
+    };
+  }
+  return notifBroadcastChannel;
+};
+
+export const wasRecentlyShownOsNotification = (tag) => {
   if (!tag) return false;
   try {
-    const raw = sessionStorage.getItem(OS_NOTIF_DEDUPE_KEY);
-    const map = raw ? JSON.parse(raw) : {};
+    const map = pruneDedupeMap(readDedupeMap());
     const ts = map[tag];
-    return ts && Date.now() - ts < OS_NOTIF_DEDUPE_TTL_MS;
+    return Boolean(ts && Date.now() - ts < OS_NOTIF_DEDUPE_TTL_MS);
   } catch {
     return false;
   }
 };
 
-const markOsNotificationShown = (tag) => {
+export const markOsNotificationShown = (tag, broadcast = true) => {
   if (!tag) return;
   try {
-    const raw = sessionStorage.getItem(OS_NOTIF_DEDUPE_KEY);
-    const map = raw ? JSON.parse(raw) : {};
+    const map = pruneDedupeMap(readDedupeMap());
     map[tag] = Date.now();
-    sessionStorage.setItem(OS_NOTIF_DEDUPE_KEY, JSON.stringify(map));
+    writeDedupeMap(map);
+    if (broadcast) {
+      getNotifBroadcastChannel()?.postMessage({ type: 'shown', tag });
+    }
   } catch (_) {}
 };
 
@@ -79,6 +120,11 @@ export const sendNotification = async (title, body, options = {}) => {
   try {
     const registration = await navigator.serviceWorker?.ready;
     if (registration?.showNotification) {
+      const existing = await registration.getNotifications({ tag });
+      if (existing.length) {
+        markOsNotificationShown(tag);
+        return;
+      }
       await registration.showNotification(title, notifOptions);
       markOsNotificationShown(tag);
       return;
@@ -102,12 +148,12 @@ export const registerServiceWorker = async () => {
   try {
     const isDev = import.meta.env?.DEV || false;
     const swUrl = isDev ? '/dev-sw.js?dev-sw' : '/sw.js';
-    return await navigator.serviceWorker.register(swUrl, { 
+    return await navigator.serviceWorker.register(swUrl, {
       scope: '/',
-      type: isDev ? 'module' : 'classic'
+      type: isDev ? 'module' : 'classic',
     });
   } catch (err) {
-    if (import.meta.env?.DEV) return null; // Suppress noise in dev if SW fails
+    if (import.meta.env?.DEV) return null;
     console.error('SW registration failed', err);
     return null;
   }
@@ -193,4 +239,11 @@ export const getNotificationPushStatus = async () => {
   const prefEnabled = isPushPreferenceEnabled();
   const subscribed = await hasActivePushSubscription();
   return { permission, prefEnabled, subscribed, enabled: prefEnabled && permission === 'granted' && subscribed };
+};
+
+/** Resolves when push subscribe attempt finishes (success or failure). */
+export const initPushNotifications = async () => {
+  getNotifBroadcastChannel();
+  if (!isPushPreferenceEnabled()) return false;
+  return subscribeToPush();
 };

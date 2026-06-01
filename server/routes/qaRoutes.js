@@ -1,11 +1,10 @@
 const express = require('express');
 const qaTestingController = require('../controllers/qaTestingController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// All QA routes require authentication
-router.use(protect);
+router.use(protect, admin);
 
 /**
  * @POST /api/qa/start

@@ -76,7 +76,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [logSort, setLogSort] = useState('newest');
   const [logProjectFilter, setLogProjectFilter] = useState('all');
 
-  const targetUserId = adminViewUserId || searchParams.get('user') || user?._id;
+  const requestedUserId = adminViewUserId || searchParams.get('user');
+  const targetUserId = (requestedUserId && (adminViewUserId || isAdminUser(user)))
+    ? requestedUserId
+    : user?._id;
 
   const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, 200);
   const { data: projects = [] } = useProjects();

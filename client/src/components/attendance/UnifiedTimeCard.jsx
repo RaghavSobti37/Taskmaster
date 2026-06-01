@@ -22,7 +22,7 @@ const UnifiedTimeCard = ({
   onApproveOut,
   isLoading
 }) => {
-  const [localForm, setLocalForm] = React.useState({ inTime: '', outTime: '', inMode: 'wfh', outMode: 'wfh' });
+  const [localForm, setLocalForm] = React.useState({ inTime: '', outTime: '', inMode: 'office', outMode: 'office' });
   const form = editForm || localForm;
   const setForm = setEditForm || setLocalForm;
 
@@ -177,7 +177,7 @@ const UnifiedTimeCard = ({
                   <div className="mt-1">
                     <NexusDropdown
                       options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
-                      value={form?.inMode || 'wfh'}
+                      value={form?.inMode || 'office'}
                       onChange={(v) => setForm && setForm((f) => ({ ...f, inMode: v }))}
                     />
                   </div>
@@ -218,7 +218,7 @@ const UnifiedTimeCard = ({
                   <div className="mt-1">
                     <NexusDropdown
                       options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
-                      value={form?.outMode || 'wfh'}
+                      value={form?.outMode || 'office'}
                       onChange={(v) => setForm && setForm((f) => ({ ...f, outMode: v }))}
                     />
                   </div>

@@ -7,7 +7,7 @@ const attendanceSchema = new mongoose.Schema({
   inTimeRecord: {
     systemTimestamp: { type: Date },
     manualTimestamp: { type: String },
-    workMode: { type: String, enum: ['office', 'wfh'], default: 'wfh' },
+    workMode: { type: String, enum: ['office', 'wfh'], default: 'office' },
     isApproved: { type: Boolean, default: false },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     checkInIp: { type: String },
@@ -16,7 +16,7 @@ const attendanceSchema = new mongoose.Schema({
   outTimeRecord: {
     systemTimestamp: { type: Date },
     manualTimestamp: { type: String },
-    workMode: { type: String, enum: ['office', 'wfh'], default: 'wfh' },
+    workMode: { type: String, enum: ['office', 'wfh'], default: 'office' },
     isApproved: { type: Boolean, default: false },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     checkOutIp: { type: String },

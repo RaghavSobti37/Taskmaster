@@ -3,6 +3,7 @@ const ipaddr = require('ipaddr.js');
 
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const User = require('../models/User');
@@ -21,8 +22,6 @@ const {
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
-
-const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 
 const isOps = (user) => isOpsUser(user);
 
@@ -405,6 +404,19 @@ router.get('/leave/requests', async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     res.json(requests);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/reset', async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Not authorized — admin required' });
+    }
+    await Attendance.deleteMany({});
+    await LeaveRequest.deleteMany({});
+    res.json({ message: 'All attendance records reset' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

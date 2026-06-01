@@ -1,6 +1,7 @@
 const webpush = require('web-push');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { dedupePushSubscriptions } = require('../utils/pushSubscriptions');
 
 let configured = false;
 
@@ -22,12 +23,15 @@ const sendPushToUser = async (userId, payload) => {
   if (!configured && !configureWebPush()) return;
   try {
     const user = await User.findById(userId).select('pushSubscriptions');
-    if (!user?.pushSubscriptions?.length) return;
+    const targets = dedupePushSubscriptions(user?.pushSubscriptions || []);
+    if (!targets.length) return;
 
     const body = JSON.stringify(payload);
     const dead = [];
 
-    await Promise.all(user.pushSubscriptions.map(async (sub, idx) => {
+    await Promise.all(targets.map(async (sub) => {
+      const idx = user.pushSubscriptions.findIndex((s) => s.endpoint === sub.endpoint);
+      if (idx < 0) return;
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys },

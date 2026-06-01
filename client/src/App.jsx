@@ -215,7 +215,9 @@ function App() {
               <Route element={<PageRoute page="todo" />}>
                 <Route path="/todo" element={<TodoPage />} />
               </Route>
-              <Route path="/components" element={<ComponentsShowcase />} />
+              <Route element={<PageRoute page="admin_data" />}>
+                <Route path="/components" element={<ComponentsShowcase />} />
+              </Route>
               <Route element={<PageRoute page="equipment" />}>
                 <Route path="/equipment" element={<EquipmentPage />} />
               </Route>

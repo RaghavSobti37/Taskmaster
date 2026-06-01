@@ -11,6 +11,7 @@ const { startOfDay, endOfDay, isBefore } = require('date-fns');
 const { getAllowedCategoriesForUser } = require('../utils/notificationCategories');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
+const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
 const logger = require('../utils/logger');
 
 router.get('/status-counts', protect, async (req, res) => {
@@ -115,21 +116,20 @@ router.post('/push/subscribe', protect, async (req, res) => {
       return res.status(400).json({ error: 'Invalid subscription' });
     }
 
+    const user = await User.findById(req.user._id).select('pushSubscriptions');
+    const newSub = {
+      endpoint,
+      keys: { p256dh, auth },
+      userAgent: req.headers['user-agent'] || '',
+      createdAt: new Date(),
+    };
+    const pruned = prunePushSubscriptions(user?.pushSubscriptions || [], newSub);
+
     await User.findByIdAndUpdate(req.user._id, {
-      $pull: { pushSubscriptions: { endpoint } },
-    });
-    await User.findByIdAndUpdate(req.user._id, {
-      $push: {
-        pushSubscriptions: {
-          endpoint,
-          keys: { p256dh, auth },
-          userAgent: req.headers['user-agent'] || '',
-          createdAt: new Date(),
-        },
-      },
+      $set: { pushSubscriptions: pruned },
     });
 
-    res.json({ success: true });
+    res.json({ success: true, subscriptionCount: pruned.length });
   } catch (error) {
     logger.error('Push', 'Failed to save subscription', { error: error.message, userId: req.user?._id });
     res.status(500).json({ error: 'Failed to save subscription' });

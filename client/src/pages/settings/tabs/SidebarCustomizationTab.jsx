@@ -4,8 +4,12 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, LayoutTemplate } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import UnsavedChangesBar from '../components/UnsavedChangesBar';
+import { useAuth } from '../../../contexts/AuthContext';
+import { hasPageAccess } from '../../../utils/departmentPermissions';
+import { filterNavGroupsForUser } from '../../../utils/navPageAccess';
 
 export default function SidebarCustomizationTab() {
+  const { user } = useAuth();
   const [groups, setGroups] = useState([]);
   const [saving, setSaving] = useState(false);
   const [originalGroups, setOriginalGroups] = useState([]);
@@ -25,8 +29,8 @@ export default function SidebarCustomizationTab() {
         ...g,
         pages: (g.pages || []).sort((a, b) => a.order - b.order)
       }));
-      setGroups(sortedGroups);
-      setOriginalGroups(JSON.parse(JSON.stringify(sortedGroups)));
+      setGroups(filterNavGroupsForUser(sortedGroups, user, hasPageAccess));
+      setOriginalGroups(JSON.parse(JSON.stringify(filterNavGroupsForUser(sortedGroups, user, hasPageAccess))));
     } catch (error) {
       console.error('Error fetching preferences:', error);
     }
@@ -55,8 +59,8 @@ export default function SidebarCustomizationTab() {
         ...g,
         pages: (g.pages || []).sort((a, b) => a.order - b.order)
       }));
-      setGroups(sortedGroups);
-      setOriginalGroups(JSON.parse(JSON.stringify(sortedGroups)));
+      setGroups(filterNavGroupsForUser(sortedGroups, user, hasPageAccess));
+      setOriginalGroups(JSON.parse(JSON.stringify(filterNavGroupsForUser(sortedGroups, user, hasPageAccess))));
       window.location.reload();
     } catch (error) {
       console.error('Error resetting preferences:', error);

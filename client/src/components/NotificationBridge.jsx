@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useNotifications } from '../hooks/useTaskmasterQueries';
 import {
   sendNotification,
-  subscribeToPush,
+  initPushNotifications,
   resolveNotificationDeliveryMode,
   isPushPreferenceEnabled,
   hasActivePushSubscription,
@@ -12,10 +12,14 @@ const NotificationBridge = () => {
   const { data } = useNotifications();
   const seenRef = useRef(new Set());
   const initializedRef = useRef(false);
+  const pushInitDoneRef = useRef(!isPushPreferenceEnabled());
+  const pushInitPromiseRef = useRef(null);
 
   useEffect(() => {
-    if (!isPushPreferenceEnabled()) return;
-    subscribeToPush().catch(() => {});
+    if (pushInitDoneRef.current) return;
+    pushInitPromiseRef.current = initPushNotifications().finally(() => {
+      pushInitDoneRef.current = true;
+    });
   }, []);
 
   useEffect(() => {
@@ -25,6 +29,11 @@ const NotificationBridge = () => {
     let cancelled = false;
 
     (async () => {
+      if (!pushInitDoneRef.current && pushInitPromiseRef.current) {
+        await pushInitPromiseRef.current;
+      }
+      if (cancelled) return;
+
       if (!initializedRef.current) {
         notifications.forEach((n) => seenRef.current.add(n._id));
         initializedRef.current = true;

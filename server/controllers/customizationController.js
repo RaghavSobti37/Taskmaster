@@ -2,6 +2,47 @@ const DashboardPreset = require('../models/DashboardPreset');
 const NavbarPreference = require('../models/NavbarPreference');
 const { DEPARTMENT_PRESETS } = require('../models/DashboardPreset');
 const logger = require('../utils/logger');
+const { filterDashboardElements, canAccessComponent } = require('../utils/dashboardComponents');
+const { hasPageAccess } = require('../utils/pagePermissions');
+
+const NAV_PATH_ACCESS = {
+  '/dashboard': 'dashboard',
+  '/calendar': 'calendar',
+  '/todo': 'todo',
+  '/inbox': 'inbox',
+  '/projects': 'projects',
+  '/assets': 'assets',
+  '/schedule': 'schedule',
+  '/logs': 'logs',
+  '/emails': 'emails',
+  '/equipment': 'equipment',
+  '/contacts': 'contacts',
+  '/subscriptions': 'subscriptions',
+  '/attendance': 'attendance',
+  '/leads': 'leads',
+  '/followups': 'followups',
+  '/bookings': 'bookings',
+  '/finance': 'finance',
+  '/announcements': 'announcements',
+  '/ops-logs': 'ops_logs',
+  '/artists': 'artists',
+  '/admin/users': 'admin_users',
+  '/admin': 'admin_data',
+  '/admin/exly-campaigns': 'admin_exly',
+  '/admin/scripts': 'admin_scripts',
+  '/admin/gamification': 'admin_gamification',
+  '/admin/qa': 'admin_data',
+};
+
+const filterNavbarGroupsForUser = (groups, user) => (groups || [])
+  .map((group) => ({
+    ...group,
+    pages: (group.pages || []).filter((page) => {
+      const key = NAV_PATH_ACCESS[normalizeNavPath(page.path)];
+      return !key || hasPageAccess(user, key);
+    }),
+  }))
+  .filter((group) => group.id !== 'admin' || group.pages.length > 0);
 
 const LEGACY_NAV_PATHS = {
   '/workspace/emails': '/emails',
@@ -92,7 +133,11 @@ exports.getDashboardPreset = async (req, res, next) => {
       });
     }
 
-    res.json(preset);
+    const presetObj = preset.toObject ? preset.toObject() : preset;
+    res.json({
+      ...presetObj,
+      elements: filterDashboardElements(presetObj.elements, req.user),
+    });
   } catch (error) {
     logger.error('Dashboard', 'Error fetching dashboard preset', { error: error.message });
     next(error);
@@ -126,6 +171,9 @@ exports.saveDashboardPreset = async (req, res, next) => {
     for (const element of elements) {
       if (!validComponentIds.includes(element.componentId)) {
         return res.status(400).json({ error: `Invalid component: ${element.componentId}` });
+      }
+      if (!canAccessComponent(element.componentId, req.user)) {
+        return res.status(403).json({ error: `Not authorized for component: ${element.componentId}` });
       }
       if (!['1', '2', '3', '4'].includes(String(element.size))) {
         return res.status(400).json({ error: `Invalid size: ${element.size}` });
@@ -282,7 +330,10 @@ exports.getNavbarPreferences = async (req, res, next) => {
 
     if (preferences?.groups?.length) {
       preferences = preferences.toObject ? preferences.toObject() : { ...preferences };
-      preferences.groups = mergeNavbarWithDefaults(preferences.groups);
+      preferences.groups = filterNavbarGroupsForUser(
+        mergeNavbarWithDefaults(preferences.groups),
+        req.user
+      );
     }
 
     res.json(preferences);
@@ -303,23 +354,26 @@ exports.saveNavbarPreferences = async (req, res, next) => {
     }
 
     // Validate and sort
-    const sortedGroups = groups
-      .map((group, idx) => ({
-        id: group.id,
-        title: group.title,
-        order: idx + 1,
-        visible: group.visible !== false,
-        isCustom: group.isCustom || false,
-        pages: (group.pages || [])
-          .map((page, pIdx) => ({
-            path: page.path,
-            label: page.label,
-            order: pIdx + 1,
-            visible: page.visible !== false
-          }))
-          .sort((a, b) => a.order - b.order)
-      }))
-      .sort((a, b) => a.order - b.order);
+    const sortedGroups = filterNavbarGroupsForUser(
+      groups
+        .map((group, idx) => ({
+          id: group.id,
+          title: group.title,
+          order: idx + 1,
+          visible: group.visible !== false,
+          isCustom: group.isCustom || false,
+          pages: (group.pages || [])
+            .map((page, pIdx) => ({
+              path: page.path,
+              label: page.label,
+              order: pIdx + 1,
+              visible: page.visible !== false
+            }))
+            .sort((a, b) => a.order - b.order)
+        }))
+        .sort((a, b) => a.order - b.order),
+      req.user
+    );
 
     const preferences = await NavbarPreference.findOneAndUpdate(
       { userId },
@@ -351,7 +405,9 @@ exports.resetNavbarToDefaults = async (req, res, next) => {
       { new: true, upsert: true }
     );
 
-    res.json(preferences);
+    const response = preferences.toObject ? preferences.toObject() : preferences;
+    response.groups = filterNavbarGroupsForUser(response.groups, req.user);
+    res.json(response);
   } catch (error) {
     logger.error('Navbar', 'Error resetting navbar', { error: error.message });
     next(error);

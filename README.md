@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.43-126d5e?style=flat-square" alt="Version 1.7.43" />
+  <img src="https://img.shields.io/badge/version-1.7.44-126d5e?style=flat-square" alt="Version 1.7.44" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -135,6 +135,25 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Page:** `/office/subscriptions` — CRUD table with search, modal forms, and assignee linking.
 * **API:** `/api/subscriptions` — list, create, update; delete restricted to ops/admin.
 * **Reminders:** Render cron (`CoreKnot-subscription-reminders`) runs daily via `runSubscriptionReminders.js` to notify assignees before due dates.
+
+### 🔔 Inbox & Web Push Notifications
+
+* **Tri-channel delivery:** In-app inbox, optional email, and Web Push (VAPID) via the service worker (`sw.js`).
+* **Single OS toast per event:** Push subscription pruning (`server/utils/pushSubscriptions.js`), send-time dedupe, service-worker tag guards, and client-side `localStorage` + `BroadcastChannel` dedupe prevent duplicate system notifications on phone and laptop.
+* **Polling fallback:** When push is unavailable, `NotificationBridge` shows OS toasts only after push init completes — never alongside an active push subscription.
+
+### 📅 Attendance & Time Tracking
+
+* **Independent mark-in / mark-out:** Self-service and admin flows treat check-in and check-out as separate inputs; server no longer blocks checkout without check-in.
+* **Split admin modals:** Team matrix opens dedicated Morning Check-In and Evening Check-Out modals (not one combined panel).
+* **Visual states:** Approved (locked) cells use blue tint; pending present cells stay emerald.
+* **Default work mode:** Admin Mode Override dropdown defaults to **Office** (self check-in still auto-detects via GPS/IP).
+
+### 🔐 Admin Access Hardening
+
+* **Department-based admin:** `isAdminUser()` checks department slug/preset `admin` — not legacy `user.role`.
+* **UI leaks fixed:** Dashboard widgets, sidebar customization, daily logs `?user=`, `/components`, and `/attendance/all` are hidden or redirected for non-admin/ops users.
+* **API guards:** QA routes, HolySheet bulk fetch, log cross-user reads, and attendance reset require admin; dashboard/nav customization filters admin-only entries on save.
 
 ### 🛡️ Local Development Safeguards
 
@@ -341,6 +360,11 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 
 ## 🚀 Production Migration Sequence
 
+### v1.7.44 - Notifications, Attendance UX & Admin Access
+
+- **Double OS notifications:** Prune push subscriptions on subscribe; dedupe send targets by OS+browser bucket; SW `getNotifications` guard; `NotificationBridge` awaits push init; cross-tab dedupe via `localStorage` + `BroadcastChannel` (`pushSubscriptions.js`, `notifications.js`, `sw.js`).
+- **Attendance:** Independent mark-in/out (UI + server); split admin check-in/check-out modals; blue locked cells; Office default in admin Mode Override dropdown.
+- **Admin hardening:** Filter dashboard widgets and sidebar prefs; scope daily logs; protect QA/HolySheet/logs/attendance-reset APIs; redirect non-ops from `/attendance/all` (`navPageAccess.js`, `dashboardComponents.js`).
 
 ### v1.7.43 - Admin Workspace Colors & Hex Picker
 

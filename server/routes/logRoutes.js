@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const GamificationService = require('../services/gamificationService');
@@ -11,9 +11,16 @@ router.get('/', protect, async (req, res) => {
   try {
     const { userId, action, lastId, limit = 50, startDate, endDate, origin, status, targetId } = req.query;
     const filter = {};
-    
+    const isAdmin = isAdminUser(req.user);
+    const selfId = req.user._id.toString();
+
     if (userId && userId !== 'undefined' && userId !== 'null' && userId !== 'all') {
-      filter.$or = [{ userId: userId }, { actorId: userId }];
+      if (!isAdmin && userId !== selfId) {
+        return res.status(403).json({ error: 'Not authorized to view other users\' logs' });
+      }
+      filter.$or = [{ userId }, { actorId: userId }];
+    } else if (!isAdmin) {
+      filter.$or = [{ userId: req.user._id }, { actorId: req.user._id }];
     }
     if (action) filter.action = action;
     if (origin) filter.origin = origin;
@@ -42,7 +49,7 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-router.get('/bug-report', protect, async (req, res) => {
+router.get('/bug-report', protect, admin, async (req, res) => {
   try {
     const discoveredBugs = await Log.find({ origin: 'QA_AGENT_TEST', status: 'BUG_DETECTED' })
       .sort({ timestamp: -1 })
@@ -63,7 +70,7 @@ router.get('/bug-report', protect, async (req, res) => {
   }
 });
 
-router.post('/run-qa', protect, async (req, res) => {
+router.post('/run-qa', protect, admin, async (req, res) => {
   try {
     const tests = [
       {

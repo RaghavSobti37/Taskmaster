@@ -11,18 +11,25 @@ self.addEventListener('push', (event) => {
     payload = { ...payload, ...event.data.json() };
   } catch (e) {}
 
+  const tag = payload.notificationId || payload.actionUrl || 'coreknot-notification';
+
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: NOTIFICATION_ICON,
-      badge: NOTIFICATION_ICON,
-      tag: payload.notificationId || payload.actionUrl || 'coreknot-notification',
-      renotify: false,
-      data: {
-        actionUrl: payload.actionUrl || '/inbox',
-        notificationId: payload.notificationId || null,
-      },
-    })
+    (async () => {
+      const existing = await self.registration.getNotifications({ tag });
+      if (existing.length) return;
+
+      await self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: NOTIFICATION_ICON,
+        badge: NOTIFICATION_ICON,
+        tag,
+        renotify: false,
+        data: {
+          actionUrl: payload.actionUrl || '/inbox',
+          notificationId: payload.notificationId || null,
+        },
+      });
+    })()
   );
 });
 

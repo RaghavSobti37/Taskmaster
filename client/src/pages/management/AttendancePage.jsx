@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown } from '../../components/ui';
@@ -49,7 +49,7 @@ const preserveTimeRecord = (record) => {
   if (!record?.manualTimestamp) return undefined;
   return {
     manualTimestamp: record.manualTimestamp,
-    workMode: record.workMode || 'wfh',
+    workMode: record.workMode || 'office',
     verificationMethod: record.verificationMethod || 'MANUAL',
     isApproved: !!record.isApproved,
     ...(record.systemTimestamp ? { systemTimestamp: record.systemTimestamp } : {}),
@@ -130,12 +130,21 @@ const AttendancePage = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const [showTeamOverview, setShowTeamOverview] = useState(() => location.pathname.endsWith('/all'));
+  const [showTeamOverview, setShowTeamOverview] = useState(() => (
+    location.pathname.endsWith('/all') && isOpsUser(user)
+  ));
+
+  useEffect(() => {
+    if (!canEdit && location.pathname.endsWith('/all')) {
+      setShowTeamOverview(false);
+      navigate('/attendance', { replace: true });
+    }
+  }, [canEdit, location.pathname, navigate]);
   const [isLocating, setIsLocating] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.DAILY);
   const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
-  const [editInForm, setEditInForm] = useState({ inTime: '', inMode: 'wfh' });
-  const [editOutForm, setEditOutForm] = useState({ outTime: '', outMode: 'wfh' });
+  const [editInForm, setEditInForm] = useState({ inTime: '', inMode: 'office' });
+  const [editOutForm, setEditOutForm] = useState({ outTime: '', outMode: 'office' });
 
   const today = useMemo(() => {
     const value = new Date();
@@ -225,14 +234,14 @@ const AttendancePage = () => {
       setEditOutCell(cell);
       setEditOutForm({
         outTime: entry?.outTimeRecord?.manualTimestamp || '',
-        outMode: entry?.outTimeRecord?.workMode || 'wfh',
+        outMode: entry?.outTimeRecord?.workMode || 'office',
       });
       setEditInCell(null);
     } else {
       setEditInCell(cell);
       setEditInForm({
         inTime: entry?.inTimeRecord?.manualTimestamp || '',
-        inMode: entry?.inTimeRecord?.workMode || 'wfh',
+        inMode: entry?.inTimeRecord?.workMode || 'office',
       });
       setEditOutCell(null);
     }

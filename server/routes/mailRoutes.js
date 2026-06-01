@@ -869,7 +869,7 @@ router.delete('/templates/:name', protect, async (req, res) => {
 });
 
 // --- HOLYSHEET BULK FETCH ---
-router.get('/holysheet/all', protect, async (req, res) => {
+router.get('/holysheet/all', protect, admin, async (req, res) => {
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {

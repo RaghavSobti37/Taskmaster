@@ -325,7 +325,7 @@ router.post('/', async (req, res) => {
         message: doc.message?.slice(0, 200) || 'New announcement',
         category: 'announcement',
         type: 'alert',
-        actionUrl: '/management/announcements',
+        actionUrl: '/announcements',
         actorId: req.user._id,
         iconType: 'system',
         sendEmail: false

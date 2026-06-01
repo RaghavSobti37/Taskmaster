@@ -33,7 +33,7 @@ const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueL
                 return row?.date ? format(parseISO(row.date), 'MMM d, yyyy') : label;
               }}
             />
-            <Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={2} dot={false} name={dataKey} />
+            <Line type="monotone" dataKey={dataKey} stroke={stroke} strokeWidth={2} dot={false} name={valueLabel} />
           </LineChart>
         </ResponsiveContainer>
       )}

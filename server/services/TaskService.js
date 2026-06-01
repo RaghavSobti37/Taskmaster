@@ -3,7 +3,6 @@ const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
 const Log = require('../models/Log');
-const { scheduleRollup } = require('../utils/rollup');
 const logActivity = require('../utils/activityLogger');
 const { applyPriorityDueDate } = require('../../shared/taskPriorityDates');
 const { getProjectRoleForUser } = require('../../shared/projectRoles');
@@ -18,10 +17,8 @@ const {
   normalizeId: rulesNormalizeId,
 } = require('../../shared/taskReviewRules');
 const { queueGamificationEvent } = require('./backgroundQueue');
-const { createNotification } = require('./notificationDispatcher');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
 const { isAdminUser } = require('../utils/departmentPermissions');
-const logger = require('../utils/logger');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
@@ -204,6 +201,7 @@ exports.getTasks = async (filter) => {
 };
 
 exports.updateTask = async (taskId, updates, user, session) => {
+  const pendingNotifications = [];
   const existing = await Task.findById(taskId).session(session).populate('assignees');
   if (!existing) throw new Error('Task not found');
 
@@ -311,8 +309,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
+  let rollupMeta = null;
+
   if (task) {
-    await scheduleRollup(task.projectId, task.phaseId, session);
+    if (task.projectId) {
+      rollupMeta = { projectId: task.projectId, phaseId: task.phaseId || null };
+    }
     await logActivity(user._id, 'UPDATE_TASK', task._id, 'Task', { title: task.title, status: task.status }, session);
 
     if (dueDateChanged) {
@@ -323,22 +325,18 @@ exports.updateTask = async (taskId, updates, user, session) => {
       const mine = getAssignmentForUser(assignments, user._id);
       const reviewerId = assignmentAssignerId(mine);
       if (reviewerId && reviewerId !== user._id.toString()) {
-        try {
-          await createNotification({
-            recipientId: reviewerId,
-            title: 'Review Required',
-            message: `${user.name} marked "${task.title}" complete — review required.`,
-            category: 'review',
-            type: 'alert',
-            relatedTaskId: task._id,
-            relatedProjectId: task.projectId,
-            actionUrl: buildTaskActionUrl(task, { review: true }),
-            actorId: user._id,
-            iconType: 'user'
-          });
-        } catch (err) {
-          logger.error('Task', 'Review notification failed', { taskId: task._id, error: err.message });
-        }
+        pendingNotifications.push({
+          recipientId: reviewerId,
+          title: 'Review Required',
+          message: `${user.name} marked "${task.title}" complete — review required.`,
+          category: 'review',
+          type: 'alert',
+          relatedTaskId: task._id,
+          relatedProjectId: task.projectId,
+          actionUrl: buildTaskActionUrl(task, { review: true }),
+          actorId: user._id,
+          iconType: 'user',
+        });
       }
     }
 
@@ -347,21 +345,17 @@ exports.updateTask = async (taskId, updates, user, session) => {
       for (const a of assignments) {
         const assigneeId = assignmentUserId(a.userId);
         if (assigneeId && assigneeId !== user._id.toString()) {
-          try {
-            await createNotification({
-              recipientId: assigneeId,
-              title: 'Task Approved',
-              message: `"${task.title}" was approved and marked complete.`,
-              category: 'review',
-              relatedTaskId: task._id,
-              relatedProjectId: task.projectId,
-              actionUrl: buildTaskActionUrl(task),
-              actorId: user._id,
-              iconType: 'user'
-            });
-          } catch (err) {
-            logger.error('Task', 'Approval notification failed', { taskId: task._id, error: err.message });
-          }
+          pendingNotifications.push({
+            recipientId: assigneeId,
+            title: 'Task Approved',
+            message: `"${task.title}" was approved and marked complete.`,
+            category: 'review',
+            relatedTaskId: task._id,
+            relatedProjectId: task.projectId,
+            actionUrl: buildTaskActionUrl(task),
+            actorId: user._id,
+            iconType: 'user',
+          });
         }
       }
     }
@@ -370,22 +364,18 @@ exports.updateTask = async (taskId, updates, user, session) => {
       for (const a of assignments) {
         const assigneeId = assignmentUserId(a.userId);
         if (!assigneeId) continue;
-        try {
-          await createNotification({
-            recipientId: assigneeId,
-            title: 'Revision Required',
-            message: `${user.name} sent "${task.title}" back to In Progress.`,
-            category: 'review',
-            type: 'alert',
-            relatedTaskId: task._id,
-            relatedProjectId: task.projectId,
-            actionUrl: buildTaskActionUrl(task),
-            actorId: user._id,
-            iconType: 'user'
-          });
-        } catch (err) {
-          logger.error('Task', 'Rollback notification failed', { taskId: task._id, error: err.message });
-        }
+        pendingNotifications.push({
+          recipientId: assigneeId,
+          title: 'Revision Required',
+          message: `${user.name} sent "${task.title}" back to In Progress.`,
+          category: 'review',
+          type: 'alert',
+          relatedTaskId: task._id,
+          relatedProjectId: task.projectId,
+          actionUrl: buildTaskActionUrl(task),
+          actorId: user._id,
+          iconType: 'user',
+        });
       }
     }
 
@@ -400,7 +390,11 @@ exports.updateTask = async (taskId, updates, user, session) => {
     .populate('createdBy', 'name avatar')
     .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
 
-  return mapTaskDTO(populatedTask);
+  return {
+    taskDto: mapTaskDTO(populatedTask),
+    pendingNotifications,
+    rollupMeta,
+  };
 };
 
 exports.deleteTask = async (taskId, user, session) => {

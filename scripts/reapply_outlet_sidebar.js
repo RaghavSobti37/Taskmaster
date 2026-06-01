@@ -18,16 +18,16 @@ const pageConfigReplacement = `const PAGE_CONFIG = {
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
-  '/workspace/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
-  '/management/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
-  '/management/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
+  '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
+  '/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
+  '/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
   '/leads': { icon: UserPlus, label: 'Leads', accessKey: 'leads' },
   '/followups': { icon: PhoneCall, label: 'Followups', accessKey: 'followups' },
   '/bookings': { icon: CalendarCheck, label: 'Bookings', accessKey: 'bookings' },
   '/finance': { icon: CircleDollarSign, label: 'Finance', accessKey: 'finance' },
-  '/management/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
-  '/management/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
+  '/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
+  '/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
   '/artists': { icon: Mic2, label: 'Artists', accessKey: 'artists' },
   '/admin/users': { icon: Users, label: 'Users & Teams', accessKey: 'admin_users' },
   '/admin': { icon: Database, label: 'All Data', accessKey: 'admin_data', end: true },
@@ -52,10 +52,10 @@ const navBlockTargetEnd = `</nav>`;
 const navBlockReplacement = `<nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
           {(navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
             { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
-            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/workspace/emails'}] },
-            { id: 'office', title: 'Office', visible: true, pages: [{path: '/management/equipment'}, {path: '/management/contacts'}, {path: '/attendance'}] },
+            { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/emails'}] },
+            { id: 'office', title: 'Office', visible: true, pages: [{path: '/equipment'}, {path: '/contacts'}, {path: '/attendance'}] },
             { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
-            { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/management/announcements'}, {path: '/management/ops-logs'}, {path: '/artists'}] },
+            { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/announcements'}, {path: '/ops-logs'}, {path: '/artists'}] },
             { id: 'admin', title: 'Admin', visible: true, pages: [{path: '/admin/users'}, {path: '/admin'}, {path: '/admin/exly-campaigns'}, {path: '/admin/scripts'}, {path: '/admin/gamification'}] }
           ])
             .filter(group => group.visible)

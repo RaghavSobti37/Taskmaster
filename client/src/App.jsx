@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
@@ -57,6 +57,7 @@ const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
 const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView'));
 const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
 const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
+const WorkspaceSettings = lazyWithRetry(() => import('./pages/projects/WorkspaceSettings'));
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
 const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
@@ -93,11 +94,18 @@ const AttendancePage = lazyWithRetry(() => import('./pages/management/Attendance
 const AnnouncementsPage = lazyWithRetry(() => import('./pages/management/AnnouncementsPage'));
 const EquipmentPage = lazyWithRetry(() => import('./pages/management/EquipmentPage'));
 const ContactsPage = lazyWithRetry(() => import('./pages/management/ContactsPage'));
+const SubscriptionsPage = lazyWithRetry(() => import('./pages/office/SubscriptionsPage'));
 const SchedulePage = lazyWithRetry(() => import('./pages/schedule/SchedulePage'));
 const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
+
+const LegacyWorkspaceRedirect = () => {
+  const { name } = useParams();
+  return <Navigate to={`/workspaces/${encodeURIComponent(name || '')}`} replace />;
+};
+
 function App() {
   const { loading } = useAuth();
 
@@ -182,6 +190,8 @@ function App() {
               <Route element={<PageRoute page="projects" />}>
                 <Route path="/projects" element={<ProjectsView />} />
                 <Route path="/projects/new" element={<ProjectCreate />} />
+                <Route path="/workspaces/:name" element={<WorkspaceSettings />} />
+                <Route path="/projects/workspaces/:name" element={<LegacyWorkspaceRedirect />} />
                 <Route path="/projects/:id" element={<ProjectDetail />} />
               </Route>
               <Route element={<PageRoute page="calendar" />}>
@@ -207,11 +217,17 @@ function App() {
               </Route>
               <Route path="/components" element={<ComponentsShowcase />} />
               <Route element={<PageRoute page="equipment" />}>
-                <Route path="/management/equipment" element={<EquipmentPage />} />
+                <Route path="/equipment" element={<EquipmentPage />} />
               </Route>
               <Route element={<PageRoute page="contacts" />}>
-                <Route path="/management/contacts" element={<ContactsPage />} />
+                <Route path="/contacts" element={<ContactsPage />} />
               </Route>
+              <Route element={<PageRoute page="subscriptions" />}>
+                <Route path="/subscriptions" element={<SubscriptionsPage />} />
+              </Route>
+              <Route path="/management/equipment" element={<Navigate to="/equipment" replace />} />
+              <Route path="/management/contacts" element={<Navigate to="/contacts" replace />} />
+              <Route path="/office/subscriptions" element={<Navigate to="/subscriptions" replace />} />
               <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
               <Route element={<PageRoute page="assets" />}>
                 <Route path="/assets" element={<AssetsPage />} />
@@ -253,9 +269,11 @@ function App() {
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />
               </Route>
               <Route element={<PageRoute page="emails" />}>
-                <Route path="/workspace/emails" element={<EmailsPage />} />
-                <Route path="/workspace/emails/create" element={<CreateCampaignPage />} />
+                <Route path="/emails" element={<EmailsPage />} />
+                <Route path="/emails/create" element={<CreateCampaignPage />} />
               </Route>
+              <Route path="/workspace/emails" element={<Navigate to="/emails" replace />} />
+              <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
                 <Route path="/artists" element={<ArtistsCollection />} />
@@ -266,11 +284,13 @@ function App() {
                 <Route path="/finance" element={<FinancePage />} />
               </Route>
               <Route element={<PageRoute page="announcements" />}>
-                <Route path="/management/announcements" element={<AnnouncementsPage />} />
+                <Route path="/announcements" element={<AnnouncementsPage />} />
               </Route>
               <Route element={<PageRoute page="ops_logs" />}>
-                <Route path="/management/ops-logs" element={<SystemLogsPage />} />
+                <Route path="/ops-logs" element={<SystemLogsPage />} />
               </Route>
+              <Route path="/management/announcements" element={<Navigate to="/announcements" replace />} />
+              <Route path="/management/ops-logs" element={<Navigate to="/ops-logs" replace />} />
             </Route>
           </Route>
 

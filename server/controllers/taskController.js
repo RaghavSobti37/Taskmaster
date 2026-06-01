@@ -5,9 +5,55 @@ const TaskService = require('../services/TaskService');
 const { createNotification } = require('../services/notificationDispatcher');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { withTransactionRetry } = require('../utils/mongoTransaction');
+const { scheduleRollup } = require('../utils/rollup');
 const { broadcastRealtimeEvent } = require('../config/realtime');
-const { todayStart, todayEnd, getDateKey, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
-const { addDays } = require('date-fns');
+const { getDateKey, APP_TIMEZONE } = require('../utils/attendanceDate');
+
+const BUG_SEVERITIES = new Set(['critical', 'high', 'medium', 'low']);
+const TZ_OFFSET = APP_TIMEZONE === 'UTC' ? '+00:00' : '+05:30';
+
+const normalizeBugSeverity = (severity) => (
+  BUG_SEVERITIES.has(String(severity || '').toLowerCase()) ? String(severity).toLowerCase() : 'medium'
+);
+
+const istDateTime = (dateKey, hour, minute = 0) => {
+  const h = String(hour).padStart(2, '0');
+  const m = String(minute).padStart(2, '0');
+  return new Date(`${dateKey}T${h}:${m}:00${TZ_OFFSET}`);
+};
+
+const addDaysToDateKey = (dateKey, days) => {
+  const anchor = new Date(`${dateKey}T12:00:00${TZ_OFFSET}`);
+  anchor.setDate(anchor.getDate() + days);
+  return getDateKey(anchor);
+};
+
+const mapSeverityToPriority = (severity) => {
+  switch (severity) {
+    case 'critical':
+    case 'high':
+      return 'critical';
+    case 'medium':
+      return 'high';
+    case 'low':
+    default:
+      return 'medium';
+  }
+};
+
+const mapSeverityToScheduleSlot = (severity) => {
+  switch (severity) {
+    case 'critical':
+      return 'FULL';
+    case 'high':
+      return 'PM';
+    case 'medium':
+    case 'low':
+    default:
+      return 'AM';
+  }
+};
 
 const dispatchTaskNotifications = (payloads = []) => {
   for (const payload of payloads) {
@@ -197,10 +243,20 @@ exports.updateTask = async (req, res, next) => {
 
     const updates = pick(req.body, ALLOWED_UPDATE);
     let taskDto;
+    let pendingNotifications = [];
+    let rollupMeta = null;
 
-    await session.withTransaction(async () => {
-      taskDto = await TaskService.updateTask(req.params.id, updates, req.user, session);
+    await withTransactionRetry(session, async () => {
+      const result = await TaskService.updateTask(req.params.id, updates, req.user, session);
+      taskDto = result.taskDto;
+      pendingNotifications = result.pendingNotifications || [];
+      rollupMeta = result.rollupMeta || null;
     });
+
+    dispatchTaskNotifications(pendingNotifications);
+    if (rollupMeta?.projectId) {
+      scheduleRollup(rollupMeta.projectId, rollupMeta.phaseId);
+    }
 
     broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'update' });
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'UPDATE_TASK' });
@@ -238,54 +294,41 @@ exports.deleteTask = async (req, res, next) => {
   }
 };
 
-/** Calculate due date based on bug severity using IST timezone */
+/** Calculate due date based on bug severity using app timezone (default IST). */
 const calculateBugDueDate = (severity) => {
-  const today = startOfDayFromKey(getDateKey());
   const now = new Date();
-  
+  const todayKey = getDateKey(now);
+
   switch (severity) {
     case 'critical':
-      // Critical: NOW (same day, current time)
       return now;
-    
-    case 'high':
-      // High: TODAY 2:00 PM IST (14:00)
-      const todayPM = new Date(today);
-      todayPM.setHours(14, 0, 0, 0);
-      // If it's already past 2 PM, use tomorrow 2 PM
-      if (todayPM < now) {
-        const tomorrowStart = startOfDayFromKey(getDateKey(addDays(today, 1)));
-        const tomorrowPM = new Date(tomorrowStart);
-        tomorrowPM.setHours(14, 0, 0, 0);
-        return tomorrowPM;
+
+    case 'high': {
+      const todayPmDue = istDateTime(todayKey, 14, 0);
+      if (todayPmDue <= now) {
+        return istDateTime(addDaysToDateKey(todayKey, 1), 14, 0);
       }
-      return todayPM;
-    
+      return todayPmDue;
+    }
+
     case 'medium':
-      // Medium: TOMORROW 9:00 AM IST (09:00)
-      const tomorrow = addDays(today, 1);
-      const tomorrowAM = new Date(startOfDayFromKey(getDateKey(tomorrow)));
-      tomorrowAM.setHours(9, 0, 0, 0);
-      return tomorrowAM;
-    
+      return istDateTime(addDaysToDateKey(todayKey, 1), 9, 0);
+
     case 'low':
     default:
-      // Low: DAY AFTER TOMORROW 9:00 AM IST (09:00)
-      const dayAfter = addDays(today, 2);
-      const dayAfterAM = new Date(startOfDayFromKey(getDateKey(dayAfter)));
-      dayAfterAM.setHours(9, 0, 0, 0);
-      return dayAfterAM;
+      return istDateTime(addDaysToDateKey(todayKey, 2), 9, 0);
   }
 };
 
 exports.reportBug = async (req, res, next) => {
   const session = await mongoose.startSession();
   try {
-    const { page, title, description, severity } = req.body;
+    const { page, title, description, severity: rawSeverity } = req.body;
     if (!title?.trim()) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    const severity = normalizeBugSeverity(rawSeverity);
     let taskDto, pendingNotifications;
 
     await session.withTransaction(async () => {
@@ -312,14 +355,14 @@ exports.reportBug = async (req, res, next) => {
 
       const taskData = {
         title: `[BUG] ${title} (${page || 'General'})`,
-        description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity || 'medium'}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
+        description: `**Reported View/Page:** ${page || 'General'}\n**Severity:** ${severity}\n\n**Issue Details:**\n${details}\n\n*Reported by:* ${req.user.name} (${req.user.email})`,
         status: 'todo',
-        priority: severity === 'blocker' || severity === 'high' ? 'critical' : severity === 'medium' ? 'high' : 'medium',
+        priority: mapSeverityToPriority(severity),
         projectId: techProject._id,
         assignees: [raghavUser._id.toString()],
         createdBy: req.user._id,
         dueDate: calculateBugDueDate(severity),
-        scheduleSlot: severity === 'high' ? 'PM' : 'AM'
+        scheduleSlot: mapSeverityToScheduleSlot(severity)
       };
 
       const result = await TaskService.createTask(taskData, req.user, session);

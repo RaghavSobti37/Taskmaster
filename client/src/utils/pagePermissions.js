@@ -17,16 +17,17 @@ export const PAGE_GROUPS = [
       { key: 'assets', label: 'Assets', path: '/assets' },
       { key: 'schedule', label: 'Schedule', path: '/schedule' },
       { key: 'logs', label: 'Daily Logs', path: '/logs' },
-      { key: 'emails', label: 'Emails', path: '/workspace/emails' },
+      { key: 'emails', label: 'Emails', path: '/emails' },
     ],
   },
   {
     id: 'office',
     label: 'Office',
     pages: [
-      { key: 'equipment', label: 'Equipment', path: '/management/equipment' },
-      { key: 'contacts', label: 'Contacts', path: '/management/contacts' },
+      { key: 'equipment', label: 'Equipment', path: '/equipment' },
+      { key: 'contacts', label: 'Contacts', path: '/contacts' },
       { key: 'attendance', label: 'Attendance', path: '/attendance' },
+      { key: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
     ],
   },
   {
@@ -43,8 +44,8 @@ export const PAGE_GROUPS = [
     label: 'Management',
     pages: [
       { key: 'finance', label: 'Finance', path: '/finance' },
-      { key: 'announcements', label: 'Announcements', path: '/management/announcements' },
-      { key: 'ops_logs', label: 'Ops Logs', path: '/management/ops-logs' },
+      { key: 'announcements', label: 'Announcements', path: '/announcements' },
+      { key: 'ops_logs', label: 'Ops Logs', path: '/ops-logs' },
       { key: 'artists', label: 'Artists', path: '/artists' },
     ],
   },
@@ -67,7 +68,7 @@ export const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key
 export const BASE_PAGE_KEYS = [
   'dashboard', 'calendar', 'todo', 'inbox',
   'projects', 'assets', 'schedule', 'logs',
-  'equipment', 'contacts', 'attendance',
+  'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
 export const PRESET_PAGES = {

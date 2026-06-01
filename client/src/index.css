@@ -465,9 +465,22 @@ select option {
   --color-primary: var(--color-action-primary);
 }
 
+.dashboard-widget-grid {
+  gap: 0;
+  border-radius: var(--radius-atomic);
+  overflow: hidden;
+}
+
+.dashboard-widget-grid .dashboard-grid-item > * {
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  margin: -1px 0 0 -1px;
+}
+
 @media (min-width: 1024px) {
   .dashboard-grid-item {
-    grid-column-start: var(--lg-col);
+    grid-column: var(--lg-col) / span var(--lg-span, 1);
     grid-row-start: var(--lg-row);
   }
 }

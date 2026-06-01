@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.39-126d5e?style=flat-square" alt="Version 1.7.39" />
+  <img src="https://img.shields.io/badge/version-1.7.40-126d5e?style=flat-square" alt="Version 1.7.40" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -111,6 +111,25 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **API:** `PATCH /api/projects/:id/members/:userId/role` — restricted to project admin/manager or platform admin.
 * **Shared Logic:** Role rank and assignment permissions live in `shared/projectRoles.js` (consumed by both client and server).
 
+### 🏢 Workspace Settings
+
+* **Dedicated Route:** `/projects/workspaces/:name/settings` — manage workspace members, linked projects, and metadata from a single settings page.
+* **API:** `GET/PATCH /api/projects/workspaces/:name` with member add/remove and role assignment.
+* **UI:** `WorkspaceSettings.jsx` with department-aware role suggestions and workspace color theming.
+
+### 💳 Office Subscriptions
+
+* **Tracking:** SaaS, hosting, domain, and recurring vendor subscriptions with INR amounts, due dates, periodicity, and payment mode.
+* **Page:** `/office/subscriptions` — CRUD table with search, modal forms, and assignee linking.
+* **API:** `/api/subscriptions` — list, create, update; delete restricted to ops/admin.
+* **Reminders:** Render cron (`CoreKnot-subscription-reminders`) runs daily via `runSubscriptionReminders.js` to notify assignees before due dates.
+
+### 🛡️ Local Development Safeguards
+
+* **Env Templates:** `server/.env.example` and `client/.env.example` document required variables without secrets.
+* **Dev Guard:** `client/src/utils/devEnvGuard.js` warns in the browser console when `VITE_API_URL` points at a production host.
+* **Prod Sync Script:** `node server/scripts/syncProdToLocal.js --yes` copies production MongoDB → local (read-only on prod); see [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md).
+
 ---
 
 ## 🗂️ Directory Structure
@@ -172,9 +191,14 @@ cd ../client && npm install
 ```bash
 cd ../server
 cp .env.example .env
+
+cd ../client
+cp .env.example .env
 ```
 
-Open your newly created `.env` file and define your structural configurations. To spin up local hardware push alerts, generate unique cryptographic VAPID signatures:
+Open your newly created `.env` files and define your structural configurations. The client **must** use `VITE_API_URL=http://localhost:5000` so local UI writes to your local database, not production.
+
+To spin up local hardware push alerts, generate unique cryptographic VAPID signatures:
 
 ```bash
 npx web-push generate-vapid-keys
@@ -260,6 +284,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 ├── /crm          → Third-party contact capture engines and pipeline automations
 ├── /webhooks     → Public ingress (book-call, Exly, Meta, Resend) with queue-backed processing
 ├── /notifications→ Push delivery registries, system status counts, and message updates
+├── /subscriptions→ Office subscription CRUD and due-date reminder pipeline
 ├── /finance      → Multi-file processing, metadata index arrays, and document extractions
 └── /proxy        → Monitored proxy routing to YouTube, OpenAI, and HolySheet targets
 ```
@@ -299,6 +324,13 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.40 — Subscriptions, Workspace Settings & Dev Safeguards
+
+- Office **Subscriptions** module: model, CRUD API, `/office/subscriptions` page, and daily Render cron for due-date reminders.
+- **Workspace Settings** page and workspace member/project management API.
+- **Local dev safeguards:** `client/.env.example`, `server/.env.example`, `devEnvGuard.js` console warning for prod API URLs, `syncProdToLocal.js` one-shot prod→local DB copy.
+- Calendar event time handling, project list/create UX, equipment registry, and dashboard card refinements.
 
 ### v1.7.39 — Project Roles & Local DB Isolation
 

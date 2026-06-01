@@ -16,6 +16,12 @@ import {
   computeOfferingTotals
 } from '../../utils/exlyFormatters';
 
+const exlyChartTooltipFormatter = (value, name) => {
+  if (/revenue|rev/i.test(String(name))) return [formatInr(value), name];
+  if (/booking/i.test(String(name))) return [String(Math.round(Number(value))), name];
+  return [value, name];
+};
+
 const MetricBlock = ({ label, value, tone = 'default', title }) => {
   const toneClass = {
     mint: 'text-[var(--color-pastel-mint-text)]',
@@ -735,6 +741,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                           borderRadius: '8px'
                         }}
                         labelClassName="font-mono text-xs"
+                        formatter={exlyChartTooltipFormatter}
                       />
                       <Area type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#81C995" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2} />
                     </AreaChart>
@@ -795,6 +802,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                           borderRadius: '8px'
                         }}
                         labelClassName="font-mono text-xs"
+                        formatter={exlyChartTooltipFormatter}
                       />
                       <Area type="monotone" dataKey="bookings" name="Bookings Count" stroke="#FDD663" fillOpacity={1} fill="url(#colorBookings)" strokeWidth={2} />
                     </AreaChart>
@@ -1436,6 +1444,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                             fontSize: '10px',
                             borderRadius: '6px'
                           }}
+                          formatter={exlyChartTooltipFormatter}
                         />
                         <Area type="monotone" dataKey="revenue" name="Rev (INR)" stroke="#81C995" fillOpacity={1} fill="url(#colorCampRev)" strokeWidth={1.5} />
                       </AreaChart>
@@ -1480,6 +1489,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                             fontSize: '10px',
                             borderRadius: '6px'
                           }}
+                          formatter={exlyChartTooltipFormatter}
                         />
                         <Area type="monotone" dataKey="bookings" name="Bookings" stroke="#FDD663" fillOpacity={1} fill="url(#colorCampBooks)" strokeWidth={1.5} />
                       </AreaChart>

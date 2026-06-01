@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Plus, Briefcase, Search, Star, LayoutGrid, List, FolderPlus, Trash2
+  Plus, Briefcase, Search, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical
 } from 'lucide-react';
 import {
   Badge,
@@ -30,23 +30,38 @@ const WORKSPACE_COLORS = [
   '#ec4899', '#06b6d4', '#eab308', '#64748b', '#8b5cf6',
 ];
 
-const ProjectPreview = ({ project, accent, onNavigate, onToggleStar, isAdmin, onDragStart, onDragEnd, reviewCount = 0 }) => (
+const ProjectPreview = ({
+  project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd, reviewCount = 0,
+}) => (
   <div
-    draggable={true}
-    onDragStart={(e) => {
-      e.dataTransfer.setData('application/project-id', project._id);
-      e.dataTransfer.effectAllowed = 'move';
-      onDragStart?.(project._id);
-    }}
-    onDragEnd={() => onDragEnd?.()}
-    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'} cursor-grab active:cursor-grabbing`}
+    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'}`}
     onClick={() => onNavigate(project._id)}
   >
     <div className="flex items-start justify-between gap-2 mb-2">
-      <h4 className="text-[10px] font-black uppercase tracking-tight truncate group-hover/preview:text-[var(--color-action-primary)] transition-colors">
+      <h4 className="text-[10px] font-black uppercase tracking-tight truncate group-hover/preview:text-[var(--color-action-primary)] transition-colors min-w-0 flex-1">
         {project.name?.toUpperCase()}
       </h4>
       <div className="flex items-center gap-1 shrink-0">
+        {canMove && (
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('application/project-id', project._id);
+              e.dataTransfer.effectAllowed = 'move';
+              onDragStart?.(project._id);
+            }}
+            onDragEnd={(e) => {
+              e.stopPropagation();
+              onDragEnd?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] opacity-60 group-hover/preview:opacity-100 transition-all"
+            title="Drag to move workspace"
+          >
+            <GripVertical size={14} />
+          </div>
+        )}
         {reviewCount > 0 && (
           <span
             className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
@@ -91,6 +106,7 @@ const ProjectsView = () => {
   const { user } = useAuth();
   const isAdmin = isAdminUser(user);
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
   const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
@@ -98,6 +114,13 @@ const ProjectsView = () => {
 
   const reviewCountByProject = useMemo(() => countReviewTasksByProject(reviewTasks), [reviewTasks]);
   const totalReviewCount = reviewTasks.length;
+
+  useEffect(() => {
+    if (location.state?.openCreateWorkspace) {
+      setCreateModalOpen(true);
+      navigate('/projects', { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const loading = loadingProjects || loadingWorkspaces;
 
@@ -110,6 +133,15 @@ const ProjectsView = () => {
       console.error('Failed to toggle star:', err);
     }
   }, [queryClient]);
+
+  const canMoveProject = useCallback((project) => {
+    if (isAdmin) return true;
+    const uid = user?._id?.toString();
+    if (!uid) return false;
+    const ownerId = (project.owner?._id || project.owner)?.toString?.();
+    if (ownerId === uid) return true;
+    return (project.members || []).some((m) => (m?._id || m)?.toString?.() === uid);
+  }, [isAdmin, user]);
 
   const filteredProjects = useMemo(() => {
     let result = projects.filter(p => {
@@ -157,7 +189,15 @@ const ProjectsView = () => {
     });
 
     return Object.entries(groups)
-      .map(([name, items]) => ({ name, color: getWorkspaceColor(name), projects: items }))
+      .map(([name, items]) => {
+        const ws = workspaces.find((w) => w.name.toUpperCase() === name);
+        return {
+          name,
+          color: getWorkspaceColor(name),
+          projects: items,
+          defaultMemberCount: ws?.defaultMembers?.length || 0,
+        };
+      })
       .sort((a, b) => {
         if (a.name === 'GENERAL') return 1;
         if (b.name === 'GENERAL') return -1;
@@ -167,16 +207,19 @@ const ProjectsView = () => {
 
   const moveProjectToWorkspace = useCallback(async (projectId, workspaceName) => {
     if (!projectId || !workspaceName) return;
+    const project = projects.find((p) => p._id === projectId);
+    if (project && !canMoveProject(project)) return;
     try {
       await axios.put(`/api/projects/${projectId}`, { workspace: workspaceName });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     } catch (err) {
       console.error('Failed to move project:', err);
+      alert(err.response?.data?.error || 'Failed to move project');
     } finally {
       setDraggingProjectId(null);
       setDragOverWorkspace(null);
     }
-  }, [queryClient]);
+  }, [queryClient, projects, canMoveProject]);
 
   const handleWorkspaceDrop = useCallback((e, workspaceName) => {
     e.preventDefault();
@@ -225,6 +268,33 @@ const ProjectsView = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PageHeader
+          title="Projects"
+          subtitle="Organize work by workspace — drag the grip icon on any project to move it."
+          icon={Briefcase}
+          className="!mb-0"
+        />
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center gap-1.5"
+          >
+            <FolderPlus size={14} />
+            Add Workspace
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => navigate('/projects/new')}
+            className="flex items-center gap-1.5"
+          >
+            <Plus size={14} />
+            New Project
+          </Button>
+        </div>
+      </div>
 
       <Card className="flex flex-col border-none shadow-none bg-transparent">
         <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9.5rem_10rem] lg:items-center lg:gap-2">
@@ -294,7 +364,7 @@ const ProjectsView = () => {
         {draggingProjectId && (
           <div className="mb-4 p-3 rounded-xl border-2 border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)] mb-2">
-              Drop project into workspace
+              Drop project into a workspace
             </p>
             <div className="flex flex-wrap gap-2">
               {workspaceGroups.map((group) => (
@@ -371,14 +441,32 @@ const ProjectsView = () => {
                       }}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/workspaces/${encodeURIComponent(group.name)}`)}
+                          className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity"
+                        >
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
                           <h3 className="text-sm font-black uppercase tracking-tight truncate">{group.name}</h3>
-                        </div>
+                        </button>
                         <div className="flex items-center gap-2 shrink-0">
                           <Badge variant="info" className="!py-0 !px-2 !text-[8px]">
                             {group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'}
                           </Badge>
+                          {group.defaultMemberCount > 0 && (
+                            <Badge variant="todo" className="!py-0 !px-2 !text-[8px]">
+                              {group.defaultMemberCount} default{group.defaultMemberCount === 1 ? '' : 's'}
+                            </Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="!p-1"
+                            onClick={() => navigate(`/workspaces/${encodeURIComponent(group.name)}`)}
+                            title="Workspace settings"
+                          >
+                            <Settings size={14} />
+                          </Button>
                           {isAdmin && group.projects.length === 0 && !['TSC ACADEMY', 'TSC ARTISTS', 'TSC FILMS', 'TSC TECH', 'GENERAL'].includes(group.name) && (
                             <Button
                               variant="ghost"
@@ -412,6 +500,7 @@ const ProjectsView = () => {
                               project={project}
                               accent={group.color}
                               reviewCount={reviewCountByProject[String(project._id)] || 0}
+                              canMove={canMoveProject(project)}
                               onNavigate={(id) => navigate(`/projects/${id}`)}
                               onToggleStar={toggleStar}
                               onDragStart={setDraggingProjectId}
@@ -449,6 +538,7 @@ const ProjectsView = () => {
               {filteredProjects.map((project, index) => {
                 const accent = getWorkspaceColor(project.workspace);
                 const reviewCount = reviewCountByProject[String(project._id)] || 0;
+                const canMove = canMoveProject(project);
                 return (
                   <motion.div
                     key={project._id}
@@ -459,16 +549,9 @@ const ProjectsView = () => {
                     transition={{ duration: 0.2, delay: index * 0.04 }}
                   >
                     <Card
-                      className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-grab active:cursor-grabbing ${draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
+                      className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
                         } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''}`}
                       style={{ borderColor: project.starred ? accent : undefined }}
-                      draggable={true}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('application/project-id', project._id);
-                        e.dataTransfer.effectAllowed = 'move';
-                        setDraggingProjectId(project._id);
-                      }}
-                      onDragEnd={() => setDraggingProjectId(null)}
                       onClick={() => navigate(`/projects/${project._id}`)}
                     >
                       <div className="h-1 w-full" style={{ backgroundColor: accent }} />
@@ -487,6 +570,26 @@ const ProjectsView = () => {
                             </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0 ml-1">
+                            {canMove && (
+                              <div
+                                draggable
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  e.dataTransfer.setData('application/project-id', project._id);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  setDraggingProjectId(project._id);
+                                }}
+                                onDragEnd={(e) => {
+                                  e.stopPropagation();
+                                  setDraggingProjectId(null);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="cursor-grab active:cursor-grabbing p-1 rounded-lg hover:bg-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] opacity-60 group-hover:opacity-100 transition-all"
+                                title="Drag to move workspace"
+                              >
+                                <GripVertical size={14} />
+                              </div>
+                            )}
                             {reviewCount > 0 && (
                               <span
                                 className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"

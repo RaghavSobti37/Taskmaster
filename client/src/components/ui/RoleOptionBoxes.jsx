@@ -18,7 +18,7 @@ const RoleOptionBoxes = ({
         {label}
       </span>
     )}
-    <div className="grid grid-cols-3 gap-2 w-full">
+    <div className="grid grid-cols-3 gap-1.5 w-full min-w-0">
       {options.map((opt) => {
         const selected = value === opt.value;
         return (
@@ -28,14 +28,14 @@ const RoleOptionBoxes = ({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={`
-              min-h-[2.5rem] px-2 py-2 rounded-[var(--radius-atomic)] border text-center text-xs font-bold uppercase tracking-wide transition-all
+              min-w-0 min-h-[2.25rem] px-1 py-1.5 rounded-[var(--radius-atomic)] border text-center text-[10px] font-bold uppercase tracking-wide transition-all overflow-hidden
               ${selected
                 ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] shadow-sm'
                 : 'border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-action-primary)]/50 hover:text-[var(--color-text-primary)]'}
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
           >
-            {opt.label}
+            <span className="block truncate">{opt.label}</span>
           </button>
         );
       })}

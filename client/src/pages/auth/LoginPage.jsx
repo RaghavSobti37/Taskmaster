@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
+import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -16,7 +17,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [remainingAttempts, setRemainingAttempts] = useState(null);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -37,21 +37,17 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await axios.post('/api/auth/login', { email, password }, AXIOS_SKIP_TOAST);
       login(res.data.token, res.data);
       navigate('/');
     } catch (err) {
-      const remaining = err.response?.headers?.['x-ratelimit-remaining'] || err.response?.headers?.['ratelimit-remaining'];
-      
-      if (err.response?.status === 429) {
-        setError('Too many authentication attempts, please try again after 15 minutes.');
-        setRemainingAttempts(0);
-      } else {
-        if (remaining !== undefined) {
-          setRemainingAttempts(Number(remaining));
-        }
-        setError(err.response?.data?.error || 'Authentication failed. Please check your credentials.');
-      }
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        (err.response?.status === 429
+          ? 'Too many login attempts. Please try again later.'
+          : 'Authentication failed. Please check your credentials.');
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -79,16 +75,9 @@ const LoginPage = () => {
         </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-            {remainingAttempts !== null && remainingAttempts > 0 && (
-              <span className="text-xs text-red-500 font-semibold ml-6">
-                {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining before a 15-minute timeout.
-              </span>
-            )}
+          <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>{error}</span>
           </div>
         )}
 

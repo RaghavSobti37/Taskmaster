@@ -30,6 +30,7 @@ import {
   Trophy,
   Activity,
   ChevronDown,
+  CreditCard,
   X,
   Moon,
   Sun,
@@ -65,6 +66,26 @@ const useWindowSize = () => {
   return windowSize;
 };
 
+const LEGACY_PAGE_PATHS = {
+  '/workspace/emails': '/emails',
+  '/workspace/emails/create': '/emails/create',
+  '/management/equipment': '/equipment',
+  '/management/contacts': '/contacts',
+  '/office/subscriptions': '/subscriptions',
+  '/management/announcements': '/announcements',
+  '/management/ops-logs': '/ops-logs',
+  '/management/attendance': '/attendance',
+  '/projects/workspaces': '/workspaces',
+};
+
+const normalizeNavPagePath = (path) => {
+  if (!path) return path;
+  if (LEGACY_PAGE_PATHS[path]) return LEGACY_PAGE_PATHS[path];
+  const workspaceMatch = path.match(/^\/projects\/workspaces\/(.+)$/);
+  if (workspaceMatch) return `/workspaces/${workspaceMatch[1]}`;
+  return path;
+};
+
 const PAGE_CONFIG = {
   '/dashboard': { icon: LayoutDashboard, label: 'Dashboard', accessKey: 'dashboard' },
   '/calendar': { icon: CalendarDays, label: 'Calendar', accessKey: 'calendar' },
@@ -74,16 +95,17 @@ const PAGE_CONFIG = {
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
-  '/workspace/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
-  '/management/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
-  '/management/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
+  '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
+  '/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
+  '/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
+  '/subscriptions': { icon: CreditCard, label: 'Subscriptions', accessKey: 'subscriptions' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
   '/leads': { icon: UserPlus, label: 'Leads', accessKey: 'leads' },
   '/followups': { icon: PhoneCall, label: 'Followups', accessKey: 'followups' },
   '/bookings': { icon: CalendarCheck, label: 'Bookings', accessKey: 'bookings' },
   '/finance': { icon: CircleDollarSign, label: 'Finance', accessKey: 'finance' },
-  '/management/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
-  '/management/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
+  '/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
+  '/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
   '/artists': { icon: Mic2, label: 'Artists', accessKey: 'artists' },
   '/admin/users': { icon: Users, label: 'Users & Teams', accessKey: 'admin_users' },
   '/admin': { icon: Database, label: 'All Data', accessKey: 'admin_data', end: true },
@@ -332,10 +354,10 @@ const OutletSidebar = () => {
           {(() => {
             const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
               { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }] },
-              { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/workspace/emails' }] },
-              { id: 'office', title: 'Office', visible: true, pages: [{ path: '/management/equipment' }, { path: '/management/contacts' }, { path: '/attendance' }] },
+              { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/emails' }] },
+              { id: 'office', title: 'Office', visible: true, pages: [{ path: '/equipment' }, { path: '/contacts' }, { path: '/attendance' }, { path: '/subscriptions' }] },
               { id: 'crm', title: 'CRM', visible: true, pages: [{ path: '/leads' }, { path: '/followups' }, { path: '/bookings' }] },
-              { id: 'management', title: 'Management', visible: true, pages: [{ path: '/finance' }, { path: '/management/announcements' }, { path: '/management/ops-logs' }, { path: '/artists' }] },
+              { id: 'management', title: 'Management', visible: true, pages: [{ path: '/finance' }, { path: '/announcements' }, { path: '/ops-logs' }, { path: '/artists' }] },
               { id: 'admin', title: 'Admin', visible: true, pages: [{ path: '/admin/users' }, { path: '/admin' }, { path: '/admin/exly-campaigns' }, { path: '/admin/scripts' }, { path: '/admin/gamification' }, { path: '/admin/qa' }] }
             ];
 
@@ -348,7 +370,26 @@ const OutletSidebar = () => {
               }
             }
 
-            return rawGroups;
+            const hasSubscriptions = rawGroups.some((g) =>
+              (g.pages || []).some((p) => normalizeNavPagePath(p.path) === '/subscriptions')
+            );
+            if (!hasSubscriptions) {
+              const officeGroup = rawGroups.find((g) => g.id === 'office');
+              if (officeGroup) {
+                officeGroup.pages = [
+                  ...(officeGroup.pages || []),
+                  { path: '/subscriptions', label: 'Subscriptions', visible: true },
+                ];
+              }
+            }
+
+            return rawGroups.map((group) => ({
+              ...group,
+              pages: (group.pages || []).map((page) => ({
+                ...page,
+                path: normalizeNavPagePath(page.path),
+              })),
+            }));
           })()
             .filter(group => group.visible)
             .sort((a, b) => (a.order || 0) - (b.order || 0))

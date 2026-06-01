@@ -223,28 +223,18 @@ const Dashboard = () => {
     .filter(el => el.visible);
 
   return (
-    <PageContainer className="!py-4 !space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="w-5 h-5 text-blue-500" />
-          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-primary)]">Raghav</h1>
-        </div>
-      </div>
-
+    <PageContainer className="!py-4">
       <PinBoardProvider>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 grid-flow-row-dense auto-rows-max">
+        <div className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 grid-flow-row-dense auto-rows-max">
           {elementsToRender
             .sort((a, b) => (a.row - b.row) || (a.col - b.col))
             .map((el) => {
-              const colSpanClass = el.size === '4' ? 'lg:col-span-4' :
-                el.size === '3' ? 'lg:col-span-3' :
-                  el.size === '2' ? 'lg:col-span-2' :
-                    'lg:col-span-1';
+              const span = parseInt(el.size, 10) || 1;
               return (
                 <div
                   key={el.componentId}
-                  className={`flex flex-col gap-4 h-full dashboard-grid-item ${colSpanClass}`}
-                  style={{ '--lg-col': el.col, '--lg-row': el.row }}
+                  className="flex flex-col h-full min-h-0 dashboard-grid-item"
+                  style={{ '--lg-col': el.col, '--lg-row': el.row, '--lg-span': span }}
                 >
                   {renderComponent(el.componentId)}
                 </div>

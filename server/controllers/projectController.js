@@ -23,6 +23,61 @@ const PALETTE = [
   '#ff4081','#7c4dff','#64dd17','#ffab00','#00e5ff',
 ];
 
+const VALID_PROJECT_ROLES = ['admin', 'manager', 'member'];
+
+const memberIdStr = (value) => (value?._id || value)?.toString?.() || '';
+
+function mergeMemberEntry(members, memberRoles, userId, role) {
+  const uid = memberIdStr(userId);
+  if (!uid) return;
+  const normalizedRole = normalizeStoredProjectRole(role);
+  if (!members.some((m) => memberIdStr(m) === uid)) {
+    members.push(userId);
+    memberRoles.push({ user: userId, role: normalizedRole });
+    return;
+  }
+  const idx = memberRoles.findIndex((r) => memberIdStr(r.user) === uid);
+  if (idx >= 0) memberRoles[idx].role = normalizedRole;
+  else memberRoles.push({ user: userId, role: normalizedRole });
+}
+
+async function syncWorkspaceDefaultsToProjects(workspaceName, defaultMembers, previousDefaults = []) {
+  const projects = await Project.find({ workspace: workspaceName.toUpperCase() });
+  const newMap = new Map(
+    (defaultMembers || []).map((d) => [memberIdStr(d.user), normalizeStoredProjectRole(d.role)])
+  );
+  const prevMap = new Map(
+    (previousDefaults || []).map((d) => [memberIdStr(d.user), normalizeStoredProjectRole(d.role)])
+  );
+
+  for (const project of projects) {
+    let changed = false;
+    const ownerId = memberIdStr(project.owner);
+
+    for (const [userId, role] of newMap) {
+      if (userId === ownerId) continue;
+      const wasMember = project.members.some((m) => memberIdStr(m) === userId);
+      const roleEntry = (project.memberRoles || []).find((r) => memberIdStr(r.user) === userId);
+      const hadRole = roleEntry ? normalizeStoredProjectRole(roleEntry.role) : null;
+      mergeMemberEntry(project.members, project.memberRoles || [], userId, role);
+      if (!wasMember || hadRole !== role) changed = true;
+    }
+
+    for (const userId of prevMap.keys()) {
+      if (newMap.has(userId) || userId === ownerId) continue;
+      const beforeLen = project.members.length;
+      project.members = project.members.filter((m) => memberIdStr(m) !== userId);
+      project.memberRoles = (project.memberRoles || []).filter((r) => memberIdStr(r.user) !== userId);
+      if (project.members.length !== beforeLen) changed = true;
+    }
+
+    if (changed) {
+      await project.save();
+      broadcastRealtimeEvent('projects', 'project_change', { projectId: project._id, action: 'update' });
+    }
+  }
+}
+
 async function pickDistinctColor() {
   try {
     const existing = await Project.find({}, 'color').lean();
@@ -38,36 +93,32 @@ async function pickDistinctColor() {
 exports.createProject = async (req, res) => {
   try {
     const { name, description, tags, members, color, starred, workspace } = req.body;
-    
-    const providedMembers = members?.map(m => m.userId) || [];
-    
-    const userDocs = await User.find({ _id: { $in: providedMembers } }).populate('departmentId');
-    const userRoleMap = new Map();
-    userDocs.forEach(u => {
-      const slug = u.departmentId?.slug || '';
-      if (slug === 'admin') userRoleMap.set(u._id.toString(), 'admin');
-      else if (['sales', 'artist-management'].includes(slug)) userRoleMap.set(u._id.toString(), 'manager');
-      else userRoleMap.set(u._id.toString(), 'member');
+    const workspaceName = workspace ? workspace.toUpperCase().trim() : 'GENERAL';
+
+    const providedMembers = [];
+    const providedRoles = [];
+
+    (members || []).forEach((m) => {
+      if (!m?.userId) return;
+      mergeMemberEntry(providedMembers, providedRoles, m.userId, m.role || 'member');
     });
 
-    const providedRoles = members?.map(m => ({
-      user: m.userId,
-      role: userRoleMap.get(m.userId) || 'member'
-    })) || [];
+    const ws = await Workspace.findOne({ name: workspaceName }).lean();
+    (ws?.defaultMembers || []).forEach((entry) => {
+      mergeMemberEntry(providedMembers, providedRoles, entry.user, entry.role || 'member');
+    });
 
     // Ensure owner is always in members and roles
-    if (!providedMembers.includes(req.user._id.toString())) {
-      providedMembers.push(req.user._id);
-      providedRoles.push({ user: req.user._id, role: 'admin' });
+    if (!providedMembers.some((m) => memberIdStr(m) === req.user._id.toString())) {
+      mergeMemberEntry(providedMembers, providedRoles, req.user._id, 'admin');
     }
 
     // Ensure redacted-staff@example.com is automatically added to all new projects
     const deepank = await User.findOne({ email: 'redacted-staff@example.com' });
     if (deepank) {
       const deepankIdStr = deepank._id.toString();
-      if (!providedMembers.some(m => m.toString() === deepankIdStr)) {
-        providedMembers.push(deepank._id);
-        providedRoles.push({ user: deepank._id, role: 'artist_management' });
+      if (!providedMembers.some((m) => memberIdStr(m) === deepankIdStr)) {
+        mergeMemberEntry(providedMembers, providedRoles, deepank._id, 'artist_management');
       }
     }
 
@@ -78,7 +129,7 @@ exports.createProject = async (req, res) => {
       description,
       tags,
       color: assignedColor,
-      workspace: workspace ? workspace.toUpperCase().trim() : 'General',
+      workspace: workspaceName,
       starred: starred || false,
       outletId: req.user.currentOutletId || 'main',
       owner: req.user._id,
@@ -203,9 +254,25 @@ exports.updateProject = async (req, res) => {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    // SECURITY: Only owner or admin can update
-    if (!isAdminUser(req.user) && project.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Not authorized to update this project' });
+    const isOwner = project.owner.toString() === req.user._id.toString();
+    const isAdmin = isAdminUser(req.user);
+    const isMember = project.members.some((m) => m.toString() === req.user._id.toString());
+    const canFullUpdate = isAdmin || isOwner;
+
+    if (!canFullUpdate) {
+      if (!isMember) {
+        return res.status(403).json({ error: 'Not authorized to update this project' });
+      }
+      if (req.body.workspace === undefined) {
+        return res.status(403).json({ error: 'Not authorized to update this project' });
+      }
+      const updated = await Project.findByIdAndUpdate(
+        req.params.id,
+        { workspace: req.body.workspace.toUpperCase().trim() },
+        { new: true, runValidators: true }
+      );
+      broadcastRealtimeEvent('projects', 'project_change', { projectId: updated._id, action: 'update' });
+      return res.json(updated);
     }
 
     // SECURITY: Whitelist allowed update fields (prevent owner/member injection)
@@ -383,13 +450,91 @@ exports.reorderWorkspaces = async (req, res) => {
   }
 };
 
+exports.getWorkspaceByName = async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || '').toUpperCase().trim();
+    if (!name) return res.status(400).json({ error: 'Workspace name is required' });
+
+    const workspace = await Workspace.findOne({ name })
+      .populate('defaultMembers.user', 'name email avatar teams departmentId')
+      .lean();
+
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+
+    const projects = await Project.find({ workspace: name })
+      .select('name status progress totalTasks starred createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ ...workspace, projects });
+  } catch (error) {
+    logger.error('projectController', 'Get Workspace', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to fetch workspace' });
+  }
+};
+
+exports.updateWorkspace = async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name || '').toUpperCase().trim();
+    if (!name) return res.status(400).json({ error: 'Workspace name is required' });
+
+    const workspace = await Workspace.findOne({ name });
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+
+    const canManage = isAdminUser(req.user)
+      || workspace.createdBy?.toString() === req.user._id.toString();
+    if (!canManage) {
+      return res.status(403).json({ error: 'Not authorized to update this workspace' });
+    }
+
+    const previousDefaults = (workspace.defaultMembers || []).map((d) => ({
+      user: d.user,
+      role: d.role,
+    }));
+
+    const { color, defaultMembers } = req.body;
+
+    if (color) workspace.color = color;
+
+    if (Array.isArray(defaultMembers)) {
+      const sanitized = defaultMembers
+        .filter((entry) => entry?.userId || entry?.user)
+        .map((entry) => {
+          const userId = entry.userId || entry.user;
+          const role = entry.role || 'member';
+          if (!VALID_PROJECT_ROLES.includes(role)) {
+            throw Object.assign(new Error('Invalid project role in default members'), { status: 400 });
+          }
+          return { user: userId, role };
+        });
+      workspace.defaultMembers = sanitized;
+    }
+
+    await workspace.save();
+    await syncWorkspaceDefaultsToProjects(name, workspace.defaultMembers, previousDefaults);
+
+    const updated = await Workspace.findOne({ name })
+      .populate('defaultMembers.user', 'name email avatar teams departmentId')
+      .lean();
+
+    res.json(updated);
+  } catch (error) {
+    if (error.status === 400) {
+      return res.status(400).json({ error: error.message });
+    }
+    logger.error('projectController', 'Update Workspace', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to update workspace' });
+  }
+};
+
 exports.deleteWorkspace = async (req, res) => {
   try {
     if (!isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Only admins can delete workspaces' });
     }
 
-    const { name } = req.params;
+    const { name: rawName } = req.params;
+    const name = decodeURIComponent(rawName || '').toUpperCase().trim();
     if (!name) {
       return res.status(400).json({ error: 'Workspace name is required' });
     }
@@ -472,8 +617,6 @@ exports.addMember = async (req, res) => {
     res.status(500).json({ error: 'Failed to add member' });
   }
 };
-
-const VALID_PROJECT_ROLES = ['admin', 'manager', 'member'];
 
 function getCallerProjectRole(req, project) {
   if (isAdminUser(req.user)) return 'admin';

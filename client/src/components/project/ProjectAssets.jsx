@@ -13,6 +13,7 @@ import {
   ASSET_TYPE_FORM_OPTIONS,
 } from '../assets/assetTypeIcons';
 import { format } from 'date-fns';
+import { assetMatchesSearch } from '../../utils/assetSearch';
 
 const openAssetLink = (link) => {
   const trimmed = link?.trim();
@@ -86,9 +87,8 @@ const ProjectAssets = ({ projectId }) => {
     }
   };
 
-  const filteredAssets = assets.filter(a => 
-    a.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAssets = assets.filter((a) => assetMatchesSearch(a, searchTerm));
+  const hasSearch = searchTerm.trim().length > 0;
 
   if (loading) return <div className="p-20 text-center animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Loading Assets...</div>;
 
@@ -130,7 +130,9 @@ const ProjectAssets = ({ projectId }) => {
                 <tr>
                   <td colSpan="4" className="px-8 py-20 text-center opacity-30">
                     <Database size={48} className="mx-auto mb-4" />
-                    <p className="text-[10px] font-black uppercase">No assets for this project</p>
+                    <p className="text-[10px] font-black uppercase">
+                      {hasSearch && assets.length > 0 ? 'No assets match your search' : 'No assets for this project'}
+                    </p>
                   </td>
                 </tr>
               ) : filteredAssets.map(asset => {

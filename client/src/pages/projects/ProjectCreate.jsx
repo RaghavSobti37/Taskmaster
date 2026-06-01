@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, UserPlus, X, Briefcase, Tag, Hash } from 'lucide-react';
+import { Plus, UserPlus, X, Briefcase } from 'lucide-react';
 import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
-import { PROJECT_ROLE_OPTIONS } from '../../constants/taskOptions';
+import WorkspaceSelect from '../../components/forms/WorkspaceSelect';
 import { suggestProjectRole } from '../../utils/taskText';
 import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPermissions';
 
@@ -14,23 +14,12 @@ const ProjectCreate = () => {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
-  const [tags, setTags] = useState([]);
-  const [customTag, setCustomTag] = useState('');
   const [users, setUsers] = useState([]);
   const [members, setMembers] = useState([]);
+  const [workspace, setWorkspace] = useState('GENERAL');
   const [loading, setLoading] = useState(false);
+  const prevDefaultIdsRef = useRef([]);
   const navigate = useNavigate();
-
-  const predefinedTags = [
-    { value: 'PR', label: 'PR' },
-    { value: 'Editing', label: 'Editing' },
-    { value: 'Marketing', label: 'Marketing' },
-    { value: 'Sales', label: 'Sales' },
-    { value: 'Design', label: 'Design' },
-    { value: 'HR', label: 'HR' },
-    { value: 'Finance', label: 'Finance' },
-    { value: 'Tech', label: 'Tech' },
-  ];
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -43,6 +32,40 @@ const ProjectCreate = () => {
     };
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (!workspace) return;
+    const loadWorkspaceDefaults = async () => {
+      try {
+        const { data } = await axios.get(`/api/projects/workspaces/${encodeURIComponent(workspace)}`);
+        const defaults = (data.defaultMembers || []).map((entry) => {
+          const u = entry.user;
+          const userId = u?._id || entry.user;
+          return {
+            userId,
+            name: u?.name || 'Unknown',
+            profileRole: getDepartmentSlug(u || {}),
+            projectRole: entry.role || 'member',
+            avatar: u?.avatar,
+          };
+        }).filter((d) => d.userId);
+
+        const defaultIds = defaults.map((d) => d.userId);
+        setMembers((prev) => {
+          const withoutOldDefaults = prev.filter((m) => !prevDefaultIdsRef.current.includes(m.userId));
+          const merged = [...withoutOldDefaults];
+          defaults.forEach((d) => {
+            if (!merged.find((m) => m.userId === d.userId)) merged.push(d);
+          });
+          return merged;
+        });
+        prevDefaultIdsRef.current = defaultIds;
+      } catch (err) {
+        console.error('Error loading workspace defaults:', err);
+      }
+    };
+    loadWorkspaceDefaults();
+  }, [workspace]);
 
   const addMember = (userId) => {
     const user = users.find(u => u._id === userId);
@@ -65,17 +88,6 @@ const ProjectCreate = () => {
     setMembers(members.filter(m => m.userId !== userId));
   };
 
-  const handleAddCustomTag = (e) => {
-    if (e.key === 'Enter' && customTag.trim()) {
-      e.preventDefault();
-      const trimmed = customTag.trim();
-      if (!tags.includes(trimmed)) {
-        setTags([...tags, trimmed]);
-      }
-      setCustomTag('');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -83,7 +95,7 @@ const ProjectCreate = () => {
       await axios.post('/api/projects', { 
         name, 
         description: desc, 
-        tags: tags,
+        workspace,
         members: members.map(m => ({ userId: m.userId, role: m.projectRole }))
       });
       await queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -94,16 +106,6 @@ const ProjectCreate = () => {
       setLoading(false);
     }
   };
-
-  const dropdownTagOptions = React.useMemo(() => {
-    const opts = [...predefinedTags];
-    tags.forEach(tag => {
-      if (!opts.some(o => o.value === tag)) {
-        opts.push({ value: tag, label: tag });
-      }
-    });
-    return opts;
-  }, [tags]);
 
   const formatOptionLabel = ({ value, label }) => {
     const user = users.find(u => u._id === value);
@@ -144,22 +146,10 @@ const ProjectCreate = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Tags</label>
-              <NexusDropdown
-                multi
-                options={dropdownTagOptions}
-                value={tags}
-                onChange={setTags}
-                placeholder="Select tags..."
-                searchable
-              />
-              <input 
-                type="text"
-                value={customTag}
-                onChange={e => setCustomTag(e.target.value)}
-                onKeyDown={handleAddCustomTag}
-                placeholder="+ Add Custom Tag"
-                className="w-full mt-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-transparent border-b border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)] outline-none"
+              <WorkspaceSelect
+                value={workspace}
+                onChange={setWorkspace}
+                label="Workspace"
               />
             </div>
           </div>
@@ -178,8 +168,14 @@ const ProjectCreate = () => {
         <Card className="p-8 space-y-6">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Team Members</label>
-            <Badge variant="todo">{members.length} ADDED</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="info">{workspace}</Badge>
+              <Badge variant="todo">{members.length} ADDED</Badge>
+            </div>
           </div>
+          <p className="text-xs text-[var(--color-text-muted)] -mt-2">
+            Default members from the selected workspace are pre-filled. You can add or remove before creating.
+          </p>
 
           <div className="space-y-6">
             <NexusDropdown
@@ -203,7 +199,7 @@ const ProjectCreate = () => {
                       <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.2em]">Profile: {m.profileRole || 'user'}</p>
                     </div>
                   </div>
-                  <div className="w-full sm:w-48 shrink-0">
+                  <div className="w-full sm:min-w-[14rem] sm:max-w-[16rem] shrink-0">
                     <RoleOptionBoxes
                       value={m.projectRole}
                       onChange={(role) => updateMemberRole(m.userId, role)}

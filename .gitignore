@@ -1,4 +1,9 @@
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.*.example
+client/dist
 node_modules
 *.csv
 server/uploads/

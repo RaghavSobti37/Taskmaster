@@ -43,13 +43,23 @@ router.get('/', async (req, res) => {
     const userProjectIds = await getUserProjectIds(req.user._id);
 
     const eventQuery = {
-      date: { $gte: startDate, $lte: endDate },
-      $or: [
-        { visibility: 'public' },
-        { createdBy: req.user._id },
-        ...(userProjectIds.length
-          ? [{ visibility: 'project', projectId: { $in: userProjectIds } }]
-          : []),
+      $and: [
+        {
+          $or: [
+            { visibility: 'public' },
+            { createdBy: req.user._id },
+            ...(userProjectIds.length
+              ? [{ visibility: 'project', projectId: { $in: userProjectIds } }]
+              : []),
+          ],
+        },
+        {
+          $or: [
+            { endDate: { $gte: startDate }, date: { $lte: endDate } },
+            { endDate: null, date: { $gte: startDate, $lte: endDate } },
+            { endDate: { $exists: false }, date: { $gte: startDate, $lte: endDate } },
+          ],
+        },
       ],
     };
 
@@ -58,7 +68,12 @@ router.get('/', async (req, res) => {
       .populate('projectId', 'name workspace')
       .lean();
 
-    const calendarOnly = events.map((ev) => ({ ...ev, type: 'event', dueDate: ev.date }));
+    const calendarOnly = events.map((ev) => ({
+      ...ev,
+      type: 'event',
+      dueDate: ev.date,
+      endDate: ev.endDate || ev.date,
+    }));
 
     const assignedTaskIds = await getAssignedTaskIds(req.user._id);
     const taskOr = [{ createdBy: req.user._id }];
@@ -100,17 +115,41 @@ router.get('/', async (req, res) => {
 // POST /api/calendar — create new calendar event
 router.post('/', async (req, res) => {
   try {
-    const { title, description, date, time, visibility, eventType, workspace, projectId } = req.body;
+    const {
+      title,
+      description,
+      date,
+      time,
+      startDate,
+      startTime,
+      endDate: endDateInput,
+      endTime,
+      visibility,
+      eventType,
+      workspace,
+      projectId,
+    } = req.body;
 
-    if (!title || !date) {
-      return res.status(400).json({ error: 'Title and date are required' });
+    const dateOnly = startDate || date;
+    const timeOnly = startTime || time || '09:00';
+
+    if (!title || !dateOnly) {
+      return res.status(400).json({ error: 'Title and start date are required' });
     }
 
     if (visibility === 'project' && !projectId) {
       return res.status(400).json({ error: 'Project is required for project-related visibility' });
     }
 
-    const eventDateTime = buildEventDateTime(date, time);
+    const eventDateTime = buildEventDateTime(dateOnly, timeOnly);
+    const endDateOnly = endDateInput || dateOnly;
+    const endTimeOnly = endTime || timeOnly;
+    let eventEndDateTime = buildEventDateTime(endDateOnly, endTimeOnly);
+
+    if (eventEndDateTime < eventDateTime) {
+      return res.status(400).json({ error: 'End date/time must be after start date/time' });
+    }
+
     const inputDate = new Date(eventDateTime);
     inputDate.setHours(0, 0, 0, 0);
     const today = new Date();
@@ -124,8 +163,9 @@ router.post('/', async (req, res) => {
       title,
       description: description || '',
       date: eventDateTime,
+      endDate: eventEndDateTime,
       eventType: eventType || 'event',
-      visibility: visibility || 'private',
+      visibility: visibility || 'public',
       workspace: visibility === 'project' ? workspace || 'General' : '',
       projectId: visibility === 'project' ? projectId : null,
       createdBy: req.user._id,
@@ -178,7 +218,7 @@ router.post('/', async (req, res) => {
 
     await GamificationService.awardActionXp(req.user._id, 'CALENDAR_EVENT_CREATED', {
       eventId: event._id,
-      visibility: visibility || 'private',
+      visibility: visibility || 'public',
     });
 
     res.status(201).json(populatedObj);
@@ -197,9 +237,20 @@ router.put('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this event' });
     }
 
-    const { title, description, date, time, visibility, eventType, workspace, projectId } = req.body;
-    if (date) {
-      const eventDateTime = buildEventDateTime(date, time);
+    const { title, description, date, time, startDate, startTime, endDate: endDateInput, endTime, visibility, eventType, workspace, projectId } = req.body;
+    const dateOnly = startDate || date;
+    const timeOnly = startTime || time;
+
+    if (dateOnly) {
+      const eventDateTime = buildEventDateTime(dateOnly, timeOnly || '09:00');
+      const endDateOnly = endDateInput || dateOnly;
+      const endTimeOnly = endTime || timeOnly || '09:00';
+      const eventEndDateTime = buildEventDateTime(endDateOnly, endTimeOnly);
+
+      if (eventEndDateTime < eventDateTime) {
+        return res.status(400).json({ error: 'End date/time must be after start date/time' });
+      }
+
       const inputDate = new Date(eventDateTime);
       inputDate.setHours(0, 0, 0, 0);
       const today = new Date();
@@ -208,6 +259,7 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: 'Cannot set calendar events to past dates' });
       }
       event.date = eventDateTime;
+      event.endDate = eventEndDateTime;
     }
     if (title) event.title = title;
     if (description !== undefined) event.description = description;

@@ -29,7 +29,7 @@ export default function CampaignDetails() {
   const { campaignId: routeCampaignId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const backToEmails = location.state?.from || '/workspace/emails';
+  const backToEmails = location.state?.from || '/emails';
   const { data: campaign, isLoading, error, refetch } = useCampaignDetails(routeCampaignId);
   const { data: profiles = [] } = useMailProfiles();
   const resendMutation = useResendCampaign();
@@ -324,7 +324,10 @@ export default function CampaignDetails() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
                 <XAxis dataKey="timeStr" stroke="#94a3b8" fontSize={10} />
                 <YAxis stroke="#94a3b8" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }}
+                  formatter={(value, name) => [String(value), name]}
+                />
                 <Line type="monotone" dataKey="opens" stroke="#38bdf8" strokeWidth={3} dot={{ r: 4, fill: '#38bdf8' }} name="Opens" />
                 <Line type="monotone" dataKey="clicks" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} name="Clicks" />
               </LineChart>
@@ -347,7 +350,10 @@ export default function CampaignDetails() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
                   <XAxis type="number" stroke="#94a3b8" fontSize={10} />
                   <YAxis dataKey="city" type="category" stroke="#94a3b8" fontSize={10} width={80} tick={{ fontSize: 10 }} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }} />
+                  <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }}
+                  formatter={(value, name) => [String(value), name]}
+                />
                   <Bar dataKey="opens" fill="#38bdf8" radius={[0, 6, 6, 0]} name="Opens" />
                   <Bar dataKey="clicks" fill="#10b981" radius={[0, 6, 6, 0]} name="Clicks" />
                 </BarChart>

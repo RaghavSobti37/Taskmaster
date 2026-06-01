@@ -10,7 +10,9 @@ const {
   addMember,
   updateMemberRole,
   getWorkspaces,
+  getWorkspaceByName,
   createWorkspace,
+  updateWorkspace,
   reorderWorkspaces,
   deleteWorkspace,
   getProjectWorkload,
@@ -31,6 +33,8 @@ router.route('/workspaces')
   .put(reorderWorkspaces);
 
 router.route('/workspaces/:name')
+  .get(getWorkspaceByName)
+  .patch(updateWorkspace)
   .delete(deleteWorkspace);
 
 router.route('/:id')

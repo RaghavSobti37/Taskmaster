@@ -1,8 +1,49 @@
 const DashboardPreset = require('../models/DashboardPreset');
 const NavbarPreference = require('../models/NavbarPreference');
 const { DEPARTMENT_PRESETS } = require('../models/DashboardPreset');
-const { DEFAULT_NAVBAR_ORDER } = require('../models/NavbarPreference');
 const logger = require('../utils/logger');
+
+const LEGACY_NAV_PATHS = {
+  '/office/subscriptions': '/subscriptions',
+  '/management/equipment': '/equipment',
+  '/management/contacts': '/contacts',
+  '/management/attendance': '/attendance',
+};
+
+const normalizeNavPath = (path) => LEGACY_NAV_PATHS[path] || path;
+
+/** Add default pages missing from saved navbar groups (e.g. new features after user saved prefs). */
+const mergeNavbarWithDefaults = (userGroups) => {
+  if (!Array.isArray(userGroups) || userGroups.length === 0) {
+    return NavbarPreference.DEFAULT_NAVBAR_GROUPS;
+  }
+
+  const merged = userGroups.map((group) => ({
+    ...group,
+    pages: (group.pages || []).map((page) => ({
+      ...page,
+      path: normalizeNavPath(page.path),
+    })),
+  }));
+
+  for (const defaultGroup of NavbarPreference.DEFAULT_NAVBAR_GROUPS) {
+    let userGroup = merged.find((g) => g.id === defaultGroup.id);
+    if (!userGroup) {
+      merged.push({ ...defaultGroup, pages: [...defaultGroup.pages] });
+      continue;
+    }
+    const existingPaths = new Set((userGroup.pages || []).map((p) => normalizeNavPath(p.path)));
+    for (const defaultPage of defaultGroup.pages) {
+      const path = normalizeNavPath(defaultPage.path);
+      if (!existingPaths.has(path)) {
+        userGroup.pages = [...(userGroup.pages || []), { ...defaultPage, path, visible: true }];
+        existingPaths.add(path);
+      }
+    }
+  }
+
+  return merged;
+};
 
 // ============ DASHBOARD ENDPOINTS ============
 
@@ -220,6 +261,11 @@ exports.getNavbarPreferences = async (req, res, next) => {
         },
         { new: true }
       );
+    }
+
+    if (preferences?.groups?.length) {
+      preferences = preferences.toObject ? preferences.toObject() : { ...preferences };
+      preferences.groups = mergeNavbarWithDefaults(preferences.groups);
     }
 
     res.json(preferences);

@@ -24,6 +24,7 @@ import {
   PageSkeleton, ModalShell, ModalHeader, ModalBody, SearchInput, TablePagination
 } from '../../components/ui';
 import { format } from 'date-fns';
+import { assetMatchesSearch } from '../../utils/assetSearch';
 
 const EMPTY_ASSET_FORM = { projectIds: [], name: '', link: '', type: 'other', notes: '' };
 
@@ -201,8 +202,7 @@ const AssetsPage = () => {
 
   const filteredAssets = useMemo(() => {
     let list = assets.filter((a) => {
-      const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase())
-        || (a.projectIds || []).some((p) => (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = assetMatchesSearch(a, searchTerm, { includeProjectNames: true });
       const matchesProject = projectFilter === 'all'
         || (a.projectIds || []).some((p) => String(p._id || p) === String(projectFilter));
       const matchesType = typeFilter === 'all' || getDetectedType(a) === typeFilter;

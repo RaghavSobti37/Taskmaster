@@ -57,7 +57,7 @@ const DEFAULT_NAVBAR_GROUPS = [
       { path: '/assets', label: 'Assets', order: 2, visible: true },
       { path: '/schedule', label: 'Schedule', order: 3, visible: true },
       { path: '/logs', label: 'Daily Logs', order: 4, visible: true },
-      { path: '/workspace/emails', label: 'Emails', order: 5, visible: true }
+      { path: '/emails', label: 'Emails', order: 5, visible: true }
     ]
   },
   {
@@ -67,9 +67,10 @@ const DEFAULT_NAVBAR_GROUPS = [
     visible: true,
     isCustom: false,
     pages: [
-      { path: '/management/equipment', label: 'Equipment', order: 1, visible: true },
-      { path: '/management/contacts', label: 'Contacts', order: 2, visible: true },
-      { path: '/attendance', label: 'Attendance', order: 3, visible: true }
+      { path: '/equipment', label: 'Equipment', order: 1, visible: true },
+      { path: '/contacts', label: 'Contacts', order: 2, visible: true },
+      { path: '/attendance', label: 'Attendance', order: 3, visible: true },
+      { path: '/subscriptions', label: 'Subscriptions', order: 4, visible: true }
     ]
   },
   {
@@ -92,8 +93,8 @@ const DEFAULT_NAVBAR_GROUPS = [
     isCustom: false,
     pages: [
       { path: '/finance', label: 'Finance', order: 1, visible: true },
-      { path: '/management/announcements', label: 'Announcements', order: 2, visible: true },
-      { path: '/management/ops-logs', label: 'Ops Logs', order: 3, visible: true },
+      { path: '/announcements', label: 'Announcements', order: 2, visible: true },
+      { path: '/ops-logs', label: 'Ops Logs', order: 3, visible: true },
       { path: '/artists', label: 'Artists', order: 4, visible: true }
     ]
   },

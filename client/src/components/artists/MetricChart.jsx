@@ -6,10 +6,11 @@ import { formatNumber } from '../../config/integrations.config';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
+  const metricName = payload[0].name || 'Followers';
   return (
     <div className="bg-[#111827]/95 backdrop-blur-md border border-[#1F2937] text-white p-3 rounded-xl shadow-2xl text-xs">
       <p className="font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className="font-bold text-emerald-400">{formatNumber(payload[0].value)}</p>
+      <p className="font-bold text-emerald-400">{metricName}: {formatNumber(payload[0].value)}</p>
     </div>
   );
 };

@@ -14,6 +14,14 @@ import ReportMembersTable from './reports/ReportMembersTable';
 
 const PIE_COLORS = ['#10b981', '#f59e0b', '#6366f1', '#94a3b8'];
 
+const formatAttendanceTooltip = (value) => {
+  if (value === 1) return ['Present', 'Attendance'];
+  if (value === 0.5) return ['Half Day', 'Attendance'];
+  return ['Absent', 'Attendance'];
+};
+
+const formatTaskPieTooltip = (value, name) => [`${value} tasks`, name];
+
 const fetchAggregatedReport = async (url, month) => {
   const { data } = await axios.get(url, { params: { month } });
   return data;
@@ -104,8 +112,8 @@ const AggregatedReportContent = ({ report, title, filenameBase }) => {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="date" tick={{ fontSize: 9 }} />
                 <YAxis tick={{ fontSize: 9 }} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Tooltip formatter={formatAttendanceTooltip} />
+                <Bar dataKey="value" name="Attendance" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -117,7 +125,7 @@ const AggregatedReportContent = ({ report, title, filenameBase }) => {
                 <Pie data={taskPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
                   {taskPie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={formatTaskPieTooltip} />
               </PieChart>
             </ResponsiveContainer>
           </Card>

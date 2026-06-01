@@ -821,7 +821,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     setIsCustomHtml(false);
     setUseRawHtml(false);
     if (standaloneWizard) {
-      navigate('/workspace/emails');
+      navigate('/emails');
     } else {
       setMode('campaigns');
     }
@@ -930,7 +930,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate('/workspace/emails/create')}
+              onClick={() => navigate('/emails/create')}
             >
               <Plus size={14} /> Create Campaign
             </Button>
@@ -1705,7 +1705,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           <div className="flex justify-between items-center pt-4 border-t border-[var(--color-bg-border)]">
             <Button variant="ghost" onClick={() => {
               if (campaignStep === 1) {
-                if (standaloneWizard) navigate('/workspace/emails');
+                if (standaloneWizard) navigate('/emails');
                 else setMode('campaigns');
               } else setCampaignStep(campaignStep - 1);
             }}>

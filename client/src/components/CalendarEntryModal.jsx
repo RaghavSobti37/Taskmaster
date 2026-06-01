@@ -8,7 +8,7 @@ import WorkspaceSelect from './forms/WorkspaceSelect';
 import ProjectSelect from './forms/ProjectSelect';
 import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
 import { useProjects } from '../hooks/useTaskmasterQueries';
-import { extractDateAndTime } from '../utils/calendarEventTime';
+import { extractEventRange } from '../utils/calendarEventTime';
 
 const CalendarEntryModal = ({
   isOpen,
@@ -20,11 +20,13 @@ const CalendarEntryModal = ({
   const queryClient = useQueryClient();
   const { data: projects = [] } = useProjects();
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('09:00');
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('10:00');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState('event');
-  const [visibility, setVisibility] = useState('private');
+  const [visibility, setVisibility] = useState('public');
   const [workspace, setWorkspace] = useState('General');
   const [projectId, setProjectId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,9 +34,11 @@ const CalendarEntryModal = ({
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
-      const parsed = extractDateAndTime(initialData.dueDate || initialData.date);
-      setDate(parsed.date);
-      setTime(parsed.time);
+      const range = extractEventRange(initialData);
+      setStartDate(range.startDate);
+      setStartTime(range.startTime);
+      setEndDate(range.endDate);
+      setEndTime(range.endTime);
       setDescription(initialData.description || '');
       setEventType(initialData.eventType || 'event');
       setVisibility(initialData.visibility || 'private');
@@ -43,15 +47,23 @@ const CalendarEntryModal = ({
     } else {
       setTitle('');
       const base = defaultDate || new Date();
-      setDate(formatDateInput(base));
-      setTime('09:00');
+      const baseDate = formatDateInput(base);
+      setStartDate(baseDate);
+      setStartTime('09:00');
+      setEndDate(baseDate);
+      setEndTime('10:00');
       setDescription('');
       setEventType('event');
-      setVisibility('private');
+      setVisibility('public');
       setWorkspace('General');
       setProjectId('');
     }
   }, [initialData, isOpen, defaultDate]);
+
+  const handleStartDateChange = (value) => {
+    setStartDate(value);
+    if (!endDate || endDate < value) setEndDate(value);
+  };
 
   if (!isOpen) return null;
 
@@ -67,11 +79,16 @@ const CalendarEntryModal = ({
     e.preventDefault();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const selectedDate = new Date(date);
-    selectedDate.setHours(0, 0, 0, 0);
+    const selectedStart = new Date(startDate);
+    selectedStart.setHours(0, 0, 0, 0);
 
-    if (selectedDate < today) {
+    if (selectedStart < today) {
       alert('Cannot create calendar events for past dates.');
+      return;
+    }
+
+    if (endDate < startDate || (endDate === startDate && endTime <= startTime)) {
+      alert('End date/time must be after start date/time.');
       return;
     }
 
@@ -83,8 +100,10 @@ const CalendarEntryModal = ({
     setLoading(true);
     const payload = {
       title,
-      date,
-      time,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
       description,
       eventType,
       visibility,
@@ -147,32 +166,67 @@ const CalendarEntryModal = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Date</label>
-              <input
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={date}
-                onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
-                onKeyDown={(e) => e.preventDefault()}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
-                required
-              />
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1"></p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Start Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={startDate}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time</label>
-              <input
-                type="time"
-                value={time}
-                onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                onFocus={(e) => e.target.showPicker && e.target.showPicker()}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
-                required
-              />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1"> </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">End Date</label>
+                <input
+                  type="date"
+                  min={startDate || new Date().toISOString().split('T')[0]}
+                  value={endDate}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">End Time</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                  onFocus={(e) => e.target.showPicker && e.target.showPicker()}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-bold cursor-pointer"
+                  required
+                />
+              </div>
             </div>
           </div>
 
@@ -189,18 +243,7 @@ const CalendarEntryModal = ({
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Who can see this?</label>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setVisibility('private')}
-                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs border transition-all ${
-                  visibility === 'private'
-                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 shadow-sm'
-                    : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-purple-500/30'
-                }`}
-              >
-                <Lock size={14} />
-                Only Me
-              </button>
+              
               <button
                 type="button"
                 onClick={() => setVisibility('public')}
@@ -212,6 +255,18 @@ const CalendarEntryModal = ({
               >
                 <Globe size={14} />
                 Everyone
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibility('private')}
+                className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-xs border transition-all ${
+                  visibility === 'private'
+                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 shadow-sm'
+                    : 'bg-[var(--color-bg-workspace)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] hover:border-purple-500/30'
+                }`}
+              >
+                <Lock size={14} />
+                Only Me
               </button>
               <button
                 type="button"

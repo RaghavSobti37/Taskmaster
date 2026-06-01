@@ -25,6 +25,11 @@ const fetchWorkspaces = async () => {
   return data;
 };
 
+const fetchWorkspaceByName = async (name) => {
+  const { data } = await axios.get(`/api/projects/workspaces/${encodeURIComponent(name)}`);
+  return data;
+};
+
 const fetchProjectById = async (id) => {
   const { data } = await axios.get(`/api/projects/${id}`);
   return normalizeProject(data);
@@ -103,6 +108,15 @@ export const useWorkspaces = () => {
     queryFn: fetchWorkspaces,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+  });
+};
+
+export const useWorkspace = (name) => {
+  return useQuery({
+    queryKey: ['workspaces', name],
+    queryFn: () => fetchWorkspaceByName(name),
+    enabled: !!name,
+    staleTime: 1000 * 60 * 2,
   });
 };
 
@@ -199,6 +213,8 @@ export const useCalendarEvents = () => {
         title: ev.title,
         description: ev.description,
         dueDate: ev.date || ev.dueDate,
+        endDate: ev.endDate || ev.date || ev.dueDate,
+        date: ev.date,
         visibility: ev.visibility,
         createdBy: ev.createdBy,
         type: ev.type || 'event',

@@ -12,7 +12,7 @@ import {
 } from '../../components/ui';
 import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
 import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
-import { formatEventTimeLabel } from '../../utils/calendarEventTime';
+import { formatEventRangeLabel, eventOccursOnDay } from '../../utils/calendarEventTime';
 
 const CalendarView = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -68,10 +68,7 @@ const CalendarView = () => {
     return combined;
   }, [calendarEvents, holidays, showHolidays, showInternal, showPublic, showTasks]);
 
-  const getEventsForDay = (day) => allEvents.filter(e => {
-    const d = parseLocalDate(e.dueDate);
-    return d && isSameDay(d, day);
-  });
+  const getEventsForDay = (day) => allEvents.filter((e) => eventOccursOnDay(e, day));
 
   const EVENT_PILL_COLOR = 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border-[var(--color-pastel-rose-text)]/20';
 
@@ -194,7 +191,7 @@ const CalendarView = () => {
                 <div className="flex items-baseline justify-between gap-2 min-w-0">
                   <span className="text-[11px] font-bold truncate normal-case leading-tight">{event.title}</span>
                   <span className="text-[10px] font-semibold shrink-0 tabular-nums opacity-90">
-                    {formatEventTimeLabel(event.dueDate || event.date)}
+                    {formatEventRangeLabel(event.dueDate || event.date, event.endDate)}
                   </span>
                 </div>
                 <p className="text-[9px] text-[var(--color-text-muted)] normal-case leading-tight mt-0.5 truncate">

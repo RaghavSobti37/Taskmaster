@@ -51,6 +51,7 @@ const resolveMongoUri = () => {
     dbUri = process.env.MONGODB_URI_PROD.trim();
     source = 'mail-prod-sync';
     console.log('[SYSTEM] MAIL_USE_PROD_DB=true — using production MongoDB for mail tracking sync');
+    console.warn('[DATABASE] ⚠ MAIL_USE_PROD_DB forces ALL local API writes to production. Set false for normal dev.');
   }
 
   return { dbUri, source };

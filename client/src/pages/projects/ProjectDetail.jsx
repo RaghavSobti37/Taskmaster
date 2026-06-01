@@ -31,7 +31,7 @@ import ProjectSettingsModal from '../../components/ProjectSettingsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import TaskDetailModal from '../../components/TaskDetailModal';
 import TaskCompletionModal from '../../components/TaskCompletionModal';
-import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
@@ -63,6 +63,7 @@ const ProjectDetail = () => {
     projectId: id
   }, activeTab === 'schedule');
   const { data: hoursSummary } = useProjectHoursSummary(id, activeTab === 'schedule' || activeTab === 'finance');
+  const { data: users = [] } = useUserDirectory();
   const loading = projectLoading || tasksLoading;
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -72,6 +73,7 @@ const ProjectDetail = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const { addToast } = useSystemToast();
 
@@ -108,7 +110,7 @@ const ProjectDetail = () => {
       const task = tasks.find((t) => t._id === taskId);
       if (!task) return;
 
-      const intent = resolveTaskFinishIntent(task, user, project ? [project] : []);
+      const intent = resolveTaskFinishIntent(task, user, project ? [project] : [], users);
       if (intent === 'approve') {
         handleApproveReview(task);
         return;
@@ -117,6 +119,7 @@ const ProjectDetail = () => {
         addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
         return;
       }
+      setCompletionSubmitForReview(intent === 'submit_review');
       setTaskToComplete(task);
       return;
     }
@@ -334,6 +337,7 @@ const ProjectDetail = () => {
         isOpen={!!taskToComplete}
         onClose={() => setTaskToComplete(null)}
         onSubmit={handleCompleteTaskSubmit}
+        submitForReview={completionSubmitForReview}
       />
 
       {/* Workspace Controls */}

@@ -56,7 +56,7 @@ const PAGE_GROUPS = [
     label: 'Admin',
     pages: [
       { key: 'admin_users', label: 'Users & Teams', path: '/admin/users' },
-      { key: 'admin_data', label: 'All Data', path: '/admin' },
+      { key: 'admin_data', label: 'Data Hub', path: '/admin' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
       { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },

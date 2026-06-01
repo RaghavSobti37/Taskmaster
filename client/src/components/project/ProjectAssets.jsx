@@ -14,6 +14,7 @@ import {
 } from '../assets/assetTypeIcons';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
+import MentionTextarea from '../mentions/MentionTextarea';
 
 const openAssetLink = (link) => {
   const trimmed = link?.trim();
@@ -247,10 +248,10 @@ const ProjectAssets = ({ projectId }) => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Notes</label>
                   <p className="text-[9px] text-[var(--color-text-muted)] ml-1">Private — not shown in the project asset list.</p>
-                  <textarea
+                  <MentionTextarea
                     value={newAsset.notes || ''}
-                    onChange={(e) => setNewAsset({ ...newAsset, notes: e.target.value })}
-                    placeholder="Internal notes about this link..."
+                    onChange={(notes) => setNewAsset({ ...newAsset, notes })}
+                    placeholder="e.g. follow up with @Name with #Asset Name"
                     rows={4}
                     className="w-full min-h-[88px] px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl text-xs font-bold outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-y focus:border-[var(--color-action-primary)]/50"
                   />

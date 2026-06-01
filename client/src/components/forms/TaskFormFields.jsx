@@ -6,9 +6,12 @@ import StatusSelect from './StatusSelect';
 import PrioritySelect from './PrioritySelect';
 import TaskCategorySelect from './TaskCategorySelect';
 import NexusDropdown from '../ui/NexusDropdown';
+import MentionTextarea from '../mentions/MentionTextarea';
+import MentionInput from '../mentions/MentionInput';
 import { SLOT_OPTIONS } from '../../constants/taskOptions';
 import { normalizeTaskCategory } from '../../constants/taskOptions';
-import { computeDueDateFromStart, todayDateString } from '../../utils/taskPriorityDates';
+import { computeDueDateFromStart } from '../../utils/taskPriorityDates';
+import { getTodayDateKey, validateTaskTimelineFields } from '../../utils/dateValidation';
 
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 const fieldInputClass =
@@ -34,10 +37,17 @@ const TaskFormFields = ({
   showTitle = false,
   showDescription = false,
   lockedAssigneeIds = [],
+  mentionSessionKey,
 }) => {
   const set = (field, val) => onChange({ ...values, [field]: val });
+  const todayKey = getTodayDateKey();
 
-  const resolveStartDate = () => values.scheduleDate || todayDateString();
+  const resolveStartDate = () => values.scheduleDate || todayKey;
+
+  const clampDateKey = (value, floor = todayKey) => {
+    if (!value) return floor;
+    return value < floor ? floor : value;
+  };
 
   const syncDueFromPriorityStart = (nextValues, { clearManualOverride = true } = {}) => {
     const start = nextValues.scheduleDate || resolveStartDate();
@@ -53,11 +63,14 @@ const TaskFormFields = ({
   };
 
   const handleScheduleDateChange = (scheduleDate) => {
-    onChange(syncDueFromPriorityStart({ ...values, scheduleDate: scheduleDate || todayDateString() }));
+    const nextDate = clampDateKey(scheduleDate || todayKey);
+    onChange(syncDueFromPriorityStart({ ...values, scheduleDate: nextDate }));
   };
 
   const handleDueDateChange = (dueDate) => {
-    onChange({ ...values, dueDate, dueDateManual: true });
+    const floor = values.scheduleDate && values.scheduleDate >= todayKey ? values.scheduleDate : todayKey;
+    const nextDue = clampDateKey(dueDate, floor);
+    onChange({ ...values, dueDate: nextDue, dueDateManual: true });
   };
 
   const handleWorkspaceChange = (workspace) => {
@@ -105,14 +118,13 @@ const TaskFormFields = ({
       {showTitle && onTitleChange && (
         <div className="w-full min-w-0">
           <label className={fieldLabelClass}>Task Title</label>
-          <input
-            type="text"
+          <MentionInput
             value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
+            onChange={onTitleChange}
             disabled={disabled}
+            editSessionKey={mentionSessionKey}
             className={`${fieldInputClass} font-bold`}
-            placeholder="What needs to be done?"
-            required
+            placeholder="What needs to be done? @name #Asset"
           />
         </div>
       )}
@@ -120,12 +132,13 @@ const TaskFormFields = ({
       {showDescription && onDescriptionChange && (
         <div className="w-full min-w-0">
           <label className={fieldLabelClass}>Description</label>
-          <textarea
+          <MentionTextarea
             value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
+            onChange={onDescriptionChange}
             disabled={disabled}
+            editSessionKey={mentionSessionKey}
             className={`${fieldInputClass} min-h-[88px] resize-y`}
-            placeholder="Add details..."
+            placeholder="follow up with @Raghav the G.O.A.T. with #Brand Deck — @ mentions notify, # links open asset URL"
           />
         </div>
       )}
@@ -180,6 +193,7 @@ const TaskFormFields = ({
               <label className={fieldLabelClass}>Start Date</label>
               <input
                 type="date"
+                min={todayKey}
                 value={values.scheduleDate || ''}
                 disabled={disabled || timelineDisabled}
                 onChange={(e) => handleScheduleDateChange(e.target.value)}
@@ -191,6 +205,7 @@ const TaskFormFields = ({
             <label className={fieldLabelClass}>Due Date</label>
             <input
               type="date"
+              min={values.scheduleDate && values.scheduleDate >= todayKey ? values.scheduleDate : todayKey}
               value={values.dueDate || ''}
               disabled={disabled || timelineDisabled}
               onChange={(e) => handleDueDateChange(e.target.value)}

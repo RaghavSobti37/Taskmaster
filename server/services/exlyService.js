@@ -156,12 +156,16 @@ class ExlyService {
         // Stop automatically adding to Leads table as requested by the user.
         // Instead, we only aggregate data into the Unified Contact hub.
         const ContactService = require('./ContactService');
+        const booking = await ExlyBooking.findOne(filter).select('_id').lean();
         await ContactService.mergeContact({
           name: name || 'Exly Lead',
           email: email,
           phone: phone,
-          exlyOfferingTitle: cleanTitle
-        }, 'exly');
+          exlyOfferingTitle: cleanTitle,
+          recordId: booking?._id,
+          inletKey: /community/i.test(cleanTitle) ? 'community' : 'exly',
+          summary: { offeringTitle: cleanTitle, pricePaid },
+        }, /community/i.test(cleanTitle) ? 'community' : 'exly');
         
         updatedCount++; // Track successfully processed contacts
       }

@@ -1,27 +1,29 @@
 const mongoose = require('mongoose');
+const { DEFAULT_XP } = require('../../shared/gamificationRules');
 
 const gamificationConfigSchema = new mongoose.Schema(
   {
-    // Action XP values
-    taskCompletion: { type: Number, default: 0, description: 'XP for completing a task (disabled by default)' },
-    taskCreation: { type: Number, default: 5, description: 'XP for creating a task' },
-    projectCreation: { type: Number, default: 20, description: 'XP for creating a project' },
-    dailyLog: { type: Number, default: 20, description: 'XP for adding a manual daily log entry' },
-    attendanceLog: { type: Number, default: 15, description: 'XP for logging attendance' },
-    assetUpload: { type: Number, default: 25, description: 'XP for uploading an asset' },
-    commentCreation: { type: Number, default: 3, description: 'XP for creating a comment' },
-    leadCapture: { type: Number, default: 30, description: 'XP for capturing a lead' },
-    invoiceSubmission: { type: Number, default: 35, description: 'XP for submitting an invoice' },
-    
-    // Daily Mission Rewards
-    dailyMissionBaseReward: { type: Number, default: 50, description: 'Base reward for daily missions' },
-    
-    // Level progression
-    stepXp: { type: Number, default: 100, description: 'XP required per level' },
-    baseXp: { type: Number, default: 100, description: 'Base XP for level 1' },
+    taskCompletion: { type: Number, default: DEFAULT_XP.taskCompletion },
+    taskCreation: { type: Number, default: DEFAULT_XP.taskCreation },
+    projectCreation: { type: Number, default: DEFAULT_XP.projectCreation },
+    dailyLog: { type: Number, default: DEFAULT_XP.dailyLog },
+    attendanceLog: { type: Number, default: DEFAULT_XP.attendanceLog },
+    attendanceDayBonus: { type: Number, default: DEFAULT_XP.attendanceDayBonus },
+    assetUpload: { type: Number, default: DEFAULT_XP.assetUpload },
+    leadCapture: { type: Number, default: DEFAULT_XP.leadCapture },
+    invoiceSubmission: { type: Number, default: DEFAULT_XP.invoiceSubmission },
+    reviewApproval: { type: Number, default: DEFAULT_XP.reviewApproval },
+    calendarEventCreated: { type: Number, default: DEFAULT_XP.calendarEventCreated },
+    announcementCreated: { type: Number, default: DEFAULT_XP.announcementCreated },
+    leaveApplied: { type: Number, default: DEFAULT_XP.leaveApplied },
+    /** @deprecated use calendarEventCreated / announcementCreated */
+    commentCreation: { type: Number, default: 0 },
 
-    // Updated at
-    updatedAt: { type: Date, default: Date.now }
+    dailyMissionBaseReward: { type: Number, default: DEFAULT_XP.dailyMissionBaseReward },
+    stepXp: { type: Number, default: DEFAULT_XP.stepXp },
+    baseXp: { type: Number, default: DEFAULT_XP.baseXp },
+
+    updatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

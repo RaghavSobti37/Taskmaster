@@ -22,6 +22,7 @@ const {
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
+const { queueGamificationEvent } = require('../services/backgroundQueue');
 
 const isOps = (user) => isOpsUser(user);
 
@@ -132,18 +133,12 @@ const computeAttendanceMetrics = async (attendanceDoc) => {
 const awardAttendanceXpIfEligible = async (attendanceDoc) => {
   if (attendanceDoc.systemHours >= 8 && attendanceDoc.discrepancyMinutes < DISCREPANCY_THRESHOLD_MINUTES) {
     const todayStr = getDateKey(attendanceDoc.date);
-    const existing = await Log.findOne({
-      userId: attendanceDoc.userId,
-      action: 'XP_AWARD',
-      'details.reason': 'ATTENDANCE_CHECKOUT_WINDOW',
-      'details.date': todayStr
-    });
-    if (!existing) {
-      await GamificationService.awardExp(attendanceDoc.userId, 1, 'ATTENDANCE_CHECKOUT_WINDOW', {
-        date: todayStr,
-        at: attendanceDoc.outTimeRecord?.manualTimestamp
-      });
-    }
+    await GamificationService.awardActionXp(
+      attendanceDoc.userId,
+      'ATTENDANCE_DAY_BONUS',
+      { date: todayStr, at: attendanceDoc.outTimeRecord?.manualTimestamp },
+      { entityKey: 'date', entityId: todayStr },
+    );
   }
 };
 
@@ -252,9 +247,13 @@ router.post('/check', async (req, res) => {
     if (attendance.inTimeRecord?.manualTimestamp && attendance.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(attendance);
       await awardAttendanceXpIfEligible(attendance);
+      const todayStr = getDateKey(attendance.date);
+      queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
+        userId: req.user._id,
+        date: todayStr,
+      });
     }
 
-    await GamificationService.awardActionXp(req.user._id, 'ATTENDANCE_ACTION', { type });
     res.json(attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -360,6 +359,10 @@ router.put('/upsert/by-user-date', async (req, res) => {
     if (row.inTimeRecord?.manualTimestamp && row.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(row);
       await awardAttendanceXpIfEligible(row);
+      queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
+        userId: row.userId,
+        date: getDateKey(row.date),
+      });
     }
 
     res.json(row);
@@ -383,7 +386,6 @@ router.post('/leave', async (req, res) => {
       reason: reason || '',
       status: 'pending',
     });
-    await GamificationService.awardActionXp(req.user._id, 'LEAVE_APPLIED', { fromDate, toDate });
     res.status(201).json(request);
   } catch (error) {
     res.status(500).json({ error: error.message });

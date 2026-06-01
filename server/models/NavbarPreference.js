@@ -106,7 +106,7 @@ const DEFAULT_NAVBAR_GROUPS = [
     isCustom: false,
     pages: [
       { path: '/admin/users', label: 'Users & Teams', order: 1, visible: true },
-      { path: '/admin', label: 'All Data', order: 2, visible: true },
+      { path: '/admin', label: 'Data Hub', order: 2, visible: true },
       { path: '/admin/exly-campaigns', label: 'Exly Data', order: 3, visible: true },
       { path: '/admin/scripts', label: 'Script Runner', order: 4, visible: true },
       { path: '/admin/gamification', label: 'Gamification', order: 5, visible: true }

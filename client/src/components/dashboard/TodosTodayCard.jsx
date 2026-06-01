@@ -65,6 +65,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
           <DashboardTaskRow
             key={task._id}
             task={task}
+            projects={projects}
             workspaceColor={resolveTaskWorkspaceColor(task, workspaces, projects)}
             onComplete={onComplete}
             onOpen={openTask}

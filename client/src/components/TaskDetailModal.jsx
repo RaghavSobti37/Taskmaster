@@ -9,11 +9,14 @@ import { canReviewTask } from '../utils/taskReview';
 import { resolveTaskId } from '../utils/taskCompletion';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
+import { validateTaskTimelineFields, toDateKey } from '../utils/dateValidation';
+import { useSystemToast } from '../lib/systemLogBridge';
 
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate }) => {
   const { user } = useAuth();
   const { data: projects = [] } = useProjects();
   const updateTaskMutation = useUpdateTask();
+  const { addToast } = useSystemToast();
   const [title, setTitle] = useState(task?.title || '');
   const [desc, setDesc] = useState(task?.description || '');
   const [formValues, setFormValues] = useState({
@@ -77,6 +80,22 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     };
 
     if (canEditTimeline) {
+      const originalScheduleDate = toDateKey(task.scheduleDate) || '';
+      const originalDueDate = toDateKey(task.dueDate) || '';
+      const timelineChanged = formValues.scheduleDate !== originalScheduleDate
+        || formValues.dueDate !== originalDueDate
+        || (formValues.scheduleSlot || 'FULL') !== (task.scheduleSlot || 'FULL');
+
+      if (timelineChanged) {
+        const timelineCheck = validateTaskTimelineFields({
+          scheduleDate: formValues.scheduleDate,
+          dueDate: formValues.dueDate,
+        });
+        if (!timelineCheck.ok) {
+          addToast({ type: 'error', message: timelineCheck.error });
+          return;
+        }
+      }
       payload.scheduleSlot = formValues.scheduleSlot;
       payload.scheduleDate = formValues.scheduleDate || null;
       payload.dueDate = formValues.dueDate || null;
@@ -152,6 +171,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               description={desc}
               onDescriptionChange={setDesc}
               lockedAssigneeIds={creatorId ? [creatorId] : []}
+              mentionSessionKey={isOpen ? task._id : undefined}
             />
 
             {isInReview && canReview && (

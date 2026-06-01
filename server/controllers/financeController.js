@@ -4,6 +4,7 @@ const { UTApi, UTFile } = require('uploadthing/server');
 const axios = require('axios');
 const { parseDocument } = require('../utils/documentParser');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
+const { queueGamificationEvent } = require('../services/backgroundQueue');
 
 // Extract sk_ API key from base64 UPLOADTHING_TOKEN
 let utApiKey;
@@ -726,6 +727,11 @@ const submitInvoice = async (req, res) => {
     });
 
     await doc.save();
+
+    queueGamificationEvent('INVOICE_SUBMITTED', {
+      userId: req.user._id,
+      invoice: { _id: doc._id },
+    });
 
     const populated = await FinanceDocument.findById(doc._id)
       .populate('uploadedBy', 'name email avatar')

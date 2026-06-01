@@ -1,5 +1,6 @@
 import { addDays, format, parse, isValid } from 'date-fns';
 import { getPriorityDaySpan } from '../constants/taskOptions';
+import { getTodayDateKey } from './dateValidation';
 
 function parseDateInput(value) {
   if (!value) return new Date();
@@ -20,5 +21,5 @@ export function computeDueDateFromStart(startDate, priority) {
 }
 
 export function todayDateString() {
-  return format(new Date(), 'yyyy-MM-dd');
+  return getTodayDateKey();
 }

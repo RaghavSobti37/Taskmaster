@@ -5,12 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCreateTask, useProjects } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import { computeDueDateFromStart, todayDateString } from '../utils/taskPriorityDates';
+import { validateTaskTimelineFields } from '../utils/dateValidation';
 import TaskFormFields from './forms/TaskFormFields';
 import { suppressAutoToasts } from '../lib/notifications';
+import { useSystemToast } from '../lib/systemLogBridge';
 
 const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
   const createTaskMutation = useCreateTask();
+  const { addToast } = useSystemToast();
 
   const { data: fetchedProjects = [] } = useProjects();
   const projects = passedProjects || fetchedProjects;
@@ -60,6 +63,15 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    const timelineCheck = validateTaskTimelineFields({
+      scheduleDate: formValues.scheduleDate,
+      dueDate: formValues.dueDate,
+    });
+    if (!timelineCheck.ok) {
+      addToast({ type: 'error', message: timelineCheck.error });
+      return;
+    }
 
     suppressAutoToasts(5000);
     const payload = {
@@ -113,6 +125,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             description={desc}
             onDescriptionChange={setDesc}
             lockedAssigneeIds={user?._id ? [user._id] : []}
+            mentionSessionKey={isOpen ? 'create' : undefined}
           />
         </div>
 

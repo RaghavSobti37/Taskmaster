@@ -9,17 +9,7 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
-
-const buildEventDateTime = (dateOnly, timeStr) => {
-  const d = new Date(dateOnly);
-  if (timeStr && /^\d{1,2}:\d{2}$/.test(timeStr)) {
-    const [h, m] = timeStr.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-  } else {
-    d.setHours(0, 0, 0, 0);
-  }
-  return d;
-};
+const { validateCalendarEventRange } = require('../utils/dateValidation');
 
 router.use(protect);
 
@@ -141,23 +131,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Project is required for project-related visibility' });
     }
 
-    const eventDateTime = buildEventDateTime(dateOnly, timeOnly);
-    const endDateOnly = endDateInput || dateOnly;
-    const endTimeOnly = endTime || timeOnly;
-    let eventEndDateTime = buildEventDateTime(endDateOnly, endTimeOnly);
-
-    if (eventEndDateTime < eventDateTime) {
-      return res.status(400).json({ error: 'End date/time must be after start date/time' });
+    const rangeCheck = validateCalendarEventRange({
+      startDate: dateOnly,
+      startTime: timeOnly,
+      endDate: endDateInput || dateOnly,
+      endTime: endTime || timeOnly,
+    });
+    if (!rangeCheck.ok) {
+      return res.status(400).json({ error: rangeCheck.error });
     }
-
-    const inputDate = new Date(eventDateTime);
-    inputDate.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (inputDate < today) {
-      return res.status(400).json({ error: 'Cannot create calendar events for past dates' });
-    }
+    const { start: eventDateTime, end: eventEndDateTime } = rangeCheck;
 
     const event = await CalendarEvent.create({
       title,
@@ -242,24 +225,17 @@ router.put('/:id', async (req, res) => {
     const timeOnly = startTime || time;
 
     if (dateOnly) {
-      const eventDateTime = buildEventDateTime(dateOnly, timeOnly || '09:00');
-      const endDateOnly = endDateInput || dateOnly;
-      const endTimeOnly = endTime || timeOnly || '09:00';
-      const eventEndDateTime = buildEventDateTime(endDateOnly, endTimeOnly);
-
-      if (eventEndDateTime < eventDateTime) {
-        return res.status(400).json({ error: 'End date/time must be after start date/time' });
+      const rangeCheck = validateCalendarEventRange({
+        startDate: dateOnly,
+        startTime: timeOnly || '09:00',
+        endDate: endDateInput || dateOnly,
+        endTime: endTime || timeOnly || '09:00',
+      });
+      if (!rangeCheck.ok) {
+        return res.status(400).json({ error: rangeCheck.error });
       }
-
-      const inputDate = new Date(eventDateTime);
-      inputDate.setHours(0, 0, 0, 0);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (inputDate < today) {
-        return res.status(400).json({ error: 'Cannot set calendar events to past dates' });
-      }
-      event.date = eventDateTime;
-      event.endDate = eventEndDateTime;
+      event.date = rangeCheck.start;
+      event.endDate = rangeCheck.end;
     }
     if (title) event.title = title;
     if (description !== undefined) event.description = description;

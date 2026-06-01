@@ -3,6 +3,7 @@ const Lead = require('../models/Lead');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep } = require('./crmController');
+const LeadService = require('../services/LeadService');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
 const { google } = require('googleapis');
 const path = require('path');
@@ -110,13 +111,28 @@ exports.processBookedCallLogic = async (data) => {
     };
 
     if (lead) {
-      Object.assign(lead, leadData);
-      lead.reminderSent = false;
-      lead.notifiedOverdue = false;
-      await lead.save();
+      await LeadService.updateLead(
+        { _id: lead._id },
+        {
+          $set: {
+            ...leadData,
+            email,
+            reminderSent: false,
+            notifiedOverdue: false,
+          },
+        }
+      );
+      lead = await Lead.findById(lead._id);
     } else {
-      lead = await Lead.create({ email, ...leadData, reminderSent: false, notifiedOverdue: false });
+      lead = await LeadService.createLead({
+        email,
+        ...leadData,
+        reminderSent: false,
+        notifiedOverdue: false,
+      });
     }
+
+    // mergeContact handled by LeadService.syncToContactHub
 
     if (rep?._id) {
       await createNotification({

@@ -9,6 +9,8 @@ import ProjectSelect from './forms/ProjectSelect';
 import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
 import { useProjects } from '../hooks/useTaskmasterQueries';
 import { extractEventRange } from '../utils/calendarEventTime';
+import { getTodayDateKey, validateCalendarEventRange } from '../utils/dateValidation';
+import { useSystemToast } from '../lib/systemLogBridge';
 
 const CalendarEntryModal = ({
   isOpen,
@@ -30,6 +32,8 @@ const CalendarEntryModal = ({
   const [workspace, setWorkspace] = useState('General');
   const [projectId, setProjectId] = useState('');
   const [loading, setLoading] = useState(false);
+  const { addToast } = useSystemToast();
+  const todayKey = getTodayDateKey();
 
   useEffect(() => {
     if (initialData) {
@@ -48,9 +52,10 @@ const CalendarEntryModal = ({
       setTitle('');
       const base = defaultDate || new Date();
       const baseDate = formatDateInput(base);
-      setStartDate(baseDate);
+      const safeStartDate = baseDate < todayKey ? todayKey : baseDate;
+      setStartDate(safeStartDate);
       setStartTime('09:00');
-      setEndDate(baseDate);
+      setEndDate(safeStartDate);
       setEndTime('10:00');
       setDescription('');
       setEventType('event');
@@ -58,11 +63,12 @@ const CalendarEntryModal = ({
       setWorkspace('General');
       setProjectId('');
     }
-  }, [initialData, isOpen, defaultDate]);
+  }, [initialData, isOpen, defaultDate, todayKey]);
 
   const handleStartDateChange = (value) => {
-    setStartDate(value);
-    if (!endDate || endDate < value) setEndDate(value);
+    const next = value < todayKey ? todayKey : value;
+    setStartDate(next);
+    if (!endDate || endDate < next) setEndDate(next);
   };
 
   if (!isOpen) return null;
@@ -77,23 +83,20 @@ const CalendarEntryModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedStart = new Date(startDate);
-    selectedStart.setHours(0, 0, 0, 0);
 
-    if (selectedStart < today) {
-      alert('Cannot create calendar events for past dates.');
-      return;
-    }
-
-    if (endDate < startDate || (endDate === startDate && endTime <= startTime)) {
-      alert('End date/time must be after start date/time.');
+    const rangeCheck = validateCalendarEventRange({
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+    });
+    if (!rangeCheck.ok) {
+      addToast({ type: 'error', message: rangeCheck.error });
       return;
     }
 
     if (visibility === 'project' && !projectId) {
-      alert('Please select a project for project-related visibility.');
+      addToast({ type: 'error', message: 'Please select a project for project-related visibility.' });
       return;
     }
 
@@ -124,6 +127,10 @@ const CalendarEntryModal = ({
       onClose();
     } catch (err) {
       console.error('Error saving calendar entry:', err);
+      addToast({
+        type: 'error',
+        message: err.response?.data?.error || 'Failed to save calendar event',
+      });
     } finally {
       setLoading(false);
     }
@@ -173,7 +180,7 @@ const CalendarEntryModal = ({
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Start Date</label>
                 <input
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayKey}
                   value={startDate}
                   onClick={(e) => e.target.showPicker && e.target.showPicker()}
                   onFocus={(e) => e.target.showPicker && e.target.showPicker()}
@@ -205,7 +212,7 @@ const CalendarEntryModal = ({
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1">End Date</label>
                 <input
                   type="date"
-                  min={startDate || new Date().toISOString().split('T')[0]}
+                  min={startDate || todayKey}
                   value={endDate}
                   onClick={(e) => e.target.showPicker && e.target.showPicker()}
                   onFocus={(e) => e.target.showPicker && e.target.showPicker()}

@@ -5,6 +5,7 @@ const TaskService = require('./TaskService');
 const { createNotification } = require('./notificationDispatcher');
 const { findProjectByArtist } = require('../utils/artistEnquiryProjectResolver');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const ContactService = require('./ContactService');
 const logger = require('../utils/logger');
 
 const BYPASS = { bypassTenant: true };
@@ -151,6 +152,19 @@ async function processArtistEnquiryLogic(data) {
     projectId: project._id,
     artist: normalized.artist,
   });
+
+  await ContactService.mergeContact({
+    name: normalized.name,
+    email: normalized.email,
+    phone: normalized.phone,
+    recordId: taskDto._id,
+    summary: {
+      artist: normalized.artist,
+      company: normalized.company,
+      collaborationType: normalized.collaborationType,
+    },
+    inletKey: 'enquiries',
+  }, 'enquiries').catch(() => {});
 
   return {
     success: true,

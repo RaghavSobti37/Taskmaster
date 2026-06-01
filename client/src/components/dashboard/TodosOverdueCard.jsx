@@ -43,6 +43,7 @@ const TodosOverdueCard = ({ tasks = [], projects = [], loading, onComplete, onOp
           <DashboardTaskRow
             key={task._id}
             task={task}
+            projects={projects}
             workspaceColor={resolveTaskWorkspaceColor(task, workspaces, projects)}
             onComplete={onComplete}
             onOpen={openTask}

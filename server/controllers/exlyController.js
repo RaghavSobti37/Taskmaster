@@ -229,8 +229,10 @@ exports.handleExlyWebhook = async (req, res) => {
         name: name || 'Exly Lead',
         email: email,
         phone: phone,
-        exlyOfferingTitle: cleanTitle
-      }, 'exly');
+        exlyOfferingTitle: cleanTitle,
+        inletKey: /community/i.test(cleanTitle) ? 'community' : 'exly',
+        summary: { offeringTitle: cleanTitle, price },
+      }, /community/i.test(cleanTitle) ? 'community' : 'exly');
     }
 
 

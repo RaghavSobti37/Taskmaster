@@ -5,44 +5,29 @@ const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const { getCurrentWeekRange } = require('../utils/attendanceDate');
-
-const ACTION_LABELS = {
-  COMPLETE_TASK: 'Completed task',
-  CREATE_TASK: 'Created task',
-  CREATE_PROJECT: 'Created project',
-  DAILY_LOG: 'Logged daily work',
-  MISSION_COMPLETE: 'Completed mission',
-  CALENDAR_EVENT_CREATED: 'Created calendar event',
-  ATTENDANCE_ACTION: 'Marked attendance action',
-  ATTENDANCE_CHECKIN_WINDOW: 'Checked in on time',
-  ATTENDANCE_CHECKOUT_WINDOW: 'Checked out on time',
-  LEAVE_APPLIED: 'Applied leave',
-  ANNOUNCEMENT_CREATED: 'Created announcement'
-};
+const { ACTION_LABELS } = require('../../shared/gamificationRules');
 
 const toSimpleMessage = (log) => {
   const base = ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase();
   if (log.action === 'MISSION_COMPLETE' && log.details?.title) {
     return `${base}: ${log.details.title}`;
   }
-  if (log.action === 'ATTENDANCE_ACTION' && log.details?.type) {
-    return `${base} (${log.details.type === 'in' ? 'check-in' : 'check-out'})`;
+  if (log.action === 'ATTENDANCE_ACTION' && log.details?.date) {
+    return `${base} (${log.details.date})`;
   }
   return base;
 };
 
-// Get active missions
 router.get('/missions', protect, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Auto-generate if missing
     await GamificationService.generateDailyMissions(req.user._id);
 
     const missions = await DailyMission.find({
       userId: req.user._id,
-      date: { $gte: today }
+      date: { $gte: today },
     });
 
     res.json(missions);
@@ -51,7 +36,6 @@ router.get('/missions', protect, async (req, res) => {
   }
 });
 
-// Get user progress details
 router.get('/progress', protect, async (req, res) => {
   try {
     const user = req.user;
@@ -62,14 +46,13 @@ router.get('/progress', protect, async (req, res) => {
       level: user.level || 1,
       exp: user.exp || 0,
       currentLevelExp,
-      nextLevelExp
+      nextLevelExp,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Leaderboard: top users by XP (basic weekly view)
 router.get('/leaderboard', protect, async (req, res) => {
   try {
     const XPAuditLog = require('../models/XPAuditLog');
@@ -80,7 +63,7 @@ router.get('/leaderboard', protect, async (req, res) => {
       { $match: { createdAt: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: '$userId', weeklyXp: { $sum: '$amount' } } },
       { $sort: { weeklyXp: -1 } },
-      { $limit: 10 }
+      { $limit: 10 },
     ]);
 
     const userIds = leaderboard.map((entry) => entry._id);
@@ -90,7 +73,7 @@ router.get('/leaderboard', protect, async (req, res) => {
     const top = leaderboard.map((entry, index) => ({
       rank: index + 1,
       weeklyXp: entry.weeklyXp,
-      ...(usersById.get(String(entry._id)) || { _id: entry._id, name: 'Unknown' })
+      ...(usersById.get(String(entry._id)) || { _id: entry._id, name: 'Unknown' }),
     }));
 
     res.json(top);
@@ -99,7 +82,6 @@ router.get('/leaderboard', protect, async (req, res) => {
   }
 });
 
-// Leaderboard detail: simple weekly XP calculation for one user
 router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -114,7 +96,7 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
 
     const logs = await XPAuditLog.find({
       userId,
-      createdAt: { $gte: weekStart, $lte: weekEnd }
+      createdAt: { $gte: weekStart, $lte: weekEnd },
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -131,7 +113,7 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
           amountPerAction: log.amount,
           count: 0,
           totalXp: 0,
-          sampleMessage: toSimpleMessage(log)
+          sampleMessage: toSimpleMessage(log),
         });
       }
       const group = groupedMap.get(key);
@@ -154,8 +136,8 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
         action: log.action,
         actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
         message: toSimpleMessage(log),
-        createdAt: log.createdAt
-      }))
+        createdAt: log.createdAt,
+      })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -10,7 +10,7 @@ import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../lib/notifications';
 import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, taskApprovalToast, resolveTaskId, canMarkTaskComplete, normalizeCompletionHours, pendingReviewToast } from '../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../utils/taskReview';
 import { updateAllTaskQueries } from '../utils/taskCache';
-import { useTasks, useDashboardTasks, useReviewTasks, useProjects, useDashboardSummary, useDashboardPreset } from '../hooks/useTaskmasterQueries';
+import { useTasks, useDashboardTasks, useReviewTasks, useProjects, useDashboardSummary, useDashboardPreset, useUserDirectory } from '../hooks/useTaskmasterQueries';
 import {
   AnnouncementsCard,
   ScheduleCard,
@@ -48,6 +48,7 @@ const Dashboard = () => {
   const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(!!user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
+  const { data: users = [] } = useUserDirectory();
 
   const today = useMemo(() => {
     const value = new Date();
@@ -79,6 +80,7 @@ const Dashboard = () => {
 
 
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const [approvingReviewId, setApprovingReviewId] = useState(null);
 
@@ -86,7 +88,7 @@ const Dashboard = () => {
   const calendar = useMemo(() => summary?.calendar || [], [summary]);
 
   const handleCompleteRequest = useCallback((task) => {
-    const intent = resolveTaskFinishIntent(task, user, projects);
+    const intent = resolveTaskFinishIntent(task, user, projects, users);
     if (intent === 'approve') {
       handleApproveReview(task);
       return;
@@ -97,8 +99,9 @@ const Dashboard = () => {
       }
       return;
     }
+    setCompletionSubmitForReview(intent === 'submit_review');
     setTaskToComplete(task);
-  }, [user, projects, addToast]);
+  }, [user, projects, users, addToast]);
 
   const handleCompleteSubmit = useCallback(async (task, hours) => {
     suppressAutoToasts(5000);
@@ -176,6 +179,17 @@ const Dashboard = () => {
     }
   }, [queryClient, addToast]);
 
+  const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'coreknot')?.elements || [];
+  const elementsToRender = useMemo(
+    () => (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements)
+      .filter((el) => el.visible && canAccessComponent(el.componentId, permissionPreset)),
+    [dashboardPreset?.elements, defaultElements, permissionPreset]
+  );
+  const maxGridRow = useMemo(
+    () => elementsToRender.reduce((max, el) => Math.max(max, el.row || 1), 1),
+    [elementsToRender]
+  );
+
   if (loading && !tasks.length) return <PageContainer><DashboardSkeleton /></PageContainer>;
 
   const renderComponent = (componentId) => {
@@ -222,16 +236,13 @@ const Dashboard = () => {
     }
   };
 
-  // Default layout if no preset or fallback
-  const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'coreknot')?.elements || [];
-
-  const elementsToRender = (dashboardPreset?.elements && dashboardPreset.elements.length > 0 ? dashboardPreset.elements : defaultElements)
-    .filter((el) => el.visible && canAccessComponent(el.componentId, permissionPreset));
-
   return (
     <PageContainer className="!py-4">
       <PinBoardProvider>
-        <div className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 grid-flow-row-dense auto-rows-max">
+        <div
+          className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 grid-flow-row-dense auto-rows-max"
+          style={{ '--grid-rows': maxGridRow }}
+        >
           {elementsToRender
             .sort((a, b) => (a.row - b.row) || (a.col - b.col))
             .map((el) => {
@@ -239,7 +250,7 @@ const Dashboard = () => {
               return (
                 <div
                   key={el.componentId}
-                  className="flex flex-col h-full min-h-0 dashboard-grid-item"
+                  className="flex flex-col min-h-0 dashboard-grid-item"
                   style={{ '--lg-col': el.col, '--lg-row': el.row, '--lg-span': span }}
                 >
                   {renderComponent(el.componentId)}
@@ -254,6 +265,7 @@ const Dashboard = () => {
         isOpen={!!taskToComplete}
         onClose={() => setTaskToComplete(null)}
         onSubmit={handleCompleteSubmit}
+        submitForReview={completionSubmitForReview}
       />
     </PageContainer>
   );

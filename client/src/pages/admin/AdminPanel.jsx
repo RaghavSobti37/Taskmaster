@@ -24,7 +24,7 @@ import {
 } from '../../components/ui';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
-import TscDataContent from '../../components/admin/TscDataContent';
+import { DataHubContent } from './DataHubPage';
 import { 
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
 } from '../../hooks/useTaskmasterQueries';
@@ -108,7 +108,7 @@ const AdminPanel = () => {
 
   const pageMeta = {
     users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
-    crm: { title: "All Data", subtitle: "Inspect, filter, and export all unified customer and engagement records." },
+    crm: { title: "Data Hub", subtitle: "Unified people data across Exly, Leads, TSC, Booked Calls, Enquiries, Mail, and more." },
   };
 
   const filteredUsers = useMemo(() => {
@@ -173,7 +173,7 @@ const AdminPanel = () => {
                onChange={handleTabChange} 
                tabs={[
                  { id: 'users', label: 'Users' }, 
-                 { id: 'crm', label: 'All Data' },
+                 { id: 'crm', label: 'Data Hub' },
                ]} 
              />
            </div>
@@ -257,7 +257,7 @@ const AdminPanel = () => {
                       onRowClick={(u) => setSelectedUser(u)}
                     />
                   )}
-                  {activeTab === 'crm' && <TscDataContent />}
+                  {activeTab === 'crm' && <DataHubContent />}
                 </motion.div>
               </AnimatePresence>
             </div>

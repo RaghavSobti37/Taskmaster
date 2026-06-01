@@ -5,6 +5,8 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
 const logger = require('../utils/logger');
+const ContactService = require('../services/ContactService');
+const { isCommunityText } = require('../../shared/dataInlets');
 
 exports.getTscData = async (req, res) => {
   try {
@@ -302,9 +304,28 @@ exports.importTscData = async (req, res) => {
           };
         });
 
-        await TscData.bulkWrite(bulkOps);
+        const writeResult = await TscData.bulkWrite(bulkOps);
+        for (const doc of tscDocs) {
+          if (!doc.email && !doc.phone) continue;
+          const isCommunity = isCommunityText(doc.campaign) || isCommunityText(doc.originSource);
+          const filter = { $or: [] };
+          if (doc.email) filter.$or.push({ email: doc.email });
+          if (doc.phone) filter.$or.push({ phone: doc.phone });
+          const saved = filter.$or.length ? await TscData.findOne(filter).select('_id').lean() : null;
+          await ContactService.mergeContact({
+            name: doc.name,
+            email: doc.email,
+            phone: doc.phone,
+            city: doc.city,
+            sourceFilename: doc.sourceFilename,
+            emailStatus: doc.emailStatus,
+            recordId: saved?._id,
+            summary: { campaign: doc.campaign, originSource: doc.originSource, role: doc.role },
+            inletKey: isCommunity ? 'community' : 'tsc',
+          }, isCommunity ? 'community' : 'tsc').catch(() => {});
+        }
         try { fs.unlinkSync(tempPath); } catch(e) {}
-        res.status(201).json({ message: `${tscDocs.length} records processed.` });
+        res.status(201).json({ message: `${tscDocs.length} records processed.`, writeResult: writeResult?.nUpserted });
       } catch (error) {
         logger.error('tscController', 'Import ', { error: error.message || error });
         res.status(500).json({ error: 'Failed to import TSC data' });

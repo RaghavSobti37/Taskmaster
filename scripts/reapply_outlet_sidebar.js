@@ -30,7 +30,7 @@ const pageConfigReplacement = `const PAGE_CONFIG = {
   '/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
   '/artists': { icon: Mic2, label: 'Artists', accessKey: 'artists' },
   '/admin/users': { icon: Users, label: 'Users & Teams', accessKey: 'admin_users' },
-  '/admin': { icon: Database, label: 'All Data', accessKey: 'admin_data', end: true },
+  '/admin': { icon: Database, label: 'Data Hub', accessKey: 'admin_data', end: true },
   '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
   '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
   '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },

@@ -25,6 +25,7 @@ import {
 } from '../../components/ui';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
+import MentionTextarea from '../../components/mentions/MentionTextarea';
 
 const EMPTY_ASSET_FORM = { projectIds: [], name: '', link: '', type: 'other', notes: '' };
 
@@ -563,10 +564,10 @@ const AssetsPage = () => {
                   Notes
                 </label>
                 <p className="text-[9px] text-[var(--color-text-muted)] ml-1">Private to this asset — not shown in the file list.</p>
-                <textarea
+                <MentionTextarea
                   value={newAsset.notes || ''}
-                  onChange={(e) => setNewAsset({ ...newAsset, notes: e.target.value })}
-                  placeholder="Internal notes about this file — not shown in the directory table..."
+                  onChange={(notes) => setNewAsset({ ...newAsset, notes })}
+                  placeholder="e.g. follow up with @Name with #Asset Name — @ notifies, # links to asset URL"
                   rows={4}
                   className="w-full min-h-[88px] px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-action-primary)]/50 resize-y"
                 />

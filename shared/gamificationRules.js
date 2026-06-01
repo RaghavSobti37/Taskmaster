@@ -1,0 +1,158 @@
+/**
+ * CoreKnot gamification — single source of truth for XP amounts, caps, and rule copy.
+ * Admin-editable values live in GamificationConfig; these are defaults + fairness rules.
+ */
+
+/** Default XP per action (overridden by GamificationConfig in DB). */
+const DEFAULT_XP = {
+  taskCompletion: 15,
+  dailyLog: 10,
+  taskCreation: 2,
+  projectCreation: 5,
+  attendanceLog: 10,
+  attendanceDayBonus: 5,
+  assetUpload: 12,
+  leadCapture: 15,
+  invoiceSubmission: 15,
+  reviewApproval: 8,
+  calendarEventCreated: 2,
+  announcementCreated: 0,
+  leaveApplied: 0,
+  dailyMissionBaseReward: 25,
+  stepXp: 100,
+  baseXp: 100,
+};
+
+/** Max times per action per user per calendar day (IST). null = unlimited. */
+const DEFAULT_DAILY_CAPS = {
+  taskCompletion: null,
+  dailyLog: 3,
+  taskCreation: 10,
+  projectCreation: 3,
+  attendanceLog: 1,
+  attendanceDayBonus: 1,
+  assetUpload: 5,
+  leadCapture: 10,
+  invoiceSubmission: 5,
+  reviewApproval: 15,
+  calendarEventCreated: 3,
+  announcementCreated: 0,
+  leaveApplied: 0,
+};
+
+/** Maps internal action codes → GamificationConfig field names. */
+const ACTION_CONFIG_KEY = {
+  COMPLETE_TASK: 'taskCompletion',
+  CREATE_TASK: 'taskCreation',
+  CREATE_PROJECT: 'projectCreation',
+  DAILY_LOG: 'dailyLog',
+  ATTENDANCE_ACTION: 'attendanceLog',
+  ATTENDANCE_DAY_BONUS: 'attendanceDayBonus',
+  LEAVE_APPLIED: 'leaveApplied',
+  CALENDAR_EVENT_CREATED: 'calendarEventCreated',
+  ANNOUNCEMENT_CREATED: 'announcementCreated',
+  REVIEW_APPROVAL: 'reviewApproval',
+  ASSET_UPLOAD: 'assetUpload',
+  LEAD_CAPTURE: 'leadCapture',
+  INVOICE_SUBMISSION: 'invoiceSubmission',
+  MISSION_COMPLETE: null,
+};
+
+const ACTION_LABELS = {
+  COMPLETE_TASK: 'Completed a task',
+  CREATE_TASK: 'Created a task',
+  CREATE_PROJECT: 'Created a project',
+  DAILY_LOG: 'Manual daily log',
+  ATTENDANCE_ACTION: 'Full-day attendance',
+  ATTENDANCE_DAY_BONUS: 'Attendance + logs aligned',
+  LEAVE_APPLIED: 'Applied leave',
+  CALENDAR_EVENT_CREATED: 'Created calendar event',
+  ANNOUNCEMENT_CREATED: 'Created announcement',
+  REVIEW_APPROVAL: 'Approved a review',
+  ASSET_UPLOAD: 'Uploaded project asset',
+  LEAD_CAPTURE: 'Captured a lead',
+  INVOICE_SUBMISSION: 'Submitted invoice',
+  MISSION_COMPLETE: 'Daily mission bonus',
+};
+
+/** Daily missions — bonus XP on top of action XP. */
+const DAILY_MISSIONS = [
+  {
+    title: 'Task Conqueror',
+    description: 'Complete 3 tasks today',
+    targetCount: 3,
+    actionType: 'COMPLETE_TASK',
+    expReward: 25,
+  },
+  {
+    title: 'Time Tracker',
+    description: 'Add 2 manual daily logs today',
+    targetCount: 2,
+    actionType: 'DAILY_LOG',
+    expReward: 20,
+  },
+  {
+    title: 'Full Day',
+    description: 'Complete check-in and check-out today',
+    targetCount: 1,
+    actionType: 'ATTENDANCE_DAY',
+    expReward: 15,
+  },
+];
+
+const FAIRNESS_PRINCIPLES = [
+  'Outcome over setup — completing work earns more than creating tasks or projects.',
+  'Role-balanced paths — sales (leads), creatives (tasks + assets), ops (attendance + invoices), reviewers (approvals) can all climb the board.',
+  'Daily caps on low-effort actions stop admins and managers from spamming the leaderboard.',
+  'Task completion XP is once per task per person — no farming the same item.',
+  'Auto daily logs from task completion do not grant log XP (prevents double-dipping).',
+  'Weekly leaderboard uses audit log totals — everyone starts fresh each week.',
+];
+
+const ROLE_PATHS = [
+  { role: 'Individual contributor', actions: 'Complete tasks (+15), manual daily logs (+10, max 3/day)', weeklyPotential: '~525+ from tasks alone' },
+  { role: 'Sales / CRM', actions: 'Capture leads (+15, max 10/day), follow-up work logged as daily logs', weeklyPotential: '~750+ from leads + logs' },
+  { role: 'Creative / production', actions: 'Complete tasks, upload assets (+12, max 5/day)', weeklyPotential: '~600+ mixed' },
+  { role: 'Ops / finance', actions: 'Full-day attendance (+10), invoice submissions (+15), review approvals (+8)', weeklyPotential: '~550+ mixed' },
+  { role: 'Managers / admins', actions: 'Lower XP for creating projects (+5, cap 3/day) and tasks (+2, cap 10/day); main earn path is completing and reviewing work', weeklyPotential: 'Same caps — cannot outrank ICs by setup alone' },
+];
+
+/** Admin UI rule rows — configKey links to editable GamificationConfig field. */
+const XP_RULE_ROWS = [
+  { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'Primary earn path for all roles' },
+  { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'Not awarded for auto task-completion logs' },
+  { configKey: 'taskCreation', action: 'CREATE_TASK', label: 'Task creation', capKey: 'taskCreation', who: 'Creator', note: 'Low — prevents manager spam' },
+  { configKey: 'projectCreation', action: 'CREATE_PROJECT', label: 'Project creation', capKey: 'projectCreation', who: 'Creator', note: 'Low — prevents admin spam' },
+  { configKey: 'attendanceLog', action: 'ATTENDANCE_ACTION', label: 'Full-day attendance', capKey: 'attendanceLog', who: 'User who completes check-in + check-out', note: 'Once per day when day is closed' },
+  { configKey: 'attendanceDayBonus', action: 'ATTENDANCE_DAY_BONUS', label: 'Attendance accuracy bonus', capKey: 'attendanceDayBonus', who: '8h+ shift with logs within 30 min', note: 'Stacked on full-day attendance' },
+  { configKey: 'assetUpload', action: 'ASSET_UPLOAD', label: 'Asset upload', capKey: 'assetUpload', who: 'Uploader', note: 'Creative / production path' },
+  { configKey: 'leadCapture', action: 'LEAD_CAPTURE', label: 'Lead capture', capKey: 'leadCapture', who: 'Rep creating a new lead manually', note: 'Sales path — not webhook imports' },
+  { configKey: 'invoiceSubmission', action: 'INVOICE_SUBMISSION', label: 'Invoice submission', capKey: 'invoiceSubmission', who: 'Submitter', note: 'Finance / ops path' },
+  { configKey: 'reviewApproval', action: 'REVIEW_APPROVAL', label: 'Review approval', capKey: 'reviewApproval', who: 'Reviewer approving in-review task', note: 'Rewards managers without task hoarding' },
+  { configKey: 'calendarEventCreated', action: 'CALENDAR_EVENT_CREATED', label: 'Calendar event', capKey: 'calendarEventCreated', who: 'Event creator', note: 'Minor — optional' },
+  { configKey: 'announcementCreated', action: 'ANNOUNCEMENT_CREATED', label: 'Announcement', capKey: 'announcementCreated', who: 'Author', note: 'Disabled by default (0 XP)' },
+  { configKey: 'leaveApplied', action: 'LEAVE_APPLIED', label: 'Leave application', capKey: 'leaveApplied', who: '—', note: 'Disabled (0 XP)' },
+];
+
+const NO_XP_ACTIONS = [
+  'Viewing dashboard, projects, todo, or inbox',
+  'Editing or deleting tasks, logs, or projects',
+  'Submitting a task for review (in-review) — completion XP on approve/done only',
+  'Receiving notifications or @mentions',
+  'Auto daily logs from task completion',
+  'Webhook / import lead sync (Exly, forms)',
+  'Undo attendance check-in/out',
+  'Reading announcements or calendar events',
+];
+
+module.exports = {
+  DEFAULT_XP,
+  DEFAULT_DAILY_CAPS,
+  ACTION_CONFIG_KEY,
+  ACTION_LABELS,
+  DAILY_MISSIONS,
+  FAIRNESS_PRINCIPLES,
+  ROLE_PATHS,
+  XP_RULE_ROWS,
+  NO_XP_ACTIONS,
+};

@@ -1419,3 +1419,75 @@ export const useNavbarPreferences = () => {
     staleTime: 5 * 60 * 1000
   });
 };
+
+export const DATA_HUB_REFRESH_MS = 3 * 60 * 60 * 1000;
+
+export const useDataHubFolders = (options = {}) => {
+  return useQuery({
+    queryKey: ['dataHub', 'folders'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/folders');
+      return data;
+    },
+    staleTime: DATA_HUB_REFRESH_MS,
+    refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
+  });
+};
+
+export const useDataHubPeople = (params, options = {}) => {
+  return useQuery({
+    queryKey: ['dataHub', 'people', params],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/people', { params });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+    staleTime: DATA_HUB_REFRESH_MS,
+    refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
+  });
+};
+
+export const useDataHubPerson = (id) => {
+  return useQuery({
+    queryKey: ['dataHub', 'person', id],
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/data-hub/people/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useDataHubAnalytics = (folder = 'all', options = {}) => {
+  return useQuery({
+    queryKey: ['dataHub', 'analytics', folder],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/analytics', { params: { folder } });
+      return data;
+    },
+    staleTime: DATA_HUB_REFRESH_MS,
+    refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
+  });
+};
+
+export const useDataHubSyncStatus = () => {
+  return useQuery({
+    queryKey: ['dataHub', 'syncStatus'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/sync-status');
+      return data;
+    },
+    staleTime: DATA_HUB_REFRESH_MS,
+    refetchInterval: DATA_HUB_REFRESH_MS,
+  });
+};
+
+export const useDataHubReconcile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ full = false } = {}) => axios.post('/api/data-hub/reconcile', null, { params: full ? { full: 'true' } : {} }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+    },
+  });
+};

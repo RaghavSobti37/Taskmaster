@@ -1,5 +1,14 @@
 const Asset = require('../models/Asset');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { createNotification } = require('../services/notificationDispatcher');
+const { buildMentionNotifications } = require('../utils/mentionNotifications');
+const { queueGamificationEvent } = require('../services/backgroundQueue');
+
+const dispatchMentionNotifications = (payloads = []) => {
+  for (const payload of payloads) {
+    createNotification(payload).catch(() => {});
+  }
+};
 
 exports.getAssets = async (req, res) => {
   try {
@@ -44,7 +53,20 @@ exports.createAsset = async (req, res) => {
     const populatedAsset = await Asset.findById(asset._id)
       .populate('projectIds', 'name')
       .populate('createdBy', 'name');
-      
+
+    const mentionPayloads = await buildMentionNotifications({
+      text: asset.notes,
+      previousText: '',
+      actor: req.user,
+      asset,
+    });
+    dispatchMentionNotifications(mentionPayloads);
+
+    queueGamificationEvent('ASSET_UPLOADED', {
+      userId: req.user._id,
+      asset: { _id: asset._id },
+    });
+
     res.status(201).json(populatedAsset);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -60,6 +82,8 @@ exports.updateAsset = async (req, res) => {
     if (asset.createdBy.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
       return res.status(403).json({ error: 'Not authorized' });
     }
+
+    const previousNotes = asset.notes;
 
     const { name, link, projectId, projectIds, type, notes } = req.body;
     if (name !== undefined) asset.name = name;
@@ -77,6 +101,16 @@ exports.updateAsset = async (req, res) => {
     const populatedAsset = await Asset.findById(asset._id)
       .populate('projectIds', 'name')
       .populate('createdBy', 'name');
+
+    if (notes !== undefined && String(asset.notes || '') !== String(previousNotes || '')) {
+      const mentionPayloads = await buildMentionNotifications({
+        text: asset.notes,
+        previousText: previousNotes,
+        actor: req.user,
+        asset,
+      });
+      dispatchMentionNotifications(mentionPayloads);
+    }
 
     res.json(populatedAsset);
   } catch (error) {

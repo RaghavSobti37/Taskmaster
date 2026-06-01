@@ -14,7 +14,7 @@ const formatBarMetric = (value, _name, item) => {
 };
 
 export default function GenericDashboardCard({ componentId }) {
-  const [timeframe, setTimeframe] = useState('1d');
+  const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
 
   // Real Data Fetchers
@@ -65,7 +65,7 @@ export default function GenericDashboardCard({ componentId }) {
         type: 'bar',
         chartData: [
           { label: 'Tasks', value: summaryData.metrics.completionRate || 0 },
-          { label: 'Leads', value: summaryData.metrics.totalLeads || 0 },
+          { label: 'Converted', value: summaryData.metrics.convertedLeads || 0 },
           { label: 'Focus', value: summaryData.metrics.focusHours || 0 }
         ],
         tooltipFormatter: formatBarMetric,

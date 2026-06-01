@@ -10,6 +10,7 @@ const followupCache = require('../services/followupCache');
 const logger = require('../utils/logger');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const { queueGamificationEvent } = require('../services/backgroundQueue');
 const Department = require('../models/Department');
 const { isAdminUser, getDepartmentSlug, SALES_SLUG } = require('../utils/departmentPermissions');
 const {
@@ -244,6 +245,10 @@ exports.createLead = async (req, res) => {
     }
     const lead = await Lead.create(leadData);
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
+    queueGamificationEvent('LEAD_CAPTURED', {
+      userId: req.user._id,
+      lead: { _id: lead._id },
+    });
     res.status(201).json(lead);
   } catch (error) {
     logger.error('crmController', 'Create lead ', { error: error.message || error });

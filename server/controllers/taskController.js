@@ -164,6 +164,9 @@ exports.createTask = async (req, res, next) => {
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
     res.status(201).json(taskDto);
   } catch (error) {
+    if (error.message?.includes('cannot be in the past') || error.message?.includes('Invalid start date')) {
+      return res.status(400).json({ error: error.message });
+    }
     if (error.message?.includes('authorized') || error.message?.includes('not found')) {
       return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
     }
@@ -265,6 +268,13 @@ exports.updateTask = async (req, res, next) => {
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'UPDATE_TASK' });
     res.json(taskDto);
   } catch (error) {
+    if (
+      error.message?.includes('cannot be in the past')
+      || error.message?.includes('Invalid start date')
+      || error.message?.includes('Invalid due date')
+    ) {
+      return res.status(400).json({ error: error.message });
+    }
     if (
       error.message?.includes('authorized')
       || error.message?.includes('not found')

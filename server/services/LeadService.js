@@ -1,9 +1,11 @@
 const Lead = require('../models/Lead');
 const backgroundQueue = require('./backgroundQueue');
 const followupCache = require('./followupCache');
+const ContactService = require('./ContactService');
 const { parse } = require('date-fns');
 const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const { isBookedCallSource } = require('../../shared/dataInlets');
 
 class LeadService {
   async createLead(rawLeadData) {
@@ -15,8 +17,34 @@ class LeadService {
     await backgroundQueue.queueCsvBackup();
     await followupCache.cacheFollowup(newLead).catch(() => {});
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: newLead._id, action: 'create' });
-    
+    await this.syncToContactHub(newLead).catch(() => {});
+
     return newLead;
+  }
+
+  async syncToContactHub(lead) {
+    if (!lead) return;
+    const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+    await ContactService.mergeContact({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      city: lead.city,
+      leadStatus: lead.leadStatus,
+      leadQuality: lead.leadQuality,
+      emailStatus: lead.emailStatus,
+      unsubscribed: lead.unsubscribed,
+      unsubscribeReason: lead.unsubscribeReason,
+      recordId: lead._id,
+      summary: {
+        source: lead.source,
+        leadStatus: lead.leadStatus,
+        callStatus: lead.callStatus,
+        nextFollowupDate: lead.nextFollowupDate,
+        nextFollowupTime: lead.nextFollowupTime,
+      },
+      inletKey,
+    }, inletKey === 'booked_calls' ? 'booked_calls' : 'crm');
   }
 
   applyFollowupReminderResets(updateData, existingLead) {
@@ -62,8 +90,9 @@ class LeadService {
       await backgroundQueue.queueCsvBackup();
       await followupCache.cacheFollowup(updatedLead).catch(() => {});
       broadcastRealtimeEvent('leads', 'lead_change', { leadId: updatedLead._id, action: 'update' });
+      await this.syncToContactHub(updatedLead).catch(() => {});
     }
-    
+
     return updatedLead;
   }
 
@@ -87,8 +116,9 @@ class LeadService {
       await backgroundQueue.queueHolySheetSync(upsertedLead._id);
       await backgroundQueue.queueCsvBackup();
       await followupCache.cacheFollowup(upsertedLead).catch(() => {});
+      await this.syncToContactHub(upsertedLead).catch(() => {});
     }
-    
+
     return upsertedLead;
   }
 

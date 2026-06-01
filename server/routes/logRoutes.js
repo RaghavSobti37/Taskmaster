@@ -128,7 +128,9 @@ router.post('/', protect, async (req, res) => {
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
     if (action === 'DAILY_LOG' && details?.type !== 'TASK_COMPLETION') {
-      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', { logId: log._id }).catch((err) => {
+      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', { logId: log._id })
+        .then(() => GamificationService.progressMission(req.user._id, 'DAILY_LOG', 1))
+        .catch((err) => {
         logger.error('Log', 'Daily log XP award failed', { error: err.message });
       });
     }

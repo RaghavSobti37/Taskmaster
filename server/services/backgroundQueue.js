@@ -94,21 +94,7 @@ function initializeQueues() {
   const gamificationWorker = new Worker('gamificationQueue', async (job) => {
     const { eventType, payload } = job.data;
     const GamificationService = require('./gamificationService');
-    
-    if (eventType === 'TASK_COMPLETED') {
-      const { userId, task } = payload;
-
-      logger.debug('Gamification', 'Raw Input Task', { task });
-
-      await GamificationService.generateDailyMissions(userId);
-      await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-    } else if (eventType === 'TASK_CREATED') {
-      const { userId, task } = payload;
-      await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
-    } else if (eventType === 'PROJECT_CREATED') {
-      const { userId, project } = payload;
-      await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
-    }
+    await GamificationService.handleGamificationEvent(eventType, payload);
   }, { connection: redisConnection, concurrency: 5 });
 
   gamificationWorker.on('failed', (job, err) => {
@@ -274,34 +260,20 @@ async function executeHolySheetSyncDirect(ids) {
 
 
 const queueGamificationEvent = async (eventType, payload) => {
+  const runEvent = async () => {
+    const GamificationService = require('./gamificationService');
+    await GamificationService.handleGamificationEvent(eventType, payload);
+  };
+
   if (redisAvailable && gamificationQueue) {
     try {
       await gamificationQueue.add(eventType, { eventType, payload }, { removeOnComplete: true, removeOnFail: false });
     } catch (e) {
-      logger.error('Queue', 'Gamification direct execution fallback', { error: e.message });
+      logger.error('Queue', 'Gamification queue failed — running inline', { error: e.message });
+      setImmediate(runEvent);
     }
   } else {
-    // Defer so gamification DB writes never run inside an active MongoDB transaction.
-    setImmediate(async () => {
-      try {
-        const GamificationService = require('./gamificationService');
-        if (eventType === 'TASK_COMPLETED') {
-          const { userId, task } = payload;
-          logger.debug('Gamification', 'Raw Input Task', { task });
-          await GamificationService.generateDailyMissions(userId);
-          await GamificationService.progressMission(userId, 'COMPLETE_TASK', 1);
-          await GamificationService.awardActionXp(userId, 'COMPLETE_TASK', { taskId: task._id });
-        } else if (eventType === 'TASK_CREATED') {
-          const { userId, task } = payload;
-          await GamificationService.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id });
-        } else if (eventType === 'PROJECT_CREATED') {
-          const { userId, project } = payload;
-          await GamificationService.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id });
-        }
-      } catch (err) {
-        logger.error('Queue', 'Deferred gamification failed', { error: err.message });
-      }
-    });
+    setImmediate(runEvent);
   }
 };
 

@@ -6,6 +6,7 @@ import { getTaskRowStyle } from '../../utils/workspaceColors';
 import { isTaskOverdue } from '../../utils/dashboardTasks';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { isPendingTask } from '../../utils/pendingTask';
+import MentionTitle from '../mentions/MentionTitle';
 
 /**
  * Dashboard task row — workspace color bar, title, due label, priority badge.
@@ -13,6 +14,7 @@ import { isPendingTask } from '../../utils/pendingTask';
  */
 const DashboardTaskRow = ({
   task,
+  projects = [],
   workspaceColor,
   onComplete,
   onOpen,
@@ -21,6 +23,8 @@ const DashboardTaskRow = ({
 }) => {
   const dueLabel = formatDueDate(task.dueDate || task.scheduleDate, { emptyLabel: 'No date' });
   const overdue = isTaskOverdue(task);
+  const projectId = task.projectId?._id || task.projectId;
+  const projectName = task.projectId?.name || projects.find((p) => String(p._id) === String(projectId))?.name;
 
   if (isCompleting || isPendingTask(task) || task._updating) {
     return (
@@ -44,7 +48,7 @@ const DashboardTaskRow = ({
     <div
       data-highlight-id={task._id}
       style={getTaskRowStyle(workspaceColor)}
-      className={`tm-task-row flex items-stretch rounded-xl border border-[var(--color-bg-border)] ${className}`}
+      className={`tm-task-row flex items-stretch rounded-xl border border-[var(--color-bg-border)] overflow-hidden ${className}`}
     >
       <div
         className="w-1 shrink-0 rounded-l-xl"
@@ -68,8 +72,13 @@ const DashboardTaskRow = ({
           onClick={() => onOpen?.(task)}
           className="flex-1 flex items-center gap-3 min-w-0 text-left"
         >
-          <p className="tm-task-title truncate flex-1">{task.title}</p>
-          
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <MentionTitle text={task.title} className="tm-task-title" truncate />
+            {projectName && (
+              <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{projectName}</p>
+            )}
+          </div>
+
           <div className="flex items-center gap-3 shrink-0">
             <Badge variant={getPriorityBadgeVariant(task.priority)} className="uppercase !text-[10px] !font-bold tracking-wide">
               {task.priority || 'medium'}

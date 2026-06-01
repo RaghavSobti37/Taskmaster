@@ -7,6 +7,7 @@ import { formatDueDate } from '../../utils/formatDueDate';
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
 import { isPendingTask } from '../../utils/pendingTask';
+import MentionTitle from '../mentions/MentionTitle';
 import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
 
 const STATUS_OPTIONS = [
@@ -87,11 +88,11 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
             {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
           </button>
         </td>
-        <td className="px-6 py-4">
-          <div className="cursor-pointer" onClick={() => onDetail(task)}>
-            <p className={`text-sm font-bold transition-all ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
-              {task.title}
-            </p>
+        <td className="px-6 py-4 max-w-0 w-full">
+          <div className="cursor-pointer min-w-0" onClick={() => onDetail(task)}>
+            <div className={`text-sm font-bold transition-all min-w-0 ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+              <MentionTitle text={task.title} className="tm-task-title" truncate />
+            </div>
             {isDone && task.completedAt && (
               <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-xs normal-case font-medium tracking-normal italic">
                 Completed {format(new Date(task.completedAt), 'MMM d')}

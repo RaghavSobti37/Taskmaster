@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.44-126d5e?style=flat-square" alt="Version 1.7.44" />
+  <img src="https://img.shields.io/badge/version-1.7.45-126d5e?style=flat-square" alt="Version 1.7.45" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -46,7 +46,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     React SPA (Vite + PWA)                      │
-│  Dashboard │ Projects │ CRM │ Finance │ Inbox │ Schedule │ Admin│
+│  Dashboard │ Projects │ CRM │ Finance │ Inbox │ Schedule │ Admin│ Data Hub │
 │            TanStack Query  │  Service Worker (sw.js)            │
 └────────────────────────────┬────────────────────────────────────┘
                              │  Secure HTTP / WSS (/api/*)
@@ -142,6 +142,30 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Single OS toast per event:** Push subscription pruning (`server/utils/pushSubscriptions.js`), send-time dedupe, service-worker tag guards, and client-side `localStorage` + `BroadcastChannel` dedupe prevent duplicate system notifications on phone and laptop.
 * **Polling fallback:** When push is unavailable, `NotificationBridge` shows OS toasts only after push init completes — never alongside an active push subscription.
 
+### 📅 Calendar & Music Content
+
+* **Past-date guard:** Tasks (`scheduleDate`, `dueDate`) and calendar events cannot be created or moved to the past — enforced in UI (`client/src/utils/dateValidation.js`) and API (`shared/dateValidation.js`, `TaskService`, `calendarRoutes`).
+* **Music Content Calendar:** 35 public `musical_day` events (birthdays, observances, memorials) seeded from `Music_Content_Calendar.pdf` via `node server/scripts/seedMusicContentCalendar.js --year=2026 [--prod]`.
+* **Event types:** `meeting`, `instagram_post`, `youtube_post`, `shoot_day`, `event`, `musical_day` — musical days display as **Musical Day** in the calendar UI.
+
+### 🗄️ Data Hub (Unified CRM)
+
+* **Admin surface:** Admin Panel → **CRM** tab (`DataHubPage.jsx`) — folder sidebar, people table, person detail drawer, analytics panel, TSC HolySheet import.
+* **Inlets:** Exly, Leads, TSC/HolySheet, Booked Calls, Enquiries, Mail Engagement, Community, Active Users, Unsubscribed — configured in `shared/dataInlets.js`.
+* **API:** `/api/data-hub` — folders, people search/pagination, analytics, sync status, reconcile trigger.
+* **Sync:** `DataHubService.syncAllInlets()` merges contacts from leads, Exly, TSC, booked-call webhooks, mail events, and enquiries into the unified `Contact` hub with inlet flags.
+* **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; auto-sync from UI every few minutes.
+
+### ✍️ Task Mentions & Assets
+
+* **@mentions:** `MentionInput` / `MentionTextarea` in task create/edit — notifies mentioned users who are not already assignees (`server/utils/mentionNotifications.js`, `shared/mentionTokens.js`).
+* **#assets:** Hash tokens link to asset URLs in task title/description.
+
+### 🔔 Notification Policy
+
+* **Overdue alerts removed:** The `checkOverdue` cron (task + follow-up overdue push/in-app alerts) was removed from `notificationService.js`. Upcoming call reminders (~30 min before follow-ups) remain.
+* **Dashboard overdue cards:** UI badges/lists for overdue tasks remain visual-only — no automated notifications.
+
 ### 📅 Attendance & Time Tracking
 
 * **Independent mark-in / mark-out:** Self-service and admin flows treat check-in and check-out as separate inputs; server no longer blocks checkout without check-in.
@@ -173,7 +197,10 @@ CoreKnot/
 │   │   └── icons/              # Responsive multi-device application icons
 │   ├── scripts/                # Frontend automation utilities
 │   └── src/
-│       ├── components/         # Atomic UI controls, design primitives, and form modules
+│       ├── components/
+│       │   ├── dataHub/        # Data Hub folder sidebar, stats, person detail, analytics, TSC import
+│       │   ├── mentions/       # MentionInput, MentionTextarea autocomplete
+│       │   └── forms/          # TaskFormFields, WorkspaceSelect, etc.
 │       ├── pages/              # Routed view targets (Dashboard, Inbox, Todo, CRM)
 │       ├── hooks/              # Isolated React Query abstractions & hardware listeners
 │       ├── contexts/           # Global State Hubs (Auth, Theme, Socket, Toasts)
@@ -187,7 +214,12 @@ CoreKnot/
 │   ├── middleware/             # Authorization, Rate Limiting, and Health Guards
 │   ├── scripts/                # Database seed engines, backup suites, and migrations
 │   └── templates/              # Transactional MJML/HTML email layouts
-├── shared/                     # Multi-runtime definitions (Logger schemas, types, projectRoles)
+├── shared/                     # Multi-runtime definitions (logger, roles, validation, data inlets)
+│   ├── dateValidation.js       # IST date-key + calendar datetime guards (CJS; client mirrors in src/utils)
+│   ├── dataInlets.js           # Data Hub folder taxonomy
+│   ├── gamificationRules.js    # Shared XP/action rules
+│   ├── mentionTokens.js        # @user / #asset token parsing
+│   └── taskPriorityDates.js    # Priority → due-date span logic
 ├── docs/                       # Architectural specs, startup guides, and AI agent context
 └── render.yaml                 # Infrastructure Blueprint configurations
 ```
@@ -241,6 +273,15 @@ Populate fundamental organizational architectures, department entities, permissi
 
 ```bash
 node scripts/seedDepartmentsAndTaskTypes.js
+node scripts/seedMusicContentCalendar.js --year=2026        # local calendar events
+node scripts/reconcileDataHub.js --full                     # backfill Data Hub contacts
+```
+
+Production one-shot (requires `MONGODB_URI_PROD` in `server/.env`):
+
+```bash
+node scripts/seedMusicContentCalendar.js --year=2026 --prod
+node scripts/reconcileDataHub.js --prod --full
 ```
 
 #### 4. Run the Local Development Environment
@@ -315,7 +356,8 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 ├── /auth         → User onboarding, token provisioning, and federated Google sign-in
 ├── /tasks        → Standard task mutations, dynamic tracking states, and role assignments
 ├── /projects     → Structural workspace definitions, access states, and board layouts
-├── /crm          → Third-party contact capture engines and pipeline automations
+├── /crm          → Legacy contacts + Admin Data Hub UI entry
+├── /data-hub     → Unified contact hub: folders, people, analytics, reconcile
 ├── /webhooks     → Public ingress (book-call, artist-enquiry, Exly, Meta, Resend) with queue-backed processing
 ├── /notifications→ Push delivery registries, system status counts, and message updates
 ├── /subscriptions→ Office subscription CRUD and due-date reminder pipeline
@@ -359,6 +401,23 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.45 — Data Hub, Calendar Guards & Music Content Calendar
+
+- **Data Hub:** Unified CRM at Admin → CRM (`DataHubPage`, `DataHubService`, `/api/data-hub`, `shared/dataInlets.js`). Folder inlets: Exly, Leads, TSC, Booked Calls, Enquiries, Mail, Community, Active, Unsubscribed. Reconcile via UI or `reconcileDataHub.js`.
+- **Past-date validation:** Tasks and calendar events blocked in past (IST) — `shared/dateValidation.js`, `TaskService`, `calendarRoutes`, client `dateValidation.js`.
+- **Music Content Calendar:** 35 public `musical_day` events from `Music_Content_Calendar.pdf` — `seedMusicContentCalendar.js --year=2026 [--prod]`.
+- **Task mentions:** `@user` / `#asset` tokens in task title/description with notification dispatch (`mentionNotifications.js`, `mentions/` components).
+- **Overdue notifications removed:** `checkOverdue` cron deleted from `notificationService.js` (no overdue task/follow-up alerts).
+- **Gamification:** Shared rules in `shared/gamificationRules.js`; booked-call sync into Data Hub via `bookedCallsSyncService.js`.
+
+Post-deploy production data (run once against `MONGODB_URI_PROD`):
+
+```bash
+cd server
+node scripts/seedMusicContentCalendar.js --year=2026 --prod
+node scripts/reconcileDataHub.js --prod --full
+```
 
 ### v1.7.44 - Notifications, Attendance UX & Admin Access
 

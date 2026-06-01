@@ -67,33 +67,28 @@ const UnifiedTimeCard = ({
 
   return (
     <Wrapper className={isSelfMode ? "p-6 space-y-6" : "space-y-6"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{subTitle}</p>
-          <p className="text-2xl font-black">{title}</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">{subTitle}</p>
+          <p className="text-2xl font-black shrink-0">{title}</p>
+          {entry?.overtimeMinutes > 0 && (
+            <span className="shrink-0 px-2 py-1 rounded-lg bg-violet-500/10 text-violet-600 border border-violet-500/20 text-xs font-bold">
+              OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
+            </span>
+          )}
+          {entry?.discrepancyMinutes >= 30 && (
+            <span className={`shrink-0 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
+              Discrepancy: {entry.discrepancyMinutes}m
+            </span>
+          )}
         </div>
         {(inAppr || outAppr) && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
             <Lock size={14} />
             {inAppr && outAppr ? 'Fully Approved' : 'Partially Approved'}
           </span>
         )}
       </div>
-
-      {(entry?.overtimeMinutes > 0 || entry?.discrepancyMinutes >= 30) && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          {entry.overtimeMinutes > 0 && (
-            <span className="px-2 py-1 rounded-lg bg-violet-500/10 text-violet-600 border border-violet-500/20 font-bold">
-              OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
-            </span>
-          )}
-          {entry.discrepancyMinutes >= 30 && (
-            <span className={`px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} font-bold`}>
-              Discrepancy: {entry.discrepancyMinutes}m
-            </span>
-          )}
-        </div>
-      )}
 
       {isSelfMode ? (
         <>

@@ -5,6 +5,7 @@ import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
 import { isPendingTask } from '../../utils/pendingTask';
+import MentionTitle from '../mentions/MentionTitle';
 import { TaskKanbanCardSkeleton } from '../tasks/TaskPendingSkeleton';
 
 const progressForStatus = (status) => {
@@ -56,7 +57,7 @@ const KanbanCard = ({ task, onMove, onDetail, workspaces, projects, completingTa
       </div>
       <div className={`${isDone ? 'cursor-default' : 'cursor-pointer'} mb-3`} onClick={() => !isDone && onDetail(task)}>
         <h4 className={`text-xs font-black mb-1 transition-colors uppercase tracking-tight leading-tight ${isDone ? 'text-[var(--color-text-muted)] line-through' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-action-primary)]'}`}>
-          {task.title}
+          <MentionTitle text={task.title} />
         </h4>
         {isDone ? (
           <div className="pt-2 border-t border-[var(--color-bg-border)] border-dashed space-y-1">

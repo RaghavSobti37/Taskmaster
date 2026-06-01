@@ -1,15 +1,6 @@
 import React from 'react';
-import { Database } from 'lucide-react';
-import { PageHeader, PageContainer } from '../../components/ui';
-import TscDataContent from '../../components/admin/TscDataContent';
+import DataHubPage from './DataHubPage';
 
-const AdminCRM = () => {
-  return (
-    <PageContainer className="!py-4 !space-y-6">
-    
-      <TscDataContent />
-    </PageContainer>
-  );
-};
+const AdminCRM = () => <DataHubPage />;
 
 export default AdminCRM;

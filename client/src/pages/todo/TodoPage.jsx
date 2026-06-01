@@ -7,7 +7,7 @@ import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTasks, useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import TaskDetailModal from '../../components/TaskDetailModal';
@@ -22,6 +22,7 @@ import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
 import { Circle, CheckCircle2 } from 'lucide-react';
+import MentionTitle from '../../components/mentions/MentionTitle';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 
 const TodoPage = () => {
@@ -31,6 +32,7 @@ const TodoPage = () => {
   const { data: tasks = [], isLoading } = useTasks(user?._id);
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
+  const { data: users = [] } = useUserDirectory();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -39,6 +41,7 @@ const TodoPage = () => {
   const [projectFilter, setProjectFilter] = useState('all');
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
 
   const typeOptions = useMemo(
@@ -68,7 +71,7 @@ const TodoPage = () => {
   const doneTasks = filtered.filter((t) => t.status === 'done');
 
   const handleCompleteRequest = (task) => {
-    const intent = resolveTaskFinishIntent(task, user, projects);
+    const intent = resolveTaskFinishIntent(task, user, projects, users);
     if (intent === 'approve') return;
     if (intent === 'awaiting_review' || !canMarkTaskComplete(task)) {
       if (task?.status === 'in-review') {
@@ -76,6 +79,7 @@ const TodoPage = () => {
       }
       return;
     }
+    setCompletionSubmitForReview(intent === 'submit_review');
     setTaskToComplete(task);
   };
 
@@ -141,8 +145,10 @@ const TodoPage = () => {
             {isDone ? <CheckCircle2 size={18} /> : <Circle size={18} />}
           </button>
         </td>
-        <td className="px-4 py-2">
-          <p className={`text-sm font-bold ${isDone ? 'line-through' : ''}`}>{task?.title}</p>
+        <td className="px-4 py-2 max-w-0 w-full">
+          <div className={`text-sm font-bold min-w-0 ${isDone ? 'line-through' : ''}`}>
+            <MentionTitle text={task?.title} className="tm-task-title" truncate />
+          </div>
           {assigner?.name && (
             <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700/90 dark:text-amber-400 mt-0.5">
               Assigned by {displayPersonName(assigner)}
@@ -214,7 +220,7 @@ const TodoPage = () => {
       </Card>
 
       <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
-      <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} />
+      <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />
     </PageContainer>
   );
 };

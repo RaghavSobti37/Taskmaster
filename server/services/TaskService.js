@@ -18,9 +18,23 @@ const {
 } = require('../../shared/taskReviewRules');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
+const { buildMentionNotifications, resolveMentionedUserIds, isMentionOnlyUser } = require('../utils/mentionNotifications');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { validateTaskTimelineForRequest } = require('../utils/dateValidation');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
+
+const queueTaskCompletedGamification = (userId, task) => {
+  if (!userId || !task?._id) return;
+  queueGamificationEvent('TASK_COMPLETED', {
+    userId,
+    task: {
+      _id: task._id,
+      title: task.title,
+      projectId: task.projectId?._id || task.projectId,
+    },
+  });
+};
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
 
@@ -192,6 +206,11 @@ exports.createTask = async (taskData, user, session) => {
 
   applyPriorityDueDate(coreData);
 
+  const timelineCheck = validateTaskTimelineForRequest(coreData);
+  if (!timelineCheck.ok) {
+    throw new Error(timelineCheck.error);
+  }
+
   const [task] = await Task.create([{ ...coreData, createdBy: user._id }], { session });
 
   const pendingNotifications = [];
@@ -212,6 +231,27 @@ exports.createTask = async (taskData, user, session) => {
         iconType: 'user'
       });
     }
+  }
+
+  const mentionNotifsDesc = await buildMentionNotifications({
+    text: coreData.description,
+    previousText: '',
+    actor: user,
+    assigneeIds,
+    task,
+  });
+  const mentionNotifsTitle = await buildMentionNotifications({
+    text: coreData.title,
+    previousText: '',
+    actor: user,
+    assigneeIds,
+    task,
+  });
+  const mentionSeen = new Set();
+  for (const payload of [...mentionNotifsDesc, ...mentionNotifsTitle]) {
+    if (mentionSeen.has(payload.recipientId)) continue;
+    mentionSeen.add(payload.recipientId);
+    pendingNotifications.push(payload);
   }
 
   if (task.projectId) {
@@ -252,6 +292,13 @@ exports.updateTask = async (taskId, updates, user, session) => {
   const isCreator = existing.createdBy?.toString() === user._id.toString();
   const isAssignee = assignments.some((a) => assignmentUserId(a.userId) === user._id.toString());
   const primaryAssignedBy = assignmentUserId(assignments[0]?.assignedBy);
+  const assigneeIds = assignments.map((a) => assignmentUserId(a.userId)).filter(Boolean);
+
+  const mentionedUserIds = await resolveMentionedUserIds(existing.title, existing.description);
+  const isMentioned = mentionedUserIds.has(user._id.toString());
+  const mentionOnly = !isAdminUser(user)
+    && !canUserApproveReview(user, assignments)
+    && isMentionOnlyUser(user._id, assigneeIds, mentionedUserIds);
 
   const { assignees, reviewAction, ...coreUpdates } = updates;
 
@@ -269,7 +316,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
-  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember) {
+  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember && !isMentioned) {
     throw new Error('Not authorized to update this task');
   }
 
@@ -324,7 +371,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
-    const needsReview = requiresReviewForUser(assignments, user._id);
+    const needsReview = requiresReviewForUser(assignments, user._id) || mentionOnly;
     if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
       coreUpdates.status = 'in-review';
     }
@@ -345,6 +392,20 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const oldDueDate = existing.dueDate;
   applyPriorityDueDate(coreUpdates, existing);
+
+  const timelineToValidate = {};
+  for (const field of TIMELINE_FIELDS) {
+    if (coreUpdates[field] !== undefined) {
+      timelineToValidate[field] = coreUpdates[field];
+    }
+  }
+  if (Object.keys(timelineToValidate).length > 0) {
+    const timelineCheck = validateTaskTimelineForRequest(timelineToValidate);
+    if (!timelineCheck.ok) {
+      throw new Error(timelineCheck.error);
+    }
+  }
+
   const dueDateChanged = Boolean(
     coreUpdates.dueDate
     && new Date(coreUpdates.dueDate).getTime() !== new Date(oldDueDate || 0).getTime()
@@ -442,6 +503,14 @@ exports.updateTask = async (taskId, updates, user, session) => {
       await finalizeTaskCompletion(task, user, session);
       for (const a of assignments) {
         const assigneeId = assignmentUserId(a.userId);
+        if (assigneeId) queueTaskCompletedGamification(assigneeId, task);
+      }
+      queueGamificationEvent('REVIEW_APPROVED', {
+        reviewerId: user._id,
+        task: { _id: task._id },
+      });
+      for (const a of assignments) {
+        const assigneeId = assignmentUserId(a.userId);
         if (assigneeId && assigneeId !== user._id.toString()) {
           pendingNotifications.push({
             recipientId: assigneeId,
@@ -478,9 +547,48 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (coreUpdates.status === 'done' && !reviewAction) {
-      if (!requiresReviewForUser(assignments, user._id)) {
+      if (!requiresReviewForUser(assignments, user._id) && !mentionOnly) {
         await finalizeTaskCompletion(task, user, session);
+        queueTaskCompletedGamification(user._id, task);
       }
+    }
+
+    if (coreUpdates.description !== undefined
+      && String(task.description || '') !== String(existing.description || '')) {
+      let currentAssignments = assignments;
+      if (assigneesChanged) {
+        currentAssignments = await TaskAssignment.find({ taskId: task._id }).session(session).lean();
+      }
+      const currentAssigneeIds = currentAssignments
+        .map((a) => assignmentUserId(a.userId))
+        .filter(Boolean);
+      const mentionNotifsDesc = await buildMentionNotifications({
+        text: task.description,
+        previousText: existing.description,
+        actor: user,
+        assigneeIds: currentAssigneeIds,
+        task,
+      });
+      pendingNotifications.push(...mentionNotifsDesc);
+    }
+
+    if (coreUpdates.title !== undefined
+      && String(task.title || '') !== String(existing.title || '')) {
+      let currentAssignments = assignments;
+      if (assigneesChanged) {
+        currentAssignments = await TaskAssignment.find({ taskId: task._id }).session(session).lean();
+      }
+      const currentAssigneeIds = currentAssignments
+        .map((a) => assignmentUserId(a.userId))
+        .filter(Boolean);
+      const mentionNotifsTitle = await buildMentionNotifications({
+        text: task.title,
+        previousText: existing.title,
+        actor: user,
+        assigneeIds: currentAssigneeIds,
+        task,
+      });
+      pendingNotifications.push(...mentionNotifsTitle);
     }
   }
 

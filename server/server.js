@@ -279,6 +279,7 @@ app.use('/api/pinboard', require('./routes/pinBoardRoutes'));
 app.use('/api/mail', require('./routes/mailRoutes'));
 app.use('/api/ses', require('./routes/sesRoutes'));
 app.use('/api/tsc', require('./routes/tscRoutes'));
+app.use('/api/data-hub', require('./routes/dataHubRoutes'));
 app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));

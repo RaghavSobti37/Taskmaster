@@ -172,8 +172,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         setSelectedProject('');
         setIsDrawerOpen(false);
         addToast({
-          title: 'Log saved (+20 XP)',
-          message: 'Daily log entry added.',
+          title: 'Log saved',
+          message: 'Daily log entry added — XP awarded if under today\'s cap.',
           type: 'success',
           module: MODULE.SYSTEM,
         });

@@ -472,16 +472,21 @@ select option {
 }
 
 .dashboard-widget-grid .dashboard-grid-item > * {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   border-radius: 0;
   box-shadow: none;
   margin: -1px 0 0 -1px;
 }
 
 @media (min-width: 1024px) {
+  .dashboard-widget-grid {
+    grid-template-rows: repeat(var(--grid-rows, 1), minmax(min-content, max-content));
+  }
+
   .dashboard-grid-item {
     grid-column: var(--lg-col) / span var(--lg-span, 1);
-    grid-row-start: var(--lg-row);
+    grid-row: var(--lg-row) / span 1;
   }
 }
 

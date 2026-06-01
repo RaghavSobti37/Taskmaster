@@ -113,6 +113,7 @@ exports.getDashboardSummary = async (req, res) => {
         overdueTasks: tasks.overdue,
         focusHours: logs.focusHours,
         totalLeads: leads.total,
+        convertedLeads: leads.converted,
         conversionRate,
         highQualityLeads: leads.highQuality,
         projectCount: projects.count,

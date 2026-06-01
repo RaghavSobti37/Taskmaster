@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, PageHeader, PageContainer, PageSkeleton } from '../../components/ui';
-import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge } from '../../components/ui';
+import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AdminGamification = () => {
   const { confirm } = useConfirm();
   const [config, setConfig] = useState(null);
+  const [rules, setRules] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -14,22 +15,23 @@ const AdminGamification = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [recalculating, setRecalculating] = useState(false);
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchRules = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/gamification-admin/config');
-      setConfig(res.data);
+      const res = await axios.get('/api/gamification-admin/rules');
+      setConfig(res.data.config);
+      setRules(res.data.rules);
       setMessage({ type: '', text: '' });
-    } catch (err) {
-      setMessage({ type: 'error', text: 'Failed to load configuration' });
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to load gamification rules' });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
 
   const handleEdit = useCallback((field, value) => {
     setEditingField(field);
@@ -41,26 +43,17 @@ const AdminGamification = () => {
     try {
       setSaving(true);
       const numValue = Number(editValue);
-
-      if (isNaN(numValue) || numValue < 0) {
-        setMessage({ type: 'error', text: 'Please enter a valid positive number' });
+      if (Number.isNaN(numValue) || numValue < 0) {
+        setMessage({ type: 'error', text: 'Enter a valid non-negative number' });
         return;
       }
-
-      await axios.put('/api/gamification-admin/config', {
-        [field]: numValue
-      });
-
-      setConfig(prev => ({
-        ...prev,
-        [field]: numValue
-      }));
-
-      setMessage({ type: 'success', text: `${field} updated successfully` });
+      await axios.put('/api/gamification-admin/config', { [field]: numValue });
+      setConfig((prev) => ({ ...prev, [field]: numValue }));
+      setMessage({ type: 'success', text: `${field} updated` });
       setEditingField(null);
       setEditValue('');
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to update configuration' });
+      setMessage({ type: 'error', text: err.response?.data?.error || 'Update failed' });
     } finally {
       setSaving(false);
     }
@@ -73,62 +66,46 @@ const AdminGamification = () => {
 
   const handleRecalculateAllLevels = useCallback(async () => {
     const ok = await confirm({
-      title: 'Recalculate levels?',
-      message: 'This will recalculate levels for all users with the new formula. Continue?',
-      confirmLabel: 'Continue',
+      title: 'Recalculate all user XP?',
+      message: 'Rebuilds totals from activity history using current XP rates, then syncs levels.',
+      confirmLabel: 'Recalculate',
       type: 'warning',
     });
     if (!ok) return;
     try {
       setRecalculating(true);
       const res = await axios.post('/api/gamification-admin/recalculate-all-levels');
-      setMessage({
-        type: 'success',
-        text: res.data.message || `Updated ${res.data.updatedUsers} of ${res.data.totalUsers} users`,
-      });
+      setMessage({ type: 'success', text: res.data.message });
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to recalculate levels' });
+      setMessage({ type: 'error', text: err.response?.data?.error || 'Recalculate failed' });
     } finally {
       setRecalculating(false);
     }
   }, [confirm]);
 
+  const xpRuleRows = useMemo(() => {
+    if (!rules?.xpRules || !config) return [];
+    return rules.xpRules.map((row) => {
+      const cap = rules.dailyCaps?.[row.capKey];
+      const capLabel = cap == null ? 'Unlimited' : cap === 0 ? 'Disabled' : `${cap}/day`;
+      return { ...row, xp: config[row.configKey] ?? 0, capLabel };
+    });
+  }, [rules, config]);
+
+  const editableFields = useMemo(() => ([
+    { key: 'stepXp', label: 'XP per level', description: 'Total XP needed to advance one level (linear: level = floor(exp / stepXp) + 1)' },
+    { key: 'dailyMissionBaseReward', label: 'Mission scale reference', description: 'Reference value; individual missions use fixed bonuses (25 / 20 / 15)' },
+  ]), []);
+
   if (loading) {
     return <PageContainer><PageSkeleton /></PageContainer>;
   }
 
-  const sections = [
-    {
-      title: 'Action XP Values',
-      description: 'XP awarded for various user actions',
-      fields: [
-        { key: 'taskCompletion', label: 'Task Completion', description: 'XP for completing a task (set to 0 to disable)' },
-        { key: 'dailyLog', label: 'Daily Log', description: 'XP awarded for each manual daily log entry' },
-        { key: 'taskCreation', label: 'Task Creation', description: 'XP awarded when a new task is created' },
-        { key: 'projectCreation', label: 'Project Creation', description: 'XP awarded when a new project is created' },
-        { key: 'attendanceLog', label: 'Attendance Log', description: 'XP awarded for logging attendance' },
-        { key: 'assetUpload', label: 'Asset Upload', description: 'XP awarded when uploading project assets' },
-        { key: 'commentCreation', label: 'Comment Creation', description: 'XP awarded when creating a comment' },
-        { key: 'leadCapture', label: 'Lead Capture', description: 'XP awarded when capturing a new lead' },
-        { key: 'invoiceSubmission', label: 'Invoice Submission', description: 'XP awarded when submitting an invoice' }
-      ]
-    },
-    {
-      title: 'Mission & Level Settings',
-      description: 'Configure mission rewards and level progression',
-      fields: [
-        { key: 'dailyMissionBaseReward', label: 'Daily Mission Base Reward', description: 'Base XP reward for completing daily missions' },
-        { key: 'stepXp', label: 'XP Per Level', description: 'XP required to advance one level (goal XP rounded to nearest 100 multiple)' },
-        { key: 'baseXp', label: 'Base XP for Level 1', description: 'Starting XP value for level 1 (legacy, not currently used)' }
-      ]
-    }
-  ];
-
   return (
-    <PageContainer className="space-y-5">
+    <PageContainer className="space-y-5 max-w-4xl">
       <PageHeader
-        title="Gamification Configuration"
-        subtitle="Manage XP values and reward multipliers"
+        title="Gamification Rules"
+        subtitle="Fair XP for every role — outcome over setup, weekly leaderboard"
         icon={Trophy}
       />
 
@@ -149,104 +126,187 @@ const AdminGamification = () => {
         </div>
       )}
 
-      <div className="space-y-5 w-full" style={{ maxWidth: '720px' }}>
-        {sections.map((section, idx) => (
-          <Card key={idx} className="w-full overflow-hidden">
-            <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
-              <h3 className="text-base font-bold">{section.title}</h3>
-              <p className="text-sm text-[var(--color-text-muted)]">{section.description}</p>
-            </div>
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)] flex items-center gap-2">
+          <Shield size={18} className="text-blue-500" />
+          <div>
+            <h3 className="text-base font-bold">Fairness principles</h3>
+            <p className="text-sm text-[var(--color-text-muted)]">Why the system is balanced across roles</p>
+          </div>
+        </div>
+        <ul className="px-5 py-4 space-y-2 text-sm text-[var(--color-text-primary)]">
+          {(rules?.fairnessPrinciples || []).map((line) => (
+            <li key={line} className="flex gap-2">
+              <span className="text-[var(--color-action-primary)] shrink-0">•</span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
-            <div className="divide-y divide-[var(--color-bg-border)]">
-              {section.fields.map(({ key, label, description }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between gap-6 px-5 py-4 hover:bg-[var(--color-bg-secondary)] transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[var(--color-text-primary)]">{label}</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{description}</p>
-                  </div>
-
-                  {editingField === key ? (
-                    <div className="flex items-center gap-2 shrink-0">
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
+          <h3 className="text-base font-bold">XP by action</h3>
+          <p className="text-sm text-[var(--color-text-muted)]">Click Edit to change amounts — caps are fixed in code for fairness</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50 text-left text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3">XP</th>
+                <th className="px-4 py-3">Daily cap</th>
+                <th className="px-4 py-3 hidden md:table-cell">Who earns</th>
+                <th className="px-4 py-3 w-24" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-bg-border)]">
+              {xpRuleRows.map((row) => (
+                <tr key={row.configKey} className="hover:bg-[var(--color-bg-secondary)]/30">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{row.label}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{row.note}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingField === row.configKey ? (
                       <input
                         type="number"
                         min="0"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSave(key);
+                          if (e.key === 'Enter') handleSave(row.configKey);
                           if (e.key === 'Escape') handleCancel();
                         }}
-                        className="w-20 px-3 py-2 text-sm text-center rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-16 px-2 py-1 text-center rounded border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]"
                         autoFocus
                       />
-                      <Button
-                        onClick={() => handleSave(key)}
-                        disabled={saving}
-                        size="sm"
-                        className="gap-1"
-                      >
-                        <Save size={14} />
-                        {saving ? 'Saving…' : 'Save'}
+                    ) : (
+                      <span className="font-bold tabular-nums">{row.xp}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={row.capLabel === 'Unlimited' ? 'info' : 'neutral'}>{row.capLabel}</Badge>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell text-[var(--color-text-muted)] text-xs">{row.who}</td>
+                  <td className="px-4 py-3">
+                    {editingField === row.configKey ? (
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={() => handleSave(row.configKey)} disabled={saving} aria-label="Save">
+                          <Save size={14} />
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={handleCancel} aria-label="Cancel">
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => handleEdit(row.configKey, row.xp)} className="gap-1">
+                        <Edit2 size={12} /> Edit
                       </Button>
-                      <Button
-                        onClick={handleCancel}
-                        variant="secondary"
-                        size="sm"
-                        disabled={saving}
-                        aria-label="Cancel"
-                      >
-                        <X size={14} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="inline-flex items-center justify-center min-w-[2.5rem] px-3 py-1 text-base font-bold rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] tabular-nums">
-                        {config?.[key] ?? 0}
-                      </span>
-                      <Button
-                        onClick={() => handleEdit(key, config?.[key] ?? 0)}
-                        variant="secondary"
-                        size="sm"
-                        className="gap-1"
-                      >
-                        <Edit2 size={14} />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </td>
+                </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)] flex items-center gap-2">
+          <Users size={18} />
+          <h3 className="text-base font-bold">Paths to the leaderboard</h3>
+        </div>
+        <div className="divide-y divide-[var(--color-bg-border)]">
+          {(rules?.rolePaths || []).map((path) => (
+            <div key={path.role} className="px-5 py-4">
+              <p className="font-bold text-sm">{path.role}</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1">{path.actions}</p>
+              <p className="text-xs text-[var(--color-action-primary)] mt-1 font-medium">{path.weeklyPotential}</p>
             </div>
-          </Card>
-        ))}
-
-        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <h4 className="font-bold text-sm mb-2">ℹ️ How XP Works</h4>
-          <ul className="text-sm text-[var(--color-text-muted)] space-y-1">
-            <li>• Users earn XP by completing various actions</li>
-            <li>• Reaching level thresholds is based on XP Per Level</li>
-            <li>• Daily missions provide bonus XP rewards</li>
-            <li>• All changes take effect immediately</li>
-          </ul>
+          ))}
         </div>
+      </Card>
 
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-          <h4 className="font-bold text-sm mb-3">⚠️ Recalculate All User XP</h4>
-          <p className="text-sm text-[var(--color-text-muted)] mb-3">
-            Rebuilds each user&apos;s total XP from activity history using the current Action XP values above, then syncs levels from XP Per Level. Use this after changing XP rates — it does not affect past audit log entries, only stored user totals.
-          </p>
-          <Button
-            onClick={handleRecalculateAllLevels}
-            disabled={recalculating}
-            className="gap-2"
-          >
-            <RefreshCw size={16} />
-            {recalculating ? 'Recalculating...' : 'Recalculate All User XP'}
-          </Button>
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
+          <h3 className="text-base font-bold">Daily mission bonuses</h3>
+          <p className="text-sm text-[var(--color-text-muted)]">Extra XP on top of action XP — resets each day</p>
         </div>
+        <div className="divide-y divide-[var(--color-bg-border)]">
+          {(rules?.dailyMissions || []).map((m) => (
+            <div key={m.title} className="px-5 py-3 flex justify-between gap-4 items-center">
+              <div>
+                <p className="font-medium text-sm">{m.title}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{m.description}</p>
+              </div>
+              <Badge variant="success">+{m.expReward} XP</Badge>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)] flex items-center gap-2">
+          <Ban size={18} className="text-[var(--color-text-muted)]" />
+          <h3 className="text-base font-bold">Actions that do not grant XP</h3>
+        </div>
+        <ul className="px-5 py-4 space-y-1.5 text-sm text-[var(--color-text-muted)]">
+          {(rules?.noXpActions || []).map((line) => (
+            <li key={line}>• {line}</li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
+          <h3 className="text-base font-bold">Level progression</h3>
+        </div>
+        <div className="divide-y divide-[var(--color-bg-border)]">
+          {editableFields.map(({ key, label, description }) => (
+            <div key={key} className="flex items-center justify-between gap-6 px-5 py-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{label}</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{description}</p>
+              </div>
+              {editingField === key ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    type="number"
+                    min="1"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="w-20 px-3 py-2 text-sm text-center rounded border border-[var(--color-bg-border)]"
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={() => handleSave(key)} disabled={saving}><Save size={14} /></Button>
+                  <Button size="sm" variant="secondary" onClick={handleCancel}><X size={14} /></Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="font-bold tabular-nums px-3 py-1 rounded border border-[var(--color-bg-border)]">{config?.[key] ?? 0}</span>
+                  <Button size="sm" variant="secondary" onClick={() => handleEdit(key, config?.[key] ?? 0)}>
+                    <Edit2 size={14} />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-3 bg-[var(--color-bg-secondary)]/40 text-xs text-[var(--color-text-muted)]">
+          Example: at {config?.stepXp ?? 100} XP/level — Level 2 at {config?.stepXp ?? 100} XP, Level 3 at {(config?.stepXp ?? 100) * 2} XP. Leaderboard ranks by <strong className="text-[var(--color-text-primary)]">this week&apos;s</strong> audit log sum.
+        </div>
+      </Card>
+
+      <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <h4 className="font-bold text-sm mb-3">Recalculate stored user XP</h4>
+        <p className="text-sm text-[var(--color-text-muted)] mb-3">
+          After changing XP rates, rebuild each user&apos;s total from their activity history using the new rates, then sync levels.
+        </p>
+        <Button onClick={handleRecalculateAllLevels} disabled={recalculating} className="gap-2">
+          <RefreshCw size={16} className={recalculating ? 'animate-spin' : ''} />
+          {recalculating ? 'Recalculating…' : 'Recalculate all user XP'}
+        </Button>
       </div>
     </PageContainer>
   );

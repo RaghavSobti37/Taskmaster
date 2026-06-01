@@ -130,8 +130,8 @@ const ALLOWED_CREATE = [
 
 const ALLOWED_UPDATE = [
   'title', 'description', 'status', 'priority', 'type', 'scheduleSlot', 'scheduleDate',
-  'phaseId', 'assignees', 'startDate', 'dueDate', 'duration', 'plannedHours', 'actualHours',
-  'progress', 'dependencies', 'reviewAction'
+  'projectId', 'workspace', 'phaseId', 'assignees', 'startDate', 'dueDate', 'duration',
+  'plannedHours', 'actualHours', 'progress', 'dependencies', 'reviewAction'
 ];
 
 const pick = (src, keys) => {
@@ -254,6 +254,9 @@ exports.updateTask = async (req, res, next) => {
     });
 
     dispatchTaskNotifications(pendingNotifications);
+    if (rollupMeta?.previousProjectId) {
+      scheduleRollup(rollupMeta.previousProjectId, null);
+    }
     if (rollupMeta?.projectId) {
       scheduleRollup(rollupMeta.projectId, rollupMeta.phaseId);
     }
@@ -262,8 +265,15 @@ exports.updateTask = async (req, res, next) => {
     broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'UPDATE_TASK' });
     res.json(taskDto);
   } catch (error) {
-    if (error.message?.includes('authorized') || error.message?.includes('not found')) {
-      return res.status(error.message.includes('not found') ? 404 : 403).json({ error: error.message });
+    if (
+      error.message?.includes('authorized')
+      || error.message?.includes('not found')
+      || error.message?.includes('Invalid project')
+      || error.message?.includes('creator or assigner')
+      || error.message?.includes('assigned this task')
+    ) {
+      const status = error.message.includes('not found') ? 404 : 403;
+      return res.status(status).json({ error: error.message });
     }
     next(error);
   } finally {

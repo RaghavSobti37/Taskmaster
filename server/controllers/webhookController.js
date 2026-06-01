@@ -3,6 +3,7 @@ const Lead = require('../models/Lead');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep } = require('./crmController');
+const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
 const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
@@ -183,6 +184,48 @@ exports.processBookedCallLogic = async (data) => {
   } catch (error) {
     console.error('Webhook Processing Error:', error);
     throw error; // Let BullMQ handle retry
+  }
+};
+
+function verifyArtistEnquirySecret(req) {
+  const secret = process.env.ARTIST_ENQUIRY_WEBHOOK_SECRET;
+  if (!secret) return true;
+  const received = req.headers['x-webhook-secret'];
+  return received && received === secret;
+}
+
+exports.processArtistEnquiryLogic = processArtistEnquiryLogic;
+
+exports.handleArtistEnquiry = async (req, res) => {
+  if (!verifyArtistEnquirySecret(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    if (connection.status === 'ready') {
+      await webhookQueue.add('artist-enquiry', req.body, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      });
+      return res.status(202).json({ success: true, message: 'Artist enquiry received and queued for processing' });
+    }
+    console.warn('Redis is not ready, falling back to synchronous artist-enquiry processing');
+    const result = await processArtistEnquiryLogic(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Artist enquiry queue error:', error);
+    try {
+      console.warn('Falling back to synchronous artist-enquiry processing after enqueue error');
+      const result = await processArtistEnquiryLogic(req.body);
+      return res.status(200).json(result);
+    } catch (syncError) {
+      console.error('Artist enquiry sync fallback error:', syncError);
+      const isValidation = syncError.message?.includes('Missing required fields');
+      return res.status(isValidation ? 400 : 500).json({
+        success: false,
+        error: syncError.message || 'Failed to process artist enquiry',
+      });
+    }
   }
 };
 

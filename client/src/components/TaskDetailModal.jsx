@@ -6,6 +6,7 @@ import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
 import { canReviewTask } from '../utils/taskReview';
+import { resolveTaskId } from '../utils/taskCompletion';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
 
@@ -60,24 +61,30 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   };
 
   const submitUpdate = (reviewAction) => {
+    const taskId = resolveTaskId(task);
+    if (!taskId) return;
+
+    const payload = {
+      title,
+      description: desc,
+      status: reviewAction ? undefined : formValues.status,
+      priority: formValues.priority,
+      type: normalizeTaskCategory(formValues.type),
+      projectId: formValues.projectId || null,
+      workspace: formValues.workspace,
+      assignees: formValues.assignees,
+      reviewAction,
+    };
+
+    if (canEditTimeline) {
+      payload.scheduleSlot = formValues.scheduleSlot;
+      payload.scheduleDate = formValues.scheduleDate || null;
+      payload.dueDate = formValues.dueDate || null;
+    }
+
     suppressAutoToasts(5000);
     updateTaskMutation.mutate(
-      {
-        id: task._id,
-        data: {
-          title,
-          description: desc,
-          status: reviewAction ? undefined : formValues.status,
-          priority: formValues.priority,
-          type: normalizeTaskCategory(formValues.type),
-          workspace: formValues.workspace,
-          scheduleSlot: formValues.scheduleSlot,
-          scheduleDate: formValues.scheduleDate || null,
-          assignees: formValues.assignees,
-          dueDate: formValues.dueDate || null,
-          reviewAction,
-        },
-      },
+      { id: taskId, data: payload },
       { onSuccess: (data) => notifyUpdate(data) }
     );
     onClose();
@@ -175,7 +182,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)]">
                 Close
               </button>
-              {!isDone && !isInReview && (
+              {!isDone && (
                 <button
                   type="submit"
                   disabled={!title}

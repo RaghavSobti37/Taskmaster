@@ -325,7 +325,7 @@ const ProjectDetail = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         task={selectedTask}
-        onTaskUpdated={handleTaskUpdate}
+        onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
         onTaskDeleted={handleTaskDelete}
       />
 

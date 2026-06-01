@@ -1,16 +1,37 @@
 import React from 'react';
 import { Link2 } from 'lucide-react';
 
-/** Detect asset type from stored type or URL */
-export function detectAssetType(type, link = '') {
-  const url = (link || '').toLowerCase();
-  if (type && type !== 'other') return type;
+function isZoomHost(url) {
+  try {
+    const withProtocol = url.startsWith('http') ? url : `https://${url}`;
+    const host = new URL(withProtocol).hostname.toLowerCase();
+    return (
+      host === 'zoom.us' || host.endsWith('.zoom.us')
+      || host === 'zoom.com' || host.endsWith('.zoom.com')
+      || host === 'zoomgov.com' || host.endsWith('.zoomgov.com')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function inferAssetTypeFromUrl(url) {
+  if (!url) return null;
   if (url.includes('docs.google.com/spreadsheets')) return 'sheet';
   if (url.includes('docs.google.com/document')) return 'docs';
   if (url.includes('docs.google.com/presentation')) return 'presentation';
   if (url.includes('drive.google.com')) return 'drive';
   if (url.includes('meet.google.com')) return 'meet';
-  if (url.includes('zoom.us') || url.includes('zoom.com') || url.includes('zoomgov.com')) return 'zoom';
+  if (isZoomHost(url)) return 'zoom';
+  return null;
+}
+
+/** Detect asset type from URL first, then stored type (keeps stats/icons aligned with links) */
+export function detectAssetType(type, link = '') {
+  const url = (link || '').toLowerCase();
+  const fromUrl = inferAssetTypeFromUrl(url);
+  if (fromUrl) return fromUrl;
+  if (type && type !== 'other') return type;
   return 'other';
 }
 

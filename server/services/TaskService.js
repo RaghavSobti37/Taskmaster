@@ -24,6 +24,39 @@ const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
 
+const isEmptyTimelineValue = (value) => value == null || value === '';
+
+const timelineFieldUnchanged = (field, nextVal, existing) => {
+  if (nextVal === undefined) return true;
+  const prev = existing?.[field];
+  if (field === 'scheduleDate' || field === 'dueDate' || field === 'startDate') {
+    if (isEmptyTimelineValue(nextVal) && isEmptyTimelineValue(prev)) return true;
+    const nextTime = new Date(nextVal).getTime();
+    const prevTime = new Date(prev).getTime();
+    return !Number.isNaN(nextTime) && !Number.isNaN(prevTime) && nextTime === prevTime;
+  }
+  if (field === 'duration') {
+    return Number(nextVal ?? 0) === Number(prev ?? 0);
+  }
+  if (field === 'scheduleSlot') {
+    const norm = (v) => String(v || 'FULL').toUpperCase();
+    return norm(nextVal) === norm(prev);
+  }
+  return String(nextVal) === String(prev ?? '');
+};
+
+/** Drop timeline keys that match existing task — avoids blocking project-only edits. */
+const stripUnchangedTimelineFields = (coreUpdates, existing) => {
+  for (const field of TIMELINE_FIELDS) {
+    if (
+      coreUpdates[field] !== undefined
+      && timelineFieldUnchanged(field, coreUpdates[field], existing)
+    ) {
+      delete coreUpdates[field];
+    }
+  }
+};
+
 /** Project memberRoles values that may assign tasks to others on that project. */
 const PROJECT_ASSIGN_ROLES = new Set(['admin', 'manager', 'artist_management']);
 
@@ -35,7 +68,10 @@ const getProjectRole = (project, userId) => {
   const ownerId = (project.owner?._id || project.owner)?.toString?.();
   if (ownerId && ownerId === uid) return 'admin';
   const isMember = project.members?.some((m) => (m?._id || m)?.toString() === uid);
-  if (!isMember) return null;
+  const hasRoleEntry = (project.memberRoles || []).some(
+    (entry) => memberRoleUserId(entry) === uid
+  );
+  if (!isMember && !hasRoleEntry) return null;
   return getProjectRoleForUser(project, userId);
 };
 
@@ -43,6 +79,13 @@ const canAssignTasks = (project, user) => {
   if (isAdminUser(user)) return true;
   const role = getProjectRole(project, user._id);
   return Boolean(role && PROJECT_ASSIGN_ROLES.has(role));
+};
+
+const userHasProjectAccess = (project, userId) => Boolean(getProjectRole(project, userId));
+
+const normalizeProjectId = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  return value.toString();
 };
 
 const mapTaskDTO = (taskDoc) => {
@@ -212,6 +255,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const { assignees, reviewAction, ...coreUpdates } = updates;
 
+  let sourceProject = null;
+  if (existing.projectId) {
+    sourceProject = await Project.findById(existing.projectId).session(session);
+  }
+  const isSourceProjectMember = sourceProject && userHasProjectAccess(sourceProject, user._id);
+
   let isReviewer = false;
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
     isReviewer = canUserApproveReview(user, assignments);
@@ -220,8 +269,36 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
-  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer) {
+  if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember) {
     throw new Error('Not authorized to update this task');
+  }
+
+  const previousProjectId = normalizeProjectId(existing.projectId);
+  let projectMoveRollup = null;
+
+  if (coreUpdates.projectId !== undefined) {
+    const nextProjectId = normalizeProjectId(coreUpdates.projectId);
+    if (nextProjectId !== previousProjectId) {
+      if (nextProjectId && !mongoose.Types.ObjectId.isValid(nextProjectId)) {
+        throw new Error('Invalid project');
+      }
+      let targetProject = null;
+      if (nextProjectId) {
+        targetProject = await Project.findById(nextProjectId).session(session);
+        if (!targetProject) throw new Error('Project not found');
+        if (!userHasProjectAccess(targetProject, user._id)) {
+          throw new Error('Not authorized to move task to this project');
+        }
+        coreUpdates.workspace = targetProject.workspace || coreUpdates.workspace || 'General';
+      } else {
+        coreUpdates.workspace = coreUpdates.workspace || 'General';
+      }
+      coreUpdates.phaseId = null;
+      projectMoveRollup = { previousProjectId, nextProjectId };
+    } else if (coreUpdates.projectId === null || coreUpdates.projectId === '') {
+      coreUpdates.projectId = null;
+      coreUpdates.phaseId = null;
+    }
   }
 
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
@@ -233,6 +310,8 @@ exports.updateTask = async (taskId, updates, user, session) => {
       coreUpdates.progress = Math.min(existing.progress || 0, 90);
     }
   }
+
+  stripUnchangedTimelineFields(coreUpdates, existing);
 
   const timelineTouched = Object.keys(coreUpdates).some((k) => TIMELINE_FIELDS.has(k));
   if (timelineTouched) {
@@ -273,8 +352,22 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const task = await Task.findByIdAndUpdate(taskId, coreUpdates, { new: true, runValidators: true, session });
 
+  if (task && projectMoveRollup) {
+    const { previousProjectId: oldId, nextProjectId: newId } = projectMoveRollup;
+    if (oldId) {
+      const dec = { totalTasksCount: -1 };
+      if (existing.status === 'done') dec.completedTasksCount = -1;
+      await Project.findByIdAndUpdate(oldId, { $inc: dec }, { session });
+    }
+    if (newId) {
+      const inc = { totalTasksCount: 1 };
+      if (existing.status === 'done') inc.completedTasksCount = 1;
+      await Project.findByIdAndUpdate(newId, { $inc: inc }, { session });
+    }
+  }
+
   let assigneesChanged = false;
-  if (assignees) {
+  if (assignees && task) {
     const project = task.projectId ? await Project.findById(task.projectId).session(session) : null;
     const creatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
     const newAssignees = mergeAssigneeIdsWithCreator(
@@ -293,11 +386,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
       }
     }
 
-    if (addingOthers && project && !canAssignTasks(project, user)) {
+    const assigneesUnchanged = newAssignees.join(',') === oldAssignees.join(',');
+    if (!assigneesUnchanged && addingOthers && project && !canAssignTasks(project, user)) {
       throw new Error('Not authorized to assign tasks to others on this project');
     }
 
-    if (newAssignees.join(',') !== oldAssignees.join(',')) {
+    if (!assigneesUnchanged) {
       assigneesChanged = true;
       await TaskAssignment.deleteMany({ taskId: task._id }, { session });
       if (newAssignees.length > 0) {
@@ -312,8 +406,12 @@ exports.updateTask = async (taskId, updates, user, session) => {
   let rollupMeta = null;
 
   if (task) {
-    if (task.projectId) {
-      rollupMeta = { projectId: task.projectId, phaseId: task.phaseId || null };
+    if (task.projectId || projectMoveRollup?.previousProjectId) {
+      rollupMeta = {
+        projectId: task.projectId || null,
+        phaseId: task.phaseId || null,
+        previousProjectId: projectMoveRollup?.previousProjectId || null,
+      };
     }
     await logActivity(user._id, 'UPDATE_TASK', task._id, 'Task', { title: task.title, status: task.status }, session);
 
@@ -386,9 +484,17 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
+  if (!task) {
+    throw new Error('Task not found');
+  }
+
   const populatedTask = await Task.findById(task._id).session(session)
     .populate('createdBy', 'name avatar')
     .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+
+  if (!populatedTask) {
+    throw new Error('Task not found');
+  }
 
   return {
     taskDto: mapTaskDTO(populatedTask),

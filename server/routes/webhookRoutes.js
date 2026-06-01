@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { handleBookedCall } = require('../controllers/webhookController');
+const { handleBookedCall, handleArtistEnquiry } = require('../controllers/webhookController');
 
 router.post('/book-call', handleBookedCall);
+router.post('/artist-enquiry', handleArtistEnquiry);
 
 // GET route to handle Meta Webhook Verification handshake
 router.get('/instagram', (req, res) => {

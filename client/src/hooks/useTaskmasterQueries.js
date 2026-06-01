@@ -4,7 +4,8 @@ import axios from 'axios';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 import { makePendingTask } from '../utils/pendingTask';
-import { getTaskQuerySnapshots, updateAllTaskQueries, restoreTaskQuerySnapshots } from '../utils/taskCache';
+import { getTaskQuerySnapshots, updateAllTaskQueries, restoreTaskQuerySnapshots, syncUpdatedTaskToQueries } from '../utils/taskCache';
+import { resolveTaskId } from '../utils/taskCompletion';
 import { globalToast } from '../lib/systemLogBridge';
 import { canReviewTask } from '../utils/taskReview';
 import { useAuth } from '../contexts/AuthContext';
@@ -448,9 +449,7 @@ export const useUpdateTask = () => {
     },
     onSuccess: (updatedTask) => {
       if (!updatedTask?._id) return;
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (resolveTaskId(t) === resolveTaskId(updatedTask) ? { ...updatedTask, _updating: false } : t))
-      );
+      syncUpdatedTaskToQueries(queryClient, updatedTask);
     },
     onError: (err, _variables, context) => {
       restoreTaskQuerySnapshots(queryClient, context?.snapshots);
@@ -463,6 +462,7 @@ export const useUpdateTask = () => {
     },
     onSettled: (_data, error) => {
       if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
         queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       }

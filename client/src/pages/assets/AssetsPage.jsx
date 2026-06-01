@@ -48,8 +48,6 @@ const AssetsPage = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [driveFiles, setDriveFiles] = useState([]);
-
   // Google account link states
   const [googleAccounts, setGoogleAccounts] = useState([]);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -72,15 +70,13 @@ const AssetsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [assetsRes, projectsRes, driveRes, googleRes] = await Promise.all([
+      const [assetsRes, projectsRes, googleRes] = await Promise.all([
         axios.get('/api/assets'),
         axios.get('/api/projects'),
-        axios.get('/api/google/drive/files').catch(() => ({ data: [] })),
         axios.get('/api/google/accounts').catch(() => ({ data: [] }))
       ]);
       setAssets(assetsRes.data);
       setProjects(projectsRes.data);
-      setDriveFiles(driveRes.data);
       setGoogleAccounts(googleRes.data);
     } catch (err) {
       console.error('Error fetching assets:', err);
@@ -143,9 +139,6 @@ const AssetsPage = () => {
     try {
       await axios.delete(`/api/google/accounts/${id}`);
       setGoogleAccounts(googleAccounts.filter(acc => acc._id !== id));
-      // Refresh drive files as well
-      const driveRes = await axios.get('/api/google/drive/files').catch(() => ({ data: [] }));
-      setDriveFiles(driveRes.data);
     } catch (err) {
       console.error('Failed to unlink account:', err);
     }
@@ -162,8 +155,6 @@ const AssetsPage = () => {
       setGoogleAccounts(refreshed.data);
       setIsLinkModalOpen(false);
       setSimEmail('');
-      const driveRes = await axios.get('/api/google/drive/files').catch(() => ({ data: [] }));
-      setDriveFiles(driveRes.data);
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
         try {
@@ -191,8 +182,14 @@ const AssetsPage = () => {
 
   const getDetectedType = (asset) => detectAssetType(asset.type, asset.link);
 
-  const countByType = (targetType) =>
-    assets.filter((a) => detectAssetType(a.type, a.link) === targetType).length;
+  const assetTypeCounts = useMemo(() => {
+    const counts = { drive: 0, sheet: 0, docs: 0, zoom: 0 };
+    for (const asset of assets) {
+      const detected = detectAssetType(asset.type, asset.link);
+      if (detected in counts) counts[detected] += 1;
+    }
+    return counts;
+  }, [assets]);
 
   const googleServiceUrl = (service, index, email) => {
     if (service.type === 'meet') return `https://meet.google.com/?authuser=${email}`;
@@ -264,14 +261,6 @@ const AssetsPage = () => {
     );
   };
 
-  const driveFolders = useMemo(() => 
-    driveFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
-  [driveFiles]);
-
-  const sheetsCount = useMemo(() => countByType('sheet'), [assets]);
-  const docsCount = useMemo(() => countByType('docs'), [assets]);
-  const zoomCount = useMemo(() => countByType('zoom'), [assets]);
-
   if (loading && assets.length === 0) return <PageSkeleton />;
 
   return (
@@ -281,16 +270,16 @@ const AssetsPage = () => {
           <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
         </div>
         <div onClick={() => setTypeFilter('drive')} className={`cursor-pointer transition-all ${typeFilter === 'drive' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Drive" value={driveFolders.length} icon={assetStatIcon('drive')} variant="mint" />
+          <StatCard label="Drive" value={assetTypeCounts.drive} icon={assetStatIcon('drive')} variant="mint" />
         </div>
         <div onClick={() => setTypeFilter('sheet')} className={`cursor-pointer transition-all ${typeFilter === 'sheet' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Sheets" value={sheetsCount} icon={assetStatIcon('sheet')} variant="apricot" />
+          <StatCard label="Sheets" value={assetTypeCounts.sheet} icon={assetStatIcon('sheet')} variant="apricot" />
         </div>
         <div onClick={() => setTypeFilter('docs')} className={`cursor-pointer transition-all ${typeFilter === 'docs' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Docs" value={docsCount} icon={assetStatIcon('docs')} variant="slate" />
+          <StatCard label="Docs" value={assetTypeCounts.docs} icon={assetStatIcon('docs')} variant="slate" />
         </div>
         <div onClick={() => setTypeFilter('zoom')} className={`cursor-pointer transition-all ${typeFilter === 'zoom' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Zoom" value={zoomCount} icon={assetStatIcon('zoom')} variant="info" />
+          <StatCard label="Zoom" value={assetTypeCounts.zoom} icon={assetStatIcon('zoom')} variant="info" />
         </div>
       </div>
 

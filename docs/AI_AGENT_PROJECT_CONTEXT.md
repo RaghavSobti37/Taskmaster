@@ -909,7 +909,7 @@ Cursor rule: `.cursor/rules/email-engine-locked.mdc`
 
 | Queue | Worker | Jobs |
 |-------|--------|------|
-| WebhookQueue | webhookWorker.js | book-call → processBookedCallLogic |
+| WebhookQueue | webhookWorker.js | book-call → processBookedCallLogic; artist-enquiry → processArtistEnquiryLogic |
 | CsvImportQueue | importWorker.js | Bulk CSV lead import |
 | HolySheet/CSV/gamification | backgroundQueue.js | Debounced sync jobs |
 
@@ -928,6 +928,7 @@ Redis-down paths fall back to synchronous processing or in-memory queues.
 | Endpoint | Handler | Integration |
 |----------|---------|-------------|
 | POST /api/webhooks/book-call | webhookController → BullMQ | Booked call form |
+| POST /api/webhooks/artist-enquiry | webhookController → BullMQ | Artist enquiry (/query) → task on artist project |
 | GET/POST /api/webhooks/instagram | Meta verification + events | Instagram |
 | POST /api/webhooks/resend | Svix-verified | Resend email events |
 | POST /webhooks/resend | track.js | Alternate Resend path |
@@ -944,6 +945,13 @@ Redis-down paths fall back to synchronous processing or in-memory queues.
 1. Public form on theshakticollective.in → POST /api/book-call (Next.js) → forwards to Taskmaster webhook
 2. BullMQ WebhookQueue processes: IST conversion, rep assignment, AiSensy WhatsApp, Google Sheets (BookedCalls tab)
 3. Redis-down → synchronous fallback
+
+### Artist enquiry flow
+
+1. Public form on theshakticollective.in `/query` → POST /api/query (Next.js) → Sheets `Inqueries` + email (unchanged)
+2. After success, fire-and-forget POST to `POST /api/webhooks/artist-enquiry` — see `docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`
+3. `artistEnquiryService.processArtistEnquiryLogic`: map `artist` field → Project (aliases YUGM, Harshad & Duhita); create task type `enquiry`, priority `high`, assignees = project `artist_management` roles
+4. Env: `ARTIST_ENQUIRY_PROJECT_MAP`, `ARTIST_ENQUIRY_FALLBACK_PROJECT_NAME`, optional `ARTIST_ENQUIRY_WEBHOOK_SECRET`
 
 ---
 
@@ -1317,7 +1325,7 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 ├── /mail              → Legacy mail system
 ├── /campaigns         → Primary email campaigns
 ├── /analytics         → Cumulative/location metrics
-├── /webhooks          → Public ingress (book-call, Meta, Resend)
+├── /webhooks          → Public ingress (book-call, artist-enquiry, Meta, Resend)
 ├── /ses               → AWS SES webhook
 ├── /tsc               → TSC sheet data (admin)
 ├── /office-assets     → Hardware inventory

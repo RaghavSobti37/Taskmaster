@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.40-126d5e?style=flat-square" alt="Version 1.7.40" />
+  <img src="https://img.shields.io/badge/version-1.7.41-126d5e?style=flat-square" alt="Version 1.7.41" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -92,6 +92,16 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 * **Governance Matrix:** Enforces strict code/task ownership logic (`shared/taskReviewRules.js`). Tasks explicitly delegated to peers are frozen upon completion and routed directly into an immutable `in-review` state queue. Self-assigned entries bypass validation rules entirely.
 * **Role Enforcement:** Restricts execution bounds; only the explicit task creator retains roll-back, state manipulation, or permanent completion override permissions.
+* **Project moves:** Any project member (or creator, assignee, admin) may move a task to another project they can access via the Edit Task modal. Server validates source/target membership, syncs workspace, updates project task counts, and refreshes TanStack Query caches without a full page reload.
+* **In-review edits:** Save remains available on `in-review` tasks so fields like project, title, and description can be updated; Approve/Rollback actions stay separate for reviewers.
+
+### 🎭 Artist Enquiry Webhook
+
+* **Ingress:** `POST /api/webhooks/artist-enquiry` — receives `/query` form payloads from the marketing site (after Sheets + email succeed).
+* **Routing:** Resolves artist name → TSC ARTISTS project (e.g. YUGM → **YUGM** project); falls back to first matching project when needed.
+* **Task creation:** High-priority `enquiry` task assigned to `artist_management` on the resolved project.
+* **Queue:** BullMQ job `artist-enquiry` with synchronous fallback when Redis is unavailable.
+* **Website wiring:** See [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md).
 
 ### 📑 OCR Document Parsing & Finance Ops
 
@@ -267,8 +277,11 @@ See [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) for the full isol
 | --- | --- |
 | **Render API** | `https://YOUR-RENDER-SERVICE.onrender.com` |
 | **Book-a-Call Webhook** | `POST https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call` |
+| **Artist Enquiry Webhook** | `POST https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-enquiry` |
 
-The public marketing site (`theshakticollective.in`) proxies bookings through its Next.js route `POST /api/book-call`, which forwards payloads to the webhook above. Set `TASKMASTER_WEBHOOK_URL` on the website host to override the default.
+The public marketing site (`theshakticollective.in`) proxies bookings through its Next.js route `POST /api/book-call`, which forwards payloads to the book-call webhook above. Set `TASKMASTER_WEBHOOK_URL` on the website host to override the default.
+
+Artist enquiries from `/query` should forward to the artist-enquiry webhook after Sheets/email succeed. See [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md).
 
 ---
 
@@ -282,7 +295,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 ├── /tasks        → Standard task mutations, dynamic tracking states, and role assignments
 ├── /projects     → Structural workspace definitions, access states, and board layouts
 ├── /crm          → Third-party contact capture engines and pipeline automations
-├── /webhooks     → Public ingress (book-call, Exly, Meta, Resend) with queue-backed processing
+├── /webhooks     → Public ingress (book-call, artist-enquiry, Exly, Meta, Resend) with queue-backed processing
 ├── /notifications→ Push delivery registries, system status counts, and message updates
 ├── /subscriptions→ Office subscription CRUD and due-date reminder pipeline
 ├── /finance      → Multi-file processing, metadata index arrays, and document extractions
@@ -320,6 +333,7 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 | [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) | Local vs production MongoDB isolation |
 | [`docs/AI_AGENT_PROJECT_CONTEXT.md`](docs/AI_AGENT_PROJECT_CONTEXT.md) | Complete AI agent reference (routes, models, rules) |
 | [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
+| [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |
 
 ---
 

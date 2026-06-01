@@ -107,7 +107,7 @@ const SIGNATURE_MARKER_BLOCK_RE = new RegExp(
   'gi'
 );
 
-const DATA_ATTR_SIG_RE = /<div[^>]*data-taskmaster-signature\s*=\s*["']?true["']?[^>]*>[\s\S]*?<\/div>/gi;
+const DATA_ATTR_SIG_RE = /<div[^>]*data-coreknot-signature\s*=\s*["']?true["']?[^>]*>[\s\S]*?<\/div>/gi;
 
 export const countSignatureBlocks = (html) => {
   if (!html) return 0;
@@ -130,9 +130,9 @@ export const wrapSignatureBlock = (signature) => {
   if (!signature?.trim()) return '';
   const trimmed = signature.trim();
   if (hasSignatureBlock(trimmed)) return trimmed;
-  const body = trimmed.includes('data-taskmaster-signature=')
+  const body = trimmed.includes('data-coreknot-signature=')
     ? trimmed
-    : `<div data-taskmaster-signature="true">${trimmed}</div>`;
+    : `<div data-coreknot-signature="true">${trimmed}</div>`;
   return `${SIGNATURE_START}\n${body}\n${SIGNATURE_END}`;
 };
 

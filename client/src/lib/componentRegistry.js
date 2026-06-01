@@ -65,8 +65,8 @@ export const canAccessComponent = (componentId, permissionPreset) => {
 
 export const LAYOUT_TEMPLATES = [
   {
-    id: 'taskmaster',
-    name: 'TaskMaster',
+    id: 'coreknot',
+    name: 'Coreknot',
     description: 'Balanced default with tasks, projects, and team tools',
     target: ['all'],
     elements: [

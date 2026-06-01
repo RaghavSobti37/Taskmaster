@@ -55,7 +55,7 @@ const dispatchEmailPayload = async ({ to, subject, html, from }) => {
 
     try {
       const info = await transporter.sendMail({
-        from: `"${from || 'Taskmaster Sandbox'}" <sandbox@taskmaster.io>`,
+        from: `"${from || 'Coreknot Sandbox'}" <sandbox@coreknot.io>`,
         to,
         subject,
         html,

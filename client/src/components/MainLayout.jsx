@@ -13,6 +13,7 @@ import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
 import BottomNavigation from './BottomNavigation';
+import HelpBugButton from './HelpBugButton';
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
@@ -52,6 +53,7 @@ const MainLayout = () => {
       <FlashHighlightListener />
       <QuickAddMenu />
       <BottomNavigation />
+      <HelpBugButton />
 
       {/* Main Content Area */}
       <div

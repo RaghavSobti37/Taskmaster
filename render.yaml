@@ -1,6 +1,6 @@
 services:
   - type: cron
-    name: taskmaster-daily-backup
+    name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
     rootDir: server
     buildCommand: npm install

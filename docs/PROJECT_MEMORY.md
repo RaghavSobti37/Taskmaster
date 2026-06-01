@@ -1,12 +1,12 @@
-# Taskmaster: Unified Project Memory & Architecture
+# CoreKnot: Unified Project Memory & Architecture
 
-This document serves as the single source of truth for the Taskmaster project. It synthesizes infrastructure setup, backend logic, frontend design rules, and the multi-platform analytics engine into an AI-optimized format.
+This document serves as the single source of truth for the CoreKnot project. It synthesizes infrastructure setup, backend logic, frontend design rules, and the multi-platform analytics engine into an AI-optimized format.
 
 ---
 
 ## 1. System Architecture & Local Runtime
 
-Taskmaster is designed to run locally as a frontend/backed pair with a protected proxy interface for third-party APIs.
+CoreKnot is designed to run locally as a frontend/backed pair with a protected proxy interface for third-party APIs.
 
 ```mermaid
 graph TD
@@ -115,7 +115,7 @@ flowchart LR
 ### Tracking
 * Centralized in `server/utils/trackingUrls.js`: `TRACKING_BASE_URL` > `APP_BASE_URL` (or localhost with `TRACKING_USE_LOCAL=true`).
 * Unsubscribe → `FRONTEND_URL/unsubscribe?email=...&token=...`; not wrapped in click tracker.
-* Live production API: `YOUR-RENDER-SERVICE.onrender.com` (Vercel `/api` proxy); avoid suspended `taskmaster-api.onrender.com`.
+* Live production API: `CoreKnot-jfw0.onrender.com` (Vercel `/api` proxy); avoid suspended `CoreKnot-api.onrender.com`.
 * `track.js` records opens/clicks via `EmailLog` + `MailEvent`.
 
 ### SMTP profiles
@@ -136,7 +136,7 @@ flowchart LR
 
 * Ensure `server/.env` is populated with all required keys.
 * Ensure `client/.env` has `VITE_API_URL` if explicit backend configuration is needed.
-* **Production mail:** set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` on Vercel; set `TRACKING_BASE_URL` or `APP_BASE_URL` to the same API origin on Render.
+* **Production mail:** set `VITE_API_URL=https://CoreKnot-jfw0.onrender.com` on Vercel; set `TRACKING_BASE_URL` or `APP_BASE_URL` to the same API origin on Render.
 * Start MongoDB before launching the backend.
 * Start Redis if you require queue and cache features.
 * Start backend first, then frontend.

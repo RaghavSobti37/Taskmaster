@@ -114,7 +114,7 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
     if (!transporter) {
       throw new Error('System SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in server/.env');
     }
-    const fromEmail = process.env.SYSTEM_VERIFIED_FROM_EMAIL || ENV_CONFIG.smtp?.user || 'system@taskmaster.internal';
+    const fromEmail = process.env.SYSTEM_VERIFIED_FROM_EMAIL || ENV_CONFIG.smtp?.user || 'system@coreknot.internal';
     return {
       profile: {
         name: 'System SMTP',
@@ -147,7 +147,7 @@ const resolveSender = async (campaign, profileId, jobIndex) => {
 
   const profile = campaign.senderProfileId
     || (profileId ? await EmailProfile.findById(profileId) : null)
-    || { name: 'Taskmaster Core Engine', email: 'system@taskmaster.internal', smtpHost: 'mock_smtp_host' };
+    || { name: 'Coreknot Core Engine', email: 'system@coreknot.internal', smtpHost: 'mock_smtp_host' };
 
   const { resend: globalResend } = require('./mailDriver');
   const useResend = !!globalResend && !usesSmtpRotation(profile);

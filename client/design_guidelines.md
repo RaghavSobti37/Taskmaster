@@ -2,7 +2,7 @@
 ## Version 2.0 - Immersive Scannable Precision
 ## MANDATE: INTERACTIVITY OVER CLUTTER
 
-This document acts as the structural blueprint for all page development within the Taskmaster platform. Adherence to these standards is mandatory.
+This document acts as the structural blueprint for all page development within the CoreKnot platform. Adherence to these standards is mandatory.
 
 ---
 

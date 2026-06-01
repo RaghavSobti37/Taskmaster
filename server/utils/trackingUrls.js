@@ -45,9 +45,9 @@ const getTrackingDbMismatchWarning = () => {
   const dbUri = (process.env.MONGODB_URI || '').trim();
   const prodUri = (process.env.MONGODB_URI_PROD || '').trim();
   if (!dbUri || !prodUri || dbUri === prodUri) return null;
-  if (dbUri.includes('taskmaster_production') || prodUri.includes('taskmaster_local')) return null;
+  if (dbUri.includes('coreknot_production') || prodUri.includes('coreknot_local')) return null;
 
-  const localDb = dbUri.includes('taskmaster_local') || dbUri.includes('localhost');
+  const localDb = dbUri.includes('coreknot_local') || dbUri.includes('localhost');
   if (!localDb) return null;
 
   return (

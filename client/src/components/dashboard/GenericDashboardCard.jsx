@@ -7,7 +7,7 @@ import { useDashboardTasks, useMailStats, useActivityGrid, useDashboardSummary }
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function GenericDashboardCard({ componentId }) {
-  const [timeframe, setTimeframe] = useState('7d');
+  const [timeframe, setTimeframe] = useState('1d');
   const { user } = useAuth();
 
   // Real Data Fetchers

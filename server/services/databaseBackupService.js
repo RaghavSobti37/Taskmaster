@@ -8,7 +8,7 @@ const SNAPSHOTS_COLLECTION = 'backup_snapshots';
 const COLLECTION_PAUSE_MS = 100;
 const CURSOR_BATCH_SIZE = 500;
 
-const LOCAL_DB_NAMES = new Set(['taskmaster_local', 'testing', 'taskmaster']);
+const LOCAL_DB_NAMES = new Set(['coreknot_local', 'testing', 'coreknot']);
 
 const extractDbNameFromUri = (uri) => {
   const withoutQuery = uri.split('?')[0];
@@ -38,7 +38,7 @@ const getSourceUri = () => {
   return uri;
 };
 
-const getBackupDbName = () => (process.env.MONGODB_BACKUP_DB || 'taskmaster_backups').trim();
+const getBackupDbName = () => (process.env.MONGODB_BACKUP_DB || 'coreknot_backups').trim();
 
 const getRetentionDays = () => {
   const parsed = parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10);

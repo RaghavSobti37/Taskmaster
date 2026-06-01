@@ -447,7 +447,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       || senderProfileIds[0]
       || profiles?.[0]?._id;
     const sp = sigId ? findProfile(sigId) : null;
-    return (sp?.signature?.trim() );
+    return (sp?.signature?.trim());
   }, [signatureProfileId, senderProfileId, senderProfileIds, profiles]);
 
   const applySignatureToContent = (html, sig = activeProfileSignature, include = includeSignature) =>
@@ -530,7 +530,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const handleSignatureProfileChange = (profileId) => {
     setSignatureProfileId(profileId);
     const sp = findProfile(profileId);
-    const sig = sp?.signature?.trim() ;
+    const sig = sp?.signature?.trim();
     setContent((prev) => (
       useRawHtml
         ? syncSignatureInContent(stripSignature(prev), sig, includeSignature)
@@ -678,7 +678,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const rawRecs = res.data || [];
       const newRecs = [];
       let skipped = 0;
-      
+
       // Process and split HolySheet compound emails
       rawRecs.forEach(rec => {
         if (rec && rec.email) {
@@ -693,7 +693,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           });
         }
       });
-      
+
       setCsvRecipients(prev => {
         const filtered = prev.filter(p => !p.source || p.source === 'CSV Upload');
         return [...filtered, ...newRecs];
@@ -918,79 +918,79 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     <div className="space-y-6">
       {/* Top Header & Mode Switcher */}
       {!hideModeBar && (
-      <div className="flex items-center justify-between pb-4 border-b border-[var(--color-bg-border)]">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={mode === 'campaigns' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setMode('campaigns')}
-          >
-            <BarChart2 size={14} /> Campaigns ({campaigns.length})
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/workspace/emails/create')}
-          >
-            <Plus size={14} /> Create Campaign
-          </Button>
-          <Button
-            variant={mode === 'templates' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setMode('templates')}
-          >
-            <FileCode size={14} /> Manage Templates ({templates.length})
-          </Button>
-          <Button
-            variant={mode === 'analytics' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setMode('analytics')}
-          >
-            <BarChart2 size={14} /> Aggregate Analytics
-          </Button>
-          <Button
-            variant={mode === 'profiles' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setMode('profiles')}
-          >
-            <Zap size={14} /> SMTP Profiles ({profiles.length})
-          </Button>
-        </div>
+        <div className="flex items-center justify-between pb-4 border-b border-[var(--color-bg-border)]">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={mode === 'campaigns' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setMode('campaigns')}
+            >
+              <BarChart2 size={14} /> Campaigns ({campaigns.length})
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/workspace/emails/create')}
+            >
+              <Plus size={14} /> Create Campaign
+            </Button>
+            <Button
+              variant={mode === 'templates' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setMode('templates')}
+            >
+              <FileCode size={14} /> Manage Templates ({templates.length})
+            </Button>
+            <Button
+              variant={mode === 'analytics' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setMode('analytics')}
+            >
+              <BarChart2 size={14} /> Aggregate Analytics
+            </Button>
+            <Button
+              variant={mode === 'profiles' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setMode('profiles')}
+            >
+              <Zap size={14} /> SMTP Profiles ({profiles.length})
+            </Button>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              if (profiles.length === 0) {
-                alert('Please configure an SMTP Profile first');
-                return;
-              }
-              scanBouncesMutation.mutate(profiles[0]?._id);
-            }}
-            disabled={scanBouncesMutation.isPending || profiles.length === 0}
-          >
-            <RefreshCw size={14} className={scanBouncesMutation.isPending ? 'animate-spin' : ''} /> Scan Bounces
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                if (profiles.length === 0) {
+                  alert('Please configure an SMTP Profile first');
+                  return;
+                }
+                scanBouncesMutation.mutate(profiles[0]?._id);
+              }}
+              disabled={scanBouncesMutation.isPending || profiles.length === 0}
+            >
+              <RefreshCw size={14} className={scanBouncesMutation.isPending ? 'animate-spin' : ''} /> Scan Bounces
+            </Button>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Analytics Summary */}
       {!hideModeBar && (
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <StatCard label="Total Campaigns" value={stats?.totalCampaigns || campaigns.length} icon={Mail} variant="info" />
-        <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
-        <StatCard label="Bounced / Failed" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" />
-        <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
-        <StatCard
-          label="Unsubscribed"
-          value={stats?.totalUnsubscribed || 0}
-          icon={UserMinus}
-          variant="warning"
-          onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
-        />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <StatCard label="Total Campaigns" value={stats?.totalCampaigns || campaigns.length} icon={Mail} variant="info" />
+          <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
+          <StatCard label="Bounced / Failed" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" />
+          <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
+          <StatCard
+            label="Unsubscribed"
+            value={stats?.totalUnsubscribed || 0}
+            icon={UserMinus}
+            variant="warning"
+            onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
+          />
+        </div>
       )}
 
       {/* Mode: Campaigns List */}
@@ -1027,17 +1027,15 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     key={step}
                     type="button"
                     onClick={() => setCampaignStep(step)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
-                      active
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${active
                         ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]'
                         : done
                           ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-600'
                           : 'border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]'
-                    }`}
+                      }`}
                   >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
-                      active ? 'bg-[var(--color-action-primary)] text-white' : done ? 'bg-emerald-500 text-white' : 'bg-[var(--color-bg-primary)]'
-                    }`}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${active ? 'bg-[var(--color-action-primary)] text-white' : done ? 'bg-emerald-500 text-white' : 'bg-[var(--color-bg-primary)]'
+                      }`}>
                       {done ? <Check size={12} /> : step}
                     </span>
                     <span className="text-[10px] font-black uppercase tracking-wider">{label}</span>
@@ -1389,7 +1387,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <div className="space-y-2 animate-in fade-in">
               <div className="flex items-center justify-between gap-3">
                 <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <input 
+                  <input
                     type="checkbox"
                     checked={useRawHtml}
                     onChange={(e) => {
@@ -1411,11 +1409,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </label>
 
                 <div className="flex flex-wrap items-center gap-2">
-                <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
-                  <Plus size={12} /> Insert {'{{firstname}}'}
-                </Button>
-            
-              </div>
+                  <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
+                    <Plus size={12} /> Insert {'{{firstname}}'}
+                  </Button>
+
+                </div>
                 <div className="flex items-center gap-2 flex-wrap justify-end">
                   <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
                     <Eye size={12} /> Preview
@@ -1426,8 +1424,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
                         <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
                       </label>
-                      <Button 
-                        size="xs" 
+                      <Button
+                        size="xs"
                         variant="secondary"
                         onClick={() => setShowHtmlPasteModal(true)}
                       >
@@ -1481,11 +1479,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         key={v.key}
                         type="button"
                         onClick={() => handleVariableClick(v.key, v.fallback)}
-                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold uppercase transition-all ${
-                          v.hasFallback
+                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold uppercase transition-all ${v.hasFallback
                             ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-700'
                             : 'bg-yellow-500/30 border-yellow-500 animate-pulse text-yellow-800'
-                        }`}
+                          }`}
                       >
                         {`{{${v.key}${v.hasFallback ? `|${v.fallback}` : ''}}}`}
                         {!v.hasFallback && ' — click to set fallback'}
@@ -1495,7 +1492,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 </div>
               )}
 
-             
+
 
               {useRawHtml ? (
                 <>
@@ -1551,7 +1548,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       </select>
                     )}
                     <span className="w-full sm:w-auto text-[9px] text-[var(--color-text-muted)]">
-                      Uncheck to remove blocks; TASKMASTER markers in HTML.
+                      Uncheck to remove blocks; CoreKnot markers in HTML.
                     </span>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1559,18 +1556,18 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       className="w-full h-[400px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
                       value={content}
                       onChange={e => handleRawHtmlChange(e.target.value)}
-                      placeholder="Paste or edit raw HTML. Signature and unsubscribe use TASKMASTER comment markers when included."
+                      placeholder="Paste or edit raw HTML. Signature and unsubscribe use CoreKnot comment markers when included."
                     />
-                 
-                      
-                      <div className={`bg-white overflow-auto ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`} style={{ height: '400px' }}>
-                        <iframe
-                          srcDoc={contentForPreview}
-                          className="w-full h-full border-none"
-                          title="Email Preview"
-                          sandbox="allow-same-origin"
-                        />
-                      
+
+
+                    <div className={`bg-white overflow-auto ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`} style={{ height: '400px' }}>
+                      <iframe
+                        srcDoc={contentForPreview}
+                        className="w-full h-full border-none"
+                        title="Email Preview"
+                        sandbox="allow-same-origin"
+                      />
+
                     </div>
                   </div>
                 </>
@@ -1591,7 +1588,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   </div>
                 </>
               )}
-              
+
               {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {attachments.map((att, idx) => (
@@ -1613,15 +1610,15 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   <span className="text-[9px] text-[var(--color-text-muted)]">Send preview to test email</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Input 
+                  <Input
                     type="email"
                     placeholder="Test email address"
                     value={testCampaignEmail}
                     onChange={e => setTestCampaignEmail(e.target.value)}
                     className="flex-1"
                   />
-                  <Button 
-                    size="md" 
+                  <Button
+                    size="md"
                     variant="secondary"
                     onClick={async () => {
                       if (!testCampaignEmail) {
@@ -1902,88 +1899,89 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               const pct = p.usage?.percent || 0;
               const rotationProviders = p.usage?.rotation?.providers || [];
               return (
-              <Card key={p._id} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="font-bold uppercase tracking-tight text-xs block">{p.name}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">From: {p.email}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">SMTP login: {p.smtpUser}</span>
-                    <span className="text-[9px] text-[var(--color-text-muted)] uppercase">
-                      Rotates: {getProfileRotationProviders(p).map((k) => SMTP_PRESETS[k]?.label || k).join(', ') || 'none configured'}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-amber-500 hover:bg-amber-500/10"
-                      onClick={() => {
-                        setEditingProfileId(p._id);
-                        const loginMatches = p.smtpUser && p.email && p.smtpUser.toLowerCase() === p.email.toLowerCase();
-                        setSmtpLoginMatchesFrom(!!loginMatches);
-                        setNewProfile({
-                          name: p.name,
-                          email: p.email,
-                          smtpUser: p.smtpUser,
-                          smtpPass: '',
-                          signature: p.signature || '',
-                          rotationEnabled: true,
-                        });
-                        const existing = emptyProviderCredentials();
-                        const saved = p.providerCredentials || {};
-                        for (const key of ADDITIONAL_ROTATION_PROVIDERS) {
-                          const s = saved[key];
-                          if (s) {
-                            existing[key] = {
-                              smtpUser: s.smtpUser || SMTP_AUTH_HINTS[key]?.userDefault || '',
-                              smtpPass: '',
-                              enabled: s.enabled !== false && !!s.smtpPass,
-                            };
+                <Card key={p._id} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="font-bold uppercase tracking-tight text-xs block">{p.name}</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">From: {p.email}</span>
+                      <span className="text-[10px] text-[var(--color-text-muted)] font-mono block">SMTP login: {p.smtpUser}</span>
+                      <span className="text-[9px] text-[var(--color-text-muted)] uppercase">
+                        Rotates: {getProfileRotationProviders(p).map((k) => SMTP_PRESETS[k]?.label || k).join(', ') || 'none configured'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-amber-500 hover:bg-amber-500/10"
+                        onClick={() => {
+                          setEditingProfileId(p._id);
+                          const loginMatches = p.smtpUser && p.email && p.smtpUser.toLowerCase() === p.email.toLowerCase();
+                          setSmtpLoginMatchesFrom(!!loginMatches);
+                          setNewProfile({
+                            name: p.name,
+                            email: p.email,
+                            smtpUser: p.smtpUser,
+                            smtpPass: '',
+                            signature: p.signature || '',
+                            rotationEnabled: true,
+                          });
+                          const existing = emptyProviderCredentials();
+                          const saved = p.providerCredentials || {};
+                          for (const key of ADDITIONAL_ROTATION_PROVIDERS) {
+                            const s = saved[key];
+                            if (s) {
+                              existing[key] = {
+                                smtpUser: s.smtpUser || SMTP_AUTH_HINTS[key]?.userDefault || '',
+                                smtpPass: '',
+                                enabled: s.enabled !== false && !!s.smtpPass,
+                              };
+                            }
                           }
-                        }
-                        setProviderCredentials(existing);
-                      }}
-                    >
-                      <Edit size={14} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-rose-500 hover:bg-rose-500/10"
-                      onClick={() => deleteProfileMutation.mutate(p._id)}
-                      disabled={deleteProfileMutation.isPending}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
+                          setProviderCredentials(existing);
+                        }}
+                      >
+                        <Edit size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-500 hover:bg-rose-500/10"
+                        onClick={() => deleteProfileMutation.mutate(p._id)}
+                        disabled={deleteProfileMutation.isPending}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-1 mb-3">
-                  <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]">
-                    <span>Combined daily usage</span>
-                    <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{p.usage?.used ?? 0}/{p.usage?.limit ?? 0}</span>
+                  <div className="space-y-1 mb-3">
+                    <div className="flex justify-between text-[10px] text-[var(--color-text-muted)]">
+                      <span>Combined daily usage</span>
+                      <span className={pct >= 80 ? 'text-amber-500 font-bold' : ''}>{p.usage?.used ?? 0}/{p.usage?.limit ?? 0}</span>
+                    </div>
+                    <div className="h-1.5 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${pct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-action-primary)]'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[9px] text-[var(--color-text-muted)]">{formatResetTime(p.usage?.resetAt)}</span>
                   </div>
-                  <div className="h-1.5 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${pct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-action-primary)]'}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-[9px] text-[var(--color-text-muted)]">{formatResetTime(p.usage?.resetAt)}</span>
-                </div>
-                {rotationProviders.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-[var(--color-bg-border)] max-h-48 overflow-y-auto">
-                    {rotationProviders.map((prov) => (
-                      <div key={prov.providerKey} className="space-y-0.5">
-                        <div className="flex justify-between text-[9px] text-[var(--color-text-muted)]">
-                          <span>{prov.label} <span className="font-mono opacity-60">({prov.smtpHost})</span></span>
-                          <span className={prov.percent >= 80 ? 'text-amber-500 font-bold' : ''}>{prov.used}/{prov.limit}</span>
+                  {rotationProviders.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-[var(--color-bg-border)] max-h-48 overflow-y-auto">
+                      {rotationProviders.map((prov) => (
+                        <div key={prov.providerKey} className="space-y-0.5">
+                          <div className="flex justify-between text-[9px] text-[var(--color-text-muted)]">
+                            <span>{prov.label} <span className="font-mono opacity-60">({prov.smtpHost})</span></span>
+                            <span className={prov.percent >= 80 ? 'text-amber-500 font-bold' : ''}>{prov.used}/{prov.limit}</span>
+                          </div>
+                          <div className="h-1 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${prov.percent >= 80 ? 'bg-amber-500' : 'bg-emerald-500/70'}`} style={{ width: `${prov.percent}%` }} />
+                          </div>
                         </div>
-                        <div className="h-1 bg-[var(--color-bg-primary)] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${prov.percent >= 80 ? 'bg-amber-500' : 'bg-emerald-500/70'}`} style={{ width: `${prov.percent}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            );})}
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
             {profiles.length === 0 && (
               <div className="p-12 text-center opacity-30 border border-dashed border-[var(--color-bg-border)] rounded-2xl">
                 <Zap size={32} className="mx-auto mb-2" />

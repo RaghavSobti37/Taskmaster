@@ -1,5 +1,5 @@
 /**
- * Taskmaster UI — global component library barrel export.
+ * Coreknot UI — global component library barrel export.
  *
  * Primary design system: primitives (CSS var tokens from index.css).
  * Shadcn/Radix components exported separately for gradual migration.

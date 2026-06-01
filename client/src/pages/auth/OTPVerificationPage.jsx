@@ -24,7 +24,7 @@ const OTPVerificationPage = () => {
 
     try {
       const endpoint = verificationMode === 'email' ? '/api/otp/send-email' : '/api/otp/send-phone';
-      const payload = verificationMode === 'email' 
+      const payload = verificationMode === 'email'
         ? { email: identifier }
         : { phone: identifier };
 
@@ -221,22 +221,20 @@ const OTPVerificationPage = () => {
               <button
                 type="button"
                 onClick={() => { setVerificationMode('email'); setError(''); }}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  verificationMode === 'email'
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${verificationMode === 'email'
                     ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 <Mail size={18} /> Email
               </button>
               <button
                 type="button"
                 onClick={() => { setVerificationMode('phone'); setError(''); }}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  verificationMode === 'phone'
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${verificationMode === 'phone'
                     ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 <Phone size={18} /> Phone
               </button>

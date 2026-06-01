@@ -25,7 +25,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
   const navigate = useNavigate();
   const { data: workspaces = [] } = useWorkspaces();
   const [todaySort, setTodaySort] = useState('asc');
-  const [timeframe, setTimeframe] = useState('7d');
+  const [timeframe, setTimeframe] = useState('1d');
 
   const todayTasks = useMemo(
     () => sortTasksByDate(filterTasksByTimeframe(tasks, timeframe), todaySort),

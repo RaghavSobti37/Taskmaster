@@ -133,7 +133,7 @@ export default function DashboardCustomizationTab() {
         ...el, col: el.col ?? 1, row: el.row ?? (i + 1),
       }));
     } else {
-      init = JSON.parse(JSON.stringify(LAYOUT_TEMPLATES.find(t => t.id === 'taskmaster').elements.map(e => ({...e, visible: true}))));
+      init = JSON.parse(JSON.stringify(LAYOUT_TEMPLATES.find(t => t.id === 'coreknot').elements.map(e => ({...e, visible: true}))));
     }
     
     const accessibleCompIds = getAccessibleComponents(permissionPreset);

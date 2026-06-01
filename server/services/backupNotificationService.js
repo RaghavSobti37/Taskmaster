@@ -72,11 +72,11 @@ const buildFailureHtml = (result) => `
     <p>Production database backup did not complete.</p>
     <table style="border-collapse:collapse;width:100%;margin:16px 0;">
       <tr><td><strong>Snapshot date (IST)</strong></td><td>${result.date || 'unknown'}</td></tr>
-      <tr><td><strong>Backup database</strong></td><td>${result.backupDatabase || 'taskmaster_backups'}</td></tr>
+      <tr><td><strong>Backup database</strong></td><td>${result.backupDatabase || 'coreknot_backups'}</td></tr>
       <tr><td><strong>Error</strong></td><td>${result.error || 'Unknown error'}</td></tr>
       <tr><td><strong>Duration</strong></td><td>${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
     </table>
-    <p style="color:#666;font-size:13px;">Check Render cron logs for taskmaster-daily-backup.</p>
+    <p style="color:#666;font-size:13px;">Check Render cron logs for coreknot-daily-backup.</p>
   </div>
 `;
 

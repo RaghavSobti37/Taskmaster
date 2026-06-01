@@ -1,6 +1,6 @@
 # Version History
 
-Release notes for Taskmaster (CoreKnot). For setup and architecture, see [README.md](../README.md).
+Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.md](../README.md).
 
 ---
 
@@ -119,10 +119,10 @@ server/scripts/migrateReviewWorkflow.js
 - New endpoint: `POST /api/campaigns/:id/resend-filtered`.
 
 #### Open / Click / Unsubscribe Tracking
-- Removed hardcoded fallback to suspended `taskmaster-api.onrender.com`; use `TRACKING_BASE_URL` or `APP_BASE_URL` via `server/utils/trackingUrls.js`.
+- Removed hardcoded fallback to suspended `CoreKnot-api.onrender.com`; use `TRACKING_BASE_URL` or `APP_BASE_URL` via `server/utils/trackingUrls.js`.
 - Unsubscribe links point to `FRONTEND_URL/unsubscribe` (not API); excluded from click-tracker wrapping.
 - Unsubscribe token included in email URLs; legacy API `GET /unsubscribe` redirects to frontend.
-- Vercel proxy updated to live API `YOUR-RENDER-SERVICE.onrender.com`.
+- Vercel proxy updated to live API `CoreKnot-jfw0.onrender.com`.
 
 #### SMTP & Profiles (v1.7.32 carry-over)
 - Multi-provider SMTP rotation with env credential precedence (Gmail, Brevo, SendGrid, Mailjet).
@@ -133,7 +133,7 @@ server/scripts/migrateReviewWorkflow.js
 ### [2026-05-30] v1.7.32 — Mail Engine Production Fixes
 
 #### Campaign Create (PayloadTooLargeError)
-- Production clients should set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` to bypass Vercel's ~4.5MB proxy limit.
+- Production clients should set `VITE_API_URL=https://CoreKnot-api.onrender.com` to bypass Vercel's ~4.5MB proxy limit.
 - Attachments upload separately via `POST /api/campaigns/upload-attachment` (multipart); create payload stores metadata only.
 - Client-side ~3MB safe payload guard; template auto-save is non-blocking.
 - Express returns **413** for oversized bodies instead of opaque 500.
@@ -141,7 +141,7 @@ server/scripts/migrateReviewWorkflow.js
 #### Open / Click Tracking
 - Fixed `ReferenceError: ip is not defined` in `track.js` (metrics now persist).
 - Fixed duplicate `$inc` keys on MailCampaign open/click updates.
-- Tracking base URL defaults to `https://YOUR-RENDER-SERVICE.onrender.com`; opt-in local via `TRACKING_USE_LOCAL=true`.
+- Tracking base URL defaults to `https://CoreKnot-api.onrender.com`; opt-in local via `TRACKING_USE_LOCAL=true`.
 - Resend sends include `campaign_id` and `recipient_email` tags for webhook correlation.
 
 #### SMTP & Signatures

@@ -292,7 +292,7 @@ exports.updateLead = async (req, res) => {
       try {
         const leadName = lead.name || 'Prospect';
         const courseTitle = lead.exlyOfferingTitle || 'Our Program';
-        const paymentLink = process.env.PAYMENT_LINK || 'https://payment.taskmaster.io';
+        const paymentLink = process.env.PAYMENT_LINK || 'https://payment.coreknot.io';
 
         // Send WhatsApp via AiSensy
         if (lead.phone) {
@@ -332,7 +332,7 @@ exports.updateLead = async (req, res) => {
                 <p>Best regards,<br/>The Team</p>
               </div>
             `,
-            from: 'support@taskmaster.io'
+            from: 'support@coreknot.io'
           });
           console.log(`✅ Email sent to ${lead.email}`);
         }

@@ -213,7 +213,7 @@ select option {
   color: var(--color-pastel-slate-text);
 }
 
-/* Taskmaster typography — use across pages for consistency */
+/* Coreknot typography — use across pages for consistency */
 .tm-page-title {
   font-size: var(--size-text-header);
   font-weight: 800;

@@ -100,7 +100,7 @@ const FeaturesPage = () => {
              <CheckCircle2 className="text-emerald-500" size={24} /> Mission Ready
           </h2>
           <p className="text-[11px] font-bold text-white/60 leading-relaxed uppercase tracking-[0.1em]">
-            Taskmaster is fully synced with your Google account. All your data is saved securely and updated in real time across all devices.
+            Coreknot is fully synced with your Google account. All your data is saved securely and updated in real time across all devices.
           </p>
           <div className="flex gap-3">
              <Badge variant="info" className="!bg-blue-500/20 !text-blue-400 !border-blue-500/30 py-2 px-4">ONLINE</Badge>

@@ -15,7 +15,7 @@ const PwaInstallBanner = () => {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-black uppercase tracking-wider text-[var(--color-text-primary)]">
-            Install CoreKnot
+            Install Coreknot
           </p>
           <p className="text-[10px] text-[var(--color-text-muted)]">
             Add to your desktop for alerts even when the browser tab is closed.

@@ -29,7 +29,7 @@ async function run() {
 
   const campaign = await MailCampaign.create({
     title: 'QA Test Campaign with Attachments',
-    subject: 'Important Update from Taskmaster QA',
+    subject: 'Important Update from Coreknot QA',
     content: '<p>Hello Redacted User,</p><p>This is a test of the fully functional campaign builder including rich text, attachments, and HolySheet logic.</p><br/><br/><div dir="ltr"><strong>The Shakti Collective</strong></div>',
     senderProfileId: profile._id,
     recipients: [{ name: 'Redacted User', email: 'redacted@example.com' }],

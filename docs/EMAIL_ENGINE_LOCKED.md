@@ -10,7 +10,7 @@ This document records the verified production behavior after extensive debugging
 
 | File | Responsibility |
 |------|----------------|
-| `server/utils/trackingUrls.js` | `TRACKING_BASE_URL` → public API (`YOUR-RENDER-SERVICE.onrender.com`). Never fall back to suspended `taskmaster-api.onrender.com`. |
+| `server/utils/trackingUrls.js` | `TRACKING_BASE_URL` → public API (`CoreKnot-jfw0.onrender.com`). Never fall back to suspended `CoreKnot-api.onrender.com`. |
 | `server/utils/emailTracker.js` | Inject 1×1 open pixel **before `</body>`**, no `display:none`. Wrap click links; skip unsubscribe/mailto/track URLs. |
 | `server/routes/track.js` | `/api/track/open/:pixelId.gif` and `/api/track/click/:clickId`. |
 
@@ -96,7 +96,7 @@ tenantId: from campaign      // must match for tenant-scoped reads
 ## 10. Environment variables
 
 ```
-TRACKING_BASE_URL=https://YOUR-RENDER-SERVICE.onrender.com
+TRACKING_BASE_URL=https://CoreKnot-jfw0.onrender.com
 FRONTEND_URL=https://tsccoreknot.com
 MAIL_USE_PROD_DB=true          # local send tests sync to prod DB for tracking
 MONGODB_URI_PROD=...

@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Taskmaster/client/src/pages');
+const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Coreknot/client/src/pages');
 
 const handlerRegex = /const handle[A-Z][a-zA-Z0-9_]*\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/;
 

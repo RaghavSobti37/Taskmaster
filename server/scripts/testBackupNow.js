@@ -137,7 +137,7 @@ const main = async () => {
     console.log(`Duration: ${Math.round(result.durationMs / 1000)}s`);
     console.log(`Compressed backup size (GridFS files): ${formatBytes(result.totalBytes)}`);
 
-    console.log('\n=== Backup DB (taskmaster_backups) ===');
+    console.log('\n=== Backup DB (coreknot_backups) ===');
     console.log(`GridFS compressed bytes: ${formatBytes(backupSize.gridfsCompressedBytes)}`);
     console.log(`GridFS file count: ${backupSize.gridfsFileCount}`);
     console.log(`Snapshot records: ${backupSize.snapshotCount}`);

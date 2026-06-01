@@ -1,7 +1,7 @@
 export const UNSUBSCRIBE_START = '<!-- TASKMASTER_UNSUBSCRIBE_START -->';
 export const UNSUBSCRIBE_END = '<!-- TASKMASTER_UNSUBSCRIBE_END -->';
 
-export const defaultUnsubscribeBlock = `<div data-taskmaster-unsubscribe="true" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; text-align: center; font-family: sans-serif;">
+export const defaultUnsubscribeBlock = `<div data-coreknot-unsubscribe="true" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; text-align: center; font-family: sans-serif;">
   <p style="margin: 4px 0;">You are receiving this email because you opted in at our website or events.</p>
   <p style="margin: 4px 0;">If you no longer wish to receive these emails, you can <a href="{{unsubscribe_url}}" style="color: #ef4444; text-decoration: underline;">unsubscribe here</a>.</p>
 </div>`;
@@ -11,7 +11,7 @@ const MARKER_BLOCK_RE = new RegExp(
   'gi'
 );
 
-const DATA_ATTR_UNSUB_RE = /<div[^>]*data-taskmaster-unsubscribe\s*=\s*["']?true["']?[^>]*>[\s\S]*?<\/div>/gi;
+const DATA_ATTR_UNSUB_RE = /<div[^>]*data-coreknot-unsubscribe\s*=\s*["']?true["']?[^>]*>[\s\S]*?<\/div>/gi;
 
 /** Footer blocks Quill may leave after stripping HTML comments */
 const LEGACY_UNSUB_RE = /<div[^>]*>[\s\S]*?\{\{unsubscribe_url\}\}[\s\S]*?<\/div>/gi;

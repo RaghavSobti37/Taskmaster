@@ -180,7 +180,7 @@ const CustomizationPage = () => {
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
               <Monitor size={18} className="text-blue-500" /> Appearance
             </h2>
-            <p className="text-sm text-[var(--color-text-secondary)]">Choose how Taskmaster looks to you.</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">Choose how CoreKnot looks to you.</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

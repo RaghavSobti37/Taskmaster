@@ -29,7 +29,7 @@ Full spec: `docs/EMAIL_ENGINE_LOCKED.md`
 1. **Opens:** Gmail proxy IPs blocked for geo; city inferred from same recipient's click via `buildClickCityByEmail`.
 2. **Clicks:** Real IP → geoip-lite → ip-api.com fallback. City only, no country codes.
 3. **No hardcoded cities** (no Mumbai fallback).
-4. **Tracking base URL:** `TRACKING_BASE_URL` / `YOUR-RENDER-SERVICE.onrender.com` — never suspended API host.
+4. **Tracking base URL:** `TRACKING_BASE_URL` / `CoreKnot-jfw0.onrender.com` — never suspended API host.
 5. **Open pixel:** before `</body>`, visible 1×1, no `display:none`.
 6. **HolySheet:** all tabs deselected on fetch.
 7. **Activity stream:** `MMM dd, yyyy · HH:mm:ss` + `@ city` from `displayCity`.

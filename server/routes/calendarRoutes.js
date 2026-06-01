@@ -159,14 +159,14 @@ router.post('/', async (req, res) => {
                 <p><strong>Created by:</strong> ${populated.createdBy.name}</p>
                 ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
                 <p>
-                  <a href="${process.env.CLIENT_URL || 'https://taskmaster.app'}/calendar"
+                  <a href="${process.env.CLIENT_URL || 'https://coreknot.app'}/calendar"
                      style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     View Event
                   </a>
                 </p>
               </div>
             `,
-            from: 'events@taskmaster.io',
+            from: 'events@coreknot.io',
           }).catch((err) => console.error(`Failed to send event email to ${user.email}:`, err))
         );
 

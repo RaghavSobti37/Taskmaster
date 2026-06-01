@@ -78,8 +78,8 @@ node server/scripts/sync-workspaces-to-prod.js
 
 **Example .env:**
 ```
-MONGODB_URI=mongodb://localhost:27017/taskmaster
-MONGODB_URI_PROD=mongodb://user:pass@prod-host:port/taskmaster
+MONGODB_URI=mongodb://localhost:27017/CoreKnot
+MONGODB_URI_PROD=mongodb://user:pass@prod-host:port/CoreKnot
 ```
 
 ## Step-by-Step Deployment
@@ -123,7 +123,7 @@ mongosh "mongodb://user:pass@host:port/dbname"
 ### Step 5: Restart Application
 ```bash
 # Restart your Node.js server
-systemctl restart taskmaster  # or your service name
+systemctl restart CoreKnot  # or your service name
 pm2 restart app
 # or your deployment method
 ```

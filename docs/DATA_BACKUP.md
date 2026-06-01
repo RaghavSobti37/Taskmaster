@@ -1,6 +1,6 @@
 # Production Data Backup
 
-Taskmaster runs a **daily full-database backup** of production MongoDB into a separate backup database on the same Atlas cluster. Backups are compressed, retained for 7 days, and you receive a success/failure email after each run.
+CoreKnot runs a **daily full-database backup** of production MongoDB into a separate backup database on the same Atlas cluster. Backups are compressed, retained for 7 days, and you receive a success/failure email after each run.
 
 ## Overview
 
@@ -54,12 +54,12 @@ Set these on the **Render cron service** (and locally in `server/.env` for manua
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MONGODB_URI_PROD` | **Yes** | — | Production MongoDB only. **Never** falls back to local `MONGODB_URI`. Local DB names (`taskmaster`, `taskmaster_local`, `testing`) and `localhost` URIs are rejected. |
+| `MONGODB_URI_PROD` | **Yes** | — | Production MongoDB only. **Never** falls back to local `MONGODB_URI`. Local DB names (`CoreKnot`, `taskmaster_local`, `testing`) and `localhost` URIs are rejected. |
 | `MONGODB_BACKUP_DB` | No | `taskmaster_backups` | Backup database name on same cluster |
 | `BACKUP_RETENTION_DAYS` | No | `7` | Days to keep daily snapshots |
 | `BACKUP_ENABLED` | No | `true` | Set `false` to skip backup runs |
 | `BACKUP_NOTIFY_EMAIL` | No | — | Override notification recipient |
-| `BACKUP_FROM_EMAIL` | No | `noreply@theshakticollective.in` | **Must be a Resend-verified domain.** Do not use unverified addresses like `sandbox@taskmaster.io`. |
+| `BACKUP_FROM_EMAIL` | No | `noreply@theshakticollective.in` | **Must be a Resend-verified domain.** Do not use unverified addresses like `sandbox@CoreKnot.io`. |
 | `ADMIN_EMAIL` | Yes (email) | — | Used when `BACKUP_NOTIFY_EMAIL` is empty |
 | `RESEND_API_KEY` | Yes (email) | — | Resend API key |
 | `SYSTEM_VERIFIED_FROM_EMAIL` | Yes (email) | — | Verified sender address in Resend |
@@ -73,7 +73,7 @@ Blueprint: [`render.yaml`](../render.yaml)
 ```yaml
 services:
   - type: cron
-    name: taskmaster-daily-backup
+    name: CoreKnot-daily-backup
     schedule: "31 18 * * *"   # 12:01 AM IST
     rootDir: server
     buildCommand: npm install
@@ -268,7 +268,7 @@ Reports:
 
 ### Render logs
 
-Dashboard → **taskmaster-daily-backup** → **Logs**
+Dashboard → **CoreKnot-daily-backup** → **Logs**
 
 Look for `[DatabaseBackup]` and `[BackupNotify]` lines.
 
@@ -288,10 +288,10 @@ Expected: `MONGODB_URI_PROD is required for backups. Local MONGODB_URI is never 
 **Test local DB blocked:**
 
 ```powershell
-node -e "process.env.MONGODB_URI_PROD='mongodb://localhost:27017/taskmaster'; try { require('./services/databaseBackupService').getSourceUri(); } catch (e) { console.log(e.message); }"
+node -e "process.env.MONGODB_URI_PROD='mongodb://localhost:27017/CoreKnot'; try { require('./services/databaseBackupService').getSourceUri(); } catch (e) { console.log(e.message); }"
 ```
 
-Expected: `Refusing to backup local database "taskmaster"...`
+Expected: `Refusing to backup local database "CoreKnot"...`
 
 On **Render cron**, there is no local `.env` — if `MONGODB_URI_PROD` is missing, the job fails and you get a failure email.
 

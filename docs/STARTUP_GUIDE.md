@@ -1,6 +1,6 @@
-# Taskmaster Startup Guide
+# CoreKnot Startup Guide
 
-This guide covers the current local setup for Taskmaster, including backend, frontend, and proxy support.
+This guide covers the current local setup for CoreKnot, including backend, frontend, and proxy support.
 
 ## Prerequisites
 - Node.js v18 or newer
@@ -39,7 +39,7 @@ VITE_API_URL=http://localhost:5000
 
 If `VITE_API_URL` is empty, the client will use relative `/api` routes and rely on the Vite proxy.
 
-**Production (Vercel frontend + Render API):** set `VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com` on the static host. Set `APP_BASE_URL` to the same API URL on Render for email open/click tracking.
+**Production (Vercel frontend + Render API):** set `VITE_API_URL=https://CoreKnot-api.onrender.com` on the static host. Set `APP_BASE_URL` to the same API URL on Render for email open/click tracking.
 
 ## 2. Install dependencies
 
@@ -76,7 +76,7 @@ It requires authorization using the backend auth middleware.
 For local debugging, enable `DEBUG_BYPASS=true` and use the bypass token:
 
 ```bash
-curl.exe -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=taskmaster&maxResults=1"
+curl.exe -H "Authorization: Bearer bypass_token" "http://localhost:5000/api/proxy/youtube/search?part=snippet&q=CoreKnot&maxResults=1"
 ```
 
 ## 6. Authentication notes

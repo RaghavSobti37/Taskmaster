@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const modelsDir = 'c:\\\\Users\\\\ragha\\\\OneDrive\\\\Desktop\\\\Taskmaster\\\\server\\\\models';
+const modelsDir = 'c:\\\\Users\\\\ragha\\\\OneDrive\\\\Desktop\\\\Coreknot\\\\server\\\\models';
 const files = fs.readdirSync(modelsDir).filter(f => f.endsWith('.js'));
 const connections = [];
 

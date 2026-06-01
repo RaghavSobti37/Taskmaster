@@ -12,8 +12,8 @@
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
 
-const LOCAL_DB_NAME = process.env.MONGODB_DB_LOCAL || 'taskmaster_local';
-const PROD_DB_NAME = process.env.MONGODB_DB_PROD || 'taskmaster_production';
+const LOCAL_DB_NAME = process.env.MONGODB_DB_LOCAL || 'coreknot_local';
+const PROD_DB_NAME = process.env.MONGODB_DB_PROD || 'coreknot_production';
 const COLLECTION = 'financedocuments';
 
 const BATCH_SIZE = 500;

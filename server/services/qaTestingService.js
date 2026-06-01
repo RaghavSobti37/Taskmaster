@@ -126,7 +126,7 @@ class QATestingService {
   }
 
   async getTestCases() {
-    const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Taskmaster/client/src/pages');
+    const targetDir = path.resolve('c:/Users/ragha/OneDrive/Desktop/Coreknot/client/src/pages');
     const testCases = [];
     
     // Recursive directory reader

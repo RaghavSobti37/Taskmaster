@@ -29,7 +29,7 @@ const main = async () => {
       date: null,
       error: error.message,
       durationMs: 0,
-      backupDatabase: process.env.MONGODB_BACKUP_DB || 'taskmaster_backups',
+      backupDatabase: process.env.MONGODB_BACKUP_DB || 'coreknot_backups',
       retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10),
       collections: [],
       collectionCount: 0,

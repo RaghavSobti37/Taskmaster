@@ -27,4 +27,4 @@ Allow: /
 User-agent: GPTBot
 Allow: /
 
-Sitemap: https://tsccoreknot.com/sitemap.xml
+Sitemap: https://tsctaskmaster.com/sitemap.xml

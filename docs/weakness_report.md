@@ -1,4 +1,4 @@
-# Taskmaster System Audit: Vulnerabilities & Bottlenecks
+# CoreKnot System Audit: Vulnerabilities & Bottlenecks
 
 ## 1. Concurrency & Locking Flaws
 - **Stale Locks**: `checkLock` middleware uses 15-minute TTL. Crash = 15m lockout.
@@ -49,7 +49,7 @@
 - **Monolithic Files**: 22 files have 15+ functions and cyclomatic complexity > 30 (e.g., `AdminMailContent.jsx` has 60 functions, `ArtistDetail.jsx` has 54).
   - **Fix**: Refactor monolithic components into smaller sub-components or custom hooks. *(Requires Dedicated Refactor Pass)*
 - ~~**Circular Dependencies**: Files import each other directly (e.g. `queueService ↔ triggerService`).~~ (Fixed)
-  - **Fix**: Extracted shared logic to [emailProcessor.js](file:///c:/Users/ragha/OneDrive/Desktop/Taskmaster/server/services/emailProcessor.js) and removed circular imports in [triggerService.js](file:///c:/Users/ragha/OneDrive/Desktop/Taskmaster/server/services/triggerService.js).
+  - **Fix**: Extracted shared logic to [emailProcessor.js](file:///c:/Users/ragha/OneDrive/Desktop/CoreKnot/server/services/emailProcessor.js) and removed circular imports in [triggerService.js](file:///c:/Users/ragha/OneDrive/Desktop/CoreKnot/server/services/triggerService.js).
 - ~~**Code Duplication**: Heavy duplication across the board (e.g. `onClose` duplicated in 21 files, `parseOfferingTitle` in 4 files).~~ (Partially Fixed)
   - **Fix**: Consolidated generic functions into `server/utils/exlyUtils.js`. Further UI consolidation needed.
 - **Architectural Inversion**: Lower layers importing higher layers (e.g. `utils` importing from `components` in `useTaskmasterQueries.js`, `services` importing `ui`).

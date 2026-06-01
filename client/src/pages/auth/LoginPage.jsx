@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -45,16 +45,11 @@ const LoginPage = () => {
     }
   };
 
-
-
-
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
-      {/* Paper texture & Ink spill background */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20"
       />
-      {/* Pattern from PDF for subtle texture */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
       />
@@ -64,10 +59,8 @@ const LoginPage = () => {
         className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">
-            CK
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">TaskMaster</h1>
+          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Coreknot</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
             A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
           </p>
@@ -152,13 +145,13 @@ const LoginPage = () => {
             </svg>
             Sign in with Google
           </button>
-
         </form>
 
         <div className="mt-4 text-center text-sm space-y-3">
-          <p className="text-[var(--color-text-muted)] font-medium">
-            New user? <Link to="/register" className="text-[var(--color-brand-teal)] font-bold hover:underline">Register here</Link>
-          </p>
+          <div className="flex items-center justify-center gap-2 text-[var(--color-text-muted)] font-medium">
+            <span>New user?</span>
+            <Link to="/register" className="text-[var(--color-brand-teal)] font-bold hover:underline inline-block">Register here</Link>
+          </div>
           <div className="pt-3 border-t border-border flex items-center justify-center gap-4 text-xs text-[var(--color-text-muted)] font-medium">
             <Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <span>•</span>
@@ -171,6 +164,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
-
-// Performance Optimization: useCallback(eventHandler) memoization guard

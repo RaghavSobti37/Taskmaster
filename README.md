@@ -2,7 +2,7 @@
   <img src="client/public/favicon.svg" alt="CoreKnot Logo" width="80" height="80" />
 </p>
 
-<h1 align="center">Taskmaster</h1>
+<h1 align="center">CoreKnot</h1>
 
 <p align="center">
   <strong>Enterprise CRM & Operations Hub</strong><br/>
@@ -31,7 +31,7 @@
 
 ## 📖 Executive Summary
 
-Taskmaster (branded natively as **CoreKnot** within its Progressive Web App shell) is a decoupled, multi-tenant operational workspace designed to strip out project management overhead. It streamlines complex business lines—such as financial document optical character recognition (OCR), multi-channel customer relationship management (CRM) ingestion, and department-aware workforce scheduling—into a unified, high-density dashboard.
+CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell) is a decoupled, multi-tenant operational workspace designed to strip out project management overhead. It streamlines complex business lines—such as financial document optical character recognition (OCR), multi-channel customer relationship management (CRM) ingestion, and department-aware workforce scheduling—into a unified, high-density dashboard.
 
 ### Core Ecosystem Primitives
 
@@ -109,7 +109,7 @@ Taskmaster (branded natively as **CoreKnot** within its Progressive Web App shel
 ## 🗂️ Directory Structure
 
 ```
-Taskmaster/
+CoreKnot/
 ├── client/                     # Frontend Application Root
 │   ├── public/                 # Static Assets & PWA manifests
 │   │   ├── manifest.json       # PWA configurations & deep link schemes
@@ -149,8 +149,8 @@ Taskmaster/
 #### 1. Clone Ecosystem and Local Dependencies
 
 ```bash
-git clone https://github.com/YOUR_ORG/Taskmaster.git
-cd Taskmaster
+git clone https://github.com/YOUR_ORG/CoreKnot.git
+cd CoreKnot
 
 # Install localized dependencies inside the Backend Layer
 cd server && npm install
@@ -237,7 +237,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 
 ## 🔍 Diagnostic & Observability Protocol
 
-Taskmaster is engineered to survive production strain with a rigorous multi-tiered observability layout:
+CoreKnot is engineered to survive production strain with a rigorous multi-tiered observability layout:
 
 * **Autonomous Killswitch Protection (`SystemHealthService`):** A middle-tier system layer that constantly probes connection paths to MongoDB and Redis. If database or caching links go offline, it immediately intercepts incoming traffic with an explicit `HTTP 503 Maintenance Mode` error response to protect database integrity.
 * **Trace Propagation & Context Isolation:** Injectable correlation IDs follow requests through the execution stack. If an unhandled application error happens, the engine wraps structural metadata parameters directly into the server logs and error bodies.
@@ -247,7 +247,7 @@ Taskmaster is engineered to survive production strain with a rigorous multi-tier
 
 ## 🧪 Global Autonomous QA System & Auditing
 
-Taskmaster features a project-wide autonomous auditing infrastructure powered by React Doctor and Omni-Security verification models:
+CoreKnot features a project-wide autonomous auditing infrastructure powered by React Doctor and Omni-Security verification models:
 * **AST & Static Analysis:** Checks all routed page files (`client/src/pages`) for unsafe property chains (`row.property` access missing optional chaining) and unmemoized event handler declarations (`const handleSomething = ...` missing `useCallback`).
 * **Swarm Probing:** Automatically identifies target endpoints inside component files and executes unauthenticated API probes to detect privilege escalation vectors.
 * **CLI Testing Harness:** Integrated test scripts (`server/scripts/runQAScan.js`) compile AST patterns and run automated sweeps to ensure clean, 100% bug-free reports before production deployment.

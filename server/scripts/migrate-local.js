@@ -15,7 +15,7 @@ const Workspace = require('../models/Workspace');
 const logger = require('../utils/logger');
 
 const runMigration = async () => {
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmaster';
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot';
   
   try {
     console.log('🔄 Connecting to local database...');

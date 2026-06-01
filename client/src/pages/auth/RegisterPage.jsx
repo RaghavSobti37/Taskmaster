@@ -37,22 +37,20 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
       {/* Paper texture & Ink spill background */}
-      <div 
+      <div
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
       />
       {/* Pattern from PDF for subtle texture */}
-      <div 
+      <div
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
       />
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[var(--color-brand-teal)] rounded-2xl mx-auto flex items-center justify-center text-[var(--color-brand-cream)] text-3xl font-black mb-4 shadow-lg shadow-[var(--color-brand-teal)]/30">
-            CK
-          </div>
+          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
           <p className="text-[var(--color-text-secondary)] mt-2 font-medium">Join the team today</p>
         </div>
@@ -68,8 +66,8 @@ const RegisterPage = () => {
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Full Name</label>
             <div className="relative">
               <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 required
                 className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="John Doe"
@@ -83,8 +81,8 @@ const RegisterPage = () => {
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Email Address</label>
             <div className="relative">
               <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 required
                 className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="you@company.com"
@@ -128,8 +126,8 @@ const RegisterPage = () => {
             <label className="text-sm font-semibold text-[var(--color-text-secondary)] ml-1">Password</label>
             <div className="relative">
               <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
                 className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
                 placeholder="••••••••"
@@ -139,7 +137,7 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className="w-full bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20"
@@ -148,10 +146,13 @@ const RegisterPage = () => {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm">
-          <p className="text-[var(--color-text-muted)] font-medium">
-            Already have an account? <Link to="/login" className="text-[var(--color-brand-teal)] font-bold hover:underline">Sign in</Link>
+        <div className="mt-8 pt-6 border-t border-border text-center text-sm">
+          <p className="text-[var(--color-text-muted)] font-medium mb-4">
+            Already have an account?
           </p>
+          <Link to="/login" className="flex items-center justify-center w-full py-3 rounded-xl bg-card border border-border text-foreground font-bold hover:bg-background transition shadow-sm">
+            Sign In
+          </Link>
         </div>
       </motion.div>
     </div>
@@ -159,6 +160,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-
-
-// Performance Optimization: useCallback(eventHandler) memoization guard

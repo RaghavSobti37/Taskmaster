@@ -10,7 +10,7 @@ const { createNotification } = require('../services/notificationDispatcher');
 
 const { isOpsUser } = require('../utils/departmentPermissions');
 const canManage = (user) => isOpsUser(user);
-const FALLBACK_APP_URL = 'https://taskmaster.app';
+const FALLBACK_APP_URL = 'https://coreknot.app';
 
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')

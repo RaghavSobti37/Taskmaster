@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const SidebarContext = createContext();
 
-const SIDEBAR_STORAGE_KEY = 'taskmaster-sidebar-open';
+const SIDEBAR_STORAGE_KEY = 'coreknot-sidebar-open';
 
 export const SIDEBAR_WIDTH_OPEN = 160;
 export const SIDEBAR_WIDTH_COLLAPSED = 56;

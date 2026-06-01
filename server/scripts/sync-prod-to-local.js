@@ -19,8 +19,8 @@ async function main() {
         await localClient.connect();
         console.log('Connected DBs.');
 
-        const prodDb = prodClient.db('taskmaster_production');
-        const localDb = localClient.db('taskmaster_local');
+        const prodDb = prodClient.db('coreknot_production');
+        const localDb = localClient.db('coreknot_local');
 
         // Initial copy
         console.log('Start initial clone Prod -> Local...');

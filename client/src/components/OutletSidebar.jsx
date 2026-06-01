@@ -95,55 +95,55 @@ const PAGE_CONFIG = {
 
 const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {
   const location = useLocation();
-  const isActive = end 
+  const isActive = end
     ? location.pathname === to.split('?')[0] && location.search === (to.includes('?') ? '?' + to.split('?')[1] : '')
     : location.pathname.startsWith(to.split('?')[0]);
   const iconOnly = collapsed && !isMobile;
-  
+
   return (
-  <NavLink
-    to={to}
-    end={end}
-    onClick={onClick}
-    title={iconOnly ? label : undefined}
-    className={({ isActive: navIsActive }) => {
-      const active = end ? isActive : navIsActive;
-      return `
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      title={iconOnly ? label : undefined}
+      className={({ isActive: navIsActive }) => {
+        const active = end ? isActive : navIsActive;
+        return `
         flex items-center rounded-lg transition-all duration-200 relative
         ${iconOnly ? 'justify-center px-2 py-2 gap-0' : 'gap-2.5 px-2.5 py-1.5'}
         ${active
-          ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-blue-500/15'
-          : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
+            ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-blue-500/15'
+            : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
       `;
-    }}
-  >
-    <div className="relative flex items-center justify-center shrink-0">
-      <Icon size={18} className="shrink-0" />
-      <AnimatePresence>
-        {count > 0 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10"
-          />
-        )}
-        {count === 0 && todayCount > 0 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-[var(--color-bg-surface)] z-10"
-          />
-        )}
-      </AnimatePresence>
-    </div>
-    {(!collapsed || isMobile) && (
-      <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
-        {label}
-      </span>
-    )}
-  </NavLink>
+      }}
+    >
+      <div className="relative flex items-center justify-center shrink-0">
+        <Icon size={18} className="shrink-0" />
+        <AnimatePresence>
+          {count > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10"
+            />
+          )}
+          {count === 0 && todayCount > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-[var(--color-bg-surface)] z-10"
+            />
+          )}
+        </AnimatePresence>
+      </div>
+      {(!collapsed || isMobile) && (
+        <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
+          {label}
+        </span>
+      )}
+    </NavLink>
   );
 };
 
@@ -153,17 +153,17 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
   return (
     <div className="flex flex-col mb-2">
       {!iconOnly && (
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
-      >
-        <div className="flex items-center gap-1.5">
-          {Icon && <Icon size={12} />}
-          <span>{title}</span>
-        </div>
-        <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
+        >
+          <div className="flex items-center gap-1.5">
+            {Icon && <Icon size={12} />}
+            <span>{title}</span>
+          </div>
+          <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
       )}
       <AnimatePresence>
         {isOpen && (!collapsed || isMobile) && (
@@ -196,47 +196,47 @@ const ThemeToggle = ({ theme, toggleTheme, collapsed, isMobile }) => {
     );
   }
   return (
-  <button
-    type="button"
-    onClick={toggleTheme}
-    className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
-  >
-    <div className="flex items-center gap-2">
-      <AnimatePresence mode="wait">
-        {theme === 'light' ? (
-          <motion.div
-            key="sun"
-            initial={{ y: 20, opacity: 0, rotate: -90 }}
-            animate={{ y: 0, opacity: 1, rotate: 0 }}
-            exit={{ y: -20, opacity: 0, rotate: 90 }}
-            transition={{ type: 'spring', damping: 15 }}
-          >
-            <Sun size={16} className="text-amber-500" />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="moon"
-            initial={{ y: 20, opacity: 0, rotate: -90 }}
-            animate={{ y: 0, opacity: 1, rotate: 0 }}
-            exit={{ y: -20, opacity: 0, rotate: 90 }}
-            transition={{ type: 'spring', damping: 15 }}
-          >
-            <Moon size={16} className="text-blue-400" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-        {theme === 'light' ? 'Light' : 'Dark'}
-      </span>
-    </div>
-    <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
-      <motion.div
-        animate={{ x: theme === 'light' ? 2 : 18 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-        className="absolute top-0.5 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
-      />
-    </div>
-  </button>
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
+    >
+      <div className="flex items-center gap-2">
+        <AnimatePresence mode="wait">
+          {theme === 'light' ? (
+            <motion.div
+              key="sun"
+              initial={{ y: 20, opacity: 0, rotate: -90 }}
+              animate={{ y: 0, opacity: 1, rotate: 0 }}
+              exit={{ y: -20, opacity: 0, rotate: 90 }}
+              transition={{ type: 'spring', damping: 15 }}
+            >
+              <Sun size={16} className="text-amber-500" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="moon"
+              initial={{ y: 20, opacity: 0, rotate: -90 }}
+              animate={{ y: 0, opacity: 1, rotate: 0 }}
+              exit={{ y: -20, opacity: 0, rotate: 90 }}
+              transition={{ type: 'spring', damping: 15 }}
+            >
+              <Moon size={16} className="text-blue-400" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
+          {theme === 'light' ? 'Light' : 'Dark'}
+        </span>
+      </div>
+      <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
+        <motion.div
+          animate={{ x: theme === 'light' ? 2 : 18 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          className="absolute top-0.5 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
+        />
+      </div>
+    </button>
   );
 };
 
@@ -297,12 +297,10 @@ const OutletSidebar = () => {
       >
         <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
           <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
-            <div className="w-7 h-7 shrink-0 bg-[var(--color-action-primary)] rounded-md flex items-center justify-center text-white text-[10px] font-bold shadow-md shadow-blue-500/15">
-              CK
-            </div>
+            <img src="/favicon.png" alt="Coreknot Logo" className="w-7 h-7 shrink-0 rounded-md shadow-md shadow-purple-500/20 object-cover" />
             {showLabels && (
               <span className="font-bold text-sm tracking-tight text-[var(--color-text-primary)] truncate">
-                CoreKnot
+                Coreknot
               </span>
             )}
           </div>
@@ -333,14 +331,14 @@ const OutletSidebar = () => {
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
           {(() => {
             const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
-              { id: 'platform', title: 'Platform', visible: true, pages: [{path: '/dashboard'}, {path: '/calendar'}, {path: '/todo'}, {path: '/inbox'}] },
-              { id: 'workspace', title: 'Workspace', visible: true, pages: [{path: '/projects'}, {path: '/assets'}, {path: '/schedule'}, {path: '/logs'}, {path: '/workspace/emails'}] },
-              { id: 'office', title: 'Office', visible: true, pages: [{path: '/management/equipment'}, {path: '/management/contacts'}, {path: '/attendance'}] },
-              { id: 'crm', title: 'CRM', visible: true, pages: [{path: '/leads'}, {path: '/followups'}, {path: '/bookings'}] },
-              { id: 'management', title: 'Management', visible: true, pages: [{path: '/finance'}, {path: '/management/announcements'}, {path: '/management/ops-logs'}, {path: '/artists'}] },
-              { id: 'admin', title: 'Admin', visible: true, pages: [{path: '/admin/users'}, {path: '/admin'}, {path: '/admin/exly-campaigns'}, {path: '/admin/scripts'}, {path: '/admin/gamification'}, {path: '/admin/qa'}] }
+              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }] },
+              { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/workspace/emails' }] },
+              { id: 'office', title: 'Office', visible: true, pages: [{ path: '/management/equipment' }, { path: '/management/contacts' }, { path: '/attendance' }] },
+              { id: 'crm', title: 'CRM', visible: true, pages: [{ path: '/leads' }, { path: '/followups' }, { path: '/bookings' }] },
+              { id: 'management', title: 'Management', visible: true, pages: [{ path: '/finance' }, { path: '/management/announcements' }, { path: '/management/ops-logs' }, { path: '/artists' }] },
+              { id: 'admin', title: 'Admin', visible: true, pages: [{ path: '/admin/users' }, { path: '/admin' }, { path: '/admin/exly-campaigns' }, { path: '/admin/scripts' }, { path: '/admin/gamification' }, { path: '/admin/qa' }] }
             ];
-            
+
             // Force inject new pages if missing from user's custom preferences
             const hasQA = rawGroups.some(g => g.pages?.some(p => p.path === '/admin/qa'));
             if (!hasQA) {
@@ -349,7 +347,7 @@ const OutletSidebar = () => {
                 adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/qa', visible: true }];
               }
             }
-            
+
             return rawGroups;
           })()
             .filter(group => group.visible)
@@ -358,7 +356,7 @@ const OutletSidebar = () => {
               const visiblePages = (group.pages || [])
                 .filter(page => (page.visible !== false) && PAGE_CONFIG[page.path] && hasPageAccess(user, PAGE_CONFIG[page.path].accessKey))
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
-                
+
               if (visiblePages.length === 0) return null;
 
               return (
@@ -376,7 +374,7 @@ const OutletSidebar = () => {
                         end={config.end}
                         count={
                           page.path === '/inbox' ? statusCounts.notifications?.unread :
-                          page.path === '/followups' ? statusCounts.followups?.overdue : 0
+                            page.path === '/followups' ? statusCounts.followups?.overdue : 0
                         }
                         todayCount={
                           page.path === '/calendar' ? statusCounts.calendar?.today : 0

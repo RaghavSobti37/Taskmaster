@@ -33,7 +33,7 @@ const scheduleTrigger = scheduleTriggerRef || ((opts) => opts);
 
 const triggerApiKey = process.env.TRIGGER_API_KEY || 'tr_mock_api_key';
 const triggerClient = new ClientConstructor({
-  id: 'taskmaster-coreknot',
+  id: 'coreknot-coreknot',
   apiKey: triggerApiKey,
   apiUrl: process.env.TRIGGER_API_URL || 'https://api.trigger.dev',
 });

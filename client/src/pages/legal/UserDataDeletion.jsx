@@ -40,11 +40,9 @@ export default function UserDataDeletion() {
       {/* Header Bar */}
       <header className="border-b border-[#1F2937] bg-[#111827]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center font-black text-lg text-white shadow-lg shadow-rose-500/30">
-            CK
-          </div>
+          <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
           <div>
-            <span className="font-bold text-base tracking-tight text-white block">CoreKnot / TaskMaster</span>
+            <span className="font-bold text-base tracking-tight text-white block">Coreknot</span>
             <span className="text-[10px] text-slate-400 font-mono">Data Deletion Protocol v1.0</span>
           </div>
         </div>
@@ -60,7 +58,7 @@ export default function UserDataDeletion() {
             <Trash2 size={14} /> Compliance Specification
           </div>
           <h1 className="text-4xl font-black tracking-tight text-white">User Data Deletion Request</h1>
-          <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          <p className="w-full text-sm text-slate-400 mx-auto" style={{ maxWidth: '600px' }}>
             In compliance with GDPR and Meta Developer Platform terms, you can instantly revoke OAuth access and request the permanent erasure of your account, API keys, and logged analytics.
           </p>
         </div>
@@ -72,7 +70,7 @@ export default function UserDataDeletion() {
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-white">Deletion Request Confirmed</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+              <p className="text-xs text-slate-400 mx-auto leading-relaxed" style={{ maxWidth: '450px' }}>
                 Your request has been securely logged. All associated OAuth tokens, platform webhook subscriptions, and profile data linked to <strong className="text-emerald-400">{email}</strong> have been marked for immediate purging.
               </p>
             </div>
@@ -113,7 +111,7 @@ export default function UserDataDeletion() {
                 <input
                   type="email"
                   required
-                  placeholder="harshad@theshakticollective.in"
+                  placeholder="[EMAIL_ADDRESS]"
                   className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] focus:ring-2 focus:ring-rose-500 outline-none text-white text-xs transition font-mono"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -175,7 +173,7 @@ export default function UserDataDeletion() {
         )}
 
         <footer className="pt-8 border-t border-[#1F2937] flex items-center justify-between text-xs text-slate-500 flex-wrap gap-4">
-          <span>© 2026 CoreKnot / The Shakti Collective. All rights reserved.</span>
+          <span>© 2026 Coreknot / The Shakti Collective. All rights reserved.</span>
           <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
         </footer>
       </main>

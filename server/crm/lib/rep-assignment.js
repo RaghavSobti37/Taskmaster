@@ -1,9 +1,9 @@
 const { getLeads } = require('./csv-store');
 
 // In a real app, this would come from the database.
-// For now, we use the CRM users if they exist, or just the Taskmaster users.
+// For now, we use the CRM users if they exist, or just the Coreknot users.
 // Actually, the CRM architecture might have a specific set of reps.
-// Let's assume we fetch users with 'sales' or 'admin' role from Taskmaster DB later.
+// Let's assume we fetch users with 'sales' or 'admin' role from Coreknot DB later.
 // For now, we'll keep the logic of finding the least loaded rep.
 
 function getLeastLoadedRep(reps) {

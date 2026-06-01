@@ -1,6 +1,6 @@
 # Active State & Milestones
-- [Current Focus]: PWA migration, mobile-native UX optimizations, and Attendance Daily View default implementation.
-- [Last Modified]: May 31, 2026
+- [Current Focus]: Finalized Coreknot PWA rebranding, global HelpBugButton integration, dashboard 1d default, and SVG syntax fixes in LoginPage.
+- [Last Modified]: June 1, 2026
 
 # Node Graph (Entities & Components)
 - [Node: AdminGamification.jsx] -> (Memoized event handlers with useCallback; imported useCallback component)

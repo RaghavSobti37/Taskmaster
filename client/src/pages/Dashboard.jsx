@@ -185,7 +185,7 @@ const Dashboard = () => {
   };
 
   // Default layout if no preset or fallback
-  const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'taskmaster')?.elements || [];
+  const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'coreknot')?.elements || [];
 
   const elementsToRender = (dashboardPreset?.elements && dashboardPreset.elements.length > 0 ? dashboardPreset.elements : defaultElements)
     .filter(el => el.visible);

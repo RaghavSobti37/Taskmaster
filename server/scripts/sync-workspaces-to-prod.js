@@ -19,7 +19,7 @@ const runSync = async () => {
   let localConnection, prodConnection;
 
   try {
-    const localUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmaster';
+    const localUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/coreknot';
     const prodUri = process.env.MONGODB_URI_PROD;
 
     if (!prodUri) {

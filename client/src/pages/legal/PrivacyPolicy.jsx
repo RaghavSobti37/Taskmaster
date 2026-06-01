@@ -8,11 +8,9 @@ export default function PrivacyPolicy() {
       {/* Header Bar */}
       <header className="border-b border-[#1F2937] bg-[#111827]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-lg text-white shadow-lg shadow-blue-500/30">
-            CK
-          </div>
+          <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
           <div>
-            <span className="font-bold text-base tracking-tight text-white block">CoreKnot / TaskMaster</span>
+            <span className="font-bold text-base tracking-tight text-white block">Coreknot</span>
             <span className="text-[10px] text-slate-400 font-mono">Privacy Specification v2.1</span>
           </div>
         </div>
@@ -28,8 +26,8 @@ export default function PrivacyPolicy() {
             <Shield size={14} /> Official Legal Policy
           </div>
           <h1 className="text-4xl font-black tracking-tight text-white">Privacy Policy & Data Security</h1>
-          <p className="text-sm text-slate-400 max-w-2xl mx-auto">
-            Effective Date: May 18, 2026 • Applying to CoreKnot OS, TaskMaster CRM, and Cross-Platform Analytics Pipelines.
+          <p className="w-full text-sm text-slate-400 mx-auto" style={{ maxWidth: '600px' }}>
+            Effective Date: May 18, 2026 • Applying to Coreknot Workspace, and Cross-Platform Analytics Pipelines.
           </p>
         </div>
 
@@ -69,7 +67,7 @@ export default function PrivacyPolicy() {
           </h2>
           <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
             <p>
-              When you use CoreKnot / TaskMaster, we collect information required to deliver CRM synchronization, internal productivity tools, and cross-platform artist analytics:
+              When you use Coreknot, we collect information required to deliver CRM synchronization, internal productivity tools, and cross-platform artist analytics:
             </p>
             <ul className="list-disc pl-5 space-y-2 text-slate-400">
               <li><strong className="text-slate-200">Account Credentials:</strong> Name, professional email address, encrypted authentication hashes, and workspace role assignments.</li>
@@ -85,7 +83,7 @@ export default function PrivacyPolicy() {
             <span className="w-2 h-2 rounded-full bg-blue-500"></span> 2. How We Use Your Data
           </h2>
           <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
-            <p>CoreKnot processes your data strictly for operational functionality:</p>
+            <p>Coreknot processes your data strictly for operational functionality:</p>
             <ul className="space-y-2 text-slate-400">
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-blue-500 mt-0.5 shrink-0" /> Aggregating follower growth trajectories and streaming metrics into your unified artist dashboard.</li>
               <li className="flex items-start gap-2"><CheckCircle size={14} className="text-blue-500 mt-0.5 shrink-0" /> Dispatching scheduled automated emails or calendar event reminders via secure AWS SES / Google API conduits.</li>
@@ -140,7 +138,7 @@ export default function PrivacyPolicy() {
         </section>
 
         <footer className="pt-8 border-t border-[#1F2937] flex items-center justify-between text-xs text-slate-500 flex-wrap gap-4">
-          <span>© 2026 CoreKnot / The Shakti Collective. All rights reserved.</span>
+          <span>© 2026 Coreknot / The Shakti Collective. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <Link to="/userdata" className="hover:underline">User Data Deletion</Link>
             <a href="mailto:privacy@theshakticollective.in" className="flex items-center gap-1 hover:underline text-blue-400">

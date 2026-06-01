@@ -61,12 +61,12 @@ const SettingsPage = () => {
   return (
     <div className="flex h-[calc(100vh-2rem)] lg:h-[calc(100vh-2.5rem)] w-full bg-[var(--color-bg-workspace)] overflow-hidden rounded-xl border border-[var(--color-bg-border)] shadow-lg">
       {/* Sidebar Settings Navigation */}
-      <aside className="w-64 flex flex-col bg-[var(--color-bg-primary)] border-r border-[var(--color-bg-border)] z-10">
+      <aside className="w-16 md:w-64 shrink-0 flex flex-col bg-[var(--color-bg-primary)] border-r border-[var(--color-bg-border)] z-10 transition-all duration-300">
         <div className="p-4 border-b border-[var(--color-bg-border)] flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-[var(--color-bg-secondary)] rounded-lg transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-[var(--color-bg-secondary)] rounded-lg transition-colors flex shrink-0 items-center justify-center">
             <ArrowLeft size={16} className="text-[var(--color-text-secondary)]" />
           </button>
-          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--color-text-primary)]">Settings</h2>
+          <h2 className="hidden md:block text-sm font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate">Settings</h2>
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -76,8 +76,8 @@ const SettingsPage = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${activeTab === tab.id ? 'bg-blue-500/10 text-blue-500' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]'}`}
             >
-              <tab.icon size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">{tab.label}</span>
+              <tab.icon size={16} className="shrink-0" />
+              <span className="hidden md:inline text-xs font-bold uppercase tracking-wider truncate">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -87,8 +87,8 @@ const SettingsPage = () => {
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left text-rose-500 hover:bg-rose-500/10"
           >
-            <LogOut size={16} />
-            <span className="text-xs font-bold uppercase tracking-wider">Sign Out</span>
+            <LogOut size={16} className="shrink-0" />
+            <span className="hidden md:inline text-xs font-bold uppercase tracking-wider truncate">Sign Out</span>
           </button>
         </div>
       </aside>

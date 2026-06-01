@@ -1,8 +1,8 @@
-# Taskmaster Deployment & Testing Guide
+# CoreKnot Deployment & Testing Guide
 
 ## Quick Overview
 
-Taskmaster is deployed across multiple environments with automatic database routing:
+CoreKnot is deployed across multiple environments with automatic database routing:
 
 - **Development (Local)**: Uses local MongoDB
 - **Vercel Preview**: Uses local MongoDB (safe for testing)
@@ -255,16 +255,16 @@ Body: { pageOrder: [{path, label, visible}, ...] }
 
 ### Preview Link Format
 
-Automatic: `taskmaster-git-{branch-name}-raghavsobti37s-projects.vercel.app`
+Automatic: `CoreKnot-git-{branch-name}-raghavsobti37s-projects.vercel.app`
 
-Example: `taskmaster-git-feature-auth-raghavsobti37s-projects.vercel.app`
+Example: `CoreKnot-git-feature-auth-raghavsobti37s-projects.vercel.app`
 
 ### Database Routing
 
 | Environment | Database | URL |
 |---|---|---|
 | Development (local) | taskmaster_local | localhost:5173 |
-| Preview (Vercel) | taskmaster_local | taskmaster-git-*.vercel.app |
+| Preview (Vercel) | taskmaster_local | CoreKnot-git-*.vercel.app |
 | Production (Vercel) | taskmaster_production | tsccoreknot.com |
 
 ### Testing Preview Links

@@ -3,12 +3,13 @@ import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YA
 import { format, subDays, parseISO } from 'date-fns';
 import { Card, TimeframeFilter } from '../ui';
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
-import { useDashboardTasks, useMailStats, useActivityGrid, useDashboardSummary } from '../../hooks/useTaskmasterQueries';
+import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 
 const formatBarMetric = (value, _name, item) => {
   const metric = item?.payload?.label || 'Count';
   if (metric === 'Tasks') return [`${value}%`, 'Completion Rate'];
+  if (metric === 'Converted') return [String(value), 'Converted'];
   if (metric === 'Focus') return [`${value}h`, 'Focus Hours'];
   return [String(value), metric];
 };
@@ -21,7 +22,10 @@ export default function GenericDashboardCard({ componentId }) {
   const { data: tasks = [] } = useDashboardTasks(user?._id);
   const { data: mailStats } = useMailStats(componentId === 'campaign-metrics');
   const { data: activityData } = useActivityGrid(componentId === 'team-activity');
-  const { data: summaryData } = useDashboardSummary(componentId === 'dept-stats');
+  const { data: deptStats, isLoading: deptStatsLoading } = useDepartmentStats(
+    timeframe,
+    componentId === 'dept-stats'
+  );
 
   const meta = COMPONENT_REGISTRY[componentId];
 
@@ -60,13 +64,14 @@ export default function GenericDashboardCard({ componentId }) {
       };
     }
 
-    if (componentId === 'dept-stats' && summaryData?.metrics) {
+    if (componentId === 'dept-stats' && deptStats?.metrics) {
+      const m = deptStats.metrics;
       return {
         type: 'bar',
         chartData: [
-          { label: 'Tasks', value: summaryData.metrics.completionRate || 0 },
-          { label: 'Converted', value: summaryData.metrics.convertedLeads || 0 },
-          { label: 'Focus', value: summaryData.metrics.focusHours || 0 }
+          { label: 'Tasks', value: m.completionRate || 0 },
+          { label: 'Converted', value: m.convertedLeads || 0 },
+          { label: 'Focus', value: m.focusHours || 0 },
         ],
         tooltipFormatter: formatBarMetric,
       };
@@ -92,7 +97,7 @@ export default function GenericDashboardCard({ componentId }) {
       chartData: Array.from(dataMap.entries()).map(([label, value]) => ({ label, value })),
       tooltipFormatter: (value) => [String(value), 'Tasks'],
     };
-  }, [tasks, timeframe, componentId, mailStats, activityData, summaryData]);
+  }, [tasks, timeframe, componentId, mailStats, activityData, deptStats]);
 
   const hasData = chartData.some(d => d.value > 0);
 
@@ -108,7 +113,11 @@ export default function GenericDashboardCard({ componentId }) {
       </div>
 
       <div className="flex-1 p-0 flex flex-col items-center justify-center relative" style={{ minHeight: 200, height: 200 }}>
-        {!hasData ? (
+        {!hasData && componentId === 'dept-stats' && deptStatsLoading ? (
+          <div className="flex flex-col items-center justify-center h-full w-full py-8">
+            <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+          </div>
+        ) : !hasData ? (
           <div className="flex flex-col items-center justify-center opacity-40 grayscale h-full w-full py-8">
             <div className="w-full max-w-[200px] space-y-2 mb-3">
               <div className="h-2 w-full bg-[var(--color-text-muted)] rounded-full animate-pulse"></div>

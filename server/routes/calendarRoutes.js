@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const CalendarEvent = require('../models/CalendarEvent');
+const { seedMusicContentCalendar } = require('../services/musicCalendarSeedService');
 const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
@@ -54,6 +55,7 @@ router.get('/', async (req, res) => {
     };
 
     const events = await CalendarEvent.find(eventQuery)
+      .setOptions({ bypassTenant: true })
       .populate('createdBy', 'name avatar')
       .populate('projectId', 'name workspace')
       .lean();
@@ -99,6 +101,28 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Error fetching calendar events:', err);
     res.status(500).json({ error: 'Failed to fetch calendar events' });
+  }
+});
+
+// POST /api/calendar/seed-music-content — admin: import Music Content Calendar birthdays
+router.post('/seed-music-content', async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const year = req.body?.year ? Number(req.body.year) : new Date().getFullYear();
+    const result = await seedMusicContentCalendar({
+      year,
+      dryRun: false,
+      creatorUserId: req.user._id,
+    });
+    res.json({
+      message: `Music Content Calendar seeded for ${year}`,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Error seeding music calendar:', err);
+    res.status(500).json({ error: err.message || 'Failed to seed music calendar' });
   }
 });
 

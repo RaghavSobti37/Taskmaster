@@ -103,6 +103,16 @@ export function DataHubContent() {
     }
   };
 
+  const handleFullReconcile = async () => {
+    if (!window.confirm('Run a full Data Hub sync? This re-merges all inlets and may take a few minutes.')) return;
+    try {
+      await reconcileMutation.mutateAsync({ full: true });
+      handleRefresh();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Full sync failed');
+    }
+  };
+
   const columns = [
     {
       header: 'Person',
@@ -218,6 +228,9 @@ export function DataHubContent() {
                 <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleReconcile} disabled={reconcileMutation.isPending} title="Pull new/changed records from all inlets">
                   <RefreshCw size={14} className={reconcileMutation.isPending ? 'animate-spin' : ''} />
                   Sync New
+                </Button>
+                <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleFullReconcile} disabled={reconcileMutation.isPending} title="Full re-merge from all inlets">
+                  Full Sync
                 </Button>
                 <Button variant="ghost" size="sm" className="!px-2.5 whitespace-nowrap" onClick={() => setShowAnalytics(!showAnalytics)}>
                   <BarChart3 size={14} />

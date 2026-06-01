@@ -622,6 +622,15 @@ export const useDashboardSummary = () => {
   });
 };
 
+export const useDepartmentStats = (timeframe = '7d', enabled = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'dept-stats', timeframe],
+    queryFn: async () => (await axios.get(`/api/dashboard/dept-stats?timeframe=${timeframe}`)).data,
+    enabled,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
 export const useActivityGrid = () => {
   return useQuery({
     queryKey: ['logs', 'activityGrid'],

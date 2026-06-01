@@ -9,7 +9,149 @@ const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { getCache, setCache } = require('../services/cacheService');
-const { todayStart, todayEnd, getDateKey } = require('../utils/attendanceDate');
+const { todayStart, todayEnd, getDateKey, startOfDayFromKey } = require('../utils/attendanceDate');
+
+const TIMEFRAME_DAYS = { '1d': 1, '7d': 7, '30d': 30 };
+
+const rangeForTimeframe = (timeframe) => {
+  const days = TIMEFRAME_DAYS[timeframe] || 7;
+  const end = todayEnd();
+  const todayKey = getDateKey();
+  const anchor = new Date(`${todayKey}T12:00:00+05:30`);
+  anchor.setDate(anchor.getDate() - (days - 1));
+  const start = startOfDayFromKey(getDateKey(anchor));
+  return { start, end, days };
+};
+
+const sumFocusHours = (match) => Log.aggregate([
+  { $match: match },
+  {
+    $project: {
+      timeValue: {
+        $convert: {
+          input: { $arrayElemAt: [{ $split: ['$details.timeSpent', 'h'] }, 0] },
+          to: 'double',
+          onError: 0,
+          onNull: 0,
+        },
+      },
+    },
+  },
+  { $group: { _id: null, focusHours: { $sum: '$timeValue' } } },
+]);
+
+const aggregateTaskStats = (periodMatch) => Task.aggregate([
+  {
+    $facet: {
+      completed: [
+        {
+          $match: {
+            status: 'done',
+            $or: [
+              { completedAt: periodMatch },
+              { $and: [{ $or: [{ completedAt: null }, { completedAt: { $exists: false } }] }, { updatedAt: periodMatch }] },
+            ],
+          },
+        },
+        { $count: 'count' },
+      ],
+      active: [
+        {
+          $match: {
+            $or: [
+              { updatedAt: periodMatch },
+              { dueDate: periodMatch },
+              { scheduleDate: periodMatch },
+            ],
+          },
+        },
+        { $count: 'count' },
+      ],
+    },
+  },
+]);
+
+const aggregateLeadStats = (periodMatch) => Lead.aggregate([
+  {
+    $facet: {
+      newLeads: [
+        { $match: { createdAt: periodMatch } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            converted: { $sum: { $cond: [{ $eq: ['$leadStatus', 'Converted'] }, 1, 0] } },
+          },
+        },
+      ],
+      conversions: [
+        { $match: { leadStatus: 'Converted', updatedAt: periodMatch } },
+        { $count: 'count' },
+      ],
+      touched: [
+        { $match: { updatedAt: periodMatch } },
+        { $count: 'count' },
+      ],
+    },
+  },
+]);
+
+exports.getDepartmentStats = async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
+    const { start, end, days } = rangeForTimeframe(timeframe);
+    const cacheKey = `dashboard:dept-stats:v2:${timeframe}:${getDateKey()}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    const periodMatch = { $gte: start, $lte: end };
+
+    const [taskFacet, leadFacet, logStats] = await Promise.all([
+      aggregateTaskStats(periodMatch),
+      aggregateLeadStats(periodMatch),
+      sumFocusHours({ action: 'DAILY_LOG', createdAt: periodMatch }),
+    ]);
+
+    const taskResult = taskFacet[0] || {};
+    const leadResult = leadFacet[0] || {};
+    const logs = logStats[0] || { focusHours: 0 };
+
+    const tasksCompleted = taskResult.completed?.[0]?.count || 0;
+    const tasksActive = taskResult.active?.[0]?.count || 0;
+    const newLeads = leadResult.newLeads?.[0] || { total: 0, converted: 0 };
+    const conversionsInPeriod = leadResult.conversions?.[0]?.count || 0;
+    const leadsTouched = leadResult.touched?.[0]?.count || 0;
+
+    const completionRate = tasksActive > 0
+      ? Math.round((tasksCompleted / tasksActive) * 100)
+      : 0;
+    const focusHours = Math.round(logs.focusHours * 10) / 10;
+
+    const payload = {
+      timeframe,
+      range: { start: start.toISOString(), end: end.toISOString(), days },
+      metrics: {
+        completionRate,
+        convertedLeads: conversionsInPeriod,
+        focusHours,
+        tasksCompleted,
+        tasksActive,
+        newLeads: newLeads.total,
+        leadsTouched,
+      },
+    };
+
+    await setCache(cacheKey, payload, 60);
+    res.json(payload);
+  } catch (error) {
+    logger.error('dashboardController', 'Department Stats', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to load department stats' });
+  }
+};
 
 exports.getDashboardSummary = async (req, res) => {
   try {
@@ -83,7 +225,7 @@ exports.getDashboardSummary = async (req, res) => {
           { createdBy: userId }
         ],
         date: { $gte: today, $lte: todayEndTime }
-      }).lean(),
+      }).setOptions({ bypassTenant: true }).lean(),
 
       // 6. Campaign Data for Bounces
       Campaign.find({ createdBy: userId }, 'recipients').lean(),

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.45-126d5e?style=flat-square" alt="Version 1.7.45" />
+  <img src="https://img.shields.io/badge/version-1.7.46-126d5e?style=flat-square" alt="Version 1.7.46" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -142,10 +142,17 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Single OS toast per event:** Push subscription pruning (`server/utils/pushSubscriptions.js`), send-time dedupe, service-worker tag guards, and client-side `localStorage` + `BroadcastChannel` dedupe prevent duplicate system notifications on phone and laptop.
 * **Polling fallback:** When push is unavailable, `NotificationBridge` shows OS toasts only after push init completes — never alongside an active push subscription.
 
+### 📊 Department Stats (Admin Dashboard)
+
+* **Timeframe-aware:** `1d` / `7d` / `30d` filters call `GET /api/dashboard/dept-stats?timeframe=` — org-wide metrics for the selected window.
+* **Metrics:** Task completion rate (%), converted lead count (people converted in period), total focus hours from daily logs.
+* **Widget:** `dept-stats` card in `GenericDashboardCard.jsx`; admin-only via `dashboardComponents.js`.
+
 ### 📅 Calendar & Music Content
 
 * **Past-date guard:** Tasks (`scheduleDate`, `dueDate`) and calendar events cannot be created or moved to the past — enforced in UI (`client/src/utils/dateValidation.js`) and API (`shared/dateValidation.js`, `TaskService`, `calendarRoutes`).
-* **Music Content Calendar:** 35 public `musical_day` events (birthdays, observances, memorials) seeded from `Music_Content_Calendar.pdf` via `node server/scripts/seedMusicContentCalendar.js --year=2026 [--prod]`.
+* **Music Content Calendar:** 35 public `musical_day` events (birthdays, observances, memorials) from `Music_Content_Calendar.pdf`. Seed via admin **Birthdays** button on Calendar, `POST /api/calendar/seed-music-content`, or `npm run seed:music-calendar:prod`.
+* **Cross-tenant public events:** Calendar API uses `bypassTenant` so org-wide public birthdays are visible to all users.
 * **Event types:** `meeting`, `instagram_post`, `youtube_post`, `shoot_day`, `event`, `musical_day` — musical days display as **Musical Day** in the calendar UI.
 
 ### 🗄️ Data Hub (Unified CRM)
@@ -154,7 +161,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Inlets:** Exly, Leads, TSC/HolySheet, Booked Calls, Enquiries, Mail Engagement, Community, Active Users, Unsubscribed — configured in `shared/dataInlets.js`.
 * **API:** `/api/data-hub` — folders, people search/pagination, analytics, sync status, reconcile trigger.
 * **Sync:** `DataHubService.syncAllInlets()` merges contacts from leads, Exly, TSC, booked-call webhooks, mail events, and enquiries into the unified `Contact` hub with inlet flags.
-* **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; auto-sync from UI every few minutes.
+* **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; **Full Sync** button in UI for full re-merge; **Sync New** for incremental updates.
 
 ### ✍️ Task Mentions & Assets
 
@@ -402,6 +409,23 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 
 ## 🚀 Production Migration Sequence
 
+### v1.7.46 — Department Stats, Music Calendar Seed & Data Hub Full Sync
+
+- **Department Stats:** New `/api/dashboard/dept-stats` with `1d`/`7d`/`30d` org-wide aggregations; widget shows completion %, converted count, and focus hours (`dashboardController.js`, `GenericDashboardCard.jsx`).
+- **Music Content Calendar:** `musicCalendarSeedService.js`; admin **Birthdays** button on Calendar; `POST /api/calendar/seed-music-content`; `npm run seed:prod-content` bundles calendar + Data Hub full reconcile.
+- **Calendar visibility:** Public events fetched with `bypassTenant` so seeded birthdays appear for all tenants.
+- **Data Hub:** **Full Sync** button triggers `POST /api/data-hub/reconcile?full=true` for complete inlet re-merge.
+
+Post-deploy production data (UI or CLI):
+
+```bash
+# Option A — in app (admin): Calendar → Birthdays; Data Hub → Full Sync
+
+# Option B — CLI against MONGODB_URI_PROD
+cd server
+npm run seed:prod-content
+```
+
 ### v1.7.45 — Data Hub, Calendar Guards & Music Content Calendar
 
 - **Data Hub:** Unified CRM at Admin → CRM (`DataHubPage`, `DataHubService`, `/api/data-hub`, `shared/dataInlets.js`). Folder inlets: Exly, Leads, TSC, Booked Calls, Enquiries, Mail, Community, Active, Unsubscribed. Reconcile via UI or `reconcileDataHub.js`.
@@ -411,7 +435,7 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 - **Overdue notifications removed:** `checkOverdue` cron deleted from `notificationService.js` (no overdue task/follow-up alerts).
 - **Gamification:** Shared rules in `shared/gamificationRules.js`; booked-call sync into Data Hub via `bookedCallsSyncService.js`.
 
-Post-deploy production data (run once against `MONGODB_URI_PROD`):
+Post-deploy production data (legacy one-liners; prefer `npm run seed:prod-content` in v1.7.46+):
 
 ```bash
 cd server

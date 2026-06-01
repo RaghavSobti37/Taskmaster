@@ -11,12 +11,16 @@ import {
   Button
 } from '../../components/ui';
 import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
+import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../utils/departmentPermissions';
 import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
 import { formatEventRangeLabel, eventOccursOnDay } from '../../utils/calendarEventTime';
 
 const CalendarView = () => {
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { data: calendarEvents = [], isLoading: eventsLoading, refetch: refetchAllEvents } = useCalendarEvents();
+  const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -27,6 +31,20 @@ const CalendarView = () => {
   const [selectedDay, setSelectedDay] = useState(new Date());
 
   const loading = eventsLoading && calendarEvents.length === 0;
+
+  const handleSeedMusicCalendar = async () => {
+    if (!window.confirm(`Import Music Content Calendar birthdays for ${currentMonth.getFullYear()}?`)) return;
+    setSeedingMusicCalendar(true);
+    try {
+      const res = await axios.post('/api/calendar/seed-music-content', { year: currentMonth.getFullYear() });
+      await refetchAllEvents();
+      alert(res.data?.message || 'Music calendar imported');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to import music calendar');
+    } finally {
+      setSeedingMusicCalendar(false);
+    }
+  };
 
   useEffect(() => {
     const fetchHolidays = async () => {
@@ -277,6 +295,11 @@ const CalendarView = () => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
              <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>
+             {isAdminUser(user) && (
+               <Button variant="secondary" size="sm" onClick={handleSeedMusicCalendar} disabled={seedingMusicCalendar} title="Import Music Content Calendar birthdays">
+                 <Star size={14} className={seedingMusicCalendar ? 'animate-pulse' : ''} /> Birthdays
+               </Button>
+             )}
              <Button size="sm" onClick={() => { setEditingEvent(null); setIsModalOpen(true); }}><Plus size={14} /> Create Event</Button>
           </div>
           </div>

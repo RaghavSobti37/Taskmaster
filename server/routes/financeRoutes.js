@@ -13,6 +13,7 @@ const {
   updateDocument,
   submitInvoice,
   listPendingInvoices,
+  listMyInvoices,
   approveInvoice,
   rejectInvoice,
   createFolder,
@@ -47,6 +48,7 @@ router.get('/usd-inr-rate', getUsdInrRate);
 
 // Any authenticated user can submit an invoice for ops review
 router.post('/submit-invoice', submitInvoice);
+router.get('/my-invoices', listMyInvoices);
 router.post('/upload-invoice', upload.single('file'), uploadFile);
 
 // Ops-only invoice review routes (before /:id catch-all)

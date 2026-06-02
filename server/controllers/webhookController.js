@@ -8,6 +8,7 @@ const LeadService = require('../services/LeadService');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
 const { rejectUnlessBookCallAuthorized, verifyArtistEnquirySecret } = require('../utils/webhookAuth');
+/** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 
 const { Queue } = require('bullmq');

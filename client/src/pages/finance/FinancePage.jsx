@@ -8,7 +8,7 @@ import {
   FolderOpen, X, ChevronDown, File,
   FileSpreadsheet, Image as ImageIcon,
   Calendar, ChevronLeft, ChevronRight, Info, Check, Eye, ArrowLeft, ArrowUp, ArrowDown,
-  FolderPlus,
+  FolderPlus, Clock, XCircle,
 } from 'lucide-react';
 import { uploadFinanceFiles } from '../../utils/financeUpload';
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
@@ -441,6 +441,39 @@ const FinancePage = () => {
     },
   });
 
+  const { data: pendingRes } = useQuery({
+    queryKey: ['finance-pending-invoices'],
+    queryFn: async () => (await axios.get('/api/finance/pending')).data,
+  });
+  const pendingInvoices = pendingRes?.data || [];
+
+  const approveInvoiceMutation = useMutation({
+    mutationFn: (id) => axios.patch(`/api/finance/${id}/approve`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-pending-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-docs'] });
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || err.message || 'Failed to approve invoice');
+    },
+  });
+
+  const rejectInvoiceMutation = useMutation({
+    mutationFn: ({ id, reason }) => axios.patch(`/api/finance/${id}/reject`, { rejectionReason: reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-pending-invoices'] });
+    },
+    onError: (err) => {
+      alert(err.response?.data?.message || err.message || 'Failed to reject invoice');
+    },
+  });
+
+  const handleRejectInvoice = async (invoice) => {
+    const reason = window.prompt(`Reject "${invoice.title}"? Optional reason:`);
+    if (reason === null) return;
+    rejectInvoiceMutation.mutate({ id: invoice._id, reason: reason.trim() });
+  };
+
   const handleDeleteFolder = async (e, folder) => {
     e.stopPropagation();
     const count = folder.documentCount ?? 0;
@@ -537,6 +570,82 @@ const FinancePage = () => {
           </>
         }
       />
+
+      {pendingInvoices.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+          <div className="px-4 py-3 border-b border-amber-500/20 flex items-center gap-2">
+            <Clock size={14} className="text-amber-600" />
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              Pending Invoice Approvals ({pendingInvoices.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-amber-500/10">
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Title</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Type</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Vendor</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted By</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Amount</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted</th>
+                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingInvoices.map((inv) => (
+                  <tr key={inv._id} className="border-b border-amber-500/10 last:border-0 hover:bg-amber-500/5">
+                    <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{inv.title}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)] capitalize">
+                      {inv.metadata?.submissionType === 'reimbursement' ? 'Reimbursement' : 'Invoice'}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
+                      {inv.project?.name ? formatProjectName(inv.project.name) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.metadata?.vendor || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.submittedBy?.name || inv.uploadedBy?.name || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
+                      {inv.metadata?.amount ? `₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
+                      {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        {inv.fileUrl && (
+                          <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="xs"><Eye size={14} /> View</Button>
+                          </a>
+                        )}
+                        <Button
+                          variant="success"
+                          size="xs"
+                          disabled={approveInvoiceMutation.isPending}
+                          onClick={() => approveInvoiceMutation.mutate(inv._id)}
+                        >
+                          <Check size={14} /> Approve
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="xs"
+                          disabled={rejectInvoiceMutation.isPending}
+                          onClick={() => handleRejectInvoice(inv)}
+                        >
+                          <XCircle size={14} /> Reject
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-amber-500/10">
+            Approved invoices appear in the document list below. Pending submissions are hidden until approved.
+          </p>
+        </div>
+      )}
 
       {/* Filters & Search */}
       <div className="flex flex-wrap gap-3 items-center">
@@ -1057,6 +1166,17 @@ const FinancePage = () => {
                         </select>
                       </div>
 
+                    {selectedDoc.metadata?.submissionType && (
+                      <div>
+                        <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
+                          Submission Type
+                        </label>
+                        <div className="px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs font-bold text-[var(--color-text-primary)] capitalize">
+                          {selectedDoc.metadata.submissionType === 'reimbursement' ? 'Reimbursement' : 'Invoice'}
+                        </div>
+                      </div>
+                    )}
+
                     {/* OCR Extractions (Display fields & updates) */}
                     <div className="p-3 bg-slate-100/60 dark:bg-slate-800/25 border border-[var(--color-bg-border)] rounded-xl space-y-3">
                       <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-1.5">
@@ -1172,6 +1292,29 @@ const FinancePage = () => {
                         </div>
                       </div>
                     </div>
+
+                    {selectedDoc.metadata?.attachments?.length > 0 && (
+                      <div className="border-t border-[var(--color-bg-border)] pt-4 space-y-2">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] block">
+                          Attached Documents ({selectedDoc.metadata.attachments.length})
+                        </label>
+                        <ul className="space-y-1.5">
+                          {selectedDoc.metadata.attachments.map((file, index) => (
+                            <li key={file.fileKey || file.fileUrl || index}>
+                              <a
+                                href={file.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-xs font-semibold text-blue-600 hover:underline truncate"
+                              >
+                                <FileText size={12} className="shrink-0" />
+                                <span className="truncate">{file.fileName || `Document ${index + 1}`}</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {/* System Metadata Details */}
                     <div className="border-t border-[var(--color-bg-border)] pt-4 space-y-2 text-[10px] text-[var(--color-text-muted)]">

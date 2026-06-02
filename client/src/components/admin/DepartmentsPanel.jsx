@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, Trash2, FileText, BarChart3, Pencil, CheckSquare, Square } from 'lucide-react';
-import { Card, Button, Input, Badge, CenteredModal } from '../ui';
+import { Card, Button, Input, Badge, CenteredModal, ModalFooter } from '../ui';
 import {
   useCreateDepartment,
   useUpdateDepartment,
@@ -173,7 +173,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
     !!editingDept &&
     (editPreset !== editPresetBaseline || !stableJsonEqual(editPages, editPagesBaseline));
 
-  useUnsavedChanges({
+  const { revert: revertPermissionEdits } = useUnsavedChanges({
     hasChanges: hasPermissionEdits,
     onSave: handleSavePermissions,
     onCancel: () => {
@@ -181,7 +181,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
       setEditPreset(editPresetBaseline);
     },
     isSaving: updateMutation.isPending,
-    elevated: true,
+    enabled: false,
   });
 
   const handleDelete = async (dept) => {
@@ -337,6 +337,27 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
           <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)]">
             <span className="text-[10px] text-[var(--color-text-muted)]">{editPages.length} pages selected</span>
           </div>
+
+          <ModalFooter>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={revertPermissionEdits}
+              disabled={!hasPermissionEdits || updateMutation.isPending}
+            >
+              Discard
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="success"
+              onClick={handleSavePermissions}
+              disabled={!hasPermissionEdits || updateMutation.isPending}
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </ModalFooter>
         </div>
       </CenteredModal>
 

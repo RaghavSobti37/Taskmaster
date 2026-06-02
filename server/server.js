@@ -95,13 +95,31 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-skip-toast', 'X-Skip-Toast', 'X-Trace-Id', 'x-trace-id'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'x-skip-toast',
+    'X-Skip-Toast',
+    'X-Trace-Id',
+    'x-trace-id',
+    'x-uploadthing-package',
+    'x-uploadthing-version',
+    'b3',
+    'traceparent',
+  ],
   exposedHeaders: ['x-ratelimit-remaining', 'x-ratelimit-reset', 'ratelimit-remaining', 'ratelimit-reset']
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(cookieParser());
+
+const { purgeLegacyAuthCookies } = require('./utils/authCookie');
+app.use((_req, res, next) => {
+  purgeLegacyAuthCookies(res);
+  next();
+});
 
 app.use(express.json({ 
   limit: '50mb',
@@ -409,36 +427,12 @@ const LISTEN_RETRY_MAX = 25;
 const { waitUntilPortFree, getListeningPids, freePort } = require('./scripts/freePort');
 let server;
 
-// #region agent log
-const agentLog = (location, message, data, hypothesisId) => {
-  fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '7646d7' },
-    body: JSON.stringify({
-      sessionId: '7646d7',
-      location,
-      message,
-      data,
-      hypothesisId,
-      timestamp: Date.now(),
-      runId: process.env.NODEMON_RESTART ? 'nodemon-restart' : 'boot',
-    }),
-  }).catch(() => {});
-};
-// #endregion
-
 function onServerListening() {
   if (serverListening) {
-    // #region agent log
-    agentLog('server.js:onServerListening:dup', 'duplicate listening event skipped', { pid: process.pid, port: PORT }, 'C');
-    // #endregion
     return;
   }
   serverListening = true;
   console.log(`Server running on port ${PORT}`);
-  // #region agent log
-  agentLog('server.js:onServerListening', 'server bound', { pid: process.pid, port: PORT }, 'C');
-  // #endregion
 
   const notificationService = require('./services/notificationService');
   notificationService.init();
@@ -466,9 +460,6 @@ function beginListen(attempt) {
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE' && attempt < LISTEN_RETRY_MAX) {
       const holders = [...getListeningPids(PORT)].filter((pid) => pid !== String(process.pid));
-      // #region agent log
-      agentLog('server.js:listen:error', 'EADDRINUSE', { attempt, holders, pid: process.pid, port: PORT }, 'A-B');
-      // #endregion
       if (attempt === 4 && holders.length) {
         console.warn(
           `[server] Port ${PORT} held by PID(s): ${holders.join(', ')}. ` +
@@ -486,9 +477,6 @@ function beginListen(attempt) {
           return;
         }
         const free = waitUntilPortFree(PORT, { timeoutMs: 5000, exceptPid: process.pid });
-        // #region agent log
-        agentLog('server.js:listen:wait', 'port wait done', { attempt, free, holders: [...getListeningPids(PORT)] }, 'A');
-        // #endregion
         retry();
       });
       return;
@@ -508,19 +496,12 @@ function listenWithRetry(attempt = 0) {
     server = null;
   }
 
-  // #region agent log
-  agentLog('server.js:listenWithRetry', 'listen attempt', { attempt, pid: process.pid, port: PORT, holders: [...getListeningPids(PORT)] }, 'A-D');
-  // #endregion
-
   if (process.env.NODE_ENV !== 'production' && attempt === 0) {
     let ready = waitUntilPortFree(PORT, { timeoutMs: 8000, exceptPid: process.pid });
     if (!ready) {
       freePort(PORT, { exceptPid: process.pid });
       ready = waitUntilPortFree(PORT, { timeoutMs: 5000, exceptPid: process.pid });
     }
-    // #region agent log
-    agentLog('server.js:listen:boot-wait', 'boot port wait', { ready, holders: [...getListeningPids(PORT)] }, 'A');
-    // #endregion
     beginListen(attempt);
     return;
   }
@@ -535,10 +516,6 @@ async function gracefulShutdown(signal = 'unknown') {
   if (shuttingDown) return;
   shuttingDown = true;
   serverListening = false;
-
-  // #region agent log
-  agentLog('server.js:gracefulShutdown', 'shutdown start', { signal, pid: process.pid, holders: [...getListeningPids(PORT)] }, 'B');
-  // #endregion
 
   const finish = () => process.exit(0);
   const forceExit = setTimeout(finish, 1500);

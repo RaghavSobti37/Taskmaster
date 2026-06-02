@@ -606,27 +606,79 @@ const updateDocument = async (req, res) => {
 
 const submitInvoice = async (req, res) => {
   try {
-    const { title, amount, description, fileUrl, fileKey, fileName, fileSize, fileType } = req.body;
-
-    if (!title || !fileUrl) {
-      return res.status(400).json({ success: false, message: 'Title and file are required' });
-    }
-
-    const doc = new FinanceDocument({
+    const {
       title,
-      description: description || '',
-      category: 'invoice',
+      amount,
+      description,
       fileUrl,
       fileKey,
       fileName,
       fileSize,
       fileType,
+      project,
+      attachments: attachmentsBody,
+      metadata: metadataBody,
+    } = req.body;
+
+    const submissionType = metadataBody?.submissionType === 'reimbursement' ? 'reimbursement' : 'invoice';
+    const normalizedAttachments = Array.isArray(attachmentsBody)
+      ? attachmentsBody
+        .filter((item) => item?.fileUrl)
+        .map((item) => ({
+          fileUrl: item.fileUrl,
+          fileKey: item.fileKey,
+          fileName: item.fileName,
+          fileSize: item.fileSize,
+          fileType: item.fileType,
+        }))
+      : [];
+
+    const primaryFromAttachments = normalizedAttachments[0];
+    const resolvedFileUrl = fileUrl || primaryFromAttachments?.fileUrl;
+
+    if (!title || !resolvedFileUrl) {
+      return res.status(400).json({ success: false, message: 'Title and at least one file are required' });
+    }
+
+    const parsedAmount = Number(metadataBody?.amount ?? amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid invoice amount (INR) is required' });
+    }
+
+    if (submissionType === 'reimbursement' && !metadataBody?.date) {
+      return res.status(400).json({ success: false, message: 'Expense date is required' });
+    }
+
+    const doc = new FinanceDocument({
+      title: String(title).trim(),
+      description: description || '',
+      category: 'invoice',
+      project: project || null,
+      fileUrl: resolvedFileUrl,
+      fileKey: fileKey || primaryFromAttachments?.fileKey,
+      fileName: fileName || primaryFromAttachments?.fileName,
+      fileSize: fileSize ?? primaryFromAttachments?.fileSize,
+      fileType: fileType || primaryFromAttachments?.fileType,
       uploadedBy: req.user._id,
       submittedBy: req.user._id,
       approvalStatus: 'pending',
       metadata: {
-        amount: Number(amount) || 0,
-        currency: 'INR',
+        amount: parsedAmount,
+        currency: metadataBody?.currency || 'INR',
+        vendor: metadataBody?.vendor ? String(metadataBody.vendor).trim() : '',
+        tax: Number(metadataBody?.tax) || 0,
+        date: metadataBody?.date ? new Date(metadataBody.date) : null,
+        detectedCategory: 'invoice',
+        submissionType,
+        attachments: normalizedAttachments.length > 0
+          ? normalizedAttachments
+          : [{
+            fileUrl: resolvedFileUrl,
+            fileKey: fileKey || primaryFromAttachments?.fileKey,
+            fileName: fileName || primaryFromAttachments?.fileName,
+            fileSize: fileSize ?? primaryFromAttachments?.fileSize,
+            fileType: fileType || primaryFromAttachments?.fileType,
+          }],
       },
     });
 
@@ -665,6 +717,33 @@ const listPendingInvoices = async (req, res) => {
     res.json({ success: true, data: docs });
   } catch (error) {
     console.error('List pending invoices error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const listMyInvoices = async (req, res) => {
+  try {
+    const filter = { submittedBy: req.user._id, category: 'invoice' };
+    if (req.query.submissionType === 'reimbursement') {
+      filter['metadata.submissionType'] = 'reimbursement';
+    } else if (req.query.submissionType === 'invoice') {
+      filter.$or = [
+        { 'metadata.submissionType': 'invoice' },
+        { 'metadata.submissionType': { $exists: false } },
+      ];
+    }
+
+    const docs = await FinanceDocument.find(filter)
+      .populate('uploadedBy', 'name email avatar')
+      .populate('submittedBy', 'name email avatar')
+      .populate('reviewedBy', 'name email avatar')
+      .populate('project', 'name')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ success: true, data: docs });
+  } catch (error) {
+    console.error('List my invoices error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -760,6 +839,7 @@ module.exports = {
   updateDocument,
   submitInvoice,
   listPendingInvoices,
+  listMyInvoices,
   approveInvoice,
   rejectInvoice,
   createFolder,

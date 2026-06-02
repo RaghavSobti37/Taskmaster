@@ -1,18 +1,14 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Briefcase, Inbox, MessageSquare, Menu } from 'lucide-react';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useStatusCounts } from '../hooks/useTaskmasterQueries';
 import { useAuth } from '../contexts/AuthContext';
 
 const BottomNavigation = () => {
-  const location = useLocation();
-  const hideOnChat = location.pathname === '/chat';
   const { toggleMobileSidebar } = useSidebar();
   const { user } = useAuth();
   const { data: statusCounts = { notifications: { unread: 0 } } } = useStatusCounts(!!user);
-
-  if (hideOnChat) return null;
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },

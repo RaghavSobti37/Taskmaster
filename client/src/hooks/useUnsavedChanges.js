@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useUnsavedChangesContext } from '../contexts/UnsavedChangesContext';
+import { getFormFieldChanges } from '../utils/formFieldChanges';
 
 export function stableJsonEqual(a, b) {
   try {
@@ -32,6 +33,8 @@ export function useUnsavedChanges({
   isSaving = false,
   enabled = true,
   elevated = false,
+  fieldLabels,
+  excludeFields = [],
 }) {
   const ctx = useUnsavedChangesContext();
   const registrationId = useId();
@@ -47,6 +50,11 @@ export function useUnsavedChanges({
     hasChangesProp !== undefined
       ? hasChangesProp
       : !stableJsonEqual(draft, baseline);
+
+  const changes = useMemo(() => {
+    if (!hasChanges || draft === undefined || baseline === undefined) return [];
+    return getFormFieldChanges(draft, baseline, { labels: fieldLabels, exclude: excludeFields });
+  }, [hasChanges, draft, baseline, fieldLabels, excludeFields]);
 
   const revert = useCallback(() => {
     if (setDraft) setDraft(cloneSnapshot(baseline));
@@ -70,11 +78,12 @@ export function useUnsavedChanges({
       onSave: save,
       isSaving,
       elevated,
+      changes,
     });
     return () => ctx.unregister(registrationId);
-  }, [ctx, enabled, hasChanges, registrationId, revert, save, isSaving, elevated]);
+  }, [ctx, enabled, hasChanges, registrationId, revert, save, isSaving, elevated, changes]);
 
-  return { hasChanges, revert, save, isSaving };
+  return { hasChanges, revert, save, isSaving, changes };
 }
 
 /**

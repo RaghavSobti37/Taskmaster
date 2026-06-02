@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-const COOKIE_NAME = 'coreknot_token';
+/** Current session cookie (Jun 2026+). */
+const COOKIE_NAME = 'coreknot_token_v2';
+
+/** Pre-fix cookie names — purged on every response after deploy so logout works for existing users. */
+const LEGACY_COOKIE_NAMES = ['coreknot_token'];
 
 const parseJwtExpiryMs = () => {
   const raw = process.env.JWT_EXPIRES_IN || '7d';
@@ -21,20 +25,53 @@ const getCookieOptions = () => {
     maxAge: parseJwtExpiryMs(),
     path: '/',
   };
-  // Safari cross-site (Vercel frontend + Render API) needs CHIPS-style partitioning
   if (isProd) {
     options.partitioned = true;
   }
   return options;
 };
 
+const clearCookieVariants = (res, name) => {
+  const expired = new Date(0);
+  const variants = [
+    { ...getCookieOptions(), maxAge: 0, expires: expired },
+    { path: '/', httpOnly: true, secure: false, sameSite: 'lax', maxAge: 0, expires: expired },
+    { path: '/', httpOnly: true, secure: true, sameSite: 'none', maxAge: 0, expires: expired },
+    {
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      partitioned: true,
+      maxAge: 0,
+      expires: expired,
+    },
+  ];
+  for (const opts of variants) {
+    res.clearCookie(name, opts);
+  }
+};
+
+/** Strip legacy cookies on every response (one deploy clears all stuck sessions). */
+const purgeLegacyAuthCookies = (res) => {
+  for (const name of LEGACY_COOKIE_NAMES) {
+    clearCookieVariants(res, name);
+  }
+};
+
 const setAuthCookie = (res, token) => {
+  purgeLegacyAuthCookies(res);
   res.cookie(COOKIE_NAME, token, getCookieOptions());
 };
 
 const clearAuthCookie = (res) => {
-  res.clearCookie(COKIE_NAME, { ...getCookieOptions(), maxAge: 0 });
+  clearCookieVariants(res, COOKIE_NAME);
+  purgeLegacyAuthCookies(res);
 };
+
+const hadAuthCookie = (req) =>
+  Boolean(req.cookies?.[COOKIE_NAME])
+  || LEGACY_COOKIE_NAMES.some((name) => Boolean(req.cookies?.[name]));
 
 const getTokenFromRequest = (req) => {
   if (req.cookies?.[COOKIE_NAME]) {
@@ -59,8 +96,11 @@ const getUserIdFromToken = (token) => {
 
 module.exports = {
   COOKIE_NAME,
+  LEGACY_COOKIE_NAMES,
   setAuthCookie,
   clearAuthCookie,
+  purgeLegacyAuthCookies,
+  hadAuthCookie,
   getTokenFromRequest,
   getUserIdFromToken,
   getCookieOptions,

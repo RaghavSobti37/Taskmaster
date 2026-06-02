@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NexusModal } from '../ui';
+import { NexusModal, ModalFooter, Button } from '../ui';
 import ChannelProjectLinksPicker from './ChannelProjectLinksPicker';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
@@ -25,12 +25,14 @@ const EditChannelProjectsModal = ({
 
   const hasLinkEdits = open && !stableJsonEqual(projectIds, baselineIds);
 
-  useUnsavedChanges({
+  const { revert: revertLinkEdits } = useUnsavedChanges({
+    baseline: baselineIds,
+    draft: projectIds,
+    setDraft: setProjectIds,
     hasChanges: hasLinkEdits,
     onSave: () => onSave({ projectIds }),
-    onCancel: () => setProjectIds(cloneSnapshot(baselineIds)),
+    enabled: false,
     isSaving: loading,
-    elevated: true,
   });
 
   return (
@@ -40,6 +42,28 @@ const EditChannelProjectsModal = ({
       title="Linked projects"
       size="sm"
       showFooter={false}
+      footer={
+        <ModalFooter>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={revertLinkEdits}
+            disabled={!hasLinkEdits || loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="success"
+            onClick={() => onSave({ projectIds })}
+            disabled={!hasLinkEdits || loading}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </ModalFooter>
+      }
     >
       <p className="text-[11px] text-[var(--color-text-muted)] mb-3">
         Workspace: <strong>{channel?.projectWorkspace || 'GENERAL'}</strong>

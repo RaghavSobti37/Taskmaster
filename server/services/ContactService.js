@@ -1,5 +1,5 @@
 const Contact = require('../models/Contact');
-const { sanitizeLocation } = require('../utils/sanitizer');
+const { sanitizeEmail, sanitizeName, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { SOURCE_TO_INLET, dedupeInletEntries } = require('../../shared/dataInlets');
 
@@ -12,9 +12,9 @@ class ContactService {
   async mergeContact(data, source = 'crm') {
     const normalized = normalizePersonRecord(
       {
-        name: data.name || 'Anonymous',
-        email: data.email,
-        phone: data.phone,
+        name: sanitizeName(data.name) || data.name || 'Anonymous',
+        email: sanitizeEmail(data.email) || data.email,
+        phone: normalizePhone(data.phone) || data.phone,
         city: data.city,
       },
       { tryRepairPhone: true }

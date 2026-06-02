@@ -22,7 +22,7 @@ import { getWorkspaceColor } from '../../utils/workspaceColors';
 import { 
   NexusModal, NexusDropdown,
   PageContainer, Card, Button, Input, StatCard, Badge, 
-  PageSkeleton, ModalShell, ModalHeader, ModalBody, SearchInput, TablePagination
+  PageSkeleton, ModalShell, ModalHeader, ModalBody, ModalFooter, SearchInput, TablePagination
 } from '../../components/ui';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
@@ -93,12 +93,14 @@ const AssetsPage = () => {
   const hasAssetEdits =
     !!editingAsset && !!assetEditBaseline && !stableJsonEqual(newAsset, assetEditBaseline);
 
-  useUnsavedChanges({
+  const { revert: revertAssetEdits } = useUnsavedChanges({
+    baseline: assetEditBaseline,
+    draft: newAsset,
+    setDraft: setNewAsset,
     hasChanges: isDrawerOpen && hasAssetEdits,
     onSave: () => handleAddAsset(),
-    onCancel: () => assetEditBaseline && setNewAsset(cloneSnapshot(assetEditBaseline)),
+    enabled: false,
     isSaving: submitting,
-    elevated: true,
   });
 
   const handleAddAsset = async (e) => {
@@ -632,25 +634,45 @@ const AssetsPage = () => {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              {!editingAsset && (
-                <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
-                  {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add Asset</>}
-                </Button>
-              )}
-              {editingAsset && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full !text-rose-500 hover:!bg-rose-500/10 border border-rose-500/10"
-                  onClick={() => setDeleteModal({ open: true, assetId: editingAsset._id })}
-                >
-                  Delete Asset
-                </Button>
-              )}
-            </div>
+            {!editingAsset && (
+              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
+                {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add Asset</>}
+              </Button>
+            )}
           </form>
         </ModalBody>
+        {editingAsset && (
+          <ModalFooter className="justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              className="!text-rose-500 hover:!bg-rose-500/10"
+              onClick={() => setDeleteModal({ open: true, assetId: editingAsset._id })}
+            >
+              Delete Asset
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertAssetEdits}
+                disabled={!hasAssetEdits || submitting}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => handleAddAsset()}
+                disabled={!hasAssetEdits || submitting}
+              >
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </ModalFooter>
+        )}
       </ModalShell>
 
       <ModalShell isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} size="lg">

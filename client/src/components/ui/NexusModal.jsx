@@ -34,6 +34,7 @@ export const NexusModal = ({
   cancelLabel = 'Cancel',
   isConfirm = false,
   showFooter = true,
+  footer,
   size = 'lg',
   width,
   children,
@@ -80,7 +81,9 @@ export const NexusModal = ({
         )}
         {children}
       </ModalBody>
-      {showFooter && (
+      {footer != null ? (
+        footer
+      ) : showFooter ? (
         <ModalFooter>
           {isConfirm ? (
             <>
@@ -100,7 +103,7 @@ export const NexusModal = ({
             <Button size="sm" variant="primary" onClick={onClose}>Acknowledged</Button>
           )}
         </ModalFooter>
-      )}
+      ) : null}
     </ModalShell>
   );
 };

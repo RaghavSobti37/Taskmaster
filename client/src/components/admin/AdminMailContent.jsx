@@ -17,7 +17,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
 import axios from 'axios';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
 import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, countSignatureBlocks, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
@@ -1000,7 +1000,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             value={stats?.totalUnsubscribed || 0}
             icon={UserMinus}
             variant="warning"
-            subValue="View unsubscribe list ↗"
+            subValue="list ↗"
             onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
           />
         </div>

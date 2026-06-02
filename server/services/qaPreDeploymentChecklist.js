@@ -783,13 +783,15 @@ async function runSecurityHardeningChecks() {
       'JWT stored in HttpOnly cookie (not response body)',
       authCookie &&
         authCookie.includes('httpOnly: true') &&
+        authCookie.includes('coreknot_token_v2') &&
+        authCookie.includes('purgeLegacyAuthCookies') &&
         authCtrl &&
         authCtrl.includes('setAuthCookie') &&
         authCtrl.includes('formatAuthUser') &&
         !authCtrl.includes("token: generateToken")
         ? 'pass'
         : 'fail',
-      'authCookie sets coreknot_token; login/register omit token from JSON',
+      'authCookie sets coreknot_token_v2 and purges legacy coreknot_token',
       'utils/authCookie.js + controllers/authController.js',
       'high'
     )
@@ -815,7 +817,7 @@ async function runSecurityHardeningChecks() {
       authRoutes && authRoutes.includes("router.post('/logout'") && authCtrl && authCtrl.includes('clearAuthCookie')
         ? 'pass'
         : 'fail',
-      'POST /api/auth/logout clears coreknot_token cookie',
+      'POST /api/auth/logout clears session cookies (v2 + legacy)',
       'routes/authRoutes.js',
       'medium'
     )

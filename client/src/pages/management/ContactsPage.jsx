@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Search, Contact } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, Input, NexusModal, PageSkeleton, DataLoading } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, Input, NexusModal, ModalFooter, PageSkeleton, DataLoading } from '../../components/ui';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const ContactsPage = () => {
@@ -31,12 +31,14 @@ const ContactsPage = () => {
   const hasContactEdits =
     isModalOpen && editingContact && !stableJsonEqual(formData, formBaseline);
 
-  useUnsavedChanges({
+  const { revert: revertContactEdits } = useUnsavedChanges({
+    baseline: formBaseline,
+    draft: formData,
+    setDraft: setFormData,
     hasChanges: hasContactEdits,
     onSave: () => saveMutation.mutate(formData),
-    onCancel: () => setFormData(cloneSnapshot(formBaseline)),
+    enabled: false,
     isSaving: saveMutation.isPending,
-    elevated: true,
   });
 
   const filtered = contacts.filter((c) =>
@@ -77,7 +79,37 @@ const ContactsPage = () => {
         </div>
       </Card>
 
-      <NexusModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingContact ? 'Edit Contact' : 'Add Contact'} showFooter={false} width="max-w-2xl">
+      <NexusModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingContact ? 'Edit Contact' : 'Add Contact'}
+        showFooter={false}
+        width="max-w-2xl"
+        footer={
+          editingContact ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertContactEdits}
+                disabled={!hasContactEdits || saveMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => saveMutation.mutate(formData)}
+                disabled={!hasContactEdits || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
+      >
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingContact) saveMutation.mutate(formData); }}>
           <Input label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={Contact} />
           <Input label="Role" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} />

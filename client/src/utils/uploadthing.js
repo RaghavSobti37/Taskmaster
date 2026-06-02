@@ -1,9 +1,31 @@
 import { generateUploadButton, generateUploadDropzone, generateReactHelpers } from '@uploadthing/react';
 
-const url = import.meta.env.VITE_UPLOADTHING_URL || 'http://localhost:5000/api/uploadthing';
+const uploadthingUrl = import.meta.env.VITE_UPLOADTHING_URL || 'http://localhost:5000/api/uploadthing';
 
-const uploadFetch = (input, init = {}) => fetch(input, { ...init, credentials: 'include' });
+const resolveRequestUrl = (input) => {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  if (input?.url) return String(input.url);
+  return '';
+};
 
-export const UploadButton = generateUploadButton({ url });
-export const UploadDropzone = generateUploadDropzone({ url });
-export const { useUploadThing, uploadFiles } = generateReactHelpers({ url, fetch: uploadFetch });
+const shouldIncludeCredentials = (requestUrl) => {
+  if (requestUrl.includes('ingest.uploadthing.com')) return false;
+  if (!requestUrl) return true;
+  const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  return (
+    requestUrl.startsWith('/') ||
+    requestUrl.startsWith(apiBase) ||
+    requestUrl.includes('/api/uploadthing')
+  );
+};
+
+const uploadFetch = (input, init = {}) => {
+  const requestUrl = resolveRequestUrl(input);
+  const includeCredentials = shouldIncludeCredentials(requestUrl);
+  return fetch(input, { ...init, ...(includeCredentials ? { credentials: 'include' } : {}) });
+};
+
+export const UploadButton = generateUploadButton({ url: uploadthingUrl });
+export const UploadDropzone = generateUploadDropzone({ url: uploadthingUrl });
+export const { useUploadThing, uploadFiles } = generateReactHelpers({ url: uploadthingUrl, fetch: uploadFetch });

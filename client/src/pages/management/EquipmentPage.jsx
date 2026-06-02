@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Wrench, Plus, Search } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { PageContainer, PageHeader, Card, Button, Input, NexusModal, PageSkeleton, DataLoading } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, Input, NexusModal, ModalFooter, PageSkeleton, DataLoading } from '../../components/ui';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const ASSET_CATEGORIES = ['Hardware', 'Furniture', 'Software', 'Misc'];
@@ -18,6 +18,16 @@ const EMPTY_ASSET_FORM = {
   updateNotes: '',
   serialNumber: '',
   purchaseDate: '',
+};
+
+const EQUIPMENT_FIELD_LABELS = {
+  name: 'Name',
+  description: 'Description',
+  category: 'Category',
+  status: 'Status',
+  currentlyWith: 'Currently With',
+  serialNumber: 'Serial Number',
+  purchaseDate: 'Purchase Date',
 };
 
 const toAssetFormData = (asset) => ({
@@ -57,15 +67,19 @@ const EquipmentPage = () => {
 
   const hasEquipmentEdits =
     isAssetModalOpen &&
-    editingAsset &&
+    !!editingAsset &&
     !stableJsonEqual(assetFormData, assetFormBaseline);
 
-  useUnsavedChanges({
+  const { revert: revertEquipmentEdits } = useUnsavedChanges({
+    baseline: assetFormBaseline,
+    draft: assetFormData,
+    setDraft: setAssetFormData,
     hasChanges: hasEquipmentEdits,
     onSave: () => saveAssetMutation.mutate(assetFormData),
-    onCancel: () => setAssetFormData(cloneSnapshot(assetFormBaseline)),
+    enabled: false,
     isSaving: saveAssetMutation.isPending,
-    elevated: true,
+    fieldLabels: EQUIPMENT_FIELD_LABELS,
+    excludeFields: ['updateNotes'],
   });
 
   const filteredAssets = assets.filter((a) =>
@@ -106,7 +120,37 @@ const EquipmentPage = () => {
         </div>
       </Card>
 
-      <NexusModal isOpen={isAssetModalOpen} onClose={() => setIsAssetModalOpen(false)} title={editingAsset ? 'Edit Equipment' : 'Add Equipment'} showFooter={false} width="max-w-3xl">
+      <NexusModal
+        isOpen={isAssetModalOpen}
+        onClose={() => setIsAssetModalOpen(false)}
+        title={editingAsset ? 'Edit Equipment' : 'Add Equipment'}
+        showFooter={false}
+        width="max-w-3xl"
+        footer={
+          editingAsset ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertEquipmentEdits}
+                disabled={!hasEquipmentEdits || saveAssetMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => saveAssetMutation.mutate(assetFormData)}
+                disabled={!hasEquipmentEdits || saveAssetMutation.isPending}
+              >
+                {saveAssetMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
+      >
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingAsset) saveAssetMutation.mutate(assetFormData); }}>
           <Input label="Name" value={assetFormData.name} onChange={(e) => setAssetFormData({ ...assetFormData, name: e.target.value })} icon={Wrench} required />
           <Input label="Description" value={assetFormData.description} onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })} />

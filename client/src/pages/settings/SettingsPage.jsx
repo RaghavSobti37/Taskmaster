@@ -7,7 +7,7 @@ import {
 import { PageContainer } from '../../components/ui';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { globalConfirm } from '../../contexts/confirmContext';
 
 // Import sub-pages
 import ProfileTab from './tabs/ProfileTab';
@@ -20,7 +20,7 @@ import InvoiceTab from './tabs/InvoiceTab';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const { confirm } = useConfirm();
+  const { logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('Profile');
 
@@ -31,7 +31,7 @@ const SettingsPage = () => {
     { id: 'Attendance', icon: Clock, label: 'Attendance' },
     { id: 'Progress', icon: Target, label: 'Progress' },
     { id: 'Leave', icon: CalendarDays, label: 'Apply for Leave' },
-    { id: 'Invoice', icon: Receipt, label: 'Raise Invoice' },
+    { id: 'Invoice', icon: Receipt, label: 'Reimbursement' },
   ];
 
   useEffect(() => {
@@ -47,14 +47,14 @@ const SettingsPage = () => {
   };
 
   const handleSignOut = async () => {
-    const ok = await confirm({
+    const ok = await globalConfirm.confirm({
       title: 'Sign out?',
       message: 'Are you sure you want to sign out?',
       confirmLabel: 'Sign out',
       type: 'warning',
     });
     if (!ok) return;
-    localStorage.clear();
+    await logout();
     window.location.href = '/login';
   };
 

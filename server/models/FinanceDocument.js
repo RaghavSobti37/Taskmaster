@@ -36,7 +36,15 @@ const financeDocumentSchema = new mongoose.Schema({
     vendor: { type: String, default: '' },
     date: { type: Date },
     tax: { type: Number, default: 0 },
-    detectedCategory: { type: String, default: 'other' }
+    detectedCategory: { type: String, default: 'other' },
+    submissionType: { type: String, enum: ['invoice', 'reimbursement'], default: 'invoice' },
+    attachments: [{
+      fileUrl: { type: String },
+      fileKey: { type: String },
+      fileName: { type: String },
+      fileSize: { type: Number },
+      fileType: { type: String },
+    }],
   },
 }, { timestamps: true });
 

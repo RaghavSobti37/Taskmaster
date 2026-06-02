@@ -346,7 +346,8 @@ exports.createLead = async (req, res) => {
     if (filter.$or.length > 0) {
       const existing = await Lead.findOne(filter).lean();
       if (existing) {
-        const cleared = await clearBlockingDuplicateLead(existing);
+        const canClear = isCorruptLeadPhone(existing.phone);
+        const cleared = canClear ? await clearBlockingDuplicateLead(existing) : false;
         if (!cleared) {
           return res.status(409).json({
             error: 'A lead with this phone or email already exists',
@@ -377,6 +378,11 @@ exports.createLead = async (req, res) => {
 exports.updateLead = async (req, res) => {
   try {
     const { id } = req.params;
+    const bodyKeys = Object.keys(req.body || {});
+    const disallowed = bodyKeys.filter((k) => !ALLOWED_LEAD_FIELDS.includes(k));
+    if (disallowed.length > 0) {
+      return res.status(400).json({ error: `Disallowed fields: ${disallowed.join(', ')}` });
+    }
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
 
     const currentLead = await Lead.findById(id);
@@ -397,6 +403,9 @@ exports.updateLead = async (req, res) => {
     }
 
     if (Object.keys(updates).length === 0) {
+      if (bodyKeys.length > 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
       return res.json(currentLead);
     }
 

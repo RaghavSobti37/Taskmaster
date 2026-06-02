@@ -45,6 +45,7 @@ export function UnsavedChangesProvider({ children }) {
         onSave={active?.onSave}
         isSaving={active?.isSaving}
         elevated={active?.elevated}
+        changes={active?.changes}
       />
     </UnsavedChangesContext.Provider>
   );

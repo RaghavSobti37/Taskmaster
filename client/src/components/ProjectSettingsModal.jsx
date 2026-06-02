@@ -4,6 +4,7 @@ import { X, Trash2, AlertTriangle, Settings, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
+import { Button } from './ui/primitives';
 import { useUnsavedChanges, stableJsonEqual } from '../hooks/useUnsavedChanges';
 
 const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
@@ -53,12 +54,12 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
     }
   };
 
-  useUnsavedChanges({
+  const { revert: revertProjectEdits } = useUnsavedChanges({
     hasChanges: isOpen && hasChanges && !showDeleteConfirm,
     onSave: () => handleSubmit(),
     onCancel: revertEdits,
     isSaving: loading,
-    elevated: true,
+    enabled: false,
   });
 
   const handleDelete = async () => {
@@ -128,6 +129,26 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
             <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 font-bold text-xs hover:underline">
               <Trash2 size={14} /> Delete Project
             </button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertProjectEdits}
+                disabled={!hasChanges || loading}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => handleSubmit()}
+                disabled={!hasChanges || loading}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </ModalFooter>
         </form>
       )}

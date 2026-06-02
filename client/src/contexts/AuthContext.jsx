@@ -10,6 +10,7 @@ import {
   recordAttendanceSessionLogin,
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
+import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 
 const defaultAuthContext = {
   user: null,
@@ -55,24 +56,29 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const userRef = useRef(user);
   const authEpochRef = useRef(0);
+  const loggingOutRef = useRef(false);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
   const logout = useCallback(async () => {
+    loggingOutRef.current = true;
     authEpochRef.current += 1;
-    clearAttendanceSessionLogin();
-    disconnectRealtime();
-    setUser(null);
+    markForceLogout();
     try {
       await axios.post('/api/auth/logout');
     } catch {
       // Cookie may already be cleared
     }
+    clearAttendanceSessionLogin();
+    disconnectRealtime();
+    setUser(null);
+    setLoading(false);
   }, []);
 
   const fetchUser = useCallback(async (options = {}) => {
+    if (loggingOutRef.current) return null;
     const epoch = authEpochRef.current;
     const { clearOn401 = true } = options;
     try {
@@ -89,7 +95,8 @@ export const AuthProvider = ({ children }) => {
       return newData;
     } catch (err) {
       if (epoch !== authEpochRef.current) return null;
-      if (err.response?.status === 401 && clearOn401) {
+      const status = err.response?.status;
+      if (clearOn401 && (status === 401 || status === 403)) {
         setUser(null);
       }
       setLoading(false);
@@ -111,6 +118,19 @@ export const AuthProvider = ({ children }) => {
   }, [fetchUser]);
 
   useEffect(() => {
+    if (consumeForceLogout()) {
+      loggingOutRef.current = true;
+      authEpochRef.current += 1;
+      (async () => {
+        try {
+          await axios.post('/api/auth/logout');
+        } catch { /* ignore */ }
+        setUser(null);
+        setLoading(false);
+      })();
+      return;
+    }
+    loggingOutRef.current = false;
     fetchUser();
   }, [fetchUser]);
 
@@ -175,6 +195,7 @@ export const AuthProvider = ({ children }) => {
   }, [user?._id, queryClient]);
 
   const login = useCallback((userData) => {
+    loggingOutRef.current = false;
     authEpochRef.current += 1;
     recordAttendanceSessionLogin();
     setUser(userData);

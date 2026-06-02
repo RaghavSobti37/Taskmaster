@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { GripVertical, Eye, EyeOff } from 'lucide-react';
-import { NexusModal, Button } from './ui';
+import { NexusModal, Button, ModalFooter } from './ui';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../hooks/useUnsavedChanges';
 
 const DashboardEditor = ({ isOpen, onClose, onSave }) => {
@@ -94,12 +94,12 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
 
   const hasLayoutChanges = isOpen && !stableJsonEqual(elements, baselineElements);
 
-  useUnsavedChanges({
+  const { revert: revertLayoutEdits } = useUnsavedChanges({
     hasChanges: hasLayoutChanges,
     onSave: handleSave,
     onCancel: handleReset,
     isSaving: saving,
-    elevated: true,
+    enabled: false,
   });
 
   return (
@@ -109,6 +109,28 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
       showFooter={false}
       title="Customize Dashboard"
       className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+      footer={
+        <ModalFooter>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={revertLayoutEdits}
+            disabled={!hasLayoutChanges || saving}
+          >
+            Discard
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="success"
+            onClick={handleSave}
+            disabled={!hasLayoutChanges || saving}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </ModalFooter>
+      }
     >
       <div className="flex-1 overflow-y-auto space-y-4 p-4">
         {/* Department Presets */}

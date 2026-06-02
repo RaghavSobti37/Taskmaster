@@ -1,6 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from './ui';
+import { Button } from './ui/primitives';
+
+const MAX_VISIBLE_CHANGES = 4;
 
 export default function UnsavedChangesBar({
   hasChanges,
@@ -8,20 +11,46 @@ export default function UnsavedChangesBar({
   onSave,
   isSaving,
   elevated = false,
+  changes = [],
 }) {
-  return (
+  const visibleChanges = changes.slice(0, MAX_VISIBLE_CHANGES);
+  const hiddenCount = Math.max(0, changes.length - MAX_VISIBLE_CHANGES);
+
+  const bar = (
     <AnimatePresence>
       {hasChanges && (
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex items-center gap-6 min-w-[min(400px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] justify-between ${elevated ? 'z-[600]' : 'z-50'}`}
+          className={`fixed left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-[min(420px,calc(100vw-2rem))] max-w-[min(720px,calc(100vw-2rem))] sm:justify-between bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-6 ${
+            elevated ? 'z-[1200]' : 'z-50'
+          }`}
         >
-          <div className="text-sm font-bold text-[var(--color-text-primary)] shrink-0">
-            Careful — you have unsaved changes!
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="text-sm font-bold text-[var(--color-text-primary)]">
+              Careful — you have unsaved changes!
+            </div>
+            {visibleChanges.length > 0 && (
+              <ul className="space-y-1 text-[11px] text-[var(--color-text-secondary)]">
+                {visibleChanges.map((change) => (
+                  <li key={change.field} className="truncate">
+                    <span className="font-bold text-blue-400">{change.label}</span>
+                    {' '}
+                    <span className="line-through text-[var(--color-text-muted)]">{change.oldValue}</span>
+                    {' → '}
+                    <span className="font-bold text-emerald-400">{change.newValue}</span>
+                  </li>
+                ))}
+                {hiddenCount > 0 && (
+                  <li className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    +{hiddenCount} more
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
             <Button
               variant="ghost"
               size="sm"
@@ -44,4 +73,10 @@ export default function UnsavedChangesBar({
       )}
     </AnimatePresence>
   );
+
+  if (elevated && typeof document !== 'undefined') {
+    return createPortal(bar, document.body);
+  }
+
+  return bar;
 }

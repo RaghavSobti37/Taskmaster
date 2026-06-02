@@ -38,8 +38,6 @@ export { default as PageLoadGuard } from './PageLoadGuard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
 export { default as TimeframeFilter } from './TimeframeFilter';
-export { default as UnsavedChangesBar } from '../UnsavedChangesBar';
-
 // ── Shadcn / Radix (install cva + radix-ui before enabling) ──
 // export { Button as ShadcnButton, buttonVariants } from './button';
 

@@ -13,6 +13,7 @@ import {
   Button,
   Input,
   NexusModal,
+  ModalFooter,
   PageSkeleton,
   DataLoading,
 } from '../../components/ui';
@@ -160,12 +161,14 @@ const SubscriptionsPage = () => {
   const hasSubscriptionEdits =
     isModalOpen && editing && !stableJsonEqual(formData, formBaseline);
 
-  useUnsavedChanges({
+  const { revert: revertSubscriptionEdits } = useUnsavedChanges({
+    baseline: formBaseline,
+    draft: formData,
+    setDraft: setFormData,
     hasChanges: hasSubscriptionEdits,
     onSave: () => saveMutation.mutate(toPayload(formData)),
-    onCancel: () => setFormData(cloneSnapshot(formBaseline)),
+    enabled: false,
     isSaving: saveMutation.isPending,
-    elevated: true,
   });
 
   if (isLoading && !subscriptions.length) {
@@ -249,6 +252,30 @@ const SubscriptionsPage = () => {
         title={editing ? 'Edit Subscription' : 'Add Subscription'}
         showFooter={false}
         width="max-w-3xl"
+        footer={
+          editing ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertSubscriptionEdits}
+                disabled={!hasSubscriptionEdits || saveMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => saveMutation.mutate(toPayload(formData))}
+                disabled={!hasSubscriptionEdits || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
       >
         <form
           className="space-y-3"

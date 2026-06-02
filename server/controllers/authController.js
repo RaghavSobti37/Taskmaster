@@ -3,7 +3,7 @@ const Department = require('../models/Department');
 const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
-const { setAuthCookie, clearAuthCookie } = require('../utils/authCookie');
+const { setAuthCookie, clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { normalizePersonName } = require('../utils/sanitizer');
 const { attachProfileCompletion } = require('../utils/profileCompleteness');
@@ -189,17 +189,21 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-exports.logout = (_req, res) => {
+exports.logout = (req, res) => {
   clearAuthCookie(res);
-  res.json({ success: true });
+  res.json({ success: true, hadCookie: hadAuthCookie(req) });
 };
 
 exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user._id)
-    .select('-password')
-    .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-  const payload = attachProfileCompletion(user);
-  res.json(payload);
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authorized' });
+    }
+    return res.json(attachProfileCompletion(req.user));
+  } catch (error) {
+    logger.error('authController', 'getMe failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to load user profile' });
+  }
 };
 
 exports.changeRequiredPassword = async (req, res) => {

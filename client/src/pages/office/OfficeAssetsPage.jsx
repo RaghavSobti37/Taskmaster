@@ -8,6 +8,7 @@ import {
   Input,
   Badge,
   NexusModal,
+  ModalFooter,
   TabSwitcher,
   PageContainer,
   PageHeader,
@@ -123,20 +124,34 @@ const OfficeAssetsPage = () => {
   const hasOfficeContactEdits =
     isContactModalOpen && editingContact && contactFormBaseline && !stableJsonEqual(contactFormData, contactFormBaseline);
 
-  useUnsavedChanges({
+  const { revert: revertOfficeAssetEdits } = useUnsavedChanges({
+    baseline: assetFormBaseline,
+    draft: assetFormData,
+    setDraft: setAssetFormData,
     hasChanges: hasOfficeAssetEdits,
-    onSave: () => handleAssetSubmit(),
-    onCancel: () => assetFormBaseline && setAssetFormData(cloneSnapshot(assetFormBaseline)),
+    onSave: () => saveAssetMutation.mutate(assetFormData),
+    enabled: false,
     isSaving: saveAssetMutation.isPending,
-    elevated: true,
+    fieldLabels: {
+      name: 'Asset Name',
+      description: 'Description',
+      category: 'Category',
+      status: 'Status',
+      currentlyWith: 'Currently With',
+      serialNumber: 'Serial Number',
+      purchaseDate: 'Purchase Date',
+    },
+    excludeFields: ['updateNotes'],
   });
 
-  useUnsavedChanges({
+  const { revert: revertOfficeContactEdits } = useUnsavedChanges({
+    baseline: contactFormBaseline,
+    draft: contactFormData,
+    setDraft: setContactFormData,
     hasChanges: hasOfficeContactEdits,
     onSave: () => handleContactSubmit(),
-    onCancel: () => contactFormBaseline && setContactFormData(cloneSnapshot(contactFormBaseline)),
+    enabled: false,
     isSaving: saveContactMutation.isPending,
-    elevated: true,
   });
 
   const getStatusBadgeVariant = (status) => {
@@ -302,6 +317,30 @@ const OfficeAssetsPage = () => {
         title={editingAsset ? `Asset Workspace: ${assetFormData.name}` : "Create New Asset"}
         showFooter={false}
         width="max-w-4xl"
+        footer={
+          editingAsset ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertOfficeAssetEdits}
+                disabled={!hasOfficeAssetEdits || saveAssetMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => saveAssetMutation.mutate(assetFormData)}
+                disabled={!hasOfficeAssetEdits || saveAssetMutation.isPending}
+              >
+                {saveAssetMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
       >
         <form onSubmit={handleAssetSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
           {/* Left 70% Primary Data Fields */}
@@ -448,6 +487,30 @@ const OfficeAssetsPage = () => {
         title={editingContact ? `Contact Workspace: ${contactFormData.name}` : "Create New Contact"}
         showFooter={false}
         width="max-w-4xl"
+        footer={
+          editingContact ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertOfficeContactEdits}
+                disabled={!hasOfficeContactEdits || saveContactMutation.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={() => handleContactSubmit()}
+                disabled={!hasOfficeContactEdits || saveContactMutation.isPending}
+              >
+                {saveContactMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
       >
         <form onSubmit={handleContactSubmit} className="grid grid-cols-1 md:grid-cols-10 gap-6 p-2">
           {/* Left 70% Primary Data Fields */}

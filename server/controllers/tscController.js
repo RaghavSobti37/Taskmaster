@@ -3,7 +3,7 @@ const Lead = require('../models/Lead');
 const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
 const fs = require('fs');
-const { escapeRegExp } = require('../utils/sanitizer');
+const { escapeRegExp, sanitizeEmail, sanitizeName, normalizePhone } = require('../utils/sanitizer');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const logger = require('../utils/logger');
 const ContactService = require('../services/ContactService');
@@ -276,6 +276,9 @@ exports.importTscData = async (req, res) => {
           }
 
           if (!doc.name) doc.name = row.Name || row.name || 'Unknown';
+          if (doc.name) doc.name = sanitizeName(doc.name) || doc.name;
+          if (doc.email) doc.email = sanitizeEmail(doc.email) || doc.email;
+          if (doc.phone) doc.phone = normalizePhone(doc.phone) || doc.phone;
 
           const normalized = normalizePersonRecord(doc, { tryRepairPhone: true });
           if (normalized.errors.length) return null;

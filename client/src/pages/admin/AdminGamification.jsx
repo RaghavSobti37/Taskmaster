@@ -92,6 +92,7 @@ const AdminGamification = () => {
     onSave: () => handleSave(),
     onCancel: handleCancel,
     isSaving: saving,
+    enabled: false,
   });
 
   const handleRecalculateAllLevels = useCallback(async () => {
@@ -222,7 +223,14 @@ const AdminGamification = () => {
                   <td className="px-4 py-3 hidden md:table-cell text-[var(--color-text-muted)] text-xs">{row.who}</td>
                   <td className="px-4 py-3">
                     {editingField === row.configKey ? (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Editing</span>
+                      <div className="flex items-center gap-1.5">
+                        <Button size="sm" variant="ghost" onClick={handleCancel} disabled={saving}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" variant="success" onClick={() => handleSave(row.configKey)} disabled={saving || !hasFieldEdits}>
+                          {saving ? 'Saving…' : 'Save'}
+                        </Button>
+                      </div>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => handleEdit(row.configKey, row.xp)} className="gap-1">
                         <Edit2 size={12} /> Edit
@@ -300,10 +308,19 @@ const AdminGamification = () => {
                     min="1"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSave(key);
+                      if (e.key === 'Escape') handleCancel();
+                    }}
                     className="w-20 px-3 py-2 text-sm text-center rounded border border-[var(--color-bg-border)]"
                     autoFocus
                   />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Editing</span>
+                  <Button size="sm" variant="ghost" onClick={handleCancel} disabled={saving}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" variant="success" onClick={() => handleSave(key)} disabled={saving || !hasFieldEdits}>
+                    {saving ? 'Saving…' : 'Save'}
+                  </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 shrink-0">

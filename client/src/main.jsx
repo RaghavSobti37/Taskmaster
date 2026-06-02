@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_bW9jay1jbGVyay1wdWJsaXNoYWJsZS1rZXkuY2xlcmsuYWNjb3VudHMuZGV2JA';
 
 import { ToastProvider } from './contexts/ToastContext';
-import { ConfirmProvider } from './contexts/ConfirmContext';
+import { ConfirmProvider } from './contexts/ConfirmProvider';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';

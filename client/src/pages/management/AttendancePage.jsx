@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input, ModalFooter } from '../../components/ui';
 import {
   useAttendance,
   useUpsertAttendance,
@@ -297,20 +297,27 @@ const AttendancePage = () => {
     });
   };
 
-  useUnsavedChanges({
-    hasChanges: !!editInCell && !!editInBaseline && !stableJsonEqual(editInForm, editInBaseline),
+  const hasInEdits = !!editInCell && !!editInBaseline && !stableJsonEqual(editInForm, editInBaseline);
+  const hasOutEdits = !!editOutCell && !!editOutBaseline && !stableJsonEqual(editOutForm, editOutBaseline);
+
+  const { revert: revertInEdits } = useUnsavedChanges({
+    baseline: editInBaseline,
+    draft: editInForm,
+    setDraft: setEditInForm,
+    hasChanges: hasInEdits,
     onSave: saveInCell,
-    onCancel: () => editInBaseline && setEditInForm(editInBaseline),
+    enabled: false,
     isSaving: upsertAttendance.isPending,
-    elevated: true,
   });
 
-  useUnsavedChanges({
-    hasChanges: !!editOutCell && !!editOutBaseline && !stableJsonEqual(editOutForm, editOutBaseline),
+  const { revert: revertOutEdits } = useUnsavedChanges({
+    baseline: editOutBaseline,
+    draft: editOutForm,
+    setDraft: setEditOutForm,
+    hasChanges: hasOutEdits,
     onSave: saveOutCell,
-    onCancel: () => editOutBaseline && setEditOutForm(editOutBaseline),
+    enabled: false,
     isSaving: upsertAttendance.isPending,
-    elevated: true,
   });
 
   const executeGeolocationCheck = (type, manualTime) => {
@@ -463,7 +470,37 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      <NexusModal isOpen={!!editInCell} onClose={() => setEditInCell(null)} title="Morning Check-In — User Timecard" showFooter={false} size="md">
+      <NexusModal
+        isOpen={!!editInCell}
+        onClose={() => setEditInCell(null)}
+        title="Morning Check-In — User Timecard"
+        showFooter={false}
+        size="md"
+        footer={
+          editInCell ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertInEdits}
+                disabled={!hasInEdits || upsertAttendance.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={saveInCell}
+                disabled={!hasInEdits || upsertAttendance.isPending}
+              >
+                {upsertAttendance.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
+      >
         {editInCell && (
           <UnifiedTimeCard
             entry={editInCell.entry}
@@ -482,7 +519,37 @@ const AttendancePage = () => {
         )}
       </NexusModal>
 
-      <NexusModal isOpen={!!editOutCell} onClose={() => setEditOutCell(null)} title="Evening Check-Out — User Timecard" showFooter={false} size="md">
+      <NexusModal
+        isOpen={!!editOutCell}
+        onClose={() => setEditOutCell(null)}
+        title="Evening Check-Out — User Timecard"
+        showFooter={false}
+        size="md"
+        footer={
+          editOutCell ? (
+            <ModalFooter>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={revertOutEdits}
+                disabled={!hasOutEdits || upsertAttendance.isPending}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={saveOutCell}
+                disabled={!hasOutEdits || upsertAttendance.isPending}
+              >
+                {upsertAttendance.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </ModalFooter>
+          ) : null
+        }
+      >
         {editOutCell && (
           <UnifiedTimeCard
             entry={editOutCell.entry}

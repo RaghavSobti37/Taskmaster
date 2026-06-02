@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="client/public/favicon.svg" alt="CoreKnot Logo" width="80" height="80" />
 </p>
 
@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.55-126d5e?style=flat-square" alt="Version 1.7.55" />
+  <img src="https://img.shields.io/badge/version-1.7.56-126d5e?style=flat-square" alt="Version 1.7.56" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -149,6 +149,23 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Metrics:** Task completion rate (%), converted lead count (people converted in period), total focus hours from daily logs.
 * **Widget:** `dept-stats` card in `GenericDashboardCard.jsx`; admin-only via `dashboardComponents.js`.
 
+
+### Team Schedule & Todo (v1.7.56)
+
+* **Schedule page:** Denser week grid, skeleton loading, and navigation on /schedule (SchedulePage.jsx, ScheduleGrid.jsx, scheduleRoutes.js).
+* **Todo list:** Sort rules in TodoPage.jsx and dashboardTasks.js surface review work, due dates, and priority predictably.
+* **Sales tasks:** **Sales** category in 	askOptions.js for pipeline work.
+* **Mentions:** Rich-text mention chips in MentionRichText.jsx match dashboard token styling.
+* **Local dev:** 
+odemon.json plus server.js listen/port fixes reduce port conflicts during hot reload.
+
+### Person Data Normalization (v1.7.56)
+
+* **Spec:** [docs/DATA_SANITATION_SPEC.md](docs/DATA_SANITATION_SPEC.md) — normalization rules for names, emails, and phones across CRM inlets.
+* **Code:** server/utils/personNormalization.js used by CRM controllers, models, webhooks, and import workers.
+* **CLI:** 
+ode server/scripts/normalizePersonData.js (reports under server/reports/, gitignored).
+* **QA:** Purge/verify/subset scripts and personNormalization.test.js guard integration tests.
 ### 📅 Calendar & Music Content
 
 * **Past-date guard:** Tasks (`scheduleDate`, `dueDate`) and calendar events cannot be created or moved to the past — enforced in UI (`client/src/utils/dateValidation.js`) and API (`shared/dateValidation.js`, `TaskService`, `calendarRoutes`).

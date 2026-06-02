@@ -26,6 +26,7 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import { isRootAdminEmail } from '../../utils/rootAdminEmails';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useAuth } from '../../contexts/AuthContext';
+import UserDeleteAction from '../../components/admin/UserDeleteAction';
 
 const formatDateInput = (value) => {
   if (!value) return '';
@@ -108,7 +109,9 @@ const AdminUsers = () => {
 
   const getDeleteBlockReason = useCallback((targetUser) => {
     if (!targetUser) return 'No user selected';
-    if (currentUser?._id && targetUser._id === currentUser._id) return 'You cannot delete your own account';
+    if (currentUser?._id && String(targetUser._id) === String(currentUser._id)) {
+      return 'You cannot delete your own account';
+    }
     if (isRootAdminEmail(targetUser.email)) return 'Root admin accounts are protected';
     return null;
   }, [currentUser?._id]);
@@ -149,29 +152,15 @@ const AdminUsers = () => {
       )
     },
     {
-      header: 'Actions',
-      render: (u) => {
-        const blockReason = getDeleteBlockReason(u);
-        return (
-          <button
-            type="button"
-            title={blockReason || 'Delete user'}
-            disabled={Boolean(blockReason) || deleteUserMutation.isPending}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (blockReason) return;
-              handleDeleteUser(u._id);
-            }}
-            className={`p-1.5 rounded-md transition-colors ${
-              blockReason
-                ? 'opacity-30 cursor-not-allowed text-[var(--color-text-muted)]'
-                : 'text-rose-500 hover:bg-rose-500/10 hover:text-rose-600'
-            }`}
-          >
-            <Trash2 size={14} />
-          </button>
-        );
-      },
+      header: 'Delete',
+      render: (u) => (
+        <UserDeleteAction
+          compact
+          blockReason={getDeleteBlockReason(u)}
+          isPending={deleteUserMutation.isPending}
+          onDelete={() => handleDeleteUser(u._id)}
+        />
+      ),
     },
   ];
 
@@ -257,8 +246,29 @@ const AdminUsers = () => {
         subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Department:', selectedUser?.departmentId?.name || 'Unassigned'].join(' ')}
         onSave={handleSaveUser}
         mainClassName="max-w-6xl"
+        extraActions={
+          selectedUser ? (
+            <UserDeleteAction
+              blockReason={getDeleteBlockReason(selectedUser)}
+              isPending={deleteUserMutation.isPending}
+              onDelete={() => handleDeleteUser(selectedUser._id)}
+            />
+          ) : null
+        }
         sidebar={
           <>
+            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Delete User</h4>
+              {getDeleteBlockReason(selectedUser) && (
+                <p className="text-[10px] text-[var(--color-text-muted)] mb-3">{getDeleteBlockReason(selectedUser)}</p>
+              )}
+              <UserDeleteAction
+                blockReason={getDeleteBlockReason(selectedUser)}
+                isPending={deleteUserMutation.isPending}
+                onDelete={() => handleDeleteUser(selectedUser._id)}
+              />
+            </Card>
+
             <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
                 <UserCheck size={12} /> User Details
@@ -322,23 +332,6 @@ const AdminUsers = () => {
                 value={editUserData.confirmPassword || ''}
                 onChange={e => setEditUserData({ ...editUserData, confirmPassword: e.target.value })}
               />
-            </Card>
-
-            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Danger Zone</h4>
-              {getDeleteBlockReason(selectedUser) && (
-                <p className="text-[10px] text-[var(--color-text-muted)] mb-3">{getDeleteBlockReason(selectedUser)}</p>
-              )}
-              <Button
-                variant="danger"
-                size="sm"
-                className="w-full justify-center !py-2"
-                onClick={() => handleDeleteUser(selectedUser._id)}
-                disabled={Boolean(getDeleteBlockReason(selectedUser)) || deleteUserMutation.isPending}
-              >
-                <Trash2 size={14} className="mr-2" />
-                {deleteUserMutation.isPending ? 'Removing...' : 'Remove User Account'}
-              </Button>
             </Card>
           </>
         }

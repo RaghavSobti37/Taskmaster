@@ -22,14 +22,9 @@ const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim(
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
 
-const formatAuthUser = (populated) => ({
-  _id: populated._id,
-  name: populated.name,
-  email: populated.email,
-  gender: populated.gender,
-  avatar: populated.avatar,
-  departmentId: populated.departmentId,
-});
+const formatAuthUser = (populated) => attachProfileCompletion(
+  populated.toObject ? populated.toObject() : populated
+);
 
 const sendAuthSuccess = (res, populated) => {
   const token = generateToken(populated._id);
@@ -122,27 +117,29 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials format' });
     }
 
-    const query = email.includes('@')
-      ? { email: email.toLowerCase() }
-      : { $or: [{ phone: email }, { name: email }] };
+    const emailTrimmed = email.trim();
+    const query = emailTrimmed.includes('@')
+      ? { email: emailTrimmed.toLowerCase() }
+      : { $or: [{ phone: emailTrimmed }, { name: emailTrimmed }] };
 
     const user = await User.findOne(query).select('+password');
-
+    let isMatch = false;
     if (user) {
-      const isMatch = await user.comparePassword(password);
-      if (isMatch) {
-        const stillOnDefaultPassword = await user.comparePassword(getDefaultSeedPassword());
-        if (stillOnDefaultPassword && !user.mustChangePassword) {
-          user.mustChangePassword = true;
-          await user.save();
-        }
+      isMatch = await user.comparePassword(password);
+    }
 
-        const populated = await User.findById(user._id)
-          .select('-password')
-          .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-        setAuthCookie(res, generateToken(populated._id));
-        return res.json(formatAuthUser(populated));
+    if (user && isMatch) {
+      const stillOnDefaultPassword = await user.comparePassword(getDefaultSeedPassword());
+      if (stillOnDefaultPassword && !user.mustChangePassword) {
+        user.mustChangePassword = true;
+        await user.save();
       }
+
+      const populated = await User.findById(user._id)
+        .select('-password')
+        .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
+      setAuthCookie(res, generateToken(populated._id));
+      return res.json(formatAuthUser(populated));
     }
 
     res.status(401).json({ error: 'Invalid email or password' });
@@ -198,6 +195,53 @@ exports.getMe = async (req, res) => {
     .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
   const payload = attachProfileCompletion(user);
   res.json(payload);
+};
+
+exports.changeRequiredPassword = async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body;
+
+    if (typeof newPassword !== 'string' || typeof confirmPassword !== 'string') {
+      return res.status(400).json({ error: 'Invalid input format' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const user = await User.findById(req.user._id).select('+password').setOptions({ bypassTenant: true });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (!user.mustChangePassword) {
+      return res.status(400).json({ error: 'Password change is not required for this account' });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
+    await user.save();
+
+    const verified = await User.findById(user._id).select('+password').setOptions({ bypassTenant: true });
+    const passwordSaved = verified ? await verified.comparePassword(newPassword) : false;
+
+    if (!passwordSaved) {
+      logger.error('Auth', 'changeRequiredPassword verification failed', { userId: user._id });
+      return res.status(500).json({ error: 'Password could not be saved. Please try again.' });
+    }
+
+    const populated = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
+
+    return res.json(formatAuthUser(populated));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 exports.googleAuthRedirect = (req, res) => {

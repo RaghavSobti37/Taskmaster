@@ -687,6 +687,19 @@ export const useDeleteUser = () => {
   });
 };
 
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const { data: result } = await axios.post('/api/users', data);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
+    },
+  });
+};
+
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
   return useMutation({

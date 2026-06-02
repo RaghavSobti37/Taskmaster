@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ShieldCheck, Users, Search, Trash2, UserCheck, TrendingUp,
-  Database, Zap, CalendarDays, KeyRound
+  Database, Zap, CalendarDays, KeyRound, UserPlus
 } from 'lucide-react';
 import {
   Badge,
@@ -19,14 +19,16 @@ import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 import {
   useUserDirectory, useCRMStats, useRepSummary, useMailStats,
-  useUpdateUser, useDeleteUser,
+  useUpdateUser, useDeleteUser, useCreateUser,
   useDepartments
 } from '../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
+import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
+import CreateUserModal from '../../components/admin/CreateUserModal';
 
 const formatDateInput = (value) => {
   if (!value) return '';
@@ -39,6 +41,7 @@ const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
+  const [showCreateUser, setShowCreateUser] = useState(false);
 
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: departments = [] } = useDepartments();
@@ -48,6 +51,7 @@ const AdminUsers = () => {
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
+  const createUserMutation = useCreateUser();
 
   useEffect(() => {
     if (selectedUser) {
@@ -69,9 +73,12 @@ const AdminUsers = () => {
       alert('Passwords do not match.');
       return;
     }
-    if (editUserData.newPassword && editUserData.newPassword.length < 8) {
-      alert('Password must be at least 8 characters.');
-      return;
+    if (editUserData.newPassword) {
+      const passwordError = validatePasswordStrength(editUserData.newPassword);
+      if (passwordError) {
+        alert(passwordError);
+        return;
+      }
     }
     try {
       const payload = {
@@ -217,6 +224,10 @@ const AdminUsers = () => {
                   className="!py-1 !text-[11px] w-full"
                 />
               </div>
+              <Button onClick={() => setShowCreateUser(true)} className="gap-2 shrink-0 !py-1.5 !text-[11px]">
+                <UserPlus size={14} />
+                Add user
+              </Button>
             </div>
 
             <div className="p-0">
@@ -338,6 +349,14 @@ const AdminUsers = () => {
           )}
         </div>
       </FullScreenWorkspace>
+
+      <CreateUserModal
+        isOpen={showCreateUser}
+        onClose={() => setShowCreateUser(false)}
+        departments={departments}
+        isPending={createUserMutation.isPending}
+        onCreate={(data) => createUserMutation.mutateAsync(data)}
+      />
     </PageContainer>
   );
 };

@@ -7,7 +7,7 @@ const { isAfter, subMinutes } = require('date-fns');
 const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
-const { validatePasswordStrength } = require('../utils/passwordValidation');
+const { validatePasswordStrength, generateSecurePassword } = require('../utils/passwordValidation');
 const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
 
 const isUserOnline = (u) => {
@@ -144,7 +144,7 @@ exports.updateUserTeams = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   const { name, avatar, phone, departmentId, currentPassword, newPassword, teams, dateOfBirth } = req.body;
   try {
-    const user = await User.findById(req.user._id).select('+password');
+    const user = await User.findById(req.user._id).select('+password').setOptions({ bypassTenant: true });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (name) user.name = name;
@@ -163,7 +163,11 @@ exports.updateProfile = async (req, res) => {
       user.departmentId = check.value;
     }
 
-    if (currentPassword && newPassword) {
+    let passwordChanged = false;
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to set a new password' });
+      }
       const isMatch = await user.comparePassword(currentPassword);
       if (!isMatch) return res.status(400).json({ error: 'Current password incorrect' });
       const passwordError = validatePasswordStrength(newPassword);
@@ -171,10 +175,21 @@ exports.updateProfile = async (req, res) => {
       user.password = newPassword;
       user.mustChangePassword = false;
       user.passwordChangedAt = new Date();
+      passwordChanged = true;
     }
 
     user.lastOnline = new Date();
     await user.save();
+
+    if (passwordChanged) {
+      const verified = await User.findById(user._id).select('+password').setOptions({ bypassTenant: true });
+      const passwordSaved = verified ? await verified.comparePassword(newPassword) : false;
+
+      if (!passwordSaved) {
+        logger.error('User', 'updateProfile password verification failed', { userId: user._id });
+        return res.status(500).json({ error: 'Password could not be saved. Please try again.' });
+      }
+    }
 
     const updatedUser = await User.findById(user._id)
       .select('-password')
@@ -250,6 +265,63 @@ exports.deleteUser = async (req, res) => {
     res.json({ message: 'User deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+};
+
+exports.createUserAdmin = async (req, res) => {
+  try {
+    const { name, email, phone, departmentId, dateOfBirth, gender } = req.body;
+
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    if (typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailLower)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const existing = await User.findOne({ email: emailLower });
+    if (existing) {
+      return res.status(409).json({ error: 'A user with this email already exists' });
+    }
+
+    const deptCheck = await validateDepartmentAssignment(departmentId, req.user);
+    if (!deptCheck.ok) return res.status(400).json({ error: deptCheck.error });
+
+    const temporaryPassword = generateSecurePassword();
+    const { getRandomAvatar } = require('../utils/avatarGenerator');
+
+    const user = await User.create({
+      name: name.trim(),
+      email: emailLower,
+      password: temporaryPassword,
+      phone: phone || '',
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      departmentId: deptCheck.value,
+      gender: gender || 'male',
+      avatar: getRandomAvatar(gender || 'male'),
+      mustChangePassword: true,
+    });
+
+    const populated = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name slug permissionPreset pagePermissions signupAllowed');
+
+    res.status(201).json({
+      user: { ...populated.toObject(), hasPassword: true },
+      credentials: {
+        email: emailLower,
+        temporaryPassword,
+      },
+    });
+  } catch (err) {
+    logger.error('User', 'createUserAdmin error', { error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to create user' });
   }
 };
 

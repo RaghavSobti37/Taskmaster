@@ -1,26 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { User, Smartphone, CalendarDays, Camera, X, Sparkles, Key, Shield } from 'lucide-react';
+import { User, Smartphone, CalendarDays, Camera, X, Sparkles, Key, Shield, Eye, EyeOff } from 'lucide-react';
 import { Card, Input, Button, Badge, NexusDropdown, ModalShell, NexusModal } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useDepartments } from '../../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../../utils/departmentPermissions';
-
-const WEAK_PASSWORDS = new Set([
-  '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890',
-  'password', 'password1', 'password123', 'qwerty', 'qwerty123', 'admin', 'admin123',
-  'letmein', 'welcome', 'monkey', 'dragon', 'master', 'abc123', 'iloveyou',
-  'sunshine', 'princess', 'football', 'baseball', 'trustno1', '111111', '000000',
-]);
-
-const validatePasswordStrength = (password) => {
-  if (!password || password.length < 8) return 'Password must be at least 8 characters long';
-  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) return 'Password must contain at least one letter and one number';
-  const normalized = password.toLowerCase().trim();
-  if (WEAK_PASSWORDS.has(normalized)) return 'Password is too weak. Please choose a stronger password';
-  if (/^(.)\1+$/.test(password) || /^(\d+)$/.test(password)) return 'Password is too weak. Please choose a stronger password';
-  return null;
-};
+import { validatePasswordStrength } from '../../../utils/passwordValidation';
+import PasswordRequirements from '../../../components/auth/PasswordRequirements';
 
 const formatDateInput = (value) => value ? new Date(value).toISOString().slice(0, 10) : '';
 const toDepartmentId = (dept) => {
@@ -39,6 +25,8 @@ export default function ProfileTab() {
   const [allTeams, setAllTeams] = useState([]);
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -78,6 +66,9 @@ export default function ProfileTab() {
   }, [user]);
 
   const handleUpdateProfile = async () => {
+    if (newPassword && !password) {
+      return alert('Enter your current password to set a new password.');
+    }
     if (password && newPassword) {
       const error = validatePasswordStrength(newPassword);
       if (error) return alert(error);
@@ -101,6 +92,17 @@ export default function ProfileTab() {
       setLoading(false);
     }
   };
+
+  const passwordToggle = (visible, setVisible) => (
+    <button
+      type="button"
+      onClick={() => setVisible((v) => !v)}
+      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+      aria-label={visible ? 'Hide password' : 'Show password'}
+    >
+      {visible ? <EyeOff size={14} /> : <Eye size={14} />}
+    </button>
+  );
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
@@ -140,9 +142,27 @@ export default function ProfileTab() {
              <Shield size={14} /> Password & Security
           </h4>
           <div className="space-y-3">
-             <Input type="password" label="Current Password" value={password} onChange={e => setPassword(e.target.value)} icon={Key} className="!text-xs" />
-             <Input type="password" label="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} icon={Shield} className="!text-xs" />
-             <p className="text-[9px] text-[var(--color-text-muted)]">Min 8 characters with at least one letter and one number.</p>
+             <Input
+               type={showCurrentPassword ? 'text' : 'password'}
+               label="Current Password"
+               value={password}
+               onChange={e => setPassword(e.target.value)}
+               icon={Key}
+               className="!text-xs"
+               endAdornment={passwordToggle(showCurrentPassword, setShowCurrentPassword)}
+             />
+             <Input
+               type={showNewPassword ? 'text' : 'password'}
+               label="New Password"
+               value={newPassword}
+               onChange={e => setNewPassword(e.target.value)}
+               icon={Shield}
+               className="!text-xs"
+               endAdornment={passwordToggle(showNewPassword, setShowNewPassword)}
+             />
+             <div className="p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+               <PasswordRequirements password={newPassword} />
+             </div>
           </div>
         </div>
       </Card>

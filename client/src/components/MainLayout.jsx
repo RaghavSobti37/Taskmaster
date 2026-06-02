@@ -10,6 +10,7 @@ import CommandPalette from './CommandPalette';
 import NotificationBridge from './NotificationBridge';
 import PwaInstallBanner from './PwaInstallBanner';
 import ProfileCompletionAlerts from './ProfileCompletionAlerts';
+import ForcePasswordChangeModal from './auth/ForcePasswordChangeModal';
 import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
@@ -54,6 +55,7 @@ const MainLayout = () => {
       <FlashHighlightListener />
       <QuickAddMenu />
       <BottomNavigation />
+      <ForcePasswordChangeModal />
 
 
       {/* Main Content Area */}

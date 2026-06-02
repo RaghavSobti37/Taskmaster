@@ -65,11 +65,13 @@ export const ModalShell = ({
   zIndex = 1000,
   className = '',
   panelClassName = '',
+  closeOnBackdrop = true,
+  closeOnEscape = true,
 }) => {
   React.useEffect(() => {
     if (!isOpen) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape' && closeOnEscape) onClose?.();
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey, true);
@@ -77,11 +79,12 @@ export const ModalShell = ({
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, closeOnEscape]);
 
   if (typeof document === 'undefined') return null;
 
   const panelStyle = getModalPanelStyle(widthPx ?? size);
+  const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
 
   return createPortal(
     <AnimatePresence>
@@ -96,7 +99,7 @@ export const ModalShell = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-            onClick={onClose}
+            onClick={handleBackdropClick}
           />
           <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
             <motion.div
@@ -123,7 +126,7 @@ export const ModalShell = ({
   );
 };
 
-export const ModalHeader = ({ title, onClose, icon: Icon, iconStyle }) => (
+export const ModalHeader = ({ title, subtitle, onClose, icon: Icon, iconStyle, showClose = true }) => (
   <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] shrink-0">
     <div className="flex items-center gap-2 min-w-0">
       {Icon && (
@@ -131,9 +134,14 @@ export const ModalHeader = ({ title, onClose, icon: Icon, iconStyle }) => (
           <Icon size={16} />
         </div>
       )}
-      <h2 className="text-sm font-bold uppercase tracking-wider truncate">{title}</h2>
+      <div className="min-w-0">
+        <h2 className="text-sm font-bold uppercase tracking-wider truncate">{title}</h2>
+        {subtitle && (
+          <p className="text-[11px] text-[var(--color-text-muted)] font-normal normal-case tracking-normal mt-0.5">{subtitle}</p>
+        )}
+      </div>
     </div>
-    {onClose && (
+    {showClose && onClose && (
       <button type="button" onClick={onClose} className="p-1.5 hover:bg-black/5 rounded transition-colors shrink-0">
         <X size={16} className="text-[var(--color-text-muted)]" />
       </button>

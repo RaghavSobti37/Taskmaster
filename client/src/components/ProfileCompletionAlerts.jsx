@@ -10,7 +10,13 @@ const alertClassName =
 export default function ProfileCompletionAlerts() {
   const { user } = useAuth();
 
-  const issues = useMemo(() => getProfileCompletionIssues(user), [user]);
+  const issues = useMemo(() => {
+    const all = getProfileCompletionIssues(user);
+    if (user?.mustChangePassword) {
+      return all.filter((issue) => issue.id !== 'password');
+    }
+    return all;
+  }, [user]);
 
   if (!user || issues.length === 0) return null;
 

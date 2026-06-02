@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
-const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
+const { isRootAdminEmail, getDeleteUserBlockReason } = require('../../shared/rootAdminEmails');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
@@ -234,8 +234,8 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (isRootAdminEmail(targetUser.email)) {
-      return res.status(403).json({ error: 'Root admin accounts cannot be deleted' });
+    if (isRootAdminEmail(targetUser.email) && !isRootAdminEmail(req.user.email)) {
+      return res.status(403).json({ error: 'Root admin accounts are protected' });
     }
 
     const adminDept = await Department.findOne({ slug: ADMIN_SLUG });

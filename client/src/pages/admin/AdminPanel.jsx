@@ -30,7 +30,7 @@ import {
 } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { isRootAdminEmail } from '../../utils/rootAdminEmails';
+import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
 
 const AdminPanel = () => {
@@ -100,14 +100,10 @@ const AdminPanel = () => {
     }
   }, [confirm, deleteUserMutation]);
 
-  const getDeleteBlockReason = useCallback((targetUser) => {
-    if (!targetUser) return 'No user selected';
-    if (currentUser?._id && String(targetUser._id) === String(currentUser._id)) {
-      return 'You cannot delete your own account';
-    }
-    if (isRootAdminEmail(targetUser.email)) return 'Root admin accounts are protected';
-    return null;
-  }, [currentUser?._id]);
+  const getDeleteBlockReason = useCallback(
+    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser),
+    [currentUser]
+  );
 
   const handleCreateTeam = useCallback(async () => {
     if (!newTeamName) return;

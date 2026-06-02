@@ -23,7 +23,7 @@ import {
   useDepartments
 } from '../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../utils/departmentPermissions';
-import { isRootAdminEmail } from '../../utils/rootAdminEmails';
+import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
@@ -107,14 +107,10 @@ const AdminUsers = () => {
     }
   }, [confirm, deleteUserMutation]);
 
-  const getDeleteBlockReason = useCallback((targetUser) => {
-    if (!targetUser) return 'No user selected';
-    if (currentUser?._id && String(targetUser._id) === String(currentUser._id)) {
-      return 'You cannot delete your own account';
-    }
-    if (isRootAdminEmail(targetUser.email)) return 'Root admin accounts are protected';
-    return null;
-  }, [currentUser?._id]);
+  const getDeleteBlockReason = useCallback(
+    (targetUser) => getDeleteUserBlockReason(currentUser, targetUser),
+    [currentUser]
+  );
 
   const filteredUsers = useMemo(() => {
     return users.filter(u =>

@@ -6,17 +6,24 @@ import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import { apiPath } from '../../utils/apiBase';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -29,7 +36,7 @@ const LoginPage = () => {
   }, [location]);
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = apiPath('/api/auth/google');
   };
 
   const handleSubmit = async (e) => {
@@ -39,7 +46,7 @@ const LoginPage = () => {
     try {
       const res = await axios.post('/api/auth/login', { email, password }, AXIOS_SKIP_TOAST);
       login(res.data);
-      navigate('/');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       const message =
         err.response?.data?.error ||
@@ -54,7 +61,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
+    <div className="min-h-[100dvh] bg-background text-foreground relative overflow-x-hidden overflow-y-auto grid place-items-center p-4 sm:p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
       <div 
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20"
       />
@@ -64,7 +71,7 @@ const LoginPage = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
+        className="tm-modal-panel w-full max-w-md relative z-10 bg-card backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-6">
           <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
@@ -101,7 +108,9 @@ const LoginPage = () => {
               <input
                 type="text"
                 required
-                className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
+                autoComplete="username"
+                enterKeyHint="next"
+                className="w-full pl-12 pr-4 py-3 text-base bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50 touch-manipulation"
                 placeholder="Email, Phone, or Name"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -116,7 +125,9 @@ const LoginPage = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                className="w-full pl-12 pr-12 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50"
+                autoComplete="current-password"
+                enterKeyHint="go"
+                className="w-full pl-12 pr-12 py-3 text-base bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent outline-none transition-all placeholder:text-[var(--color-text-muted)]/50 touch-manipulation"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -134,7 +145,7 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20"
+            className="w-full min-h-[48px] bg-[var(--color-brand-teal)] text-[var(--color-brand-cream)] py-4 rounded-xl font-bold hover:bg-[var(--color-action-hover)] active:bg-[var(--color-action-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-brand-teal)]/20 touch-manipulation"
           >
             {loading ? 'Signing in...' : 'Sign In'} <ArrowRight size={20} />
           </button>
@@ -151,7 +162,7 @@ const LoginPage = () => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full bg-white text-gray-700 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+            className="w-full min-h-[48px] bg-white text-gray-700 py-3 rounded-xl font-semibold border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm touch-manipulation"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path

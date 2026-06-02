@@ -38,7 +38,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (options = {}) => {
+    const { clearOn401 = true } = options;
     try {
       const res = await axios.get('/api/auth/me');
       const newData = res.data;
@@ -48,13 +49,23 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return newData;
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 401 && clearOn401) {
         setUser(null);
       }
       setLoading(false);
       return null;
     }
   }, []);
+
+  const syncSessionAfterLogin = useCallback(async () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+      }
+      const sessionUser = await fetchUser({ clearOn401: false });
+      if (sessionUser) return;
+    }
+  }, [fetchUser]);
 
   useEffect(() => {
     fetchUser();
@@ -118,8 +129,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((userData) => {
     setUser(userData);
-    fetchUser();
-  }, [fetchUser]);
+    setLoading(false);
+    syncSessionAfterLogin();
+  }, [syncSessionAfterLogin]);
 
   const value = useMemo(() => ({
     user,

@@ -28,17 +28,26 @@ const GoogleSuccessPage = () => {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
         login(user);
-        refreshUser();
-        navigate('/', { replace: true });
+        navigate('/dashboard', { replace: true });
       } catch (error) {
         console.error('Error parsing user data:', error);
         navigate('/login?error=auth_failed', { replace: true });
       }
     } else if (location.search) {
       processed.current = true;
-      refreshUser().then((user) => {
-        navigate(user ? '/' : '/login?error=auth_failed', { replace: true });
-      });
+      (async () => {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          if (attempt > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+          }
+          const sessionUser = await refreshUser({ clearOn401: false });
+          if (sessionUser) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+        }
+        navigate('/login?error=auth_failed', { replace: true });
+      })();
     }
   }, [location.search, login, navigate, refreshUser]);
 

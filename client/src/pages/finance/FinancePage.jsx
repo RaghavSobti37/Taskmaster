@@ -151,6 +151,11 @@ const FinancePage = () => {
   const { data: rateData } = useUsdInrRate({ enabled: !!selectedDoc });
   const usdInrRate = rateData?.rate;
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => normalizeProjects((await axios.get('/api/projects')).data),
+  });
+
   useEffect(() => {
     if (selectedDoc) {
       const projectId = selectedDoc.project?._id || selectedDoc.project || '';
@@ -219,10 +224,6 @@ const FinancePage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentFolderId, selectedDoc, searchParams]);
 
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: async () => normalizeProjects((await axios.get('/api/projects')).data),
-  });
   const { data: workspaces = [] } = useWorkspaces();
 
   const filteredProjects = useMemo(

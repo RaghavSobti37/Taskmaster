@@ -14,13 +14,18 @@ const parseJwtExpiryMs = () => {
 
 const getCookieOptions = () => {
   const isProd = process.env.NODE_ENV === 'production';
-  return {
+  const options = {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
     maxAge: parseJwtExpiryMs(),
     path: '/',
   };
+  // Safari cross-site (Vercel frontend + Render API) needs CHIPS-style partitioning
+  if (isProd) {
+    options.partitioned = true;
+  }
+  return options;
 };
 
 const setAuthCookie = (res, token) => {

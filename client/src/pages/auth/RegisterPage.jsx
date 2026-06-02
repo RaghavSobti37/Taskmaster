@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
@@ -15,9 +15,15 @@ const RegisterPage = () => {
   const [departmentId, setDepartmentId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { data: departments = [] } = useDepartments(true);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +32,7 @@ const RegisterPage = () => {
     try {
       const res = await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
       login(res.data);
-      navigate('/');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {

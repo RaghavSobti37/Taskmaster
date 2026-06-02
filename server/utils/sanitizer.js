@@ -23,25 +23,40 @@ const sanitizeEmail = (email) => {
     .trim();
 };
 
+const stripPhoneIntegritySuffix = (phone) => {
+  if (!phone) return '';
+  let str = String(phone).trim();
+  if (/^EMPTY-[a-f0-9]{24}$/i.test(str)) return '';
+  const dupMatch = str.match(/-DUP-[a-f0-9]{24}$/i);
+  if (dupMatch) str = str.slice(0, dupMatch.index);
+  return str;
+};
+
 const normalizePhone = (phone) => {
   if (!phone) return '';
-  const str = phone.toString().trim();
+  const str = stripPhoneIntegritySuffix(phone);
+  if (!str) return '';
   const lower = str.toLowerCase();
   if (lower === '-' || lower === 'n/a' || lower === 'null' || lower === 'undefined') return '';
-  
-  // Remove all non-numeric characters except +
+
   let cleaned = str.replace(/[^\d+]/g, '');
-  
-  // If it starts with 0 and has 11 digits, it's likely a local format (e.g., India 09... -> +91...)
-  // But for now, let's just ensure it has a standard format.
-  // Standardizing to +CC format if missing. Default to +91 if 10 digits and no CC.
+
   if (cleaned.length === 10 && !cleaned.startsWith('+')) {
     cleaned = '+91' + cleaned;
   } else if (cleaned.length > 10 && !cleaned.startsWith('+')) {
     cleaned = '+' + cleaned;
   }
-  
+
   return cleaned;
+};
+
+/** Restore phones corrupted by legacy duplicate-resolution (e.g. +91…-DUP-{objectId}). */
+const repairPhone = (phone) => normalizePhone(stripPhoneIntegritySuffix(phone));
+
+const isCorruptLeadPhone = (phone) => {
+  if (!phone) return false;
+  const str = String(phone);
+  return /-DUP-[a-f0-9]{24}$/i.test(str) || /^EMPTY-[a-f0-9]{24}$/i.test(str);
 };
 
 const validateDate = (dateStr) => {
@@ -90,6 +105,9 @@ module.exports = {
   sanitizeName,
   sanitizeEmail,
   normalizePhone,
+  repairPhone,
+  stripPhoneIntegritySuffix,
+  isCorruptLeadPhone,
   validateDate,
   sanitizeLocation,
   escapeRegExp,

@@ -3,7 +3,7 @@ const backgroundQueue = require('./backgroundQueue');
 const followupCache = require('./followupCache');
 const ContactService = require('./ContactService');
 const { parse } = require('date-fns');
-const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, repairPhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isBookedCallSource } = require('../../shared/dataInlets');
@@ -143,7 +143,7 @@ class LeadService {
     const clean = { ...data };
     if (clean.name) clean.name = sanitizeName(clean.name);
     if (clean.email) clean.email = sanitizeEmail(clean.email);
-    if (clean.phone) clean.phone = normalizePhone(clean.phone);
+    if (clean.phone) clean.phone = repairPhone(clean.phone);
     if (clean.city) clean.city = sanitizeLocation(clean.city);
     if (clean.location) clean.location = sanitizeLocation(clean.location);
     if (clean.nextFollowupDate && !validateDate(clean.nextFollowupDate)) {
@@ -159,7 +159,7 @@ class LeadService {
     
     if (set.name) set.name = sanitizeName(set.name);
     if (set.email) set.email = sanitizeEmail(set.email);
-    if (set.phone) set.phone = normalizePhone(set.phone);
+    if (set.phone) set.phone = repairPhone(set.phone);
     if (set.city) set.city = sanitizeLocation(set.city);
     if (set.location) set.location = sanitizeLocation(set.location);
     if (set.nextFollowupDate && !validateDate(set.nextFollowupDate)) {

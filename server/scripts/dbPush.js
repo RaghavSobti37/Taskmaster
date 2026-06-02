@@ -23,33 +23,46 @@ async function pushToDb() {
   const Task = require('../models/Task');
   const Project = require('../models/Project');
 
-  // Fix duplicate empty phones in Leads
+  // Remove duplicate empty phones — keep oldest per tenant, delete the rest
   console.log('🧹 Cleaning up duplicate empty phones in Leads...');
-  const emptyPhoneLeads = await Lead.find({ phone: '' });
-  for (let i = 0; i < emptyPhoneLeads.length; i++) {
-    emptyPhoneLeads[i].phone = `EMPTY-${emptyPhoneLeads[i]._id}`;
-    await emptyPhoneLeads[i].save();
+  const emptyDupes = await Lead.aggregate([
+    { $match: { phone: '' } },
+    { $group: { _id: '$tenantId', count: { $sum: 1 }, docs: { $push: '$_id' } } },
+    { $match: { count: { $gt: 1 } } },
+  ]);
+  let emptyRemoved = 0;
+  for (const group of emptyDupes) {
+    for (const docId of group.docs.slice(1)) {
+      await Lead.deleteOne({ _id: docId });
+      emptyRemoved += 1;
+    }
   }
+  console.log(`✅ Removed ${emptyRemoved} redundant empty-phone leads.`);
 
-  console.log('🧹 Resolving other duplicate phones in Leads...');
+  console.log('🧹 Resolving duplicate phones in Leads (delete extras, keep oldest)...');
   const duplicates = await Lead.aggregate([
-    { $group: { _id: { tenantId: "$tenantId", phone: "$phone" }, count: { $sum: 1 }, docs: { $push: "$_id" } } },
-    { $match: { count: { $gt: 1 } } }
+    { $match: { phone: { $ne: '' } } },
+    { $group: { _id: { tenantId: '$tenantId', phone: '$phone' }, count: { $sum: 1 }, docs: { $push: '$_id' } } },
+    { $match: { count: { $gt: 1 } } },
   ]);
 
   let dupCount = 0;
   for (const dup of duplicates) {
-    // Keep the first document, modify the rest
-    const docsToModify = dup.docs.slice(1);
-    for (const docId of docsToModify) {
-      await Lead.updateOne(
-        { _id: docId },
-        { $set: { phone: `${dup._id.phone}-DUP-${docId}` } }
-      );
-      dupCount++;
+    const sorted = await Lead.find({
+      tenantId: dup._id.tenantId,
+      phone: dup._id.phone,
+    }).sort({ createdAt: 1 }).select('_id').lean();
+    for (const doc of sorted.slice(1)) {
+      await Lead.deleteOne({ _id: doc._id });
+      dupCount += 1;
     }
   }
-  console.log(`✅ Resolved ${dupCount} duplicate phones.`);
+  console.log(`✅ Removed ${dupCount} duplicate phone leads.`);
+
+  console.log('🔧 Repairing legacy -DUP- / EMPTY- corrupt phones...');
+  const { repairCorruptLeadPhones } = require('../services/leadPhoneRepair');
+  const repairStats = await repairCorruptLeadPhones();
+  console.log(`✅ Phone repair: ${repairStats.repaired} repaired, ${repairStats.deleted} deleted, ${repairStats.skipped} skipped.`);
 
   // Sync Indexes
   console.log('🔄 Syncing Indexes (Pushing Schema rules)...');

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { sanitizeName, sanitizeEmail, repairPhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
 const auditPlugin = require('./plugins/auditPlugin');
 
 /**
@@ -90,7 +90,7 @@ const LeadSchema = new mongoose.Schema({
 LeadSchema.pre('save', function(next) {
   if (this.name) this.name = sanitizeName(this.name);
   if (this.email) this.email = sanitizeEmail(this.email);
-  if (this.phone) this.phone = normalizePhone(this.phone);
+  if (this.phone) this.phone = repairPhone(this.phone);
   if (this.city) this.city = sanitizeLocation(this.city);
   next();
 });

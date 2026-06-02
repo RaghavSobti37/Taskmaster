@@ -163,9 +163,6 @@ class QATestingService {
       // Process results
       await this.processResults();
 
-      // Cleanup test data
-      await this.cleanupTestData();
-
       // Mark complete
       await QATestRun.findByIdAndUpdate(this.testRunId, {
         status: 'completed',
@@ -188,6 +185,11 @@ class QATestingService {
       throw error;
     } finally {
       delete process.env.QA_SYNC_GAMIFICATION;
+      try {
+        await this.cleanupTestData();
+      } catch (cleanupErr) {
+        logger.error('QA', 'Cleanup failed in finally block', { error: cleanupErr.message });
+      }
     }
   }
 
@@ -632,7 +634,11 @@ class QATestingService {
       }
 
       // Sweep all QA-pattern leads/contacts (integration probes, sanitization tests, etc.)
-      const swept = await purgeQaTestData();
+      const { repairCorruptLeadPhones } = require('./leadPhoneRepair');
+      const [swept, phoneRepair] = await Promise.all([
+        purgeQaTestData(),
+        repairCorruptLeadPhones(),
+      ]);
       DataHubService.clearFolderCache();
       cleanupResults.deleted.leads += swept.deleted.leads;
       cleanupResults.deleted.contacts += swept.deleted.contacts;
@@ -640,6 +646,7 @@ class QATestingService {
       cleanupResults.deleted.logs += swept.deleted.logs;
       cleanupResults.deleted.users = swept.deleted.users;
       cleanupResults.deleted.tasks = swept.deleted.tasks;
+      cleanupResults.phoneRepair = phoneRepair;
 
       if (this.testRunId) {
         await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });

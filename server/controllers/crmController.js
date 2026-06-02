@@ -8,12 +8,13 @@ const CRMConfig = require('../models/CRMConfig');
 const {
   sanitizeName,
   sanitizeEmail,
-  normalizePhone,
   sanitizeLocation,
   escapeRegExp,
   MAX_NAME_LENGTH,
   isValidEmail,
   isValidPhone,
+  repairPhone,
+  isCorruptLeadPhone,
 } = require('../utils/sanitizer');
 const followupCache = require('../services/followupCache');
 const logger = require('../utils/logger');
@@ -67,8 +68,9 @@ const prepareLeadContactUpdates = (updates, currentLead, res) => {
     if (updates.phone === '' || updates.phone == null) {
       delete updates.phone;
     } else {
-      const normalized = normalizePhone(updates.phone);
-      if (phoneDigits(normalized) === phoneDigits(currentLead?.phone)) {
+      const normalized = repairPhone(updates.phone);
+      const existingNormalized = repairPhone(currentLead?.phone);
+      if (phoneDigits(normalized) === phoneDigits(existingNormalized)) {
         delete updates.phone;
       } else {
         updates.phone = normalized;
@@ -291,7 +293,7 @@ const normalizeLeadInput = (leadData, res) => {
     }
   }
   if (leadData.phone != null && leadData.phone !== '') {
-    leadData.phone = normalizePhone(leadData.phone);
+    leadData.phone = repairPhone(leadData.phone);
     if (!isValidPhone(leadData.phone)) {
       res.status(400).json({ error: 'Invalid phone number' });
       return false;
@@ -347,8 +349,29 @@ exports.updateLead = async (req, res) => {
     const currentLead = await Lead.findById(id);
     if (!currentLead) return res.status(404).json({ error: 'Lead not found' });
 
-    if (!prepareLeadContactUpdates(updates, currentLead, res)) return;
-    if (!normalizeLeadInput(updates, res)) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c9fc45'},body:JSON.stringify({sessionId:'c9fc45',location:'crmController.js:updateLead:entry',message:'updateLead called',data:{leadId:id,bodyPhone:req.body?.phone!=null,currentPhoneCorrupt:isCorruptLeadPhone(currentLead.phone),updateKeys:Object.keys(updates)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    if (!prepareLeadContactUpdates(updates, currentLead, res)) {
+      // #region agent log
+      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c9fc45'},body:JSON.stringify({sessionId:'c9fc45',location:'crmController.js:updateLead:prepareFail',message:'prepareLeadContactUpdates rejected',data:{leadId:id,phoneInUpdates:updates.phone},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+
+    if (!updates.phone && isCorruptLeadPhone(currentLead.phone)) {
+      const repairedStored = repairPhone(currentLead.phone);
+      if (repairedStored && isValidPhone(repairedStored)) {
+        updates.phone = repairedStored;
+      }
+    }
+    if (!normalizeLeadInput(updates, res)) {
+      // #region agent log
+      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c9fc45'},body:JSON.stringify({sessionId:'c9fc45',location:'crmController.js:updateLead:normalizeFail',message:'normalizeLeadInput rejected',data:{leadId:id},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.json(currentLead);
@@ -461,8 +484,14 @@ exports.updateLead = async (req, res) => {
     }
 
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c9fc45'},body:JSON.stringify({sessionId:'c9fc45',location:'crmController.js:updateLead:success',message:'updateLead succeeded',data:{leadId:id,phone:lead.phone},timestamp:Date.now(),hypothesisId:'D',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
     res.json(lead);
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c9fc45'},body:JSON.stringify({sessionId:'c9fc45',location:'crmController.js:updateLead:catch',message:'updateLead error',data:{leadId:req.params?.id,code:error.code,name:error.name,errMsg:error.message},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     logger.error('crmController', 'Update lead ', { error: error.message || error, code: error.code });
     if (error.code === 11000) {
       return res.status(409).json({ error: 'A lead with this phone or email already exists' });
@@ -996,10 +1025,15 @@ exports.getRepSummary = async (req, res) => {
 exports.cleanupTestData = async (req, res) => {
   try {
     const { purgeQaTestData } = require('../services/qa/qaTestData');
-    const swept = await purgeQaTestData();
+    const { repairCorruptLeadPhones } = require('../services/leadPhoneRepair');
+    const [swept, phoneRepair] = await Promise.all([
+      purgeQaTestData(),
+      repairCorruptLeadPhones(),
+    ]);
     res.json({
-      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records.`,
+      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records. Repaired ${phoneRepair.repaired} corrupt phones, deleted ${phoneRepair.deleted} redundant duplicates.`,
       deleted: swept.deleted,
+      phoneRepair,
     });
   } catch (error) {
     logger.error('crmController', 'Cleanup test data ', { error: error.message || error });

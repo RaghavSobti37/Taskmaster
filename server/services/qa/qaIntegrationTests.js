@@ -13,6 +13,7 @@ const {
   probePass,
   request,
   QA_API_BASE,
+  extractId,
 } = require('./qaApiClient');
 const { PLANNED_INTEGRATION_DEFS, PLANNED_RUNNERS } = require('./qaIntegrationRunners');
 
@@ -332,18 +333,29 @@ async function runProjectTaskCount(def, ctx) {
 
 async function runLeadAudit(def, ctx) {
   const { adminUser } = await resolveTestUsers();
-  const lead = await Lead.findOne();
-  if (!lead) return skipProbeResult(def, 'No lead');
+  const email = `qa-audit-${Date.now()}@example.com`;
+  const phone = `9${String(Date.now()).slice(-9)}`;
+  const createRes = await request(def, {
+    method: 'POST',
+    url: '/api/crm/leads',
+    user: adminUser,
+    data: { name: 'QA Audit Probe', email, phone, source: 'QA Test' },
+  });
+  const leadId = extractId(createRes);
+  if (leadId) ctx.artifacts.push({ type: 'lead', id: leadId });
+  if (!leadId || (createRes.status !== 201 && createRes.status !== 200)) {
+    return { ...probeFail(def, `Lead create failed (${createRes.status})`), artifacts: ctx.artifacts };
+  }
   const res = await request(def, {
     method: 'PUT',
-    url: `/api/crm/leads/${lead._id}`,
+    url: `/api/crm/leads/${leadId}`,
     user: adminUser,
     data: { callStatus: 'Connected' },
   });
   if (res.status !== 200) {
     return { ...probeFail(def, `Lead update failed (${res.status})`), artifacts: ctx.artifacts };
   }
-  const audit = await CRMAudit.findOne({ leadId: lead._id }).sort({ createdAt: -1 }).lean();
+  const audit = await CRMAudit.findOne({ leadId }).sort({ createdAt: -1 }).lean();
   if (audit) {
     return { ...probePass(def, 'CRMAudit entry recorded after lead PATCH'), artifacts: ctx.artifacts };
   }

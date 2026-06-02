@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.53-126d5e?style=flat-square" alt="Version 1.7.53" />
+  <img src="https://img.shields.io/badge/version-1.7.54-126d5e?style=flat-square" alt="Version 1.7.54" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -194,6 +194,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Auth cookies:** JWT stored in HttpOnly `coreknot_token` cookie — not `localStorage`. `POST /api/auth/logout` clears session. Client uses `axios.defaults.withCredentials = true`.
 * **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
 * **Logout (v1.7.52):** Logout bumps an auth epoch so in-flight `/me` retries from post-login sync cannot re-set the user after sign-out. Client clears user state before the logout API call completes.
+* **CRM lead updates (v1.7.54):** Legacy `-DUP-{id}` / `EMPTY-{id}` corrupt phones (from old `dbPush.js` duplicate resolution) are auto-repaired on save, bulk-repairable via `npm run repair:lead-phones`, and cleaned during QA purge. Saving leads with unchanged corrupt phones no longer fails validation.
 * **CRM lead updates (v1.7.53):** Saving a lead no longer fails when phone/email normalize to the same value (e.g. `9876543210` → `+919876543210`). Duplicate phone/email returns **409** with a clear message instead of generic **400 Failed to update lead**.
 * **Webhook signatures:** HMAC-SHA256 via `X-Webhook-Signature: sha256=…` for book-call, Exly, and artist-enquiry ingress (`server/utils/webhookAuth.js`). Set `BOOK_CALL_WEBHOOK_SECRET`, `EXLY_WEBHOOK_SECRET`, `ARTIST_ENQUIRY_WEBHOOK_SECRET` on Render.
 * **Registration lockdown:** Production signup restricted to `ALLOWED_DOMAIN` and departments with `signupAllowed`. Password strength enforced server-side.
@@ -441,7 +442,9 @@ CoreKnot ships a **209-case** pre-deployment QA engine (Admin → QA Testing) th
 
 **Operator UX (`QATestingPage.jsx`):** Live probe panel (method, URL, payload), grouped failure copy, checklist progress, realtime Socket.IO updates, and **Purge QA Test Data** with confirm dialog.
 
-**Purge QA Test Data:** Admin → QA Testing removes probe CRM rows (`qa-*@example.com`, names starting with `QA `), probe user accounts (e.g. QA Login Probe), probe tasks (QA Proto, XSS titles, `[QA BUG]`, Backdated QA), related task assignments/logs, and QA audit logs — without touching production data outside those patterns (`server/services/qa/qaTestData.js`).
+**Purge QA Test Data:** Admin → QA Testing removes probe CRM rows (`qa-*@example.com`, names starting with `QA `), probe user accounts (e.g. QA Login Probe), probe tasks (QA Proto, XSS titles, `[QA BUG]`, Backdated QA), related task assignments/logs, and QA audit logs — without touching production data outside those patterns (`server/services/qa/qaTestData.js`). QA runs also **always purge in a `finally` block** (success or failure), repair corrupt `-DUP-` phones, and integration lock/audit tests use disposable QA-tagged leads instead of mutating real CRM rows.
+
+**Repair corrupt lead phones:** `cd server && npm run repair:lead-phones` — strips legacy `-DUP-{objectId}` / `EMPTY-{objectId}` suffixes, merges redundant duplicates, safe to run against production (`server/scripts/repairCorruptPhones.js`, `server/services/leadPhoneRepair.js`).
 
 **CLI runners:**
 

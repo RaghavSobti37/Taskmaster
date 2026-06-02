@@ -259,11 +259,29 @@ async function runProjectMemberRoleEnforced(def, ctx) {
   return { ...probeFail(def, `Expected 403 for member name change, got ${res.status}`), artifacts: ctx.artifacts };
 }
 
+async function createQaProbeLead(def, ctx, adminUser, suffix = 'probe') {
+  const email = `qa-${suffix}-${Date.now()}@example.com`;
+  const phone = `9${String(Date.now()).slice(-9)}`;
+  const res = await request(def, {
+    method: 'POST',
+    url: '/api/crm/leads',
+    user: adminUser,
+    data: { name: `QA ${suffix} Probe`, email, phone, source: 'QA Test' },
+  });
+  const leadId = extractId(res);
+  if (leadId) track(ctx, 'lead', leadId);
+  if (!leadId || (res.status !== 201 && res.status !== 200)) {
+    return { leadId: null, res };
+  }
+  const lead = await Lead.findById(leadId).lean();
+  return { leadId, lead, res };
+}
+
 async function runLeadLockConcurrent(def, ctx) {
   const users = await distinctUsers();
   if (!users) return skipProbeResult(def, 'Need two distinct users');
-  const lead = await Lead.findOne();
-  if (!lead) return skipProbeResult(def, 'No lead');
+  const { lead } = await createQaProbeLead(def, ctx, users.assigner, 'lock-concurrent');
+  if (!lead) return skipProbeResult(def, 'Could not create QA probe lead');
 
   await Lead.findByIdAndUpdate(lead._id, {
     lockedBy: users.assigner._id.toString(),
@@ -286,8 +304,8 @@ async function runLeadLockConcurrent(def, ctx) {
 
 async function runLeadLockExpires(def, ctx) {
   const users = await resolveTestUsers();
-  const lead = await Lead.findOne();
-  if (!lead) return skipProbeResult(def, 'No lead');
+  const { lead } = await createQaProbeLead(def, ctx, users.adminUser, 'lock-expires');
+  if (!lead) return skipProbeResult(def, 'Could not create QA probe lead');
 
   const staleAt = new Date(Date.now() - 120 * 1000);
   await Lead.findByIdAndUpdate(lead._id, {

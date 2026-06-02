@@ -20,7 +20,8 @@
     "reset-weak-passwords": "node scripts/resetWeakUserPasswords.js",
     "reset-weak-passwords:local:apply": "node scripts/resetWeakUserPasswords.js --apply",
     "reset-weak-passwords:prod": "node scripts/resetWeakUserPasswords.js --prod",
-    "reset-weak-passwords:prod:apply": "node scripts/resetWeakUserPasswords.js --prod --apply"
+    "reset-weak-passwords:prod:apply": "node scripts/resetWeakUserPasswords.js --prod --apply",
+    "repair:lead-phones": "node scripts/repairCorruptPhones.js"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",

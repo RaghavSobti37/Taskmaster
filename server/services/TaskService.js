@@ -24,9 +24,9 @@ const { validateTaskTimelineForRequest } = require('../utils/dateValidation');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
-const queueTaskCompletedGamification = (userId, task) => {
+const queueTaskCompletedGamification = async (userId, task) => {
   if (!userId || !task?._id) return;
-  queueGamificationEvent('TASK_COMPLETED', {
+  const job = queueGamificationEvent('TASK_COMPLETED', {
     userId,
     task: {
       _id: task._id,
@@ -34,6 +34,7 @@ const queueTaskCompletedGamification = (userId, task) => {
       projectId: task.projectId?._id || task.projectId,
     },
   });
+  if (process.env.QA_SYNC_GAMIFICATION === 'true') await job;
 };
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
@@ -206,6 +207,10 @@ exports.createTask = async (taskData, user, session) => {
 
   applyPriorityDueDate(coreData);
 
+  const { sanitizeName } = require('../utils/sanitizer');
+  if (coreData.title) coreData.title = sanitizeName(coreData.title);
+  if (coreData.description) coreData.description = sanitizeName(coreData.description);
+
   const timelineCheck = validateTaskTimelineForRequest(coreData);
   if (!timelineCheck.ok) {
     throw new Error(timelineCheck.error);
@@ -301,6 +306,10 @@ exports.updateTask = async (taskId, updates, user, session) => {
     && isMentionOnlyUser(user._id, assigneeIds, mentionedUserIds);
 
   const { assignees, reviewAction, ...coreUpdates } = updates;
+
+  const { sanitizeName } = require('../utils/sanitizer');
+  if (coreUpdates.title !== undefined) coreUpdates.title = sanitizeName(coreUpdates.title);
+  if (coreUpdates.description !== undefined) coreUpdates.description = sanitizeName(coreUpdates.description);
 
   let sourceProject = null;
   if (existing.projectId) {
@@ -503,7 +512,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
       await finalizeTaskCompletion(task, user, session);
       for (const a of assignments) {
         const assigneeId = assignmentUserId(a.userId);
-        if (assigneeId) queueTaskCompletedGamification(assigneeId, task);
+        if (assigneeId) await queueTaskCompletedGamification(assigneeId, task);
       }
       queueGamificationEvent('REVIEW_APPROVED', {
         reviewerId: user._id,
@@ -549,7 +558,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
     if (coreUpdates.status === 'done' && !reviewAction) {
       if (!requiresReviewForUser(assignments, user._id) && !mentionOnly) {
         await finalizeTaskCompletion(task, user, session);
-        queueTaskCompletedGamification(user._id, task);
+        await queueTaskCompletedGamification(user._id, task);
       }
     }
 

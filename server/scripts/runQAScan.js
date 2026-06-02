@@ -3,7 +3,11 @@ const QATestRun = require('../models/QATestRun');
 const QATestingService = require('../services/qaTestingService');
 require('dotenv').config();
 
-const dbUri = process.env.MONGODB_URI_PROD || process.env.MONGODB_URI || 'mongodb://localhost:27017/testing';
+const dbUri =
+  process.env.QA_SCAN_MONGODB_URI
+  || process.env.MONGODB_URI
+  || process.env.MONGODB_URI_PROD
+  || 'mongodb://localhost:27017/testing';
 
 async function run() {
   console.log('Connecting to database:', dbUri.replace(/\/\/.*:.*@/, '//****:****@'));

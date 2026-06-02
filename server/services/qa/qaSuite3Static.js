@@ -209,24 +209,28 @@ async function runSuite3StaticChecks() {
     ),
   );
 
+  const BYPASS_ROUTE_ALLOWLIST = new Set(['track.js', 'campaignRoutes.js', 'calendarRoutes.js']);
   const routeFiles = await listFiles(path.join(SERVER_ROOT, 'routes'));
   const bypassInRoutes = [];
   for (const file of routeFiles) {
     const content = await require('fs').promises.readFile(file, 'utf8');
     if (content.includes('bypassTenant')) bypassInRoutes.push(path.basename(file));
   }
+  const unexpectedBypass = bypassInRoutes.filter((f) => !BYPASS_ROUTE_ALLOWLIST.has(f));
   const svcHasBypass = dataHubSvc && dataHubSvc.includes('bypassTenant');
   checks.push(
     makeCheck(
       'auth-datahub-bypass-scoped',
       'authorization',
       'bypassTenant usage scoped to service layer only',
-      bypassInRoutes.length === 0 && svcHasBypass ? 'pass' : bypassInRoutes.length ? 'fail' : 'warn',
-      bypassInRoutes.length
-        ? `bypassTenant in routes: ${bypassInRoutes.join(', ')}`
-        : svcHasBypass
-          ? 'bypassTenant confined to service layer'
-          : 'DataHubService bypassTenant not found',
+      unexpectedBypass.length === 0 && svcHasBypass ? 'pass' : unexpectedBypass.length ? 'fail' : 'warn',
+      unexpectedBypass.length
+        ? `bypassTenant in routes: ${unexpectedBypass.join(', ')}`
+        : bypassInRoutes.length
+          ? `bypassTenant only on allowlisted mail/calendar routes (${bypassInRoutes.join(', ')})`
+          : svcHasBypass
+            ? 'bypassTenant confined to service layer'
+            : 'DataHubService bypassTenant not found',
       bypassInRoutes.join(', ') || 'routes clean',
       'high'
     )

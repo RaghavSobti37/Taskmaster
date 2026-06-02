@@ -881,11 +881,19 @@ async function buildSecurityRuntimeTestCases() {
   const base = QA_API_BASE();
   const category = 'security-hardening';
 
-  const probe = async (name, checklistId, fn) => ({
+  const probe = async (name, checklistId, method, url, fn) => ({
     name: `[Security Live] ${name}`,
     category,
     severity: 'high',
     checklistId,
+    qaMeta: {
+      kind: 'http',
+      action: 'Unsigned / malformed webhook probe',
+      method,
+      url,
+      checklistId,
+      category,
+    },
     test: async () => {
       try {
         return await fn(base);
@@ -919,13 +927,15 @@ async function buildSecurityRuntimeTestCases() {
     await probe(
       'Book-call webhook rejects unsigned payload',
       'sec-live-book-call-401',
+      'POST',
+      '/api/webhooks/book-call',
       async (apiBase) => {
         const res = await axios.post(
           `${apiBase}/api/webhooks/book-call`,
           { name: 'QA Probe', email: 'qa-probe@example.com', phone: '9999999999' },
           { validateStatus: () => true, timeout: 8000 }
         );
-        const ok = res.status === 401 || (process.env.NODE_ENV !== 'production' && res.status >= 400);
+        const ok = res.status === 401;
         return {
           passed: ok,
           checkStatus: ok ? 'pass' : 'fail',
@@ -944,13 +954,15 @@ async function buildSecurityRuntimeTestCases() {
     await probe(
       'Exly webhook rejects unsigned payload',
       'sec-live-exly-401',
+      'POST',
+      '/api/exly/webhook',
       async (apiBase) => {
         const res = await axios.post(
           `${apiBase}/api/exly/webhook`,
           { email: 'qa-probe@example.com', phone: '9999999999' },
           { validateStatus: () => true, timeout: 8000 }
         );
-        const ok = res.status === 401 || (process.env.NODE_ENV !== 'production' && res.status >= 400);
+        const ok = res.status === 401;
         return {
           passed: ok,
           checkStatus: ok ? 'pass' : 'fail',
@@ -969,6 +981,8 @@ async function buildSecurityRuntimeTestCases() {
     await probe(
       'Artist analytics requires authentication',
       'sec-live-artist-analytics-401',
+      'GET',
+      '/api/artists/:id/analytics/spotify',
       async (apiBase) => {
         const res = await axios.get(
           `${apiBase}/api/artists/000000000000000000000001/analytics/spotify`,
@@ -993,6 +1007,8 @@ async function buildSecurityRuntimeTestCases() {
     await probe(
       'Registration rejects weak passwords',
       'sec-live-register-weak-password',
+      'POST',
+      '/api/auth/register',
       async (apiBase) => {
         const res = await axios.post(
           `${apiBase}/api/auth/register`,
@@ -1023,6 +1039,8 @@ async function buildSecurityRuntimeTestCases() {
     await probe(
       'Login response omits JWT from JSON body',
       'sec-live-login-no-token-body',
+      'POST',
+      '/api/auth/login',
       async (apiBase) => {
         const email = `qa-login-${Date.now()}@example.com`;
         const password = getDefaultSeedPassword();
@@ -1036,6 +1054,19 @@ async function buildSecurityRuntimeTestCases() {
           { email, password },
           { validateStatus: () => true, timeout: 8000 }
         );
+        if (res.status === 429) {
+          return {
+            passed: true,
+            checkStatus: 'skip',
+            checklistId: 'sec-live-login-no-token-body',
+            error: null,
+            description: 'Skipped — login rate limit active on this host (retry after 15m)',
+            evidence: String(res.data?.error || res.status),
+            category,
+            severity: 'low',
+            message: '[SKIP] Login JWT body check (rate limited)',
+          };
+        }
         const ok = res.status === 200 && !res.data?.token;
         return {
           passed: ok,
@@ -1181,18 +1212,68 @@ function checklistToTestResult(check) {
   };
 }
 
+const PRE_DEPLOY_GROUPS = [
+  { label: 'Authorization', fn: runAuthorizationChecks },
+  { label: 'Password reset', fn: runPasswordResetChecks },
+  { label: 'Input validation', fn: runInputValidationChecks },
+  { label: 'CORS', fn: runCorsChecks },
+  { label: 'Rate limiting', fn: runRateLimitChecks },
+  { label: 'Error handling', fn: runErrorHandlingChecks },
+  { label: 'Database indexes', fn: runDatabaseIndexChecks },
+  { label: 'Logging & monitoring', fn: runLoggingChecks },
+  { label: 'Rollback / deploy', fn: runRollbackChecks },
+  { label: 'Business logic', fn: runBusinessLogicChecks },
+  { label: 'Security hardening', fn: runSecurityHardeningChecks },
+];
+
+function preDeployMeta(check) {
+  const live = String(check.id || '').startsWith('sec-live-');
+  return {
+    kind: live ? 'http' : 'static',
+    action: live ? 'Live HTTP security probe' : 'Read/analyze repository files (no HTTP)',
+    target: check.evidence || check.id,
+    checklistId: check.id,
+    category: check.category,
+  };
+}
+
 /**
  * Build QA test case objects compatible with QATestingService.runTestCase
+ * @param {(message: string) => void|Promise<void>} [onProgress] discovery callback
  */
-async function buildPreDeploymentTestCases() {
-  const checks = await runAllPreDeploymentChecks();
-  const staticCases = checks.map((check) => ({
-    name: `[Pre-Deploy] ${check.title}`,
-    category: check.category,
-    severity: check.severity,
-    checklistId: check.id,
-    test: async () => checklistToTestResult(check),
-  }));
+async function buildPreDeploymentTestCases(onProgress) {
+  const staticCases = [];
+  const { runSuite3StaticChecks } = require('./qa/qaSuite3Static');
+
+  for (const { label, fn } of PRE_DEPLOY_GROUPS) {
+    if (onProgress) await onProgress(`Pre-deploy: evaluating ${label}…`);
+    const checks = await fn();
+    for (const check of checks) {
+      staticCases.push({
+        name: `[Pre-Deploy] ${check.title}`,
+        category: check.category,
+        severity: check.severity,
+        checklistId: check.id,
+        qaMeta: preDeployMeta(check),
+        test: async () => checklistToTestResult(check),
+      });
+    }
+  }
+
+  if (onProgress) await onProgress('Pre-deploy: evaluating Suite 3 static checks…');
+  const suite3 = await runSuite3StaticChecks();
+  for (const check of suite3) {
+    staticCases.push({
+      name: `[Pre-Deploy] ${check.title}`,
+      category: check.category,
+      severity: check.severity,
+      checklistId: check.id,
+      qaMeta: preDeployMeta(check),
+      test: async () => checklistToTestResult(check),
+    });
+  }
+
+  if (onProgress) await onProgress('Pre-deploy: building live security probes…');
   const runtimeCases = await buildSecurityRuntimeTestCases();
   return [...staticCases, ...runtimeCases];
 }

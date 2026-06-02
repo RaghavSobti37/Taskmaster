@@ -267,13 +267,27 @@ const queueGamificationEvent = async (eventType, payload) => {
 
   if (redisAvailable && gamificationQueue) {
     try {
-      await gamificationQueue.add(eventType, { eventType, payload }, { removeOnComplete: true, removeOnFail: false });
+      const job = await gamificationQueue.add(
+        eventType,
+        { eventType, payload },
+        { removeOnComplete: true, removeOnFail: false }
+      );
+      if (process.env.QA_SYNC_GAMIFICATION === 'true') {
+        const { QueueEvents } = require('bullmq');
+        const events = new QueueEvents('gamificationQueue', { connection: redisConnection });
+        try {
+          await job.waitUntilFinished(events, 30000);
+        } finally {
+          await events.close().catch(() => {});
+        }
+      }
+      return;
     } catch (e) {
       logger.error('Queue', 'Gamification queue failed — running inline', { error: e.message });
-      setImmediate(runEvent);
+      await runEvent();
     }
   } else {
-    setImmediate(runEvent);
+    await runEvent();
   }
 };
 

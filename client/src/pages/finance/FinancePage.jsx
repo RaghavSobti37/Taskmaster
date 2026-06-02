@@ -27,6 +27,8 @@ import {
 } from '../../components/ui';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
+import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
+import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Types' },
@@ -124,8 +126,10 @@ const FinancePage = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderWorkspace, setNewFolderWorkspace] = useState('General');
   const [newFolderProject, setNewFolderProject] = useState('');
 
+  const [selectedWorkspace, setSelectedWorkspace] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,10 +153,13 @@ const FinancePage = () => {
 
   useEffect(() => {
     if (selectedDoc) {
+      const projectId = selectedDoc.project?._id || selectedDoc.project || '';
+      const projectRecord = projects.find((p) => p._id === projectId);
       setEditForm({
         title: selectedDoc.title || '',
         description: selectedDoc.description || '',
-        project: selectedDoc.project?._id || selectedDoc.project || '',
+        workspace: projectRecord?.workspace || 'General',
+        project: projectId,
         category: selectedDoc.category || 'other',
         metadata: {
           vendor: selectedDoc.metadata?.vendor || '',
@@ -167,7 +174,7 @@ const FinancePage = () => {
       setEditForm(null);
       setEditAmountUsd('');
     }
-  }, [selectedDoc?._id]);
+  }, [selectedDoc?._id, projects]);
 
   useEffect(() => {
     if (!selectedDoc || !editForm?.metadata?.amount) return;
@@ -216,6 +223,12 @@ const FinancePage = () => {
     queryKey: ['projects'],
     queryFn: async () => normalizeProjects((await axios.get('/api/projects')).data),
   });
+  const { data: workspaces = [] } = useWorkspaces();
+
+  const filteredProjects = useMemo(
+    () => filterProjectsByWorkspace(projects, selectedWorkspace || 'all'),
+    [projects, selectedWorkspace]
+  );
 
   const { data: docsRes, isLoading } = useQuery({
     queryKey: ['finance-docs', selectedProject, selectedCategory, startDate, endDate, searchQuery, currentPage, pageSize, currentFolderId, sortConfig.field, sortConfig.order],
@@ -299,6 +312,8 @@ const FinancePage = () => {
       || activeFolder?.project?._id
       || activeFolder?.project
       || '';
+    const projectRecord = projects.find((p) => p._id === projectId);
+    setNewFolderWorkspace(projectRecord?.workspace || selectedWorkspace || 'General');
     setNewFolderProject(projectId);
     setNewFolderName('');
     setShowNewFolder(true);
@@ -318,6 +333,7 @@ const FinancePage = () => {
       setShowNewFolder(false);
       setNewFolderName('');
       setNewFolderProject('');
+      setNewFolderWorkspace('General');
     },
   });
 
@@ -530,18 +546,40 @@ const FinancePage = () => {
           className="min-w-[240px] flex-1"
         />
 
+        {/* Workspace Select */}
+        <div className="relative">
+          <select
+            value={selectedWorkspace}
+            onChange={(e) => {
+              setSelectedWorkspace(e.target.value);
+              setSelectedProject('');
+              goToProjectRoot();
+            }}
+            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
+          >
+            <option value="">All Workspaces</option>
+            {workspaces.map((w) => (
+              <option key={w._id || w.name} value={w.name}>{w.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+        </div>
+
         {/* Project Select */}
         <div className="relative">
           <select
             value={selectedProject}
             onChange={(e) => {
-              setSelectedProject(e.target.value);
+              const projectId = e.target.value;
+              setSelectedProject(projectId);
+              const projectRecord = projects.find((p) => p._id === projectId);
+              if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
               goToProjectRoot();
             }}
             className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
           >
             <option value="">All Projects</option>
-            {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+            {filteredProjects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
           </select>
           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
         </div>
@@ -814,19 +852,16 @@ const FinancePage = () => {
           <p className="text-[10px] text-[var(--color-text-muted)]">
             Folders live at project root{newFolderProjectName ? ` — ${newFolderProjectName}` : ''}.
           </p>
-          <div>
-            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Project *</label>
-            <select
-              value={newFolderProject}
-              onChange={(e) => setNewFolderProject(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
-            >
-              <option value="">Select project</option>
-              {projects.map((p) => (
-                <option key={p._id} value={p._id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          <WorkspaceProjectFields
+            projects={projects}
+            workspace={newFolderWorkspace}
+            projectId={newFolderProject}
+            onChange={({ workspace, projectId }) => {
+              setNewFolderWorkspace(workspace);
+              setNewFolderProject(projectId);
+            }}
+            layout="stacked"
+          />
           <div>
             <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Folder name *</label>
             <input
@@ -991,23 +1026,19 @@ const FinancePage = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Project</label>
-                        <select
-                          value={editForm.project}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setEditForm(prev => ({ ...prev, project: val }));
-                            updateMutation.mutate({ id: selectedDoc._id, payload: { project: val || null } });
-                          }}
-                          className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
-                        >
-                          <option value="">No Project</option>
-                          {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      <div>
+                    <WorkspaceProjectFields
+                      projects={projects}
+                      workspace={editForm.workspace || 'General'}
+                      projectId={editForm.project || ''}
+                      onChange={({ workspace, projectId }) => {
+                        setEditForm((prev) => ({ ...prev, workspace, project: projectId }));
+                        updateMutation.mutate({ id: selectedDoc._id, payload: { project: projectId || null } });
+                      }}
+                      layout="inline"
+                      allowEmptyProject
+                      emptyProjectLabel="No Project"
+                    />
+                    <div>
                         <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Category</label>
                         <select
                           value={editForm.category}
@@ -1021,7 +1052,6 @@ const FinancePage = () => {
                           {CATEGORIES.filter(c => c.value !== 'all').map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                       </div>
-                    </div>
 
                     {/* OCR Extractions (Display fields & updates) */}
                     <div className="p-3 bg-slate-100/60 dark:bg-slate-800/25 border border-[var(--color-bg-border)] rounded-xl space-y-3">

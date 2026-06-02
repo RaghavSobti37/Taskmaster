@@ -10,6 +10,13 @@ const authLoginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+  keyGenerator: (req) => {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.trim()) {
+      return `login:${email.trim().toLowerCase()}`;
+    }
+    return `login-ip:${req.ip || req.socket?.remoteAddress || 'unknown'}`;
+  },
 });
 
 const authSignupLimiter = rateLimit({

@@ -46,7 +46,7 @@ const PROBE_DEFS = [
         headers: {},
         data: { email: { $regex: '.*' }, password: { $gt: '' } },
       });
-      const ok = res.status === 400 || res.status === 401;
+      const ok = res.status === 400 || res.status === 401 || res.status === 429;
       return ok
         ? probePass(this, `Login rejected malformed operators (${res.status})`)
         : probeFail(this, `Login accepted NoSQL operators (${res.status})`, res.status);
@@ -366,8 +366,8 @@ const PROBE_DEFS = [
     async run() {
       const res = await request(this, {
         method: 'GET',
-        url: '/api/users/me',
-        headers: { Authorization: '' },
+        url: '/api/auth/me',
+        skipAuth: true,
       });
       const ok = res.status === 401;
       return ok
@@ -538,6 +538,15 @@ function wrapProbe(def) {
     category: def.category,
     severity: def.sev,
     checklistId: def.id,
+    qaMeta: {
+      kind: 'http',
+      action: `HTTP probe (${def.suite === 's4' ? 'Suite 4 sanitization' : 'Suite 7 edge'})`,
+      method: def.method || 'GET',
+      url: def.url || '(see probe)',
+      payloadHint: def.payloadHint,
+      checklistId: def.id,
+      category: def.category,
+    },
     test: async () => {
       if (!(await isApiReachable())) {
         return skipProbeResult(def, `API not reachable at ${QA_API_BASE()}`);

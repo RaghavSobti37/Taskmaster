@@ -5,6 +5,7 @@ import { PageContainer, Card, Badge, SearchInput, PageSkeleton, DataLoading } fr
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
+import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
@@ -38,6 +39,7 @@ const TodoPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);
@@ -49,10 +51,18 @@ const TodoPage = () => {
     []
   );
 
+  const workspaceFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All workspaces' },
+      ...workspaces.map((w) => ({ value: w.name, label: w.name })),
+    ],
+    [workspaces]
+  );
+
   const projectFilterOptions = useMemo(() => [
     { value: 'all', label: 'All projects' },
-    ...projects.map((p) => ({ value: p._id, label: p.name }))
-  ], [projects]);
+    ...filterProjectsByWorkspace(projects, workspaceFilter).map((p) => ({ value: p._id, label: p.name }))
+  ], [projects, workspaceFilter]);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -183,6 +193,17 @@ const TodoPage = () => {
         <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} className="w-full sm:w-36" />
         <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} className="w-full sm:w-36" />
         <NexusDropdown label="Category" options={typeOptions} value={typeFilter} onChange={setTypeFilter} className="w-full sm:w-40" />
+        <NexusDropdown
+          label="Workspace"
+          options={workspaceFilterOptions}
+          value={workspaceFilter}
+          onChange={(value) => {
+            setWorkspaceFilter(value);
+            setProjectFilter('all');
+          }}
+          className="w-full sm:w-44"
+          searchable
+        />
         <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} className="w-full sm:w-44" searchable />
       </div>
 

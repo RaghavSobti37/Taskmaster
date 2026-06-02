@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Upload, X, FileText, Loader2, FolderOpen, FolderPlus, ChevronDown } from 'lucide-react';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalShell';
+import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
 
 const CATEGORIES = [
   { value: 'invoice', label: 'Invoice' },
@@ -183,6 +184,7 @@ const UploadDocumentModal = ({
   const queryClient = useQueryClient();
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const [uploadWorkspace, setUploadWorkspace] = useState('General');
   const [uploadProject, setUploadProject] = useState('');
   const [uploadFolderId, setUploadFolderId] = useState(null);
   const [uploadFolderLabel, setUploadFolderLabel] = useState('');
@@ -191,11 +193,14 @@ const UploadDocumentModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setUploadProject(selectedProject || '');
+    const initialProject = selectedProject || '';
+    const initialProjectRecord = projects.find((p) => p._id === initialProject);
+    setUploadWorkspace(initialProjectRecord?.workspace || 'General');
+    setUploadProject(initialProject);
     setUploadFolderId(currentFolderId || null);
     setUploadFolderLabel(currentFolder?.folderName || '');
     setUploadNewFolderName('');
-  }, [isOpen, selectedProject, currentFolderId, currentFolder?.folderName]);
+  }, [isOpen, selectedProject, currentFolderId, currentFolder?.folderName, projects]);
 
   const { data: foldersRes } = useQuery({
     queryKey: ['finance-folders', uploadProject],
@@ -220,7 +225,8 @@ const UploadDocumentModal = ({
     );
   };
 
-  const handleProjectChange = (projectId) => {
+  const handleProjectChange = ({ workspace, projectId }) => {
+    setUploadWorkspace(workspace);
     setUploadProject(projectId);
     setUploadFolderId(null);
     setUploadFolderLabel('');
@@ -364,25 +370,14 @@ const UploadDocumentModal = ({
         </p>
 
         {/* Global project + folder */}
-        <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-              Project *
-            </label>
-            <select
-              value={uploadProject}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-lg text-sm font-bold cursor-pointer"
-            >
-              <option value="">Select project</option>
-              {projects.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.name}
-                  {p._id === selectedProject ? ' (current filter)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] space-y-4">
+          <WorkspaceProjectFields
+            projects={projects}
+            workspace={uploadWorkspace}
+            projectId={uploadProject}
+            onChange={handleProjectChange}
+            layout="inline"
+          />
           <FolderCombobox
             projectId={uploadProject}
             folders={projectFolders}
@@ -454,11 +449,16 @@ const UploadDocumentModal = ({
                       </label>
                       <select
                         value={file.project || uploadProject}
-                        onChange={(e) => updateStagedFile(file.id, 'project', e.target.value)}
+                        onChange={(e) => {
+                          const pid = e.target.value;
+                          updateStagedFile(file.id, 'project', pid);
+                          const project = projects.find((p) => p._id === pid);
+                          if (project?.workspace) setUploadWorkspace(project.workspace);
+                        }}
                         className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-sm cursor-pointer"
                       >
                         <option value="">Select project</option>
-                        {projects.map((p) => (
+                        {filterProjectsByWorkspace(projects, uploadWorkspace).map((p) => (
                           <option key={p._id} value={p._id}>{p.name}</option>
                         ))}
                       </select>

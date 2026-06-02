@@ -25,15 +25,15 @@ exports.startQATesting = async (req, res, next) => {
       permissions: permissions || []
     });
 
-    // Start async testing (don't wait for completion)
-    qaService.startTesting().catch(err => {
+    await qaService.initTestRun();
+
+    qaService.executeTests().catch((err) => {
       logger.error('QA', 'Error in background testing', { error: err.message });
     });
 
-    // Broadcast that testing started
     broadcastRealtimeEvent(`qa-test:global`, 'started', {
       testRunId: qaService.testRunId,
-      initiatedBy: userId
+      initiatedBy: userId,
     });
 
     res.status(202).json({
@@ -61,7 +61,7 @@ exports.getTestProgress = async (req, res, next) => {
     }
 
     const testRun = await QATestRun.findOne(query).select(
-      'status progress testCases pagesTestedCount bugsIdentified startedAt'
+      'status progress activityLog testCases pagesTestedCount bugsIdentified startedAt errorDetails'
     );
 
     if (!testRun) {
@@ -72,10 +72,12 @@ exports.getTestProgress = async (req, res, next) => {
       testRunId: testRun._id,
       status: testRun.status,
       progress: testRun.progress,
+      activityLog: testRun.activityLog || [],
       testCases: testRun.testCases,
       pagesTestedCount: testRun.pagesTestedCount,
       bugsIdentified: testRun.bugsIdentified,
-      startedAt: testRun.startedAt
+      startedAt: testRun.startedAt,
+      errorDetails: testRun.errorDetails,
     });
   } catch (error) {
     logger.error('QA', 'Error fetching test progress', { error: error.message });

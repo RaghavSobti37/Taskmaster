@@ -20,8 +20,11 @@ import { useConfirm } from '../../contexts/ConfirmContext';
 import { useSearchParams } from 'react-router-dom';
 import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
-  useLogs, useProjects, useTasks, useUserDirectory, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
+  useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
+import WorkspaceProjectFields, {
+  resolveWorkspaceFromProjectName,
+} from '../../components/forms/WorkspaceProjectFields';
 
 const parseLogMinutes = (raw = '') => {
   const str = String(raw || '').trim().toLowerCase();
@@ -63,6 +66,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timeSpent, setTimeSpent] = useState('');
+  const [selectedWorkspace, setSelectedWorkspace] = useState('General');
   const [selectedProject, setSelectedProject] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -70,10 +74,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editMessage, setEditMessage] = useState('');
   const [editTimeSpent, setEditTimeSpent] = useState('');
-  const [editProject, setEditProject] = useState('');
+  const [editWorkspace, setEditWorkspace] = useState('General');
+  const [editProjectId, setEditProjectId] = useState('');
 
   const [logSearch, setLogSearch] = useState('');
   const [logSort, setLogSort] = useState('newest');
+  const [logWorkspaceFilter, setLogWorkspaceFilter] = useState('all');
   const [logProjectFilter, setLogProjectFilter] = useState('all');
 
   const requestedUserId = adminViewUserId || searchParams.get('user');
@@ -83,6 +89,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 
   const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, 200);
   const { data: projects = [] } = useProjects();
+  const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId);
   const { data: userDirectory = [] } = useUserDirectory();
   const { data: activityGrid = [] } = useActivityGrid();
@@ -103,14 +110,20 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
 
   const handleStartEdit = (log) => {
+    const projectName = log.details?.project || '';
+    const matchedProject = projects.find(
+      (p) => p.name?.toUpperCase() === String(projectName).toUpperCase()
+    );
     setEditingLogId(log._id);
     setEditTitle(cleanLogTitle(log.details?.title || ''));
     setEditMessage(cleanLogMessage(log.details?.message || ''));
     setEditTimeSpent(log.details?.timeSpent || '');
-    setEditProject(log.details?.project || '');
+    setEditWorkspace(log.details?.workspace || resolveWorkspaceFromProjectName(projects, projectName));
+    setEditProjectId(matchedProject?._id || '');
   };
 
   const handleSaveEdit = async (logId) => {
+    const projectRecord = projects.find((p) => p._id === editProjectId);
     try {
       await updateLogMutation.mutateAsync({
         id: logId,
@@ -119,8 +132,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             title: editTitle,
             message: editMessage,
             timeSpent: editTimeSpent,
-            project: editProject
-          }
+            workspace: editWorkspace || projectRecord?.workspace || 'General',
+            project: projectRecord?.name || 'General',
+          },
+          targetId: editProjectId || null,
+          targetType: editProjectId ? 'Project' : 'System',
         }
       });
       setEditingLogId(null);
@@ -154,13 +170,15 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     if (e) e.preventDefault();
     if (!title.trim()) return;
 
+    const projectRecord = projects.find((p) => p._id === selectedProject);
     createLogMutation.mutate({
       action: 'DAILY_LOG',
       details: {
         title,
         message: description,
         timeSpent,
-        project: projects.find(p => p._id === selectedProject)?.name || 'General'
+        workspace: selectedWorkspace || projectRecord?.workspace || 'General',
+        project: projectRecord?.name || 'General',
       },
       targetId: selectedProject || null,
       targetType: selectedProject ? 'Project' : 'System'
@@ -169,6 +187,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         setTitle('');
         setDescription('');
         setTimeSpent('');
+        setSelectedWorkspace('General');
         setSelectedProject('');
         setIsDrawerOpen(false);
         addToast({
@@ -186,15 +205,27 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     && isSameDay(new Date(l.createdAt), selectedDate)
   ), [logs, selectedDate]);
 
+  const logWorkspaceOptions = useMemo(() => [
+    { value: 'all', label: 'All workspaces' },
+    ...workspaces.map((w) => ({ value: w.name, label: w.name })),
+  ], [workspaces]);
+
   const logProjectOptions = useMemo(() => {
+    let rows = dailyLogs;
+    if (logWorkspaceFilter !== 'all') {
+      rows = rows.filter(
+        (l) => (l.details?.workspace || resolveWorkspaceFromProjectName(projects, l.details?.project))
+          === logWorkspaceFilter
+      );
+    }
     const names = new Set(
-      dailyLogs.map((l) => l.details?.project || 'GENERAL').filter(Boolean)
+      rows.map((l) => l.details?.project || 'GENERAL').filter(Boolean)
     );
     return [
       { value: 'all', label: 'All projects' },
       ...[...names].sort().map((p) => ({ value: p, label: p })),
     ];
-  }, [dailyLogs]);
+  }, [dailyLogs, logWorkspaceFilter, projects]);
 
   const displayedLogs = useMemo(() => {
     let rows = [...dailyLogs];
@@ -204,6 +235,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         (l.details?.title || '').toLowerCase().includes(term)
         || (l.details?.message || '').toLowerCase().includes(term)
         || (l.details?.project || '').toLowerCase().includes(term)
+      );
+    }
+    if (logWorkspaceFilter !== 'all') {
+      rows = rows.filter(
+        (l) => (l.details?.workspace || resolveWorkspaceFromProjectName(projects, l.details?.project))
+          === logWorkspaceFilter
       );
     }
     if (logProjectFilter !== 'all') {
@@ -226,7 +263,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       }
     });
     return rows;
-  }, [dailyLogs, logSearch, logSort, logProjectFilter]);
+  }, [dailyLogs, logSearch, logSort, logWorkspaceFilter, logProjectFilter, projects]);
 
   const dailyTasks = useMemo(() => tasks.filter(t => {
     const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
@@ -346,13 +383,23 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     {displayedLogs.length}{displayedLogs.length !== dailyLogs.length ? ` / ${dailyLogs.length}` : ''} LOGS
                   </Badge>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <Input
                     icon={Search}
                     placeholder="Search logs…"
                     value={logSearch}
                     onChange={(e) => setLogSearch(e.target.value)}
-                    className="!py-1.5 !text-xs"
+                    className="!py-1.5 !text-xs sm:col-span-2 lg:col-span-1"
+                  />
+                  <NexusDropdown
+                    variant="compact"
+                    options={logWorkspaceOptions}
+                    value={logWorkspaceFilter}
+                    onChange={(value) => {
+                      setLogWorkspaceFilter(value);
+                      setLogProjectFilter('all');
+                    }}
+                    placeholder="Workspace"
                   />
                   <NexusDropdown
                     variant="compact"
@@ -388,13 +435,25 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     if (editingLogId === log._id) {
                       return (
                         <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-2xl space-y-4">
-                           <div className="grid grid-cols-2 gap-4">
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <Input label="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} size="sm" />
                               <div className="space-y-1">
                                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">Time</label>
                                  <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={editTimeSpent} onChange={setEditTimeSpent} placeholder="Time" />
                               </div>
                            </div>
+                           <WorkspaceProjectFields
+                             projects={projects}
+                             workspace={editWorkspace}
+                             projectId={editProjectId}
+                             onChange={({ workspace, projectId }) => {
+                               setEditWorkspace(workspace);
+                               setEditProjectId(projectId);
+                             }}
+                             layout="inline"
+                             allowEmptyProject
+                             emptyProjectLabel="None"
+                           />
                            <textarea 
                              value={editMessage} 
                              onChange={e => setEditMessage(e.target.value)}
@@ -419,6 +478,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
                                   <span className="text-xs font-black uppercase tracking-tight">{cleanLogTitle(log.details?.title)}</span>
+                                  <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>
                                <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
@@ -509,16 +569,22 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
       >
         <form onSubmit={handleManualSubmit} className="space-y-6">
             <Input label="What did you work on?" value={title} onChange={e => setTitle(e.target.value)} placeholder="Task name or summary" icon={Target} required />
-            <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
-                  <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={timeSpent} onChange={setTimeSpent} placeholder="Select time" />
-               </div>
-               <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project</label>
-                  <NexusDropdown options={[{ value: '', label: 'None' }, ...projects.map(p => ({ value: p._id, label: p.name }))]} value={selectedProject} onChange={setSelectedProject} placeholder="Select project" />
-               </div>
+            <div className="space-y-1.5">
+               <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
+               <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={timeSpent} onChange={setTimeSpent} placeholder="Select time" />
             </div>
+            <WorkspaceProjectFields
+              projects={projects}
+              workspace={selectedWorkspace}
+              projectId={selectedProject}
+              onChange={({ workspace, projectId }) => {
+                setSelectedWorkspace(workspace);
+                setSelectedProject(projectId);
+              }}
+              layout="inline"
+              allowEmptyProject
+              emptyProjectLabel="None"
+            />
             <div className="space-y-1.5">
                <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
                <textarea 

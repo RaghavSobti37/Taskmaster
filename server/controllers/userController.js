@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
-const { isRootAdminEmail, getDeleteUserBlockReason } = require('../../shared/rootAdminEmails');
+const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;

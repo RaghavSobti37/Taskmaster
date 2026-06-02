@@ -6,17 +6,17 @@ const computeWebhookSignature = (rawBody, secret) => {
 };
 
 const verifyWebhookSignature = (req, secretEnvKey) => {
+  const header = req.headers['x-webhook-signature'] || req.headers['x-hub-signature-256'];
+  if (!header) {
+    return { ok: false, error: 'Missing X-Webhook-Signature header' };
+  }
+
   const secret = process.env[secretEnvKey];
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       return { ok: false, error: 'Webhook secret not configured' };
     }
     return { ok: true, skipped: true };
-  }
-
-  const header = req.headers['x-webhook-signature'] || req.headers['x-hub-signature-256'];
-  if (!header) {
-    return { ok: false, error: 'Missing X-Webhook-Signature header' };
   }
 
   const rawBody = req.rawBody;

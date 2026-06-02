@@ -59,6 +59,19 @@ const sanitizeLocation = (loc) => {
     .trim();
 };
 
+const MAX_NAME_LENGTH = 200;
+
+const isValidEmail = (email) => {
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email));
+};
+
+const isValidPhone = (phone) => {
+  if (!phone) return false;
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 15;
+};
+
 const escapeRegExp = (str) => {
   if (!str) return '';
   const specials = ['-', '[', ']', '/', '{', '}', '(', ')', '*', '+', '?', '.', '\\', '^', '$', '|'];
@@ -79,6 +92,9 @@ module.exports = {
   normalizePhone,
   validateDate,
   sanitizeLocation,
-  escapeRegExp
+  escapeRegExp,
+  MAX_NAME_LENGTH,
+  isValidEmail,
+  isValidPhone,
 };
 

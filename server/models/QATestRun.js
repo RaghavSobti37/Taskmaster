@@ -52,8 +52,41 @@ const qaTestRunSchema = new mongoose.Schema({
     totalPages: {
       type: Number,
       default: 0
-    }
+    },
+    liveActivity: {
+      phase: { type: String, default: 'idle' },
+      kind: String,
+      action: String,
+      checklistId: String,
+      testName: String,
+      category: String,
+      method: String,
+      url: String,
+      requestBody: String,
+      target: String,
+      httpStatus: Number,
+      outcome: String,
+      message: String,
+      startedAt: Date,
+      updatedAt: Date,
+      elapsedMs: Number,
+    },
   },
+  activityLog: [{
+    at: { type: Date, default: Date.now },
+    phase: String,
+    testName: String,
+    checklistId: String,
+    kind: String,
+    summary: String,
+    method: String,
+    url: String,
+    requestBody: String,
+    httpStatus: Number,
+    outcome: String,
+    durationMs: Number,
+    message: String,
+  }],
   testIdentity: {
     name: {
       type: String,

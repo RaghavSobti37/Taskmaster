@@ -78,9 +78,135 @@ const useQAProgress = (testRunId) => {
       return data;
     },
     enabled: !!testRunId,
-    refetchInterval: 1000,
+    refetchInterval: 800,
   });
 };
+
+const KIND_LABELS = {
+  static: 'Static (files/config)',
+  http: 'Live HTTP',
+  'http-live': 'Live HTTP',
+  integration: 'Integration (API + DB)',
+  'page-scan': 'Page pentest',
+  discovery: 'Discovery',
+  unknown: 'Test',
+};
+
+const kindBadgeClass = (kind) => {
+  switch (kind) {
+    case 'static':
+      return 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/25';
+    case 'http':
+    case 'http-live':
+      return 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/25';
+    case 'integration':
+      return 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25';
+    case 'page-scan':
+      return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/25';
+    default:
+      return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20';
+  }
+};
+
+function LiveProbePanel({ currentRun }) {
+  const live = currentRun?.progress?.liveActivity || {};
+  const log = [...(currentRun?.activityLog || [])].reverse().slice(0, 12);
+  const elapsed =
+    live.startedAt && live.phase === 'running'
+      ? Math.max(0, Math.floor((Date.now() - new Date(live.startedAt).getTime()) / 1000))
+      : live.elapsedMs != null
+        ? Math.floor(live.elapsedMs / 1000)
+        : null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {live.kind && (
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${kindBadgeClass(live.kind)}`}>
+            {KIND_LABELS[live.kind] || live.kind}
+          </span>
+        )}
+        {live.phase && (
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20">
+            {live.phase}
+          </span>
+        )}
+        {elapsed != null && live.phase === 'running' && (
+          <span className="text-xs text-amber-600 dark:text-amber-400 font-mono">
+            running {elapsed}s{elapsed > 15 ? ' — slow static group or HTTP timeout (12s max)' : ''}
+          </span>
+        )}
+      </div>
+
+      {live.kind === 'static' && (
+        <p className="text-xs text-violet-700 dark:text-violet-300 bg-violet-500/5 border border-violet-500/20 rounded-lg px-3 py-2">
+          No API call for this step — agent reads repo files (e.g. <code className="font-mono">render.yaml</code>, middleware). Safe to sit here a few seconds.
+        </p>
+      )}
+
+      {live.method && live.url && (
+        <div className="font-mono text-xs bg-black/5 dark:bg-black/40 rounded-lg p-3 border border-blue-100 dark:border-blue-800/40 space-y-1">
+          <div>
+            <span className="text-blue-500 font-bold">{live.method}</span>{' '}
+            <span className="text-blue-900 dark:text-blue-100 break-all">{live.url}</span>
+          </div>
+          {live.requestBody && (
+            <div className="text-[var(--color-text-muted)] break-all">
+              <span className="text-blue-500">body</span> {live.requestBody}
+            </div>
+          )}
+          {live.httpStatus != null && (
+            <div className={live.httpStatus >= 400 ? 'text-amber-600' : 'text-emerald-600'}>
+              → HTTP {live.httpStatus}
+            </div>
+          )}
+        </div>
+      )}
+
+      {live.target && !live.url && (
+        <div className="font-mono text-xs text-[var(--color-text-secondary)]">
+          Target: <span className="text-blue-900 dark:text-blue-100">{live.target}</span>
+        </div>
+      )}
+
+      {live.action && (
+        <p className="text-sm text-[var(--color-text-secondary)]">{live.action}</p>
+      )}
+
+      {live.message && live.phase !== 'queued' && (
+        <p className="text-xs font-mono text-[var(--color-text-muted)]">{live.message}</p>
+      )}
+
+      {log.length > 0 && (
+        <div className="border-t border-blue-100 dark:border-blue-800/40 pt-3">
+          <div className="text-[10px] uppercase font-bold text-blue-500 tracking-wider mb-2">Recent steps</div>
+          <ul className="max-h-36 overflow-y-auto space-y-1.5 text-xs font-mono">
+            {log.map((entry, idx) => (
+              <li key={`${entry.at}-${idx}`} className="flex gap-2 text-[var(--color-text-muted)]">
+                <span
+                  className={
+                    entry.outcome === 'failed'
+                      ? 'text-red-500 shrink-0'
+                      : entry.outcome === 'passed'
+                        ? 'text-emerald-500 shrink-0'
+                        : 'text-gray-400 shrink-0'
+                  }
+                >
+                  {entry.outcome === 'failed' ? '✗' : entry.outcome === 'passed' ? '✓' : '○'}
+                </span>
+                <span className="truncate">
+                  {entry.method && entry.url ? `${entry.method} ${entry.url}` : entry.summary || entry.testName}
+                  {entry.httpStatus != null ? ` → ${entry.httpStatus}` : ''}
+                  {entry.durationMs != null ? ` (${entry.durationMs}ms)` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const QATestingPage = () => {
   const { success: toastSuccess, error: toastError } = useSystemToast();
@@ -181,39 +307,62 @@ const QATestingPage = () => {
     startMutation.mutate();
   }, [startMutation]);
 
-  const handleCopyErrors = useCallback(() => {
-    if (!latestResults || !latestResults.testCases) return;
-    const failedBugs = latestResults.testCases.filter(t => t.status === 'failed');
-    const checklistFails = latestResults.testCases.filter(
-      t => PREDEPLOY_CATEGORIES.has(t.category) && (t.checkStatus === 'fail' || t.status === 'failed')
-    );
-    if (failedBugs.length === 0 && checklistFails.length === 0) return;
+  const formatCheckLine = (c, index) => {
+    const st = c.checkStatus || (c.status === 'failed' ? 'fail' : c.status === 'warn' ? 'warn' : c.status === 'skip' ? 'skip' : 'pass');
+    let block = `${index + 1}. [${st}] ${c.name}\n`;
+    block += `   Category: ${c.category || 'n/a'}\n`;
+    if (c.description) block += `   ${c.description}\n`;
+    if (c.error) block += `   Error: ${c.error}\n`;
+    if (c.evidence) block += `   Evidence: ${c.evidence}\n`;
+    if (c.checklistId) block += `   Id: ${c.checklistId}\n`;
+    return `${block}\n`;
+  };
 
-    let textToCopy = 'QA Testing Error Report\n' + '='.repeat(30) + '\n\n';
-
-    if (checklistFails.length > 0) {
-      textToCopy += '--- Pre-Deployment Checklist Failures ---\n\n';
-      checklistFails.forEach((c, index) => {
-        textToCopy += `${index + 1}. [${c.category}] ${c.name}\n`;
-        textToCopy += `   ${c.error || c.description}\n`;
-        if (c.evidence) textToCopy += `   Evidence: ${c.evidence}\n`;
-        textToCopy += '\n';
-      });
+  const handleCopyErrors = useCallback((includeWarns = false) => {
+    if (!latestResults?.testCases?.length) {
+      toastError('No QA results to copy yet', { module: MODULE.SYSTEM });
+      return;
     }
 
-    failedBugs.forEach((bug, index) => {
-      textToCopy += `${index + 1}. [${(bug.severity || 'Medium').toUpperCase()}] ${bug.name}\n`;
-      textToCopy += `   Category: ${bug.category}\n`;
-      textToCopy += `   Error: ${bug.error}\n`;
-      if (bug.description) {
-        textToCopy += `   Details: ${bug.description}\n`;
-      }
-      textToCopy += `   Status: ${bug.resolved ? 'Resolved' : 'Open'}\n\n`;
+    const isFail = (t) => t.checkStatus === 'fail' || t.status === 'failed';
+    const isWarn = (t) => t.checkStatus === 'warn' || t.status === 'warn';
+    const failed = latestResults.testCases.filter(isFail);
+    const warned = latestResults.testCases.filter(isWarn);
+    const summary = latestResults.checklistSummary;
+
+    if (failed.length === 0 && (!includeWarns || warned.length === 0)) {
+      toastError('No failures to copy', { module: MODULE.SYSTEM });
+      return;
+    }
+
+    let text = 'QA Testing Report\n';
+    text += `${'='.repeat(40)}\n`;
+    text += `Run: ${latestResults.testRunId || 'latest'}\n`;
+    if (summary?.total) {
+      text += `Checklist: ${summary.pass} pass · ${summary.fail} fail · ${summary.warn} warn · ${summary.skip} skip\n`;
+    }
+    text += `Failures: ${failed.length}\n\n`;
+
+    const byCategory = {};
+    for (const t of failed) {
+      const cat = t.category || 'other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(t);
+    }
+
+    Object.entries(byCategory).forEach(([cat, items]) => {
+      text += `--- ${PRE_DEPLOY_LABELS[cat] || cat} (${items.length}) ---\n\n`;
+      items.forEach((c, i) => { text += formatCheckLine(c, i); });
     });
 
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      toastSuccess('Error report copied to clipboard', { module: MODULE.SYSTEM });
-    }).catch(err => {
+    if (includeWarns && warned.length > 0) {
+      text += `--- Warnings (${warned.length}) ---\n\n`;
+      warned.forEach((c, i) => { text += formatCheckLine(c, i); });
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      toastSuccess(`Copied ${failed.length} failure(s)${includeWarns && warned.length ? ` + ${warned.length} warn` : ''}`, { module: MODULE.SYSTEM });
+    }).catch((err) => {
       toastError('Failed to copy to clipboard', { module: MODULE.SYSTEM });
       console.error(err);
     });
@@ -237,6 +386,27 @@ const QATestingPage = () => {
           <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <Shield className="text-indigo-500" /> Pre-Deployment Checklist
           </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            {summary.fail > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCopyErrors(false)}
+                  className="text-gray-600 dark:text-gray-300"
+                >
+                  <Copy size={14} className="mr-1.5" /> Copy failures
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCopyErrors(true)}
+                  className="text-gray-600 dark:text-gray-300"
+                >
+                  <Copy size={14} className="mr-1.5" /> Copy failures + warns
+                </Button>
+              </>
+            )}
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
             <span className="px-2 py-1 rounded-full border border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
               {summary.pass} pass
@@ -250,6 +420,7 @@ const QATestingPage = () => {
             <span className="px-2 py-1 rounded-full border border-gray-500/30 text-gray-600 dark:text-gray-400">
               {summary.skip} skip
             </span>
+          </div>
           </div>
         </div>
 
@@ -339,14 +510,24 @@ const QATestingPage = () => {
           <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             <Bug className="text-rose-500" /> Discovered Bugs ({bugs.length})
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyErrors}
-            className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            <Copy size={16} className="mr-2" /> Copy Report
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleCopyErrors(false)}
+              className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Copy size={16} className="mr-2" /> Copy failures
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleCopyErrors(true)}
+              className="text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <Copy size={16} className="mr-2" /> + warns
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4">
@@ -433,7 +614,9 @@ const QATestingPage = () => {
                     <RefreshCw className="animate-spin text-blue-500" size={24} />
                     Agent {selectedAgent.name} is Testing...
                   </h3>
-                  <p className="text-sm text-blue-600 dark:text-blue-400">Executing multi-layered autonomous test suite.</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    Live probe feed below — method, URL, body, and file targets update every ~0.8s.
+                  </p>
                 </div>
                 <Button variant="outline" onClick={() => cancelMutation.mutate(currentRun.testRunId || currentRun._id)} className="text-rose-500 border-rose-200 hover:bg-rose-50">
                   <XCircle size={16} className="mr-2" /> Cancel Test
@@ -444,7 +627,7 @@ const QATestingPage = () => {
                 <div>
                   <div className="flex flex-col sm:flex-row sm:justify-between text-sm font-bold mb-2 text-blue-800 dark:text-blue-200 gap-2 sm:gap-0">
                     <span>Overall Progress: {currentRun.progress?.current || 0}%</span>
-                    <span>{currentRun.pagesTestedCount || 0} / {currentRun.progress?.totalPages || 0} test cases</span>
+                    <span>{currentRun.pagesTestedCount || 0} completed · {currentRun.progress?.totalPages || 0} total</span>
                   </div>
                   <div className="w-full bg-blue-100 dark:bg-blue-900/50 rounded-full h-4 overflow-hidden">
                     <div
@@ -454,12 +637,26 @@ const QATestingPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-blue-800/50 p-4 rounded-xl">
-                  <div className="text-xs uppercase font-bold text-blue-500 tracking-wider mb-1">Currently Testing</div>
-                  <div className="text-blue-900 dark:text-blue-100 font-mono text-sm">
-                    {currentRun.progress?.currentPage || 'Initializing framework...'}
+                <div className="bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-blue-800/50 p-4 rounded-xl space-y-3">
+                  <div>
+                    <div className="text-xs uppercase font-bold text-blue-500 tracking-wider mb-1">Currently Testing</div>
+                    <div className="text-blue-900 dark:text-blue-100 font-mono text-sm font-semibold">
+                      {currentRun.progress?.currentPage || 'Initializing framework...'}
+                    </div>
+                    {currentRun.progress?.liveActivity?.checklistId && (
+                      <div className="text-[10px] font-mono text-[var(--color-text-muted)] mt-1">
+                        id: {currentRun.progress.liveActivity.checklistId}
+                      </div>
+                    )}
                   </div>
+                  <LiveProbePanel currentRun={currentRun} />
                 </div>
+
+                {currentRun.errorDetails?.message && (
+                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3 rounded-xl text-sm text-red-700 dark:text-red-300">
+                    Run error ({currentRun.errorDetails.phase}): {currentRun.errorDetails.message}
+                  </div>
+                )}
               </div>
             </div>
           ) : (

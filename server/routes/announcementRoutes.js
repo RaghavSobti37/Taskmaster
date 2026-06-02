@@ -267,7 +267,10 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     if (!canManage(req.user)) return res.status(403).json({ error: 'Not authorized' });
-    const { title, message, audienceType, recipients, projectId, sendEmail = true, expiresAt, ctaText, ctaLink } = req.body;
+    const { sanitizeName } = require('../utils/sanitizer');
+    let { title, message, audienceType, recipients, projectId, sendEmail = true, expiresAt, ctaText, ctaLink } = req.body;
+    title = sanitizeName(title);
+    message = sanitizeName(message);
     if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
     if (audienceType === 'selected' && (!Array.isArray(recipients) || recipients.length === 0)) {
       return res.status(400).json({ error: 'Select at least one user for selected audience' });

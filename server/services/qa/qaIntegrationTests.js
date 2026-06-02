@@ -14,6 +14,7 @@ const {
   request,
   QA_API_BASE,
 } = require('./qaApiClient');
+const { PLANNED_INTEGRATION_DEFS, PLANNED_RUNNERS } = require('./qaIntegrationRunners');
 
 function integrationCase(def, runFn) {
   return {
@@ -21,6 +22,15 @@ function integrationCase(def, runFn) {
     category: def.category || 'business-logic',
     severity: def.sev || 'high',
     checklistId: def.id,
+    qaMeta: {
+      kind: 'integration',
+      action: 'Live API + database integration test',
+      checklistId: def.id,
+      category: def.category || 'business-logic',
+      method: def.method,
+      url: def.url,
+      payloadHint: def.payloadHint,
+    },
     test: async () => {
       if (!(await isApiReachable())) {
         return skipProbeResult(def, `API not reachable at ${QA_API_BASE()}`);
@@ -346,18 +356,20 @@ async function runUnsubscribeWiring(def, ctx) {
     'utf8'
   ).catch(() => '');
   const ok =
-    trackJs.includes('unsubscribed') &&
-    (trackJs.includes('Contact') || trackJs.includes('contact'));
+    trackJs.includes('Lead.updateMany') &&
+    /Contact\.updateMany/.test(trackJs) &&
+    trackJs.includes('unsubscribed');
   return ok
-    ? probePass(def, 'track.js references Contact + unsubscribed fields')
+    ? probePass(def, 'track.js dual-writes Lead + Contact on unsubscribe')
     : probeFail(def, 'Unsubscribe dual-write not evident in track.js');
 }
 
 async function runReconcileIdempotent(def, ctx) {
   const { adminUser } = await resolveTestUsers();
   const before = await Contact.countDocuments();
-  const r1 = await request(def, { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {} });
-  const r2 = await request(def, { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {} });
+  const reconcileReq = { method: 'POST', url: '/api/data-hub/reconcile', user: adminUser, data: {}, timeout: 180000 };
+  const r1 = await request({ ...def, timeout: 180000 }, reconcileReq);
+  const r2 = await request({ ...def, timeout: 180000 }, reconcileReq);
   if (r1.status === 403 || r2.status === 403) {
     return skipProbeResult(def, 'Data Hub reconcile requires admin — test user not admin');
   }
@@ -380,56 +392,19 @@ const RUNNERS = {
   'int-lead-field-audit': runLeadAudit,
   'int-unsubscribe-propagates': runUnsubscribeWiring,
   'sync-idempotent-reconcile': runReconcileIdempotent,
+  ...PLANNED_RUNNERS,
 };
 
-/** Placeholder cases for plan coverage — marked skip until runner implemented */
-function placeholderCase(def) {
-  return integrationCase(def, async (d) =>
-    skipProbeResult(d, 'Runner not yet implemented — tracked in QA v2 plan')
-  );
-}
-
-const PLANNED_PLACEHOLDERS = [
-  { id: 'sm-review-rollback', title: 'Assigner rolls back task from in-review', sev: 'high' },
-  { id: 'sm-invoice-submit-pending', title: 'Invoice submission sets approvalStatus=pending', sev: 'high' },
-  { id: 'sm-invoice-reject-reason', title: 'Invoice rejection stores reason field', sev: 'medium' },
-  { id: 'sm-project-complete-count', title: 'Task completion increments completedTaskCount', sev: 'high' },
-  { id: 'sm-project-delete-count', title: 'Task deletion decrements project.totalTasksCount', sev: 'medium' },
-  { id: 'sm-project-member-role-enforced', title: 'Project viewer role blocks mutation', sev: 'medium' },
-  { id: 'sm-lead-lock-concurrent', title: 'Concurrent lead edits trigger optimistic lock', sev: 'high' },
-  { id: 'sm-lead-lock-expires', title: 'Lead lock releases after TTL', sev: 'medium' },
-  { id: 'int-task-complete-xp', title: 'Task completion triggers XP award chain', sev: 'critical' },
-  { id: 'int-lead-captured-xp', title: 'CRM lead creation queues LEAD_CAPTURED XP', sev: 'high' },
-  { id: 'int-xp-leaderboard-reflect', title: 'XP award reflects in leaderboard', sev: 'high' },
-  { id: 'int-level-up-threshold', title: 'User level increments at XP threshold', sev: 'medium' },
-  { id: 'int-task-assign-notify', title: 'Task assignment creates notification', sev: 'high' },
-  { id: 'int-mention-notify', title: '@mention notifies user', sev: 'high' },
-  { id: 'int-review-submit-notify', title: 'In-review notifies assigner', sev: 'high' },
-  { id: 'int-review-approve-notify', title: 'Review approval notifies assignee', sev: 'medium' },
-  { id: 'int-lead-syncs-to-contact', title: 'Lead syncs to Contact.inCRM', sev: 'high' },
-  { id: 'int-exly-syncs-to-contact', title: 'ExlyBooking syncs to Contact.inExly', sev: 'high' },
-  { id: 'int-mail-open-contact-sync', title: 'MailEvent open sets Contact.inMailer', sev: 'medium' },
-  { id: 'int-multiinlet-flag-set', title: 'Multi-inlet Contact gets isMultiInlet=true', sev: 'medium' },
-  { id: 'int-task-mutation-logged', title: 'Task mutation creates Log entry', sev: 'medium' },
-  { id: 'int-bug-task-correct-project', title: 'Bug report lands in Tech Stack project', sev: 'medium' },
-  { id: 'int-campaign-stats-accurate', title: 'Campaign stats match MailEvents', sev: 'high' },
-  { id: 'int-attendance-weekend-leave', title: 'Saturday attendance classified as leave', sev: 'medium' },
-  { id: 'int-booked-call-full-flow', title: 'Book-a-call webhook full pipeline', sev: 'high' },
-  { id: 'sync-lead-csv-dedup-email', title: 'CSV import deduplicates by email', sev: 'critical' },
-  { id: 'sync-lead-csv-dedup-phone', title: 'CSV import deduplicates by phone', sev: 'critical' },
-  { id: 'sync-tsc-data-normalized', title: 'TSC import normalizes email/name', sev: 'high' },
-  { id: 'sync-exly-webhook-booking', title: 'Exly webhook creates booking + Contact', sev: 'high' },
-  { id: 'sync-bookedcall-full-flow', title: 'Book-a-call webhook 4-step pipeline', sev: 'critical' },
-  { id: 'sync-mail-event-no-hardcode', title: 'MailEvent displayCity not hardcoded (LOCKED)', sev: 'critical' },
-  { id: 'sync-unsubscribe-dual-write', title: 'Unsubscribe dual-write Lead + Contact', sev: 'critical' },
-  { id: 'sync-folder-count-match', title: 'Data Hub folder counts match Contact', sev: 'high' },
-  { id: 'sync-multiinlet-count-accurate', title: 'inletCount reflects active inlets', sev: 'high' },
-];
+const ALL_INTEGRATION_DEFS = [...INTEGRATION_DEFS, ...PLANNED_INTEGRATION_DEFS];
 
 async function buildIntegrationTestCases() {
-  const implemented = INTEGRATION_DEFS.map((def) => {
+  return ALL_INTEGRATION_DEFS.map((def) => {
     const runner = RUNNERS[def.id];
-    if (!runner) return placeholderCase(def);
+    if (!runner) {
+      return integrationCase(def, async (d) =>
+        skipProbeResult(d, `No runner registered for ${d.id}`)
+      );
+    }
     return integrationCase(def, async (d, ctx) => {
       const result = await runner(d, ctx);
       if (result.artifacts) return result;
@@ -437,9 +412,11 @@ async function buildIntegrationTestCases() {
       return result;
     });
   });
-
-  const placeholders = PLANNED_PLACEHOLDERS.map(placeholderCase);
-  return [...implemented, ...placeholders];
 }
 
-module.exports = { buildIntegrationTestCases, INTEGRATION_DEFS, PLANNED_PLACEHOLDERS };
+module.exports = {
+  buildIntegrationTestCases,
+  INTEGRATION_DEFS,
+  PLANNED_INTEGRATION_DEFS,
+  ALL_INTEGRATION_DEFS,
+};

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { StickyNote, Save, Trash2 } from 'lucide-react';
 import { Card, Button } from '../ui';
-import ProjectSelect from '../forms/ProjectSelect';
+import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
 import {
   useUserNotes,
   useCreateNote,
@@ -28,19 +28,24 @@ const NotesPanel = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [workspace, setWorkspace] = useState('General');
 
   const resetComposer = () => {
     setEditingId(null);
     setTitle('');
     setContent('');
     setProjectId('');
+    setWorkspace('General');
   };
 
   const loadNote = (note) => {
+    const pid = note.projectId?._id || note.projectId || '';
+    const project = projects.find((p) => p._id === pid);
     setEditingId(note._id);
     setTitle(note.title || '');
     setContent(note.content || '');
-    setProjectId(note.projectId?._id || note.projectId || '');
+    setProjectId(pid);
+    setWorkspace(project?.workspace || 'General');
   };
 
   const handleSave = () => {
@@ -73,14 +78,19 @@ const NotesPanel = () => {
           placeholder="Title (optional)"
           className="w-full text-xs font-bold bg-transparent border-b border-[var(--color-bg-border)] py-1 outline-none"
         />
-        <ProjectSelect
+        <WorkspaceProjectFields
           projects={projects}
-          value={projectId}
-          onChange={setProjectId}
-          label=""
-          placeholder="Select project"
-          allowEmpty
-          emptyLabel="Select project"
+          workspace={workspace}
+          projectId={projectId}
+          onChange={({ workspace: ws, projectId: pid }) => {
+            setWorkspace(ws);
+            setProjectId(pid);
+          }}
+          layout="inline"
+          allowEmptyProject
+          emptyProjectLabel="Select project"
+          workspaceLabel=""
+          projectLabel=""
         />
         <textarea
           value={content}

@@ -16,6 +16,12 @@ const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
 const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
 const { buildIntegrationTestCases } = require('./qa/qaIntegrationTests');
 const { QA_API_BASE } = require('./qa/qaApiClient');
+const {
+  setQaActivityHook,
+  reportQaActivity,
+  inferQaMeta,
+  formatActivitySummary,
+} = require('./qa/qaActivity');
 
 const PREDEPLOY_CATEGORIES = new Set([
   'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
@@ -34,24 +40,25 @@ class QATestingService {
     this.completedTestCases = 0;
   }
 
+  async initTestRun() {
+    this.testRun = await QATestRun.create({
+      projectId: this.projectId,
+      initiatedBy: this.userId,
+      status: 'pending',
+      testIdentity: {
+        name: this.config.testAgentName || 'QA Agent',
+        role: this.config.testRole || 'user',
+        permissions: this.config.permissions || [],
+      },
+    });
+    this.testRunId = this.testRun._id;
+    logger.info('QA', `Test run created: ${this.testRunId}`);
+    return this.testRunId;
+  }
+
   async startTesting() {
     try {
-      // Create test run record
-      this.testRun = await QATestRun.create({
-        projectId: this.projectId,
-        initiatedBy: this.userId,
-        status: 'pending',
-        testIdentity: {
-          name: this.config.testAgentName || 'QA Agent',
-          role: this.config.testRole || 'user',
-          permissions: this.config.permissions || []
-        }
-      });
-
-      this.testRunId = this.testRun._id;
-      logger.info('QA', `Test run created: ${this.testRunId}`);
-
-      // Begin testing
+      await this.initTestRun();
       await this.executeTests();
       
       return { success: true, testRunId: this.testRunId };
@@ -73,27 +80,49 @@ class QATestingService {
   }
 
   async executeTests() {
+    process.env.QA_SYNC_GAMIFICATION = 'true';
     try {
+      await QATestRun.findByIdAndUpdate(this.testRunId, {
+        status: 'in-progress',
+        startedAt: new Date(),
+        testCases: [],
+        activityLog: [],
+        progress: {
+          current: 0,
+          currentPage: 'Discovering test cases…',
+          totalPages: 0,
+          liveActivity: {
+            phase: 'discovery',
+            action: 'Building checklist (pre-deploy, probes, integration, page scans)',
+            startedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+        pagesTestedCount: 0,
+      });
+
       const testCases = await this.getTestCases();
       this.totalTestCases = testCases.length;
 
-      // Initialize test cases in the database (start empty, push atomically)
-      await QATestRun.findByIdAndUpdate(this.testRunId, { 
-        status: 'in-progress', 
-        startedAt: new Date(),
-        testCases: [],
-        progress: { current: 0, currentPage: 'Starting...', totalPages: testCases.length },
-        pagesTestedCount: 0
+      await QATestRun.findByIdAndUpdate(this.testRunId, {
+        progress: {
+          current: 0,
+          currentPage: 'Starting test execution…',
+          totalPages: testCases.length,
+          liveActivity: {
+            phase: 'ready',
+            action: `${testCases.length} tests queued`,
+            updatedAt: new Date(),
+          },
+        },
       });
 
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
         
-        // Update progress
         const progress = Math.round((i / testCases.length) * 100);
-        await this.updateProgress(progress, testCase.name, i, testCases.length);
+        await this.updateProgress(progress, testCase, i, testCases.length);
 
-        // Execute test
         await this.runTestCase(testCase, i);
 
         // Broadcast update (global instead of project specific)
@@ -134,15 +163,29 @@ class QATestingService {
         completedAt: new Date()
       });
       throw error;
+    } finally {
+      delete process.env.QA_SYNC_GAMIFICATION;
     }
   }
 
   async getTestCases() {
-    const preDeployCases = await buildPreDeploymentTestCases();
+    const reportDiscovery = (message) => this.setLiveActivity({
+      phase: 'discovery',
+      action: message,
+      testName: message,
+      updatedAt: new Date(),
+    });
+
+    await reportDiscovery('Loading pre-deployment checklist…');
+    const preDeployCases = await buildPreDeploymentTestCases(reportDiscovery);
+    await reportDiscovery(`Loaded ${preDeployCases.length} pre-deploy cases`);
     const extendedProbes = await buildExtendedProbeTestCases();
+    await reportDiscovery(`Loaded ${extendedProbes.length} HTTP probes`);
     const integrationCases = await buildIntegrationTestCases();
+    await reportDiscovery(`Loaded ${integrationCases.length} integration tests`);
     const targetDir = path.join(__dirname, '../../client/src/pages');
     const testCases = [...preDeployCases, ...extendedProbes, ...integrationCases];
+    await reportDiscovery('Scanning client pages for dynamic probes…');
     
     // Recursive directory reader
     const walk = async (dir) => {
@@ -155,15 +198,33 @@ class QATestingService {
           const content = await fs.readFile(fullPath, 'utf8');
           const routeName = file.name;
           
+          const { inferPageScanEndpoint } = require('./qa/qaActivity');
+          const pageMeta = {
+            kind: 'page-scan',
+            action: 'Dynamic pentest from page file heuristics',
+            target: routeName,
+            ...inferPageScanEndpoint(routeName),
+          };
+
           testCases.push({
             name: `[${routeName}] Dynamic QA Scan`,
             category: 'backend',
             severity: 'high',
+            qaMeta: pageMeta,
             test: async () => {
               const errors = [];
               const routeLower = routeName.toLowerCase();
               let payloadMatrix = {};
-              let endpoint = '/api/system/ping';
+              let endpoint = '/api/general/ping';
+              let httpMethod = 'POST';
+
+              reportQaActivity({
+                phase: 'http',
+                method: pageMeta.method,
+                url: `${QA_API_BASE()}${pageMeta.url}`,
+                requestBody: pageMeta.payloadHint,
+                message: `Page scan probe for ${routeName}`,
+              });
 
               // 1. True Authentication (JWT Injection)
               const testRole = this.config.testRole || 'user';
@@ -178,11 +239,14 @@ class QATestingService {
                 const lead = await Lead.findOne();
                 if(lead) dynamicId = lead._id;
                 endpoint = `/api/crm/leads/${dynamicId}`;
-                payloadMatrix = { status: 'won' }; // Intentionally missing tracking props
+                httpMethod = 'PUT';
+                payloadMatrix = { status: 'won' };
                 const probeUrl = `${QA_API_BASE()}${endpoint}`;
-                
+                reportQaActivity({ method: 'PUT', url: probeUrl, requestBody: JSON.stringify(payloadMatrix) });
+
                 try {
                   const resCRM = await axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  reportQaActivity({ httpStatus: resCRM.status, message: `PUT ${endpoint} → ${resCRM.status}` });
                   if (resCRM.status === 200 || resCRM.status === 201) {
                     errors.push({
                       error: `Automation Breach! Lead mutated without audit/tracking integrity on ${endpoint}.`,
@@ -197,11 +261,14 @@ class QATestingService {
                 const doc = await FinanceDocument.findOne({ category: 'invoice', approvalStatus: 'pending' }) || await FinanceDocument.findOne();
                 if(doc) dynamicId = doc._id;
                 endpoint = `/api/finance/${dynamicId}/approve`;
+                httpMethod = 'PATCH';
                 payloadMatrix = { amount: 5000, status: 'approved', tenantId: 'spoofed_tenant_999' };
                 const probeUrl = `${QA_API_BASE()}${endpoint}`;
-                
+                reportQaActivity({ method: 'PATCH', url: probeUrl, requestBody: JSON.stringify(payloadMatrix) });
+
                 try {
                   const resFin = await axios.patch(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  reportQaActivity({ httpStatus: resFin.status, message: `PATCH ${endpoint} → ${resFin.status}` });
                   if (resFin.status !== 403) {
                     errors.push({
                       error: `Multi-Tenant Leakage! Finance mutation bypassed tenant isolation (Expected 403, got ${resFin.status}) on ${endpoint}.`,
@@ -216,15 +283,18 @@ class QATestingService {
                 const project = await Project.findOne();
                 if(project) dynamicId = project._id;
                 endpoint = `/api/projects/${dynamicId}`;
+                httpMethod = 'PUT';
                 payloadMatrix = { visibility: 'public', assignedUsers: [testUser._id] };
                 const probeUrl = `${QA_API_BASE()}${endpoint}`;
-                
+                reportQaActivity({ method: 'PUT', url: probeUrl, requestBody: JSON.stringify(payloadMatrix) });
+
                 try {
                   const [resP1, resP2] = await Promise.all([
                     axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true }),
                     axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true })
                   ]);
                   
+                  reportQaActivity({ httpStatus: resP1.status, message: `PUT ${endpoint} (×2) → ${resP1.status}/${resP2.status}` });
                   if (resP1.status === 200 && resP2.status === 200) {
                     errors.push({
                       error: `Concurrency Breach! Project allowed overlapping identical mutations without version conflict (__v) on ${endpoint}.`,
@@ -236,11 +306,14 @@ class QATestingService {
                 } catch(err) {}
               } else {
                 endpoint = '/api/general/ping';
+                httpMethod = 'POST';
                 payloadMatrix = { data: 'test' };
                 const probeUrl = `${QA_API_BASE()}${endpoint}`;
-                
+                reportQaActivity({ method: 'POST', url: probeUrl, requestBody: JSON.stringify(payloadMatrix) });
+
                 try {
                   const resPing = await axios.post(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  reportQaActivity({ httpStatus: resPing.status, message: `POST ${endpoint} → ${resPing.status}` });
                   if (resPing.status === 500) {
                      errors.push({
                        error: `State Desync! Unhandled server rejection (500) instead of 400 on ${endpoint}.`,
@@ -280,11 +353,58 @@ class QATestingService {
     return testCases;
   }
 
+  async setLiveActivity(patch) {
+    const now = new Date();
+    const liveActivity = { ...patch, updatedAt: now };
+    if (liveActivity.startedAt && !liveActivity.elapsedMs) {
+      liveActivity.elapsedMs = now - new Date(liveActivity.startedAt);
+    }
+    await QATestRun.findByIdAndUpdate(this.testRunId, {
+      $set: { 'progress.liveActivity': liveActivity },
+    });
+  }
+
+  async appendActivityLog(entry) {
+    await QATestRun.findByIdAndUpdate(this.testRunId, {
+      $push: {
+        activityLog: {
+          $each: [entry],
+          $slice: -40,
+        },
+      },
+    });
+  }
+
   async runTestCase(testCase, index) {
+    const meta = inferQaMeta(testCase);
+    const startedAt = new Date();
+    await this.setLiveActivity({
+      phase: 'running',
+      testName: testCase.name,
+      checklistId: testCase.checklistId || meta.checklistId,
+      category: testCase.category || meta.category,
+      kind: meta.kind,
+      action: meta.action,
+      method: meta.method,
+      url: meta.url,
+      requestBody: meta.payloadHint || meta.requestBody,
+      target: meta.target,
+      startedAt,
+    });
+
+    setQaActivityHook((patch) => {
+      this.setLiveActivity({
+        phase: patch.phase || 'running',
+        testName: testCase.name,
+        checklistId: testCase.checklistId,
+        kind: meta.kind,
+        ...patch,
+        startedAt,
+      }).catch(() => {});
+    });
+
     try {
       const startTime = Date.now();
-      
-      // Execute test
       const result = await testCase.test();
       const duration = Date.now() - startTime;
       const checkStatus = result.checkStatus || (result.passed ? 'pass' : 'fail');
@@ -346,12 +466,51 @@ class QATestingService {
         });
       }
 
+      const logEntry = {
+        at: new Date(),
+        phase: 'done',
+        testName: testCase.name,
+        checklistId: testCase.checklistId || result.checklistId,
+        kind: meta.kind,
+        summary: formatActivitySummary({ ...meta, method: meta.method, url: meta.url, requestBody: meta.payloadHint }),
+        method: meta.method,
+        url: meta.url,
+        httpStatus: result.httpStatus,
+        outcome: status,
+        durationMs: duration,
+        message: result.description || result.message || result.error || status,
+      };
+      await this.appendActivityLog(logEntry);
+      await this.setLiveActivity({
+        phase: 'done',
+        testName: testCase.name,
+        outcome: status,
+        message: logEntry.message,
+        httpStatus: result.httpStatus,
+        startedAt,
+        elapsedMs: duration,
+      });
+
       logger.info('QA', `Test case executed: ${testCase.name} - ${status}`, { duration });
-      
-      // Intentional mechanical delay to stabilize React Query refetch loops and UI progress bar
-      await new Promise(resolve => setTimeout(resolve, 200));
+
+      await new Promise((resolve) => setTimeout(resolve, 80));
     } catch (error) {
       logger.error('QA', `Error running test case: ${testCase.name}`, { error: error.message });
+      await this.appendActivityLog({
+        at: new Date(),
+        phase: 'error',
+        testName: testCase.name,
+        kind: meta.kind,
+        outcome: 'failed',
+        message: error.message,
+      });
+      await this.setLiveActivity({
+        phase: 'error',
+        testName: testCase.name,
+        outcome: 'failed',
+        message: error.message,
+        startedAt,
+      });
       await QATestRun.updateOne(
         { _id: this.testRunId },
         { 
@@ -365,7 +524,9 @@ class QATestingService {
           } 
         }
       );
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    } finally {
+      setQaActivityHook(null);
     }
   }
 
@@ -432,6 +593,12 @@ class QATestingService {
           } else if (artifact.type === 'finance') {
             await FinanceDocument.findByIdAndDelete(artifact.id);
             cleanupResults.deleted.finance = (cleanupResults.deleted.finance || 0) + 1;
+          } else if (artifact.type === 'project') {
+            await Project.findByIdAndDelete(artifact.id);
+            cleanupResults.deleted.projects = (cleanupResults.deleted.projects || 0) + 1;
+          } else if (artifact.type === 'lead') {
+            await Lead.findByIdAndDelete(artifact.id);
+            cleanupResults.deleted.leads = (cleanupResults.deleted.leads || 0) + 1;
           }
         } catch (error) {
           cleanupResults.errors.push(`Failed to delete ${artifact.type} ${artifact.id}: ${error.message}`);
@@ -446,15 +613,26 @@ class QATestingService {
     }
   }
 
-  async updateProgress(current, currentPage, completed, total) {
+  async updateProgress(current, testCase, completed, total) {
     try {
+      const name = typeof testCase === 'string' ? testCase : testCase?.name;
+      const meta = typeof testCase === 'object' ? inferQaMeta(testCase) : {};
       await QATestRun.findByIdAndUpdate(this.testRunId, {
-        progress: {
-          current,
-          currentPage,
-          totalPages: total
+        $set: {
+          'progress.current': current,
+          'progress.currentPage': name,
+          'progress.totalPages': total,
+          'progress.liveActivity.testName': name,
+          'progress.liveActivity.checklistId': testCase?.checklistId,
+          'progress.liveActivity.kind': meta.kind,
+          'progress.liveActivity.action': meta.action || 'Queued — starting next test',
+          'progress.liveActivity.target': meta.target,
+          'progress.liveActivity.method': meta.method,
+          'progress.liveActivity.url': meta.url,
+          'progress.liveActivity.phase': 'queued',
+          'progress.liveActivity.updatedAt': new Date(),
         },
-        pagesTestedCount: completed
+        pagesTestedCount: completed,
       });
     } catch (error) {
       logger.error('QA', 'Error updating progress', { error: error.message });

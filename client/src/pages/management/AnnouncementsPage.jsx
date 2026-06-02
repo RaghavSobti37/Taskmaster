@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Megaphone } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Input, Button } from '../../components/ui';
+import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
@@ -16,6 +17,7 @@ const AnnouncementsPage = () => {
   const [audienceType, setAudienceType] = useState('all');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [projectId, setProjectId] = useState('');
+  const [projectWorkspace, setProjectWorkspace] = useState('General');
   const [sendEmail, setSendEmail] = useState(true);
   const [expiresAt, setExpiresAt] = useState('');
   const [ctaText, setCtaText] = useState('');
@@ -46,6 +48,7 @@ const AnnouncementsPage = () => {
     setMessage('');
     setSelectedUsers([]);
     setProjectId('');
+    setProjectWorkspace('General');
     setExpiresAt('');
     setCtaText('');
     setCtaLink('');
@@ -83,12 +86,16 @@ const AnnouncementsPage = () => {
           )}
 
           {audienceType === 'project' && (
-            <select className="w-full border rounded-lg p-2 bg-transparent" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">Select project</option>
-              {projects.map((p) => (
-                <option key={p._id} value={p._id}>{p.name}</option>
-              ))}
-            </select>
+            <WorkspaceProjectFields
+              projects={projects}
+              workspace={projectWorkspace}
+              projectId={projectId}
+              onChange={({ workspace, projectId: pid }) => {
+                setProjectWorkspace(workspace);
+                setProjectId(pid);
+              }}
+              layout="stacked"
+            />
           )}
 
           <Input

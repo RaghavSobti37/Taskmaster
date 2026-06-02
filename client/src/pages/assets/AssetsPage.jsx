@@ -14,6 +14,7 @@ import {
   GOOGLE_WORKSPACE_SHORTCUTS,
 } from '../../components/assets/assetTypeIcons';
 import ProjectMultiSelect from '../../components/forms/ProjectMultiSelect';
+import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { WorkspaceDot } from '../../components/forms/WorkspaceSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
@@ -44,6 +45,7 @@ const AssetsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [workspaceFilter, setWorkspaceFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -198,13 +200,35 @@ const AssetsPage = () => {
     return `https://docs.google.com/${service.path}/u/${index}/`;
   };
 
+  const workspaceFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Workspaces' },
+      ...workspaces.map((w) => ({ value: w.name, label: w.name })),
+    ],
+    [workspaces]
+  );
+
+  const projectFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Projects' },
+      ...filterProjectsByWorkspace(projects, workspaceFilter).map((p) => ({ value: p._id, label: p.name })),
+    ],
+    [projects, workspaceFilter]
+  );
+
   const filteredAssets = useMemo(() => {
     let list = assets.filter((a) => {
       const matchesSearch = assetMatchesSearch(a, searchTerm, { includeProjectNames: true });
+      const matchesWorkspace = workspaceFilter === 'all'
+        || (a.projectIds || []).some((p) => {
+          const pid = p._id || p;
+          const project = projects.find((pr) => String(pr._id) === String(pid));
+          return project && String(project.workspace || 'General').toUpperCase() === String(workspaceFilter).toUpperCase();
+        });
       const matchesProject = projectFilter === 'all'
         || (a.projectIds || []).some((p) => String(p._id || p) === String(projectFilter));
       const matchesType = typeFilter === 'all' || getDetectedType(a) === typeFilter;
-      return matchesSearch && matchesProject && matchesType;
+      return matchesSearch && matchesWorkspace && matchesProject && matchesType;
     });
 
     list = [...list].sort((a, b) => {
@@ -218,11 +242,11 @@ const AssetsPage = () => {
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
     return list;
-  }, [assets, searchTerm, projectFilter, typeFilter, sortBy]);
+  }, [assets, searchTerm, workspaceFilter, projectFilter, typeFilter, sortBy, projects]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, projectFilter, typeFilter, sortBy]);
+  }, [searchTerm, workspaceFilter, projectFilter, typeFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
 
@@ -301,7 +325,17 @@ const AssetsPage = () => {
                       className="w-full sm:!w-44 lg:!w-48"
                     />
                     <NexusDropdown
-                      options={[{ value: 'all', label: 'All Projects' }, ...projects.map((p) => ({ value: p._id, label: p.name }))]}
+                      options={workspaceFilterOptions}
+                      value={workspaceFilter}
+                      onChange={(value) => {
+                        setWorkspaceFilter(value);
+                        setProjectFilter('all');
+                      }}
+                      placeholder="Workspace"
+                      className="flex-1 min-w-[120px] sm:flex-none sm:!w-40"
+                    />
+                    <NexusDropdown
+                      options={projectFilterOptions}
                       value={projectFilter}
                       onChange={setProjectFilter}
                       placeholder="Project"

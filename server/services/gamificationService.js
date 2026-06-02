@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const DailyMission = require('../models/DailyMission');
 const XPAuditLog = require('../models/XPAuditLog');
@@ -84,10 +85,15 @@ class GamificationService {
 
   static async hasAwardForEntity(userId, action, entityKey, entityId) {
     if (!entityId) return false;
+    const idStr = String(entityId);
+    const entityMatch = [{ [`details.${entityKey}`]: entityId }, { [`details.${entityKey}`]: idStr }];
+    if (mongoose.Types.ObjectId.isValid(idStr)) {
+      entityMatch.push({ [`details.${entityKey}`]: new mongoose.Types.ObjectId(idStr) });
+    }
     const existing = await XPAuditLog.findOne({
       userId,
       action,
-      [`details.${entityKey}`]: entityId,
+      $or: entityMatch,
     }).select('_id').lean();
     return Boolean(existing);
   }

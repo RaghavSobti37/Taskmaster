@@ -654,6 +654,18 @@ router.post('/unsubscribe', async (req, res) => {
       { $set: { unsubscribed: true, unsubscribeReason: reason || 'Opt-out', emailStatus: 'Unsubscribed', status: 'inactive' } }
     );
 
+    const Contact = require('../models/Contact');
+    await Contact.updateMany(
+      { email: cleanEmail },
+      {
+        $set: {
+          unsubscribed: true,
+          unsubscribeReason: reason || 'Opt-out',
+          emailStatus: 'Unsubscribed',
+        },
+      }
+    ).setOptions({ bypassTenant: true });
+
     // Sync to HolySheet
     const { syncUnsubscribeToSheet } = require('../services/holySheetService');
     await syncUnsubscribeToSheet({

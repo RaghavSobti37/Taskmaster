@@ -5,7 +5,16 @@ const CRMAudit = require('../models/CRMAudit');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 const CRMConfig = require('../models/CRMConfig');
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
+const {
+  sanitizeName,
+  sanitizeEmail,
+  normalizePhone,
+  sanitizeLocation,
+  escapeRegExp,
+  MAX_NAME_LENGTH,
+  isValidEmail,
+  isValidPhone,
+} = require('../utils/sanitizer');
 const followupCache = require('../services/followupCache');
 const logger = require('../utils/logger');
 const { dispatchEmailPayload } = require('../services/mailDriver');
@@ -220,10 +229,40 @@ exports.getLeads = async (req, res) => {
   }
 };
 
+const normalizeLeadInput = (leadData, res) => {
+  if (leadData.name != null) {
+    leadData.name = sanitizeName(leadData.name);
+    if (!leadData.name) {
+      res.status(400).json({ error: 'Invalid name' });
+      return false;
+    }
+    if (leadData.name.length > MAX_NAME_LENGTH) {
+      res.status(400).json({ error: `Name must be at most ${MAX_NAME_LENGTH} characters` });
+      return false;
+    }
+  }
+  if (leadData.email != null && leadData.email !== '') {
+    leadData.email = sanitizeEmail(leadData.email);
+    if (!isValidEmail(leadData.email)) {
+      res.status(400).json({ error: 'Invalid email format' });
+      return false;
+    }
+  }
+  if (leadData.phone != null && leadData.phone !== '') {
+    leadData.phone = normalizePhone(leadData.phone);
+    if (!isValidPhone(leadData.phone)) {
+      res.status(400).json({ error: 'Invalid phone number' });
+      return false;
+    }
+  }
+  if (leadData.city && typeof leadData.city === 'string') leadData.city = sanitizeLocation(leadData.city);
+  return true;
+};
+
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
-    if (leadData.city && typeof leadData.city === 'string') leadData.city = sanitizeLocation(leadData.city);
+    if (!normalizeLeadInput(leadData, res)) return;
 
     // Duplicate check
     const filter = { $or: [] };
@@ -234,9 +273,10 @@ exports.createLead = async (req, res) => {
     if (filter.$or.length > 0) {
       const existing = await Lead.findOne(filter);
       if (existing) {
-        Object.assign(existing, leadData);
-        await existing.save();
-        return res.json(existing);
+        return res.status(409).json({
+          error: 'A lead with this phone or email already exists',
+          duplicateOf: existing._id,
+        });
       }
     }
 
@@ -245,10 +285,11 @@ exports.createLead = async (req, res) => {
     }
     const lead = await Lead.create(leadData);
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
-    queueGamificationEvent('LEAD_CAPTURED', {
+    const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
       userId: req.user._id,
       lead: { _id: lead._id },
     });
+    if (process.env.QA_SYNC_GAMIFICATION === 'true') await xpJob;
     res.status(201).json(lead);
   } catch (error) {
     logger.error('crmController', 'Create lead ', { error: error.message || error });
@@ -265,7 +306,7 @@ exports.updateLead = async (req, res) => {
       return res.status(400).json({ error: 'No valid tracking/audit properties provided for mutation' });
     }
 
-    if (updates.city && typeof updates.city === 'string') updates.city = sanitizeLocation(updates.city);
+    if (!normalizeLeadInput(updates, res)) return;
 
     // Fetch the current lead to check if this is a first call
     const currentLead = await Lead.findById(id);

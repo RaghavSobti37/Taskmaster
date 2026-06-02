@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.47-126d5e?style=flat-square" alt="Version 1.7.47" />
+  <img src="https://img.shields.io/badge/version-1.7.48-126d5e?style=flat-square" alt="Version 1.7.48" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -422,10 +422,30 @@ CoreKnot is engineered to survive production strain with a rigorous multi-tiered
 
 ## 🧪 Global Autonomous QA System & Auditing
 
-CoreKnot features a project-wide autonomous auditing infrastructure powered by React Doctor and Omni-Security verification models:
-* **AST & Static Analysis:** Checks all routed page files (`client/src/pages`) for unsafe property chains (`row.property` access missing optional chaining) and unmemoized event handler declarations (`const handleSomething = ...` missing `useCallback`).
-* **Swarm Probing:** Automatically identifies target endpoints inside component files and executes unauthenticated API probes to detect privilege escalation vectors.
-* **CLI Testing Harness:** Integrated test scripts (`server/scripts/runQAScan.js`) compile AST patterns and run automated sweeps to ensure clean, 100% bug-free reports before production deployment.
+CoreKnot ships a **209-case** pre-deployment QA engine (Admin → QA Testing) that runs static checks, live HTTP security probes, integration workflows, and per-page AST scans before release.
+
+| Suite | Scope | Examples |
+| --- | --- | --- |
+| **Pre-deploy checklist** | Static file/code audits | Auth cookies, tenant plugins, webhook HMAC, CORS, indexes |
+| **Security live probes** | Real HTTP against local API | Login omits JWT body, unsigned webhooks rejected, finance tenant spoof blocked |
+| **Sanitization & edge** | Input validation | XSS in task titles, NoSQL login operators, 413 oversized bodies, per-email login rate limits |
+| **Integration (45)** | End-to-end business logic | Task review → XP, lead lock 423, Data Hub reconcile, unsubscribe dual-write |
+| **Page scans** | Every `client/src/pages` route | Optional chaining, `useCallback` heuristics, endpoint exposure |
+
+**Operator UX (`QATestingPage.jsx`):** Live probe panel (method, URL, payload), grouped failure copy, checklist progress, and realtime Socket.IO updates.
+
+**CLI runners:**
+
+```bash
+cd server
+# Full scan via running API (set QA_ADMIN_USER_ID or use login)
+node scripts/triggerQaHttp.js
+
+# Direct DB scan (uses QA_SCAN_MONGODB_URI or MONGODB_URI)
+node scripts/runQAScan.js
+```
+
+During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards complete before integration assertions (production traffic unchanged).
 
 ---
 
@@ -445,6 +465,16 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.48 — QA v2 Engine, Security Hardening & Gamification Test Sync
+
+- **QA backend v2:** Suites 3–8 — `qaSuite3Static.js`, `qaExtendedProbes.js`, `qaIntegrationRunners.js` (~45 integration cases), `qaActivity.js` live logging; `triggerQaHttp.js` for CI/local HTTP runs.
+- **QA UI:** `QATestingPage.jsx` live probe panel, copy-failures actions, activity log on `QATestRun`.
+- **Security fixes:** Webhook HMAC rejects missing signatures; CRM duplicate leads return **409**; task/announcement sanitization; unsubscribe dual-writes `Contact`; finance tenant spoof probes; login rate limit keyed per **email** (not shared IP).
+- **Gamification QA:** `QA_SYNC_GAMIFICATION` waits on BullMQ during scans; `hasAwardForEntity` matches string/ObjectId entity ids.
+- **Auth:** Per-email `express-rate-limit` on `/api/auth/login`; security probes skip on transient 429.
+
+No mandatory production migration scripts for this release.
 
 ### v1.7.46 — Department Stats, Music Calendar Seed & Data Hub Full Sync
 

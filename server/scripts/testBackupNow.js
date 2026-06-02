@@ -13,27 +13,6 @@ const {
 } = require('../services/databaseBackupService');
 const { notifyBackupResult } = require('../services/backupNotificationService');
 
-const DEBUG_ENDPOINT = 'http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490';
-const SESSION_ID = '49c8fc';
-
-const debugLog = (location, message, data, hypothesisId) => {
-  // #region agent log
-  fetch(DEBUG_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': SESSION_ID },
-    body: JSON.stringify({
-      sessionId: SESSION_ID,
-      runId: 'backup-test-now',
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-};
-
 const formatBytes = (bytes) => {
   if (!bytes) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
@@ -92,8 +71,6 @@ const main = async () => {
     const sourceUri = getSourceUri();
     const backupDbName = getBackupDbName();
 
-    debugLog('testBackupNow.js:main', 'Starting backup test', { backupDbName, hasUri: !!sourceUri }, 'H1');
-
     connection = await mongoose.createConnection(sourceUri, {
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 120000,
@@ -103,7 +80,6 @@ const main = async () => {
     const backupDb = connection.useDb(backupDbName, { useCache: false }).db;
 
     const prodBefore = await getDatabaseSizeStats(sourceDb);
-    debugLog('testBackupNow.js:prodSize', 'Production DB size measured', prodBefore, 'H2');
 
     console.log('\n=== Production DB (before backup) ===');
     console.log(`Database: ${prodBefore.database}`);
@@ -114,14 +90,6 @@ const main = async () => {
     console.log(`Logical total (data + indexes): ${formatBytes(prodBefore.totalSizeBytes)}`);
 
     const result = await runDailyBackup();
-    debugLog('testBackupNow.js:backupResult', 'Backup finished', {
-      success: result.success,
-      error: result.error || null,
-      collectionCount: result.collectionCount,
-      totalBytes: result.totalBytes,
-      durationMs: result.durationMs,
-      date: result.date,
-    }, result.success ? 'H3' : 'H4');
 
     if (!result.success) {
       console.error('\nBackup FAILED:', result.error);
@@ -129,7 +97,6 @@ const main = async () => {
     }
 
     const backupSize = await getBackupCompressedSize(backupDb);
-    debugLog('testBackupNow.js:backupSize', 'Backup DB compressed size measured', backupSize, 'H5');
 
     console.log('\n=== Backup run result ===');
     console.log(`Snapshot date (IST): ${result.date}`);
@@ -154,16 +121,13 @@ const main = async () => {
     try {
       await notifyBackupResult(result);
       console.log('\nNotification email dispatched.');
-      debugLog('testBackupNow.js:email', 'Notification sent', { success: true }, 'H6');
     } catch (emailErr) {
       console.warn('\nBackup OK but email failed:', emailErr.message);
-      debugLog('testBackupNow.js:email', 'Notification failed', { error: emailErr.message }, 'H6');
     }
 
     console.log('\nBackup test completed successfully.');
     process.exit(0);
   } catch (error) {
-    debugLog('testBackupNow.js:error', 'Test script failed', { error: error.message }, 'H4');
     console.error('Test failed:', error.message);
     process.exit(1);
   } finally {

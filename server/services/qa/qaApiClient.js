@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 const Department = require('../../models/Department');
 const { ADMIN_SLUG, OPS_SLUG, SALES_SLUG } = require('../../utils/departmentPermissions');
+const { reportQaActivity, sanitizePayload } = require('./qaActivity');
 
 const QA_API_BASE = () =>
   (process.env.QA_API_BASE_URL || process.env.API_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
@@ -92,12 +93,31 @@ function probePass(def, detail, evidence = '') {
   };
 }
 
-async function request(def, { method, url, data, headers, user }) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function extractId(res, field = '_id') {
+  const body = res?.data;
+  return body?.[field] || body?.data?.[field] || body?.data?._id || body?._id;
+}
+
+async function request(def, { method, url, data, headers, user, skipAuth = false }) {
   const base = QA_API_BASE();
   const fullUrl = url.startsWith('http') ? url : `${base}${url}`;
-  const h = { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...headers };
-  return axios({
-    method: method || 'GET',
+  const httpMethod = (method || 'GET').toUpperCase();
+  const h = skipAuth
+    ? { 'Content-Type': 'application/json', ...headers }
+    : { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...headers };
+
+  reportQaActivity({
+    method: httpMethod,
+    url: fullUrl,
+    requestBody: sanitizePayload(data),
+    phase: 'http',
+  });
+
+  const started = Date.now();
+  const res = await axios({
+    method: httpMethod,
     url: fullUrl,
     data,
     headers: h,
@@ -105,6 +125,14 @@ async function request(def, { method, url, data, headers, user }) {
     timeout: def.timeout || 12000,
     maxRedirects: 0,
   });
+
+  reportQaActivity({
+    httpStatus: res.status,
+    message: `${httpMethod} ${url} → ${res.status} (${Date.now() - started}ms)`,
+    elapsedMs: Date.now() - started,
+  });
+
+  return res;
 }
 
 module.exports = {
@@ -116,4 +144,6 @@ module.exports = {
   probeFail,
   probePass,
   request,
+  sleep,
+  extractId,
 };

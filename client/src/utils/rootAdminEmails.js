@@ -4,6 +4,7 @@ const ROOT_ADMIN_EMAILS = new Set([
   'test@example.com',
   'REDACTED_ADMIN@example.com',
   'redacted@example.com',
+  'redacted@example.com',
 ]);
 
 export const isRootAdminEmail = (email) =>

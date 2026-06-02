@@ -3,6 +3,7 @@ const ROOT_ADMIN_EMAILS = new Set([
   'test@example.com',
   'REDACTED_ADMIN@example.com',
   'redacted@example.com',
+  'redacted@example.com',
 ]);
 
 const isRootAdminEmail = (email) => ROOT_ADMIN_EMAILS.has(String(email || '').toLowerCase().trim());

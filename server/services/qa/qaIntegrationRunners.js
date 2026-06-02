@@ -75,9 +75,18 @@ function entityDetailQuery(field, entityId) {
 async function pollXpAudit({ userId, action, entityField, entityId, attempts = 24, intervalMs = 500 }) {
   const base = { userId, action, ...entityDetailQuery(entityField, entityId) };
   for (let i = 0; i < attempts; i += 1) {
-    await sleep(intervalMs);
     const audit = await XPAuditLog.findOne(base).lean();
     if (audit) return audit;
+    await sleep(intervalMs);
+  }
+  return null;
+}
+
+async function pollNotification(filter, attempts = 20, intervalMs = 300) {
+  for (let i = 0; i < attempts; i += 1) {
+    const note = await Notification.findOne(filter).lean();
+    if (note) return note;
+    await sleep(intervalMs);
   }
   return null;
 }
@@ -111,7 +120,12 @@ async function runReviewRollback(def, ctx) {
   const taskId = await createDelegatedTask(def, ctx, pair.assigner, pair.assignee, project._id, 'Rollback');
   if (!taskId) return probeFail(def, 'Task create failed');
 
-  await request(def, { method: 'PUT', url: `/api/tasks/${taskId}`, user: pair.assignee, data: { status: 'done' } });
+  await request(def, { method: 'PUT', url: `/api/tasks/${taskId}`, user: pair.assignee, data: { status: 'done', actualHours: 1 } });
+  const reviewLogsBefore = await Log.countDocuments({
+    targetId: taskId,
+    targetType: 'Task',
+    'details.type': { $in: ['TASK_COMPLETION', 'TASK_REVIEW'] },
+  });
   const rollbackRes = await request(def, {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
@@ -119,10 +133,18 @@ async function runReviewRollback(def, ctx) {
     data: { reviewAction: 'rollback' },
   });
   const status = rollbackRes.data?.status || rollbackRes.data?.data?.status;
-  if (status === 'in-progress') {
-    return { ...probePass(def, 'Rollback moved task back to in-progress'), artifacts: ctx.artifacts };
+  if (status !== 'in-progress') {
+    return { ...probeFail(def, `Expected in-progress after rollback, got ${status || rollbackRes.status}`), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, `Expected in-progress after rollback, got ${status || rollbackRes.status}`), artifacts: ctx.artifacts };
+  const reviewLogsAfter = await Log.countDocuments({
+    targetId: taskId,
+    targetType: 'Task',
+    'details.type': { $in: ['TASK_COMPLETION', 'TASK_REVIEW'] },
+  });
+  if (reviewLogsBefore > 0 && reviewLogsAfter !== 0) {
+    return { ...probeFail(def, `Rollback should remove review logs (before=${reviewLogsBefore} after=${reviewLogsAfter})`), artifacts: ctx.artifacts };
+  }
+  return { ...probePass(def, 'Rollback cleared review daily logs'), artifacts: ctx.artifacts };
 }
 
 async function runInvoiceSubmitPending(def, ctx) {
@@ -360,6 +382,8 @@ async function runTaskCompleteXp(def, ctx) {
     action: 'COMPLETE_TASK',
     entityField: 'taskId',
     entityId: taskId,
+    attempts: 60,
+    intervalMs: 500,
   });
   if (audit) {
     return { ...probePass(def, 'COMPLETE_TASK XP audit logged after approval'), artifacts: ctx.artifacts };
@@ -399,6 +423,8 @@ async function runLeadCapturedXp(def, ctx) {
     action: 'LEAD_CAPTURE',
     entityField: 'leadId',
     entityId: leadId,
+    attempts: 60,
+    intervalMs: 500,
   });
   if (audit) {
     return { ...probePass(def, 'LEAD_CAPTURE XP logged after CRM lead POST'), artifacts: ctx.artifacts };
@@ -412,7 +438,7 @@ async function runXpLeaderboardReflect(def, ctx) {
     userId: adminUser._id,
     action: 'COMPLETE_TASK',
     amount: 25,
-    details: { taskId: new (require('mongoose')).Types.ObjectId() },
+    details: { taskId: new (require('mongoose')).Types.ObjectId(), qaProbe: true },
   });
 
   const afterRes = await request(def, { method: 'GET', url: '/api/gamification/leaderboard', user: adminUser });
@@ -545,13 +571,12 @@ async function runReviewApproveNotify(def, ctx) {
     user: pair.assigner,
     data: { reviewAction: 'approve' },
   });
-  await sleep(400);
 
-  const note = await Notification.findOne({
+  const note = await pollNotification({
     recipient: pair.assignee._id,
     relatedTaskId: taskId,
     title: /approved/i,
-  }).lean();
+  });
   if (note) {
     return { ...probePass(def, 'Review approval notification sent to assignee'), artifacts: ctx.artifacts };
   }

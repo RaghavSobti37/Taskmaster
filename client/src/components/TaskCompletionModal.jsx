@@ -53,7 +53,7 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
             {hoursError && <p className="text-xs text-rose-500 mt-1">{hoursError}</p>}
             <p className="text-xs text-[var(--color-text-muted)] mt-2">
               {submitForReview
-                ? 'This sends the task for approval. Time is logged to your daily logs.'
+                ? 'Your hours go to your daily logs. The person who assigned this task gets 15 minutes (review) in theirs.'
                 : 'This time will be logged to your daily logs.'}
             </p>
           </div>

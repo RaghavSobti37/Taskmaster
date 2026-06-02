@@ -127,7 +127,7 @@ router.post('/', protect, async (req, res) => {
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
-    if (action === 'DAILY_LOG' && details?.type !== 'TASK_COMPLETION') {
+    if (action === 'DAILY_LOG' && !['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) {
       GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', { logId: log._id })
         .then(() => GamificationService.progressMission(req.user._id, 'DAILY_LOG', 1))
         .catch((err) => {

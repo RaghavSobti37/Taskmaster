@@ -39,7 +39,7 @@ import { format, addDays } from 'date-fns';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast } from '../../utils/taskCompletion';
+import { taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast } from '../../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
@@ -176,14 +176,6 @@ const ProjectDetail = () => {
         { status: 'done', actualHours: (task.actualHours || 0) + hours },
         AXIOS_SKIP_TOAST
       );
-      if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
-        axios.post(
-          '/api/logs',
-          buildTaskCompletionLogPayload(task, hours, project ? [project] : []),
-          AXIOS_SKIP_TOAST
-        ).catch(() => {});
-      }
-
       addToast({
         ...taskCompletionToast(taskRes.data?.status, task.title),
         duration: 6000,

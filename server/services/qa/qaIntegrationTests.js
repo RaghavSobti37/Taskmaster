@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Project = require('../../models/Project');
 const Task = require('../../models/Task');
+const Log = require('../../models/Log');
 const Lead = require('../../models/Lead');
 const FinanceDocument = require('../../models/FinanceDocument');
 const CRMAudit = require('../../models/CRMAudit');
@@ -23,6 +24,7 @@ function integrationCase(def, runFn) {
     category: def.category || 'business-logic',
     severity: def.sev || 'high',
     checklistId: def.id,
+    timeout: def.timeout || 45000,
     qaMeta: {
       kind: 'integration',
       action: 'Live API + database integration test',
@@ -148,13 +150,43 @@ async function runDelegatedInReview(def, ctx) {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
     user: assignee,
-    data: { status: 'done' },
+    data: { status: 'done', actualHours: 2 },
   });
   const status = completeRes.data?.status || completeRes.data?.data?.status;
-  if (status === 'in-review') {
-    return { ...probePass(def, 'Delegated completion moved task to in-review'), artifacts: ctx.artifacts };
+  if (status !== 'in-review') {
+    return { ...probeFail(def, `Expected in-review, got ${status || completeRes.status}`), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, `Expected in-review, got ${status || completeRes.status}`), artifacts: ctx.artifacts };
+
+  const assigneeLog = await Log.findOne({
+    userId: assignee._id,
+    targetId: taskId,
+    targetType: 'Task',
+    action: 'DAILY_LOG',
+    'details.type': 'TASK_COMPLETION',
+  }).lean();
+  const reviewLog = await Log.findOne({
+    userId: assigner._id,
+    targetId: taskId,
+    targetType: 'Task',
+    action: 'DAILY_LOG',
+    'details.type': 'TASK_REVIEW',
+  }).lean();
+  const assignerCompletion = await Log.findOne({
+    userId: assigner._id,
+    targetId: taskId,
+    'details.type': 'TASK_COMPLETION',
+  }).lean();
+
+  if (!assigneeLog) return { ...probeFail(def, 'Missing assignee TASK_COMPLETION daily log'), artifacts: ctx.artifacts };
+  if (!reviewLog) return { ...probeFail(def, 'Missing assigner TASK_REVIEW daily log'), artifacts: ctx.artifacts };
+  if (assignerCompletion) {
+    return { ...probeFail(def, 'Assigner must not get TASK_COMPLETION on submit'), artifacts: ctx.artifacts };
+  }
+  if (!String(reviewLog.details?.timeSpent || '').includes('0.25')) {
+    return { ...probeFail(def, `Review log expected 0.25h, got ${reviewLog.details?.timeSpent}`), artifacts: ctx.artifacts };
+  }
+
+  return { ...probePass(def, 'Delegated completion → in-review with split daily logs'), artifacts: ctx.artifacts };
 }
 
 async function runSelfComplete(def, ctx) {
@@ -244,7 +276,12 @@ async function runReviewApprove(def, ctx) {
   if (!taskId) return probeFail(def, 'Create failed');
   track(ctx, 'task', taskId);
 
-  await request(def, { method: 'PUT', url: `/api/tasks/${taskId}`, user: assignee, data: { status: 'done' } });
+  await request(def, { method: 'PUT', url: `/api/tasks/${taskId}`, user: assignee, data: { status: 'done', actualHours: 1 } });
+  const assignerCompletionBefore = await Log.countDocuments({
+    userId: assigner._id,
+    targetId: taskId,
+    'details.type': 'TASK_COMPLETION',
+  });
   const approveRes = await request(def, {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
@@ -252,10 +289,18 @@ async function runReviewApprove(def, ctx) {
     data: { reviewAction: 'approve' },
   });
   const status = approveRes.data?.status || approveRes.data?.data?.status;
-  if (status === 'done') {
-    return { ...probePass(def, 'Assigner approved review → done'), artifacts: ctx.artifacts };
+  if (status !== 'done') {
+    return { ...probeFail(def, `Approve failed (${approveRes.status}) status=${status}`), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, `Approve failed (${approveRes.status}) status=${status}`), artifacts: ctx.artifacts };
+  const assignerCompletionAfter = await Log.countDocuments({
+    userId: assigner._id,
+    targetId: taskId,
+    'details.type': 'TASK_COMPLETION',
+  });
+  if (assignerCompletionAfter > assignerCompletionBefore) {
+    return { ...probeFail(def, 'Approve must not create assigner TASK_COMPLETION log'), artifacts: ctx.artifacts };
+  }
+  return { ...probePass(def, 'Assigner approved review → done without extra completion log'), artifacts: ctx.artifacts };
 }
 
 async function runFinanceOpsApprove(def, ctx) {

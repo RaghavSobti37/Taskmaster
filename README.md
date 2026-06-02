@@ -94,6 +94,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Role Enforcement:** Restricts execution bounds; only the explicit task creator retains roll-back, state manipulation, or permanent completion override permissions.
 * **Project moves:** Any project member (or creator, assignee, admin) may move a task to another project they can access via the Edit Task modal. Server validates source/target membership, syncs workspace, updates project task counts, and refreshes TanStack Query caches without a full page reload.
 * **In-review edits:** Save remains available on `in-review` tasks so fields like project, title, and description can be updated; Approve/Rollback actions stay separate for reviewers.
+* **Daily log split on submit:** When a delegatee submits for review, the server writes two automatic daily logs — assignee `TASK_COMPLETION` (hours from the completion modal) and assigner `TASK_REVIEW` (default **15 minutes**, `REVIEW_DEFAULT_HOURS` in `shared/taskReviewRules.js`). Approving does not add a full-task completion log for the reviewer; rolling back removes both logs. Review entries show a **Review** badge on Daily Logs and are excluded from manual-log XP like task completions.
 
 ### 🎭 Artist Enquiry Webhook
 

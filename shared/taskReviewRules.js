@@ -62,6 +62,9 @@ const canUserApproveReview = (user, assignments) => {
 const isSelfWorkOnlyTask = (assignments) =>
   (assignments || []).length > 0 && getDelegatedAssignments(assignments).length === 0;
 
+/** Default daily-log hours credited to reviewer when assignee submits for review. */
+const REVIEW_DEFAULT_HOURS = 0.25;
+
 const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => {
   const creator = normalizeId(creatorId);
   const ids = [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))];
@@ -83,4 +86,5 @@ module.exports = {
   canUserApproveReview,
   isSelfWorkOnlyTask,
   mergeAssigneeIdsWithCreator,
+  REVIEW_DEFAULT_HOURS,
 };

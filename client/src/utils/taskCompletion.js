@@ -46,9 +46,9 @@ export function pendingReviewToast(taskTitle) {
   };
 }
 
-/** Server finalizeTaskCompletion already writes DAILY_LOG when status is done. */
+/** Server writes daily logs for done and in-review (assignee + reviewer). */
 export function shouldClientCreateCompletionLog(status) {
-  return status !== 'done';
+  return false;
 }
 
 /** Keep toast copy readable — ellipsis long task titles instead of awkward wraps. */
@@ -71,7 +71,7 @@ export function taskCompletionToast(status, taskTitle) {
   if (status === 'in-review') {
     return {
       title: 'Submitted for Review',
-      message: `"${title}" sent for approval — time logged to daily logs.`,
+      message: `"${title}" sent for approval — your hours are in daily logs; your reviewer gets a 15m review entry.`,
       type: 'success',
     };
   }

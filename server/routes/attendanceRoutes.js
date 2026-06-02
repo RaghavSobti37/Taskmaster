@@ -122,7 +122,7 @@ const computeAttendanceMetrics = async (attendanceDoc) => {
     userId: attendanceDoc.userId,
     action: 'DAILY_LOG',
     createdAt: { $gte: dayStart, $lte: dayEnd },
-    'details.type': { $ne: 'TASK_COMPLETION' }
+    'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] }
   }).select('details').lean();
 
   const parseHours = (str) => {

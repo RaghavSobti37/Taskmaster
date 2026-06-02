@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSystemToast } from '../lib/systemLogBridge';
 import { MODULE } from '../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../lib/notifications';
-import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, taskApprovalToast, resolveTaskId, canMarkTaskComplete, normalizeCompletionHours, pendingReviewToast } from '../utils/taskCompletion';
+import { taskCompletionToast, taskApprovalToast, resolveTaskId, canMarkTaskComplete, normalizeCompletionHours, pendingReviewToast } from '../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../utils/taskReview';
 import { updateAllTaskQueries } from '../utils/taskCache';
 import { useTasks, useDashboardTasks, useReviewTasks, useProjects, useDashboardSummary, useDashboardPreset, useUserDirectory } from '../hooks/useTaskmasterQueries';
@@ -121,13 +121,6 @@ const Dashboard = () => {
         AXIOS_SKIP_TOAST
       );
       const returnedStatus = taskRes.data?.status;
-      if (shouldClientCreateCompletionLog(returnedStatus)) {
-        axios.post(
-          '/api/logs',
-          buildTaskCompletionLogPayload(task, hours, projects),
-          AXIOS_SKIP_TOAST
-        ).catch(() => { });
-      }
       const toast = taskCompletionToast(returnedStatus, task.title);
       addToast({ ...toast, duration: 5000, module: MODULE.PROJECTS });
       updateAllTaskQueries(queryClient, (tasks) =>

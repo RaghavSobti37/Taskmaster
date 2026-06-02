@@ -1119,6 +1119,13 @@ Path: `shared/`
 4. Rules enforced in both `taskController.js` and frontend task modals
 5. Shared logic: `shared/taskReviewRules.js`
 
+**Daily logs on delegated review** (`TaskService.js`):
+
+- **Submit for review:** assignee gets `TASK_COMPLETION` with hours submitted; assigner gets `TASK_REVIEW` with `REVIEW_DEFAULT_HOURS` (0.25h / 15m), editable on Daily Logs
+- **Approve:** project `completedTasksCount` increments; no new `TASK_COMPLETION` for assigner (assignee log already exists)
+- **Rollback:** both `TASK_COMPLETION` (assignee) and `TASK_REVIEW` (assigner) logs for that task are deleted
+- Auto logs excluded from manual daily-log XP (`TASK_COMPLETION`, `TASK_REVIEW`)
+
 ### CRM lead locking
 
 - 60-second optimistic lock on lead edits via `concurrencyMiddleware.checkLock(Lead)`

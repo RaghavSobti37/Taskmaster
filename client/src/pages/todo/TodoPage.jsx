@@ -18,7 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { buildTaskCompletionLogPayload, shouldClientCreateCompletionLog, taskCompletionToast, canMarkTaskComplete, pendingReviewToast } from '../../utils/taskCompletion';
+import { taskCompletionToast, canMarkTaskComplete, pendingReviewToast } from '../../utils/taskCompletion';
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
@@ -104,13 +104,6 @@ const TodoPage = () => {
         { status: 'done', actualHours: (task.actualHours || 0) + hours },
         AXIOS_SKIP_TOAST
       );
-      if (shouldClientCreateCompletionLog(taskRes.data?.status)) {
-        axios.post(
-          '/api/logs',
-          buildTaskCompletionLogPayload(task, hours, projects),
-          AXIOS_SKIP_TOAST
-        ).catch(() => {});
-      }
       const toast = taskCompletionToast(taskRes.data?.status, task.title);
       addToast({ ...toast, module: MODULE.PROJECTS });
       updateAllTaskQueries(queryClient, (tasks) =>

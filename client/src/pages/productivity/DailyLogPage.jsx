@@ -478,6 +478,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
                                   <span className="text-xs font-black uppercase tracking-tight">{cleanLogTitle(log.details?.title)}</span>
+                                  {log.details?.type === 'TASK_REVIEW' && (
+                                    <Badge variant="warning" className="text-[8px] py-0">Review</Badge>
+                                  )}
                                   <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>

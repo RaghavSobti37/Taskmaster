@@ -825,7 +825,7 @@ exports.getProjectHoursSummary = async (req, res) => {
 
     const logs = await Log.find({
       action: 'DAILY_LOG',
-      'details.type': { $ne: 'TASK_COMPLETION' },
+      'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] },
       $or: [
         { 'details.projectId': project._id },
         { 'details.project': project.name }

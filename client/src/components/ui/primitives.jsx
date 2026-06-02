@@ -108,7 +108,7 @@ export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
   );
 };
 
-export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, ...props }) => (
+export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, ...props }) => (
   <div className="flex flex-col gap-2 w-full min-w-0">
     {label && (
       <label className="block tm-section-label">
@@ -122,12 +122,18 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
       {multiline ? (
         <textarea
           rows={rows}
-          className={`block w-full min-w-0 min-h-[5rem] p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm resize-y ${className}`}
+          aria-invalid={error ? 'true' : undefined}
+          className={`block w-full min-w-0 min-h-[5rem] p-3 bg-[var(--color-bg-primary)] border rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm resize-y ${
+            error ? 'border-rose-500 focus:border-rose-500' : 'border-[var(--color-bg-border)]'
+          } ${className}`}
           {...props}
         />
       ) : (
         <input
-          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${className}`}
+          aria-invalid={error ? 'true' : undefined}
+          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 bg-[var(--color-bg-primary)] border rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${
+            error ? 'border-rose-500 focus:border-rose-500' : 'border-[var(--color-bg-border)]'
+          } ${className}`}
           {...props}
         />
       )}
@@ -137,6 +143,8 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
         </div>
       )}
     </div>
+    {error && <p className="text-[10px] font-bold text-rose-400">{error}</p>}
+    {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
   </div>
 );
 
@@ -456,7 +464,7 @@ export const DataTable = ({
   );
 };
 
-export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, extraActions, mainClassName = 'max-w-4xl' }) => {
+export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, saveDisabled = false, isSaving = false, extraActions, mainClassName = 'max-w-4xl' }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -489,8 +497,8 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                 {extraActions}
                 <Button variant="ghost" size="sm" onClick={onClose} className="hidden sm:inline-flex">Cancel</Button>
-                <Button size="sm" onClick={onSave} className="shadow-lg shadow-[var(--color-action-primary)]/20">
-                   <Save size={16} /> <span className="hidden sm:inline">Save Changes</span>
+                <Button size="sm" onClick={onSave} disabled={saveDisabled || isSaving} className="shadow-lg shadow-[var(--color-action-primary)]/20">
+                   <Save size={16} /> <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Save Changes'}</span>
                 </Button>
              </div>
           </div>

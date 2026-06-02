@@ -25,6 +25,8 @@ import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, 
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatExlyTag } from '../../utils/crmUtils';
+import { validateLeadFormFields, splitPhoneNumber } from '../../utils/leadFormValidation';
+import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 import { useDebounce } from '../../hooks/useDebounce';
 
 export default function LeadsPage() {
@@ -48,20 +50,38 @@ export default function LeadsPage() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newLeadData, setNewLeadData] = useState({
-    name: '', phone: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: ''
+    name: '', phoneCountryCode: '+91', phoneNational: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: ''
   });
+  const [newLeadErrors, setNewLeadErrors] = useState({});
 
   const updateMutation = useUpdateLead();
   const createMutation = useCreateLead();
   const [editLeadData, setEditLeadData] = useState({
-    name: '', phone: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: ''
+    name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
   });
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const applyLeadValidation = (data) => {
+    const { errors } = validateLeadFormFields(data);
+    setFieldErrors(errors);
+    return errors;
+  };
+
+  const patchEditLeadData = (patch) => {
+    setEditLeadData((prev) => {
+      const next = { ...prev, ...patch };
+      applyLeadValidation(next);
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     if (selectedLead) {
-      setEditLeadData({
+      const { countryCode, nationalNumber } = splitPhoneNumber(selectedLead.phone || '');
+      const loaded = {
         name: selectedLead.name || '',
-        phone: selectedLead.phone || '',
+        phoneCountryCode: countryCode,
+        phoneNational: nationalNumber,
         city: selectedLead.city || '',
         leadQuality: selectedLead.leadQuality ? String(selectedLead.leadQuality) : '3',
         leadStatus: selectedLead.leadStatus || 'New',
@@ -70,8 +90,11 @@ export default function LeadsPage() {
         nextFollowupDate: selectedLead.nextFollowupDate || '',
         nextFollowupTime: selectedLead.nextFollowupTime || '',
         setReminder: selectedLead.setReminder || false,
-        planOption: selectedLead.planOption || ''
-      });
+        planOption: selectedLead.planOption || '',
+        assignedRepId: selectedLead.assignedRepId || selectedLead.assignedRep?._id || '',
+      };
+      setEditLeadData(loaded);
+      applyLeadValidation(loaded);
 
       // Fetch audit trail for the selected lead
       axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
@@ -79,21 +102,28 @@ export default function LeadsPage() {
         .catch(err => console.error('Failed to fetch lead logs', err));
     } else {
       setLeadLogs([]);
+      setFieldErrors({});
     }
   }, [selectedLead]);
 
   const handleSaveLead = async () => {
-    if (!selectedLead) return;
+    if (!selectedLead || updateMutation.isPending) return;
+    const { valid, errors, sanitized } = validateLeadFormFields(editLeadData);
+    setFieldErrors(errors);
+    if (!valid) {
+      toast.error(errors.phone || Object.values(errors)[0] || 'Fix highlighted fields before saving');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         id: selectedLead._id,
-        data: editLeadData
+        data: sanitized,
       });
+      toast.success('Lead saved');
       setSelectedLead(null);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      setFieldErrors({});
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to save lead');
     }
   };
 
@@ -156,18 +186,24 @@ export default function LeadsPage() {
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (!newLeadData.name || (!newLeadData.phone && !newLeadData.email)) {
-      alert('Please provide a Customer Name and either a Phone or Email.');
+    const { valid, errors, sanitized } = validateLeadFormFields(newLeadData);
+    setNewLeadErrors(errors);
+    if (!valid) {
+      toast.error(errors.phone || Object.values(errors)[0] || 'Fix highlighted fields before creating');
+      return;
+    }
+    if (!sanitized.name || (!sanitized.phone && !sanitized.email)) {
+      toast.error('Provide a customer name and either a phone or email.');
       return;
     }
     try {
-      await createMutation.mutateAsync(newLeadData);
+      await createMutation.mutateAsync(sanitized);
       setIsAddModalOpen(false);
-      setNewLeadData({ name: '', phone: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: '' });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      setNewLeadData({ name: '', phoneCountryCode: '+91', phoneNational: '', email: '', city: '', leadStatus: 'New', leadQuality: '3', source: 'Organic / Direct', remarks: '' });
+      setNewLeadErrors({});
+      toast.success('Lead created');
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to create lead');
     }
   };
 
@@ -472,30 +508,38 @@ export default function LeadsPage() {
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id?.substring(0, 8) || '—'}` : ''}
         onSave={handleSaveLead}
+        isSaving={updateMutation.isPending}
+        saveDisabled={Object.keys(fieldErrors).length > 0}
         extraActions={
           <div className="flex items-center gap-2">
             <Button
               variant="mint"
               size="sm"
+              disabled={updateMutation.isPending}
               onClick={async () => {
                 if (!selectedLead) return;
+                const { valid, errors, sanitized } = validateLeadFormFields(editLeadData);
+                if (!valid) {
+                  setFieldErrors(errors);
+                  toast.error(Object.values(errors)[0] || 'Fix highlighted fields first');
+                  return;
+                }
                 try {
                   const updatedData = {
-                    ...editLeadData,
-                    callStatus: editLeadData.callStatus === 'Pending' ? 'Connected' : editLeadData.callStatus,
+                    ...sanitized,
+                    callStatus: sanitized.callStatus === 'Pending' ? 'Connected' : sanitized.callStatus,
                     nextFollowupDate: '',
                     nextFollowupTime: '',
-                    remarks: (editLeadData.remarks ? editLeadData.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                    remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${new Date().toLocaleDateString('en-GB')}]`
                   };
                   await updateMutation.mutateAsync({
                     id: selectedLead._id,
                     data: updatedData
                   });
+                  toast.success('Follow-up marked done');
                   setSelectedLead(null);
-                  queryClient.invalidateQueries({ queryKey: ['leads'] });
-                  queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
                 } catch (err) {
-                  alert(err.response?.data?.error || err.message);
+                  toast.error(err.response?.data?.error || err.message || 'Failed to update lead');
                 }
               }}
               className="flex items-center gap-1.5"
@@ -590,6 +634,11 @@ export default function LeadsPage() {
         }
       >
         <div className="space-y-8">
+          {Object.keys(fieldErrors).length > 0 && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs font-bold text-rose-300">
+              Fix highlighted fields before saving.
+            </div>
+          )}
           {/* Funnel Mapping */}
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
@@ -744,17 +793,20 @@ export default function LeadsPage() {
               <Input
                 label="Customer Name"
                 value={editLeadData.name}
-                onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })}
+                error={fieldErrors.name}
+                onChange={e => patchEditLeadData({ name: e.target.value })}
               />
-              <Input
-                label="Phone Number"
-                value={editLeadData.phone}
-                onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })}
+              <PhoneNumberFields
+                countryCode={editLeadData.phoneCountryCode}
+                nationalNumber={editLeadData.phoneNational}
+                error={fieldErrors.phone}
+                onCountryCodeChange={(phoneCountryCode) => patchEditLeadData({ phoneCountryCode })}
+                onNationalNumberChange={(phoneNational) => patchEditLeadData({ phoneNational })}
               />
               <Input
                 label="Location / City"
                 value={editLeadData.city}
-                onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })}
+                onChange={e => patchEditLeadData({ city: e.target.value })}
                 icon={MapPin}
               />
               <Input label="Original Lead Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
@@ -831,11 +883,20 @@ export default function LeadsPage() {
             onChange={e => setNewLeadData({ ...newLeadData, name: e.target.value })}
             required
           />
-          <Input
-            label="Phone Number"
-            placeholder="+91 9876543210"
-            value={newLeadData.phone}
-            onChange={e => setNewLeadData({ ...newLeadData, phone: e.target.value })}
+          <PhoneNumberFields
+            countryCode={newLeadData.phoneCountryCode}
+            nationalNumber={newLeadData.phoneNational}
+            error={newLeadErrors.phone}
+            onCountryCodeChange={(phoneCountryCode) => {
+              const next = { ...newLeadData, phoneCountryCode };
+              setNewLeadData(next);
+              setNewLeadErrors(validateLeadFormFields(next).errors);
+            }}
+            onNationalNumberChange={(phoneNational) => {
+              const next = { ...newLeadData, phoneNational };
+              setNewLeadData(next);
+              setNewLeadErrors(validateLeadFormFields(next).errors);
+            }}
           />
           <Input
             label="Email Address"

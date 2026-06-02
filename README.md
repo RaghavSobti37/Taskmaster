@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.54-126d5e?style=flat-square" alt="Version 1.7.54" />
+  <img src="https://img.shields.io/badge/version-1.7.55-126d5e?style=flat-square" alt="Version 1.7.55" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -194,6 +194,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Auth cookies:** JWT stored in HttpOnly `coreknot_token` cookie — not `localStorage`. `POST /api/auth/logout` clears session. Client uses `axios.defaults.withCredentials = true`.
 * **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
 * **Logout (v1.7.52):** Logout bumps an auth epoch so in-flight `/me` retries from post-login sync cannot re-set the user after sign-out. Client clears user state before the logout API call completes.
+* **CRM lead updates (v1.7.55):** Lead modal uses country-code + national-number fields with strict per-country digit rules (no silent truncation). Invalid phones block save with clear errors; server validates via `phoneCountryValidation.js`. Lead table refreshes after save (`useUpdateLead` cache fix). Legacy overlong/concatenated phones repaired via `leadPhoneRepair.js` and QA audit/cleanup CLI scripts.
 * **CRM lead updates (v1.7.54):** Legacy `-DUP-{id}` / `EMPTY-{id}` corrupt phones (from old `dbPush.js` duplicate resolution) are auto-repaired on save, bulk-repairable via `npm run repair:lead-phones`, and cleaned during QA purge. Saving leads with unchanged corrupt phones no longer fails validation.
 * **CRM lead updates (v1.7.53):** Saving a lead no longer fails when phone/email normalize to the same value (e.g. `9876543210` → `+919876543210`). Duplicate phone/email returns **409** with a clear message instead of generic **400 Failed to update lead**.
 * **Webhook signatures:** HMAC-SHA256 via `X-Webhook-Signature: sha256=…` for book-call, Exly, and artist-enquiry ingress (`server/utils/webhookAuth.js`). Set `BOOK_CALL_WEBHOOK_SECRET`, `EXLY_WEBHOOK_SECRET`, `ARTIST_ENQUIRY_WEBHOOK_SECRET` on Render.
@@ -446,6 +447,21 @@ CoreKnot ships a **209-case** pre-deployment QA engine (Admin → QA Testing) th
 
 **Repair corrupt lead phones:** `cd server && npm run repair:lead-phones` — strips legacy `-DUP-{objectId}` / `EMPTY-{objectId}` suffixes, merges redundant duplicates, safe to run against production (`server/scripts/repairCorruptPhones.js`, `server/services/leadPhoneRepair.js`).
 
+**QA data audit & cleanup (CLI):**
+
+```bash
+cd server
+npm run qa:audit          # read-only report (local MONGODB_URI)
+npm run qa:audit:prod     # read-only report (MONGODB_URI_PROD)
+npm run qa:cleanup        # purge QA patterns + repair corrupt phones (local)
+npm run qa:cleanup:prod   # same against production
+npm run repair:phones     # repair overlong E.164 phones (local)
+npm run repair:phones:prod
+npm run repair:phones:all # local then prod
+```
+
+Scripts: `qaAuditReport.js`, `qaFullCleanup.js`, `scanCorruptPhones.js`, `auditLeadPhones.js`.
+
 **CLI runners:**
 
 ```bash
@@ -477,6 +493,16 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.55 — CRM Phone Validation, Lead Save Fix & QA Cleanup CLI
+
+- **Lead modal UX:** `PhoneNumberFields.jsx` splits country code and national number; `leadPhoneCountries.js` enforces digit counts per region (+91=10, +971=9, +60=9, +65=8, +61=9, +44=10, +1=10); inline errors replace silent “Will save as…” hints.
+- **Save reliability:** `useUpdateLead` updates paginated `['leads', params]` cache and invalidates stats; `FullScreenWorkspace` shows saving state; required-field validation blocks unsanitized saves.
+- **Server validation:** `phoneCountryValidation.js` strict E.164 on create/update; `crmController.js` merges/clears corrupt duplicate leads on update.
+- **Phone repair:** `sanitizer.js` + `leadPhoneRepair.js` handle overlong concatenated numbers (not just `-DUP-` suffixes); `repair:phones*` npm scripts for local/prod.
+- **QA cleanup CLI:** `qa:audit`, `qa:cleanup` scripts for read-only audit and targeted purge without touching real contacts.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.7.50 — UX Clarity Remediation & QA Purge Extension
 

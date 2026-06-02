@@ -34,6 +34,42 @@ describe('lead phone repair', () => {
     expect(repairPhone('EMPTY-6a141225306a60191607c213')).toBe('');
     expect(isCorruptLeadPhone('EMPTY-6a141225306a60191607c213')).toBe(true);
   });
+
+  test('extracts Indian mobile from concatenated digit blob', () => {
+    const blob = '+91859149939360809296289249';
+    expect(repairPhone(blob)).toBe('+918591499393');
+    expect(isCorruptLeadPhone(blob)).toBe(true);
+    expect(isValidPhone(repairPhone(blob))).toBe(true);
+  });
+
+  test('extracts from Mayank-style concatenated phone', () => {
+    const blob = '+917999590515600440129893197126';
+    expect(repairPhone(blob)).toBe('+917999590515');
+    expect(isCorruptLeadPhone(blob)).toBe(true);
+  });
+
+  test('extracts first 10 digits when no +91 prefix', () => {
+    const blob = '+6051722962892400';
+    expect(repairPhone(blob)).toBe('+6051722962');
+    expect(isCorruptLeadPhone(blob)).toBe(true);
+    expect(isValidPhone(repairPhone(blob))).toBe(true);
+  });
+
+  test('extracts first 10 digits from 15-digit concatenated blob', () => {
+    const blob = '+605171296289242';
+    expect(repairPhone(blob)).toBe('+6051712962');
+    expect(isCorruptLeadPhone(blob)).toBe(true);
+  });
+
+  test('valid +91 mobile stays unchanged', () => {
+    expect(repairPhone('+918591499393')).toBe('+918591499393');
+    expect(isCorruptLeadPhone('+918591499393')).toBe(false);
+  });
+
+  test('valid UAE mobile stays unchanged', () => {
+    expect(repairPhone('+971506622739')).toBe('+971506622739');
+    expect(isCorruptLeadPhone('+971506622739')).toBe(false);
+  });
 });
 
 describe('prepareLeadContactUpdates logic (unit)', () => {

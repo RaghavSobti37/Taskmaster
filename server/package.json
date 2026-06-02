@@ -21,7 +21,14 @@
     "reset-weak-passwords:local:apply": "node scripts/resetWeakUserPasswords.js --apply",
     "reset-weak-passwords:prod": "node scripts/resetWeakUserPasswords.js --prod",
     "reset-weak-passwords:prod:apply": "node scripts/resetWeakUserPasswords.js --prod --apply",
-    "repair:lead-phones": "node scripts/repairCorruptPhones.js"
+    "repair:lead-phones": "node scripts/repairCorruptPhones.js",
+    "qa:audit": "node scripts/qaAuditReport.js",
+    "qa:audit:prod": "node scripts/qaAuditReport.js --prod",
+    "qa:cleanup": "node scripts/qaFullCleanup.js",
+    "qa:cleanup:prod": "node scripts/qaFullCleanup.js --prod",
+    "repair:phones": "node scripts/repairCorruptPhones.js --local",
+    "repair:phones:prod": "node scripts/repairCorruptPhones.js --prod",
+    "repair:phones:all": "node scripts/repairCorruptPhones.js --local && node scripts/repairCorruptPhones.js --prod"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",

@@ -473,25 +473,28 @@ export const useUpdateTask = () => {
 export const useUpdateLead = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }) => axios.put(`/api/crm/leads/${id}`, data),
+    mutationFn: async ({ id, data }) => (await axios.put(`/api/crm/leads/${id}`, data)).data,
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ['leads'] });
-      const previousLeads = queryClient.getQueryData(['leads']);
-      if (previousLeads) {
-        queryClient.setQueryData(['leads'], (old) => 
-          (old || []).map(l => l._id === id ? { ...l, ...data } : l)
-        );
-      }
-      return { previousLeads };
+      const snapshots = queryClient.getQueriesData({ queryKey: ['leads'] });
+      queryClient.setQueriesData({ queryKey: ['leads'] }, (old) => {
+        if (!old?.leads) return old;
+        return {
+          ...old,
+          leads: old.leads.map((l) => (String(l._id) === String(id) ? { ...l, ...data } : l)),
+        };
+      });
+      return { snapshots };
     },
-    onError: (err, variables, context) => {
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['leads'], context.previousLeads);
+    onError: (_err, _variables, context) => {
+      for (const [key, data] of context?.snapshots || []) {
+        queryClient.setQueryData(key, data);
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+    },
   });
 };
 

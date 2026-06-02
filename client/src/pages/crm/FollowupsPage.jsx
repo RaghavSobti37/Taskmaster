@@ -24,12 +24,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
+import { validateLeadFormFields, splitPhoneNumber } from '../../utils/leadFormValidation';
+import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 
 const FOLLOWUP_PAGE_SIZE = 50;
 
 export default function FollowupsPage() {
   const { user } = useAuth();
   const { confirm } = useConfirm();
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
   const [followupPage, setFollowupPage] = useState(1);
@@ -71,14 +75,30 @@ export default function FollowupsPage() {
     if (match) setSelectedLead(match);
   }, [searchParams, leads]);
   const [editLeadData, setEditLeadData] = useState({
-    name: '', phone: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: ''
+    name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
   });
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const applyLeadValidation = (data) => {
+    const { errors } = validateLeadFormFields(data);
+    setFieldErrors(errors);
+  };
+
+  const patchEditLeadData = (patch) => {
+    setEditLeadData((prev) => {
+      const next = { ...prev, ...patch };
+      applyLeadValidation(next);
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     if (selectedLead) {
-      setEditLeadData({
+      const { countryCode, nationalNumber } = splitPhoneNumber(selectedLead.phone || '');
+      const loaded = {
         name: selectedLead.name || '',
-        phone: selectedLead.phone || '',
+        phoneCountryCode: countryCode,
+        phoneNational: nationalNumber,
         city: selectedLead.city || '',
         leadQuality: selectedLead.leadQuality ? String(selectedLead.leadQuality) : '3',
         leadStatus: selectedLead.leadStatus || 'New',
@@ -87,8 +107,11 @@ export default function FollowupsPage() {
         nextFollowupDate: selectedLead.nextFollowupDate || '',
         nextFollowupTime: selectedLead.nextFollowupTime || '',
         setReminder: selectedLead.setReminder || false,
-        planOption: selectedLead.planOption || ''
-      });
+        planOption: selectedLead.planOption || '',
+        assignedRepId: selectedLead.assignedRepId || selectedLead.assignedRep?._id || '',
+      };
+      setEditLeadData(loaded);
+      applyLeadValidation(loaded);
 
       // Fetch audit trail for the selected lead
       axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
@@ -96,26 +119,30 @@ export default function FollowupsPage() {
         .catch(err => console.error('Failed to fetch lead logs', err));
     } else {
       setLeadLogs([]);
+      setFieldErrors({});
     }
   }, [selectedLead]);
 
   const handleSaveLead = async () => {
-    if (!selectedLead) return;
+    if (!selectedLead || updateMutation.isPending) return;
+    const { valid, errors, sanitized } = validateLeadFormFields(editLeadData);
+    setFieldErrors(errors);
+    if (!valid) {
+      toast.error(errors.phone || Object.values(errors)[0] || 'Fix highlighted fields before saving');
+      return;
+    }
     try {
-      const updatedDoc = await updateMutation.mutateAsync({
+      const updated = await updateMutation.mutateAsync({
         id: selectedLead._id,
-        data: editLeadData
+        data: sanitized,
       });
-      setSelectedLead(updatedDoc);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-      
-      // Fetch updated audit trail
+      setSelectedLead(updated);
+      toast.success('Lead saved');
       axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
         .then(res => setLeadLogs(res.data))
         .catch(err => console.error('Failed to fetch lead logs', err));
     } catch (err) {
-      alert(err.response?.data?.error || err.message);
+      toast.error(err.response?.data?.error || err.message || 'Failed to save lead');
     }
   };
 
@@ -350,29 +377,37 @@ export default function FollowupsPage() {
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id.substring(0, 8)}` : ''}
         onSave={handleSaveLead}
+        isSaving={updateMutation.isPending}
+        saveDisabled={Object.keys(fieldErrors).length > 0}
         extraActions={
           <Button
             variant="mint"
             size="sm"
+            disabled={updateMutation.isPending}
             onClick={async () => {
               if (!selectedLead) return;
+              const { valid, errors, sanitized } = validateLeadFormFields(editLeadData);
+              if (!valid) {
+                setFieldErrors(errors);
+                toast.error(Object.values(errors)[0] || 'Fix highlighted fields first');
+                return;
+              }
               try {
                 const updatedData = {
-                  ...editLeadData,
-                  callStatus: editLeadData.callStatus === 'Pending' ? 'Connected' : editLeadData.callStatus,
+                  ...sanitized,
+                  callStatus: sanitized.callStatus === 'Pending' ? 'Connected' : sanitized.callStatus,
                   nextFollowupDate: '',
                   nextFollowupTime: '',
-                  remarks: (editLeadData.remarks ? editLeadData.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
+                  remarks: (sanitized.remarks ? sanitized.remarks + '\n' : '') + `[Follow-up done on ${format(new Date(), 'dd-MM-yyyy')}]`
                 };
                 await updateMutation.mutateAsync({
                   id: selectedLead._id,
                   data: updatedData
                 });
+                toast.success('Follow-up marked done');
                 setSelectedLead(null);
-                queryClient.invalidateQueries({ queryKey: ['leads'] });
-                queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
               } catch (err) {
-                alert(err.response?.data?.error || err.message);
+                toast.error(err.response?.data?.error || err.message || 'Failed to update lead');
               }
             }}
             className="flex items-center gap-1.5"
@@ -439,6 +474,11 @@ export default function FollowupsPage() {
         }
       >
         <div className="space-y-8">
+          {Object.keys(fieldErrors).length > 0 && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs font-bold text-rose-300">
+              Fix highlighted fields before saving.
+            </div>
+          )}
           {/* Funnel Mapping */}
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
@@ -580,17 +620,20 @@ export default function FollowupsPage() {
               <Input
                 label="Customer Name"
                 value={editLeadData.name}
-                onChange={e => setEditLeadData({ ...editLeadData, name: e.target.value })}
+                error={fieldErrors.name}
+                onChange={e => patchEditLeadData({ name: e.target.value })}
               />
-              <Input
-                label="Phone Number"
-                value={editLeadData.phone}
-                onChange={e => setEditLeadData({ ...editLeadData, phone: e.target.value })}
+              <PhoneNumberFields
+                countryCode={editLeadData.phoneCountryCode}
+                nationalNumber={editLeadData.phoneNational}
+                error={fieldErrors.phone}
+                onCountryCodeChange={(phoneCountryCode) => patchEditLeadData({ phoneCountryCode })}
+                onNationalNumberChange={(phoneNational) => patchEditLeadData({ phoneNational })}
               />
               <Input
                 label="Location / City"
                 value={editLeadData.city}
-                onChange={e => setEditLeadData({ ...editLeadData, city: e.target.value })}
+                onChange={e => patchEditLeadData({ city: e.target.value })}
                 icon={MapPin}
               />
               <Input label="Original Lead Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />

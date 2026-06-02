@@ -6,6 +6,7 @@ const { isAdminUser } = require('../utils/departmentPermissions');
 const logger = require('../utils/logger');
 const GamificationService = require('../services/gamificationService');
 const { broadcastRealtimeEvent } = require('../config/realtime');
+const { parseTimeSpentToMinutes, parseTimeSpentToHours } = require('../../shared/timeSpent');
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -128,7 +129,12 @@ router.post('/', protect, async (req, res) => {
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
     if (action === 'DAILY_LOG' && !['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) {
-      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', { logId: log._id })
+      const hours = parseTimeSpentToHours(details?.timeSpent);
+      GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', {
+        logId: log._id,
+        hours,
+        timeSpent: details?.timeSpent,
+      })
         .then(() => GamificationService.progressMission(req.user._id, 'DAILY_LOG', 1))
         .catch((err) => {
         logger.error('Log', 'Daily log XP award failed', { error: err.message });
@@ -212,24 +218,23 @@ router.delete('/:id', protect, async (req, res) => {
 router.get('/activity-grid', protect, async (req, res) => {
   try {
     const userId = req.user._id;
-    const stats = await Log.aggregate([
-      { $match: { userId, action: 'DAILY_LOG' } },
-      { $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-        count: { $sum: 1 },
-        totalMinutes: {
-          $sum: {
-            $convert: {
-              input: { $arrayElemAt: [{ $split: ['$details.timeSpent', 'h'] }, 0] },
-              to: 'double',
-              onError: 60.0, // Default to 60 min if "h" missing
-              onNull: 60.0
-            }
-          }
-        }
-      }},
-      { $sort: { _id: 1 } }
-    ]);
+    const logs = await Log.find({ userId, action: 'DAILY_LOG' })
+      .select('createdAt details.timeSpent')
+      .lean();
+
+    const byDay = new Map();
+    logs.forEach((log) => {
+      const day = log.createdAt.toISOString().split('T')[0];
+      const existing = byDay.get(day) || { count: 0, totalMinutes: 0 };
+      existing.count += 1;
+      existing.totalMinutes += parseTimeSpentToMinutes(log.details?.timeSpent);
+      byDay.set(day, existing);
+    });
+
+    const stats = [...byDay.entries()]
+      .map(([_id, { count, totalMinutes }]) => ({ _id, count, totalMinutes }))
+      .sort((a, b) => a._id.localeCompare(b._id));
+
     res.json(stats);
   } catch (err) {
     res.status(500).json({ error: err.message });

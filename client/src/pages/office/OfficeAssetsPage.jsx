@@ -17,6 +17,7 @@ import {
   SectionCard,
 } from '../../components/ui';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const OfficeAssetsPage = () => {
   const { confirm } = useConfirm();
@@ -27,7 +28,9 @@ const OfficeAssetsPage = () => {
   const [editingContact, setEditingContact] = useState(null);
   
   const [assetFormData, setAssetFormData] = useState({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
+  const [assetFormBaseline, setAssetFormBaseline] = useState(null);
   const [contactFormData, setContactFormData] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
+  const [contactFormBaseline, setContactFormBaseline] = useState(null);
   const [search, setSearch] = useState('');
   
   const queryClient = useQueryClient();
@@ -104,13 +107,37 @@ const OfficeAssetsPage = () => {
 
   const handleAssetSubmit = (e) => {
     if (e) e.preventDefault();
+    if (editingAsset) return;
     saveAssetMutation.mutate(assetFormData);
   };
 
   const handleContactSubmit = (e) => {
     if (e) e.preventDefault();
+    if (editingContact) return;
     saveContactMutation.mutate(contactFormData);
   };
+
+  const hasOfficeAssetEdits =
+    isAssetModalOpen && editingAsset && assetFormBaseline && !stableJsonEqual(assetFormData, assetFormBaseline);
+
+  const hasOfficeContactEdits =
+    isContactModalOpen && editingContact && contactFormBaseline && !stableJsonEqual(contactFormData, contactFormBaseline);
+
+  useUnsavedChanges({
+    hasChanges: hasOfficeAssetEdits,
+    onSave: () => handleAssetSubmit(),
+    onCancel: () => assetFormBaseline && setAssetFormData(cloneSnapshot(assetFormBaseline)),
+    isSaving: saveAssetMutation.isPending,
+    elevated: true,
+  });
+
+  useUnsavedChanges({
+    hasChanges: hasOfficeContactEdits,
+    onSave: () => handleContactSubmit(),
+    onCancel: () => contactFormBaseline && setContactFormData(cloneSnapshot(contactFormBaseline)),
+    isSaving: saveContactMutation.isPending,
+    elevated: true,
+  });
 
   const getStatusBadgeVariant = (status) => {
     switch (status) {
@@ -142,6 +169,7 @@ const OfficeAssetsPage = () => {
               size="sm"
               onClick={() => {
                 setEditingAsset(null);
+                setAssetFormBaseline(null);
                 setAssetFormData({ name: '', description: '', category: 'Hardware', currentlyWith: 'Office', status: 'Available', updateNotes: '', serialNumber: '', purchaseDate: '' });
                 setIsAssetModalOpen(true);
               }}
@@ -153,6 +181,7 @@ const OfficeAssetsPage = () => {
               size="sm"
               onClick={() => {
                 setEditingContact(null);
+                setContactFormBaseline(null);
                 setContactFormData({ name: '', role: '', phone: '', email: '', notes: '' });
                 setIsContactModalOpen(true);
               }}
@@ -203,8 +232,10 @@ const OfficeAssetsPage = () => {
                     <tr 
                       key={asset._id} 
                       onClick={() => {
+                        const loaded = { ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' };
                         setEditingAsset(asset);
-                        setAssetFormData({ ...asset, purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '', updateNotes: '' });
+                        setAssetFormData(loaded);
+                        setAssetFormBaseline(cloneSnapshot(loaded));
                         setIsAssetModalOpen(true);
                       }}
                       className="cursor-pointer hover:bg-[var(--color-bg-secondary)]/60 transition-colors"
@@ -243,8 +274,10 @@ const OfficeAssetsPage = () => {
                     <tr 
                       key={contact._id} 
                       onClick={() => {
+                        const loaded = { name: contact.name, role: contact.role, phone: contact.phone, email: contact.email || '', notes: contact.notes || '' };
                         setEditingContact(contact);
-                        setContactFormData(contact);
+                        setContactFormData(loaded);
+                        setContactFormBaseline(cloneSnapshot(loaded));
                         setIsContactModalOpen(true);
                       }}
                       className="cursor-pointer hover:bg-[var(--color-bg-secondary)]/60 transition-colors"
@@ -371,14 +404,11 @@ const OfficeAssetsPage = () => {
             )}
 
             <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={saveAssetMutation.isPending}
-              >
-                {saveAssetMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Save Asset'}
-              </Button>
-              
+              {!editingAsset && (
+                <Button type="submit" className="w-full" disabled={saveAssetMutation.isPending}>
+                  {saveAssetMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Add Asset'}
+                </Button>
+              )}
               {editingAsset && (
                 <Button 
                   type="button" 
@@ -472,14 +502,11 @@ const OfficeAssetsPage = () => {
             />
 
             <div className="pt-4 border-t border-[var(--color-bg-border)] space-y-2">
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={saveContactMutation.isPending}
-              >
-                {saveContactMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Save Contact'}
-              </Button>
-              
+              {!editingContact && (
+                <Button type="submit" className="w-full" disabled={saveContactMutation.isPending}>
+                  {saveContactMutation.isPending ? <RefreshCw className="animate-spin" size={14} /> : 'Add Contact'}
+                </Button>
+              )}
               {editingContact && (
                 <Button 
                   type="button" 

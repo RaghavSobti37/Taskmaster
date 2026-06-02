@@ -14,6 +14,7 @@ import {
 } from '../../utils/pagePermissions';
 import { DepartmentMonthlyReportPanel, TeamMonthlyReportPanel } from './AggregatedMonthlyReportPanel';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const PagePermissionsEditor = ({ selectedPages, onChange }) => {
   const togglePage = (key) => {
@@ -103,7 +104,9 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
   const [newPreset, setNewPreset] = useState('standard');
   const [editingDept, setEditingDept] = useState(null);
   const [editPages, setEditPages] = useState([]);
+  const [editPagesBaseline, setEditPagesBaseline] = useState([]);
   const [editPreset, setEditPreset] = useState('standard');
+  const [editPresetBaseline, setEditPresetBaseline] = useState('standard');
   const [reportDept, setReportDept] = useState(null);
   const [teamReportOpen, setTeamReportOpen] = useState(false);
 
@@ -136,9 +139,13 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
   };
 
   const openEdit = (dept) => {
+    const pages = resolveDepartmentPages(dept);
+    const preset = dept.permissionPreset || 'standard';
     setEditingDept(dept);
-    setEditPreset(dept.permissionPreset || 'standard');
-    setEditPages(resolveDepartmentPages(dept));
+    setEditPreset(preset);
+    setEditPresetBaseline(preset);
+    setEditPages(pages);
+    setEditPagesBaseline(cloneSnapshot(pages));
   };
 
   const applyPresetToEdit = (preset) => {
@@ -161,6 +168,21 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
       alert(err.response?.data?.error || err.message);
     }
   };
+
+  const hasPermissionEdits =
+    !!editingDept &&
+    (editPreset !== editPresetBaseline || !stableJsonEqual(editPages, editPagesBaseline));
+
+  useUnsavedChanges({
+    hasChanges: hasPermissionEdits,
+    onSave: handleSavePermissions,
+    onCancel: () => {
+      setEditPages(cloneSnapshot(editPagesBaseline));
+      setEditPreset(editPresetBaseline);
+    },
+    isSaving: updateMutation.isPending,
+    elevated: true,
+  });
 
   const handleDelete = async (dept) => {
     const ok = await confirm({
@@ -314,12 +336,6 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
 
           <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)]">
             <span className="text-[10px] text-[var(--color-text-muted)]">{editPages.length} pages selected</span>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditingDept(null)}>Cancel</Button>
-              <Button size="sm" onClick={handleSavePermissions} disabled={updateMutation.isPending || editPages.length === 0}>
-                {updateMutation.isPending ? 'Saving...' : 'Save Access'}
-              </Button>
-            </div>
           </div>
         </div>
       </CenteredModal>

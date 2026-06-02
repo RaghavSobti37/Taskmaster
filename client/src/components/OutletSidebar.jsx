@@ -11,6 +11,7 @@ import {
   CalendarClock,
   ListTodo,
   Inbox,
+  MessageSquare,
   FolderArchive,
   NotebookPen,
   Mail,
@@ -91,6 +92,7 @@ const PAGE_CONFIG = {
   '/calendar': { icon: CalendarDays, label: 'Calendar', accessKey: 'calendar' },
   '/todo': { icon: ListTodo, label: 'Todo', accessKey: 'todo' },
   '/inbox': { icon: Inbox, label: 'Inbox', accessKey: 'inbox' },
+  '/chat': { icon: MessageSquare, label: 'Chat', accessKey: 'chat' },
   '/projects': { icon: Briefcase, label: 'Projects', accessKey: 'projects' },
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
@@ -353,7 +355,7 @@ const OutletSidebar = () => {
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
           {(() => {
             const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
-              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }] },
+              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }, { path: '/chat' }] },
               { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/emails' }] },
               { id: 'office', title: 'Office', visible: true, pages: [{ path: '/equipment' }, { path: '/contacts' }, { path: '/attendance' }, { path: '/subscriptions' }] },
               { id: 'crm', title: 'CRM', visible: true, pages: [{ path: '/leads' }, { path: '/followups' }, { path: '/bookings' }] },
@@ -379,6 +381,19 @@ const OutletSidebar = () => {
                 officeGroup.pages = [
                   ...(officeGroup.pages || []),
                   { path: '/subscriptions', label: 'Subscriptions', visible: true },
+                ];
+              }
+            }
+
+            const hasChat = rawGroups.some((g) =>
+              (g.pages || []).some((p) => normalizeNavPagePath(p.path) === '/chat')
+            );
+            if (!hasChat) {
+              const platformGroup = rawGroups.find((g) => g.id === 'platform');
+              if (platformGroup) {
+                platformGroup.pages = [
+                  ...(platformGroup.pages || []),
+                  { path: '/chat', label: 'Chat', visible: true },
                 ];
               }
             }

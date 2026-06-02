@@ -1,19 +1,22 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import axios from 'axios';
-import { Settings, LayoutDashboard } from 'lucide-react';
-import { PageContainer, DashboardSkeleton, PageHeader, Button } from '../components/ui';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PageContainer, DashboardSkeleton } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useSystemToast } from '../lib/systemLogBridge';
 import { MODULE } from '../lib/systemLogContract';
-import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../lib/notifications';
-import { taskCompletionToast, taskApprovalToast, resolveTaskId, canMarkTaskComplete, normalizeCompletionHours, pendingReviewToast } from '../utils/taskCompletion';
-import { resolveTaskFinishIntent } from '../utils/taskReview';
-import { updateAllTaskQueries } from '../utils/taskCache';
-import { useTasks, useDashboardTasks, useReviewTasks, useProjects, useDashboardSummary, useDashboardPreset, useUserDirectory } from '../hooks/useTaskmasterQueries';
+import {
+  useDashboardTasks,
+  useReviewTasks,
+  useProjects,
+  useWorkspaces,
+  useDashboardSummary,
+  useDashboardPreset,
+  useUserDirectory,
+} from '../hooks/useTaskmasterQueries';
+import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
 import {
   AnnouncementsCard,
-  ScheduleCard,
+  CalendarTodayCard,
   TodosTodayCard,
   TodosOverdueCard,
   ReviewQueueCard,
@@ -22,8 +25,9 @@ import {
   PinBoardMessages,
   PinBoardComposer,
   LeaderboardPodium,
+  DailyMissionsCard,
   PipelineSummaryCard,
-  GenericDashboardCard
+  GenericDashboardCard,
 } from '../components/dashboard';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import TaskCompletionModal from '../components/TaskCompletionModal';
@@ -35,20 +39,33 @@ import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent } from '../lib
 import { isAdminUser } from '../utils/departmentPermissions';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToast } = useSystemToast();
   const permissionPreset = useMemo(() => {
     if (isAdminUser(user)) return 'admin';
     const dept = user?.departmentId;
     return dept?.permissionPreset || dept?.slug || 'standard';
   }, [user]);
-  const queryClient = useQueryClient();
-  const { addToast } = useSystemToast();
+
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id);
   const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(!!user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: workspaces = [] } = useWorkspaces();
   const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
   const { data: users = [] } = useUserDirectory();
+
+  const {
+    taskToComplete,
+    setTaskToComplete,
+    completionSubmitForReview,
+    completingTaskId,
+    approvingReviewId,
+    handleCompleteRequest,
+    handleCompleteSubmit,
+    handleApproveReview,
+  } = useDashboardTaskActions({ user, projects, users });
 
   const today = useMemo(() => {
     const value = new Date();
@@ -63,121 +80,43 @@ const Dashboard = () => {
 
   const executeGeolocationCheck = (type, manualTime) => {
     setIsLocating(true);
-    if ("geolocation" in navigator) {
+    if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          checkIn.mutate({ type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime }, { onSettled: () => setIsLocating(false) });
+          checkIn.mutate(
+            { type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime },
+            { onSettled: () => setIsLocating(false) }
+          );
         },
-        (error) => {
-          addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
+        () => {
+          addToast({
+            type: 'warn',
+            message: 'Location unavailable — check-in saved without GPS.',
+            module: MODULE.ATTENDANCE,
+          });
           checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     } else {
-      addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
+      addToast({
+        type: 'warn',
+        message: 'Location unavailable — check-in saved without GPS.',
+        module: MODULE.ATTENDANCE,
+      });
       checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
     }
   };
 
-
-  const [taskToComplete, setTaskToComplete] = useState(null);
-  const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
-  const [completingTaskId, setCompletingTaskId] = useState(null);
-  const [approvingReviewId, setApprovingReviewId] = useState(null);
-
-  const loading = summaryLoading || tasksLoading || projectsLoading || presetLoading;
   const calendar = useMemo(() => summary?.calendar || [], [summary]);
+  const showPageSkeleton = presetLoading && !dashboardPreset;
 
-  const handleCompleteRequest = useCallback((task) => {
-    const intent = resolveTaskFinishIntent(task, user, projects, users);
-    if (intent === 'approve') {
-      handleApproveReview(task);
-      return;
-    }
-    if (intent === 'awaiting_review' || !canMarkTaskComplete(task)) {
-      if (task?.status === 'in-review') {
-        addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
-      }
-      return;
-    }
-    setCompletionSubmitForReview(intent === 'submit_review');
-    setTaskToComplete(task);
-  }, [user, projects, users, addToast]);
-
-  const handleCompleteSubmit = useCallback(async (task, hours) => {
-    suppressAutoToasts(5000);
-    const taskId = resolveTaskId(task);
-    if (!taskId) {
-      addToast({ title: 'Error', message: 'Invalid task. Refresh and try again.', type: 'error', module: MODULE.PROJECTS });
-      return;
-    }
-    setCompletingTaskId(taskId);
-    setTaskToComplete(null);
-    try {
-      const taskRes = await axios.put(
-        `/api/tasks/${taskId}`,
-        { status: 'done', actualHours: normalizeCompletionHours(task.actualHours, hours) },
-        AXIOS_SKIP_TOAST
-      );
-      const returnedStatus = taskRes.data?.status;
-      const toast = taskCompletionToast(returnedStatus, task.title);
-      addToast({ ...toast, duration: 5000, module: MODULE.PROJECTS });
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
-      );
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['logs'] });
-    } catch (err) {
-      addToast({
-        title: 'Error',
-        message: err.response?.data?.error || err.response?.data?.message || 'Failed',
-        type: 'error',
-        module: MODULE.PROJECTS,
-      });
-    } finally {
-      setCompletingTaskId(null);
-    }
-  }, [projects, queryClient, addToast]);
-
-  const handleApproveReview = useCallback(async (task) => {
-    const taskId = resolveTaskId(task);
-    if (!taskId) return;
-    suppressAutoToasts(5000);
-    setApprovingReviewId(taskId);
-    try {
-      const taskRes = await axios.put(
-        `/api/tasks/${taskId}`,
-        { reviewAction: 'approve' },
-        AXIOS_SKIP_TOAST
-      );
-      addToast({
-        ...taskApprovalToast(task.title),
-        duration: 5000,
-        module: MODULE.PROJECTS,
-      });
-      updateAllTaskQueries(queryClient, (list) =>
-        (list || []).map((t) => (resolveTaskId(t) === taskId ? { ...t, ...taskRes.data } : t))
-      );
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'review'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['logs'] });
-    } catch (err) {
-      addToast({
-        title: 'Approval Failed',
-        message: err.response?.data?.error || err.response?.data?.message || 'Could not approve task.',
-        type: 'error',
-        module: MODULE.PROJECTS,
-      });
-    } finally {
-      setApprovingReviewId(null);
-    }
-  }, [queryClient, addToast]);
-
-  const defaultElements = LAYOUT_TEMPLATES.find(t => t.id === 'coreknot')?.elements || [];
+  const defaultElements = LAYOUT_TEMPLATES.find((t) => t.id === 'coreknot')?.elements || [];
   const elementsToRender = useMemo(
-    () => (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements)
-      .filter((el) => el.visible && canAccessComponent(el.componentId, permissionPreset)),
+    () =>
+      (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
+        (el) => el.visible && canAccessComponent(el.componentId, permissionPreset)
+      ),
     [dashboardPreset?.elements, defaultElements, permissionPreset]
   );
   const maxGridRow = useMemo(
@@ -185,37 +124,79 @@ const Dashboard = () => {
     [elementsToRender]
   );
 
-  if (loading && !tasks.length) return <PageContainer><DashboardSkeleton /></PageContainer>;
+  if (showPageSkeleton) {
+    return (
+      <PageContainer>
+        <DashboardSkeleton />
+      </PageContainer>
+    );
+  }
 
   const renderComponent = (componentId) => {
     switch (componentId) {
-      case 'leaderboard': return <LeaderboardPodium />;
-      case 'announcements': return <AnnouncementsCard />;
-      case 'pinboard': return <PinBoardMessages />;
-      case 'schedule': return <ScheduleCard calendar={calendar} loading={summaryLoading} />;
-      case 'review-queue': return <ReviewQueueCard tasks={reviewTasks} projects={projects} loading={reviewLoading} onApprove={handleApproveReview} approvingTaskId={approvingReviewId} />;
-      case 'todos-today': return <TodosTodayCard tasks={tasks} projects={projects} loading={tasksLoading} onComplete={handleCompleteRequest} completingTaskId={completingTaskId} />;
-      case 'todos-overdue': return <TodosOverdueCard tasks={tasks} projects={projects} loading={tasksLoading} onComplete={handleCompleteRequest} completingTaskId={completingTaskId} />;
-      case 'projects-today': return <ProjectsTodayCard tasks={tasks} projects={projects} loading={tasksLoading} />;
-      case 'notes': return <NotesPanel />;
-      case 'composer': return <PinBoardComposer />;
+      case 'leaderboard':
+        return <LeaderboardPodium />;
+      case 'daily-missions':
+        return <DailyMissionsCard />;
+      case 'announcements':
+        return <AnnouncementsCard />;
+      case 'pinboard':
+        return <PinBoardMessages />;
+      case 'schedule':
+        return <CalendarTodayCard calendar={calendar} loading={summaryLoading} />;
+      case 'review-queue':
+        return (
+          <ReviewQueueCard
+            tasks={reviewTasks}
+            projects={projects}
+            workspaces={workspaces}
+            loading={reviewLoading}
+            onApprove={handleApproveReview}
+            approvingTaskId={approvingReviewId}
+            onOpenProject={(projectId) => navigate(`/projects/${projectId}`)}
+          />
+        );
+      case 'todos-today':
+        return (
+          <TodosTodayCard
+            tasks={tasks}
+            projects={projects}
+            loading={tasksLoading}
+            onComplete={handleCompleteRequest}
+            completingTaskId={completingTaskId}
+          />
+        );
+      case 'todos-overdue':
+        return (
+          <TodosOverdueCard
+            tasks={tasks}
+            projects={projects}
+            loading={tasksLoading}
+            onComplete={handleCompleteRequest}
+            completingTaskId={completingTaskId}
+          />
+        );
+      case 'projects-today':
+        return <ProjectsTodayCard tasks={tasks} projects={projects} loading={tasksLoading || projectsLoading} />;
+      case 'notes':
+        return <NotesPanel />;
+      case 'composer':
+        return <PinBoardComposer />;
       case 'mark-attendance':
         return (
-          <UnifiedTimeCard 
+          <UnifiedTimeCard
             entry={attendanceRows[0]}
             title={format(today, 'EEEE, MMMM d')}
             subTitle="Today"
-            isSelfMode={true}
+            isSelfMode
             onCheckIn={(t) => executeGeolocationCheck('in', t)}
             onCheckOut={(t) => executeGeolocationCheck('out', t)}
             onUndo={(type) => undoCheck.mutate({ type })}
             isLoading={isLocating || checkIn.isPending}
           />
         );
-
       case 'pipeline-summary':
         return <PipelineSummaryCard />;
-
       case 'leave-alerts':
       case 'invoice-alerts':
       case 'booked-calls':
@@ -227,7 +208,8 @@ const Dashboard = () => {
       case 'system-health':
       case 'artist-calendar':
         return <GenericDashboardCard componentId={componentId} />;
-      default: return null;
+      default:
+        return null;
     }
   };
 
@@ -239,7 +221,7 @@ const Dashboard = () => {
           style={{ '--grid-rows': maxGridRow }}
         >
           {elementsToRender
-            .sort((a, b) => (a.row - b.row) || (a.col - b.col))
+            .sort((a, b) => a.row - b.row || a.col - b.col)
             .map((el) => {
               const span = parseInt(el.size, 10) || 1;
               return (

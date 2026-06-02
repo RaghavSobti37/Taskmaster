@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.56-126d5e?style=flat-square" alt="Version 1.7.56" />
+  <img src="https://img.shields.io/badge/version-1.7.57-126d5e?style=flat-square" alt="Version 1.7.57" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -84,9 +84,10 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 ### 💼 Automated Sales & CRM Pipelines
 
-* **Ingestion Vectors:** Multi-channel lead ingestion via structured CSV uploads, real-time Google Sheets integrations, and Exly webhook endpoints.
-* **Auto-Routing Allocations:** Automatically assigns incoming customer opportunities to the least-loaded sales representative currently online.
-* **Transactional Communication:** Dual-route AiSensy WhatsApp setups simultaneously issue real-time tracking confirmations to clients and internal alert indicators to the assigned sales team.
+* **Booked calls (CRM direct):** [theshakticollective.in/book-a-call](https://theshakticollective.in/book-a-call) → TSC Website `POST /api/book-call` → Taskmaster `POST /api/webhooks/book-call` → MongoDB lead (no HolySheet, no Google Sheets append). Rep split **2:1:1** (Satyam / Aryaman / Akash). See [`docs/BOOKED_CALLS_CRM_DIRECT.md`](docs/BOOKED_CALLS_CRM_DIRECT.md).
+* **Ingestion Vectors:** CSV uploads, Exly webhooks, and legacy Data Hub inlets; sheet import for booked calls removed in v1.7.57.
+* **Follow-up reminders:** Taskmaster `notificationService` fires in-app reminders from CRM `nextFollowupDate` / `nextFollowupTime` (IST, `dd-MM-yyyy`).
+* **Transactional Communication:** AiSensy WhatsApp confirmations to the booker and assigned rep on each website booking.
 
 ### 🛡️ Institutional Task Review Workflow
 
@@ -149,6 +150,21 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Metrics:** Task completion rate (%), converted lead count (people converted in period), total focus hours from daily logs.
 * **Widget:** `dept-stats` card in `GenericDashboardCard.jsx`; admin-only via `dashboardComponents.js`.
 
+
+### Booked Calls, Chat & Unsaved Changes (v1.7.57)
+
+* **CRM-only bookings:** Removed `bookedCallsSyncService`, HolySheet/Sheet sync API (`/api/crm/sync-bookings`), Data Hub sheet import, and Google Sheets append on the book-call webhook. Website webhook is the single source of truth.
+* **Webhook auth:** `BOOK_CALL_WEBHOOK_SECRET` via `X-Webhook-Secret` (same pattern as artist enquiry); `rejectUnlessBookCallAuthorized` in `webhookAuth.js`.
+* **Rep assignment:** `bookedCallRepAssignment.js` — weighted 2:1:1 across Satyam (`sr06`), Aryaman (`sr09`), and Akash.
+* **Team chat:** Linked channels, DMs, file uploads (`chatRoutes.js`, `ChatChannel` / `ChatMessage` models, `client/src/pages/chat/`).
+* **Unsaved changes:** Global `UnsavedChangesProvider` + bottom bar on settings, CRM workspaces, admin panels, and `FullScreenWorkspace` flows (`useUnsavedChanges.js`).
+
+**Deploy env (Taskmaster + TSC Website):**
+
+```env
+BOOK_CALL_WEBHOOK_SECRET=<shared-secret>
+TASKMASTER_WEBHOOK_URL=https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call
+```
 
 ### Team Schedule & Todo (v1.7.56)
 
@@ -576,7 +592,7 @@ npm run seed:prod-content
 - **Music Content Calendar:** 35 public `musical_day` events from `Music_Content_Calendar.pdf` — `seedMusicContentCalendar.js --year=2026 [--prod]`.
 - **Task mentions:** `@user` / `#asset` tokens in task title/description with notification dispatch (`mentionNotifications.js`, `mentions/` components).
 - **Overdue notifications removed:** `checkOverdue` cron deleted from `notificationService.js` (no overdue task/follow-up alerts).
-- **Gamification:** Shared rules in `shared/gamificationRules.js`; booked-call sync into Data Hub via `bookedCallsSyncService.js`.
+- **Gamification:** Shared rules in `shared/gamificationRules.js`. Booked-call contacts merge via `LeadService` on webhook (v1.7.57+); legacy `bookedCallsSyncService.js` removed.
 
 Post-deploy production data (legacy one-liners; prefer `npm run seed:prod-content` in v1.7.46+):
 

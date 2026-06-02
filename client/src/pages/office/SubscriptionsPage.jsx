@@ -16,6 +16,7 @@ import {
   PageSkeleton,
   DataLoading,
 } from '../../components/ui';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const SUBSCRIPTION_TYPES = ['Software', 'SaaS', 'Hosting', 'Domain', 'Service', 'Other'];
 const PERIODICITY_OPTIONS = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'One-time'];
@@ -76,6 +77,7 @@ const SubscriptionsPage = () => {
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formBaseline, setFormBaseline] = useState(EMPTY_FORM);
   const rateAppliedRef = useRef(false);
   const queryClient = useQueryClient();
   const { data: users = [] } = useUserDirectory();
@@ -143,14 +145,28 @@ const SubscriptionsPage = () => {
   const openCreate = () => {
     setEditing(null);
     setFormData(EMPTY_FORM);
+    setFormBaseline(EMPTY_FORM);
     setIsModalOpen(true);
   };
 
   const openEdit = (sub) => {
+    const loaded = toFormData(sub, usdInrRate);
     setEditing(sub);
-    setFormData(toFormData(sub, usdInrRate));
+    setFormData(loaded);
+    setFormBaseline(cloneSnapshot(loaded));
     setIsModalOpen(true);
   };
+
+  const hasSubscriptionEdits =
+    isModalOpen && editing && !stableJsonEqual(formData, formBaseline);
+
+  useUnsavedChanges({
+    hasChanges: hasSubscriptionEdits,
+    onSave: () => saveMutation.mutate(toPayload(formData)),
+    onCancel: () => setFormData(cloneSnapshot(formBaseline)),
+    isSaving: saveMutation.isPending,
+    elevated: true,
+  });
 
   if (isLoading && !subscriptions.length) {
     return (
@@ -238,7 +254,7 @@ const SubscriptionsPage = () => {
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            saveMutation.mutate(toPayload(formData));
+            if (!editing) saveMutation.mutate(toPayload(formData));
           }}
         >
           <Input
@@ -332,9 +348,11 @@ const SubscriptionsPage = () => {
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
           <div className="flex items-center gap-2">
-            <Button type="submit" disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
+            {!editing && (
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? 'Saving...' : 'Add Subscription'}
+              </Button>
+            )}
             {editing && (
               <Button
                 type="button"

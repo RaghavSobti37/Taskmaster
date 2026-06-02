@@ -2,6 +2,7 @@ import React from 'react';
 import { Users } from 'lucide-react';
 import { Card, ProgressBar } from '../ui';
 import { useLogs } from '../../hooks/useTaskmasterQueries';
+import { taskAssignedToUserId } from '../../utils/normalizeTask';
 import { isSameDay } from 'date-fns';
 
 const SquadCard = ({ teamMembers = [], tasks = [], loading = false }) => {
@@ -57,7 +58,7 @@ const SquadCard = ({ teamMembers = [], tasks = [], loading = false }) => {
       </div>
       <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
         {sortedMembers.map(member => {
-          const memberTasks = tasks.filter(t => t.assignees?.includes(member._id));
+          const memberTasks = tasks.filter((t) => taskAssignedToUserId(t, member._id));
           const completedCount = memberTasks.filter(t => t.status === 'done').length;
           const progress = memberTasks.length 
             ? Math.round((completedCount / memberTasks.length) * 100) 

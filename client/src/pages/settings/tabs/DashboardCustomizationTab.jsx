@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { LayoutDashboard, GripVertical, Plus, EyeOff, Scaling, PanelRight, X } from 'lucide-react';
-import UnsavedChangesBar from '../components/UnsavedChangesBar';
 import { useDashboardPreset } from '../../../hooks/useTaskmasterQueries';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
 
@@ -332,10 +332,24 @@ export default function DashboardCustomizationTab() {
   };
 
   const hasChanges = JSON.stringify(dashboardElements) !== JSON.stringify(originalElements);
+
+  useUnsavedChanges({
+    hasChanges,
+    onSave: handleSave,
+    onCancel: handleRevert,
+    isSaving: saving,
+  });
   const colSpanClass = (size) => ({ '4': 'col-span-4', '3': 'col-span-3', '2': 'col-span-2' }[String(size)] || 'col-span-1');
 
   const renderDummyContent = (id) => {
     switch (id) {
+      case 'daily-missions': return (
+        <div className="space-y-2 w-full">
+          <div className="h-2 w-full bg-emerald-500/30 rounded"></div>
+          <div className="h-2 w-4/5 bg-emerald-500/20 rounded"></div>
+          <div className="h-2 w-3/5 bg-emerald-500/10 rounded"></div>
+        </div>
+      );
       case 'leaderboard': return (
         <div className="space-y-2 w-full">
           <div className="flex items-center gap-2"><span className="text-yellow-500 text-sm">🥇</span><div className="h-3.5 bg-yellow-400/80 rounded-full flex-1"></div><span className="text-xs font-bold text-[var(--color-text-muted)]">142</span></div>
@@ -444,6 +458,16 @@ export default function DashboardCustomizationTab() {
     return dashboardElements;
   }, [dashboardElements, dragId, dropTarget]);
 
+  const maxVisibleRow = useMemo(
+    () => displayElements
+      .filter((el) => el.visible)
+      .reduce((max, el) => Math.max(max, el.row || 1), 1),
+    [displayElements]
+  );
+
+  const gridContentHeight = maxVisibleRow * CELL_HEIGHT + Math.max(0, maxVisibleRow - 1) * GAP;
+  const workspaceMinHeight = Math.max(500, gridContentHeight + 48);
+
   return (
     <div className="flex h-full overflow-hidden relative">
       <div className="flex-1 flex flex-col overflow-y-auto px-8 custom-scrollbar pt-6 pb-24">
@@ -477,11 +501,17 @@ export default function DashboardCustomizationTab() {
           </div>
         </div>
 
-        <div className="border-[4px] border-[var(--color-text-primary)] bg-[var(--color-bg-workspace)] rounded-3xl p-6 min-h-[500px]">
+        <div
+          className="border-[4px] border-[var(--color-text-primary)] bg-[var(--color-bg-workspace)] rounded-3xl p-6"
+          style={{ minHeight: workspaceMinHeight }}
+        >
           <div
             ref={gridRef}
             className="grid grid-cols-4 gap-4 relative"
-            style={{ gridAutoRows: `${CELL_HEIGHT}px` }}
+            style={{
+              gridAutoRows: `${CELL_HEIGHT}px`,
+              gridTemplateRows: `repeat(${maxVisibleRow}, ${CELL_HEIGHT}px)`,
+            }}
           >
             {displayElements.filter(el => el.visible).map((el) => {
               const cCol = clampCol(el.col, el.size);
@@ -621,7 +651,6 @@ export default function DashboardCustomizationTab() {
         <div className="fixed inset-0 bg-black/20 z-[90] transition-opacity" onClick={() => setDrawerOpen(false)} />
       )}
 
-      <UnsavedChangesBar hasChanges={hasChanges} onReset={handleRevert} onSave={handleSave} isSaving={saving} />
     </div>
   );
 }

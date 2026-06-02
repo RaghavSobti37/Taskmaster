@@ -6,6 +6,7 @@
   "scripts": {
     "build": "cd ../client && npm install && npm run build",
     "start": "node server.js",
+    "predev": "node scripts/freePort.js 5000 --wait",
     "dev": "nodemon server.js",
     "test": "set NODE_ENV=test&& jest",
     "sync-db": "node scripts/sync-prod-to-local.js",

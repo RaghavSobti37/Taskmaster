@@ -8,9 +8,10 @@
 export const COMPONENT_REGISTRY = {
   // ── Universal (all departments) ──
   'leaderboard': { label: 'Leaderboard', access: ['all'], defaultSize: '1', icon: '🏆' },
+  'daily-missions': { label: 'Daily Missions', access: ['all'], defaultSize: '1', icon: '🎯' },
   'announcements': { label: 'Announcements', access: ['all'], defaultSize: '1', icon: '📢' },
   'pinboard': { label: 'Pin Board', access: ['all'], defaultSize: '1', icon: '📌' },
-  'schedule': { label: 'Schedule', access: ['all'], defaultSize: '1', icon: '📅' },
+  'schedule': { label: "Today's Calendar", access: ['all'], defaultSize: '1', icon: '📅' },
   'review-queue': { label: 'Review Queue', access: ['all'], defaultSize: '2', icon: '✅' },
   'todos-today': { label: 'Today Tasks', access: ['all'], defaultSize: '2', icon: '📋' },
   'todos-overdue': { label: 'Overdue Tasks', access: ['all'], defaultSize: '2', icon: '⚠️' },
@@ -71,9 +72,10 @@ export const LAYOUT_TEMPLATES = [
     target: ['all'],
     elements: [
       { componentId: 'leaderboard', size: '1', col: 1, row: 1 },
-      { componentId: 'announcements', size: '1', col: 1, row: 2 },
-      { componentId: 'pinboard', size: '1', col: 1, row: 3 },
-      { componentId: 'schedule', size: '1', col: 1, row: 4 },
+      { componentId: 'daily-missions', size: '1', col: 1, row: 2 },
+      { componentId: 'announcements', size: '1', col: 1, row: 3 },
+      { componentId: 'pinboard', size: '1', col: 1, row: 4 },
+      { componentId: 'schedule', size: '1', col: 1, row: 5 },
       { componentId: 'review-queue', size: '2', col: 2, row: 1 },
       { componentId: 'todos-today', size: '2', col: 2, row: 2 },
       { componentId: 'projects-today', size: '2', col: 2, row: 3 },

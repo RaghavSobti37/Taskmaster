@@ -1,3 +1,7 @@
+/**
+ * UI helpers for task review. Authoritative approve/review rules: shared/taskReviewRules.js
+ * (enforced server-side in TaskService). Do not duplicate business logic here.
+ */
 import {
   canUserApproveReview,
   requiresReviewForUser,
@@ -10,6 +14,7 @@ import {
 } from './taskReviewRules';
 import { extractUserMentionLabels, resolveUserByLabel } from './mentionTokens';
 import { isAdminUser } from './departmentPermissions';
+import { normalizeTask } from './normalizeTask';
 
 export {
   canUserApproveReview,
@@ -20,12 +25,7 @@ export {
 };
 
 export function getTaskAssignments(task) {
-  if (task?.assignments?.length) return task.assignments;
-  const assignees = task?.assignees || [];
-  return assignees.map((a) => {
-    if (typeof a === 'object' && a.userId) return a;
-    return { userId: a, assignedBy: task?.assignedBy || task?.createdBy };
-  });
+  return normalizeTask(task).assignments || [];
 }
 
 export function getDelegatedAssignmentForTask(task) {

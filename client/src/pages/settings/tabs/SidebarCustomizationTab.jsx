@@ -3,8 +3,8 @@ import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, LayoutTemplate } from 'lucide-react';
 import { Button } from '../../../components/ui';
-import UnsavedChangesBar from '../components/UnsavedChangesBar';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { hasPageAccess } from '../../../utils/departmentPermissions';
 import { filterNavGroupsForUser } from '../../../utils/navPageAccess';
 
@@ -112,6 +112,13 @@ export default function SidebarCustomizationTab() {
 
   const hasChanges = JSON.stringify(groups) !== JSON.stringify(originalGroups);
 
+  useUnsavedChanges({
+    hasChanges,
+    onSave: handleSave,
+    onCancel: handleRevert,
+    isSaving: saving,
+  });
+
   return (
     <div className="flex flex-col h-full overflow-hidden pb-24">
       <div className="flex-1 overflow-y-auto px-8 custom-scrollbar">
@@ -119,11 +126,7 @@ export default function SidebarCustomizationTab() {
           {/* LEFT — Page ordering within groups */}
           <div className="flex-1 min-w-0">
             <section>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
-                  <LayoutTemplate size={18} className="text-blue-500" /> Group Ordering
-                </h2>
-              </div>
+             
 
               <Reorder.Group axis="y" values={groups} onReorder={handleReorderGroups} className="space-y-4">
                 <AnimatePresence>
@@ -248,12 +251,6 @@ export default function SidebarCustomizationTab() {
         </div>
       </div>
 
-      <UnsavedChangesBar
-        hasChanges={hasChanges}
-        onReset={handleRevert}
-        onSave={handleSave}
-        isSaving={saving}
-      />
     </div>
   );
 }

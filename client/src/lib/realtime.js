@@ -1,14 +1,11 @@
 import { io } from 'socket.io-client';
+import { getRealtimeOrigin } from '../utils/apiBase';
 
 let socket = null;
 
-const getSocketUrl = () => {
-  const api = import.meta.env.VITE_API_URL;
-  if (api) return api.replace(/\/$/, '');
-  return window.location.origin;
-};
+const getSocketUrl = () => getRealtimeOrigin();
 
-const connect = () => {
+export const connect = () => {
   if (socket?.connected) {
     return socket;
   }

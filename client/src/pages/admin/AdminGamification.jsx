@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge } from '../../components/ui';
-import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
+import { Edit2, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const AdminGamification = () => {
   const { confirm } = useConfirm();
@@ -14,6 +15,7 @@ const AdminGamification = () => {
   const [saving, setSaving] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [editOriginalValue, setEditOriginalValue] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [recalculating, setRecalculating] = useState(false);
 
@@ -37,11 +39,13 @@ const AdminGamification = () => {
 
   const handleEdit = useCallback((field, value) => {
     setEditingField(field);
-    setEditValue(String(value));
+    const str = String(value);
+    setEditValue(str);
+    setEditOriginalValue(str);
   }, []);
 
-  const invalidateLeaderboardQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
+  const invalidateGamificationQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['gamification'] });
     queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
   }, [queryClient]);
 
@@ -54,10 +58,18 @@ const AdminGamification = () => {
         setMessage({ type: 'error', text: 'Enter a valid non-negative number' });
         return;
       }
-      await axios.put('/api/gamification-admin/config', { [field]: numValue });
-      setConfig((prev) => ({ ...prev, [field]: numValue }));
-      invalidateLeaderboardQueries();
-      setMessage({ type: 'success', text: `${field} updated — audit logs synced` });
+      const res = await axios.put('/api/gamification-admin/config', { [field]: numValue });
+      if (res.data?.config) {
+        setConfig(res.data.config);
+      } else {
+        setConfig((prev) => ({ ...prev, [field]: numValue }));
+      }
+      invalidateGamificationQueries();
+      const recalcMsg = res.data?.recalc?.message;
+      setMessage({
+        type: 'success',
+        text: recalcMsg || `${field} updated`,
+      });
       setEditingField(null);
       setEditValue('');
     } catch (err) {
@@ -65,12 +77,22 @@ const AdminGamification = () => {
     } finally {
       setSaving(false);
     }
-  }, [editingField, editValue, invalidateLeaderboardQueries]);
+  }, [editingField, editValue, invalidateGamificationQueries]);
 
   const handleCancel = useCallback(() => {
     setEditingField(null);
     setEditValue('');
+    setEditOriginalValue('');
   }, []);
+
+  const hasFieldEdits = !!editingField && editValue !== editOriginalValue;
+
+  useUnsavedChanges({
+    hasChanges: hasFieldEdits,
+    onSave: () => handleSave(),
+    onCancel: handleCancel,
+    isSaving: saving,
+  });
 
   const handleRecalculateAllLevels = useCallback(async () => {
     const ok = await confirm({
@@ -83,14 +105,14 @@ const AdminGamification = () => {
     try {
       setRecalculating(true);
       const res = await axios.post('/api/gamification-admin/recalculate-all-levels');
-      invalidateLeaderboardQueries();
+      invalidateGamificationQueries();
       setMessage({ type: 'success', text: res.data.message });
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || 'Recalculate failed' });
     } finally {
       setRecalculating(false);
     }
-  }, [confirm, invalidateLeaderboardQueries]);
+  }, [confirm, invalidateGamificationQueries]);
 
   const xpRuleRows = useMemo(() => {
     if (!rules?.xpRules || !config) return [];
@@ -156,7 +178,7 @@ const AdminGamification = () => {
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
           <h3 className="text-base font-bold">XP by action</h3>
-          <p className="text-sm text-[var(--color-text-muted)]">Click Edit to change amounts — caps are fixed in code for fairness</p>
+          <p className="text-sm text-[var(--color-text-muted)]">Click Edit to change rates — time-based actions use hours × XP per hour</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -200,14 +222,7 @@ const AdminGamification = () => {
                   <td className="px-4 py-3 hidden md:table-cell text-[var(--color-text-muted)] text-xs">{row.who}</td>
                   <td className="px-4 py-3">
                     {editingField === row.configKey ? (
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={() => handleSave(row.configKey)} disabled={saving} aria-label="Save">
-                          <Save size={14} />
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={handleCancel} aria-label="Cancel">
-                          <X size={14} />
-                        </Button>
-                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Editing</span>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => handleEdit(row.configKey, row.xp)} className="gap-1">
                         <Edit2 size={12} /> Edit
@@ -288,8 +303,7 @@ const AdminGamification = () => {
                     className="w-20 px-3 py-2 text-sm text-center rounded border border-[var(--color-bg-border)]"
                     autoFocus
                   />
-                  <Button size="sm" onClick={() => handleSave(key)} disabled={saving}><Save size={14} /></Button>
-                  <Button size="sm" variant="secondary" onClick={handleCancel}><X size={14} /></Button>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Editing</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 shrink-0">

@@ -29,6 +29,7 @@ import {
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
 } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
@@ -42,6 +43,7 @@ const AdminPanel = () => {
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [editUserData, setEditUserData] = useState({});
+  const [editUserBaseline, setEditUserBaseline] = useState(null);
 
   const handleTabChange = useCallback((tabId) => {
     setActiveTab(tabId);
@@ -61,14 +63,24 @@ const AdminPanel = () => {
 
   useEffect(() => {
     if (selectedUser) {
-      setEditUserData({
+      const loaded = {
         name: selectedUser.name || '',
         email: selectedUser.email || '',
+        phone: selectedUser.phone || '',
         role: selectedUser.role || 'user',
-        teams: selectedUser.teams || []
-      });
+        teams: selectedUser.teams || [],
+      };
+      setEditUserData(loaded);
+      setEditUserBaseline(loaded);
+    } else {
+      setEditUserBaseline(null);
     }
   }, [selectedUser]);
+
+  const hasUserChanges = !!editUserBaseline && !stableJsonEqual(editUserData, editUserBaseline);
+  const handleRevertUserEdits = () => {
+    if (editUserBaseline) setEditUserData(editUserBaseline);
+  };
 
   const handleSaveUser = useCallback(async () => {
     if (!selectedUser) return;
@@ -356,6 +368,8 @@ const AdminPanel = () => {
         title={selectedUser?.name || 'User Profile'}
         subtitle={['System ID:', selectedUser?._id?.substring(0, 8), '• Role:', selectedUser?.role?.toUpperCase()].join(' ')}
         onSave={handleSaveUser}
+        onCancel={handleRevertUserEdits}
+        hasChanges={hasUserChanges}
         isSaving={updateUserMutation.isPending}
         extraActions={
           selectedUser ? (

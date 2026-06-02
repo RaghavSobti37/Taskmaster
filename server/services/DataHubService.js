@@ -9,7 +9,6 @@ const EMI = require('../models/EMI');
 const User = require('../models/User');
 const ContactService = require('./ContactService');
 const { buildDataHubExcludeFilter } = require('./qa/qaTestData');
-const { syncFromHolySheet } = require('./bookedCallsSyncService');
 const DataHubSyncState = require('../models/DataHubSyncState');
 const { escapeRegExp } = require('../utils/sanitizer');
 const {
@@ -876,15 +875,8 @@ class DataHubService {
       if (onProgress) onProgress(msg);
     };
 
-    // HolySheet → leads (upsert only; lightweight)
-    try {
-      const bookedSync = await syncFromHolySheet({ skipAudit: true });
-      stats.bookedCalls = bookedSync.addedCount + bookedSync.updatedCount;
-      log(`booked_calls sheet: ${bookedSync.addedCount} new, ${bookedSync.updatedCount} updated`);
-    } catch (err) {
-      stats.errors += 1;
-      log(`booked_calls sheet skipped: ${err.message}`);
-    }
+    // Booked calls: CRM only (website webhook → Lead). No sheet import.
+    log('booked_calls: CRM webhook only (sheet sync removed)');
 
     const runBatch = async (items, label, handler) => {
       if (!items.length) return;

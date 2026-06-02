@@ -66,9 +66,33 @@ const verifyArtistEnquirySecret = (req) => {
   }
 };
 
+const verifyBookCallWebhookSecret = (req) => {
+  const secret = process.env.BOOK_CALL_WEBHOOK_SECRET;
+  if (!secret) {
+    return process.env.NODE_ENV !== 'production';
+  }
+  const received = req.headers['x-webhook-secret'];
+  if (!received || typeof received !== 'string') return false;
+  try {
+    const a = Buffer.from(received.trim());
+    const b = Buffer.from(secret.trim());
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+};
+
+const rejectUnlessBookCallAuthorized = (req, res) => {
+  if (verifyBookCallWebhookSecret(req)) return true;
+  return rejectUnlessWebhookSignature(req, res, 'BOOK_CALL_WEBHOOK_SECRET');
+};
+
 module.exports = {
   computeWebhookSignature,
   verifyWebhookSignature,
   rejectUnlessWebhookSignature,
   verifyArtistEnquirySecret,
+  verifyBookCallWebhookSecret,
+  rejectUnlessBookCallAuthorized,
 };

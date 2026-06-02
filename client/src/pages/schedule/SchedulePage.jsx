@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { format, addDays } from 'date-fns';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { getTodayDateKey } from '../../utils/dateValidation';
+import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
 import { PageContainer, PageHeader, EmptyState } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
@@ -14,20 +15,11 @@ const SchedulePage = () => {
   const queryClient = useQueryClient();
   const [dayCount, setDayCount] = useState(2);
   const [selectedTask, setSelectedTask] = useState(null);
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const scheduleEnd = format(addDays(new Date(), MAX_SCHEDULE_DAYS - 1), 'yyyy-MM-dd');
-  // Prefetch color metadata in parallel with schedule (ScheduleGrid consumes same cache).
-  useWorkspaces();
-  useProjects();
-  const { data, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
-
-  const scheduleData = useMemo(() => {
-    if (!data) return data;
-    return {
-      ...data,
-      tasks: (data.tasks || []).filter((task) => task.status !== 'done'),
-    };
-  }, [data]);
+  const today = getTodayDateKey();
+  const scheduleEnd = addDaysToDateKey(today, MAX_SCHEDULE_DAYS - 1);
+  const { data: workspaces = [] } = useWorkspaces();
+  const { data: projects = [] } = useProjects();
+  const { data: scheduleData, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
 
   const dayLabel = dayCount === 1 ? '1 day' : `${dayCount} days`;
   const showInitialSkeleton = isPending && !scheduleData;
@@ -72,6 +64,8 @@ const SchedulePage = () => {
         <ScheduleGrid
           data={scheduleData}
           visibleDayCount={dayCount}
+          workspaces={workspaces}
+          projects={projects}
           onTaskClick={setSelectedTask}
         />
       )}

@@ -23,7 +23,7 @@ exports.getAssets = async (req, res) => {
     }
     const assets = await Asset.find(query)
       .populate('projectIds', 'name')
-      .populate('createdBy', 'name')
+      .populate('createdBy', 'name avatar')
       .sort('-createdAt');
     res.json(assets);
   } catch (error) {
@@ -52,7 +52,7 @@ exports.createAsset = async (req, res) => {
 
     const populatedAsset = await Asset.findById(asset._id)
       .populate('projectIds', 'name')
-      .populate('createdBy', 'name');
+      .populate('createdBy', 'name avatar');
 
     const mentionPayloads = await buildMentionNotifications({
       text: asset.notes,
@@ -100,7 +100,7 @@ exports.updateAsset = async (req, res) => {
 
     const populatedAsset = await Asset.findById(asset._id)
       .populate('projectIds', 'name')
-      .populate('createdBy', 'name');
+      .populate('createdBy', 'name avatar');
 
     if (notes !== undefined && String(asset.notes || '') !== String(previousNotes || '')) {
       const mentionPayloads = await buildMentionNotifications({

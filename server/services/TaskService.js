@@ -19,11 +19,13 @@ const {
   normalizeId: rulesNormalizeId,
   REVIEW_DEFAULT_HOURS,
 } = require('../../shared/taskReviewRules');
+const { formatTimeSpent, MIN_COMPLETION_MINUTES } = require('../../shared/timeSpent');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
 const { buildMentionNotifications, resolveMentionedUserIds, isMentionOnlyUser } = require('../utils/mentionNotifications');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { validateTaskTimelineForRequest } = require('../utils/dateValidation');
+const { isQaSyncGamification } = require('../utils/qaProbeContext');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
@@ -35,9 +37,11 @@ const queueTaskCompletedGamification = async (userId, task) => {
       _id: task._id,
       title: task.title,
       projectId: task.projectId?._id || task.projectId,
+      actualHours: task.actualHours,
+      plannedHours: task.plannedHours,
     },
   });
-  if (process.env.QA_SYNC_GAMIFICATION === 'true') await job;
+  if (isQaSyncGamification()) await job;
 };
 
 const TIMELINE_FIELDS = new Set(['scheduleDate', 'scheduleSlot', 'startDate', 'dueDate', 'duration']);
@@ -137,11 +141,7 @@ const buildAssignmentsForUser = (taskId, assigneeIds, actingUserId, creatorId) =
   });
 };
 
-const formatHoursForLog = (hours) => {
-  const n = Number(hours);
-  if (!Number.isFinite(n) || n <= 0) return '1h';
-  return `${n}h`;
-};
+const formatHoursForLog = (hours) => formatTimeSpent(hours);
 
 const getProjectNameForTask = async (task, session) => {
   if (!task.projectId) return 'Unassigned';
@@ -230,8 +230,8 @@ const createReviewSubmitLogs = async ({
 const finalizeTaskCompletion = async (task, user, session) => {
   const projectName = await getProjectNameForTask(task, session);
   const timeSpentStr = task.actualHours > 0
-    ? `${task.actualHours}h`
-    : (task.plannedHours > 0 ? `${task.plannedHours}h` : '1h');
+    ? formatTimeSpent(task.actualHours)
+    : (task.plannedHours > 0 ? formatTimeSpent(task.plannedHours) : '1h');
 
   await Log.create([{
     userId: user._id,
@@ -592,7 +592,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
           const prevHours = Number(existing.actualHours) || 0;
           const nextHours = Number(task.actualHours) || 0;
           let hoursSubmitted = Math.max(0, nextHours - prevHours);
-          if (hoursSubmitted <= 0) hoursSubmitted = 0.5;
+          if (hoursSubmitted <= 0) hoursSubmitted = MIN_COMPLETION_MINUTES / 60;
           await createReviewSubmitLogs({
             task,
             assigneeId,
@@ -615,7 +615,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
         reviewerId: user._id,
         task: { _id: task._id },
       });
-      if (process.env.QA_SYNC_GAMIFICATION === 'true') await reviewXpJob;
+      if (isQaSyncGamification()) await reviewXpJob;
       for (const a of assignments) {
         const assigneeId = assignmentUserId(a.userId);
         if (assigneeId && assigneeId !== user._id.toString()) {

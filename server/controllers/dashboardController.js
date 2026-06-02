@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { getCache, setCache } = require('../services/cacheService');
-const { todayStart, todayEnd, getDateKey, startOfDayFromKey } = require('../utils/attendanceDate');
+const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 
 const TIMEFRAME_DAYS = { '1d': 1, '7d': 7, '30d': 30 };
 
@@ -23,22 +23,16 @@ const rangeForTimeframe = (timeframe) => {
   return { start, end, days };
 };
 
-const sumFocusHours = (match) => Log.aggregate([
-  { $match: match },
-  {
-    $project: {
-      timeValue: {
-        $convert: {
-          input: { $arrayElemAt: [{ $split: ['$details.timeSpent', 'h'] }, 0] },
-          to: 'double',
-          onError: 0,
-          onNull: 0,
-        },
-      },
-    },
-  },
-  { $group: { _id: null, focusHours: { $sum: '$timeValue' } } },
-]);
+const { todayStart, todayEnd, getDateKey, startOfDayFromKey } = require('../utils/attendanceDate');
+
+const sumFocusHours = async (match) => {
+  const logs = await Log.find(match).select('details.timeSpent').lean();
+  const focusHours = logs.reduce(
+    (sum, log) => sum + parseTimeSpentToHours(log.details?.timeSpent),
+    0
+  );
+  return [{ focusHours: Math.round(focusHours * 100) / 100 }];
+};
 
 const aggregateTaskStats = (periodMatch) => Task.aggregate([
   {
@@ -191,23 +185,7 @@ exports.getDashboardSummary = async (req, res) => {
       ]),
 
       // 3. Log Statistics (Focus Hours)
-      Log.aggregate([
-        { $match: { userId: userId, action: 'DAILY_LOG', createdAt: { $gte: today } } },
-        { $project: {
-          timeValue: {
-            $convert: {
-              input: { $arrayElemAt: [{ $split: ['$details.timeSpent', 'h'] }, 0] },
-              to: 'double',
-              onError: 1.0,
-              onNull: 1.0
-            }
-          }
-        }},
-        { $group: {
-          _id: null,
-          focusHours: { $sum: '$timeValue' }
-        }}
-      ]),
+      sumFocusHours({ userId, action: 'DAILY_LOG', createdAt: { $gte: today } }),
 
       // 4. Project Portfolio
       Project.aggregate([

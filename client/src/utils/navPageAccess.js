@@ -4,6 +4,7 @@ export const NAV_PATH_ACCESS = {
   '/calendar': 'calendar',
   '/todo': 'todo',
   '/inbox': 'inbox',
+  '/chat': 'chat',
   '/projects': 'projects',
   '/assets': 'assets',
   '/schedule': 'schedule',

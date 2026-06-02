@@ -266,7 +266,8 @@ const queueGamificationEvent = async (eventType, payload) => {
   };
 
   // QA runs: inline only — avoids Bull waitUntilFinished exceeding HTTP client timeouts
-  if (process.env.QA_SYNC_GAMIFICATION === 'true') {
+  const { isQaSyncGamification } = require('../utils/qaProbeContext');
+  if (isQaSyncGamification()) {
     await runEvent();
     return;
   }

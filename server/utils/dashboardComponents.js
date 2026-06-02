@@ -2,6 +2,7 @@ const { isAdminUser } = require('./departmentPermissions');
 
 const COMPONENT_ACCESS = {
   leaderboard: ['all'],
+  'daily-missions': ['all'],
   announcements: ['all'],
   pinboard: ['all'],
   schedule: ['all'],

@@ -3,12 +3,12 @@ const Lead = require('../models/Lead');
 const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep } = require('./crmController');
+const { assignNextBookedCallRep } = require('../utils/bookedCallRepAssignment');
 const LeadService = require('../services/LeadService');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
-const { google } = require('googleapis');
-const path = require('path');
-const fs = require('fs');
+const { rejectUnlessBookCallAuthorized, verifyArtistEnquirySecret } = require('../utils/webhookAuth');
+const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
@@ -61,7 +61,7 @@ exports.processBookedCallLogic = async (data) => {
     }
 
     if (!rep) {
-      const repId = await assignLeadToRep();
+      const repId = (await assignNextBookedCallRep()) || (await assignLeadToRep());
       if (repId) rep = await User.findById(repId);
       if (!rep) throw new Error("No sales rep available");
     }
@@ -111,12 +111,13 @@ exports.processBookedCallLogic = async (data) => {
       throw new Error('This slot is no longer available in your timezone.');
     }
 
-    const istDateStr = istSlotDate.toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
-    const istTimeStr = istSlotDate.toLocaleTimeString('en-US', {
+    const istDateStr = formatIstFollowupDate(istSlotDate);
+    const istTimeStr = formatIstFollowupTime24(istSlotDate);
+    const istTimeDisplay = istSlotDate.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-      timeZone: 'Asia/Kolkata'
+      timeZone: 'Asia/Kolkata',
     });
 
     // 2. Upsert Lead in CRM
@@ -126,8 +127,8 @@ exports.processBookedCallLogic = async (data) => {
       phone: normalizedPhone,
       course,
       assignedRepId: rep._id,
-      leadStatus: lead ? lead.leadStatus : 'New',
-      callStatus: lead ? lead.callStatus : 'Pending',
+      leadStatus: 'Warm',
+      callStatus: 'Scheduled',
       source: 'Website Booking',
       nextFollowupDate: istDateStr,
       nextFollowupTime: istTimeStr
@@ -161,7 +162,7 @@ exports.processBookedCallLogic = async (data) => {
       await createNotification({
         recipientId: rep._id,
         title: 'New Call Booked',
-        message: `${name} booked a ${course} call on ${istDateStr} at ${istTimeStr}.`,
+        message: `${name} booked a ${course} call on ${istDateStr} at ${istTimeDisplay}.`,
         category: 'crm',
         type: 'alert',
         relatedLeadId: lead._id,
@@ -174,12 +175,12 @@ exports.processBookedCallLogic = async (data) => {
     await sendAiSensyMessage(
       whatsapp || phone,
       'final_book_call_confirmation',
-      [name.split(' ')[0], course, istDateStr, istTimeStr, whatsapp || phone],
+      [name.split(' ')[0], course, istDateStr, istTimeDisplay, whatsapp || phone],
       {
         "FirstName": name.split(' ')[0],
         "CourseName": course,
         "ScheduledDate": istDateStr,
-        "ScheduledTime": istTimeStr,
+        "ScheduledTime": istTimeDisplay,
         "WhatsAppNumber": whatsapp || phone
       },
       name
@@ -190,13 +191,13 @@ exports.processBookedCallLogic = async (data) => {
       await sendAiSensyMessage(
         rep.phone,
         'sales_rep_new_booking_alert',
-        [rep.name.split(' ')[0], name, course, istDateStr, istTimeStr],
+        [rep.name.split(' ')[0], name, course, istDateStr, istTimeDisplay],
         {
           "RepName": rep.name.split(' ')[0],
           "LeadName": name,
           "CourseName": course,
           "ScheduledDate": istDateStr,
-          "ScheduledTime": istTimeStr
+          "ScheduledTime": istTimeDisplay
         },
         rep.name
       );
@@ -204,29 +205,12 @@ exports.processBookedCallLogic = async (data) => {
       console.warn(`[Warning] No phone number for rep ${rep.name}, skipping AiSensy notification.`);
     }
 
-    // 6. Push to Google Sheets
-    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    const row = [
-      timestamp,
-      name,
-      email,
-      `'${phone}`,
-      course,
-      rep.name,
-      istDateStr,
-      istTimeStr,
-      'No'
-    ];
-    await pushToGoogleSheets(row);
-
-    return { success: true, message: 'Call booked and synced' };
+    return { success: true, message: 'Call booked in CRM', leadId: lead._id };
   } catch (error) {
     console.error('Webhook Processing Error:', error);
     throw error; // Let BullMQ handle retry
   }
 };
-
-const { rejectUnlessWebhookSignature, verifyArtistEnquirySecret } = require('../utils/webhookAuth');
 
 exports.processArtistEnquiryLogic = processArtistEnquiryLogic;
 
@@ -264,7 +248,7 @@ exports.handleArtistEnquiry = async (req, res) => {
 };
 
 exports.handleBookedCall = async (req, res) => {
-  if (!rejectUnlessWebhookSignature(req, res, 'BOOK_CALL_WEBHOOK_SECRET')) {
+  if (!rejectUnlessBookCallAuthorized(req, res)) {
     return;
   }
 
@@ -324,44 +308,3 @@ async function sendAiSensyMessage(destination, campaign, params, attributes, use
   }
 }
 
-async function pushToGoogleSheets(row) {
-  const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '19sTRQ-lUls_dWYRgL3OM70Ewpcn7M2tWYfOMPLzn8Us';
-  const SHEET_NAME = 'BookedCalls';
-
-  let serviceAccount;
-  const serviceAccountCandidates = [
-    process.env.GOOGLE_SERVICE_ACCOUNT_PATH,
-    path.join(process.cwd(), 'google_service_account.json'),
-    path.join(__dirname, '../../google_service_account.json'),
-  ].filter(Boolean);
-
-  const serviceAccountPath = serviceAccountCandidates.find((candidate) => fs.existsSync(candidate));
-
-  if (serviceAccountPath) {
-    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-  } else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
-    serviceAccount = {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
-    };
-  } else {
-    throw new Error('Google Service Account credentials missing.');
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials: serviceAccount,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  const sheets = google.sheets({ version: 'v4', auth });
-
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:I`,
-    valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: {
-      values: [row],
-    },
-  });
-}

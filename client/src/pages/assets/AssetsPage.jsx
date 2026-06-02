@@ -27,6 +27,7 @@ import {
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
 import MentionTextarea from '../../components/mentions/MentionTextarea';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const EMPTY_ASSET_FORM = { projectIds: [], name: '', link: '', type: 'other', notes: '' };
 
@@ -61,6 +62,7 @@ const AssetsPage = () => {
   const [newAsset, setNewAsset] = useState(EMPTY_ASSET_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
+  const [assetEditBaseline, setAssetEditBaseline] = useState(null);
 
   const [deleteModal, setDeleteModal] = useState({ open: false, assetId: null });
 
@@ -88,6 +90,17 @@ const AssetsPage = () => {
     }
   };
 
+  const hasAssetEdits =
+    !!editingAsset && !!assetEditBaseline && !stableJsonEqual(newAsset, assetEditBaseline);
+
+  useUnsavedChanges({
+    hasChanges: isDrawerOpen && hasAssetEdits,
+    onSave: () => handleAddAsset(),
+    onCancel: () => assetEditBaseline && setNewAsset(cloneSnapshot(assetEditBaseline)),
+    isSaving: submitting,
+    elevated: true,
+  });
+
   const handleAddAsset = async (e) => {
     if (e) e.preventDefault();
     if (!newAsset.name || !newAsset.link) return;
@@ -105,6 +118,7 @@ const AssetsPage = () => {
         setAssets(assets.map(a => a._id === editingAsset._id ? res.data : a));
         setIsDrawerOpen(false);
         setEditingAsset(null);
+        setAssetEditBaseline(null);
         setNewAsset(EMPTY_ASSET_FORM);
       } else {
         const res = await axios.post('/api/assets', {
@@ -263,20 +277,25 @@ const AssetsPage = () => {
     if (!projectIds?.length) {
       return <Badge variant="slate" className="text-[8px] shrink-0">ROOT</Badge>;
     }
-    const first = projectIds[0];
-    const firstColor = getWorkspaceColor(first.workspace, workspaces);
-    const extra = projectIds.length - 1;
+    const visible = projectIds.slice(0, 2);
+    const extra = projectIds.length - visible.length;
     const allNames = projectIds.map((p) => p.name).join(', ');
     return (
       <div className="flex items-center gap-1 min-w-0 w-full whitespace-nowrap overflow-hidden">
-        <span
-          className="inline-flex items-center gap-1 min-w-0 max-w-full pl-1.5 pr-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-tight bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]"
-          style={{ borderLeft: `3px solid ${firstColor}` }}
-          title={allNames}
-        >
-          <WorkspaceDot color={firstColor} className="!w-1.5 !h-1.5" />
-          <span className="truncate">{first.name}</span>
-        </span>
+        {visible.map((project) => {
+          const color = getWorkspaceColor(project.workspace, workspaces);
+          return (
+            <span
+              key={project._id || project.name}
+              className="inline-flex items-center gap-1 min-w-0 max-w-[calc(50%-0.5rem)] pl-1.5 pr-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-tight bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]"
+              style={{ borderLeft: `3px solid ${color}` }}
+              title={allNames}
+            >
+              <WorkspaceDot color={color} className="!w-1.5 !h-1.5" />
+              <span className="truncate">{project.name}</span>
+            </span>
+          );
+        })}
         {extra > 0 && (
           <span className="text-[8px] font-black text-[var(--color-text-muted)] shrink-0" title={allNames}>
             +{extra}
@@ -373,19 +392,19 @@ const AssetsPage = () => {
               <div className="min-w-0 pr-1 sm:pr-2">
                  <table className="w-full max-w-full text-left table-fixed">
                     <colgroup>
-                      <col />
-                      <col className="w-[80px] sm:w-[84px]" />
-                      <col className="w-[17%] sm:w-[18%]" />
-                      <col className="w-[12%] sm:w-[13%] hidden sm:table-column" />
-                      <col className="w-[76px] sm:w-20" />
+                      <col style={{ width: '38%' }} />
+                      <col style={{ width: '11%' }} />
+                      <col style={{ width: '27%' }} />
+                      <col style={{ width: '17%' }} className="hidden sm:table-column" />
+                      <col style={{ width: '7%' }} />
                     </colgroup>
                     <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                        <tr>
-                          <th className="px-2 sm:px-3 py-2">File Name</th>
-                          <th className="px-2 sm:px-3 py-2">Date</th>
+                          <th className="pl-2 sm:pl-3 pr-1 py-2">File Name</th>
+                          <th className="px-1.5 sm:px-2 py-2 whitespace-nowrap">Date</th>
                           <th className="px-2 sm:px-3 py-2">Projects</th>
                           <th className="px-2 sm:px-3 py-2 hidden sm:table-cell">Added By</th>
-                          <th className="px-2 py-2 text-center whitespace-nowrap">Edit</th>
+                          <th className="px-1.5 py-2 text-center whitespace-nowrap">Edit</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -406,7 +425,7 @@ const AssetsPage = () => {
                              className={`group hover:bg-[var(--color-bg-secondary)]/50 transition-all ${hasLink ? 'cursor-pointer' : ''}`}
                            >
                              
-                              <td className="px-2 sm:px-3 py-2 max-w-0 whitespace-nowrap">
+                              <td className="pl-2 sm:pl-3 pr-1 py-2 max-w-0 whitespace-nowrap">
                                  <div className="flex items-center gap-2 min-w-0">
                                     <AssetTypeIconBadge type={asset.type} link={asset.link} size={14} className="shrink-0" />
                                     <p
@@ -417,7 +436,7 @@ const AssetsPage = () => {
                                     </p>
                                  </div>
                               </td>
-                              <td className="px-2 sm:px-3 py-2 max-w-0 whitespace-nowrap">
+                              <td className="px-1.5 sm:px-2 py-2 max-w-0 whitespace-nowrap align-middle">
                                  <span
                                    className="text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] truncate block tabular-nums"
                                    title={format(new Date(asset.createdAt), 'MMM dd, yyyy')}
@@ -431,8 +450,12 @@ const AssetsPage = () => {
                               <td className="px-2 sm:px-3 py-2 max-w-0 whitespace-nowrap hidden sm:table-cell">
                                  {asset.createdBy ? (
                                    <div className="flex items-center gap-1.5 min-w-0">
-                                      <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                                         <span className="text-[8px] font-black uppercase text-blue-500">{asset.createdBy.name ? asset.createdBy.name.substring(0, 2) : '??'}</span>
+                                      <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 overflow-hidden text-[8px] font-black uppercase text-blue-500">
+                                         {asset.createdBy.avatar ? (
+                                           <img src={asset.createdBy.avatar} alt="" className="w-full h-full object-cover" />
+                                         ) : (
+                                           asset.createdBy.name ? asset.createdBy.name.substring(0, 2) : '??'
+                                         )}
                                       </div>
                                       <span className="text-[10px] font-bold text-[var(--color-text-secondary)] truncate" title={asset.createdBy.name || 'Unknown'}>{asset.createdBy.name || 'Unknown'}</span>
                                    </div>
@@ -440,7 +463,7 @@ const AssetsPage = () => {
                                    <span className="text-[9px] italic opacity-30">N/A</span>
                                  )}
                               </td>
-                              <td className="px-2 py-2 text-center align-middle whitespace-nowrap">
+                              <td className="px-1.5 py-2 text-center align-middle whitespace-nowrap">
                                  <Button
                                    type="button"
                                    size="xs"
@@ -449,14 +472,16 @@ const AssetsPage = () => {
                                    className="gap-1 shrink-0 mx-auto !px-2"
                                    onClick={(e) => {
                                      e.stopPropagation();
-                                     setEditingAsset(asset);
-                                     setNewAsset({
+                                     const loaded = {
                                        projectIds: (asset.projectIds || []).map((p) => p._id || p),
                                        name: asset.name,
                                        link: asset.link,
                                        type: asset.type || 'other',
                                        notes: asset.notes || '',
-                                     });
+                                     };
+                                     setEditingAsset(asset);
+                                     setNewAsset(loaded);
+                                     setAssetEditBaseline(cloneSnapshot(loaded));
                                      setIsDrawerOpen(true);
                                    }}
                                  >
@@ -608,9 +633,11 @@ const AssetsPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
-                {submitting ? <RefreshCw size={14} className="animate-spin" /> : editingAsset ? 'Save Changes' : <><Plus size={14} /> Add Asset</>}
-              </Button>
+              {!editingAsset && (
+                <Button type="submit" className="w-full" disabled={submitting || !newAsset.name || !newAsset.link}>
+                  {submitting ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Add Asset</>}
+                </Button>
+              )}
               {editingAsset && (
                 <Button
                   type="button"

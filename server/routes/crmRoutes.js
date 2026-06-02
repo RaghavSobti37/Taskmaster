@@ -33,7 +33,6 @@ router.delete('/imports/:id', admin, crmController.deleteImport);
 router.post('/reset', admin, crmController.resetCRM);
 router.get('/debug/columns', admin, crmController.getDebugColumns);
 router.post('/debug/save-mapping', admin, crmController.saveMapping);
-router.post('/sync-bookings', admin, require('../controllers/syncController').syncBookings);
 router.post('/sync-unsubscribed', admin, async (req, res) => {
   try {
     const { syncAndCleanUnsubscribeSheet } = require('../services/holySheetService');

@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Input, Button, ModalShell, ModalBody, ModalFooter } from './ui';
 import MentionTitle from './mentions/MentionTitle';
+import {
+  hoursMinutesToDecimal,
+  isValidCompletionMinutes,
+  MIN_COMPLETION_MINUTES,
+} from '../utils/timeSpent';
 
 const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview = false }) => {
-  const [hours, setHours] = useState(1);
-  const [hoursError, setHoursError] = useState('');
+  const [hoursInput, setHoursInput] = useState('1');
+  const [minutesInput, setMinutesInput] = useState('0');
+  const [timeError, setTimeError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setHours(1);
-      setHoursError('');
+      setHoursInput('1');
+      setMinutesInput('0');
+      setTimeError('');
     }
   }, [isOpen]);
 
   if (!task) return null;
 
-  const parsedHours = Number(hours);
-  const isValidHours = Number.isFinite(parsedHours) && parsedHours >= 0.5;
+  const isValidTime = isValidCompletionMinutes(hoursInput, minutesInput);
+  const minLabel = MIN_COMPLETION_MINUTES >= 60
+    ? `${MIN_COMPLETION_MINUTES / 60} hour`
+    : `${MIN_COMPLETION_MINUTES} minutes`;
 
   const handleMarkDone = () => {
-    if (!isValidHours) {
-      setHoursError('Enter at least 0.5 hours.');
+    if (!isValidTime) {
+      setTimeError(`Enter at least ${minLabel}.`);
       return;
     }
-    onSubmit(task, parsedHours);
+    onSubmit(task, hoursMinutesToDecimal(hoursInput, minutesInput));
     onClose();
   };
 
@@ -40,27 +49,55 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
           </div>
 
           <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-action-primary)]/20">
-            <label className="block text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-3">Time Invested (Hours)</label>
-            <Input
-              type="number"
-              min="0.5"
-              step="0.5"
-              value={hours}
-              onChange={(e) => { setHours(e.target.value); setHoursError(''); }}
-              className="w-full text-lg font-bold text-[var(--color-action-primary)]"
-              autoFocus
-            />
-            {hoursError && <p className="text-xs text-rose-500 mt-1">{hoursError}</p>}
-            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+            <label className="block text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-3">
+              Time Invested
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={hoursInput}
+                  onChange={(e) => { setHoursInput(e.target.value); setTimeError(''); }}
+                  className="w-full text-lg font-bold text-[var(--color-action-primary)] text-center"
+                  autoFocus
+                  aria-label="Hours"
+                />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-center mt-1.5">
+                  Hours
+                </p>
+              </div>
+              <span className="text-xl font-bold text-[var(--color-text-muted)] pb-5">:</span>
+              <div className="flex-1">
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  inputMode="numeric"
+                  value={minutesInput}
+                  onChange={(e) => { setMinutesInput(e.target.value); setTimeError(''); }}
+                  className="w-full text-lg font-bold text-[var(--color-action-primary)] text-center"
+                  aria-label="Minutes"
+                />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] text-center mt-1.5">
+                  Minutes
+                </p>
+              </div>
+            </div>
+            {timeError && <p className="text-xs text-rose-500 mt-2">{timeError}</p>}
+            <p className="text-xs text-[var(--color-text-muted)] mt-3">
               {submitForReview
-                ? 'Your hours go to your daily logs. The person who assigned this task gets 15 minutes (review) in theirs.'
+                ? 'Your time goes to your daily logs. The person who assigned this task gets 15 minutes (review) in theirs.'
                 : 'This time will be logged to your daily logs.'}
             </p>
           </div>
         </ModalBody>
         <ModalFooter className="flex-shrink-0 flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleMarkDone} className="flex-1" disabled={!isValidHours}>
+          <Button onClick={handleMarkDone} className="flex-1" disabled={!isValidTime}>
             {actionLabel}
           </Button>
         </ModalFooter>

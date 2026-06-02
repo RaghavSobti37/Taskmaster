@@ -1,19 +1,14 @@
 const FinanceDocument = require('../models/FinanceDocument');
 const Project = require('../models/Project');
-const { UTApi, UTFile } = require('uploadthing/server');
 const axios = require('axios');
 const { parseDocument } = require('../utils/documentParser');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
-
-// Extract sk_ API key from base64 UPLOADTHING_TOKEN
-let utApiKey;
-try {
-  const tokenData = JSON.parse(Buffer.from(process.env.UPLOADTHING_TOKEN || '', 'base64').toString());
-  utApiKey = tokenData.apiKey;
-} catch { utApiKey = process.env.UPLOADTHING_SECRET; }
-
-const utapi = new UTApi({ apiKey: utApiKey });
+const {
+  utapi,
+  handleUploadFilesManyRequest,
+  handleUploadSingleRequest,
+} = require('../utils/uploadthingServer');
 
 const populateFinanceDoc = (id) =>
   FinanceDocument.findById(id)
@@ -22,103 +17,8 @@ const populateFinanceDoc = (id) =>
     .populate('folderId', 'folderName title isFolder')
     .lean();
 
-// Direct file upload via server-side UTApi (bypasses React client version issues)
-const uploadFile = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file provided' });
-    }
-
-    const { buffer, originalname, mimetype, size } = req.file;
-    const utFile = new UTFile([buffer], originalname, { type: mimetype });
-    const uploadResult = await utapi.uploadFiles([utFile]);
-
-    if (!uploadResult[0]?.data) {
-      const errObj = uploadResult[0]?.error;
-      console.error('[UploadThing API Error Details]:', errObj);
-      const errMsg = errObj?.message || 'Upload to storage failed';
-      return res.status(500).json({ success: false, message: errMsg });
-    }
-
-    const { url, key, name } = uploadResult[0].data;
-    res.json({
-      success: true,
-      data: { url, key, name: name || originalname, size, type: mimetype }
-    });
-  } catch (error) {
-    console.error('File upload error:', error);
-    if (error.data || error.cause) {
-      console.error('[UploadThing Error Context]:', error.data, error.cause);
-    }
-    res.status(500).json({ success: false, message: error.message || 'File upload failed' });
-  }
-};
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const uploadOneFileToUT = async (file, maxAttempts = 3) => {
-  let lastError = 'Upload failed';
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const utFile = new UTFile([file.buffer], file.originalname, { type: file.mimetype });
-      const uploadResult = await utapi.uploadFiles([utFile]);
-
-      if (uploadResult[0]?.data) {
-        const { url, key, name } = uploadResult[0].data;
-        return {
-          url: url || uploadResult[0].data.ufsUrl,
-          key,
-          name: name || file.originalname,
-          size: file.size,
-          type: file.mimetype,
-        };
-      }
-      lastError = uploadResult[0]?.error?.message || lastError;
-    } catch (err) {
-      lastError = err.message || lastError;
-    }
-    if (attempt < maxAttempts) await sleep(1500 * attempt);
-  }
-  throw new Error(lastError);
-};
-
-// Multi-file upload via server-side UTApi (batched by client; retries per file)
-const uploadFilesMany = async (req, res) => {
-  try {
-    const files = req.files || [];
-    if (files.length === 0) {
-      return res.status(400).json({ success: false, message: 'No files provided' });
-    }
-
-    const data = [];
-    const failed = [];
-
-    for (const file of files) {
-      try {
-        const result = await uploadOneFileToUT(file);
-        data.push(result);
-      } catch (err) {
-        console.error(`Upload failed for ${file.originalname}:`, err.message);
-        failed.push({ fileName: file.originalname, error: err.message });
-      }
-      await sleep(300);
-    }
-
-    const message = failed.length
-      ? `${data.length} uploaded, ${failed.length} failed`
-      : `${data.length} file(s) uploaded`;
-
-    res.status(failed.length && data.length === 0 ? 500 : 200).json({
-      success: data.length > 0,
-      data,
-      failed,
-      message,
-    });
-  } catch (error) {
-    console.error('Multi file upload error:', error);
-    res.status(500).json({ success: false, message: error.message || 'File upload failed' });
-  }
-};
+const uploadFile = handleUploadSingleRequest;
+const uploadFilesMany = handleUploadFilesManyRequest;
 
 
 const uploadDocument = async (req, res) => {

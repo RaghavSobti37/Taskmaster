@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Search, RefreshCw, Clock, Target, Zap, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send, History
+  Search, RefreshCw, Clock, Target, CheckCircle2, AlertCircle, PhoneCall, Calendar, Edit2, Users, Layers, GitCommit, Briefcase, Bell, UserCheck, MapPin, Globe, MessageSquare, Send, History
 } from 'lucide-react';
 import { 
   Badge, 
@@ -25,9 +25,9 @@ import axios from 'axios';
 
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useToast } from '../../contexts/ToastContext';
-import { validateLeadFormFields, splitPhoneNumber } from '../../utils/leadFormValidation';
+import { validateLeadFormFields } from '../../utils/leadFormValidation';
+import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
-
 const FOLLOWUP_PAGE_SIZE = 50;
 
 export default function FollowupsPage() {
@@ -78,6 +78,7 @@ export default function FollowupsPage() {
     name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
   });
   const [fieldErrors, setFieldErrors] = useState({});
+  const [editBaseline, setEditBaseline] = useState(null);
 
   const applyLeadValidation = (data) => {
     const { errors } = validateLeadFormFields(data);
@@ -94,23 +95,9 @@ export default function FollowupsPage() {
 
   React.useEffect(() => {
     if (selectedLead) {
-      const { countryCode, nationalNumber } = splitPhoneNumber(selectedLead.phone || '');
-      const loaded = {
-        name: selectedLead.name || '',
-        phoneCountryCode: countryCode,
-        phoneNational: nationalNumber,
-        city: selectedLead.city || '',
-        leadQuality: selectedLead.leadQuality ? String(selectedLead.leadQuality) : '3',
-        leadStatus: selectedLead.leadStatus || 'New',
-        callStatus: selectedLead.callStatus || 'Pending',
-        remarks: selectedLead.remarks || '',
-        nextFollowupDate: selectedLead.nextFollowupDate || '',
-        nextFollowupTime: selectedLead.nextFollowupTime || '',
-        setReminder: selectedLead.setReminder || false,
-        planOption: selectedLead.planOption || '',
-        assignedRepId: selectedLead.assignedRepId || selectedLead.assignedRep?._id || '',
-      };
+      const loaded = buildLeadEditState(selectedLead);
       setEditLeadData(loaded);
+      setEditBaseline(loaded);
       applyLeadValidation(loaded);
 
       // Fetch audit trail for the selected lead
@@ -120,8 +107,17 @@ export default function FollowupsPage() {
     } else {
       setLeadLogs([]);
       setFieldErrors({});
+      setEditBaseline(null);
     }
   }, [selectedLead]);
+
+  const hasLeadChanges = leadEditHasChanges(editLeadData, editBaseline);
+  const handleRevertLeadEdits = () => {
+    if (editBaseline) {
+      setEditLeadData(editBaseline);
+      applyLeadValidation(editBaseline);
+    }
+  };
 
   const handleSaveLead = async () => {
     if (!selectedLead || updateMutation.isPending) return;
@@ -296,24 +292,6 @@ export default function FollowupsPage() {
     }
   ];
 
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
-
-  const handleSyncBookedCalls = async () => {
-    setSyncStatus('syncing');
-    try {
-      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
-      refetch();
-    } catch (err) {
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-    }
-  };
-
   if (isLoading && leads.length === 0) return <PageSkeleton />;
 
   return (
@@ -332,9 +310,6 @@ export default function FollowupsPage() {
                 { id: 'upcoming', label: `Upcoming (${stats.upcoming})` }
               ]}
             />
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
-              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
-            </Button>
             <Button variant="secondary" size="sm" onClick={() => refetch()}>
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh
             </Button>
@@ -363,12 +338,7 @@ export default function FollowupsPage() {
           pageSize={FOLLOWUP_PAGE_SIZE}
           onPageChange={setFollowupPage}
         />
-        {filteredLeads.length === 0 && (
-          <div className="p-20 text-center opacity-30">
-            <PhoneCall size={48} className="mx-auto mb-4" />
-            <p className="text-xs font-black uppercase tracking-widest">No planned calls in this group</p>
-          </div>
-        )}
+       
       </Card>
 
       <FullScreenWorkspace
@@ -377,6 +347,8 @@ export default function FollowupsPage() {
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id.substring(0, 8)}` : ''}
         onSave={handleSaveLead}
+        onCancel={handleRevertLeadEdits}
+        hasChanges={hasLeadChanges}
         isSaving={updateMutation.isPending}
         saveDisabled={Object.keys(fieldErrors).length > 0}
         extraActions={

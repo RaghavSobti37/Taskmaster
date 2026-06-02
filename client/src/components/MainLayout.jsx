@@ -4,13 +4,14 @@ import OutletSidebar from './OutletSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
 import { Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CommandPalette from './CommandPalette';
 import NotificationBridge from './NotificationBridge';
 import PwaInstallBanner from './PwaInstallBanner';
 import ProfileCompletionAlerts from './ProfileCompletionAlerts';
 import ForcePasswordChangeModal from './auth/ForcePasswordChangeModal';
+import AttendancePromptModal from './attendance/AttendancePromptModal';
 import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
@@ -30,6 +31,8 @@ const MainLayout = () => {
   }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isChatPage = location.pathname === '/chat';
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const profileMenuRef = React.useRef(null);
 
@@ -56,7 +59,7 @@ const MainLayout = () => {
       <QuickAddMenu />
       <BottomNavigation />
       <ForcePasswordChangeModal />
-
+      <AttendancePromptModal />
 
       {/* Main Content Area */}
       <div
@@ -65,9 +68,13 @@ const MainLayout = () => {
           marginLeft: isDesktop ? (isOpen ? 160 : 56) : 0,
         }}
       >
-        <main className="flex-1 p-4 pb-24 lg:p-5">
-          <div className="w-full">
-            <ProfileCompletionAlerts />
+        <main
+          className={`flex-1 min-h-0 flex flex-col ${
+            isChatPage ? 'p-0 overflow-hidden h-[100dvh] max-h-[100dvh]' : 'p-4 pb-24 lg:p-5'
+          }`}
+        >
+          <div className={`w-full min-h-0 ${isChatPage ? 'flex-1 flex flex-col' : ''}`}>
+            {!isChatPage && <ProfileCompletionAlerts />}
             <Outlet />
           </div>
         </main>

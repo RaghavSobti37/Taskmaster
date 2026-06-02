@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/d
 import { suggestProjectRole } from '../../utils/taskText';
 import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const WorkspaceSettings = () => {
   const { name: nameParam } = useParams();
@@ -28,6 +29,7 @@ const WorkspaceSettings = () => {
   const [projects, setProjects] = useState([]);
   const [workspaceColor, setWorkspaceColor] = useState(DEFAULT_WORKSPACE_COLOR);
   const [initialColor, setInitialColor] = useState(DEFAULT_WORKSPACE_COLOR);
+  const [initialMembers, setInitialMembers] = useState([]);
   const [createdById, setCreatedById] = useState(null);
 
   const apiPath = `/api/projects/workspaces/${encodeURIComponent(workspaceName)}`;
@@ -58,6 +60,7 @@ const WorkspaceSettings = () => {
         };
       }).filter((d) => d.userId);
       setMembers(defaults);
+      setInitialMembers(cloneSnapshot(defaults));
       setProjects(data.projects || []);
       const loadedColor = normalizeHexColor(data.color) || DEFAULT_WORKSPACE_COLOR;
       setWorkspaceColor(loadedColor);
@@ -167,8 +170,29 @@ const WorkspaceSettings = () => {
     );
   };
 
+  const membersSnapshot = useMemo(
+    () => members.map((m) => ({ userId: String(m.userId), projectRole: m.projectRole })),
+    [members]
+  );
+  const initialMembersSnapshot = useMemo(
+    () => initialMembers.map((m) => ({ userId: String(m.userId), projectRole: m.projectRole })),
+    [initialMembers]
+  );
+  const hasWorkspaceChanges =
+    !stableJsonEqual(membersSnapshot, initialMembersSnapshot) ||
+    (isAdmin && workspaceColor !== initialColor);
+
+  useUnsavedChanges({
+    hasChanges: hasWorkspaceChanges && !forbidden,
+    onSave: handleSave,
+    onCancel: () => {
+      setMembers(cloneSnapshot(initialMembers));
+      setWorkspaceColor(initialColor);
+    },
+    isSaving: saving,
+  });
+
   const displayName = workspaceName.toUpperCase();
-  const canSave = (canManageMembers || (isAdmin && workspaceColor !== initialColor)) && !forbidden;
 
   if (loading) {
     return (
@@ -346,23 +370,6 @@ const WorkspaceSettings = () => {
         </Card>
       )}
 
-      <div className="flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/projects')}
-          className="px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-all"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving || !canSave}
-          className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20"
-        >
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
-      </div>
     </PageContainer>
   );
 };

@@ -365,7 +365,8 @@ exports.createLead = async (req, res) => {
       userId: req.user._id,
       lead: { _id: lead._id },
     });
-    if (process.env.QA_SYNC_GAMIFICATION === 'true') await xpJob;
+    const { isQaSyncGamification } = require('../utils/qaProbeContext');
+    if (isQaSyncGamification()) await xpJob;
     res.status(201).json(lead);
   } catch (error) {
     logger.error('crmController', 'Create lead ', { error: error.message || error });
@@ -984,14 +985,17 @@ exports.getCRMConfig = async (req, res) => {
       });
     }
 
+    const { getBookedCallsPublicConfig } = require('../utils/bookedCallsConfig');
+
     const mergedConfig = {
       callStatuses: Array.from(new Set([...callStatuses.filter(Boolean), ...configDoc.callStatuses])),
       leadStatuses: Array.from(new Set([...leadStatuses.filter(Boolean), ...configDoc.leadStatuses])),
       artistTypes: Array.from(new Set([...artistTypes.filter(Boolean), ...configDoc.artistTypes])),
       webinarDates: webinarDates.filter(Boolean),
       meaningfulConnectStatuses: Array.from(new Set([...meaningfulConnectStatuses.filter(Boolean), ...configDoc.meaningfulConnectStatuses])),
-      sources: Array.from(new Set([...sources.filter(Boolean), 'Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'])),
-      qualities: Array.from(new Set([...qualities.filter(Boolean), ...configDoc.qualities, '1', '2', '3', '4', '5', 'Future 4']))
+      sources: Array.from(new Set([...sources.filter(Boolean), 'Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral', 'Website Booking', 'Booked Call'])),
+      qualities: Array.from(new Set([...qualities.filter(Boolean), ...configDoc.qualities, '1', '2', '3', '4', '5', 'Future 4'])),
+      bookedCalls: getBookedCallsPublicConfig(),
     };
 
     res.json(mergedConfig);

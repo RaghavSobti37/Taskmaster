@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
-import { X, Save } from 'lucide-react';
+import { X } from 'lucide-react';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
   const variants = {
@@ -24,7 +25,8 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
     danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
-    mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10'
+    mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10',
+    success: 'bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-700',
   };
 
   const sizes = {
@@ -464,7 +466,32 @@ export const DataTable = ({
   );
 };
 
-export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children, sidebar, onSave, saveDisabled = false, isSaving = false, extraActions, mainClassName = 'max-w-4xl' }) => {
+export const FullScreenWorkspace = ({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  sidebar,
+  onSave,
+  onCancel,
+  hasChanges = false,
+  saveDisabled = false,
+  isSaving = false,
+  extraActions,
+  mainClassName = 'max-w-4xl',
+}) => {
+  const dirty = isOpen && hasChanges && !!onSave;
+
+  useUnsavedChanges({
+    hasChanges: dirty && !saveDisabled,
+    onSave,
+    onCancel: onCancel || onClose,
+    isSaving,
+    enabled: dirty,
+    elevated: true,
+  });
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -494,13 +521,11 @@ export const FullScreenWorkspace = ({ isOpen, onClose, title, subtitle, children
                    {subtitle && <p className="text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-1 truncate">{subtitle}</p>}
                 </div>
              </div>
-             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-                {extraActions}
-                <Button variant="ghost" size="sm" onClick={onClose} className="hidden sm:inline-flex">Cancel</Button>
-                <Button size="sm" onClick={onSave} disabled={saveDisabled || isSaving} className="shadow-lg shadow-[var(--color-action-primary)]/20">
-                   <Save size={16} /> <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Save Changes'}</span>
-                </Button>
-             </div>
+             {extraActions ? (
+               <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                 {extraActions}
+               </div>
+             ) : null}
           </div>
 
           {/* Main Layout Partition */}

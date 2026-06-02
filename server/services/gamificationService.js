@@ -11,7 +11,10 @@ const {
   ACTION_LABELS,
   DAILY_MISSIONS,
   normalizeGamificationAction,
+  isTimeBasedXpAction,
+  computeTimeBasedXp,
 } = require('../../shared/gamificationRules');
+const { MIN_COMPLETION_MINUTES } = require('../../shared/timeSpent');
 const { todayStart, todayEnd, getCurrentWeekRange } = require('../utils/attendanceDate');
 
 const STEP_XP = DEFAULT_XP.stepXp;
@@ -55,10 +58,35 @@ class GamificationService {
     return toPlainConfig(await this.getConfig());
   }
 
-  static getXpAmount(config, action) {
+  static getXpRate(config, action) {
     const configKey = getConfigKeyForAction(action);
     if (!configKey) return 0;
-    return config[configKey] ?? DEFAULT_XP[configKey] ?? 0;
+    const plain = toPlainConfig(config);
+    return plain[configKey] ?? DEFAULT_XP[configKey] ?? 0;
+  }
+
+  static getXpAmount(config, action) {
+    return this.getXpRate(config, action);
+  }
+
+  static resolveTaskCompletionHours(task = {}) {
+    let hours = Number(task.actualHours) || 0;
+    if (hours <= 0) hours = Number(task.plannedHours) || 0;
+    if (hours <= 0) hours = MIN_COMPLETION_MINUTES / 60;
+    return hours;
+  }
+
+  static computeActionXp(config, action, details = {}) {
+    const normalized = normalizeGamificationAction(action);
+    const rate = this.getXpRate(config, normalized);
+    if (!rate) return 0;
+
+    if (isTimeBasedXpAction(normalized)) {
+      const hours = Number(details.hours) || 0;
+      return computeTimeBasedXp(hours, rate);
+    }
+
+    return Number(rate) || 0;
   }
 
   static async getLevelFromExp(exp) {
@@ -71,8 +99,7 @@ class GamificationService {
     const config = await this.getConfig();
     const stepXp = config.stepXp || STEP_XP;
     if (level <= 1) return 0;
-    const rawXp = (level - 1) * stepXp;
-    return Math.ceil(rawXp / 100) * 100;
+    return (level - 1) * stepXp;
   }
 
   static async countActionToday(userId, action) {
@@ -99,17 +126,25 @@ class GamificationService {
   }
 
   static resolveLogAmount(config, log) {
+    const normalized = normalizeGamificationAction(log.action);
     const plain = toPlainConfig(config);
-    const configKey = getConfigKeyForAction(log.action);
-    if (configKey && plain[configKey] != null) {
+    const configKey = getConfigKeyForAction(normalized);
+
+    if (isTimeBasedXpAction(normalized) && log.details?.hours != null) {
+      const rate = configKey ? (plain[configKey] ?? DEFAULT_XP[configKey] ?? 0) : 0;
+      return computeTimeBasedXp(log.details.hours, rate);
+    }
+
+    if (configKey && plain[configKey] != null && !isTimeBasedXpAction(normalized)) {
       return Number(plain[configKey]) || 0;
     }
+
     return Number(log.amount) || 0;
   }
 
   static async recalculateExpFromAudit(userId) {
     const config = await this.getConfig();
-    const logs = await XPAuditLog.find({ userId }).select('action amount').lean();
+    const logs = await XPAuditLog.find({ userId }).select('action amount details').lean();
 
     let total = 0;
     for (const log of logs) {
@@ -120,7 +155,7 @@ class GamificationService {
 
   static async syncAuditLogAmountsFromConfig(options = {}) {
     const config = await this.getConfigPlain();
-    const logs = await XPAuditLog.find().select('action amount').lean();
+    const logs = await XPAuditLog.find().select('action amount details').lean();
 
     const bulkOps = [];
     const unmappedActions = {};
@@ -135,7 +170,16 @@ class GamificationService {
       }
       if (config[configKey] == null) continue;
 
-      const newAmount = Number(config[configKey]) || 0;
+      const isTimeBased = isTimeBasedXpAction(log.action);
+      const hours = log.details?.hours;
+      let newAmount;
+      if (isTimeBased && hours != null) {
+        newAmount = computeTimeBasedXp(hours, Number(config[configKey]) || 0);
+      } else if (isTimeBased) {
+        continue;
+      } else {
+        newAmount = Number(config[configKey]) || 0;
+      }
       const oldAmount = Number(log.amount) || 0;
       if (!actionStats[log.action]) {
         actionStats[log.action] = { configKey, count: 0, oldAmount, newAmount };
@@ -204,28 +248,28 @@ class GamificationService {
     return { totalsByUser, storedSum, resolvedSum, logCount: logs.length };
   }
 
-  static async getWeeklyLeaderboard(limit = 10) {
+  static async getWeeklyLeaderboard(limit) {
     const config = await this.getConfigPlain();
     const { weekStart, weekEnd, weekStartKey, weekEndKey } = getCurrentWeekRange();
 
     const logs = await XPAuditLog.find({
       createdAt: { $gte: weekStart, $lte: weekEnd },
     })
-      .select('userId action amount')
+      .select('userId action amount details')
       .lean();
 
     const { totalsByUser, storedSum, resolvedSum, logCount } = this.aggregateWeeklyXpFromLogs(logs, config);
 
-    const sorted = [...totalsByUser.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit);
+    const sorted = [...totalsByUser.entries()].sort((a, b) => b[1] - a[1]);
+    const entries =
+      typeof limit === 'number' && limit > 0 ? sorted.slice(0, limit) : sorted;
 
     return {
       weekStart,
       weekEnd,
       weekStartKey,
       weekEndKey,
-      entries: sorted,
+      entries,
       logCount,
       storedSum,
       resolvedSum,
@@ -308,6 +352,7 @@ class GamificationService {
       action,
       actionLabel: ACTION_LABELS[action] || action,
       newTotal: user.exp,
+      newLevel: user.level,
       leveledUp,
     });
 
@@ -316,7 +361,7 @@ class GamificationService {
 
   static async awardActionXp(userId, action = 'ACTION_TRACKED', details = {}, options = {}) {
     const config = await this.getConfig();
-    const amount = this.getXpAmount(config, action);
+    const amount = this.computeActionXp(config, action, details);
     if (!amount || amount <= 0) return null;
 
     const { entityKey, entityId, skipDailyCap = false } = options;
@@ -340,7 +385,8 @@ class GamificationService {
 
   static async handleGamificationEvent(eventType, payload = {}) {
     const { userId, task, project, asset, lead, invoice, reviewerId } = payload;
-    const qaProbe = process.env.QA_SYNC_GAMIFICATION === 'true';
+    const { isQaSyncGamification } = require('../utils/qaProbeContext');
+    const qaProbe = isQaSyncGamification();
     const awardOpts = (entityKey, entityId) => ({
       entityKey,
       entityId,
@@ -351,10 +397,17 @@ class GamificationService {
       const completerId = userId || payload.completerId;
       if (!completerId || !task?._id) return null;
 
+      const hours = this.resolveTaskCompletionHours(task);
+
       await this.generateDailyMissions(completerId);
       await this.progressMission(completerId, 'COMPLETE_TASK', 1);
 
-      return this.awardActionXp(completerId, 'COMPLETE_TASK', { taskId: task._id }, awardOpts('taskId', task._id));
+      return this.awardActionXp(
+        completerId,
+        'COMPLETE_TASK',
+        { taskId: task._id, hours, actualHours: task.actualHours },
+        awardOpts('taskId', task._id)
+      );
     }
 
     if (eventType === 'TASK_CREATED') {
@@ -382,7 +435,13 @@ class GamificationService {
     }
 
     if (eventType === 'ATTENDANCE_DAY_COMPLETE') {
-      const result = await this.awardActionXp(userId, 'ATTENDANCE_ACTION', { date: payload.date }, awardOpts('date', payload.date));
+      const hours = Number(payload.hours) || 0;
+      const result = await this.awardActionXp(
+        userId,
+        'ATTENDANCE_ACTION',
+        { date: payload.date, hours },
+        awardOpts('date', payload.date)
+      );
       await this.progressMission(userId, 'ATTENDANCE_DAY', 1);
       return result;
     }

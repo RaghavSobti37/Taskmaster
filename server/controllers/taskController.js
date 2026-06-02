@@ -1,3 +1,7 @@
+/**
+ * Task HTTP layer. Review/approve rules live in TaskService + shared/taskReviewRules.js —
+ * keep client taskReview.js aligned with that shared module.
+ */
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');

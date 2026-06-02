@@ -1,53 +1,51 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
-const Message = require('../models/Message');
 const { protect } = require('../middleware/authMiddleware');
-const logActivity = require('../utils/activityLogger');
+const { handleUploadFilesManyRequest } = require('../utils/uploadthingServer');
+const {
+  listChannels,
+  getChannel,
+  getMessages,
+  sendMessage,
+  markRead,
+  openDm,
+  createGroupChannel,
+  updateChannel,
+  updateChannelMembers,
+  emitTyping,
+} = require('../controllers/chatController');
 
-// Get all messages for current outlet
-router.get('/', protect, async (req, res) => {
-  try {
-    const { channel, limit = 50, skip = 0 } = req.query;
-    const query = { outletId: req.user?.outletId || 'main' };
-    if (channel) query.channel = channel;
-
-    const messages = await Message.find(query)
-      .populate('senderId', 'name avatar')
-      .populate('mentions', 'name')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    res.json(messages.reverse());
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 32 * 1024 * 1024, files: 12 },
 });
 
-// Post a message
-router.post('/', protect, async (req, res) => {
-  try {
-    const { content, mentions, taskId, channel } = req.body;
-    const message = await Message.create({
-      senderId: req.user._id,
-      content,
-      mentions,
-      taskId,
-      channel: channel || 'General Hub',
-      outletId: req.user?.outletId || 'main'
-    });
-    const populated = await Message.findById(message._id).populate('senderId', 'name avatar').populate('mentions', 'name');
-    
-    // Log to system activity
-    logActivity(req.user._id, 'CHAT_MESSAGE', message._id, 'Chat', { 
-      message: content,
-      channel: channel || 'General Hub'
-    });
+router.use(protect);
 
-    res.status(201).json(populated);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+router.get('/channels', listChannels);
+router.post('/channels', createGroupChannel);
+router.get('/channels/:id', getChannel);
+router.patch('/channels/:id', updateChannel);
+router.get('/channels/:id/messages', getMessages);
+router.post('/channels/:id/messages', sendMessage);
+router.patch('/channels/:id/read', markRead);
+router.patch('/channels/:id/members', updateChannelMembers);
+router.post('/channels/:id/typing', emitTyping);
+
+router.post('/dm', openDm);
+
+router.post('/upload', (req, res, next) => {
+  upload.array('files', 12)(req, res, (err) => {
+    if (err?.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files in one batch (max 12). Upload in smaller groups.',
+      });
+    }
+    if (err) return next(err);
+    return handleUploadFilesManyRequest(req, res);
+  });
 });
 
 module.exports = router;

@@ -6,6 +6,7 @@ import {
   Plus,
   ArrowLeft,
   Layout,
+  MessageSquare,
 } from 'lucide-react';
 import ProjectList from '../../components/project/ProjectList';
 import ProjectKanban from '../../components/project/ProjectKanban';
@@ -39,7 +40,7 @@ import { format, addDays } from 'date-fns';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast } from '../../utils/taskCompletion';
+import { taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast, normalizeCompletionHours } from '../../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
@@ -173,7 +174,7 @@ const ProjectDetail = () => {
     try {
       const taskRes = await axios.put(
         `/api/tasks/${task?._id}`,
-        { status: 'done', actualHours: (task.actualHours || 0) + hours },
+        { status: 'done', actualHours: normalizeCompletionHours(task.actualHours, hours) },
         AXIOS_SKIP_TOAST
       );
       addToast({
@@ -275,6 +276,9 @@ const ProjectDetail = () => {
               className="w-full min-[480px]:w-[9.5rem]"
             />
           )}
+          <Button variant="secondary" size="sm" onClick={() => navigate(`/chat?highlightProject=${id}`)}>
+            <MessageSquare size={14} /> Chat
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
             <Settings size={14} /> Settings
           </Button>
@@ -400,7 +404,13 @@ const ProjectDetail = () => {
                           <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Planned</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.plannedHours)}</p></Card>
                         </div>
                       )}
-                      <ScheduleGrid data={scheduleData} projectId={id} compact onTaskClick={handleOpenDetail} />
+                      <ScheduleGrid
+                        data={scheduleData}
+                        workspaces={workspaces}
+                        projects={project ? [project] : []}
+                        compact
+                        onTaskClick={handleOpenDetail}
+                      />
                     </>
                   )}
                 </div>

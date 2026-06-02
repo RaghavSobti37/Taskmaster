@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Wrench, Plus, Search } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { PageContainer, PageHeader, Card, Button, Input, NexusModal, PageSkeleton, DataLoading } from '../../components/ui';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const ASSET_CATEGORIES = ['Hardware', 'Furniture', 'Software', 'Misc'];
 const ASSET_STATUSES = ['Available', 'In Use', 'Maintenance', 'Lost', 'Damaged'];
@@ -35,6 +36,7 @@ const EquipmentPage = () => {
   const [editingAsset, setEditingAsset] = useState(null);
   const [search, setSearch] = useState('');
   const [assetFormData, setAssetFormData] = useState(EMPTY_ASSET_FORM);
+  const [assetFormBaseline, setAssetFormBaseline] = useState(EMPTY_ASSET_FORM);
   const queryClient = useQueryClient();
   const { data: users = [] } = useUserDirectory();
 
@@ -53,6 +55,19 @@ const EquipmentPage = () => {
     }
   });
 
+  const hasEquipmentEdits =
+    isAssetModalOpen &&
+    editingAsset &&
+    !stableJsonEqual(assetFormData, assetFormBaseline);
+
+  useUnsavedChanges({
+    hasChanges: hasEquipmentEdits,
+    onSave: () => saveAssetMutation.mutate(assetFormData),
+    onCancel: () => setAssetFormData(cloneSnapshot(assetFormBaseline)),
+    isSaving: saveAssetMutation.isPending,
+    elevated: true,
+  });
+
   const filteredAssets = assets.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase()) || a.currentlyWith.toLowerCase().includes(search.toLowerCase())
   );
@@ -63,7 +78,7 @@ const EquipmentPage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Equipment" subtitle="Manage office equipment and assignment." icon={Wrench} actions={<Button size="sm" onClick={() => { setEditingAsset(null); setAssetFormData(EMPTY_ASSET_FORM); setIsAssetModalOpen(true); }}><Plus size={14} /> Add Asset</Button>} />
+      <PageHeader title="Equipment" subtitle="Manage office equipment and assignment." icon={Wrench} actions={<Button size="sm" onClick={() => { setEditingAsset(null); setAssetFormData(EMPTY_ASSET_FORM); setAssetFormBaseline(EMPTY_ASSET_FORM); setIsAssetModalOpen(true); }}><Plus size={14} /> Add Asset</Button>} />
       <Card className="p-4 space-y-4">
         <Input placeholder="Search equipment..." value={search} onChange={(e) => setSearch(e.target.value)} icon={Search} />
         <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
@@ -79,7 +94,7 @@ const EquipmentPage = () => {
             <tbody>
               {isLoading && <tr><td colSpan={4}><DataLoading /></td></tr>}
               {!isLoading && filteredAssets.map((asset) => (
-                <tr key={asset._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { setEditingAsset(asset); setAssetFormData(toAssetFormData(asset)); setIsAssetModalOpen(true); }}>
+                <tr key={asset._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { const loaded = toAssetFormData(asset); setEditingAsset(asset); setAssetFormData(loaded); setAssetFormBaseline(cloneSnapshot(loaded)); setIsAssetModalOpen(true); }}>
                   <td className="px-3 py-2 font-bold">{asset.name}</td>
                   <td className="px-3 py-2">{asset.category}</td>
                   <td className="px-3 py-2">{asset.status}</td>
@@ -92,7 +107,7 @@ const EquipmentPage = () => {
       </Card>
 
       <NexusModal isOpen={isAssetModalOpen} onClose={() => setIsAssetModalOpen(false)} title={editingAsset ? 'Edit Equipment' : 'Add Equipment'} showFooter={false} width="max-w-3xl">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); saveAssetMutation.mutate(assetFormData); }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingAsset) saveAssetMutation.mutate(assetFormData); }}>
           <Input label="Name" value={assetFormData.name} onChange={(e) => setAssetFormData({ ...assetFormData, name: e.target.value })} icon={Wrench} required />
           <Input label="Description" value={assetFormData.description} onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -128,7 +143,9 @@ const EquipmentPage = () => {
               {users.map((u) => <option key={u._id} value={u.name}>{u.name}</option>)}
             </select>
           </div>
-          <Button type="submit" disabled={saveAssetMutation.isPending}>{saveAssetMutation.isPending ? 'Saving...' : 'Save'}</Button>
+          {!editingAsset && (
+            <Button type="submit" disabled={saveAssetMutation.isPending}>{saveAssetMutation.isPending ? 'Saving...' : 'Add Asset'}</Button>
+          )}
         </form>
       </NexusModal>
     </PageContainer>

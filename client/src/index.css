@@ -88,12 +88,7 @@
   --letter-spacing-wider: 0.05em;
 
   --spacing-row-padding: 0.5rem 0.75rem;
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 2.5rem;
+  /* Do not define --spacing-xs … --spacing-2xl here: Tailwind v4 maps max-w-xs/sm/md/lg/xl/2xl to those keys and text collapses to one word per line. */
 
   --radius-atomic: 4px;
   --radius-sm: 6px;
@@ -506,7 +501,7 @@ a.tm-hashtag-chip:hover {
 .dashboard-widget-grid {
   gap: 0;
   border-radius: var(--radius-atomic);
-  overflow: hidden;
+  align-content: start;
 }
 
 .dashboard-widget-grid .dashboard-grid-item > * {
@@ -519,6 +514,7 @@ a.tm-hashtag-chip:hover {
 
 @media (min-width: 1024px) {
   .dashboard-widget-grid {
+    grid-auto-rows: minmax(min-content, max-content);
     grid-template-rows: repeat(var(--grid-rows, 1), minmax(min-content, max-content));
   }
 

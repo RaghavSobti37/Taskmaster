@@ -7,6 +7,7 @@ const { formatProjectName } = require('../utils/formatProjectName');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { normalizeStoredProjectRole } = require('../../shared/projectRoles');
+const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 
 const DEFAULT_WORKSPACES = [
   { name: 'TSC ACADEMY', color: '#3498db' },
@@ -832,13 +833,10 @@ exports.getProjectHoursSummary = async (req, res) => {
       ]
     }).select('details').lean();
 
-    const parseHours = (str) => {
-      if (!str) return 0;
-      const match = String(str).match(/([\d.]+)/);
-      return match ? parseFloat(match[1]) : 0;
-    };
-
-    const manualLogHours = logs.reduce((sum, l) => sum + parseHours(l.details?.timeSpent), 0);
+    const manualLogHours = logs.reduce(
+      (sum, l) => sum + parseTimeSpentToHours(l.details?.timeSpent),
+      0
+    );
 
     res.json({
       projectId: project._id,

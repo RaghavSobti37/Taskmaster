@@ -7,7 +7,8 @@ export const SALES_REPS = {
   'sr06': 'Satyam Mishra',
   'sr07': 'Shivam Sahijwani',
   'sr08': 'Harshika Kasliwal',
-  'sr09': 'Aryaman'
+  'sr09': 'Aryaman',
+  'akash': 'Akash'
 };
 
 export const getRepName = (rep) => {

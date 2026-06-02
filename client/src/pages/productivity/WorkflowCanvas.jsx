@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Play, Plus, Zap, Filter, Send, Settings, Save, RefreshCw, Layers } from 'lucide-react';
+import { Play, Plus, Zap, Filter, Send, Settings, RefreshCw, Layers } from 'lucide-react';
 import { PageContainer, PageHeader, Button, Card, Badge } from '../../components/ui';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const initialNodes = [
   {
@@ -35,6 +36,10 @@ const initialEdges = [
 const WorkflowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [baselineFlow, setBaselineFlow] = useState(() => ({
+    nodes: cloneSnapshot(initialNodes),
+    edges: cloneSnapshot(initialEdges),
+  }));
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
 
@@ -52,13 +57,28 @@ const WorkflowCanvas = () => {
 
   const handleSave = async () => {
     setSaving(true);
-    setTimeout(() => setSaving(false), 800);
+    setTimeout(() => {
+      setBaselineFlow({ nodes: cloneSnapshot(nodes), edges: cloneSnapshot(edges) });
+      setSaving(false);
+    }, 800);
   };
 
   const handleRunPipeline = async () => {
     setRunning(true);
     setTimeout(() => setRunning(false), 1200);
   };
+
+  const hasFlowChanges = !stableJsonEqual({ nodes, edges }, baselineFlow);
+
+  useUnsavedChanges({
+    hasChanges: hasFlowChanges,
+    onSave: handleSave,
+    onCancel: () => {
+      setNodes(cloneSnapshot(baselineFlow.nodes));
+      setEdges(cloneSnapshot(baselineFlow.edges));
+    },
+    isSaving: saving,
+  });
 
   return (
     <PageContainer className="!py-4 !space-y-4 !h-[90vh] flex flex-col">
@@ -67,9 +87,6 @@ const WorkflowCanvas = () => {
         subtitle="Build automated background workflows and email campaigns."
         actions={
           <div className="flex items-center gap-2">
-            <Button size="xs" variant="ghost" onClick={handleSave} disabled={saving}>
-              {saving ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Save size={12} className="mr-1" />} Save Workflow
-            </Button>
             <Button size="xs" variant="primary" onClick={handleRunPipeline} disabled={running}>
               {running ? <RefreshCw size={12} className="animate-spin mr-1" /> : <Play size={12} className="mr-1" />} Execute Workflow
             </Button>

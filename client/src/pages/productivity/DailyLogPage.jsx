@@ -25,18 +25,9 @@ import {
 import WorkspaceProjectFields, {
   resolveWorkspaceFromProjectName,
 } from '../../components/forms/WorkspaceProjectFields';
+import { parseTimeSpentToMinutes } from '../../utils/timeSpent';
 
-const parseLogMinutes = (raw = '') => {
-  const str = String(raw || '').trim().toLowerCase();
-  if (!str) return 0;
-  let total = 0;
-  const hours = str.match(/(\d+(?:\.\d+)?)\s*h/);
-  const mins = str.match(/(\d+)\s*m/);
-  if (hours) total += parseFloat(hours[1]) * 60;
-  if (mins) total += parseInt(mins[1], 10);
-  if (!hours && !mins && !Number.isNaN(Number(str))) total += parseInt(str, 10);
-  return total;
-};
+const parseLogMinutes = parseTimeSpentToMinutes;
 
 const LOG_SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },

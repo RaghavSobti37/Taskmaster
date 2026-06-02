@@ -249,9 +249,11 @@ export default function ArtistDetail({ isPreview = false }) {
 
       <FullScreenWorkspace
         isOpen={showAddVideo}
-        onClose={() => setShowAddVideo(false)}
+        onClose={() => { setShowAddVideo(false); setNewVideo({ url: '', title: '', channelName: '' }); }}
         title="Add Featured Video"
         subtitle="Track collab / guest appearance stats"
+        hasChanges={showAddVideo && !!(newVideo.url || newVideo.title || newVideo.channelName)}
+        onCancel={() => setNewVideo({ url: '', title: '', channelName: '' })}
         onSave={async () => {
           if (!newVideo.url) return alert('YouTube URL required');
           await addVideoMutation.mutateAsync({ id, data: newVideo });

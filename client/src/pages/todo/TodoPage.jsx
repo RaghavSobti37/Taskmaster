@@ -18,7 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { taskCompletionToast, canMarkTaskComplete, pendingReviewToast } from '../../utils/taskCompletion';
+import { taskCompletionToast, canMarkTaskComplete, pendingReviewToast, normalizeCompletionHours } from '../../utils/taskCompletion';
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
@@ -108,7 +108,7 @@ const TodoPage = () => {
     try {
       const taskRes = await axios.put(
         `/api/tasks/${task?._id}`,
-        { status: 'done', actualHours: (task.actualHours || 0) + hours },
+        { status: 'done', actualHours: normalizeCompletionHours(task.actualHours, hours) },
         AXIOS_SKIP_TOAST
       );
       const toast = taskCompletionToast(taskRes.data?.status, task.title);

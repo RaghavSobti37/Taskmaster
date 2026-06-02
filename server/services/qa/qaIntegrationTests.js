@@ -182,8 +182,8 @@ async function runDelegatedInReview(def, ctx) {
   if (assignerCompletion) {
     return { ...probeFail(def, 'Assigner must not get TASK_COMPLETION on submit'), artifacts: ctx.artifacts };
   }
-  if (!String(reviewLog.details?.timeSpent || '').includes('0.25')) {
-    return { ...probeFail(def, `Review log expected 0.25h, got ${reviewLog.details?.timeSpent}`), artifacts: ctx.artifacts };
+  if (!String(reviewLog.details?.timeSpent || '').includes('15m')) {
+    return { ...probeFail(def, `Review log expected 15m, got ${reviewLog.details?.timeSpent}`), artifacts: ctx.artifacts };
   }
 
   return { ...probePass(def, 'Delegated completion → in-review with split daily logs'), artifacts: ctx.artifacts };

@@ -1,8 +1,11 @@
 export { default as StatCards } from './StatCards';
-export { default as ScheduleCard } from './ScheduleCard';
+export { default as CalendarTodayCard } from './CalendarTodayCard';
+/** @deprecated Use CalendarTodayCard */
+export { default as ScheduleCard } from './CalendarTodayCard';
 export { default as SquadCard } from './SquadCard';
 export { default as LeaderboardCard } from './LeaderboardCard';
 export { default as LeaderboardPodium } from './LeaderboardPodium';
+export { default as DailyMissionsCard } from './DailyMissionsCard';
 export { default as AnnouncementsCard } from './AnnouncementsCard';
 export { default as TaskTable } from './TaskTable';
 export { default as TodosTodayCard } from './TodosTodayCard';

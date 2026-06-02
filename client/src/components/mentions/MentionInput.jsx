@@ -1,5 +1,6 @@
 import React from 'react';
 import MentionRichText from './MentionRichText';
+import MentionAutocompleteMenu from './MentionAutocompleteMenu';
 import { useMentionAutocomplete } from '../../hooks/useMentionAutocomplete';
 
 const MentionInput = ({
@@ -9,23 +10,36 @@ const MentionInput = ({
   className = '',
   placeholder = 'What needs to be done? Use @name or #Asset',
   editSessionKey,
+  menuPlacement = 'below',
 }) => {
   const {
     inputRef,
     users,
     assets,
+    assetsError,
     menu,
     menuItems,
-    isEditing,
+    showMenu,
     showRichView,
     showDisabledRichView,
     enterEdit,
     handleRichViewMouseDown,
+    handleFocus,
+    syncMenuFromEl,
     insertAtCursor,
     handleChange,
     handleKeyDown,
     handleBlur,
   } = useMentionAutocomplete({ value, onChange, disabled, editSessionKey, multiline: false });
+
+  const inputEvents = {
+    onChange: handleChange,
+    onKeyDown: handleKeyDown,
+    onBlur: handleBlur,
+    onFocus: handleFocus,
+    onClick: (e) => syncMenuFromEl(e.target),
+    onSelect: (e) => syncMenuFromEl(e.target),
+  };
 
   return (
     <div className="relative w-full min-w-0">
@@ -50,31 +64,23 @@ const MentionInput = ({
           ref={inputRef}
           type="text"
           value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
           disabled={disabled}
           placeholder={placeholder}
           className={className}
+          {...inputEvents}
         />
       )}
 
-      {isEditing && menu && menuItems.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 max-h-44 overflow-y-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] shadow-lg">
-          {menuItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-secondary)] transition-colors"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                insertAtCursor(item.insert);
-              }}
-            >
-              {menu.type === 'user' ? '@' : '#'}{item.label}
-            </button>
-          ))}
-        </div>
+      {showMenu && (
+        <MentionAutocompleteMenu
+          menu={menu}
+          menuItems={menuItems}
+          users={users}
+          assets={assets}
+          assetsError={assetsError}
+          menuPlacement={menuPlacement}
+          onPick={insertAtCursor}
+        />
       )}
     </div>
   );

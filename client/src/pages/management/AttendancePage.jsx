@@ -19,6 +19,7 @@ import { isOpsUser, isAdminUser } from '../../utils/departmentPermissions';
 import { isAttendanceExcluded } from '../../utils/attendanceUsers';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
+import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import {
   isAttendanceHoliday,
@@ -146,6 +147,8 @@ const AttendancePage = () => {
   const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
   const [editInForm, setEditInForm] = useState({ inTime: '', inMode: 'office' });
   const [editOutForm, setEditOutForm] = useState({ outTime: '', outMode: 'office' });
+  const [editInBaseline, setEditInBaseline] = useState(null);
+  const [editOutBaseline, setEditOutBaseline] = useState(null);
 
   const today = useMemo(() => {
     const value = new Date();
@@ -232,19 +235,25 @@ const AttendancePage = () => {
     const resolvedScope = scope || inferEditScope(entry);
     const cell = { userRow, date, entry };
     if (resolvedScope === 'out') {
-      setEditOutCell(cell);
-      setEditOutForm({
+      const form = {
         outTime: entry?.outTimeRecord?.manualTimestamp || '',
         outMode: entry?.outTimeRecord?.workMode || 'office',
-      });
+      };
+      setEditOutCell(cell);
+      setEditOutForm(form);
+      setEditOutBaseline(form);
       setEditInCell(null);
+      setEditInBaseline(null);
     } else {
-      setEditInCell(cell);
-      setEditInForm({
+      const form = {
         inTime: entry?.inTimeRecord?.manualTimestamp || '',
         inMode: entry?.inTimeRecord?.workMode || 'office',
-      });
+      };
+      setEditInCell(cell);
+      setEditInForm(form);
+      setEditInBaseline(form);
       setEditOutCell(null);
+      setEditOutBaseline(null);
     }
   };
 
@@ -287,6 +296,22 @@ const AttendancePage = () => {
       onError: (error) => addToast({ type: 'error', message: error.response?.data?.error || 'Failed to save', module: MODULE.ATTENDANCE }),
     });
   };
+
+  useUnsavedChanges({
+    hasChanges: !!editInCell && !!editInBaseline && !stableJsonEqual(editInForm, editInBaseline),
+    onSave: saveInCell,
+    onCancel: () => editInBaseline && setEditInForm(editInBaseline),
+    isSaving: upsertAttendance.isPending,
+    elevated: true,
+  });
+
+  useUnsavedChanges({
+    hasChanges: !!editOutCell && !!editOutBaseline && !stableJsonEqual(editOutForm, editOutBaseline),
+    onSave: saveOutCell,
+    onCancel: () => editOutBaseline && setEditOutForm(editOutBaseline),
+    isSaving: upsertAttendance.isPending,
+    elevated: true,
+  });
 
   const executeGeolocationCheck = (type, manualTime) => {
     setIsLocating(true);
@@ -438,12 +463,7 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      <NexusModal isOpen={!!editInCell} onClose={() => setEditInCell(null)} title="Morning Check-In — User Timecard" showFooter={true} size="md" footerActions={
-          <>
-            <Button variant="ghost" onClick={() => setEditInCell(null)}>Cancel</Button>
-            <Button variant="primary" onClick={saveInCell} disabled={upsertAttendance.isPending}>Save Changes</Button>
-          </>
-      }>
+      <NexusModal isOpen={!!editInCell} onClose={() => setEditInCell(null)} title="Morning Check-In — User Timecard" showFooter={false} size="md">
         {editInCell && (
           <UnifiedTimeCard
             entry={editInCell.entry}
@@ -462,12 +482,7 @@ const AttendancePage = () => {
         )}
       </NexusModal>
 
-      <NexusModal isOpen={!!editOutCell} onClose={() => setEditOutCell(null)} title="Evening Check-Out — User Timecard" showFooter={true} size="md" footerActions={
-          <>
-            <Button variant="ghost" onClick={() => setEditOutCell(null)}>Cancel</Button>
-            <Button variant="primary" onClick={saveOutCell} disabled={upsertAttendance.isPending}>Save Changes</Button>
-          </>
-      }>
+      <NexusModal isOpen={!!editOutCell} onClose={() => setEditOutCell(null)} title="Evening Check-Out — User Timecard" showFooter={false} size="md">
         {editOutCell && (
           <UnifiedTimeCard
             entry={editOutCell.entry}

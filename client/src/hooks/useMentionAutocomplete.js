@@ -4,7 +4,9 @@ import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 
 const fetchAssets = async () => {
-  const { data } = await axios.get('/api/assets');
+  const { data } = await axios.get('/api/assets', {
+    headers: { 'x-skip-toast': 'true' },
+  });
   return Array.isArray(data) ? data : [];
 };
 
@@ -14,9 +16,11 @@ const detectTrigger = (text, cursor) => {
   if (userMatch) {
     return { type: 'user', query: userMatch[1], start: cursor - userMatch[1].length - 1 };
   }
-  const assetMatch = slice.match(/(?:^|\s)#([^\s@#]*)$/);
+  const assetMatch = slice.match(/(?:^|\s)#([^@]*)$/);
   if (assetMatch) {
-    return { type: 'asset', query: assetMatch[1], start: cursor - assetMatch[1].length - 1 };
+    const raw = assetMatch[1];
+    const query = raw.trim();
+    return { type: 'asset', query, start: cursor - raw.length - 1 };
   }
   return null;
 };
@@ -30,30 +34,33 @@ export function useMentionAutocomplete({
   disabled = false,
   editSessionKey,
   multiline = true,
+  forcePlain = false,
+  mentionUsers = null,
 }) {
   const inputRef = useRef(null);
-  const { data: users = [] } = useUserDirectory();
-  const { data: assets = [] } = useQuery({
+  const { data: directoryUsers = [] } = useUserDirectory();
+  const users = mentionUsers ?? directoryUsers;
+  const { data: assets = [], isError: assetsError } = useQuery({
     queryKey: ['assets', 'mention-picker'],
     queryFn: fetchAssets,
     staleTime: 1000 * 60 * 5,
+    retry: 1,
   });
 
   const [menu, setMenu] = useState(null);
-  const [isEditing, setIsEditing] = useState(() => !String(value).trim());
+  const [isEditing, setIsEditing] = useState(() => !String(value).trim() || forcePlain);
 
   useEffect(() => {
     if (editSessionKey == null) return;
-    setIsEditing(!String(value).trim());
-    // Only reset edit/view mode when the modal session opens — not on each keystroke.
+    setIsEditing(!String(value).trim() || forcePlain);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editSessionKey]);
 
   useEffect(() => {
     const el = inputRef.current;
     if (el && document.activeElement === el) return;
-    if (String(value).trim()) setIsEditing(false);
-  }, [value]);
+    if (String(value).trim() && !forcePlain) setIsEditing(false);
+  }, [value, forcePlain]);
 
   const menuItems = useMemo(() => {
     if (!menu) return [];
@@ -62,20 +69,42 @@ export function useMentionAutocomplete({
       return users
         .filter((u) => !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
         .slice(0, 8)
-        .map((u) => ({ key: u._id, label: u.name, insert: `@${u.name?.split(/\s+/)[0] || u.name} ` }));
+        .map((u) => ({
+          key: u._id,
+          label: u.name,
+          insert: `@${u.name?.split(/\s+/)[0] || u.name} `,
+          meta: u,
+        }));
     }
     return assets
       .filter((a) => !q || a.name?.toLowerCase().includes(q))
       .slice(0, 8)
-      .map((a) => ({ key: a._id, label: a.name, insert: `#${a.name} ` }));
+      .map((a) => ({
+        key: a._id,
+        label: a.name,
+        insert: `#${a.name} `,
+        meta: a,
+      }));
   }, [menu, users, assets]);
 
+  const showMenu = Boolean(menu && (isEditing || forcePlain));
+
   const closeMenu = () => setMenu(null);
+
+  const syncMenuFromEl = useCallback((el) => {
+    if (!el) return;
+    const trigger = detectTrigger(value, el.selectionStart ?? value.length);
+    setMenu(trigger);
+  }, [value]);
 
   const enterEdit = () => {
     if (disabled) return;
     setIsEditing(true);
     requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleFocus = () => {
+    if (!disabled) setIsEditing(true);
   };
 
   const handleRichViewMouseDown = (e) => {
@@ -106,41 +135,49 @@ export function useMentionAutocomplete({
     onChange?.(next);
     const trigger = detectTrigger(next, e.target.selectionStart);
     setMenu(trigger);
+    if (!disabled) setIsEditing(true);
   };
 
   const handleKeyDown = (e) => {
-    if (!menu || !menuItems.length) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeMenu();
-    }
-    if (e.key === 'Enter' && menuItems[0]) {
-      e.preventDefault();
-      insertAtCursor(menuItems[0].insert);
+    if (showMenu && menuItems.length > 0) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+        return;
+      }
+      if (e.key === 'Enter' && menuItems[0]) {
+        e.preventDefault();
+        insertAtCursor(menuItems[0].insert);
+        return;
+      }
     }
   };
 
   const handleBlur = () => {
     setTimeout(() => {
       closeMenu();
-      if (!disabled) setIsEditing(false);
+      if (!disabled && !forcePlain) setIsEditing(false);
     }, 150);
   };
 
-  const showRichView = !disabled && !isEditing && String(value).trim();
-  const showDisabledRichView = disabled && String(value).trim();
+  const showRichView = !forcePlain && !disabled && !isEditing && String(value).trim();
+  const showDisabledRichView = !forcePlain && disabled && String(value).trim();
 
   return {
     inputRef,
     users,
     assets,
+    assetsError,
     menu,
     menuItems,
+    showMenu,
     isEditing,
     showRichView,
     showDisabledRichView,
     enterEdit,
     handleRichViewMouseDown,
+    handleFocus,
+    syncMenuFromEl,
     insertAtCursor,
     handleChange,
     handleKeyDown,

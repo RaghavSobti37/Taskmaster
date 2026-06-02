@@ -56,7 +56,10 @@ const checkFollowups = async () => {
     for (const lead of leads) {
       try {
         const followupStr = `${lead.nextFollowupDate} ${lead.nextFollowupTime}`;
-        const followupDate = parse(followupStr, 'dd-MM-yyyy HH:mm', new Date());
+        let followupDate = parse(followupStr, 'dd-MM-yyyy HH:mm', new Date());
+        if (isNaN(followupDate.getTime())) {
+          followupDate = parse(followupStr, 'dd-MM-yyyy h:mm a', new Date());
+        }
         if (isNaN(followupDate.getTime())) continue;
 
         if (isBefore(followupDate, thirtyMinsFromNow) && isAfter(followupDate, thirtyMinsBefore)) {

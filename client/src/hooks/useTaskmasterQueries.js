@@ -1,67 +1,34 @@
+export {
+  useProjects,
+  useWorkspaces,
+  useWorkspace,
+  useProject,
+  useTasks,
+  useDashboardTasks,
+  useReviewTasks,
+  useProjectTasks,
+  useCreateTask,
+  useDeleteTask,
+  useUpdateTask,
+  useSchedule,
+  useProjectWorkload,
+  useProjectHoursSummary,
+  useDashboardSummary,
+  useDepartmentStats,
+  useDashboardPreset,
+  useTaskDomainRealtimeSync,
+} from './queries';
+
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
-import { makePendingTask } from '../utils/pendingTask';
-import { getTaskQuerySnapshots, updateAllTaskQueries, restoreTaskQuerySnapshots, syncUpdatedTaskToQueries } from '../utils/taskCache';
-import { resolveTaskId } from '../utils/taskCompletion';
-import { globalToast } from '../lib/systemLogBridge';
-import { canReviewTask } from '../utils/taskReview';
-import { useAuth } from '../contexts/AuthContext';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
   const { data } = await axios.get(`/api/logs?userId=${userId}&limit=${limit}`);
   return data;
-};
-
-const fetchProjects = async () => {
-  const { data } = await axios.get('/api/projects');
-  return normalizeProjects(data);
-};
-
-const fetchWorkspaces = async () => {
-  const { data } = await axios.get('/api/projects/workspaces');
-  return data;
-};
-
-const fetchWorkspaceByName = async (name) => {
-  const { data } = await axios.get(`/api/projects/workspaces/${encodeURIComponent(name)}`);
-  return data;
-};
-
-const fetchProjectById = async (id) => {
-  const { data } = await axios.get(`/api/projects/${id}`);
-  return normalizeProject(data);
-};
-
-const fetchTasks = async () => {
-  const { data } = await axios.get('/api/tasks');
-  return data;
-};
-
-const fetchDashboardTasks = async () => {
-  const { data } = await axios.get('/api/tasks', { params: { scope: 'dashboard' } });
-  return data;
-};
-
-const fetchReviewTasks = async () => {
-  const { data } = await axios.get('/api/tasks', { params: { scope: 'review' } });
-  return data;
-};
-
-const filterTasksForUser = (tasks, userId) => {
-  if (!userId) return tasks;
-  const uid = String(userId?._id || userId);
-  const resolveAssigneeId = (a) => {
-    if (typeof a === 'string') return a;
-    if (a?._id) return String(a._id);
-    if (a?.userId?._id) return String(a.userId._id);
-    if (a?.userId) return String(a.userId);
-    return null;
-  };
-  return tasks.filter((t) => t.assignees?.some((a) => resolveAssigneeId(a) === uid));
 };
 
 const fetchUserDirectory = async () => {
@@ -83,104 +50,6 @@ export const useLogs = (userId, limit = 200, enabled = true) => {
     queryFn: () => fetchLogs(userId === 'all' || !userId ? undefined : userId, limit),
     enabled: enabled,
     placeholderData: keepPreviousData,
-  });
-};
-
-export const useProjects = () => {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    return subscribeToChannel('projects', 'project_change', (payload) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    });
-  }, [queryClient]);
-
-  return useQuery({
-    queryKey: ['projects'],
-    queryFn: fetchProjects,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-  });
-};
-
-export const useWorkspaces = () => {
-  return useQuery({
-    queryKey: ['workspaces'],
-    queryFn: fetchWorkspaces,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-  });
-};
-
-export const useWorkspace = (name) => {
-  return useQuery({
-    queryKey: ['workspaces', name],
-    queryFn: () => fetchWorkspaceByName(name),
-    enabled: !!name,
-    staleTime: 1000 * 60 * 2,
-  });
-};
-
-export const useProject = (id) => {
-  return useQuery({
-    queryKey: ['projects', id],
-    queryFn: () => fetchProjectById(id),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5,
-  });
-};
-
-export const useTasks = (userId) => {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    return subscribeToChannel('tasks', 'task_change', (payload) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    });
-  }, [queryClient]);
-
-  return useQuery({
-    queryKey: ['tasks'],
-    queryFn: fetchTasks,
-    placeholderData: keepPreviousData,
-    select: (tasks) => filterTasksForUser(tasks, userId),
-  });
-};
-
-export const useDashboardTasks = (userId) => {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    return subscribeToChannel('tasks', 'task_change', () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    });
-  }, [queryClient]);
-
-  return useQuery({
-    queryKey: ['tasks', 'dashboard'],
-    queryFn: fetchDashboardTasks,
-    placeholderData: keepPreviousData,
-    select: (tasks) => filterTasksForUser(tasks, userId),
-  });
-};
-
-export const useReviewTasks = (enabled = true) => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    return subscribeToChannel('tasks', 'task_change', () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', 'review'] });
-    });
-  }, [queryClient]);
-
-  return useQuery({
-    queryKey: ['tasks', 'review'],
-    queryFn: fetchReviewTasks,
-    enabled: typeof enabled === 'boolean' ? enabled : enabled?.enabled !== false,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    placeholderData: keepPreviousData,
-    select: (tasks) => (tasks || []).filter((t) => canReviewTask(t, user)),
   });
 };
 
@@ -238,82 +107,6 @@ export const useCalendarEvents = () => {
       return Array.from(new Map(combined.map(ev => [ev._id, ev])).values());
     },
     staleTime: 1000 * 60,
-  });
-};
-
-export const useProjectTasks = (projectId) => {
-  return useQuery({
-    queryKey: ['tasks', { projectId }],
-    queryFn: async () => (await axios.get(`/api/tasks?projectId=${projectId}`)).data,
-    enabled: !!projectId,
-    staleTime: 1000 * 60 * 2,
-    placeholderData: keepPreviousData,
-  });
-};
-
-// Mutations with optimistic updates + minimal refetch
-export const useCreateTask = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (newTask) => {
-      const { data } = await axios.post('/api/tasks', newTask);
-      return data;
-    },
-    onMutate: async (newTask) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const snapshots = getTaskQuerySnapshots(queryClient);
-      const tempId = `pending-task-${Date.now()}`;
-      const optimistic = makePendingTask(newTask, tempId);
-      updateAllTaskQueries(queryClient, (tasks) => [optimistic, ...(tasks || [])]);
-      return { snapshots, tempId };
-    },
-    onSuccess: (createdTask, _variables, context) => {
-      if (!context?.tempId) return;
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === context.tempId ? { ...createdTask, _pending: false } : t))
-      );
-    },
-    onError: (err, _variables, context) => {
-      restoreTaskQuerySnapshots(queryClient, context?.snapshots);
-      globalToast.addToast({
-        title: 'Create failed',
-        message: err.response?.data?.error || err.response?.data?.message || 'Could not create task',
-        type: 'error',
-        module: 'PROJECTS',
-      });
-    },
-    onSettled: (_data, error) => {
-      if (!error) {
-        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-        queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      }
-    },
-  });
-};
-
-export const useDeleteTask = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => axios.delete(`/api/tasks/${id}`),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previousTasks = queryClient.getQueryData(['tasks']);
-      if (previousTasks) {
-        queryClient.setQueryData(['tasks'], (old) => (old || []).filter(t => t._id !== id));
-      }
-      return { previousTasks };
-    },
-    onError: (err, id, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks'], context.previousTasks);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-    }
   });
 };
 
@@ -429,44 +222,6 @@ export const useUpdateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['projects', id] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     }
-  });
-};
-
-export const useUpdateTask = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, data }) => {
-      const res = await axios.put(`/api/tasks/${id}`, data);
-      return res.data;
-    },
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const snapshots = getTaskQuerySnapshots(queryClient);
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (resolveTaskId(t) === String(id) ? { ...t, ...data, _updating: true } : t))
-      );
-      return { snapshots };
-    },
-    onSuccess: (updatedTask) => {
-      if (!updatedTask?._id) return;
-      syncUpdatedTaskToQueries(queryClient, updatedTask);
-    },
-    onError: (err, _variables, context) => {
-      restoreTaskQuerySnapshots(queryClient, context?.snapshots);
-      globalToast.addToast({
-        title: 'Update failed',
-        message: err.response?.data?.error || err.response?.data?.message || 'Could not update task',
-        type: 'error',
-        module: 'PROJECTS',
-      });
-    },
-    onSettled: (_data, error) => {
-      if (!error) {
-        queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
-        queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
-      }
-    },
   });
 };
 
@@ -614,23 +369,6 @@ export const useMailProfiles = (enabled = true) => {
     queryFn: async () => (await axios.get('/api/mail/profiles')).data,
     enabled,
     staleTime: 1000 * 60 * 10,
-  });
-};
-
-export const useDashboardSummary = () => {
-  return useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
-    staleTime: 1000 * 60 * 2,
-  });
-};
-
-export const useDepartmentStats = (timeframe = '7d', enabled = true) => {
-  return useQuery({
-    queryKey: ['dashboard', 'dept-stats', timeframe],
-    queryFn: async () => (await axios.get(`/api/dashboard/dept-stats?timeframe=${timeframe}`)).data,
-    enabled,
-    staleTime: 1000 * 60 * 2,
   });
 };
 
@@ -1167,6 +905,33 @@ export const useLeaderboardBreakdown = (userId, enabled = true) => {
   });
 };
 
+export const useGamificationProgress = (enabled = true) => {
+  return useQuery({
+    queryKey: ['gamification', 'progress'],
+    queryFn: async () => (await axios.get('/api/gamification/progress')).data,
+    enabled,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useGamificationHistory = (page = 1, limit = 10, enabled = true) => {
+  return useQuery({
+    queryKey: ['gamification', 'history', page, limit],
+    queryFn: async () => (await axios.get('/api/gamification/history', { params: { page, limit } })).data,
+    enabled,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useGamificationMissions = (enabled = true) => {
+  return useQuery({
+    queryKey: ['gamification', 'missions'],
+    queryFn: async () => (await axios.get('/api/gamification/missions')).data,
+    enabled,
+    staleTime: 1000 * 60,
+  });
+};
+
 export const useAnnouncements = (enabled = true, refetchInterval = false, includeExpired = false) => {
   return useQuery({
     queryKey: ['announcements', { includeExpired }],
@@ -1276,36 +1041,6 @@ export const useTaskTypes = () => {
     queryFn: async () => categories,
     staleTime: Infinity,
     initialData: categories,
-  });
-};
-
-export const useSchedule = ({ start, end, projectId, departmentId } = {}, enabled = true) => {
-  return useQuery({
-    queryKey: ['schedule', start, end, projectId, departmentId],
-    queryFn: async () => (await axios.get('/api/schedule', {
-      params: { start, end, projectId, departmentId }
-    })).data,
-    enabled: enabled && !!start && !!end,
-    staleTime: 1000 * 30,
-    placeholderData: keepPreviousData,
-  });
-};
-
-export const useProjectWorkload = (projectId, start, end, enabled = true) => {
-  return useQuery({
-    queryKey: ['projects', projectId, 'workload', start, end],
-    queryFn: async () => (await axios.get(`/api/projects/${projectId}/workload`, { params: { start, end } })).data,
-    enabled: enabled && !!projectId,
-    staleTime: 1000 * 30
-  });
-};
-
-export const useProjectHoursSummary = (projectId, enabled = true) => {
-  return useQuery({
-    queryKey: ['projects', projectId, 'hours-summary'],
-    queryFn: async () => (await axios.get(`/api/projects/${projectId}/hours-summary`)).data,
-    enabled: enabled && !!projectId,
-    staleTime: 1000 * 60
   });
 };
 
@@ -1422,17 +1157,6 @@ export const useUpdateUserDepartment = () => {
   return useMutation({
     mutationFn: ({ userId, departmentId }) => axios.patch(`/api/departments/users/${userId}`, { departmentId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] })
-  });
-};
-
-export const useDashboardPreset = () => {
-  return useQuery({
-    queryKey: ['dashboardPreset'],
-    queryFn: async () => {
-      const { data } = await axios.get('/api/customization/dashboard/preset');
-      return data;
-    },
-    staleTime: 5 * 60 * 1000
   });
 };
 

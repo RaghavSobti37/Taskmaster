@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Trash2, AlertTriangle, Settings, Star } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Settings, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
+import { useUnsavedChanges, stableJsonEqual } from '../hooks/useUnsavedChanges';
 
 const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   const [name, setName] = useState(project?.name || '');
@@ -22,8 +23,22 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
     }
   }, [project]);
 
+  const hasChanges =
+    !!project &&
+    !stableJsonEqual(
+      { name, description: desc, starred },
+      { name: project.name || '', description: project.description || '', starred: project.starred || false }
+    );
+
+  const revertEdits = () => {
+    if (!project) return;
+    setName(project.name || '');
+    setDesc(project.description || '');
+    setStarred(project.starred || false);
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setLoading(true);
     try {
       const res = await axios.put(`/api/projects/${project._id}`, { name, description: desc, starred });
@@ -37,6 +52,14 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
       setLoading(false);
     }
   };
+
+  useUnsavedChanges({
+    hasChanges: isOpen && hasChanges && !showDeleteConfirm,
+    onSave: () => handleSubmit(),
+    onCancel: revertEdits,
+    isSaving: loading,
+    elevated: true,
+  });
 
   const handleDelete = async () => {
     try {
@@ -105,12 +128,6 @@ const ProjectSettingsModal = ({ isOpen, onClose, project, onProjectUpdated }) =>
             <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 text-red-500 font-bold text-xs hover:underline">
               <Trash2 size={14} /> Delete Project
             </button>
-            <div className="flex items-center gap-3 ml-auto">
-              <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-workspace)]">Cancel</button>
-              <button type="submit" disabled={loading || !name} className="bg-[var(--color-action-primary)] text-white px-8 py-2.5 rounded-xl font-bold hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2">
-                {loading ? 'Saving...' : <><CheckCircle2 size={18} /> Save Changes</>}
-              </button>
-            </div>
           </ModalFooter>
         </form>
       )}

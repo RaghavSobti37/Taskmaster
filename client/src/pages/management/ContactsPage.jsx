@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Search, Contact } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Button, Input, NexusModal, PageSkeleton, DataLoading } from '../../components/ui';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const ContactsPage = () => {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [formData, setFormData] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
+  const [formBaseline, setFormBaseline] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
   const queryClient = useQueryClient();
 
   const { data: contacts = [], isLoading } = useQuery({
@@ -26,6 +28,17 @@ const ContactsPage = () => {
     }
   });
 
+  const hasContactEdits =
+    isModalOpen && editingContact && !stableJsonEqual(formData, formBaseline);
+
+  useUnsavedChanges({
+    hasChanges: hasContactEdits,
+    onSave: () => saveMutation.mutate(formData),
+    onCancel: () => setFormData(cloneSnapshot(formBaseline)),
+    isSaving: saveMutation.isPending,
+    elevated: true,
+  });
+
   const filtered = contacts.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.role.toLowerCase().includes(search.toLowerCase())
   );
@@ -36,7 +49,7 @@ const ContactsPage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Important Contacts" subtitle="Manage key contacts for operations." icon={Contact} actions={<Button size="sm" onClick={() => setIsModalOpen(true)}><Plus size={14} /> Add Contact</Button>} />
+      <PageHeader title="Important Contacts" subtitle="Manage key contacts for operations." icon={Contact} actions={<Button size="sm" onClick={() => { setEditingContact(null); setFormData({ name: '', role: '', phone: '', email: '', notes: '' }); setFormBaseline({ name: '', role: '', phone: '', email: '', notes: '' }); setIsModalOpen(true); }}><Plus size={14} /> Add Contact</Button>} />
       <Card className="p-4 space-y-4">
         <Input placeholder="Search contacts..." value={search} onChange={(e) => setSearch(e.target.value)} icon={Search} />
         <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
@@ -52,7 +65,7 @@ const ContactsPage = () => {
             <tbody>
               {isLoading && <tr><td colSpan={4}><DataLoading /></td></tr>}
               {!isLoading && filtered.map((contact) => (
-                <tr key={contact._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { setEditingContact(contact); setFormData(contact); setIsModalOpen(true); }}>
+                <tr key={contact._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { setEditingContact(contact); const loaded = { name: contact.name, role: contact.role, phone: contact.phone, email: contact.email || '', notes: contact.notes || '' }; setFormData(loaded); setFormBaseline(cloneSnapshot(loaded)); setIsModalOpen(true); }}>
                   <td className="px-3 py-2 font-bold">{contact.name}</td>
                   <td className="px-3 py-2">{contact.role}</td>
                   <td className="px-3 py-2">{contact.phone}</td>
@@ -65,13 +78,15 @@ const ContactsPage = () => {
       </Card>
 
       <NexusModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingContact ? 'Edit Contact' : 'Add Contact'} showFooter={false} width="max-w-2xl">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(formData); }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingContact) saveMutation.mutate(formData); }}>
           <Input label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={Contact} />
           <Input label="Role" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} />
           <Input label="Phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
           <Input label="Email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
           <Input label="Notes" value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
-          <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : 'Save'}</Button>
+          {!editingContact && (
+            <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : 'Add Contact'}</Button>
+          )}
         </form>
       </NexusModal>
     </PageContainer>

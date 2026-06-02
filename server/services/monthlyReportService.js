@@ -5,6 +5,7 @@ const Project = require('../models/Project');
 const Attendance = require('../models/Attendance');
 const CalendarEvent = require('../models/CalendarEvent');
 const Log = require('../models/Log');
+const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 
 const parseMonth = (monthParam) => {
   if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
@@ -25,14 +26,6 @@ const groupBy = (items, keyFn) => {
     map.get(key).push(item);
   });
   return map;
-};
-
-const parseLogHours = (raw) => {
-  const str = String(raw || '0').trim().toLowerCase();
-  if (!str) return 0;
-  if (str.includes('h')) return parseFloat(str.replace('h', '')) || 0;
-  if (str.includes('m')) return (parseFloat(str.replace('m', '')) || 0) / 60;
-  return parseFloat(str) || 0;
 };
 
 const formatLogEntry = (log, userName) => {
@@ -129,7 +122,7 @@ const buildLogsSummary = (logs, userName) => {
   const logsByDayMap = new Map();
   const entries = logs.map((log) => {
     const day = (log.createdAt || log.timestamp).toISOString().split('T')[0];
-    const hours = parseLogHours(log.details?.timeSpent || log.payload?.timeSpent);
+    const hours = parseTimeSpentToHours(log.details?.timeSpent || log.payload?.timeSpent);
     const existing = logsByDayMap.get(day) || { hours: 0, count: 0 };
     logsByDayMap.set(day, { hours: existing.hours + hours, count: existing.count + 1 });
     return formatLogEntry(log, userName);

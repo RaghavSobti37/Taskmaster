@@ -14,7 +14,11 @@ const toSimpleMessage = (log) => {
     return `${base}: ${log.details.title}`;
   }
   if (log.action === 'ATTENDANCE_ACTION' && log.details?.date) {
-    return `${base} (${log.details.date})`;
+    const hours = log.details?.hours != null ? ` · ${Number(log.details.hours).toFixed(1)}h` : '';
+    return `${base} (${log.details.date}${hours})`;
+  }
+  if (log.details?.hours != null && ['COMPLETE_TASK', 'DAILY_LOG'].includes(log.action)) {
+    return `${base} · ${Number(log.details.hours).toFixed(2)}h`;
   }
   return base;
 };
@@ -40,14 +44,53 @@ router.get('/missions', protect, async (req, res) => {
 router.get('/progress', protect, async (req, res) => {
   try {
     const user = req.user;
+    const config = await GamificationService.getConfigPlain();
+    const stepXp = config.stepXp || 100;
     const currentLevelExp = await GamificationService.getExpForLevel(user.level || 1);
     const nextLevelExp = await GamificationService.getExpForLevel((user.level || 1) + 1);
 
     res.json({
       level: user.level || 1,
       exp: user.exp || 0,
+      stepXp,
       currentLevelExp,
       nextLevelExp,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/history', protect, async (req, res) => {
+  try {
+    const XPAuditLog = require('../models/XPAuditLog');
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+    const config = await GamificationService.getConfigPlain();
+    const userId = req.user._id;
+
+    const [logs, total] = await Promise.all([
+      XPAuditLog.find({ userId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      XPAuditLog.countDocuments({ userId }),
+    ]);
+
+    res.json({
+      logs: logs.map((log) => ({
+        _id: log._id,
+        amount: GamificationService.resolveLogAmount(config, log),
+        action: log.action,
+        actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
+        message: toSimpleMessage(log),
+        createdAt: log.createdAt,
+      })),
+      total,
+      page,
+      limit,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -57,17 +100,32 @@ router.get('/progress', protect, async (req, res) => {
 router.get('/leaderboard', protect, async (req, res) => {
   try {
     const User = require('../models/User');
-    const weekly = await GamificationService.getWeeklyLeaderboard(10);
+    const weekly = await GamificationService.getWeeklyLeaderboard();
 
-    const userIds = weekly.entries.map(([userId]) => userId);
-    const users = await User.find({ _id: { $in: userIds } }, 'name avatar xp level').lean();
-    const usersById = new Map(users.map((u) => [String(u._id), u]));
+    const weeklyXpByUserId = new Map(
+      weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
+    );
 
-    const top = weekly.entries.map(([userId, weeklyXp], index) => ({
-      rank: index + 1,
-      weeklyXp,
-      ...(usersById.get(String(userId)) || { _id: userId, name: 'Unknown' }),
-    }));
+    const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
+
+    const top = allUsers
+      .map((user) => ({
+        ...user,
+        weeklyXp: weeklyXpByUserId.get(String(user._id)) || 0,
+      }))
+      .sort((a, b) => {
+        if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
+        return (a.name || '').localeCompare(b.name || '');
+      })
+      .map((user, index) => ({
+        rank: index + 1,
+        weeklyXp: user.weeklyXp,
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        exp: user.exp,
+        level: user.level,
+      }));
 
     logger.debug('Gamification', 'Leaderboard fetch', {
       weekStart: weekly.weekStartKey,

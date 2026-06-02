@@ -1,18 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Search, ArrowUpDown } from 'lucide-react';
 import { Card, DataTable, Badge, Input, NexusDropdown } from '../ui';
-
-const parseLogMinutes = (raw = '') => {
-  const str = String(raw).trim().toLowerCase();
-  if (!str) return 0;
-  let total = 0;
-  const hours = str.match(/(\d+(?:\.\d+)?)\s*h/);
-  const mins = str.match(/(\d+)\s*m/);
-  if (hours) total += parseFloat(hours[1]) * 60;
-  if (mins) total += parseInt(mins[1], 10);
-  if (!hours && !mins && !Number.isNaN(Number(str))) total += parseInt(str, 10);
-  return total;
-};
+import { parseTimeSpentToMinutes as parseLogMinutes } from '../../utils/timeSpent';
 
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest first' },

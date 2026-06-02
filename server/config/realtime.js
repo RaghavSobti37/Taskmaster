@@ -9,6 +9,8 @@ const { COOKIE_NAME } = require('../utils/authCookie');
 let io = null;
 
 const initRealtime = (httpServer, corsAllowlist = new Set()) => {
+  if (io) return io;
+
   const origins = [...corsAllowlist];
   const allowVercelPreviews = process.env.NODE_ENV !== 'production'
     || String(process.env.CORS_ALLOW_VERCEL_PREVIEWS).trim() === 'true';
@@ -49,7 +51,9 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
   io.on('connection', (socket) => {
     logger.info('Realtime', 'Client connected', { userId: socket.userId });
 
-    socket.on('join', (channelName) => {
+    socket.join(`user-${socket.userId}`);
+
+    socket.on('join', async (channelName) => {
       if (typeof channelName !== 'string' || !channelName.trim()) return;
 
       if (channelName === 'system-logs') {
@@ -63,7 +67,36 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
         }
       }
 
+      if (channelName.startsWith('chat-')) {
+        try {
+          const { canJoinChatChannel } = require('../controllers/chatController');
+          const channelId = channelName.slice(5);
+          const allowed = await canJoinChatChannel(socket.userId, channelId);
+          if (!allowed) return;
+        } catch (err) {
+          logger.warn('Realtime', 'Chat join denied', { error: err.message });
+          return;
+        }
+      }
+
       socket.join(channelName);
+    });
+
+    socket.on('chat_typing', async (payload) => {
+      const channelId = payload?.channelId;
+      if (!channelId) return;
+      try {
+        const { canJoinChatChannel } = require('../controllers/chatController');
+        const allowed = await canJoinChatChannel(socket.userId, channelId);
+        if (!allowed) return;
+        io.to(`chat-${channelId}`).emit('chat_typing', {
+          userId: socket.userId,
+          name: payload?.name || '',
+          channelId,
+        });
+      } catch {
+        /* ignore */
+      }
     });
 
     socket.on('disconnect', () => {
@@ -84,8 +117,18 @@ const broadcastRealtimeEvent = (channelName, event, payload = {}) => {
   }
 };
 
+const closeRealtime = () =>
+  new Promise((resolve) => {
+    if (!io) return resolve();
+    io.close(() => {
+      io = null;
+      resolve();
+    });
+  });
+
 module.exports = {
   initRealtime,
   broadcastRealtimeEvent,
   getIO: () => io,
+  closeRealtime,
 };

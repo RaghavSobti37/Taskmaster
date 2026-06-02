@@ -64,14 +64,44 @@ router.put('/config', protect, admin, async (req, res) => {
 
     await config.save();
 
-    const auditSync = await GamificationService.syncAuditLogAmountsFromConfig({ log: true });
+    const { totalUsers, updatedUsers, auditSync } = await GamificationService.recalculateAllUsersFromConfig();
+
+    const unchangedUsers = totalUsers - updatedUsers;
+    let message;
+    if (updatedUsers === 0 && auditSync.updatedLogs === 0) {
+      message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates.`;
+    } else {
+      const parts = [];
+      if (changedFields.length > 0) {
+        parts.push(`updated ${changedFields.join(', ')}`);
+      }
+      if (auditSync.updatedLogs > 0) {
+        parts.push(`updated ${auditSync.updatedLogs} audit log entries`);
+      }
+      if (updatedUsers > 0) {
+        parts.push(`synced XP/levels for ${updatedUsers} of ${totalUsers} users`);
+      }
+      message = parts.join('; ');
+    }
+
     logger.info('Gamification', 'Config saved', {
       changedFields,
       updatedAuditLogs: auditSync.updatedLogs,
+      updatedUsers,
       configRates: auditSync.configRates,
     });
 
-    res.json(config);
+    res.json({
+      config,
+      recalc: {
+        message,
+        totalUsers,
+        updatedUsers,
+        unchangedUsers,
+        updatedAuditLogs: auditSync.updatedLogs,
+        changedFields,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

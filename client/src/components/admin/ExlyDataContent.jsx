@@ -11,6 +11,7 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
+import { buildOfferingEditState, offeringEditHasChanges } from '../../utils/exlyOfferingEditState';
 import {
   shortenOfferingTitle,
   shortenOfferingTitleCompact,
@@ -84,6 +85,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const [editedEventDate, setEditedEventDate] = useState('');
   const [editedEventTime, setEditedEventTime] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [offeringEditBaseline, setOfferingEditBaseline] = useState(null);
 
   // Search Filter for campaign customers
   const [searchQuery, setSearchQuery] = useState('');
@@ -330,13 +332,22 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
     setBookingPaymentFilter('all');
     setBookingPage(1);
 
-    setEditedTitle(offering.title || '');
-    setEditedPrice(offering.price || 0);
+    const loaded = buildOfferingEditState({
+      title: offering.title || '',
+      price: offering.price || 0,
+      type: offering.type || 'program',
+      status: offering.status || 'active',
+      eventDate: offering.eventDate || '',
+      eventTime: offering.eventTime || '',
+    });
+    setEditedTitle(loaded.title);
+    setEditedPrice(loaded.price);
     setEditedPriceUsd('');
-    setEditedType(offering.type || 'program');
-    setEditedStatus(offering.status || 'active');
-    setEditedEventDate(offering.eventDate || '');
-    setEditedEventTime(offering.eventTime || '');
+    setEditedType(loaded.type);
+    setEditedStatus(loaded.status);
+    setEditedEventDate(loaded.eventDate);
+    setEditedEventTime(loaded.eventTime);
+    setOfferingEditBaseline(loaded);
 
     try {
       const res = await axios.get(`/api/exly/offerings/${offering.offeringId}/analytics`);
@@ -356,6 +367,31 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
     }, searchQuery ? 300 : 0);
     return () => clearTimeout(timer);
   }, [workspaceOpen, selectedOffering?.offeringId, bookingPage, bookingRowsPerPage, bookingPaymentFilter, searchQuery, fetchOfferingDetails]);
+
+  const currentOfferingEdit = useMemo(
+    () =>
+      buildOfferingEditState({
+        title: editedTitle,
+        price: editedPrice,
+        type: editedType,
+        status: editedStatus,
+        eventDate: editedEventDate,
+        eventTime: editedEventTime,
+      }),
+    [editedTitle, editedPrice, editedType, editedStatus, editedEventDate, editedEventTime]
+  );
+
+  const hasOfferingChanges = offeringEditHasChanges(currentOfferingEdit, offeringEditBaseline);
+
+  const handleRevertOfferingEdits = () => {
+    if (!offeringEditBaseline) return;
+    setEditedTitle(offeringEditBaseline.title);
+    setEditedPrice(offeringEditBaseline.price);
+    setEditedType(offeringEditBaseline.type);
+    setEditedStatus(offeringEditBaseline.status);
+    setEditedEventDate(offeringEditBaseline.eventDate);
+    setEditedEventTime(offeringEditBaseline.eventTime);
+  };
 
   const handleSaveChanges = async () => {
     if (!selectedOffering || isSaving) return;
@@ -1247,10 +1283,13 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       {/* Immersive Workspace Modal Sheet */}
       <FullScreenWorkspace
         isOpen={workspaceOpen}
-        onClose={() => setWorkspaceOpen(false)}
+        onClose={() => { setWorkspaceOpen(false); setOfferingEditBaseline(null); }}
         title={editedTitle || selectedOffering?.title || 'Offering Details'}
         subtitle={`Exly ID: ${selectedOffering?.offeringId || ''}`}
         onSave={handleSaveChanges}
+        onCancel={handleRevertOfferingEdits}
+        hasChanges={hasOfferingChanges}
+        isSaving={isSaving}
         extraActions={
           isSaving && (
             <span className="text-[10px] font-bold text-[var(--color-text-muted)] animate-pulse uppercase tracking-wider">

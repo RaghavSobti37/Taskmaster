@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { GripVertical, Eye, EyeOff, Save, Undo2, Check } from 'lucide-react';
+import { GripVertical, Eye, EyeOff } from 'lucide-react';
 import { NexusModal, Button } from './ui';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../hooks/useUnsavedChanges';
 
 const DashboardEditor = ({ isOpen, onClose, onSave }) => {
   const [preset, setPreset] = useState(null);
@@ -10,6 +11,7 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [departmentPresets, setDepartmentPresets] = useState([]);
   const [selectedDept, setSelectedDept] = useState('custom');
+  const [baselineElements, setBaselineElements] = useState([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -20,8 +22,10 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
   const fetchPreset = async () => {
     try {
       const response = await axios.get('/api/customization/dashboard/preset');
+      const loaded = response.data.elements || [];
       setPreset(response.data);
-      setElements(response.data.elements || []);
+      setElements(loaded);
+      setBaselineElements(cloneSnapshot(loaded));
     } catch (error) {
       console.error('Error fetching preset:', error);
     }
@@ -39,8 +43,10 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
   const loadDepartmentPreset = async (dept) => {
     try {
       const response = await axios.post(`/api/customization/dashboard/preset/department/${dept}`);
+      const loaded = response.data.elements || [];
       setPreset(response.data);
-      setElements(response.data.elements || []);
+      setElements(loaded);
+      setBaselineElements(cloneSnapshot(loaded));
       setSelectedDept(dept);
     } catch (error) {
       console.error('Error loading department preset:', error);
@@ -83,8 +89,18 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
   };
 
   const handleReset = () => {
-    fetchPreset();
+    setElements(cloneSnapshot(baselineElements));
   };
+
+  const hasLayoutChanges = isOpen && !stableJsonEqual(elements, baselineElements);
+
+  useUnsavedChanges({
+    hasChanges: hasLayoutChanges,
+    onSave: handleSave,
+    onCancel: handleReset,
+    isSaving: saving,
+    elevated: true,
+  });
 
   return (
     <NexusModal
@@ -188,32 +204,6 @@ const DashboardEditor = ({ isOpen, onClose, onSave }) => {
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="flex gap-2 justify-end border-t border-[var(--color-bg-border)] p-4">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleReset}
-          disabled={saving}
-          className="gap-2"
-        >
-          <Undo2 size={14} /> Reset
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 gap-2"
-        >
-          {saving ? (
-            <>Saving...</>
-          ) : (
-            <>
-              <Save size={14} /> Apply Changes
-            </>
-          )}
-        </Button>
-      </div>
     </NexusModal>
   );
 };

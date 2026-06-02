@@ -18,26 +18,42 @@ const crmRoutes = require('./routes/crmRoutes');
 const googleRoutes = require('./routes/googleRoutes');
 const artistRoutes = require('./routes/artistRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
-
+const { qaProbeStorage } = require('./utils/qaProbeContext');
 
 const app = express();
 const fs = require('fs');
 const path = require('path');
 
-// Global Performance Logger
-app.use((req, res, next) => {
-    const start = process.hrtime();
-    res.on('finish', () => {
-        const diff = process.hrtime(start);
-        const timeInMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
-        const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${timeInMs}ms - Status: ${res.statusCode}\n`;
-        
-        // Log to file for the report
-        fs.appendFile(path.join(__dirname, 'performance.log'), logEntry, (err) => {
-            if (err) console.error('Logging failed', err);
-        });
+const PERF_LOG_PATH = path.join(__dirname, 'performance.log');
+const PERF_LOG_MAX_BYTES = 5 * 1024 * 1024;
+const PERF_LOG_ENABLED = String(process.env.PERF_LOG_ENABLED).trim() === 'true';
+
+function appendPerfLog(line) {
+  if (!PERF_LOG_ENABLED) return;
+  fs.stat(PERF_LOG_PATH, (statErr, stats) => {
+    if (!statErr && stats?.size > PERF_LOG_MAX_BYTES) {
+      fs.writeFile(PERF_LOG_PATH, line, (writeErr) => {
+        if (writeErr) console.error('Perf log rotate failed', writeErr);
+      });
+      return;
+    }
+    fs.appendFile(PERF_LOG_PATH, line, (err) => {
+      if (err) console.error('Perf log write failed', err);
     });
-    next();
+  });
+}
+
+// Optional request performance logger (PERF_LOG_ENABLED=true)
+app.use((req, res, next) => {
+  if (!PERF_LOG_ENABLED) return next();
+  const start = process.hrtime();
+  res.on('finish', () => {
+    const diff = process.hrtime(start);
+    const timeInMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
+    const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${timeInMs}ms - Status: ${res.statusCode}\n`;
+    appendPerfLog(logEntry);
+  });
+  next();
 });
 
 // Trust proxy for Render/Vercel (required for express-rate-limit)
@@ -103,17 +119,10 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-/** Integration probes: inline gamification per request (nested under full QA run env is preserved). */
+/** Integration probes: sync gamification scoped to request via AsyncLocalStorage. */
 app.use('/api', (req, res, next) => {
   if (req.headers['x-qa-integration-probe'] !== 'true') return next();
-  if (process.env.QA_SYNC_GAMIFICATION === 'true') return next();
-  process.env.QA_SYNC_GAMIFICATION = 'true';
-  res.on('finish', () => {
-    if (process.env.QA_SYNC_GAMIFICATION === 'true') {
-      delete process.env.QA_SYNC_GAMIFICATION;
-    }
-  });
-  next();
+  qaProbeStorage.run({ syncGamification: true }, next);
 });
 
 // Rate limit public tracking endpoints (outside /api/ limiter scope)
@@ -176,7 +185,18 @@ mongoose.connect(dbUri, {
     console.log(`[MAIL] Tracking pixel base URL: ${resolveTrackingApiBaseUrl()}`);
     const trackingWarn = getTrackingDbMismatchWarning();
     if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
-    
+
+    setImmediate(async () => {
+      try {
+        const { repairChatChannelIndexes } = require('./utils/repairChatChannelIndexes');
+        await repairChatChannelIndexes();
+        const { migrateChatChannelsToLinked } = require('./utils/migrateChatChannelsToLinked');
+        await migrateChatChannelsToLinked();
+      } catch (err) {
+        console.warn('[ChatChannel] Index repair skipped:', err.message);
+      }
+    });
+
     // Auto-repair zero-dipped history snapshots in background (non-blocking)
     setImmediate(async () => {
       try {
@@ -384,12 +404,41 @@ const backupJob = require('./jobs/backupJob');
 
 const http = require('http');
 const PORT = process.env.PORT || 5000;
-const LISTEN_RETRY_MS = 500;
-const LISTEN_RETRY_MAX = 20;
+const LISTEN_RETRY_MS = 800;
+const LISTEN_RETRY_MAX = 25;
+const { waitUntilPortFree, getListeningPids, freePort } = require('./scripts/freePort');
 let server;
 
+// #region agent log
+const agentLog = (location, message, data, hypothesisId) => {
+  fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '7646d7' },
+    body: JSON.stringify({
+      sessionId: '7646d7',
+      location,
+      message,
+      data,
+      hypothesisId,
+      timestamp: Date.now(),
+      runId: process.env.NODEMON_RESTART ? 'nodemon-restart' : 'boot',
+    }),
+  }).catch(() => {});
+};
+// #endregion
+
 function onServerListening() {
+  if (serverListening) {
+    // #region agent log
+    agentLog('server.js:onServerListening:dup', 'duplicate listening event skipped', { pid: process.pid, port: PORT }, 'C');
+    // #endregion
+    return;
+  }
+  serverListening = true;
   console.log(`Server running on port ${PORT}`);
+  // #region agent log
+  agentLog('server.js:onServerListening', 'server bound', { pid: process.pid, port: PORT }, 'C');
+  // #endregion
 
   const notificationService = require('./services/notificationService');
   notificationService.init();
@@ -412,21 +461,35 @@ function onServerListening() {
   initRealtime(server, corsAllowlist);
 }
 
-function listenWithRetry(attempt = 0) {
-  if (server) {
-    server.close();
-    server = null;
-  }
-
+function beginListen(attempt) {
   server = http.createServer(app);
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE' && attempt < LISTEN_RETRY_MAX) {
+      const holders = [...getListeningPids(PORT)].filter((pid) => pid !== String(process.pid));
+      // #region agent log
+      agentLog('server.js:listen:error', 'EADDRINUSE', { attempt, holders, pid: process.pid, port: PORT }, 'A-B');
+      // #endregion
+      if (attempt === 4 && holders.length) {
+        console.warn(
+          `[server] Port ${PORT} held by PID(s): ${holders.join(', ')}. ` +
+            'Stop extra "npm run dev" in server/ — only one terminal.'
+        );
+      }
       console.warn(
         `[server] Port ${PORT} in use (waiting for release). Retry ${attempt + 1}/${LISTEN_RETRY_MAX} in ${LISTEN_RETRY_MS}ms`
       );
       server.close(() => {
         server = null;
-        setTimeout(() => listenWithRetry(attempt + 1), LISTEN_RETRY_MS);
+        const retry = () => setTimeout(() => listenWithRetry(attempt + 1), LISTEN_RETRY_MS);
+        if (process.env.NODE_ENV === 'production') {
+          retry();
+          return;
+        }
+        const free = waitUntilPortFree(PORT, { timeoutMs: 5000, exceptPid: process.pid });
+        // #region agent log
+        agentLog('server.js:listen:wait', 'port wait done', { attempt, free, holders: [...getListeningPids(PORT)] }, 'A');
+        // #endregion
+        retry();
       });
       return;
     }
@@ -437,23 +500,80 @@ function listenWithRetry(attempt = 0) {
   server.listen(PORT);
 }
 
-function gracefulShutdown(signal) {
-  const finish = () => {
-    if (signal === 'SIGUSR2') process.kill(process.pid, 'SIGUSR2');
-    else process.exit(0);
-  };
-  if (!server) return finish();
-  server.close(finish);
-  setTimeout(finish, 3000).unref();
+function listenWithRetry(attempt = 0) {
+  if (attempt === 0) serverListening = false;
+
+  if (server) {
+    server.close();
+    server = null;
+  }
+
+  // #region agent log
+  agentLog('server.js:listenWithRetry', 'listen attempt', { attempt, pid: process.pid, port: PORT, holders: [...getListeningPids(PORT)] }, 'A-D');
+  // #endregion
+
+  if (process.env.NODE_ENV !== 'production' && attempt === 0) {
+    let ready = waitUntilPortFree(PORT, { timeoutMs: 8000, exceptPid: process.pid });
+    if (!ready) {
+      freePort(PORT, { exceptPid: process.pid });
+      ready = waitUntilPortFree(PORT, { timeoutMs: 5000, exceptPid: process.pid });
+    }
+    // #region agent log
+    agentLog('server.js:listen:boot-wait', 'boot port wait', { ready, holders: [...getListeningPids(PORT)] }, 'A');
+    // #endregion
+    beginListen(attempt);
+    return;
+  }
+
+  beginListen(attempt);
+}
+
+let shuttingDown = false;
+let serverListening = false;
+
+async function gracefulShutdown(signal = 'unknown') {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  serverListening = false;
+
+  // #region agent log
+  agentLog('server.js:gracefulShutdown', 'shutdown start', { signal, pid: process.pid, holders: [...getListeningPids(PORT)] }, 'B');
+  // #endregion
+
+  const finish = () => process.exit(0);
+  const forceExit = setTimeout(finish, 1500);
+  forceExit.unref();
+
+  try {
+    const { closeRealtime } = require('./config/realtime');
+    await closeRealtime();
+  } catch {
+    /* ignore */
+  }
+
+  if (server) {
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
+    }
+    await new Promise((resolve) => {
+      server.close(() => {
+        server = null;
+        resolve();
+      });
+    });
+  }
+
+  clearTimeout(forceExit);
+  finish();
 }
 
 if (process.env.NODE_ENV !== 'test') {
   listenWithRetry();
 }
 
-process.once('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
-process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+process.once('SIGUSR2', () => { gracefulShutdown('SIGUSR2'); });
+process.once('SIGTERM', () => { gracefulShutdown('SIGTERM'); });
+process.once('SIGINT', () => { gracefulShutdown('SIGINT'); });
 
 module.exports = app;
 

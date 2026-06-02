@@ -147,8 +147,6 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
       onClose={onClose}
       title={contact?.name || 'Person Detail'}
       subtitle={contact?.email || contact?.phone || ''}
-      onSave={onClose}
-      saveLabel="Close"
       sidebar={
         <div className="space-y-4">
           <Card className="p-4 space-y-3">

@@ -3,7 +3,10 @@
  * Admin-editable values live in GamificationConfig; these are defaults + fairness rules.
  */
 
-/** Default XP per action (overridden by GamificationConfig in DB). */
+/** Actions where config value = XP earned per hour of time logged. */
+const TIME_BASED_XP_ACTIONS = new Set(['COMPLETE_TASK', 'DAILY_LOG', 'ATTENDANCE_ACTION']);
+
+/** XP per hour of time for time-based actions; flat XP for all others (overridden by GamificationConfig). */
 const DEFAULT_XP = {
   taskCompletion: 15,
   dailyLog: 10,
@@ -48,6 +51,19 @@ const LEGACY_ACTION_ALIASES = {
 };
 
 const normalizeGamificationAction = (action) => LEGACY_ACTION_ALIASES[action] || action;
+
+const isTimeBasedXpAction = (action) =>
+  TIME_BASED_XP_ACTIONS.has(normalizeGamificationAction(action));
+
+/** @param {number} hours decimal hours worked
+ * @param {number} xpPerHour config rate
+ * @returns {number} rounded XP (0 if no time or rate) */
+const computeTimeBasedXp = (hours, xpPerHour) => {
+  const h = Number(hours) || 0;
+  const rate = Number(xpPerHour) || 0;
+  if (h <= 0 || rate <= 0) return 0;
+  return Math.round(h * rate);
+};
 
 /** Maps internal action codes → GamificationConfig field names. */
 const ACTION_CONFIG_KEY = {
@@ -114,25 +130,26 @@ const FAIRNESS_PRINCIPLES = [
   'Role-balanced paths — sales (leads), creatives (tasks + assets), ops (attendance + invoices), reviewers (approvals) can all climb the board.',
   'Daily caps on low-effort actions stop admins and managers from spamming the leaderboard.',
   'Task completion XP is once per task per person — no farming the same item.',
-  'Auto daily logs from task completion do not grant log XP (prevents double-dipping).',
+  'Auto daily logs from task completion do not grant log XP — task completion XP uses hours × XP/hour instead.',
+  'Manual daily logs, task completion, and full-day attendance XP = time (hours) × configured XP per hour.',
   'Weekly leaderboard uses audit log totals — everyone starts fresh each week.',
 ];
 
 const ROLE_PATHS = [
-  { role: 'Individual contributor', actions: 'Complete tasks (+15), manual daily logs (+10, max 3/day)', weeklyPotential: '~525+ from tasks alone' },
-  { role: 'Sales / CRM', actions: 'Capture leads (+15, max 10/day), follow-up work logged as daily logs', weeklyPotential: '~750+ from leads + logs' },
-  { role: 'Creative / production', actions: 'Complete tasks, upload assets (+12, max 5/day)', weeklyPotential: '~600+ mixed' },
-  { role: 'Ops / finance', actions: 'Full-day attendance (+10), invoice submissions (+15), review approvals (+8)', weeklyPotential: '~550+ mixed' },
+  { role: 'Individual contributor', actions: 'Complete tasks (hours × XP/h), manual daily logs (hours × XP/h, max 3/day)', weeklyPotential: 'Scales with time logged' },
+  { role: 'Sales / CRM', actions: 'Capture leads (+15 flat, max 10/day), follow-up work logged as daily logs (hours × XP/h)', weeklyPotential: 'Scales with time logged' },
+  { role: 'Creative / production', actions: 'Complete tasks (hours × XP/h), upload assets (+12 flat, max 5/day)', weeklyPotential: 'Scales with time logged' },
+  { role: 'Ops / finance', actions: 'Full-day attendance (hours × XP/h), invoice submissions (+15), review approvals (+8)', weeklyPotential: 'Scales with time logged' },
   { role: 'Managers / admins', actions: 'Lower XP for creating projects (+5, cap 3/day) and tasks (+2, cap 10/day); main earn path is completing and reviewing work', weeklyPotential: 'Same caps — cannot outrank ICs by setup alone' },
 ];
 
 /** Admin UI rule rows — configKey links to editable GamificationConfig field. */
 const XP_RULE_ROWS = [
-  { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'Primary earn path for all roles' },
-  { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'Not awarded for auto task-completion logs' },
+  { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'XP per hour — actualHours on the task × rate (min 30m if unset)' },
+  { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'XP per hour — timeSpent on the log × rate; not awarded for auto task-completion logs' },
   { configKey: 'taskCreation', action: 'CREATE_TASK', label: 'Task creation', capKey: 'taskCreation', who: 'Creator', note: 'Low — prevents manager spam' },
   { configKey: 'projectCreation', action: 'CREATE_PROJECT', label: 'Project creation', capKey: 'projectCreation', who: 'Creator', note: 'Low — prevents admin spam' },
-  { configKey: 'attendanceLog', action: 'ATTENDANCE_ACTION', label: 'Full-day attendance', capKey: 'attendanceLog', who: 'User who completes check-in + check-out', note: 'Once per day when day is closed' },
+  { configKey: 'attendanceLog', action: 'ATTENDANCE_ACTION', label: 'Full-day attendance', capKey: 'attendanceLog', who: 'User who completes check-in + check-out', note: 'XP per hour — system shift hours × rate; once per day' },
   { configKey: 'attendanceDayBonus', action: 'ATTENDANCE_DAY_BONUS', label: 'Attendance accuracy bonus', capKey: 'attendanceDayBonus', who: '8h+ shift with logs within 30 min', note: 'Stacked on full-day attendance' },
   { configKey: 'assetUpload', action: 'ASSET_UPLOAD', label: 'Asset upload', capKey: 'assetUpload', who: 'Uploader', note: 'Creative / production path' },
   { configKey: 'leadCapture', action: 'LEAD_CAPTURE', label: 'Lead capture', capKey: 'leadCapture', who: 'Rep creating a new lead manually', note: 'Sales path — not webhook imports' },
@@ -157,8 +174,11 @@ const NO_XP_ACTIONS = [
 module.exports = {
   DEFAULT_XP,
   DEFAULT_DAILY_CAPS,
+  TIME_BASED_XP_ACTIONS,
   LEGACY_ACTION_ALIASES,
   normalizeGamificationAction,
+  isTimeBasedXpAction,
+  computeTimeBasedXp,
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,

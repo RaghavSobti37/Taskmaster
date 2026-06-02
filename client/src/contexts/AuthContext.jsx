@@ -3,6 +3,13 @@ import axios from 'axios';
 import { subscribeToChannel, disconnectRealtime } from '../lib/realtime';
 import { pushCustomToast } from '../lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTaskDomainRealtimeSync } from '../hooks/queries/taskRealtime';
+import { useChatInboxRealtimeForUser } from '../hooks/useChatRealtime';
+import {
+  clearAttendanceSessionLogin,
+  recordAttendanceSessionLogin,
+} from '../utils/attendancePrompt';
+import { getAxiosBaseURL } from '../utils/apiBase';
 
 const defaultAuthContext = {
   user: null,
@@ -14,10 +21,34 @@ const defaultAuthContext = {
 
 const AuthContext = createContext(defaultAuthContext);
 
-if (import.meta.env.VITE_API_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+const axiosBase = getAxiosBaseURL();
+if (axiosBase) {
+  axios.defaults.baseURL = axiosBase;
 }
 axios.defaults.withCredentials = true;
+
+function userSessionChanged(prev, next) {
+  if (!prev && !next) return false;
+  if (!prev || !next) return true;
+  const pick = (u) => ({
+    id: String(u._id || ''),
+    updatedAt: u.updatedAt || '',
+    departmentId: String(u.departmentId?._id || u.departmentId || ''),
+    pagePermissions: JSON.stringify(u.departmentId?.pagePermissions || u.pagePermissions || null),
+    exp: u.exp,
+    level: u.level,
+  });
+  const a = pick(prev);
+  const b = pick(next);
+  return (
+    a.id !== b.id ||
+    a.updatedAt !== b.updatedAt ||
+    a.departmentId !== b.departmentId ||
+    a.pagePermissions !== b.pagePermissions ||
+    a.exp !== b.exp ||
+    a.level !== b.level
+  );
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -31,6 +62,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     authEpochRef.current += 1;
+    clearAttendanceSessionLogin();
     disconnectRealtime();
     setUser(null);
     try {
@@ -47,8 +79,11 @@ export const AuthProvider = ({ children }) => {
       const res = await axios.get('/api/auth/me');
       if (epoch !== authEpochRef.current) return null;
       const newData = res.data;
-      if (JSON.stringify(userRef.current) !== JSON.stringify(newData)) {
+      if (userSessionChanged(userRef.current, newData)) {
         setUser(newData);
+      }
+      if (newData && !userRef.current) {
+        recordAttendanceSessionLogin();
       }
       setLoading(false);
       return newData;
@@ -88,6 +123,8 @@ export const AuthProvider = ({ children }) => {
   }, [user?._id, fetchUser]);
 
   const queryClient = useQueryClient();
+  useTaskDomainRealtimeSync(!!user?._id);
+  useChatInboxRealtimeForUser(user?._id, !!user?._id);
 
   useEffect(() => {
     if (user?._id) {
@@ -95,12 +132,14 @@ export const AuthProvider = ({ children }) => {
         setUser((prev) => ({
           ...prev,
           exp: payload.newTotal,
-          level: payload.leveledUp ? (prev.level || 1) + 1 : prev.level,
+          level: payload.newLevel ?? prev.level,
         }));
 
+        queryClient.invalidateQueries({ queryKey: ['gamification'] });
         queryClient.invalidateQueries({ queryKey: ['missions'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
 
+        const actionLabel = payload.actionLabel || payload.action?.replace(/_/g, ' ') || 'XP';
         pushCustomToast(
           () => (
             <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
@@ -114,7 +153,7 @@ export const AuthProvider = ({ children }) => {
                       XP Gained!
                     </p>
                     <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
-                      +{payload.amount} XP • {payload.action.replace(/_/g, ' ')}
+                      +{payload.amount} XP • {actionLabel}
                     </p>
                     <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
                       <div
@@ -137,6 +176,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((userData) => {
     authEpochRef.current += 1;
+    recordAttendanceSessionLogin();
     setUser(userData);
     setLoading(false);
     syncSessionAfterLogin();

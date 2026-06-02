@@ -43,7 +43,8 @@ const DEFAULT_NAVBAR_GROUPS = [
       { path: '/dashboard', label: 'Dashboard', order: 1, visible: true },
       { path: '/calendar', label: 'Calendar', order: 2, visible: true },
       { path: '/todo', label: 'To-Do', order: 3, visible: true },
-      { path: '/inbox', label: 'Inbox', order: 4, visible: true }
+      { path: '/inbox', label: 'Inbox', order: 4, visible: true },
+      { path: '/chat', label: 'Chat', order: 5, visible: true }
     ]
   },
   {

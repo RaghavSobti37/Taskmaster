@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { GripVertical, Eye, EyeOff, Save, RotateCcw, Plus, Trash2, Edit2, Check, X, LayoutTemplate } from 'lucide-react';
+import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, LayoutTemplate } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { useDashboardPreset } from '../../../hooks/useTaskmasterQueries';
+import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 
 export default function CustomizationTab() {
   // Navigation State
@@ -18,24 +19,27 @@ export default function CustomizationTab() {
   // Dashboard State
   const { data: dashboardPreset, refetch: refetchDashboard } = useDashboardPreset();
   const [dashboardElements, setDashboardElements] = useState([]);
+  const [originalDashboard, setOriginalDashboard] = useState([]);
+
+  const defaultDashboardElements = [
+    { componentId: 'leaderboard', size: '1', order: 1, visible: true },
+    { componentId: 'announcements', size: '1', order: 2, visible: true },
+    { componentId: 'pinboard', size: '1', order: 3, visible: true },
+    { componentId: 'schedule', size: '1', order: 4, visible: true },
+    { componentId: 'review-queue', size: '2', order: 5, visible: true },
+    { componentId: 'todos-overdue', size: '2', order: 6, visible: true },
+    { componentId: 'todos-today', size: '2', order: 7, visible: true },
+    { componentId: 'projects-today', size: '4', order: 8, visible: true },
+    { componentId: 'notes', size: '2', order: 9, visible: true },
+    { componentId: 'composer', size: '2', order: 10, visible: true },
+  ];
 
   useEffect(() => {
-    if (dashboardPreset?.elements) {
-      setDashboardElements([...dashboardPreset.elements].sort((a, b) => a.order - b.order));
-    } else {
-      setDashboardElements([
-        { componentId: 'leaderboard', size: '1', order: 1, visible: true },
-        { componentId: 'announcements', size: '1', order: 2, visible: true },
-        { componentId: 'pinboard', size: '1', order: 3, visible: true },
-        { componentId: 'schedule', size: '1', order: 4, visible: true },
-        { componentId: 'review-queue', size: '2', order: 5, visible: true },
-        { componentId: 'todos-overdue', size: '2', order: 6, visible: true },
-        { componentId: 'todos-today', size: '2', order: 7, visible: true },
-        { componentId: 'projects-today', size: '4', order: 8, visible: true },
-        { componentId: 'notes', size: '2', order: 9, visible: true },
-        { componentId: 'composer', size: '2', order: 10, visible: true }
-      ]);
-    }
+    const next = dashboardPreset?.elements
+      ? [...dashboardPreset.elements].sort((a, b) => a.order - b.order)
+      : defaultDashboardElements;
+    setDashboardElements(next);
+    setOriginalDashboard(JSON.parse(JSON.stringify(next)));
   }, [dashboardPreset]);
 
   const handleReorderDashboard = (newOrder) => setDashboardElements(newOrder);
@@ -138,22 +142,28 @@ export default function CustomizationTab() {
   const handleReorderGroups = (newOrder) => setGroups(newOrder);
   const handleReorderPages = (groupId, newPagesOrder) => setGroups(groups.map(g => g.id === groupId ? { ...g, pages: newPagesOrder } : g));
 
-  const hasChanges = JSON.stringify(groups) !== JSON.stringify(originalGroups);
+  const hasNavChanges = JSON.stringify(groups) !== JSON.stringify(originalGroups);
+  const hasDashboardChanges = JSON.stringify(dashboardElements) !== JSON.stringify(originalDashboard);
+  const hasChanges = hasNavChanges || hasDashboardChanges;
+
+  const handleRevert = () => {
+    setGroups(JSON.parse(JSON.stringify(originalGroups)));
+    setDashboardElements(JSON.parse(JSON.stringify(originalDashboard)));
+  };
+
+  useUnsavedChanges({
+    hasChanges,
+    onSave: handleSave,
+    onCancel: handleRevert,
+    isSaving: saving,
+  });
 
   return (
-    <div className="flex flex-col h-full bg-[var(--color-bg-workspace)] overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--color-bg-workspace)] overflow-hidden pb-24">
       <div className="flex items-center justify-between p-8 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Customization</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">Drag and drop to rearrange your workspace layout.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="ghost" onClick={handleReset} disabled={saving} className="gap-2 text-[var(--color-text-secondary)]">
-            <RotateCcw size={16} /> Reset
-          </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
-            <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
         </div>
       </div>
 

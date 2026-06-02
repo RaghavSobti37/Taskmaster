@@ -1,8 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Check, ExternalLink } from 'lucide-react';
 import { Card, Badge, DataLoading, Button } from '../ui';
-import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { resolveTaskId } from '../../utils/taskCompletion';
@@ -14,8 +12,8 @@ const ReviewTaskRow = ({
   workspaces,
   onApprove,
   approvingTaskId,
+  onOpenProject,
 }) => {
-  const navigate = useNavigate();
   const taskId = resolveTaskId(task);
   const assignee = getTaskAssignee(task);
   const assigner = getTaskAssignedBy(task);
@@ -34,7 +32,7 @@ const ReviewTaskRow = ({
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
-            onClick={() => projectId && navigate(`/projects/${projectId}`)}
+            onClick={() => projectId && onOpenProject?.(projectId)}
             className="text-left min-w-0 flex-1 hover:text-[var(--color-action-primary)] transition-colors"
           >
             <MentionTitle text={task.title} className="tm-task-title" truncate />
@@ -45,7 +43,7 @@ const ReviewTaskRow = ({
           {projectId && (
             <button
               type="button"
-              onClick={() => navigate(`/projects/${projectId}`)}
+              onClick={() => onOpenProject?.(projectId)}
               className="shrink-0 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)] hover:bg-[var(--color-bg-border)] transition-colors"
               title="Open project"
             >
@@ -64,11 +62,10 @@ const ReviewTaskRow = ({
         </div>
         <Button
           type="button"
-          variant="primary"
+          variant="success"
           size="xs"
           disabled={isApproving}
           onClick={() => onApprove?.(task)}
-          className="!bg-emerald-600 hover:!bg-emerald-700 !border-emerald-600"
         >
           <Check size={12} className="mr-1" />
           {isApproving ? 'Approving…' : 'Approve & Close'}
@@ -81,40 +78,42 @@ const ReviewTaskRow = ({
 const ReviewQueueCard = ({
   tasks = [],
   projects = [],
+  workspaces = [],
   loading,
   onApprove,
   approvingTaskId = null,
+  onOpenProject,
 }) => {
-  const { data: workspaces = [] } = useWorkspaces();
   return (
-  <Card className="p-0 flex flex-col shadow-md overflow-hidden h-full border-[rgba(255,255,255,0.08)]">
-    <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between gap-2 shrink-0">
-      <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)] mb-0">
-        <ClipboardCheck size={16} className="text-amber-500" />
-        Awaiting Your Review
-      </h4>
-      <Badge variant={tasks.length > 0 ? 'warning' : 'info'}>{tasks.length}</Badge>
-    </div>
-    <div className={`p-3 flex-1 flex flex-col ${!loading && tasks.length === 0 ? 'items-center justify-center' : 'space-y-2'} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}>
-      {loading && <DataLoading message="Loading reviews..." className="!py-3" />}
-      {!loading && tasks.length === 0 && (
-        <div className="flex items-center justify-center py-4 px-6 bg-emerald-500/10 rounded border border-emerald-500/20">
-          <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
-        </div>
-      )}
-      {!loading &&
-        tasks.map((task) => (
-          <ReviewTaskRow
-            key={resolveTaskId(task)}
-            task={task}
-            projects={projects}
-            workspaces={workspaces}
-            onApprove={onApprove}
-            approvingTaskId={approvingTaskId}
-          />
-        ))}
-    </div>
-  </Card>
+    <Card className="p-0 flex flex-col shadow-md overflow-hidden h-full border-[rgba(255,255,255,0.08)]">
+      <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between gap-2 shrink-0">
+        <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)] mb-0">
+          <ClipboardCheck size={16} className="text-amber-500" />
+          Awaiting Your Review
+        </h4>
+        <Badge variant={tasks.length > 0 ? 'warning' : 'info'}>{tasks.length}</Badge>
+      </div>
+      <div className={`p-3 flex-1 flex flex-col ${!loading && tasks.length === 0 ? 'items-center justify-center' : 'space-y-2'} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}>
+        {loading && <DataLoading message="Loading reviews..." className="!py-3" />}
+        {!loading && tasks.length === 0 && (
+          <div className="flex items-center justify-center py-4 px-6 bg-emerald-500/10 rounded border border-emerald-500/20">
+            <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
+          </div>
+        )}
+        {!loading &&
+          tasks.map((task) => (
+            <ReviewTaskRow
+              key={resolveTaskId(task)}
+              task={task}
+              projects={projects}
+              workspaces={workspaces}
+              onApprove={onApprove}
+              approvingTaskId={approvingTaskId}
+              onOpenProject={onOpenProject}
+            />
+          ))}
+      </div>
+    </Card>
   );
 };
 

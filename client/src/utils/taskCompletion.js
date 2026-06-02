@@ -1,3 +1,5 @@
+import { formatTimeSpent } from './timeSpent';
+
 export function buildTaskCompletionLogPayload(task, hours, projects = []) {
   const projectId = task.projectId?._id || task.projectId;
   const project = projects.find(
@@ -12,7 +14,7 @@ export function buildTaskCompletionLogPayload(task, hours, projects = []) {
     details: {
       type: 'TASK_COMPLETION',
       title: task.title,
-      timeSpent: `${hours}h`,
+      timeSpent: formatTimeSpent(hours),
       project: project?.name || 'General',
       projectId: projectId || null,
     },
@@ -35,7 +37,8 @@ export function canMarkTaskComplete(task) {
 export function normalizeCompletionHours(current, hours) {
   const base = Number(current) || 0;
   const added = Number(hours);
-  return base + (Number.isFinite(added) && added >= 0 ? added : 0);
+  const total = base + (Number.isFinite(added) && added >= 0 ? added : 0);
+  return Math.round(total * 60) / 60;
 }
 
 export function pendingReviewToast(taskTitle) {

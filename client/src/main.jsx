@@ -24,6 +24,7 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_bW9ja
 
 import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
+import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 
@@ -40,7 +41,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <SidebarProvider>
                 <ToastProvider>
                   <ConfirmProvider>
-                    <App />
+                    <UnsavedChangesProvider>
+                      <App />
+                    </UnsavedChangesProvider>
                   </ConfirmProvider>
                 </ToastProvider>
               </SidebarProvider>

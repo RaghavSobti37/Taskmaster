@@ -8,6 +8,7 @@ const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const User = require('../models/User');
 const GamificationService = require('../services/gamificationService');
+const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 const {
   getDateKey,
   toStartOfDay,
@@ -125,13 +126,10 @@ const computeAttendanceMetrics = async (attendanceDoc) => {
     'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] }
   }).select('details').lean();
 
-  const parseHours = (str) => {
-    if (!str) return 0;
-    const match = String(str).match(/([\d.]+)/);
-    return match ? parseFloat(match[1]) : 0;
-  };
-
-  const loggedHours = logs.reduce((sum, l) => sum + parseHours(l.details?.timeSpent), 0);
+  const loggedHours = logs.reduce(
+    (sum, l) => sum + parseTimeSpentToHours(l.details?.timeSpent),
+    0
+  );
   const systemHours = systemMinutes / 60;
   const discrepancyMinutes = Math.abs(Math.round(systemHours * 60) - Math.round(loggedHours * 60));
   const overtimeMinutes = Math.max(0, systemMinutes - STANDARD_SHIFT_MINUTES);
@@ -272,6 +270,7 @@ router.post('/check', async (req, res) => {
       queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
         userId: req.user._id,
         date: todayStr,
+        hours: attendance.systemHours || 0,
       });
     }
 
@@ -393,6 +392,7 @@ router.put('/upsert/by-user-date', async (req, res) => {
       queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
         userId: row.userId,
         date: getDateKey(row.date),
+        hours: row.systemHours || 0,
       });
     }
 

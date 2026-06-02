@@ -1,5 +1,6 @@
 import React from 'react';
 import MentionRichText from './MentionRichText';
+import MentionAutocompleteMenu from './MentionAutocompleteMenu';
 import { useMentionAutocomplete } from '../../hooks/useMentionAutocomplete';
 
 const MentionTextarea = ({
@@ -10,29 +11,54 @@ const MentionTextarea = ({
   placeholder = 'Add details... Use @name to mention someone, #AssetName to link an asset.',
   rows = 4,
   editSessionKey,
+  forcePlain = false,
+  menuPlacement = 'below',
+  mentionUsers = null,
 }) => {
   const {
     inputRef,
     users,
     assets,
+    assetsError,
     menu,
     menuItems,
-    isEditing,
+    showMenu,
     showRichView,
     showDisabledRichView,
     enterEdit,
     handleRichViewMouseDown,
+    handleFocus,
+    syncMenuFromEl,
     insertAtCursor,
     handleChange,
     handleKeyDown,
     handleBlur,
-  } = useMentionAutocomplete({ value, onChange, disabled, editSessionKey, multiline: true });
+  } = useMentionAutocomplete({
+    value,
+    onChange,
+    disabled,
+    editSessionKey,
+    multiline: true,
+    forcePlain,
+    mentionUsers,
+  });
 
   const minHeight = rows >= 4 ? 'min-h-[88px]' : 'min-h-[2.5rem]';
+  const useRich = !forcePlain && showRichView;
+  const useDisabledRich = !forcePlain && showDisabledRichView;
+
+  const inputEvents = {
+    onChange: handleChange,
+    onKeyDown: handleKeyDown,
+    onBlur: handleBlur,
+    onFocus: handleFocus,
+    onClick: (e) => syncMenuFromEl(e.target),
+    onSelect: (e) => syncMenuFromEl(e.target),
+  };
 
   return (
     <div className="relative w-full min-w-0">
-      {showRichView ? (
+      {useRich ? (
         <div
           role="button"
           tabIndex={0}
@@ -44,7 +70,7 @@ const MentionTextarea = ({
         >
           <MentionRichText text={value} users={users} assets={assets} className="text-sm" />
         </div>
-      ) : showDisabledRichView ? (
+      ) : useDisabledRich ? (
         <div className={`${className} ${minHeight} opacity-60`}>
           <MentionRichText text={value} users={users} assets={assets} className="text-sm" />
         </div>
@@ -52,32 +78,24 @@ const MentionTextarea = ({
         <textarea
           ref={inputRef}
           value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
           disabled={disabled}
           rows={rows}
           placeholder={placeholder}
-          className={className}
+          className={`${className} resize-none overflow-hidden`.trim()}
+          {...inputEvents}
         />
       )}
 
-      {isEditing && menu && menuItems.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 max-h-44 overflow-y-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] shadow-lg">
-          {menuItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-secondary)] transition-colors"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                insertAtCursor(item.insert);
-              }}
-            >
-              {menu.type === 'user' ? '@' : '#'}{item.label}
-            </button>
-          ))}
-        </div>
+      {showMenu && (
+        <MentionAutocompleteMenu
+          menu={menu}
+          menuItems={menuItems}
+          users={users}
+          assets={assets}
+          assetsError={assetsError}
+          menuPlacement={menuPlacement}
+          onPick={insertAtCursor}
+        />
       )}
     </div>
   );

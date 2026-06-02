@@ -3,7 +3,8 @@ import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Card, Badge } from '../ui';
 import { formatEventRangeLabel } from '../../utils/calendarEventTime';
 
-const ScheduleCard = ({ calendar = [], loading = false }) => {
+/** Dashboard widget (componentId: schedule) — calendar events for today, not team task Schedule page. */
+const CalendarTodayCard = ({ calendar = [], loading = false }) => {
   if (loading) {
     return (
       <Card className="p-0 flex flex-col shadow-md overflow-hidden">
@@ -25,7 +26,7 @@ const ScheduleCard = ({ calendar = [], loading = false }) => {
     <Card className="p-0 flex flex-col shadow-md overflow-hidden">
       <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
         <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-          <CalendarIcon size={16} className="text-blue-500" /> Today's Schedule
+          <CalendarIcon size={16} className="text-blue-500" /> Today&apos;s Calendar
         </h4>
         <Badge variant="info">{calendar.length}</Badge>
       </div>
@@ -35,9 +36,9 @@ const ScheduleCard = ({ calendar = [], loading = false }) => {
             No events planned for today
           </p>
         ) : (
-          calendar.map(event => (
-            <div 
-              key={event._id} 
+          calendar.map((event) => (
+            <div
+              key={event._id}
               className="flex flex-col p-3 rounded-xl bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] gap-1.5 transition-colors hover:border-blue-500/30"
             >
               <div className="flex justify-between items-start gap-2">
@@ -59,4 +60,4 @@ const ScheduleCard = ({ calendar = [], loading = false }) => {
   );
 };
 
-export default ScheduleCard;
+export default CalendarTodayCard;

@@ -15,6 +15,7 @@ import { inferModuleFromRoute, SEVERITY } from './lib/systemLogContract';
 import { DashboardSkeleton } from './components/ui';
 import axios from 'axios';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
+import { normalizeTasks, normalizeSchedulePayload } from './utils/normalizeTask';
 
 const normalizeProjectsInResponse = (url, data) => {
   if (data == null) return data;
@@ -27,6 +28,12 @@ const normalizeProjectsInResponse = (url, data) => {
   }
   if (path.startsWith('/api/finance') && data?.data) {
     return { ...data, data: normalizePopulatedProjectList(data.data) };
+  }
+  if (path === '/api/schedule' || path.endsWith('/api/schedule')) {
+    return normalizeSchedulePayload(data);
+  }
+  if (path === '/api/tasks' || path.endsWith('/api/tasks')) {
+    return normalizeTasks(data);
   }
   return data;
 };
@@ -98,6 +105,7 @@ const SubscriptionsPage = lazyWithRetry(() => import('./pages/office/Subscriptio
 const SchedulePage = lazyWithRetry(() => import('./pages/schedule/SchedulePage'));
 const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
+const ChatPage = lazyWithRetry(() => import('./pages/chat/ChatPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 
@@ -211,6 +219,9 @@ function App() {
               </Route>
               <Route element={<PageRoute page="inbox" />}>
                 <Route path="/inbox" element={<InboxPage />} />
+              </Route>
+              <Route element={<PageRoute page="chat" />}>
+                <Route path="/chat" element={<ChatPage />} />
               </Route>
               <Route element={<PageRoute page="todo" />}>
                 <Route path="/todo" element={<TodoPage />} />

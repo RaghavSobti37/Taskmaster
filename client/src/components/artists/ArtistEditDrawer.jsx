@@ -1,6 +1,7 @@
 import React from 'react';
 import { Edit2, Trash2, Globe, Link as LinkIcon } from 'lucide-react';
 import { Card, Input, Button, FullScreenWorkspace } from '../ui';
+import { stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import ConnectAccountButton from './ConnectAccountButton';
 import { analyticsIntegrations } from '../../config/integrations.config';
 
@@ -23,6 +24,8 @@ export default function ArtistEditDrawer({
       title={artist.name || 'Artist Profile'}
       subtitle={`Workspace ID · ${artist._id}`}
       onSave={onSave}
+      hasChanges={!stableJsonEqual(editedArtist, artist)}
+      onCancel={() => setEditedArtist(cloneSnapshot(artist))}
       sidebar={
         !isPreview && (
           <Card className="p-4 space-y-4 border-rose-500/20">

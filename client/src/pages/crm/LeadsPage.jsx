@@ -25,7 +25,8 @@ import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, 
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { formatExlyTag } from '../../utils/crmUtils';
-import { validateLeadFormFields, splitPhoneNumber } from '../../utils/leadFormValidation';
+import { validateLeadFormFields } from '../../utils/leadFormValidation';
+import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -60,6 +61,7 @@ export default function LeadsPage() {
     name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
   });
   const [fieldErrors, setFieldErrors] = useState({});
+  const [editBaseline, setEditBaseline] = useState(null);
 
   const applyLeadValidation = (data) => {
     const { errors } = validateLeadFormFields(data);
@@ -77,23 +79,9 @@ export default function LeadsPage() {
 
   React.useEffect(() => {
     if (selectedLead) {
-      const { countryCode, nationalNumber } = splitPhoneNumber(selectedLead.phone || '');
-      const loaded = {
-        name: selectedLead.name || '',
-        phoneCountryCode: countryCode,
-        phoneNational: nationalNumber,
-        city: selectedLead.city || '',
-        leadQuality: selectedLead.leadQuality ? String(selectedLead.leadQuality) : '3',
-        leadStatus: selectedLead.leadStatus || 'New',
-        callStatus: selectedLead.callStatus || 'Pending',
-        remarks: selectedLead.remarks || '',
-        nextFollowupDate: selectedLead.nextFollowupDate || '',
-        nextFollowupTime: selectedLead.nextFollowupTime || '',
-        setReminder: selectedLead.setReminder || false,
-        planOption: selectedLead.planOption || '',
-        assignedRepId: selectedLead.assignedRepId || selectedLead.assignedRep?._id || '',
-      };
+      const loaded = buildLeadEditState(selectedLead);
       setEditLeadData(loaded);
+      setEditBaseline(loaded);
       applyLeadValidation(loaded);
 
       // Fetch audit trail for the selected lead
@@ -103,8 +91,17 @@ export default function LeadsPage() {
     } else {
       setLeadLogs([]);
       setFieldErrors({});
+      setEditBaseline(null);
     }
   }, [selectedLead]);
+
+  const hasLeadChanges = leadEditHasChanges(editLeadData, editBaseline);
+  const handleRevertLeadEdits = () => {
+    if (editBaseline) {
+      setEditLeadData(editBaseline);
+      applyLeadValidation(editBaseline);
+    }
+  };
 
   const handleSaveLead = async () => {
     if (!selectedLead || updateMutation.isPending) return;
@@ -229,24 +226,6 @@ export default function LeadsPage() {
 
 
 
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done, error
-
-  const handleSyncBookedCalls = async () => {
-    setSyncStatus('syncing');
-    try {
-      await axios.post('/api/crm/sync-bookings?sheet=BookedCalls');
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
-      queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
-    } catch (err) {
-      setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 3000);
-      toast.error(err.response?.data?.error || err.message || 'Sync failed');
-    }
-  };
-
   const { data, isLoading } = useLiveLeads(queryParams);
   const { data: statsData } = useCRMStats();
   const { data: team = [] } = useSalesReps();
@@ -344,10 +323,6 @@ export default function LeadsPage() {
         icon={UserPlus}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
-              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : syncStatus === 'error' ? 'Sync failed' : 'Sync Booked Calls'}
-            </Button>
-
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
               <Plus size={14} /> Add Lead
             </Button>
@@ -455,14 +430,7 @@ export default function LeadsPage() {
             </div>
             <div className="w-56">
               <NexusDropdown
-                label={`Sort: ${
-                  sortField === 'createdAt' && sortOrder === 'desc' ? 'Newest first'
-                  : sortField === 'createdAt' && sortOrder === 'asc' ? 'Oldest first'
-                  : sortField === 'leadQuality' ? 'Quality (high–low)'
-                  : sortField === 'nextFollowupDate' ? 'Follow-up (earliest)'
-                  : sortField === 'name' ? 'Name (A–Z)'
-                  : 'Custom'
-                }`}
+               
                 placeholder="Sort by"
                 options={[
                   { value: 'createdAt-desc', label: 'Newest First' },
@@ -508,6 +476,8 @@ export default function LeadsPage() {
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id?.substring(0, 8) || '—'}` : ''}
         onSave={handleSaveLead}
+        onCancel={handleRevertLeadEdits}
+        hasChanges={hasLeadChanges}
         isSaving={updateMutation.isPending}
         saveDisabled={Object.keys(fieldErrors).length > 0}
         extraActions={

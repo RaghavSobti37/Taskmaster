@@ -1,5 +1,4 @@
 const DataHubService = require('../services/DataHubService');
-const { syncFromHolySheet } = require('../services/bookedCallsSyncService');
 const { runDailyBackup, listAvailableBackups, getBackupDbName } = require('../services/databaseBackupService');
 const { notifyBackupResult } = require('../services/backupNotificationService');
 const logger = require('../utils/logger');
@@ -94,22 +93,6 @@ exports.getSyncStatus = async (req, res) => {
   } catch (error) {
     logger.error('dataHubController', 'getSyncStatus', { error: error.message });
     res.status(500).json({ error: 'Failed to fetch sync status' });
-  }
-};
-
-exports.syncBookedCalls = async (req, res) => {
-  try {
-    const { getDepartmentSlug } = require('../utils/departmentPermissions');
-    const result = await syncFromHolySheet({
-      sheetName: req.query.sheet || 'BookedCalls',
-      userId: req.user._id,
-      userRole: getDepartmentSlug(req.user),
-    });
-    DataHubService.clearFolderCache();
-    res.json(result);
-  } catch (error) {
-    logger.error('dataHubController', 'syncBookedCalls', { error: error.message });
-    res.status(500).json({ error: 'Booked calls sync failed' });
   }
 };
 

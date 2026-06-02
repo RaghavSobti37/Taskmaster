@@ -44,7 +44,7 @@ const TaskTable = ({
 
   if (loading) {
     return (
-      <Card className="flex flex-col shadow-md overflow-hidden">
+      <Card className="flex flex-col overflow-hidden">
         <div className="p-4 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
           <div className="h-4 w-32 bg-[var(--color-bg-border)] rounded animate-pulse" />
         </div>
@@ -207,7 +207,7 @@ const TaskTable = ({
 
 
   return (
-    <Card className="flex flex-col shadow-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] overflow-hidden">
+    <Card className="flex flex-col overflow-hidden">
       <div className="p-0">
         <DataTable
           columns={taskColumns}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Inbox, CheckCheck, Shield, ListTodo } from 'lucide-react';
-import { Card, Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout } from '../../components/ui';
+import { Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout, DataListRow } from '../../components/ui';
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -103,40 +103,38 @@ const InboxPage = () => {
         </Button>
       }
     >
-      <Card className="divide-y divide-[var(--color-bg-border)]">
+      <div className="min-w-0">
         {isLoading && <DataLoading />}
         {!isLoading && filtered.length === 0 && (
           <EmptyState title="No notifications" variant="subtle" className="!py-10" />
         )}
         {filtered.map((n) => (
-          <button
+          <DataListRow
             key={n._id}
-            type="button"
             onClick={() => handleOpen(n)}
-            className={`w-full text-left px-3 py-2 hover:bg-[var(--color-bg-secondary)] transition-colors flex items-center gap-3 ${!n.read ? 'bg-[var(--color-brand-teal)]/5' : ''}`}
-            title={n.message}
-          >
-            <NotificationAvatar notification={n} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+            className={!n.read ? 'bg-[var(--color-brand-teal)]/5' : ''}
+            leading={<NotificationAvatar notification={n} />}
+            primary={(
+              <div className="flex items-center gap-2 min-w-0">
                 {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-teal)] shrink-0" />}
                 <span className="font-semibold text-xs truncate">{n.title}</span>
                 <Badge variant="todo" className="!text-[8px] !py-0 shrink-0">{n.category || n.type}</Badge>
               </div>
-              <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">{n.message}</p>
-            </div>
-            <span className="text-[9px] text-[var(--color-text-muted)] shrink-0 whitespace-nowrap">
-              {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-            </span>
-          </button>
+            )}
+            secondary={(
+              <p className="text-[10px] text-[var(--color-text-muted)] truncate">{n.message}</p>
+            )}
+            trailing={(
+              <span className="text-[9px] text-[var(--color-text-muted)] whitespace-nowrap">
+                {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+              </span>
+            )}
+          />
         ))}
-      </Card>
+      </div>
     </ListPageLayout>
     </PageLoadGuard>
   );
 };
 
 export default InboxPage;
-
-
-// Performance Optimization: useCallback(eventHandler) memoization guard

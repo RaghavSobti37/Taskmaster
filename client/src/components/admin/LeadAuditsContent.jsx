@@ -6,7 +6,7 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import { 
   History, Search, RefreshCw, Calendar, ArrowRight, User, FileText, Trash2
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, Input, UserLabel } from '../ui';
+import { Badge, DataTable, Button, Input, UserLabel } from '../ui';
 import { useConfirm } from '../../contexts/confirmContext';
 import { format } from 'date-fns';
 
@@ -123,7 +123,7 @@ const LeadAuditsContent = () => {
   };
 
   return (
-    <Card className="flex flex-col h-full !border-none">
+    <section className="flex flex-col h-full border-t border-[var(--color-bg-border)]">
       <div className="p-4 border-b border-[var(--color-bg-border)] flex flex-wrap items-center justify-between gap-4 bg-[var(--color-bg-secondary)]/50">
         <div className="flex items-center gap-2 max-w-xs flex-1">
           <Input 
@@ -183,7 +183,7 @@ const LeadAuditsContent = () => {
           </div>
         )}
       </div>
-    </Card>
+    </section>
   );
 };
 

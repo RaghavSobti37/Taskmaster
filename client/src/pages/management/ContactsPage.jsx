@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Contact } from 'lucide-react';
 import {
-  Card,
   Button,
   Input,
   NexusModal,
@@ -14,7 +13,6 @@ import {
   SearchInput,
   ListPageLayout,
 } from '../../components/ui';
-import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const EMPTY_CONTACT_FORM = { name: '', role: '', phone: '', email: '', notes: '' };
@@ -93,11 +91,6 @@ const ContactsPage = () => {
     setIsModalOpen(true);
   };
 
-  const roleChart = useMemo(
-    () => distributionFromField(contacts, 'role'),
-    [contacts]
-  );
-
   const contactColumns = useMemo(
     () => [
       {
@@ -105,7 +98,7 @@ const ContactsPage = () => {
         sortKey: 'name',
         render: (row) => (
           <span className="block min-w-0 truncate text-xs" title={[row.name, row.notes].filter(Boolean).join(' — ')}>
-            <span className="font-bold text-[var(--color-text-primary)]">{row.name}</span>
+            <span className="tm-data-primary">{row.name}</span>
             {row.notes ? (
               <span className="text-[var(--color-text-muted)] font-medium"> · {row.notes}</span>
             ) : null}
@@ -165,9 +158,6 @@ const ContactsPage = () => {
             variant: 'mint',
           },
         ],
-        charts: roleChart.length
-          ? [{ id: 'roles', title: 'By role', type: 'bar', data: roleChart }]
-          : [],
       }}
       toolbar={
         <SearchInput
@@ -183,18 +173,15 @@ const ContactsPage = () => {
         </Button>
       }
     >
-      <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-        <DataTable
-          columns={contactColumns}
-          data={filtered}
-          onRowClick={openContactEditor}
-          getRowId={(row) => row._id}
-          fitWidth
-          emptyTitle="No contacts found"
-          emptyDescription="Try a different search or add a new contact."
-          className="!border-none !rounded-none"
-        />
-      </Card>
+      <DataTable
+        columns={contactColumns}
+        data={filtered}
+        onRowClick={openContactEditor}
+        getRowId={(row) => row._id}
+        fitWidth
+        emptyTitle="No contacts found"
+        emptyDescription="Try a different search or add a new contact."
+      />
 
       <NexusModal
         isOpen={isModalOpen}
@@ -257,6 +244,9 @@ const ContactsPage = () => {
           />
           <Input
             label="Notes"
+            multiline
+            rows={3}
+            autoGrow
             value={formData.notes || ''}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />

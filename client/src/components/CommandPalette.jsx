@@ -10,7 +10,8 @@ import {
   CalendarDays, 
   Settings,
   Plus,
-  NotebookPen
+  NotebookPen,
+  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -92,7 +93,7 @@ const CommandPalette = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="tm-modal-panel max-w-2xl relative w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden"
+            className="tm-modal-panel tm-floating max-w-2xl relative w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-lg)] shadow-2xl overflow-hidden"
           >
             <div className="flex items-center px-6 py-5 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/50">
               <Search className="text-[var(--color-text-muted)] mr-4" size={20} />
@@ -105,7 +106,7 @@ const CommandPalette = () => {
                 onKeyDown={onKeyDown}
                 className="flex-1 bg-transparent border-none outline-none text-base font-bold text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
               />
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl shadow-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
                 <Command size={12} className="text-[var(--color-text-muted)]" />
                 <span className="text-[10px] font-black text-[var(--color-text-muted)]">K</span>
               </div>
@@ -125,10 +126,10 @@ const CommandPalette = () => {
                     key={action.id}
                     onMouseEnter={() => setActiveIndex(idx)}
                     onClick={() => handleAction(action.path)}
-                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${idx === activeIndex ? 'bg-[var(--color-action-primary)] text-white shadow-xl shadow-blue-500/20' : 'hover:bg-[var(--color-bg-workspace)] text-[var(--color-text-secondary)]'}`}
+                    className={`w-full flex items-center justify-between px-5 py-3 rounded-[var(--radius-atomic)] transition-colors ${idx === activeIndex ? 'bg-[var(--color-action-primary)] text-white' : 'hover:bg-[var(--color-bg-workspace)] text-[var(--color-text-secondary)]'}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl ${idx === activeIndex ? 'bg-white/20' : 'bg-[var(--color-bg-workspace)]'} ${action.color || ''}`}>
+                      <div className={`p-2 rounded-[var(--radius-atomic)] ${idx === activeIndex ? 'bg-white/20' : 'bg-[var(--color-bg-workspace)]'} ${action.color || ''}`}>
                         <action.icon size={20} />
                       </div>
                       <span className="text-sm font-black uppercase tracking-tight italic">{action.label}</span>
@@ -154,13 +155,13 @@ const CommandPalette = () => {
             <div className="px-6 py-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/30 flex items-center justify-between">
                <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)] shadow-sm">ENTER</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">ENTER</span>
                     <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Select</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                       <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)] shadow-sm">↑</span>
-                       <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)] shadow-sm">↓</span>
+                       <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">↑</span>
+                       <span className="px-1.5 py-0.5 rounded bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">↓</span>
                     </div>
                     <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Navigate</span>
                   </div>

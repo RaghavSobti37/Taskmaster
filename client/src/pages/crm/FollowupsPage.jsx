@@ -203,9 +203,10 @@ export default function FollowupsPage() {
     })).filter(l => l.followupFullDate !== null);
   }, [leads]);
 
-  const filteredLeads = useMemo(() => {
+  const tableLeads = useMemo(() => {
+    if (!isDefaultSort) return processedLeads;
     return [...processedLeads].sort((a, b) => a.followupFullDate - b.followupFullDate);
-  }, [processedLeads]);
+  }, [processedLeads, isDefaultSort]);
 
   const stats = useMemo(() => {
     if (data?.tabStats) {
@@ -390,24 +391,22 @@ export default function FollowupsPage() {
         </Button>
       }
     >
-      <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-        <DataTable
-          columns={columns}
-          data={filteredLeads}
-          getRowId={(row) => row._id}
-          onRowClick={(row) => setSelectedLead(row)}
-          serverSide
-          paginated
-          currentPage={followupPage}
-          totalPages={followupPages}
-          totalItems={data?.total || 0}
-          pageSize={FOLLOWUP_PAGE_SIZE}
-          onPageChange={setFollowupPage}
-          sortState={tableSortState}
-          onSortChange={handleTableSortChange}
-          isLoading={isLoading}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        data={tableLeads}
+        getRowId={(row) => row._id}
+        onRowClick={(row) => setSelectedLead(row)}
+        serverSide
+        paginated
+        currentPage={followupPage}
+        totalPages={followupPages}
+        totalItems={data?.total || 0}
+        pageSize={FOLLOWUP_PAGE_SIZE}
+        onPageChange={setFollowupPage}
+        sortState={tableSortState}
+        onSortChange={handleTableSortChange}
+        isLoading={isLoading}
+      />
 
       <FullScreenWorkspace
         isOpen={!!selectedLead}

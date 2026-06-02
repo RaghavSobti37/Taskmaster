@@ -1,9 +1,28 @@
-import React, { useMemo, useState, isValidElement } from 'react';
+import React, { useMemo, useState, isValidElement, cloneElement } from 'react';
 import { SlidersHorizontal, MoreVertical } from 'lucide-react';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import SearchInput from './SearchInput';
+import NexusDropdown from './NexusDropdown';
+import StatusSelect from '../forms/StatusSelect';
+import PrioritySelect from '../forms/PrioritySelect';
+import ProjectSelect from '../forms/ProjectSelect';
 import MobileFilterSheet from './MobileFilterSheet';
 import MobileFilterField, { isSearchInputElement, isMobileInlineElement } from './MobileFilterField';
+
+const TOOLBAR_FIELD_TYPES = new Set([
+  SearchInput,
+  NexusDropdown,
+  StatusSelect,
+  PrioritySelect,
+  ProjectSelect,
+]);
+
+function normalizeToolbarChild(child) {
+  if (!isValidElement(child)) return child;
+  if (!TOOLBAR_FIELD_TYPES.has(child.type)) return child;
+  if (child.props?.variant === 'field') return child;
+  return cloneElement(child, { variant: 'toolbar' });
+}
 
 /**
  * Single compact row: title (optional) + filters (children) + actions (right).
@@ -50,6 +69,11 @@ export default function PageToolbar({
     mobileFilterCount ||
     filterChildren.filter((c) => isValidElement(c) && !isSearchInputElement(c)).length;
 
+  const desktopChildren = useMemo(
+    () => childArray.map(normalizeToolbarChild),
+    [childArray]
+  );
+
   if (isMobile) {
     const hasFilters = filterChildren.length > 0;
     const actionNodes = actions ? React.Children.toArray(actions) : [];
@@ -61,7 +85,7 @@ export default function PageToolbar({
       <button
         type="button"
         onClick={() => setSheetOpen(true)}
-        className="relative shrink-0 flex items-center gap-1.5 px-3 min-h-[44px] rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)]"
+        className="relative shrink-0 flex items-center gap-1.5 px-3 min-h-[44px] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] text-xs font-bold uppercase tracking-wider text-[var(--color-text-primary)]"
       >
         <SlidersHorizontal size={16} />
         Filters
@@ -90,7 +114,7 @@ export default function PageToolbar({
         <button
           type="button"
           onClick={() => setActionsOpen((v) => !v)}
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]"
           aria-label="More actions"
         >
           <MoreVertical size={18} />
@@ -98,7 +122,7 @@ export default function PageToolbar({
         {actionsOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setActionsOpen(false)} aria-hidden />
-            <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] shadow-xl">
+            <div className="tm-floating absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] shadow-xl">
               {menuNodes.map((node, i) => (
                 <div key={i} className="px-2 py-1" onClick={() => setActionsOpen(false)}>
                   {node}
@@ -124,12 +148,12 @@ export default function PageToolbar({
     const titleBlock = hasTitle ? (
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {Icon && (
-          <div className="p-1.5 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
+          <div className="flex items-center justify-center w-9 h-9 rounded-[var(--radius-atomic)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
             <Icon size={16} strokeWidth={2.5} />
           </div>
         )}
         {title && (
-          <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)] truncate">
+          <span className="tm-widget-label truncate normal-case tracking-[0.08em]">
             {title}
           </span>
         )}
@@ -139,7 +163,7 @@ export default function PageToolbar({
     return (
       <>
         <div
-          className={`flex flex-col gap-2 min-w-0 p-3 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-hidden ${className}`}
+          className={`flex flex-col gap-2 min-w-0 pb-3 border-b border-[var(--color-bg-border)] overflow-hidden ${className}`}
         >
           {hasTitle ? (
             <>
@@ -207,25 +231,27 @@ export default function PageToolbar({
 
   return (
     <div
-      className={`flex flex-nowrap items-center gap-2 min-w-0 p-3 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-x-auto custom-scrollbar ${className}`}
+      className={`page-toolbar-row flex flex-nowrap items-center gap-2 min-w-0 min-h-[44px] py-2 border-b border-[var(--color-bg-border)] overflow-x-auto custom-scrollbar ${className}`}
     >
       {(Icon || title) && (
-        <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-[var(--color-bg-border)] mr-1">
+        <div className="flex items-center gap-2 shrink-0 pr-3 h-9 border-r border-[var(--color-bg-border)]">
           {Icon && (
-            <div className="p-1.5 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10">
+            <div className="flex items-center justify-center w-9 h-9 rounded-[var(--radius-atomic)] bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
               <Icon size={16} strokeWidth={2.5} />
             </div>
           )}
           {title && (
-            <span className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)] whitespace-nowrap">
+            <span className="tm-widget-label whitespace-nowrap normal-case tracking-[0.08em]">
               {title}
             </span>
           )}
         </div>
       )}
-      <div className="flex flex-nowrap items-center gap-2 min-w-0 flex-1">{children}</div>
+      <div className="page-toolbar-controls flex flex-nowrap items-center gap-2 min-w-0 flex-1">
+        {desktopChildren}
+      </div>
       {actions && (
-        <div className="flex flex-nowrap items-center gap-2 shrink-0 ml-auto pl-2 border-l border-[var(--color-bg-border)]">
+        <div className="page-toolbar-actions flex flex-nowrap items-center gap-2 shrink-0 pl-3 h-9 border-l border-[var(--color-bg-border)]">
           {actions}
         </div>
       )}

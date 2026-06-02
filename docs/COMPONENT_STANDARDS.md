@@ -11,8 +11,10 @@ Global UI rules for `client/src`. Aligns with [design_guidelines.md](../client/d
 | **Overview** | `DataOverviewSection` + `DataMiniChart`; helpers in `utils/buildChartSeries.js`. |
 | **Toolbar** | `PageToolbar` — single nowrap row for search, filters, actions. |
 | **Modals** | `NexusModal` first (confirms, simple forms). `ModalShell` + `ModalHeader` / `ModalBody` / `ModalFooter` when layout is custom or non-dismissible. Never nest `NexusModal` around `ModalShell`. |
-| **Detail overlays** | `FullScreenWorkspace` for row-click detail (70/30). |
-| **Tables** | `DataTable` from `components/ui` for list UIs. Column sort: asc → desc → default. |
+| **Detail overlays** | `FullScreenWorkspace` for row-click detail (70/30 bg shift, ghost inputs). Prefer over NexusModal for data edit flows. |
+| **Tables** | `DataTable` from `components/ui` for list UIs. **Do not wrap DataTable in Card** — table sits flush on page surface. Column sort: asc → desc → default. |
+| **Dashboard widgets** | `DashboardWidgetShell` + `DataListRow` for list widgets; `ChartSurface` for charts. |
+| **Analytics** | `DeltaBadge`, `tabular-nums`, muted Recharts via `CHART_MUTED` from `ChartSurface`. |
 | **User display** | `UserAvatar` / `UserLabel` from `components/ui` whenever a user name appears in lists, tables, or detail chrome. Pass `user` object with `name` + `avatar`. |
 | **Loading** | `PageLoadGuard` at route level + `PageSkeleton` or `DashboardSkeleton`. `DataLoading` / `Spinner` inside panels only. |
 | **Selects** | `NexusDropdown` or thin wrappers (`PrioritySelect`, `ProjectSelect`, …). |

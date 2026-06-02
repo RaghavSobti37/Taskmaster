@@ -20,7 +20,7 @@ export default function ListCard({
       data-highlight-id={highlightId || undefined}
       onClick={onClick}
       style={style}
-      className={`p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] cursor-pointer shadow-sm active:scale-[0.99] transition-transform ${className}`}
+      className={`p-4 border-b border-[var(--color-bg-border)] bg-transparent cursor-pointer active:scale-[0.99] transition-transform ${className}`}
     >
       <div className="flex items-start gap-3 min-w-0">
         {leading && <div className="shrink-0 flex items-center min-h-[44px]">{leading}</div>}

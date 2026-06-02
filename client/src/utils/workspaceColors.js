@@ -110,14 +110,9 @@ export function getWorkspaceAccentStyle(color) {
   return { '--workspace-accent': color || DEFAULT_WORKSPACE_COLOR };
 }
 
-/** Tinted row background + left accent bar. */
-export function getTaskRowStyle(workspaceColor, borderWidth = 3) {
-  const accent = workspaceColor || DEFAULT_WORKSPACE_COLOR;
-  return {
-    ...getWorkspaceAccentStyle(accent),
-    backgroundColor: `color-mix(in srgb, ${accent} 28%, var(--color-bg-surface))`,
-    borderLeft: `${borderWidth}px solid ${accent}`,
-  };
+/** Sets --workspace-accent for .tm-task-row left bar + faint bottom-left gradient tint. */
+export function getTaskRowStyle(workspaceColor) {
+  return getWorkspaceAccentStyle(workspaceColor || DEFAULT_WORKSPACE_COLOR);
 }
 
 /** Muted grey styling for completed tasks (project task list / kanban). */

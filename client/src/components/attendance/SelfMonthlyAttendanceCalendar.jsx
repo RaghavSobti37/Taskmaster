@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { Button } from '../ui';
 import { getHolidayLabel } from '../../utils/officeHolidays';
 
 const SQUARE_COLORS = {
@@ -68,7 +68,7 @@ const SelfMonthlyAttendanceCalendar = ({
   }
 
   return (
-    <Card className="p-4 space-y-4">
+    <section className="space-y-4 border-t border-[var(--color-bg-border)] pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">{title}</h3>
         <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ const SelfMonthlyAttendanceCalendar = ({
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" /> No input</span>
       </div>
 
-      <div className="rounded-xl border border-[var(--color-bg-border)] overflow-hidden">
+      <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
             <tr>
@@ -115,7 +115,7 @@ const SelfMonthlyAttendanceCalendar = ({
                     <td key={dateKey} className={`relative h-24 border-r last:border-r-0 border-[var(--color-bg-border)] p-2 align-top transition-colors hover:bg-[var(--color-bg-secondary)]/30 ${!isCurrentMonth ? 'opacity-40 bg-[var(--color-bg-secondary)]/50' : ''}`} title={buildTooltip(date, entry, status)}>
                       <div className="flex flex-col items-center justify-center h-full gap-2">
                         <span className="text-xs font-bold text-[var(--color-text-muted)] absolute top-2 left-2">{format(date, 'd')}</span>
-                        <div className={`w-8 h-8 rounded-lg border shadow-sm ${getSquareColor(status, entry)}`} />
+                        <div className={`w-8 h-8 rounded-lg border ${getSquareColor(status, entry)}`} />
                       </div>
                     </td>
                   );
@@ -125,7 +125,7 @@ const SelfMonthlyAttendanceCalendar = ({
           </tbody>
         </table>
       </div>
-    </Card>
+    </section>
   );
 };
 

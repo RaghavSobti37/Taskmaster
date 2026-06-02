@@ -6,6 +6,13 @@ const PRESETS = ['1d', '7d', '30d'];
 const dateInputClass =
   'px-2 py-1 text-xs font-medium rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500';
 
+const segmentClass = (active) =>
+  `px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide transition-colors border-b-2 -mb-px ${
+    active
+      ? 'border-[var(--color-action-primary)] text-[var(--color-action-primary)]'
+      : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+  }`;
+
 export default function ProjectReportRangeControls({
   rangeMode,
   onRangeModeChange,
@@ -30,18 +37,14 @@ export default function ProjectReportRangeControls({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center bg-[var(--color-bg-secondary)] rounded-full p-1 border border-[var(--color-bg-border)] shadow-sm">
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-1 border-b border-[var(--color-bg-border)]">
         {PRESETS.map((opt) => (
           <button
             key={opt}
             type="button"
             onClick={() => selectPreset(opt)}
-            className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${
-              rangeMode === 'preset' && timeframe === opt
-                ? 'bg-[var(--color-bg-primary)] text-blue-500 shadow-sm ring-1 ring-[var(--color-bg-border)]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-            }`}
+            className={segmentClass(rangeMode === 'preset' && timeframe === opt)}
           >
             {opt}
           </button>
@@ -49,11 +52,7 @@ export default function ProjectReportRangeControls({
         <button
           type="button"
           onClick={selectCustom}
-          className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${
-            rangeMode === 'custom'
-              ? 'bg-[var(--color-bg-primary)] text-blue-500 shadow-sm ring-1 ring-[var(--color-bg-border)]'
-              : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-          }`}
+          className={segmentClass(rangeMode === 'custom')}
         >
           Range
         </button>

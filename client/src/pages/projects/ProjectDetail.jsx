@@ -24,7 +24,6 @@ import {
   PageHeader,
   Button,
   SearchInput,
-  Card,
   NexusModal
 } from '../../components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -365,45 +364,44 @@ const ProjectDetail = () => {
         approveReview
       />
 
-      {/* Workspace Controls */}
-      <Card className="flex flex-col overflow-hidden">
-        <div className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3">
-            <div className="flex-1 min-w-0 overflow-x-auto">
-              <TabSwitcher
-                tabs={tabs}
-                activeTab={activeTab}
-                onChange={setActiveTab}
+      <div className="border-b border-[var(--color-bg-border)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+          <div className="flex-1 min-w-0 overflow-x-auto">
+            <TabSwitcher
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              className="!bg-transparent !border-0 !p-0"
+            />
+          </div>
+
+          {showTaskFilters && (
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
+              <SearchInput
+                placeholder="Search tasks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="min-w-0 w-full sm:w-52 shrink"
+              />
+              <NexusDropdown
+                variant="compact"
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'todo', label: 'Todo' },
+                  { value: 'in-progress', label: 'Active' },
+                  { value: 'done', label: 'Done' },
+                ]}
+                value={filterStatus}
+                onChange={setFilterStatus}
+                placeholder="Status"
+                className="w-full sm:w-[9.5rem] shrink-0"
               />
             </div>
-
-            {showTaskFilters && (
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
-                <SearchInput
-                  placeholder="Search tasks..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="min-w-0 w-full sm:w-52 shrink"
-                />
-                <NexusDropdown
-                  variant="compact"
-                  options={[
-                    { value: 'all', label: 'All Status' },
-                    { value: 'todo', label: 'Todo' },
-                    { value: 'in-progress', label: 'Active' },
-                    { value: 'done', label: 'Done' },
-                  ]}
-                  value={filterStatus}
-                  onChange={setFilterStatus}
-                  placeholder="Status"
-                  className="w-full sm:w-[9.5rem] shrink-0"
-                />
-              </div>
-            )}
-          </div>
+          )}
         </div>
+      </div>
 
-        <div className="p-0 min-h-fit">
+      <div className="min-h-fit">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -426,11 +424,18 @@ const ProjectDetail = () => {
                   ) : (
                     <>
                       {hoursSummary && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Task Hours</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.taskHours)}</p></Card>
-                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Manual Logs</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.manualLogHours)}</p></Card>
-                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Total</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.totalHours)}</p></Card>
-                          <Card className="p-4"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Planned</p><p className="text-2xl font-black">{formatHoursMinutes(hoursSummary.plannedHours)}</p></Card>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-b border-[var(--color-bg-border)] pb-4">
+                          {[
+                            { label: 'Task Hours', value: formatHoursMinutes(hoursSummary.taskHours) },
+                            { label: 'Manual Logs', value: formatHoursMinutes(hoursSummary.manualLogHours) },
+                            { label: 'Total', value: formatHoursMinutes(hoursSummary.totalHours) },
+                            { label: 'Planned', value: formatHoursMinutes(hoursSummary.plannedHours) },
+                          ].map((stat) => (
+                            <div key={stat.label} className="py-2">
+                              <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">{stat.label}</p>
+                              <p className="text-2xl font-black tabular-nums mt-1">{stat.value}</p>
+                            </div>
+                          ))}
                         </div>
                       )}
                       <ScheduleGrid
@@ -455,8 +460,7 @@ const ProjectDetail = () => {
               )}
             </motion.div>
           </AnimatePresence>
-        </div>
-      </Card>
+      </div>
     </PageContainer>
   );
 };

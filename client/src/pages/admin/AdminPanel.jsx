@@ -10,7 +10,6 @@ import {
 import { 
   Badge, 
   TabSwitcher, 
-  Card, 
   Button, 
   DataTable,
   ProgressBar,
@@ -259,38 +258,33 @@ const AdminPanel = () => {
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className={activeTab === 'users' ? 'lg:col-span-8' : 'lg:col-span-12'}>
-          <Card className="flex flex-col h-full p-0 overflow-hidden">
-            <div className="p-0">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {activeTab === 'users' && (
-                    <DataTable 
-                      columns={userColumns} 
-                      data={filteredUsers} 
-                      className="!border-none"
-                      onRowClick={(u) => setSelectedUser(u)}
-                    />
-                  )}
-                  {activeTab === 'crm' && <DataHubContent />}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </Card>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeTab === 'users' && (
+                <DataTable 
+                  columns={userColumns} 
+                  data={filteredUsers} 
+                  onRowClick={(u) => setSelectedUser(u)}
+                />
+              )}
+              {activeTab === 'crm' && <DataHubContent />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {activeTab === 'users' && (
           <aside className="lg:col-span-4 space-y-6">
-            <Card className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-4">
+            <div className="p-4 border border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center justify-between">
                  <div className="flex items-center gap-2">
                     <Users size={14} className="text-[var(--color-action-primary)]" />
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Teams & Workgroups</h4>
+                    <h4 className="tm-widget-label">Teams & Workgroups</h4>
                  </div>
               </div>
               <div className="flex gap-2">
@@ -344,7 +338,7 @@ const AdminPanel = () => {
                    );
                  })}
               </div>
-            </Card>
+            </div>
           </aside>
         )}
       </div>
@@ -370,8 +364,8 @@ const AdminPanel = () => {
         }
         sidebar={
           <>
-            <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
-               <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Delete User</h4>
+            <div className="p-4 border border-rose-500/30 space-y-3">
+               <h4 className="tm-widget-label text-rose-500">Delete User</h4>
                {getDeleteBlockReason(selectedUser) && (
                  <p className="text-[10px] text-[var(--color-text-muted)] mb-3">{getDeleteBlockReason(selectedUser)}</p>
                )}
@@ -380,9 +374,9 @@ const AdminPanel = () => {
                  isPending={deleteUserMutation.isPending}
                  onDelete={() => handleDeleteUser(selectedUser._id)}
                />
-            </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Trail</h4>
+            </div>
+            <div className="p-4 border-b border-[var(--color-bg-border)] space-y-4">
+               <h4 className="tm-widget-label">Activity Trail</h4>
                <div className="space-y-4">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="flex gap-3">
@@ -394,9 +388,9 @@ const AdminPanel = () => {
                     </div>
                   ))}
                </div>
-            </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Security Configuration</h4>
+            </div>
+            <div className="p-4 space-y-4">
+               <h4 className="tm-widget-label">Security Configuration</h4>
                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                      <span className="text-[10px] font-bold">Two-Factor Auth</span>
@@ -407,7 +401,7 @@ const AdminPanel = () => {
                      <span className="text-[9px] font-mono opacity-50">••••••••</span>
                   </div>
                </div>
-            </Card>
+            </div>
           </>
         }
       >
@@ -458,7 +452,7 @@ const AdminPanel = () => {
                  {teams.map(t => {
                    const isAssigned = editUserData.teams?.includes(t.name);
                    return (
-                     <Card 
+                     <div 
                        key={t._id} 
                        onClick={() => {
                          const currentTeams = editUserData.teams || [];
@@ -471,7 +465,7 @@ const AdminPanel = () => {
                      >
                        <p className="text-[10px] font-black uppercase tracking-tight">{t.name}</p>
                        <p className="text-[8px] font-bold text-[var(--color-text-muted)] mt-1">{isAssigned ? 'Assigned (Click to Remove)' : 'Click to Assign'}</p>
-                     </Card>
+                     </div>
                    );
                  })}
               </div>

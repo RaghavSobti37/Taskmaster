@@ -1,5 +1,5 @@
 import React from 'react';
-import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
+import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import MentionTitle from '../mentions/MentionTitle';
 
 const ScheduleTaskPill = ({ task, workspaces, projects, compact, onTaskClick, style }) => {
@@ -12,13 +12,18 @@ const ScheduleTaskPill = ({ task, workspaces, projects, compact, onTaskClick, st
       type="button"
       onClick={() => onTaskClick?.(task)}
       title={task.title}
-      style={{ ...style, ...(isDone ? getCompletedTaskRowStyle(4) : getTaskRowStyle(workspaceColor, 4)) }}
-      className={`tm-task-row flex ${taskMaxW} text-left rounded border border-[var(--color-bg-border)] overflow-hidden hover:border-[var(--color-brand-teal)]/50 transition-colors ${
-        isDone ? 'tm-task-row--completed' : ''
+      style={{
+        ...style,
+        ...(isDone
+          ? { '--workspace-accent': 'var(--color-pastel-slate-text)' }
+          : getTaskRowStyle(workspaceColor)),
+      }}
+      className={`tm-schedule-pill flex ${taskMaxW} text-left rounded-md overflow-hidden transition-all ${
+        isDone ? 'tm-schedule-pill--completed' : ''
       }`}
     >
       <div
-        className="w-0.5 shrink-0 self-stretch"
+        className="w-1 shrink-0 self-stretch"
         style={{
           backgroundColor: isDone ? 'var(--color-pastel-slate-text)' : workspaceColor,
         }}
@@ -26,7 +31,7 @@ const ScheduleTaskPill = ({ task, workspaces, projects, compact, onTaskClick, st
       />
       <MentionTitle
         text={task.title}
-        className="min-w-0 flex-1 truncate text-[9px] font-semibold px-1 py-0.5 leading-tight"
+        className="min-w-0 flex-1 truncate text-[9px] font-semibold px-1.5 py-1 leading-tight text-[var(--color-text-primary)]"
         truncate
       />
     </button>

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
-import { Card, TimeframeFilter, InfoButton } from '../ui';
+import { DashboardWidgetShell, ChartSurface, CHART_MUTED, TimeframeFilter, InfoButton } from '../ui';
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
 import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,7 +19,6 @@ export default function GenericDashboardCard({ componentId }) {
   const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
 
-  // Real Data Fetchers
   const { data: tasks = [] } = useDashboardTasks(user?._id);
   const { data: mailStats } = useMailStats(componentId === 'campaign-metrics');
   const { data: activityData } = useActivityGrid(componentId === 'team-activity');
@@ -102,21 +101,27 @@ export default function GenericDashboardCard({ componentId }) {
 
   const hasData = chartData.some(d => d.value > 0);
 
-  return (
-    <Card className="p-0 flex flex-col justify-between shadow-md overflow-hidden h-full">
-      <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between w-full shrink-0">
-        <h4 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2 uppercase tracking-wider mb-0">
-          <span className="text-[16px]">{meta?.icon || '📊'}</span> {meta?.label || componentId}
-          {componentId === 'dept-stats' && <InfoButton text="Bars use different units: Tasks = completion %, Converted = lead count, Focus = avg focus hours per day in the selected window." />}
-        </h4>
-        {componentId !== 'campaign-metrics' && (
-          <div className="flex items-center gap-2">
-            <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-          </div>
-        )}
-      </div>
+  const titleContent = (
+    <>
+      {meta?.icon || '📊'} {meta?.label || componentId}
+      {componentId === 'dept-stats' && (
+        <InfoButton text="Bars use different units: Tasks = completion %, Converted = lead count, Focus = avg focus hours per day in the selected window." />
+      )}
+    </>
+  );
 
-      <div className="flex-1 p-0 flex flex-col items-center justify-center relative" style={{ minHeight: 200, height: 200 }}>
+  return (
+    <DashboardWidgetShell
+      className="h-full overflow-hidden"
+      bodyClassName="p-4 flex flex-col flex-1 min-h-0"
+      title={titleContent}
+      actions={
+        componentId !== 'campaign-metrics' ? (
+          <TimeframeFilter value={timeframe} onChange={setTimeframe} />
+        ) : null
+      }
+    >
+      <ChartSurface className="flex-1" height={200}>
         {!hasData && componentId === 'dept-stats' && deptStatsLoading ? (
           <div className="flex flex-col items-center justify-center h-full w-full py-8">
             <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
@@ -124,52 +129,51 @@ export default function GenericDashboardCard({ componentId }) {
         ) : !hasData ? (
           <div className="flex flex-col items-center justify-center opacity-40 grayscale h-full w-full py-8">
             <div className="w-full max-w-[200px] space-y-2 mb-3">
-              <div className="h-2 w-full bg-[var(--color-text-muted)] rounded-full animate-pulse"></div>
-              <div className="h-2 w-3/4 bg-[var(--color-text-muted)] rounded-full mx-auto animate-pulse" style={{ animationDelay: '150ms' }}></div>
-              <div className="h-2 w-1/2 bg-[var(--color-text-muted)] rounded-full mx-auto animate-pulse" style={{ animationDelay: '300ms' }}></div>
+              <div className="h-2 w-full bg-[var(--color-text-muted)] rounded-full animate-pulse" />
+              <div className="h-2 w-3/4 bg-[var(--color-text-muted)] rounded-full mx-auto animate-pulse" style={{ animationDelay: '150ms' }} />
+              <div className="h-2 w-1/2 bg-[var(--color-text-muted)] rounded-full mx-auto animate-pulse" style={{ animationDelay: '300ms' }} />
             </div>
             <p className="text-xs text-[var(--color-text-secondary)] italic">
               No data to display for the last {formatTimeframeLabel(timeframe)}
             </p>
           </div>
         ) : (
-          <div className="w-full" style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height={200}>
-              {type === 'bar' ? (
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-bg-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}
-                    itemStyle={{ color: 'var(--color-text-primary)' }}
-                    cursor={{ fill: 'var(--color-bg-secondary)' }}
-                    formatter={tooltipFormatter}
-                  />
-                  <Bar dataKey="value" name={seriesName || 'Count'} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              ) : (
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id={`colorValue-${componentId}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} width={35} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-bg-border)', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}
-                    itemStyle={{ color: 'var(--color-text-primary)' }}
-                    formatter={tooltipFormatter}
-                  />
-                  <Area type="monotone" dataKey="value" name={seriesName || 'Tasks'} stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill={`url(#colorValue-${componentId})`} />
-                </AreaChart>
-              )}
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            {type === 'bar' ? (
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid {...CHART_MUTED.grid} vertical={false} />
+                <XAxis dataKey="label" tick={CHART_MUTED.axis} axisLine={false} tickLine={false} />
+                <YAxis tick={CHART_MUTED.axis} axisLine={false} tickLine={false} width={35} />
+                <Tooltip
+                  contentStyle={CHART_MUTED.tooltip}
+                  itemStyle={{ color: 'var(--color-text-primary)' }}
+                  cursor={{ fill: 'var(--color-bg-secondary)' }}
+                  formatter={tooltipFormatter}
+                />
+                <Bar dataKey="value" name={seriesName || 'Count'} fill="#3b82f6" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            ) : (
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`colorValue-${componentId}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid {...CHART_MUTED.grid} vertical={false} />
+                <XAxis dataKey="label" tick={CHART_MUTED.axis} axisLine={false} tickLine={false} />
+                <YAxis tick={CHART_MUTED.axis} axisLine={false} tickLine={false} width={35} />
+                <Tooltip
+                  contentStyle={CHART_MUTED.tooltip}
+                  itemStyle={{ color: 'var(--color-text-primary)' }}
+                  formatter={tooltipFormatter}
+                />
+                <Area type="monotone" dataKey="value" name={seriesName || 'Tasks'} stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill={`url(#colorValue-${componentId})`} />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
         )}
-      </div>
-    </Card>
+      </ChartSurface>
+    </DashboardWidgetShell>
   );
 }

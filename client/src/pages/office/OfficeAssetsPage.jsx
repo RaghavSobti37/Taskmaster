@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Building2, Plus, Contact, Phone, Mail, FileText, Database, Shield, RefreshCw } from 'lucide-react';
+import { Building2, Plus, Contact, Phone, Mail, Database, Shield, RefreshCw } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import {
   Button,
@@ -11,8 +11,6 @@ import {
   ModalFooter,
   TabSwitcher,
   SearchInput,
-  EmptyState,
-  Card,
   DataTable,
   PageLoadGuard,
   PageSkeleton,
@@ -231,8 +229,6 @@ const OfficeAssetsPage = () => {
   );
 
   const listLoading = activeTab === 'assets' ? assetsLoading : contactsLoading;
-  const listEmpty = activeTab === 'assets' ? !assetsLoading && filteredAssets.length === 0 : !contactsLoading && filteredContacts.length === 0;
-
   const openAddAsset = () => {
     setEditingAsset(null);
     setAssetFormBaseline(null);
@@ -306,31 +302,27 @@ const OfficeAssetsPage = () => {
         </>
       }
     >
-      <Card className="p-0 overflow-hidden">
-        {listEmpty ? (
-          <EmptyState variant="subtle" title={activeTab === 'assets' ? 'No assets found' : 'No contacts found'} />
-        ) : activeTab === 'assets' ? (
-          <DataTable
-            columns={assetColumns}
-            data={filteredAssets}
-            onRowClick={openAssetRow}
-            getRowId={(a) => a._id}
-            isLoading={assetsLoading}
-            defaultPageSize={15}
-            emptyTitle="No assets found"
-          />
-        ) : (
-          <DataTable
-            columns={contactColumns}
-            data={filteredContacts}
-            onRowClick={openContactRow}
-            getRowId={(c) => c._id}
-            isLoading={contactsLoading}
-            defaultPageSize={15}
-            emptyTitle="No contacts found"
-          />
-        )}
-      </Card>
+      {activeTab === 'assets' ? (
+        <DataTable
+          columns={assetColumns}
+          data={filteredAssets}
+          onRowClick={openAssetRow}
+          getRowId={(a) => a._id}
+          isLoading={assetsLoading}
+          defaultPageSize={15}
+          emptyTitle="No assets found"
+        />
+      ) : (
+        <DataTable
+          columns={contactColumns}
+          data={filteredContacts}
+          onRowClick={openContactRow}
+          getRowId={(c) => c._id}
+          isLoading={contactsLoading}
+          defaultPageSize={15}
+          emptyTitle="No contacts found"
+        />
+      )}
 
       {/* Immersive Asset Workspace Drawer Modal (70-30 split layout) */}
       <NexusModal
@@ -457,10 +449,12 @@ const OfficeAssetsPage = () => {
             {editingAsset && (
               <Input 
                 label="Update Remark / Notes" 
+                multiline
+                rows={3}
+                autoGrow
                 placeholder="e.g., Handed to John" 
                 value={assetFormData.updateNotes || ''} 
                 onChange={e => setAssetFormData({...assetFormData, updateNotes: e.target.value})} 
-                icon={FileText}
               />
             )}
 
@@ -560,7 +554,7 @@ const OfficeAssetsPage = () => {
               <textarea 
                 value={contactFormData.notes} 
                 onChange={e => setContactFormData({...contactFormData, notes: e.target.value})} 
-                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] transition-colors min-h-[120px]" 
+                className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-4 py-2 text-xs font-bold outline-none text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] transition-colors min-h-[120px] resize-y" 
                 placeholder="Add special notes..."
               />
             </div>

@@ -10,6 +10,7 @@ const PrioritySelect = ({
   filterMode = false,
   placeholder = 'Priority',
   className = '',
+  variant,
 }) => (
   <NexusDropdown
     label={label}
@@ -17,9 +18,12 @@ const PrioritySelect = ({
     value={value}
     onChange={onChange}
     disabled={disabled}
-    placeholder={placeholder}
+    placeholder={filterMode && placeholder === 'Priority' ? 'All priorities' : placeholder}
     className={className}
+    variant={variant}
   />
 );
+
+PrioritySelect.displayName = 'PrioritySelect';
 
 export default PrioritySelect;

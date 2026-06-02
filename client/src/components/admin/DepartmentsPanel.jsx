@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, Trash2, FileText, BarChart3, Pencil, CheckSquare, Square } from 'lucide-react';
-import { Card, Button, Input, Badge, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui';
+import { Button, Input, Badge, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui';
 import {
   useCreateDepartment,
   useUpdateDepartment,
@@ -203,7 +203,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
 
   return (
     <>
-      <Card className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-4 h-fit">
+      <section className="space-y-4 border-t border-[var(--color-bg-border)] pt-4 h-fit">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Building2 size={14} className="text-[var(--color-action-primary)]" />
@@ -263,7 +263,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
             return (
               <div
                 key={dept._id}
-                className="p-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-lg"
+                className="py-2 border-b border-[var(--color-bg-border)] last:border-b-0"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold uppercase tracking-tight text-[10px] truncate">{dept.name}</span>
@@ -305,7 +305,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
             );
           })}
         </div>
-      </Card>
+      </section>
 
       <ModalShell isOpen={!!editingDept} onClose={() => setEditingDept(null)} size="lg">
         <ModalHeader

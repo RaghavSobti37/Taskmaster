@@ -641,167 +641,26 @@ if (!fs.existsSync(TEMPLATE_DIR)) {
   }
 }
 
-// Pre-populate default templates if empty
+// Pre-populate default templates if empty (copy from bundled server/templates)
+const BUNDLED_TEMPLATE_DIR = path.join(__dirname, '..', 'templates');
+
 const seedDefaultTemplates = () => {
   if (!fs.existsSync(TEMPLATE_DIR)) return;
   try {
     const files = fs.readdirSync(TEMPLATE_DIR);
     if (files.length > 0) return;
-  } catch(e) {
+  } catch (e) {
     return;
   }
 
-  const marketingHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Exclusive Announcement</title>
-</head>
-<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-          <!-- Banner -->
-          <tr>
-            <td>
-              <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&h=250&q=80" alt="Banner" style="width:100%;height:auto;display:block;border-bottom:1px solid #1f2937;" />
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:40px 32px;">
-              <h2 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">Unlocking New Possibilities</h2>
-              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">Hello {{name}},</p>
-              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">We are thrilled to bring you our latest updates. We have optimized our pipeline to deliver maximum performance and reliability. Join us to explore how these features can accelerate your workflow.</p>
-              <!-- CTA -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:32px 0;">
-                <tr>
-                  <td align="center">
-                    <a href="{{cta_url}}" style="display:inline-block;background:linear-gradient(135deg,#0284c7 0%,#0369a1 100%);color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:16px 36px;border-radius:12px;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 15px -3px rgba(2,132,199,0.3);">Explore Features</a>
-                  </td>
-                </tr>
-              </table>
-              <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0;text-align:center;">Have questions? Reply directly to this email or visit our Help Center.</p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="background-color:#0f172a;padding:24px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
-              <p style="margin:0 0 8px 0;">You are receiving this because you subscribed to our updates.</p>
-              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  const reminderHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Session Reminder</title>
-</head>
-<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;padding:40px 32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-          <tr>
-            <td align="center" style="padding-bottom:24px;border-bottom:1px solid #1f2937;">
-              <h2 style="font-size:20px;font-weight:800;color:#38bdf8;margin:0 0 4px 0;text-transform:uppercase;">The Shakti Collective</h2>
-              <p style="font-size:12px;color:#94a3b8;margin:0;text-transform:uppercase;letter-spacing:2px;">Session Reminder</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:24px 0;font-size:15px;line-height:1.6;color:#cbd5e1;">
-              <p style="margin:0 0 16px 0;">Hello {{name}},</p>
-              <p style="margin:0 0 24px 0;">This is a friendly reminder for your upcoming scheduled collective session. Please find the alignment details below:</p>
-              <div style="background-color:#1e293b;border-left:4px solid #38bdf8;padding:16px 20px;border-radius:10px;margin-bottom:24px;">
-                <p style="margin:0 0 4px 0;font-size:16px;font-weight:700;color:#f8fafc;">Acoustic Alignment Session</p>
-                <p style="margin:0 0 2px 0;font-size:13px;color:#cbd5e1;"><strong>Date:</strong> Tomorrow</p>
-                <p style="margin:0;font-size:13px;color:#cbd5e1;"><strong>Time:</strong> 4:00 PM IST</p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding-bottom:24px;">
-              <a href="{{cta_url}}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Confirm Attendance</a>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="border-top:1px solid #1f2937;padding-top:20px;font-size:11px;color:#64748b;">
-              <p style="margin:0;">The Shakti Collective • <a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  const newsletterHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Monthly Newsletter</title>
-</head>
-<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-          <!-- Header -->
-          <td align="center" style="background-color:#1e293b;padding:32px 24px;border-bottom:1px solid #1f2937;">
-            <h1 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0;text-transform:uppercase;letter-spacing:3px;">SHAKTI DIGEST</h1>
-            <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;text-transform:uppercase;letter-spacing:4px;">Monthly Newsletter & updates</p>
-          </td>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px;">
-              <p style="font-size:14px;color:#94a3b8;margin:0 0 8px 0;font-weight:bold;text-transform:uppercase;">Update for {{name}}</p>
-              <h2 style="font-size:20px;font-weight:700;color:#f8fafc;margin:0 0 16px 0;">This Month at the Collective</h2>
-              <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 20px 0;">Welcome to this month's digest. We have been working hard to push boundary lines in music production, artist routing networks, and performance optimization. Here is a summary of what's new:</p>
-              
-              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">1. Advanced routing pipelines</h3>
-              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 16px 0;">Sales rep assignment metrics are now protected under isolated MongoDB transactions to eliminate duplicate allocations.</p>
-
-              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">2. Dynamic geolocation metrics</h3>
-              <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">We now track exact client locations on email open and click events to provide complete geographical breakdown analytics.</p>
-              
-              <!-- CTA -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:24px 0;">
-                <tr>
-                  <td align="center">
-                    <a href="{{cta_url}}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;">Read Full Blog</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
-              <p style="margin:0 0 6px 0;">The Shakti Collective • indigenously rooted music</p>
-              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
+  const templateNames = ['marketing.html', 'session-reminder.html', 'newsletter.html'];
   try {
-    fs.writeFileSync(path.join(TEMPLATE_DIR, 'marketing.html'), marketingHTML, 'utf8');
-    fs.writeFileSync(path.join(TEMPLATE_DIR, 'session-reminder.html'), reminderHTML, 'utf8');
-    fs.writeFileSync(path.join(TEMPLATE_DIR, 'newsletter.html'), newsletterHTML, 'utf8');
-  } catch(e) {
+    for (const name of templateNames) {
+      const src = path.join(BUNDLED_TEMPLATE_DIR, name);
+      if (!fs.existsSync(src)) continue;
+      fs.copyFileSync(src, path.join(TEMPLATE_DIR, name));
+    }
+  } catch (e) {
     console.error('Failed to seed templates:', e);
   }
 };

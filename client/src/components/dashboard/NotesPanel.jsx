@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { StickyNote, Save, Trash2 } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { DashboardWidgetShell, DataListRow, Button } from '../ui';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
 import {
   useUserNotes,
@@ -64,14 +64,13 @@ const NotesPanel = () => {
   const saving = createNote.isPending || updateNote.isPending;
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden shrink-0">
-      <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-        <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-          <StickyNote size={14} className="text-amber-500" /> Private Notes
-        </h4>
-      </div>
-
-      <div className="p-3 border-b border-[var(--color-bg-border)] space-y-2 bg-[var(--color-bg-workspace)]/40">
+    <DashboardWidgetShell
+      className="shrink-0"
+      bodyClassName="p-0 flex flex-col"
+      title="Private Notes"
+      icon={StickyNote}
+    >
+      <div className="p-3 border-b border-[var(--color-bg-border)] space-y-2">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -95,7 +94,7 @@ const NotesPanel = () => {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full text-[11px] min-h-[72px] bg-[var(--color-bg-workspace)] rounded-lg p-2 border border-[var(--color-bg-border)] outline-none resize-y"
+          className="w-full text-[11px] min-h-[72px] bg-transparent border-0 border-b border-[var(--color-bg-border)] py-2 outline-none resize-y placeholder:text-[var(--color-text-muted)]"
           placeholder="Write a note..."
         />
         <div className="flex items-center gap-2">
@@ -110,34 +109,35 @@ const NotesPanel = () => {
 
       {(isLoading || notes.length > 0) && (
       <div
-        className={`p-2 space-y-1 ${
-          notes.length > 4 ? 'max-h-[min(40vh,280px)] overflow-y-auto custom-scrollbar' : ''
-        }`}
+        className={`-mx-0 ${notes.length > 4 ? 'max-h-[min(40vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
       >
-        {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-2 py-1">Loading...</p>}
+        {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-4 py-2">Loading...</p>}
         {notes.map((note) => {
           const projectName = note.projectId?.name || 'Personal';
           const dateLabel = format(new Date(note.updatedAt || note.createdAt), 'MMM d, yyyy');
           return (
-            <button
+            <DataListRow
               key={note._id}
-              type="button"
               onClick={() => loadNote(note)}
-              className={`w-full text-left px-3 py-2 rounded-xl border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-secondary)] transition-colors ${editingId === note._id ? 'ring-1 ring-[var(--color-action-primary)]' : ''}`}
-            >
-              <div className="flex items-center justify-between gap-2 mb-0.5">
-                <span className="text-[9px] font-black uppercase text-[var(--color-text-muted)]">{dateLabel}</span>
-                <span className="text-[9px] font-bold text-[var(--color-action-primary)] truncate">{projectName}</span>
-              </div>
-              <p className="text-[11px] text-[var(--color-text-secondary)] truncate">{notePreview(note.content)}</p>
-            </button>
+              accentColor={editingId === note._id ? 'var(--color-action-primary)' : undefined}
+              className={editingId === note._id ? 'bg-[var(--color-bg-secondary)]' : ''}
+              primary={
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className="text-[9px] font-black uppercase text-[var(--color-text-muted)]">{dateLabel}</span>
+                  <span className="text-[9px] font-bold text-[var(--color-action-primary)] truncate">{projectName}</span>
+                </div>
+              }
+              secondary={
+                <p className="text-[11px] text-[var(--color-text-secondary)] truncate">{notePreview(note.content)}</p>
+              }
+            />
           );
         })}
       </div>
       )}
 
       {editingId && (
-        <div className="px-3 pb-2">
+        <div className="px-3 pb-2 pt-1">
           <button
             type="button"
             onClick={() => deleteNote.mutate(editingId, { onSuccess: resetComposer })}
@@ -147,7 +147,7 @@ const NotesPanel = () => {
           </button>
         </div>
       )}
-    </Card>
+    </DashboardWidgetShell>
   );
 };
 

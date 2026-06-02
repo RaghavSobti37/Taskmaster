@@ -174,7 +174,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     const bannerImgTag = bannerImg
       ? `<tr>
           <td align="center" style="padding-bottom: 24px;">
-            <img src="${bannerImg}" alt="Session Banner" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; border: 1px solid #1F2937;" />
+            <img src="${bannerImg}" alt="Session Banner" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 6px; border: 1px solid #334155;" />
           </td>
         </tr>`
       : '';
@@ -186,27 +186,27 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Session Reminder: ${logoText}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0B0F19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F1F5F9; -webkit-font-smoothing: antialiased;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #111827; border: 1px solid #1F2937; border-radius: 24px; padding: 48px 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 32px 28px;">
           <tr>
-            <td align="center" style="padding-bottom: 32px; border-bottom: 1px solid #1F2937; margin-bottom: 24px;">
-              <h1 style="font-size: 28px; font-weight: 800; color: #38BDF8; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 2px;">${logoText}</h1>
-              <p style="font-size: 14px; font-weight: 600; color: #94A3B8; margin: 0; text-transform: uppercase; letter-spacing: 4px;">Exclusive Session Reminder</p>
+            <td align="center" style="padding-bottom: 24px; border-bottom: 1px solid #334155; margin-bottom: 24px;">
+              <h1 style="font-size: 22px; font-weight: 700; color: #2dd4bf; margin: 0 0 8px 0; letter-spacing: 0.02em;">${logoText}</h1>
+              <p style="font-size: 13px; font-weight: 600; color: #94a3b8; margin: 0; text-transform: uppercase; letter-spacing: 0.1em;">Exclusive Session Reminder</p>
             </td>
           </tr>
           ${bannerImgTag}
           <tr>
-            <td style="padding: 24px 0 28px 0; font-size: 16px; line-height: 1.6; color: #E2E8F0;">
+            <td style="padding: 24px 0 28px 0; font-size: 15px; line-height: 1.6; color: #cbd5e1;">
               <p style="margin: 0 0 20px 0;">Namaste <strong>Valued Member</strong>,</p>
               <p style="margin: 0 0 24px 0;">${messageText}</p>
               
-              <div style="background-color: #1E293B; border-left: 4px solid #38BDF8; padding: 20px 24px; border-radius: 12px; margin-bottom: 32px;">
-                <p style="margin: 0 0 8px 0; font-size: 14px; color: #94A3B8; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Session Details</p>
-                <p style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #F8FAFC;">Shakti Studio Alignment</p>
-                <p style="margin: 0; font-size: 14px; color: #CBD5E1;">Date: ${dateText} | Location: ${locationText}</p>
+              <div style="background-color: #334155; border: 1px solid #475569; border-left: 3px solid #10b981; padding: 16px 20px; border-radius: 6px; margin-bottom: 32px;">
+                <p style="margin: 0 0 8px 0; font-size: 13px; color: #94a3b8; text-transform: uppercase; font-weight: 600; letter-spacing: 0.06em;">Session Details</p>
+                <p style="margin: 0 0 4px 0; font-size: 18px; font-weight: 600; color: #f8fafc;">Shakti Studio Alignment</p>
+                <p style="margin: 0; font-size: 14px; color: #cbd5e1;">Date: ${dateText} | Location: ${locationText}</p>
               </div>
 
               <p style="margin: 0 0 36px 0; text-align: center;">Please confirm your attendance or review session prerequisites on our official collective portal.</p>
@@ -214,12 +214,12 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           </tr>
           <tr>
             <td align="center" style="padding-bottom: 40px;">
-              <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%); color: #FFFFFF; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 40px; border-radius: 16px; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.5);">${ctaText}</a>
+              <a href="${ctaUrl}" style="display: inline-block; background: #126d5e; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 6px;">${ctaText}</a>
             </td>
           </tr>
           <tr>
-            <td align="center" style="border-top:1px solid #1f2937;padding-top:20px;font-size:11px;color:#64748b;">
-              <p style="margin:0;">The Shakti Collective • <a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+            <td align="center" style="border-top:1px solid #334155;padding-top:20px;font-size:11px;color:#64748b;">
+              <p style="margin:0;">The Shakti Collective • <a href="{{unsubscribe_url}}" style="color:#2dd4bf;text-decoration:none;">Unsubscribe</a></p>
             </td>
           </tr>
         </table>
@@ -235,7 +235,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     const bannerImgTag = bannerImg
       ? `<tr>
           <td>
-            <img src="${bannerImg}" alt="Banner" style="width:100%;height:auto;display:block;border-bottom:1px solid #1f2937;" />
+            <img src="${bannerImg}" alt="Banner" style="width:100%;height:auto;display:block;border-bottom:1px solid #334155;" />
           </td>
         </tr>`
       : '';
@@ -246,21 +246,21 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   <meta charset="utf-8">
   <title>Exclusive Announcement</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+<body style="margin:0;padding:0;background-color:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;">
           ${bannerImgTag}
           <tr>
-            <td style="padding:40px 32px;">
-              <h2 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0 0 16px 0;text-transform:uppercase;letter-spacing:1px;">${titleText}</h2>
+            <td style="padding:32px 28px;">
+              <h2 style="font-size:22px;font-weight:700;color:#2dd4bf;margin:0 0 16px 0;letter-spacing:0.02em;">${titleText}</h2>
               <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">Hello {{name}},</p>
               <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">${messageText}</p>
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:32px 0;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:28px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(135deg,#0284c7 0%,#0369a1 100%);color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:16px 36px;border-radius:12px;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 15px -3px rgba(2,132,199,0.3);">${ctaText}</a>
+                    <a href="${ctaUrl}" style="display:inline-block;background:#126d5e;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:6px;">${ctaText}</a>
                   </td>
                 </tr>
               </table>
@@ -268,9 +268,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             </td>
           </tr>
           <tr>
-            <td align="center" style="background-color:#0f172a;padding:24px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #334155;">
               <p style="margin:0 0 8px 0;">You are receiving this because you subscribed to our updates.</p>
-              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#2dd4bf;text-decoration:none;">Unsubscribe</a></p>
             </td>
           </tr>
         </table>
@@ -290,42 +290,42 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   <meta charset="utf-8">
   <title>Monthly Newsletter</title>
 </head>
-<body style="margin:0;padding:0;background-color:#0b0f19;color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 20px;">
+<body style="margin:0;padding:0;background-color:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0f172a;padding:32px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#111827;border:1px solid #1f2937;border-radius:24px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-          <tr align="center" style="background-color:#1e293b;padding:32px 24px;border-bottom:1px solid #1f2937;">
-            <td align="center" style="padding: 32px 24px;">
-              <h1 style="font-size:24px;font-weight:800;color:#38bdf8;margin:0;text-transform:uppercase;letter-spacing:3px;">${logoText}</h1>
-              <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;text-transform:uppercase;letter-spacing:4px;">Monthly Newsletter & updates</p>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;">
+          <tr align="center" style="background-color:#1e293b;border-bottom:1px solid #334155;">
+            <td align="center" style="padding: 28px 24px;">
+              <h1 style="font-size:22px;font-weight:700;color:#2dd4bf;margin:0;text-transform:uppercase;letter-spacing:0.08em;">${logoText}</h1>
+              <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;text-transform:uppercase;letter-spacing:0.12em;">Monthly Newsletter & updates</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:32px;">
-              <p style="font-size:14px;color:#94a3b8;margin:0 0 8px 0;font-weight:bold;text-transform:uppercase;">Update for {{name}}</p>
+            <td style="padding:28px;">
+              <p style="font-size:13px;color:#94a3b8;margin:0 0 8px 0;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Update for {{name}}</p>
               <h2 style="font-size:20px;font-weight:700;color:#f8fafc;margin:0 0 16px 0;">${titleText}</h2>
               <p style="font-size:15px;line-height:1.6;color:#cbd5e1;margin:0 0 20px 0;">${messageText}</p>
               
-              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">1. ${feature1Title}</h3>
+              <h3 style="font-size:15px;color:#2dd4bf;margin:24px 0 8px 0;font-weight:600;">1. ${feature1Title}</h3>
               <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 16px 0;">${feature1Text}</p>
 
-              <h3 style="font-size:16px;color:#38bdf8;margin:24px 0 8px 0;font-weight:bold;">2. ${feature2Title}</h3>
+              <h3 style="font-size:15px;color:#2dd4bf;margin:24px 0 8px 0;font-weight:600;">2. ${feature2Title}</h3>
               <p style="font-size:14px;line-height:1.6;color:#cbd5e1;margin:0 0 24px 0;">${feature2Text}</p>
               
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin:24px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${ctaUrl}" style="display:inline-block;background:#0284c7;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:8px;text-transform:uppercase;">${ctaText}</a>
+                    <a href="${ctaUrl}" style="display:inline-block;background:#126d5e;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;padding:12px 24px;border-radius:6px;">${ctaText}</a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #1f2937;">
+            <td align="center" style="background-color:#0f172a;padding:20px;font-size:11px;color:#64748b;border-top:1px solid #334155;">
               <p style="margin:0 0 6px 0;">${footerText}</p>
-              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#38bdf8;text-decoration:none;">Unsubscribe</a></p>
+              <p style="margin:0;"><a href="{{unsubscribe_url}}" style="color:#2dd4bf;text-decoration:none;">Unsubscribe</a></p>
             </td>
           </tr>
         </table>
@@ -344,11 +344,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   <meta charset="utf-8">
   <title>Update</title>
 </head>
-<body style="font-family: monospace; font-size: 14px; line-height: 1.5; color: #cbd5e1; background-color: #0b0f19; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #111827; border: 1px solid #1f2937; padding: 24px; border-radius: 12px;">
+<body style="font-family: monospace; font-size: 14px; line-height: 1.5; color: #cbd5e1; background-color: #0f172a; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; padding: 24px; border-radius: 8px;">
     <pre style="white-space: pre-wrap; font-family: inherit; margin: 0 0 24px 0;">${messageText}</pre>
-    <div style="border-top: 1px solid #1f2937; padding-top: 12px; font-size: 11px; color: #64748b;">
-      <a href="{{unsubscribe_url}}" style="color: #ef4444; text-decoration: underline;">Unsubscribe</a>
+    <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 11px; color: #64748b;">
+      <a href="{{unsubscribe_url}}" style="color: #2dd4bf; text-decoration: underline;">Unsubscribe</a>
     </div>
   </div>
 </body>
@@ -438,7 +438,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     if (!content) return '';
     if (isRawHtmlPreview) return content;
     const sanitized = DOMPurify.sanitize(content);
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:16px;">${sanitized}</body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:16px;background-color:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${sanitized}</body></html>`;
   }, [content, isRawHtmlPreview]);
 
   const findProfile = (id) => profiles?.find((p) => String(p._id) === String(id));

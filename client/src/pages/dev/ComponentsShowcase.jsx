@@ -34,6 +34,11 @@ import {
   Spinner,
   LoadingState,
   PageSkeleton,
+  DashboardWidgetShell,
+  DataListRow,
+  ChartSurface,
+  DeltaBadge,
+  DataOverviewSection,
 } from '../../components/ui';
 
 const SHOWCASE_MOCK_USERS = [
@@ -118,6 +123,7 @@ const ComponentsShowcase = () => {
             ['inputs', 'Inputs'],
             ['badges', 'Badges'],
             ['cards', 'Cards'],
+            ['subtractive', 'Subtractive'],
             ['dropdowns', 'Dropdowns'],
             ['modals', 'Modals'],
             ['tables', 'Tables'],
@@ -149,7 +155,7 @@ const ComponentsShowcase = () => {
       {activeTab === 'tokens' && (
         <Card className="p-6 space-y-4">
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Design tokens from <code className="text-[10px]">index.css</code> — cream/teal brand, pastel semantic badges.
+            App shell uses slate neutrals; TSC cream/teal on <code className="text-[10px]">.tm-marketing-page</code> only.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -245,9 +251,9 @@ const ComponentsShowcase = () => {
 
         <ShowcaseSection id="cards" title="Cards & Stats">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label="Total Leads" value="1,284" icon={TrendingUp} variant="mint" subValue="+12%" />
+            <StatCard label="Total Leads" value="1,284" icon={TrendingUp} variant="mint" subValue="+12%" delta={{ value: '+12%', direction: 'up' }} active />
             <StatCard label="Pipeline" value="₹4.2L" icon={Database} variant="info" />
-            <StatCard label="Overdue" value="7" icon={Bell} variant="rose" />
+            <StatCard label="Overdue" value="7" icon={Bell} variant="rose" delta={{ value: '-2', direction: 'down' }} />
             <StatCard label="Neutral" value="42" icon={Inbox} variant="slate" />
           </div>
           <SectionCard
@@ -263,6 +269,41 @@ const ComponentsShowcase = () => {
             <p className="text-xs font-bold">Hover Card</p>
             <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Interactive surface variant</p>
           </Card>
+        </ShowcaseSection>
+
+        <ShowcaseSection
+          id="subtractive"
+          title="Subtractive UI"
+          description="Flat surfaces, rule dividers, typography hierarchy — no nested card boxes or static shadows."
+        >
+          <VariantRow label="Delta badges">
+            <DeltaBadge value="+12%" direction="up" />
+            <DeltaBadge value="-8%" direction="down" />
+          </VariantRow>
+          <DashboardWidgetShell title="Widget shell" actions={<Button size="xs" variant="ghost">Filter</Button>}>
+            <div className="divide-y divide-[var(--color-bg-border)]">
+              <DataListRow
+                primary={<span className="tm-data-primary">Alpha task</span>}
+                secondary={<span className="tm-data-meta">#TSC · Due today</span>}
+                trailing={<span className="tabular-nums tm-data-meta">4h</span>}
+              />
+              <DataListRow
+                primary={<span className="tm-data-primary">Beta review</span>}
+                secondary={<span className="tm-data-meta">#CRM · Overdue</span>}
+                trailing={<span className="tabular-nums tm-data-meta">1d</span>}
+              />
+            </div>
+          </DashboardWidgetShell>
+          <VariantRow label="Ghost input (FSW inline edit)">
+            <div className="max-w-sm w-full">
+              <Input variant="ghost" defaultValue="Editable field value" />
+            </div>
+          </VariantRow>
+          <VariantRow label="Flush DataTable">
+            <div className="w-full">
+              <DataTable columns={tableColumns} data={SHOWCASE_TABLE_DATA} paginated={false} />
+            </div>
+          </VariantRow>
         </ShowcaseSection>
 
         <ShowcaseSection

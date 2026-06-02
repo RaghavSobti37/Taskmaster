@@ -12,6 +12,7 @@ export { default as TodosTodayCard } from './TodosTodayCard';
 export { default as DashboardTaskRow } from './DashboardTaskRow';
 export { default as ProjectsTodayCard } from './ProjectsTodayCard';
 export { default as NotesPanel } from './NotesPanel';
+export { default as MarkAttendanceCard } from './MarkAttendanceCard';
 export { default as PinBoardMessages } from './PinBoardMessages';
 export { default as PinBoardComposer } from './PinBoardComposer';
 export { default as ReviewQueueCard } from './ReviewQueueCard';

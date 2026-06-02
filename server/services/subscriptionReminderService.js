@@ -34,20 +34,20 @@ const getFromEmail = () => {
 };
 
 const buildReminderHtml = (subscription, usedByName) => `
-  <div style="font-family:Arial,sans-serif;color:#111;max-width:640px;">
-    <h2 style="color:#b45309;">Subscription renewal in ${REMINDER_DAYS} days</h2>
-    <p>The following subscription is due soon. Please arrange payment before the due date.</p>
-    <table style="border-collapse:collapse;width:100%;margin:16px 0;">
-      <tr><td><strong>Name</strong></td><td>${subscription.name}</td></tr>
-      <tr><td><strong>Amount</strong></td><td>${formatInr(subscription.amount)}</td></tr>
-      <tr><td><strong>Due date</strong></td><td>${formatDate(subscription.dueDate)}</td></tr>
-      <tr><td><strong>Type</strong></td><td>${subscription.type || '—'}</td></tr>
-      <tr><td><strong>Periodicity</strong></td><td>${subscription.periodicity || '—'}</td></tr>
-      <tr><td><strong>Payment mode</strong></td><td>${subscription.paymentMode || '—'}</td></tr>
-      <tr><td><strong>Used by</strong></td><td>${usedByName || '—'}</td></tr>
-      ${subscription.notes ? `<tr><td><strong>Notes</strong></td><td>${subscription.notes}</td></tr>` : ''}
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;">
+    <h2 style="color:#2dd4bf;margin:0 0 12px;font-size:20px;font-weight:600;">Subscription renewal in ${REMINDER_DAYS} days</h2>
+    <p style="margin:0 0 16px;line-height:1.6;">The following subscription is due soon. Please arrange payment before the due date.</p>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Name</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.name}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Amount</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatInr(subscription.amount)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Due date</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatDate(subscription.dueDate)}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Type</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.type || '—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Periodicity</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.periodicity || '—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Payment mode</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.paymentMode || '—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Used by</strong></td><td style="padding:6px 0;color:#f8fafc;">${usedByName || '—'}</td></tr>
+      ${subscription.notes ? `<tr><td style="padding:6px 0;color:#94a3b8;"><strong>Notes</strong></td><td style="padding:6px 0;color:#f8fafc;">${subscription.notes}</td></tr>` : ''}
     </table>
-    <p style="color:#666;font-size:13px;">This is an automated reminder from CoreKnot.</p>
+    <p style="color:#64748b;font-size:13px;margin:0;">This is an automated reminder from CoreKnot.</p>
   </div>
 `;
 

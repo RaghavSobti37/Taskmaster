@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
@@ -47,15 +47,17 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
   );
 };
 
-export const Card = ({ children, className = '', hover = false, variant = 'surface', ...props }) => {
+export const Card = ({ children, className = '', hover = false, variant = 'flat', divided = false, ...props }) => {
   const variants = {
-    surface: 'bg-[var(--color-bg-surface)] border-[var(--color-bg-border)]',
-    secondary: 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]',
+    flat: 'bg-[var(--color-bg-surface)]',
+    subtle: 'bg-[var(--color-bg-surface)] border-t border-[var(--color-bg-border)]',
+    surface: 'bg-[var(--color-bg-surface)]',
+    secondary: 'bg-[var(--color-bg-secondary)]',
   };
 
   return (
     <div 
-      className={`rounded-[var(--radius-atomic)] border shadow-sm transition-all ${variants[variant]} ${hover ? 'hover:border-[var(--color-action-primary)]/50 cursor-pointer' : ''} ${className}`}
+      className={`rounded-[var(--radius-atomic)] transition-colors ${variants[variant] || variants.flat} ${divided ? 'border-t border-[var(--color-bg-border)]' : ''} ${hover ? 'hover:bg-[var(--color-bg-secondary)] cursor-pointer' : ''} ${className}`}
       {...props}
     >
       {children}
@@ -74,14 +76,15 @@ export const PageContainer = ({ children, className = '', maxWidth = '1600px' })
 );
 
 export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
-  <div className={`flex flex-wrap lg:flex-nowrap items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-hidden ${className}`}>
+  <div className={`tm-toolbar-control inline-flex flex-nowrap items-center gap-0.5 bg-[var(--color-bg-secondary)] px-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-auto custom-scrollbar shrink-0 ${className}`}>
     {tabs.map((tab) => (
       <button
         key={tab.id}
+        type="button"
         onClick={() => onChange(tab.id)}
-        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
+        className={`px-2.5 h-7 text-[10px] font-bold uppercase tracking-wider transition-colors rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
           activeTab === tab.id
-            ? 'bg-[var(--color-bg-surface)] text-[var(--color-action-primary)] shadow-sm border border-[var(--color-bg-border)]'
+            ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
         }`}
       >
@@ -115,7 +118,29 @@ export const FormFieldGrid = ({ children, columns = 2, className = '' }) => {
   );
 };
 
-export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, ...props }) => (
+export const Input = ({ label, icon: Icon, multiline = false, rows = 4, className = '', endAdornment, error, hint, variant = 'field', autoGrow = false, onChange, ...props }) => {
+  const textareaRef = useRef(null);
+  const fieldStyles = variant === 'ghost'
+    ? 'bg-transparent border-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] focus:border-transparent'
+    : 'bg-[var(--color-bg-primary)] border-[var(--color-bg-border)] focus:border-[var(--color-action-primary)]';
+
+  const syncTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !multiline || !autoGrow) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [multiline, autoGrow]);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [props.value, syncTextareaHeight]);
+
+  const handleTextareaChange = (e) => {
+    onChange?.(e);
+    syncTextareaHeight();
+  };
+
+  return (
   <div className="flex flex-col gap-2 w-full min-w-0">
     {label && (
       <label className="block tm-section-label">
@@ -128,18 +153,23 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
       )}
       {multiline ? (
         <textarea
+          ref={textareaRef}
           rows={rows}
+          onChange={handleTextareaChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`block w-full min-w-0 min-h-[5rem] p-3 bg-[var(--color-bg-primary)] border rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm resize-y ${
-            error ? 'border-rose-500 focus:border-rose-500' : 'border-[var(--color-bg-border)]'
+          className={`block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
+            autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
+          } ${fieldStyles} ${
+            error ? 'border-rose-500 focus:border-rose-500' : ''
           } ${className}`}
           {...props}
         />
       ) : (
         <input
+          onChange={onChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 bg-[var(--color-bg-primary)] border rounded-[var(--radius-atomic)] focus:border-[var(--color-action-primary)] outline-none transition-all text-sm ${
-            error ? 'border-rose-500 focus:border-rose-500' : 'border-[var(--color-bg-border)]'
+          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
+            error ? 'border-rose-500 focus:border-rose-500' : ''
           } ${className}`}
           {...props}
         />
@@ -153,7 +183,8 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
     {error && <p className="text-[10px] font-bold text-rose-400">{error}</p>}
     {hint && !error && <p className="text-[10px] font-bold text-amber-400">{hint}</p>}
   </div>
-);
+  );
+};
 
 export const Badge = ({ children, variant = 'info', className = '' }) => {
   const variants = {
@@ -209,37 +240,44 @@ export const InfoButton = ({ text }) => {
   );
 };
 
-export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, children, onClick, className = '' }) => {
-  const variants = {
-    info: 'border-[var(--color-pastel-blue-text)]/20 bg-[var(--color-pastel-blue-bg)] text-[var(--color-pastel-blue-text)]',
-    mint: 'border-[var(--color-pastel-mint-text)]/20 bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)]',
-    rose: 'border-[var(--color-pastel-rose-text)]/20 bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)]',
-    apricot: 'border-[var(--color-pastel-apricot-text)]/20 bg-[var(--color-pastel-apricot-bg)] text-[var(--color-pastel-apricot-text)]',
-    slate: 'border-[var(--color-pastel-slate-text)]/20 bg-[var(--color-pastel-slate-bg)] text-[var(--color-pastel-slate-text)]',
+export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, children, onClick, className = '', active = false, delta }) => {
+  const accentColors = {
+    info: 'border-l-[var(--color-pastel-blue-text)]',
+    mint: 'border-l-[var(--color-pastel-mint-text)]',
+    rose: 'border-l-[var(--color-pastel-rose-text)]',
+    apricot: 'border-l-[var(--color-pastel-apricot-text)]',
+    slate: 'border-l-[var(--color-pastel-slate-text)]',
   };
 
   return (
-    <Card 
+    <div 
       onClick={onClick} 
-      className={`p-3 flex flex-col gap-2 !rounded-[var(--radius-atomic)] border-l-2 ${variants[variant]} ${onClick ? 'cursor-pointer hover:border-[var(--color-action-primary)]/50 active:scale-[0.99] transition-transform' : ''} h-full ${className}`}
+      className={`p-3 flex flex-col gap-2 rounded-[var(--radius-atomic)] border-l-2 bg-[var(--color-bg-surface)] ${accentColors[variant] || accentColors.slate} ${active ? 'ring-1 ring-[var(--color-action-primary)]' : ''} ${onClick ? 'cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors' : ''} h-full ${className}`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 opacity-70">
-          <Icon size={12} strokeWidth={2.5} />
-          <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+        <div className="flex items-center gap-1.5">
+          {Icon && <Icon size={12} strokeWidth={2.5} className="text-[var(--color-text-muted)]" />}
+          <span className="tm-widget-label leading-none">
             {label}
             {info && <InfoButton text={info} />}
           </span>
         </div>
-        {subValue && <Badge variant={variant} className="!py-0 !px-1.5 !text-[9px] font-black">{subValue}</Badge>}
+        {subValue && <Badge variant={variant} className="!py-0 !px-1.5 !text-[9px]">{subValue}</Badge>}
       </div>
-      <div className="flex items-center justify-between mt-auto">
-        <span className="text-2xl font-black tracking-tighter text-[var(--color-text-primary)] leading-none">{value}</span>
+      <div className="flex items-end justify-between gap-2 mt-auto">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="tm-data-primary tabular-nums text-2xl font-semibold leading-none">{value}</span>
+          {delta && (
+            <span className={delta.direction === 'down' ? 'tm-delta-negative' : 'tm-delta-positive'}>
+              {delta.direction === 'down' ? '↓' : '↑'} {delta.value}
+            </span>
+          )}
+        </div>
         <div className="flex-shrink-0 flex items-center justify-end">
           {children}
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -256,7 +294,7 @@ export const TablePagination = ({
   const endIndex = Math.min(startIndex + (rowCount || pageSize), totalItems);
 
   return (
-    <div className="p-3 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
+    <div className="p-3 border-t border-[var(--color-bg-border)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-[var(--color-text-muted)]">
       <div className="flex items-center gap-2">
         <span>Show</span>
         <select
@@ -409,7 +447,7 @@ export const DataTable = ({
   const actionColumns = columns.filter((c) => c.mobileAction);
 
   return (
-    <div className={`w-full flex flex-col border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] ${className}`}>
+    <div className={`w-full flex flex-col ${className}`}>
       <div
         ref={parentRef}
         className={`w-full max-lg:overflow-visible lg:overflow-y-auto lg:max-h-[600px] custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
@@ -417,7 +455,7 @@ export const DataTable = ({
         <table
           className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}
         >
-          <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
+          <thead className="border-b border-[var(--color-bg-border)]">
             <tr>
               {columns.map((col, i) => {
                 const sortKey = col.sortKey || col.key;
@@ -430,10 +468,11 @@ export const DataTable = ({
                     ? ArrowUp
                     : ArrowDown
                   : ArrowUpDown;
+                const alignClass = col.align === 'right' || col.numeric ? 'text-right' : '';
                 return (
                   <th
                     key={i}
-                    className={`px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap ${
+                    className={`px-4 py-2 tm-widget-label whitespace-nowrap ${alignClass} ${
                       sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
                     }`}
                     onClick={sortable ? () => handleSortClick(col) : undefined}
@@ -476,25 +515,28 @@ export const DataTable = ({
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = paginatedData[virtualRow.index];
               const rowId = getRowId?.(row);
+              const rowKey = rowId ?? virtualRow.index;
               return (
                 <tr 
-                  key={virtualRow.index}
+                  key={rowKey}
                   data-highlight-id={rowId || undefined}
                   onClick={(e) => {
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     onRowClick?.(row);
                   }}
-                  className="data-table-row cursor-pointer transition-none relative group hover:bg-[var(--color-bg-secondary)]"
+                  className="data-table-row cursor-pointer relative group"
                   style={{ height: `${virtualRow.size}px` }}
                 >
-                  {columns.map((col, j) => (
+                  {columns.map((col, j) => {
+                    const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
+                    return (
                     <td
                       key={j}
-                      className={`px-4 py-2 text-sm text-[var(--color-text-primary)] ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                      className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
                     >
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
-                  ))}
+                  );})}
                 </tr>
               );
             })}
@@ -507,21 +549,21 @@ export const DataTable = ({
         </table>
 
         {/* Mobile Responsive Card Stack (< lg) */}
-        <div className="grid grid-cols-1 gap-3 p-3 lg:hidden">
+        <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
           {showEmpty ? (
             <div className="px-4 py-12 text-center">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
-              {emptyDescription && <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{emptyDescription}</p>}
+              <p className="tm-widget-label">{emptyTitle}</p>
+              {emptyDescription && <p className="mt-2 tm-data-meta">{emptyDescription}</p>}
             </div>
           ) : paginatedData.map((row, i) => (
             <div
-              key={i}
+              key={getRowId?.(row) ?? i}
               data-highlight-id={getRowId?.(row) || undefined}
               onClick={(e) => {
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 onRowClick?.(row);
               }}
-              className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] cursor-pointer shadow-sm active:scale-[0.99] transition-transform min-w-0"
+              className="tm-data-row cursor-pointer min-w-0"
             >
               {primaryCol && (
                 <div className="min-w-0">
@@ -626,14 +668,14 @@ export const FullScreenWorkspace = ({
           className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
         >
           {/* Top Bar Navigation */}
-          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between px-4 sm:px-6 shrink-0">
+          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between px-4 sm:px-6 shrink-0">
              <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
-                <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-border)] rounded-lg transition-colors shrink-0">
+                <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0">
                    <X size={20} />
                 </button>
                 <div className="min-w-0">
-                   <h2 className="text-xs sm:text-sm font-black uppercase tracking-tight leading-none truncate">{title}</h2>
-                   {subtitle && <p className="text-[9px] sm:text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest mt-1 truncate">{subtitle}</p>}
+                   <h2 className="tm-data-primary text-sm font-medium leading-none truncate">{title}</h2>
+                   {subtitle && <p className="tm-data-meta text-xs mt-1 truncate">{subtitle}</p>}
                 </div>
              </div>
              {extraActions ? (
@@ -646,14 +688,14 @@ export const FullScreenWorkspace = ({
           {/* Main Layout Partition */}
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
              {/* Left Column: Canvas */}
-             <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
-             <div className={`${mainClassName} mx-auto space-y-6 lg:space-y-8`}>
+             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar bg-[var(--color-bg-surface)]">
+             <div className={`${mainClassName} mx-auto space-y-6`}>
                    {children}
                 </div>
              </div>
 
              {/* Right Column: Utility Drawer */}
-             <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+             <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 bg-[var(--color-bg-workspace-sidebar)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
                 <div className="space-y-6">
                    {sidebar}
                 </div>

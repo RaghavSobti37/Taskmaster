@@ -5,7 +5,7 @@ import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, UserPlus, X, Briefcase } from 'lucide-react';
-import { Badge, PageHeader, PageContainer, Card } from "../../components/ui";
+import { Badge, PageHeader, PageContainer } from "../../components/ui";
 import WorkspaceSelect from '../../components/forms/WorkspaceSelect';
 import { suggestProjectRole } from '../../utils/taskText';
 import { getDepartmentSlug, getDepartmentName } from '../../utils/departmentPermissions';
@@ -131,7 +131,7 @@ const ProjectCreate = () => {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="p-8 space-y-6">
+        <section className="py-8 space-y-6 border-b border-[var(--color-bg-border)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Project Name</label>
@@ -139,7 +139,7 @@ const ProjectCreate = () => {
                 type="text" 
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-black text-sm uppercase tracking-tight"
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none font-black text-sm uppercase tracking-tight"
                 placeholder="Enter project name"
                 required
               />
@@ -158,13 +158,13 @@ const ProjectCreate = () => {
             <textarea 
               value={desc}
               onChange={e => setDesc(e.target.value)}
-              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[120px] text-sm font-medium"
+              className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] focus:ring-2 focus:ring-[var(--color-action-primary)] outline-none min-h-[120px] text-sm font-medium"
               placeholder="Describe what this project is about..."
             />
           </div>
-        </Card>
+        </section>
 
-        <Card className="p-8 space-y-6">
+        <section className="py-8 space-y-6 border-b border-[var(--color-bg-border)]">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Team Members</label>
             <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ const ProjectCreate = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {members.map((m) => (
-                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] group gap-3">
+                <div key={m.userId} className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] group gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] text-blue-500 uppercase overflow-hidden">
                       {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" alt="" /> : m.name.substring(0, 2)}
@@ -215,27 +215,27 @@ const ProjectCreate = () => {
                 </div>
               ))}
               {members.length === 0 && (
-                <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl opacity-30">
+                <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
                   <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
                   <p className="text-[10px] font-black uppercase tracking-widest">No Members Added</p>
                 </div>
               )}
             </div>
           </div>
-        </Card>
+        </section>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-4 pt-4">
           <button 
             type="button" 
             onClick={() => navigate('/projects')}
-            className="px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-all"
+            className="px-8 py-3 rounded-[var(--radius-atomic)] font-black text-[10px] uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-all"
           >
             Cancel
           </button>
           <button 
             type="submit"
             disabled={loading || !name}
-            className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+            className="bg-[var(--color-action-primary)] text-white px-10 py-3 rounded-[var(--radius-atomic)] font-black text-[10px] uppercase tracking-widest hover:bg-[var(--color-action-hover)] disabled:opacity-50 transition-all flex items-center gap-2"
           >
              {loading ? 'Creating...' : <><Plus size={18} /> Create Project</>}
           </button>

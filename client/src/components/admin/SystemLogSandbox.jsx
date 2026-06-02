@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Terminal, Zap, AlertTriangle, CheckCircle, Link2 } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { Button } from '../ui';
 import { emitSystemEvent, getClientTraceId, startClientTrace } from '../../lib/systemLogBridge';
 import { SEVERITY, MODULE } from '../../lib/systemLogContract';
 
@@ -54,7 +54,7 @@ const SystemLogSandbox = () => {
   };
 
   return (
-    <Card className="p-4 border-dashed border-[var(--color-pastel-blue-text)]/30 space-y-3">
+    <section className="py-4 border-t border-dashed border-[var(--color-pastel-blue-text)]/30 space-y-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
         <Terminal className="w-4 h-4" />
         System Log Sandbox
@@ -107,7 +107,7 @@ const SystemLogSandbox = () => {
           Last trace: {lastTrace} · current session: {getClientTraceId()}
         </p>
       )}
-    </Card>
+    </section>
   );
 };
 

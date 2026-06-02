@@ -1,7 +1,7 @@
 import React from 'react';
 import { ClipboardCheck, Check, ExternalLink } from 'lucide-react';
-import { Card, Badge, DataLoading, Button } from '../ui';
-import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
+import { DashboardWidgetShell, Badge, DataLoading, Button } from '../ui';
+import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { resolveTaskId } from '../../utils/taskCompletion';
 import MentionTitle from '../mentions/MentionTitle';
@@ -24,10 +24,10 @@ const ReviewTaskRow = ({
 
   return (
     <div
-      className="tm-task-row flex items-stretch rounded-xl border border-amber-500/25 bg-amber-500/[0.04] overflow-hidden"
+      className="tm-task-row flex items-stretch overflow-hidden"
+      style={getTaskRowStyle(accent)}
       data-highlight-id={taskId}
     >
-      <div className="w-1 shrink-0 rounded-l-xl" style={{ backgroundColor: accent || '#f59e0b' }} aria-hidden />
       <div className="flex-1 min-w-0 p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <button
@@ -85,35 +85,36 @@ const ReviewQueueCard = ({
   onOpenProject,
 }) => {
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden h-full border-[rgba(255,255,255,0.08)]">
-      <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between gap-2 shrink-0">
-        <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)] mb-0">
-          <ClipboardCheck size={16} className="text-amber-500" />
-          Awaiting Your Review
-        </h4>
-        <Badge variant={tasks.length > 0 ? 'warning' : 'info'}>{tasks.length}</Badge>
-      </div>
-      <div className={`p-3 flex-1 flex flex-col ${!loading && tasks.length === 0 ? 'items-center justify-center' : 'space-y-2'} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}>
-        {loading && <DataLoading message="Loading reviews..." className="!py-3" />}
-        {!loading && tasks.length === 0 && (
-          <div className="flex items-center justify-center py-4 px-6 bg-emerald-500/10 rounded border border-emerald-500/20">
-            <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
+    <DashboardWidgetShell
+      className="h-full overflow-hidden"
+      bodyClassName={`p-0 flex flex-col flex-1 min-h-0 ${!loading && tasks.length === 0 ? 'items-center justify-center' : ''} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
+      title="Awaiting Your Review"
+      icon={ClipboardCheck}
+      actions={<Badge variant={tasks.length > 0 ? 'warning' : 'info'}>{tasks.length}</Badge>}
+    >
+      {loading && <DataLoading message="Loading reviews..." className="!py-3 px-3" />}
+      {!loading && tasks.length === 0 && (
+        <div className="flex items-center justify-center py-4 px-6">
+          <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
+        </div>
+      )}
+      {!loading &&
+        tasks.length > 0 && (
+          <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
+            {tasks.map((task) => (
+              <ReviewTaskRow
+                key={resolveTaskId(task)}
+                task={task}
+                projects={projects}
+                workspaces={workspaces}
+                onApprove={onApprove}
+                approvingTaskId={approvingTaskId}
+                onOpenProject={onOpenProject}
+              />
+            ))}
           </div>
         )}
-        {!loading &&
-          tasks.map((task) => (
-            <ReviewTaskRow
-              key={resolveTaskId(task)}
-              task={task}
-              projects={projects}
-              workspaces={workspaces}
-              onApprove={onApprove}
-              approvingTaskId={approvingTaskId}
-              onOpenProject={onOpenProject}
-            />
-          ))}
-      </div>
-    </Card>
+    </DashboardWidgetShell>
   );
 };
 

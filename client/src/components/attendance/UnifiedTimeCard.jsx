@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, NexusDropdown } from '../ui';
+import { Button, NexusDropdown } from '../ui';
 import { Lock, Check, LogIn, LogOut, RotateCcw, Info } from 'lucide-react';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
@@ -14,6 +14,8 @@ const UnifiedTimeCard = ({
   entry,
   title,
   subTitle,
+  hideTitleRow = false,
+  compact = false,
   isSelfMode,
   editScope,
   onCheckIn,
@@ -51,31 +53,39 @@ const UnifiedTimeCard = ({
     if (onApproveOut) onApproveOut();
   };
 
-  const TimeDisplayBlock = ({ type, time, mode, approved, marked, emptyHint }) => {
+  const TimeDisplayBlock = ({ type, time, mode, approved, marked, emptyHint, embedded = false }) => {
     const recorded = !!(time || marked || approved);
+    const stateClass = approved
+      ? 'border-blue-500/30 bg-blue-500/5'
+      : marked
+        ? 'border-emerald-500/30 bg-emerald-500/5'
+        : 'border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40';
+    const blockPad = compact && embedded ? 'px-2 py-2' : embedded ? 'px-3 py-3' : 'px-0 py-3';
+    const timeClass = compact ? 'text-base font-bold tabular-nums' : 'text-lg font-black tabular-nums';
+    const hintClass = compact
+      ? 'text-[11px] font-medium text-[var(--color-text-muted)] leading-snug normal-case tracking-normal'
+      : 'text-[13px] font-semibold text-[var(--color-text-muted)] leading-snug normal-case tracking-normal';
     return (
       <div
-        className={`rounded-xl border px-4 py-3 ${
-          approved
-            ? 'bg-blue-500/10 border-blue-500/30'
-            : marked
-              ? 'bg-emerald-500/10 border-emerald-500/30'
-              : 'bg-[var(--color-bg-secondary)]/60 border-dashed border-[var(--color-bg-border)]'
-        }`}
+        className={
+          embedded
+            ? `rounded-[var(--radius-atomic)] border ${blockPad} ${stateClass}`
+            : `border-b ${blockPad} ${stateClass}`
+        }
       >
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{type}</p>
+            {!embedded && (
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{type}</p>
+            )}
             {recorded ? (
-              <span className="text-lg font-black tabular-nums">{time || '--:--'}</span>
+              <span className={timeClass}>{time || '--:--'}</span>
             ) : (
-              <p className="text-[13px] font-semibold text-[var(--color-text-muted)] leading-snug normal-case tracking-normal">
-                {emptyHint}
-              </p>
+              <p className={hintClass}>{emptyHint}</p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            {approved ? <Lock size={14} className="text-blue-500" /> : marked ? <Check size={16} className="text-emerald-500" /> : null}
+            {approved ? <Lock size={compact ? 12 : 14} className="text-blue-500" /> : marked ? <Check size={compact ? 14 : 16} className="text-emerald-500" /> : null}
             {recorded && mode && (
               <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">{mode}</span>
             )}
@@ -85,14 +95,49 @@ const UnifiedTimeCard = ({
     );
   };
 
-  const Wrapper = isSelfMode ? Card : 'div';
+  const wrapperClass = compact
+    ? 'space-y-2'
+    : isSelfMode
+      ? hideTitleRow
+        ? 'space-y-6'
+        : 'space-y-6 border-t border-[var(--color-bg-border)] pt-4'
+      : 'space-y-6';
+
+  const panelGridClass = compact ? 'grid grid-cols-2 gap-2 min-w-0' : 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+  const panelBodyClass = compact ? 'p-2.5 space-y-2.5 flex flex-col flex-1 min-w-0' : 'p-4 space-y-4 flex flex-col flex-1';
+  const panelHeaderClass = compact ? 'px-2.5 py-1.5' : 'px-3 py-2';
+  const fieldBlockClass = compact
+    ? 'space-y-1.5 pt-1 border-t border-[var(--color-bg-border)]'
+    : 'space-y-2 pt-1 border-t border-[var(--color-bg-border)]';
+  const timeInputClass = compact
+    ? 'w-full h-9 px-2.5 text-sm rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]'
+    : 'w-full px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]';
+  const actionBtnClass = compact ? '!py-2 w-full text-xs' : '!py-3 w-full';
+  const inEmptyHint = compact ? 'Not checked in' : 'Enter your start time below';
+  const outEmptyHint = hasIn
+    ? compact
+      ? 'Not checked out'
+      : 'Enter your end time below'
+    : 'Check in first';
+
+  const showMetaRow =
+    !hideTitleRow
+    || entry?.overtimeMinutes > 0
+    || entry?.discrepancyMinutes >= 30
+    || inAppr
+    || outAppr;
 
   return (
-    <Wrapper className={isSelfMode ? "p-6 space-y-6" : "space-y-6"}>
+    <div className={wrapperClass}>
+      {showMetaRow && (
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">{subTitle}</p>
-          <p className="text-2xl font-black shrink-0">{title}</p>
+          {!hideTitleRow && (
+            <>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">{subTitle}</p>
+              <p className="text-2xl font-black shrink-0">{title}</p>
+            </>
+          )}
           {entry?.overtimeMinutes > 0 && (
             <span className="shrink-0 px-2 py-1 rounded-lg bg-violet-500/10 text-violet-600 border border-violet-500/20 text-xs font-bold">
               OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
@@ -121,71 +166,112 @@ const UnifiedTimeCard = ({
           </span>
         )}
       </div>
+      )}
 
       {isSelfMode ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TimeDisplayBlock
-              type="Time In"
-              time={entry?.inTimeRecord?.manualTimestamp}
-              mode={entry?.inTimeRecord?.workMode}
-              marked={hasIn}
-              approved={inAppr}
-              emptyHint="Enter your start time below"
-            />
-            <TimeDisplayBlock
-              type="Time Out"
-              time={entry?.outTimeRecord?.manualTimestamp}
-              mode={entry?.outTimeRecord?.workMode}
-              marked={hasOut}
-              approved={outAppr}
-              emptyHint={hasIn ? 'Enter your end time below' : 'Check in first'}
-            />
-          </div>
+          <div className={panelGridClass}>
+            <section className="flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] border-l-[3px] border-l-emerald-500/80 overflow-hidden min-w-0">
+              <div className={`${panelHeaderClass} border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50 flex items-center gap-1.5`}>
+                <LogIn size={compact ? 12 : 14} className="text-emerald-500 shrink-0" />
+                <p className="tm-widget-label mb-0 normal-case tracking-[0.08em] text-emerald-600 dark:text-emerald-400 truncate">Time In</p>
+              </div>
+              <div className={panelBodyClass}>
+                <TimeDisplayBlock
+                  type="Time In"
+                  time={entry?.inTimeRecord?.manualTimestamp}
+                  mode={entry?.inTimeRecord?.workMode}
+                  marked={hasIn}
+                  approved={inAppr}
+                  emptyHint={inEmptyHint}
+                  embedded
+                />
+                <div className={fieldBlockClass}>
+                  {!compact && (
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare In-Time</label>
+                  )}
+                  <input
+                    type="time"
+                    aria-label="Declare in-time"
+                    disabled={inAppr}
+                    value={form?.inTime || ''}
+                    onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))}
+                    className={timeInputClass}
+                  />
+                  <Button
+                    variant="primary"
+                    size={compact ? 'sm' : 'md'}
+                    className={actionBtnClass}
+                    disabled={hasIn || inAppr || !form?.inTime || isLoading}
+                    onClick={() => onCheckIn && onCheckIn(form?.inTime)}
+                  >
+                    {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : <LogIn size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />}
+                    {isLoading ? 'Processing...' : 'Mark In'}
+                  </Button>
+                </div>
+                {hasIn && !inAppr && !compact && (
+                  <Button size="sm" variant="ghost" className="self-start" onClick={() => onUndo && onUndo('in')}>
+                    <RotateCcw size={14} className="mr-1.5" />
+                    Undo check-in
+                  </Button>
+                )}
+              </div>
+            </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare In-Time</label>
-              <input type="time" disabled={inAppr} value={form?.inTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, inTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
-              <Button
-                variant="primary"
-                className="!py-3 w-full"
-                disabled={hasIn || inAppr || !form?.inTime || isLoading}
-                onClick={() => onCheckIn && onCheckIn(form?.inTime)}
-              >
-                {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : <LogIn size={16} className="mr-2" />}
-                {isLoading ? 'Processing...' : 'Mark In'}
-              </Button>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare Out-Time</label>
-              <input type="time" disabled={outAppr} value={form?.outTime || ''} onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]" />
-              <Button
-                variant="primary"
-                className="!py-3 w-full"
-                disabled={hasOut || outAppr || !form?.outTime || isLoading}
-                onClick={() => onCheckOut && onCheckOut(form?.outTime)}
-              >
-                {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : <LogOut size={16} className="mr-2" />}
-                {isLoading ? 'Processing...' : 'Mark Out'}
-              </Button>
-            </div>
+            <section className="flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] border-l-[3px] border-l-[var(--color-action-primary)]/80 overflow-hidden min-w-0">
+              <div className={`${panelHeaderClass} border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50 flex items-center gap-1.5`}>
+                <LogOut size={compact ? 12 : 14} className="text-[var(--color-action-primary)] shrink-0" />
+                <p className="tm-widget-label mb-0 normal-case tracking-[0.08em] text-[var(--color-action-primary)] truncate">Time Out</p>
+              </div>
+              <div className={panelBodyClass}>
+                <TimeDisplayBlock
+                  type="Time Out"
+                  time={entry?.outTimeRecord?.manualTimestamp}
+                  mode={entry?.outTimeRecord?.workMode}
+                  marked={hasOut}
+                  approved={outAppr}
+                  emptyHint={outEmptyHint}
+                  embedded
+                />
+                <div className={fieldBlockClass}>
+                  {!compact && (
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Declare Out-Time</label>
+                  )}
+                  <input
+                    type="time"
+                    aria-label="Declare out-time"
+                    disabled={outAppr}
+                    value={form?.outTime || ''}
+                    onChange={(e) => setForm && setForm((f) => ({ ...f, outTime: e.target.value }))}
+                    className={timeInputClass}
+                  />
+                  <Button
+                    variant="primary"
+                    size={compact ? 'sm' : 'md'}
+                    className={actionBtnClass}
+                    disabled={hasOut || outAppr || !form?.outTime || isLoading}
+                    onClick={() => onCheckOut && onCheckOut(form?.outTime)}
+                  >
+                    {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : <LogOut size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />}
+                    {isLoading ? 'Processing...' : 'Mark Out'}
+                  </Button>
+                </div>
+                {hasOut && !outAppr && !compact && (
+                  <Button size="sm" variant="ghost" className="self-start" onClick={() => onUndo && onUndo('out')}>
+                    <RotateCcw size={14} className="mr-1.5" />
+                    Undo check-out
+                  </Button>
+                )}
+              </div>
+            </section>
           </div>
-
-          {(hasIn || hasOut) && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {hasIn && !inAppr && (
-                <Button size="sm" variant="ghost" onClick={() => onUndo && onUndo('in')}>
-                  <RotateCcw size={14} className="mr-1.5" />
-                  Undo check-in
-                </Button>
-              )}
-              {hasOut && !outAppr && (
-                <Button size="sm" variant="ghost" onClick={() => onUndo && onUndo('out')}>
-                  <RotateCcw size={14} className="mr-1.5" />
-                  Undo check-out
-                </Button>
-              )}
+          {compact && hasIn && hasOut && (
+            <div className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/30 px-2 py-1.5">
+              <span className="text-[11px] font-medium text-[var(--color-text-muted)] tabular-nums">
+                {entry?.inTimeRecord?.manualTimestamp || '--:--'}
+                {' → '}
+                {entry?.outTimeRecord?.manualTimestamp || '--:--'}
+              </span>
             </div>
           )}
         </>
@@ -274,7 +360,7 @@ const UnifiedTimeCard = ({
           )}
         </div>
       )}
-    </Wrapper>
+    </div>
   );
 };
 

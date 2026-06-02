@@ -10,6 +10,7 @@ const StatusSelect = ({
   filterMode = false,
   placeholder = 'Status',
   className = '',
+  variant,
 }) => (
   <NexusDropdown
     label={label}
@@ -17,9 +18,12 @@ const StatusSelect = ({
     value={value}
     onChange={onChange}
     disabled={disabled}
-    placeholder={placeholder}
+    placeholder={filterMode && placeholder === 'Status' ? 'All statuses' : placeholder}
     className={className}
+    variant={variant}
   />
 );
+
+StatusSelect.displayName = 'StatusSelect';
 
 export default StatusSelect;

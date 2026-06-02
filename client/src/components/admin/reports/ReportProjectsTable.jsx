@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Briefcase } from 'lucide-react';
-import { Card, Badge, ProgressBar, TablePagination } from '../../ui';
+import { Badge, ProgressBar, TablePagination } from '../../ui';
 import { getWorkspaceColor } from '../../../utils/workspaceColors';
 
 const STATUS_VARIANT = {
@@ -46,17 +46,17 @@ const ReportProjectsTable = ({ items = [], workspaces = [] }) => {
 
   if (!items.length) {
     return (
-      <Card className="p-4">
+      <section className="py-4 border-t border-[var(--color-bg-border)]">
         <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">
           Projects (0)
         </p>
         <p className="text-xs text-[var(--color-text-muted)] opacity-60">No projects for this period.</p>
-      </Card>
+      </section>
     );
   }
 
   return (
-    <Card className="p-0 overflow-hidden">
+    <section className="border-t border-[var(--color-bg-border)] overflow-hidden">
       <div className="px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between gap-2">
         <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
           <Briefcase size={12} /> Projects ({totalProjects})
@@ -84,7 +84,7 @@ const ReportProjectsTable = ({ items = [], workspaces = [] }) => {
                 return (
                   <div
                     key={`${group.name}-${project.name}-${idx}`}
-                    className="p-3 rounded-xl bg-[var(--color-bg-secondary)]/50 border border-[var(--color-bg-border)] hover:border-[var(--color-action-primary)]/20 transition-colors"
+                    className="py-3 border-b border-[var(--color-bg-border)] last:border-b-0 hover:bg-[var(--color-bg-secondary)]/40 transition-colors"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                       <span className="text-xs font-bold text-[var(--color-text-primary)]">{project.name}</span>
@@ -116,7 +116,7 @@ const ReportProjectsTable = ({ items = [], workspaces = [] }) => {
           onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
         />
       )}
-    </Card>
+    </section>
   );
 };
 

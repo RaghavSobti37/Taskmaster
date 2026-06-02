@@ -15,6 +15,7 @@ const ProjectSelect = ({
   allowEmpty = false,
   emptyLabel = 'Personal',
   className = '',
+  variant,
 }) => {
   const { data: workspaces = [] } = useWorkspaces();
 
@@ -53,8 +54,11 @@ const ProjectSelect = ({
       className={className}
       renderOption={renderOption}
       searchable
+      variant={variant}
     />
   );
 };
+
+ProjectSelect.displayName = 'ProjectSelect';
 
 export default ProjectSelect;

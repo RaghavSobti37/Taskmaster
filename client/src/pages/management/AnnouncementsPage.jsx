@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Megaphone } from 'lucide-react';
-import { ListPageLayout, Card, Input, Button } from '../../components/ui';
+import { ListPageLayout, Input, Button } from '../../components/ui';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -61,7 +61,7 @@ const AnnouncementsPage = () => {
       title="Announcements"
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <Card className="lg:col-span-8 p-5 space-y-4">
+        <section className="lg:col-span-8 p-5 space-y-4 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)] lg:pr-6">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input label="Message" value={message} onChange={(e) => setMessage(e.target.value)} />
           <div className="space-y-2">
@@ -117,16 +117,16 @@ const AnnouncementsPage = () => {
           <Button disabled={!canSubmit || createAnnouncement.isPending} onClick={handleSubmit}>
             {createAnnouncement.isPending ? 'Sending...' : 'Publish Announcement'}
           </Button>
-        </Card>
+        </section>
 
-        <Card className="lg:col-span-4 p-4 flex flex-col gap-3 self-start w-full">
+        <section className="lg:col-span-4 p-4 flex flex-col gap-3 self-start w-full">
           <h3 className="tm-section-label text-[var(--color-text-primary)]">Recent Announcements</h3>
           {announcements.length === 0 ? (
             <p className="tm-caption py-4 text-center">No announcements yet.</p>
           ) : (
             <div className="space-y-2 max-h-[min(70vh,32rem)] overflow-y-auto pr-0.5">
               {announcements.map((item) => (
-                <div key={item._id} className="rounded-xl border border-[var(--color-bg-border)] p-3 space-y-2">
+                <div key={item._id} className="border-b border-[var(--color-bg-border)] pb-3 last:border-0 space-y-2">
                   <div>
                     <p className="tm-task-title">{item.title}</p>
                     <p className="tm-caption mt-1 line-clamp-3">{item.message}</p>
@@ -183,7 +183,7 @@ const AnnouncementsPage = () => {
               ))}
             </div>
           )}
-        </Card>
+        </section>
       </div>
     </ListPageLayout>
   );

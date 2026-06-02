@@ -30,7 +30,7 @@ const PageHeader = ({
           {showTitle && title && (
             <div className="flex items-center gap-3 min-w-0">
               {Icon && (
-                <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] shadow-sm border border-[var(--color-action-primary)]/10 shrink-0">
+                <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
                   <Icon size={18} strokeWidth={2.5} />
                 </div>
               )}

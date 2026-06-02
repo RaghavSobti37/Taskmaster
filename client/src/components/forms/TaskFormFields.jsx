@@ -16,6 +16,8 @@ import { getTodayDateKey, validateTaskTimelineFields } from '../../utils/dateVal
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 const fieldInputClass =
   'block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30';
+const ghostInputClass =
+  'block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-transparent bg-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] disabled:opacity-60 text-sm outline-none';
 
 const TaskFormFields = ({
   values,
@@ -38,7 +40,9 @@ const TaskFormFields = ({
   showDescription = false,
   lockedAssigneeIds = [],
   mentionSessionKey,
+  inlineEdit = false,
 }) => {
+  const inputClass = inlineEdit ? ghostInputClass : fieldInputClass;
   const set = (field, val) => onChange({ ...values, [field]: val });
   const todayKey = getTodayDateKey();
 
@@ -123,7 +127,7 @@ const TaskFormFields = ({
             onChange={onTitleChange}
             disabled={disabled}
             editSessionKey={mentionSessionKey}
-            className={`${fieldInputClass} font-bold`}
+            className={`${inputClass} font-bold`}
             placeholder="What needs to be done? @name #Asset"
           />
         </div>
@@ -137,7 +141,7 @@ const TaskFormFields = ({
             onChange={onDescriptionChange}
             disabled={disabled}
             editSessionKey={mentionSessionKey}
-            className={`${fieldInputClass} min-h-[88px] resize-y`}
+            className={`${inputClass} min-h-[88px] resize-y`}
             placeholder="follow up with @Raghav the G.O.A.T. with #Brand Deck — @ mentions notify, # links open asset URL"
           />
         </div>
@@ -197,7 +201,7 @@ const TaskFormFields = ({
                 value={values.scheduleDate || ''}
                 disabled={disabled || timelineDisabled}
                 onChange={(e) => handleScheduleDateChange(e.target.value)}
-                className={fieldInputClass}
+                className={inputClass}
               />
             </div>
           </div>
@@ -209,7 +213,7 @@ const TaskFormFields = ({
               value={values.dueDate || ''}
               disabled={disabled || timelineDisabled}
               onChange={(e) => handleDueDateChange(e.target.value)}
-              className={fieldInputClass}
+              className={inputClass}
             />
           </div>
         </>

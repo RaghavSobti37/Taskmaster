@@ -6,7 +6,6 @@ import {
   FileText, Search, Download, Trash2, ChevronDown, 
   ChevronLeft, ChevronRight, X, Eye, Check, Info, ArrowLeft
 } from 'lucide-react';
-import { Card } from '../ui';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
@@ -187,7 +186,7 @@ const ProjectFinance = ({ projectId }) => {
       </div>
 
       {/* Finance Table */}
-      <Card className="overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]">
+      <div className="overflow-hidden border-t border-[var(--color-bg-border)]">
         {isLoading ? (
           <div className="p-20 text-center animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Loading Finance Records...</div>
         ) : (
@@ -195,12 +194,12 @@ const ProjectFinance = ({ projectId }) => {
             <table className="w-full text-left border-collapse">
               <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
                 <tr>
-                  <th className="px-6 py-4">Document Title</th>
-                  <th className="px-6 py-4">Vendor</th>
-                  <th className="px-6 py-4">Amount</th>
-                  <th className="px-6 py-4">Category</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                  <th className="px-4 py-2">Document Title</th>
+                  <th className="px-4 py-2">Vendor</th>
+                  <th className="px-4 py-2 text-right">Amount</th>
+                  <th className="px-4 py-2">Category</th>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -222,7 +221,7 @@ const ProjectFinance = ({ projectId }) => {
                         className="hover:bg-[var(--color-bg-secondary)]/50 transition-all cursor-pointer group"
                         onClick={() => setSelectedDoc(doc)}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-2">
                           <div className="flex items-center gap-3">
                             {isImage ? (
                               <img src={doc.fileUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-[var(--color-bg-border)] flex-shrink-0" />
@@ -237,21 +236,21 @@ const ProjectFinance = ({ projectId }) => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-xs font-bold text-[var(--color-text-secondary)] uppercase">
+                        <td className="px-4 py-2 text-xs font-bold text-[var(--color-text-secondary)] uppercase">
                           {doc.metadata?.vendor || '—'}
                         </td>
-                        <td className="px-6 py-4 text-xs font-black text-[var(--color-text-primary)]">
+                        <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] tabular-nums text-right">
                           {doc.metadata?.amount ? `${doc.metadata.currency || 'INR'} ${Number(doc.metadata.amount).toLocaleString('en-IN')}` : '—'}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-2">
                           <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider" style={{ background: cat.bg, color: cat.text }}>
                             {doc.category}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                        <td className="px-4 py-2 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest tabular-nums">
                           {new Date(doc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-2 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedDoc(doc); }}
@@ -318,7 +317,7 @@ const ProjectFinance = ({ projectId }) => {
             </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Immersive Preview Modal (70% Left, 30% Right) */}
       <AnimatePresence>
@@ -334,7 +333,7 @@ const ProjectFinance = ({ projectId }) => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-full h-full bg-[var(--color-bg-surface)] border-l border-[var(--color-bg-border)] flex flex-col md:flex-row shadow-2xl overflow-hidden"
+              className="w-full h-full bg-[var(--color-bg-surface)] border-l border-[var(--color-bg-border)] flex flex-col md:flex-row overflow-hidden"
             >
               {/* Document Viewer (70% Left) */}
               <div className="flex-1 bg-slate-950 flex flex-col relative h-[50vh] md:h-full">
@@ -358,13 +357,13 @@ const ProjectFinance = ({ projectId }) => {
                     <iframe
                       src={selectedDoc.fileUrl}
                       title={selectedDoc.title}
-                      className="w-full h-full rounded-xl border border-slate-800 shadow-2xl bg-slate-900"
+                      className="w-full h-full rounded-xl border border-slate-800 bg-slate-900"
                     />
                   ) : selectedDoc.fileType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(selectedDoc.fileName) ? (
                     <img
                       src={selectedDoc.fileUrl}
                       alt={selectedDoc.title}
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-slate-800"
+                      className="max-w-full max-h-full object-contain rounded-xl border border-slate-800"
                     />
                   ) : (
                     <div className="text-center p-8 bg-slate-900/50 border border-slate-800 rounded-2xl max-w-sm">

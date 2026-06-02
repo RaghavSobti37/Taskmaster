@@ -6,7 +6,7 @@ import { ArrowLeft, Settings, UserPlus, X, Briefcase } from 'lucide-react';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
-import { Badge, PageHeader, PageContainer, Card, Button, PageSkeleton } from '../../components/ui';
+import { Badge, PageHeader, PageContainer, Button, PageSkeleton } from '../../components/ui';
 import { getDepartmentSlug, getDepartmentName, isAdminUser } from '../../utils/departmentPermissions';
 import { suggestProjectRole } from '../../utils/taskText';
 import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
@@ -208,9 +208,9 @@ const WorkspaceSettings = () => {
         <Button variant="ghost" size="xs" onClick={() => navigate('/projects')} className="mb-4 flex items-center gap-2">
           <ArrowLeft size={14} /> Back to Projects
         </Button>
-        <Card className="p-8 text-center">
+        <div className="p-8 text-center border border-[var(--color-bg-border)]">
           <p className="text-sm font-bold text-red-400">{error}</p>
-        </Card>
+        </div>
       </PageContainer>
     );
   }
@@ -240,14 +240,14 @@ const WorkspaceSettings = () => {
       />
 
       {forbidden && (
-        <Card className="p-4 mb-4 border-red-500/30 bg-red-500/5">
+        <div className="p-4 mb-4 border border-red-500/30 bg-red-500/5">
           <p className="text-sm font-bold text-red-400">
             Not authorized to update this workspace. Contact an admin or the workspace creator.
           </p>
-        </Card>
+        </div>
       )}
 
-      <Card className="p-8 space-y-4 mb-6">
+      <section className="py-8 space-y-4 mb-6 border-b border-[var(--color-bg-border)]">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
             Workspace Color
@@ -272,9 +272,9 @@ const WorkspaceSettings = () => {
             Only admins can change workspace color.
           </p>
         )}
-      </Card>
+      </section>
 
-      <Card className="p-8 space-y-6 mb-6">
+      <section className="py-8 space-y-6 mb-6 border-b border-[var(--color-bg-border)]">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
             Default Members
@@ -300,7 +300,7 @@ const WorkspaceSettings = () => {
           {members.map((m) => (
             <div
               key={m.userId}
-              className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-xl border border-[var(--color-bg-border)] group gap-3"
+              className="flex items-center justify-between p-3 bg-[var(--color-bg-workspace)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] group gap-3"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] text-blue-500 uppercase overflow-hidden">
@@ -338,16 +338,16 @@ const WorkspaceSettings = () => {
             </div>
           ))}
           {members.length === 0 && (
-            <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-2xl opacity-30">
+            <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
               <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
               <p className="text-[10px] font-black uppercase tracking-widest">No Default Members</p>
             </div>
           )}
         </div>
-      </Card>
+      </section>
 
       {projects.length > 0 && (
-        <Card className="p-8 space-y-4 mb-6">
+        <section className="py-8 space-y-4 mb-6">
           <div className="flex items-center gap-2">
             <Briefcase size={16} className="text-[var(--color-text-muted)]" />
             <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
@@ -367,7 +367,7 @@ const WorkspaceSettings = () => {
               </li>
             ))}
           </ul>
-        </Card>
+        </section>
       )}
 
     </PageContainer>

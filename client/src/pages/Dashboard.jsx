@@ -32,10 +32,9 @@ import {
 } from '../components/dashboard';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import TaskCompletionModal from '../components/TaskCompletionModal';
-import UnifiedTimeCard from '../components/attendance/UnifiedTimeCard';
+import MarkAttendanceCard from '../components/dashboard/MarkAttendanceCard';
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
-import { format } from 'date-fns';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
 import { isAdminUser } from '../utils/departmentPermissions';
 import { useIsMobile } from '../hooks/useBreakpoint';
@@ -215,11 +214,8 @@ const Dashboard = () => {
         return <PinBoardComposer />;
       case 'mark-attendance':
         return (
-          <UnifiedTimeCard
+          <MarkAttendanceCard
             entry={attendanceRows[0]}
-            title={format(today, 'EEEE, MMMM d')}
-            subTitle="Today"
-            isSelfMode
             onCheckIn={(t) => executeGeolocationCheck('in', t)}
             onCheckOut={(t) => executeGeolocationCheck('out', t)}
             onUndo={(type) => undoCheck.mutate({ type })}

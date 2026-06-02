@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderKanban, ArrowDown, ArrowUp } from 'lucide-react';
-import { Card, Badge, Button } from '../ui';
+import { DashboardWidgetShell, Badge, Button } from '../ui';
 import { formatProjectName } from '../../utils/projectUtils';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
-import { getTaskWorkspace, getWorkspaceColor } from '../../utils/workspaceColors';
+import { getTaskWorkspace, getWorkspaceColor, getWorkspaceAccentStyle } from '../../utils/workspaceColors';
 import {
   filterTodayTasks,
   filterOverdueTasks,
@@ -51,10 +51,10 @@ const ProjectGroupList = ({ groups, projects, workspaces, navigate, emptyMessage
         key={pid}
         type="button"
         onClick={() => navigate(`/projects/${pid}`)}
-        className="w-full text-left flex items-stretch rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] transition-colors hover:bg-[var(--color-bg-secondary)] overflow-hidden"
+        style={getWorkspaceAccentStyle(color)}
+        className="tm-task-row w-full text-left flex items-stretch overflow-hidden"
       >
-        <div className="w-1 shrink-0" style={{ backgroundColor: color }} aria-hidden />
-        <div className="flex items-center justify-between gap-2 flex-1 min-w-0 p-3">
+        <div className="flex items-center justify-between gap-2 flex-1 min-w-0 py-2.5 px-3">
           <div className="min-w-0">
             <p className="tm-task-title truncate">{formatProjectName(proj?.name || 'Project')}</p>
             <p className="tm-caption mt-0.5 truncate">
@@ -85,17 +85,16 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
   }, [tasks, todaySort]);
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden shrink-0">
-      <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-        <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)]">
-          <FolderKanban size={16} className="text-[var(--color-brand-teal)]" /> Projects — Today & Overdue
-        </h4>
-        <Badge variant="info">{overdueGroups.length + todayGroups.length}</Badge>
-      </div>
-
+    <DashboardWidgetShell
+      className="shrink-0"
+      bodyClassName="p-0"
+      title="Projects — Today & Overdue"
+      icon={FolderKanban}
+      actions={<Badge variant="info">{overdueGroups.length + todayGroups.length}</Badge>}
+    >
       <div className="border-b border-[var(--color-bg-border)]">
-        <div className="px-4 py-3 bg-[var(--color-bg-secondary)]/60 flex items-center justify-between">
-          <h5 className="tm-section-label text-[var(--color-text-primary)]">Overdue</h5>
+        <div className="px-4 py-3 flex items-center justify-between">
+          <h5 className="tm-widget-label mb-0 text-[var(--color-text-primary)]">Overdue</h5>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -110,8 +109,8 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
             <Badge variant={overdueGroups.length > 0 ? 'overdue' : 'info'}>{overdueGroups.length}</Badge>
           </div>
         </div>
-        <div className="p-3 space-y-2">
-          {loading && <p className="text-xs text-[var(--color-text-muted)] p-2">Loading...</p>}
+        <div className="px-0">
+          {loading && <p className="text-xs text-[var(--color-text-muted)] px-4 py-2">Loading...</p>}
           {!loading && (
             <ProjectGroupList
               groups={overdueGroups}
@@ -125,8 +124,8 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
       </div>
 
       <div>
-        <div className="px-4 py-3 bg-[var(--color-bg-secondary)]/60 flex items-center justify-between">
-          <h5 className="tm-section-label text-[var(--color-text-primary)]">Today</h5>
+        <div className="px-4 py-3 flex items-center justify-between">
+          <h5 className="tm-widget-label mb-0 text-[var(--color-text-primary)]">Today</h5>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -141,8 +140,8 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
             <Badge variant="info">{todayGroups.length}</Badge>
           </div>
         </div>
-        <div className="p-3 space-y-2">
-          {loading && <p className="text-xs text-[var(--color-text-muted)] p-2">Loading...</p>}
+        <div className="px-0">
+          {loading && <p className="text-xs text-[var(--color-text-muted)] px-4 py-2">Loading...</p>}
           {!loading && (
             <ProjectGroupList
               groups={todayGroups}
@@ -154,7 +153,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
           )}
         </div>
       </div>
-    </Card>
+    </DashboardWidgetShell>
   );
 };
 

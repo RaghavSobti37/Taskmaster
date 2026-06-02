@@ -4,6 +4,7 @@ import { Input } from './primitives';
 
 /**
  * SearchInput — standardized search field used across list/table pages.
+ * variant="toolbar" — compact h-9 inline control for PageToolbar rows.
  */
 const SearchInput = ({
   value,
@@ -12,12 +13,45 @@ const SearchInput = ({
   label,
   className = '',
   onClear,
+  variant = 'field',
   ...props
 }) => {
   const handleClear = () => {
     onChange?.({ target: { value: '' } });
     onClear?.();
   };
+
+  if (variant === 'toolbar') {
+    return (
+      <div
+        className={`relative tm-toolbar-field tm-toolbar-search min-w-[10rem] w-[12rem] max-w-[16rem] shrink-0 ${className}`}
+        data-toolbar-field=""
+      >
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]"
+        />
+        <input
+          type="search"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className="tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
+          {...props}
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            aria-label="Clear search"
+          >
+            <X size={14} />
+          </button>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full min-w-0 overflow-hidden ${className}`}>
@@ -27,6 +61,7 @@ const SearchInput = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        variant={variant === 'ghost' ? 'ghost' : 'field'}
         endAdornment={
           value ? (
             <button

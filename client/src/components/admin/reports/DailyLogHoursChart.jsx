@@ -3,10 +3,10 @@ import { format, parseISO } from 'date-fns';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { Card, Badge } from '../../ui';
+import { Badge } from '../../ui';
 
 const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueLabel }) => (
-  <Card className="p-4 h-full flex flex-col">
+  <section className="py-4 border-t border-[var(--color-bg-border)] h-full flex flex-col">
     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
         {title}
@@ -38,7 +38,7 @@ const LogLineChart = ({ title, data, dataKey, stroke, badge, formatValue, valueL
         </ResponsiveContainer>
       )}
     </div>
-  </Card>
+  </section>
 );
 
 const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {

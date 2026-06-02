@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Badge, NexusModal, NexusDropdown, PageHeader, Card, 
+  Badge, NexusModal, NexusDropdown, PageHeader, 
   PageContainer, Button, Input, StatCard, TabSwitcher
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
@@ -329,7 +329,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             )}
             {activeView === 'daily' && (
               <>
-                <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-xl border border-[var(--color-bg-border)]">
+                <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
                   <Button variant="ghost" size="xs" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
                   <div className="px-3 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
                     <CalIcon size={12} className="text-blue-500" /> {format(selectedDate, 'MMM dd')}
@@ -359,10 +359,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-          <Card className="flex flex-col min-h-[400px]">
-             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3">
+          <section className="flex flex-col min-h-[400px] border-b border-[var(--color-bg-border)]">
+             <div className="p-3 border-b border-[var(--color-bg-border)] space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <h3 className="tm-widget-label flex items-center gap-2">
                     <Activity size={14} className="text-blue-500" /> Work History
                   </h3>
                   <Badge variant="slate">
@@ -420,7 +420,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     const isEditable = isSameDay(new Date(log.createdAt), new Date()) || isAdminUser(user);
                     if (editingLogId === log._id) {
                       return (
-                        <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-2xl space-y-4">
+                        <div key={log._id} className="p-4 bg-[var(--color-bg-workspace)] border border-blue-500/30 rounded-[var(--radius-atomic)] space-y-4">
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <Input label="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} size="sm" />
                               <div className="space-y-1">
@@ -443,7 +443,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                            <textarea 
                              value={editMessage} 
                              onChange={e => setEditMessage(e.target.value)}
-                             className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-medium outline-none min-h-[80px]"
+                             className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-medium outline-none min-h-[80px]"
                            />
                            <div className="flex justify-end gap-2">
                               <Button variant="ghost" size="xs" onClick={() => setEditingLogId(null)}>Cancel</Button>
@@ -458,12 +458,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        className="group p-4 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl hover:border-[var(--color-action-primary)]/30 transition-all flex gap-4 relative overflow-hidden"
+                        className="group p-4 border-b border-[var(--color-bg-border)] last:border-0 hover:bg-[var(--color-bg-secondary)]/30 transition-all flex gap-4 relative overflow-hidden"
                       >
                          <div className="flex-1 space-y-2">
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-black uppercase tracking-tight">{cleanLogTitle(log.details?.title)}</span>
+                                  <span className="text-xs font-black uppercase tracking-tight tm-data-primary">{cleanLogTitle(log.details?.title)}</span>
                                   {(log.details?.type === 'TASK_REVIEW'
                                     || log.details?.title === '[review]') && (
                                     <Badge variant="warning" className="text-[8px] py-0">[review]</Badge>
@@ -472,8 +472,8 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>
                                </div>
                                <div className="flex items-center gap-3 text-[10px] font-bold text-[var(--color-text-muted)]">
-                                  <Clock size={10} /> {format(new Date(log.createdAt), 'HH:mm')}
-                                  <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 ml-2">
+                                  <Clock size={10} /> <span className="tabular-nums">{format(new Date(log.createdAt), 'HH:mm')}</span>
+                                  <span className="text-blue-500 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10 ml-2 tabular-nums">
                                      {log.details?.timeSpent || '0m'}
                                   </span>
                                   {isEditable && (
@@ -497,13 +497,13 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                   })
                 )}
              </div>
-          </Card>
+          </section>
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
-           <Card className="p-4">
+           <section className="p-4 border-b border-[var(--color-bg-border)]">
               <div className="flex items-center justify-between mb-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Activity Grid</h4>
+                 <h4 className="tm-widget-label">Activity Grid</h4>
                  <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase">Less</span>
                     <div className="flex gap-1">
@@ -524,17 +524,17 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                    />
                  ))}
               </div>
-           </Card>
+           </section>
 
-           <Card className="p-4 bg-slate-50 dark:bg-slate-900 text-[var(--color-text-primary)] dark:text-white border-[var(--color-bg-border)] dark:border-white/5 relative overflow-hidden">
+           <section className="p-4 border border-[var(--color-bg-border)]">
               <div className="relative z-10 space-y-4">
                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Daily Goal</h4>
+                    <h4 className="tm-widget-label text-blue-400">Daily Goal</h4>
                     <Trophy size={14} className="text-amber-500" />
                  </div>
                  <div className="space-y-1.5">
                     <div className="flex justify-between items-end">
-                       <span className="text-xl font-black italic">{Math.min(100, Math.round((totalMinutes / 480) * 100))}%</span>
+                       <span className="text-xl font-black italic tabular-nums">{Math.min(100, Math.round((totalMinutes / 480) * 100))}%</span>
                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{totalMinutes >= 480 ? 'GOAL MET' : 'IN PROGRESS'}</span>
                     </div>
                     <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
@@ -546,7 +546,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                     </div>
                  </div>
               </div>
-           </Card>
+           </section>
         </aside>
       </div>
 
@@ -580,7 +580,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                <textarea 
                  value={description} 
                  onChange={e => setDescription(e.target.value)}
-                 className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl text-xs font-medium outline-none min-h-[120px] focus:ring-1 focus:ring-blue-500/30 transition-all resize-none shadow-inner"
+                 className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-medium outline-none min-h-[120px] focus:ring-1 focus:ring-blue-500/30 transition-all resize-none"
                  placeholder="Any extra details..."
                />
             </div>

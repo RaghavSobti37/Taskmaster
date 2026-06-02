@@ -26,7 +26,7 @@ const KanbanCard = ({ task, onMove, onDetail, workspaces, projects, completingTa
 
   return (
     <div
-      className={`tm-task-row p-4 rounded-xl border border-[var(--color-bg-border)] shadow-sm transition-all group ${isDone ? 'tm-task-row--completed' : 'hover:shadow-md'}`}
+      className={`tm-task-row p-3 border-b border-[var(--color-bg-border)] transition-colors group ${isDone ? 'tm-task-row--completed' : 'hover:bg-[var(--color-bg-secondary)]/40'}`}
       style={isDone ? getCompletedTaskRowStyle() : getTaskRowStyle(accent)}
       data-highlight-id={task._id}
     >
@@ -75,7 +75,7 @@ const KanbanCard = ({ task, onMove, onDetail, workspaces, projects, completingTa
             <span className="text-[10px] font-bold">Active</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-6 h-6 rounded-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden">
               {task.assignees?.[0]?.avatar ? (
                 <img src={task.assignees[0].avatar} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -125,12 +125,12 @@ const ProjectKanban = ({ tasks, onUpdate, onDetail, completingTaskId = null }) =
               </div>
             </div>
             
-            <div className="flex-1 bg-[var(--color-bg-workspace)]/50 rounded-2xl border border-[var(--color-bg-border)] p-3 space-y-3 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 min-h-[200px] border-t border-[var(--color-bg-border)] overflow-y-auto custom-scrollbar">
               {columnTasks.map(task => (
                 <KanbanCard key={task._id} task={task} onMove={handleMove} onDetail={onDetail} workspaces={workspaces} projects={projects} completingTaskId={completingTaskId} />
               ))}
               {columnTasks.length === 0 && (
-                <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-[var(--color-bg-border)] rounded-xl">
+                <div className="h-32 flex flex-col items-center justify-center border-b border-dashed border-[var(--color-bg-border)]">
                   <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">No tasks here</p>
                 </div>
               )}

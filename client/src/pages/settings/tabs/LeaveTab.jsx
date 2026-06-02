@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarDays } from 'lucide-react';
-import { Card, Input, Button, Badge, NexusModal } from '../../../components/ui';
+import { Input, Button, Badge, NexusModal } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useApplyLeave, useLeaveRequests } from '../../../hooks/useTaskmasterQueries';
 
@@ -40,18 +40,18 @@ export default function LeaveTab() {
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Apply for Leave</h1>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <section className="border-b border-[var(--color-bg-border)] pb-6">
+        <div className="pb-4 border-b border-[var(--color-bg-border)] mb-6 flex items-center justify-between">
+          <h3 className="tm-widget-label flex items-center gap-2">
             <CalendarDays size={14} className="text-violet-500" /> New Request
           </h3>
           {pendingLeaveCount > 0 && (
             <Badge variant="warning">{pendingLeaveCount} pending</Badge>
           )}
         </div>
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           {(leaveSuccessMessage || pendingLeaveCount > 0) && (
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
+            <div className="p-4 rounded-[var(--radius-atomic)] bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
               {leaveSuccessMessage || 'You have leave request(s) pending approval from operations.'}
             </div>
           )}
@@ -86,7 +86,7 @@ export default function LeaveTab() {
             </Button>
           </div>
         </div>
-      </Card>
+      </section>
       
       <NexusModal isOpen={modalConfig.isOpen} onClose={() => setModalConfig({ ...modalConfig, isOpen: false })} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} />
     </div>

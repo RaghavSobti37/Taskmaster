@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, Button } from '../ui';
+import { Button } from '../ui';
 import { getHolidayLabel } from '../../utils/officeHolidays';
 import { inferEditScope } from '../../utils/attendanceUtils';
 
@@ -65,7 +65,7 @@ const MonthlyAttendanceGrid = ({
   const displayUsers = singleUser ? [singleUser] : users;
 
   return (
-    <Card className="p-4 space-y-4">
+    <section className="space-y-4 border-t border-[var(--color-bg-border)] pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">{title}</h3>
         <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ const MonthlyAttendanceGrid = ({
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)]" /> No input</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
+      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
         <table className="min-w-full border-collapse text-xs">
           <thead className="bg-[var(--color-bg-secondary)]">
             <tr>
@@ -151,7 +151,7 @@ const MonthlyAttendanceGrid = ({
           </tbody>
         </table>
       </div>
-    </Card>
+    </section>
   );
 };
 

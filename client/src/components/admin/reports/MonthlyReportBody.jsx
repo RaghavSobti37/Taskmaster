@@ -3,7 +3,6 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { Card } from '../../ui';
 import DailyLogHoursChart from './DailyLogHoursChart';
 import ReportProjectsTable from './ReportProjectsTable';
 import ReportCalendarTable from './ReportCalendarTable';
@@ -39,32 +38,32 @@ const MonthlyReportBody = ({
 
   return (
     <div ref={printRef} className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="p-3">
-          <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Present</p>
-          <p className="text-2xl font-black">{report.attendance.present}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Half Days</p>
-          <p className="text-2xl font-black">{report.attendance.halfDay}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Tasks Done</p>
-          <p className="text-2xl font-black">{report.tasks.completed}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Log Hours</p>
-          <p className="text-2xl font-black">{report.logs.totalHours.toFixed(1)}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Daily Logs</p>
-          <p className="text-2xl font-black">{report.logs.totalEntries ?? report.logs.entries?.length ?? 0}</p>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-5 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] divide-x divide-y divide-[var(--color-bg-border)]">
+        <div className="p-3">
+          <p className="tm-widget-label text-[var(--color-text-muted)]">Present</p>
+          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.attendance.present}</p>
+        </div>
+        <div className="p-3">
+          <p className="tm-widget-label text-[var(--color-text-muted)]">Half Days</p>
+          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.attendance.halfDay}</p>
+        </div>
+        <div className="p-3">
+          <p className="tm-widget-label text-[var(--color-text-muted)]">Tasks Done</p>
+          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.tasks.completed}</p>
+        </div>
+        <div className="p-3">
+          <p className="tm-widget-label text-[var(--color-text-muted)]">Log Hours</p>
+          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.logs.totalHours.toFixed(1)}</p>
+        </div>
+        <div className="p-3">
+          <p className="tm-widget-label text-[var(--color-text-muted)]">Daily Logs</p>
+          <p className="text-2xl font-black tabular-nums tm-data-primary">{report.logs.totalEntries ?? report.logs.entries?.length ?? 0}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+        <section className="py-4 border-t border-[var(--color-bg-border)] lg:border-t-0 lg:border-r lg:pr-4">
+          <p className="tm-widget-label text-[var(--color-text-muted)] mb-3">
             Attendance by Day
           </p>
           <ResponsiveContainer width="100%" height={200}>
@@ -76,10 +75,10 @@ const MonthlyReportBody = ({
               <Bar dataKey="value" name="Attendance" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </section>
 
-        <Card className="p-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+        <section className="py-4 border-t border-[var(--color-bg-border)] lg:border-t-0">
+          <p className="tm-widget-label text-[var(--color-text-muted)] mb-3">
             Task Status
           </p>
           <ResponsiveContainer width="100%" height={200}>
@@ -90,7 +89,7 @@ const MonthlyReportBody = ({
               <Tooltip formatter={formatTaskPieTooltip} />
             </PieChart>
           </ResponsiveContainer>
-        </Card>
+        </section>
 
         <DailyLogHoursChart
           byDay={report.logs.byDay}

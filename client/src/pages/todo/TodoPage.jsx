@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ListTodo } from 'lucide-react';
 import axios from 'axios';
-import { Card, Badge, SearchInput, PageSkeleton, PageLoadGuard, DataLoading, ListPageLayout, UserLabel, ListCard } from '../../components/ui';
+import { Badge, SearchInput, PageSkeleton, PageLoadGuard, DataLoading, ListPageLayout, UserLabel, ListCard } from '../../components/ui';
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
@@ -175,7 +175,7 @@ const TodoPage = () => {
         key={task?._id}
         highlightId={task?._id}
         onClick={() => setSelectedTask(task)}
-        className={`${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
+        className={`tm-task-row ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
         style={getTaskRowStyle(accent)}
         leading={
           <button
@@ -235,7 +235,7 @@ const TodoPage = () => {
       <tr
         key={task?._id}
         data-highlight-id={task?._id}
-        className={`tm-task-row cursor-pointer rounded-xl overflow-hidden ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
+        className={`tm-task-row cursor-pointer ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
         style={getTaskRowStyle(accent)}
         onClick={() => setSelectedTask(task)}
       >
@@ -303,9 +303,9 @@ const TodoPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} className="w-full" />
-          <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} className="w-full" />
-          <NexusDropdown label="Category" options={typeOptions} value={typeFilter} onChange={setTypeFilter} className="w-full" />
+          <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} />
+          <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} />
+          <NexusDropdown options={typeOptions} value={typeFilter} onChange={setTypeFilter} label="Category" placeholder="All categories" />
           <NexusDropdown
             label="Workspace"
             options={workspaceFilterOptions}
@@ -314,10 +314,9 @@ const TodoPage = () => {
               setWorkspaceFilter(value);
               setProjectFilter('all');
             }}
-            className="w-full"
             searchable
           />
-          <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} className="w-full" searchable />
+          <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} searchable />
         </>
       }
     >
@@ -339,10 +338,10 @@ const TodoPage = () => {
       </div>
 
       {/* Desktop: table */}
-      <Card className="overflow-hidden hidden lg:block">
-        <table className="w-full text-left border-separate border-spacing-y-2">
+      <div className="overflow-hidden hidden lg:block border-t border-[var(--color-bg-border)]">
+        <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+            <tr className="border-b border-[var(--color-bg-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
               <th className="px-4 py-3 w-10" />
               <th className="px-4 py-3">Task</th>
               <th className="px-4 py-3">Type</th>
@@ -371,14 +370,14 @@ const TodoPage = () => {
             )}
             {activeTasks.map(renderRow)}
             {activeTasks.length > 0 && doneTasks.length > 0 && (
-              <tr className="bg-[var(--color-bg-secondary)]/50">
+              <tr className="border-b border-[var(--color-bg-border)]">
                 <td colSpan={7} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Completed ({doneTasks.length})</td>
               </tr>
             )}
             {doneTasks.map(renderRow)}
           </tbody>
         </table>
-      </Card>
+      </div>
 
       <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
       <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />

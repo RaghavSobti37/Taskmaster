@@ -72,7 +72,7 @@ const CreateUserModal = ({ isOpen, onClose, departments = [], onCreate, isPendin
       {credentials ? (
         <>
           <ModalBody className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-3">
+            <div className="py-4 border-b border-emerald-500/25 space-y-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Email</p>
                 <p className="text-sm font-mono font-bold break-all">{credentials.email}</p>

@@ -21,7 +21,7 @@ import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
 import { 
   NexusModal, NexusDropdown,
-  Card, Button, Input, Badge, 
+  Button, Input, Badge, 
   PageSkeleton, ModalShell, ModalHeader, ModalBody, ModalFooter, SearchInput, TablePagination,
   ListPageLayout,
   UserLabel,
@@ -433,10 +433,10 @@ const AssetsPage = () => {
            {/* Mobile card list */}
            <div className="lg:hidden space-y-3">
              {filteredAssets.length === 0 ? (
-               <Card className="py-16 text-center opacity-40">
+               <div className="py-16 text-center opacity-40 border border-[var(--color-bg-border)]">
                  <Database size={40} className="mx-auto mb-3" />
                  <p className="text-[10px] font-black uppercase tracking-widest">No files uploaded yet</p>
-               </Card>
+               </div>
              ) : paginatedAssets.map((asset) => {
                const hasLink = Boolean(asset.link?.trim());
                return (
@@ -498,7 +498,7 @@ const AssetsPage = () => {
              )}
            </div>
 
-           <Card className="overflow-visible p-0 hidden lg:block">
+           <div className="overflow-visible hidden lg:block border-t border-[var(--color-bg-border)]">
               <div className="min-w-0 pr-1 sm:pr-2">
                  <table className="w-full max-w-full text-left table-fixed">
                     <colgroup>
@@ -614,12 +614,12 @@ const AssetsPage = () => {
                   }}
                 />
               )}
-           </Card>
+           </div>
         </div>
 
         <aside className="lg:col-span-3 space-y-6 min-w-0">
            <MobileCollapsibleSection title="Connected accounts">
-           <Card className="p-4 space-y-4 border-0 shadow-none">
+           <section className="p-4 space-y-4 border-b border-[var(--color-bg-border)]">
               <div className="flex items-center justify-between">
                  <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-500 flex items-center gap-2">
                     <Cloud size={14} /> Google Workspace
@@ -638,7 +638,7 @@ const AssetsPage = () => {
                 {googleAccounts.length === 0 ? (
                    <p className="text-[9px] text-[var(--color-text-muted)] italic text-center py-4">No Google accounts linked yet.</p>
                 ) : googleAccounts.map((acc, index) => (
-                   <div key={acc._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-2xl space-y-3 relative group">
+                   <div key={acc._id} className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] space-y-3 relative group">
                       {/* Header with Account Details & Unlink Trigger */}
                       <div className="flex items-center justify-between">
                          <div className="flex items-center gap-2 min-w-0">
@@ -667,7 +667,7 @@ const AssetsPage = () => {
                               href={googleServiceUrl(service, index, acc.email)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex flex-col items-center justify-center p-1.5 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/40 hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-action-primary)]/30 transition-all relative group" 
+                              className="flex flex-col items-center justify-center p-1.5 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]/40 hover:bg-[var(--color-bg-surface)] hover:border-[var(--color-action-primary)]/30 transition-all relative group" 
                               title={`Open Google ${service.name}`}
                             >
                               <AssetTypeIconBadge type={service.type} size={12} className="!p-0.5 mb-0.5" />
@@ -679,21 +679,20 @@ const AssetsPage = () => {
                    </div>
                 ))}
               </div>
-           </Card>
+           </section>
            </MobileCollapsibleSection>
 
-           <Card className="p-4 bg-slate-50 dark:bg-slate-900 text-[var(--color-text-primary)] dark:text-white border-[var(--color-bg-border)] dark:border-white/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-3xl rounded-full" />
+           <section className="p-4 border border-[var(--color-bg-border)] relative overflow-hidden">
               <div className="relative z-10 space-y-3">
                  <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Storage Security</h4>
+                    <h4 className="tm-widget-label text-blue-400">Storage Security</h4>
                     <Shield size={14} className="text-emerald-500" />
                  </div>
-                 <div className="p-2.5 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-[10px] font-bold italic text-slate-300">All registered assets are saved as secure external references.</p>
+                 <div className="p-2.5 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
+                    <p className="text-[10px] font-bold italic tm-data-meta">All registered assets are saved as secure external references.</p>
                  </div>
               </div>
-           </Card>
+           </section>
         </aside>
       </div>
 
@@ -734,7 +733,7 @@ const AssetsPage = () => {
                   onChange={(notes) => setNewAsset({ ...newAsset, notes })}
                   placeholder="e.g. follow up with @Name with #Asset Name — @ notifies, # links to asset URL"
                   rows={4}
-                  className="w-full min-h-[88px] px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-action-primary)]/50 resize-y"
+                  className="w-full min-h-[88px] px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:border-[var(--color-action-primary)]/50 resize-y"
                 />
               </div>
             </div>
@@ -787,7 +786,7 @@ const AssetsPage = () => {
           <button
             type="button"
             onClick={handleOAuthConnect}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/10"
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[var(--radius-atomic)] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
           >
             <Cloud size={14} /> Connect via Google OAuth
           </button>
@@ -803,13 +802,13 @@ const AssetsPage = () => {
               value={simEmail}
               onChange={(e) => setSimEmail(e.target.value)}
               placeholder="Enter one or more Google emails (comma or newline separated)..."
-              className="w-full min-h-[96px] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl px-4 py-2.5 text-xs font-bold outline-none text-[var(--color-text-primary)] resize-y"
+              className="w-full min-h-[96px] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-4 py-2.5 text-xs font-bold outline-none text-[var(--color-text-primary)] resize-y"
               required
             />
             <button
               type="submit"
               disabled={linking || !simEmail}
-              className="w-full py-2.5 bg-[var(--color-action-primary)] hover:opacity-90 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+              className="w-full py-2.5 bg-[var(--color-action-primary)] hover:opacity-90 text-white rounded-[var(--radius-atomic)] text-[10px] font-black uppercase tracking-widest transition-all"
             >
               {linking ? 'Saving...' : 'Save Linked Emails'}
             </button>

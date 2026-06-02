@@ -9,7 +9,7 @@ import {
   Target, Globe, Calendar, Link2, X, Activity, UserCheck
 } from 'lucide-react';
 import { 
-  Badge, Card, NexusModal, PageHeader, NexusDropdown, DataTable, 
+  Badge, NexusModal, PageHeader, NexusDropdown, DataTable, 
   Button, Input, StatCard, ProgressBar, FullScreenWorkspace, InfoButton,
   ModalShell, ModalHeader, ModalBody
 } from '../ui';
@@ -208,7 +208,7 @@ const TscDataContent = () => {
 
   return (
     <div className="space-y-6 p-4">
-      <Card className="p-4 bg-[var(--color-bg-secondary)] border-dashed border-2">
+      <section className="py-4 border-t border-dashed border-2 border-[var(--color-bg-border)]">
          <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
                <Input 
@@ -282,7 +282,7 @@ const TscDataContent = () => {
                 />
             </div>
          </div>
-      </Card>
+      </section>
 
       <DataTable 
         columns={columns} 
@@ -310,7 +310,7 @@ const TscDataContent = () => {
         onSave={() => setSelectedItem(null)}
         sidebar={
           <>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
                <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Entry Metadata</h4>
                <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -324,8 +324,8 @@ const TscDataContent = () => {
                      </Badge>
                   </div>
                </div>
-            </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+            </section>
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
                <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Source Insights</h4>
                <div className="flex items-center gap-3">
                   <div className="p-2 bg-[var(--color-bg-secondary)] rounded-lg text-[var(--color-action-primary)]">
@@ -336,7 +336,7 @@ const TscDataContent = () => {
                      <p className="text-[8px] text-[var(--color-text-muted)] uppercase">{selectedItem?.originSource || 'Direct Entry'}</p>
                   </div>
                </div>
-            </Card>
+            </section>
           </>
         }
       >
@@ -426,7 +426,7 @@ const TscDataContent = () => {
               <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest text-center">Map your headers to system fields</p>
               <div className="space-y-2">
                  {headers.map(h => (
-                   <div key={h} className="flex items-center justify-between gap-4 p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                   <div key={h} className="flex items-center justify-between gap-4 py-3 border-b border-[var(--color-bg-border)] last:border-b-0">
                       <span className="text-[10px] font-black uppercase truncate flex-1">{h}</span>
                       <ArrowRight size={12} className="text-[var(--color-text-muted)] shrink-0" />
                       <select 

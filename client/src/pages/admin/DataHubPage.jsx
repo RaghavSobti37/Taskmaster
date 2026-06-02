@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
 import {
-  PageContainer, DataTable, Button, Input,
+  PageContainer, DataTable, Button, SearchInput,
   Badge, NexusDropdown, DataOverviewSection, PageToolbar,
 } from '../../components/ui';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
@@ -188,11 +188,12 @@ export function DataHubContent() {
     const lastLabel = latestBackup?.date
       ? `Latest snapshot: ${latestBackup.date} (${formatBytes(latestBackup.totalBytes)}).`
       : 'No snapshots found yet.';
-    const ok = window.confirm(
-      `Back up the full production MongoDB into Atlas GridFS (${backupDbLabel})?\n\n`
-      + `${lastLabel}\n`
-      + 'This may take 1–2 minutes. You will get a success email when done.'
-    );
+    const ok = await confirm({
+      title: 'Back up production database?',
+      message: `Back up the full production MongoDB into Atlas GridFS (${backupDbLabel})? ${lastLabel} This may take 1–2 minutes. You will get a success email when done.`,
+      confirmLabel: 'Start backup',
+      type: 'danger',
+    });
     if (!ok) return;
 
     try {
@@ -285,7 +286,7 @@ export function DataHubContent() {
           }}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col space-y-3">
+        <div className="flex-1 min-w-0 flex flex-col space-y-3 mb-8">
           <DataOverviewSection stats={overview.stats} charts={overview.charts} />
 
           <PageToolbar
@@ -328,17 +329,14 @@ export function DataHubContent() {
               </>
             )}
           >
-            <Input
-              icon={Search}
+            <SearchInput
               placeholder="Search name, email, phone…"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-              className="!py-1.5 !min-h-[2.25rem] !w-full min-w-[12rem] max-w-md"
             />
             <NexusDropdown
-              className="!w-[128px] shrink-0"
-              variant="compact"
-              placeholder="Status"
+              label="Status"
+              placeholder="All statuses"
               value={emailStatusFilter}
               onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
               options={[

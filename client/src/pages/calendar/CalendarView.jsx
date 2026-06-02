@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSqu
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
-  Card, 
   Button,
   ListPageLayout,
 } from '../../components/ui';
@@ -129,7 +128,7 @@ const CalendarView = () => {
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
     return (
-      <Card className="p-4 bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]">
+      <div className="p-4 border border-[var(--color-bg-border)]">
         <div className="flex items-center justify-between mb-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
             {format(currentMonth, 'MMMM yyyy')}
@@ -156,7 +155,7 @@ const CalendarView = () => {
                 className={`relative text-center py-1.5 text-[9px] font-black rounded-full cursor-pointer transition-all
                   ${!isCurrentMonth ? 'opacity-20' : 'opacity-100'}
                   ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-[var(--color-bg-secondary)]' : ''}
-                  ${isToday ? 'bg-blue-500 text-white shadow-lg' : 'hover:bg-[var(--color-bg-workspace)]'}
+                  ${isToday ? 'bg-blue-500 text-white' : 'hover:bg-[var(--color-bg-workspace)]'}
                 `}
                 onClick={() => { setCurrentMonth(day); setSelectedDay(day); }}
               >
@@ -172,12 +171,12 @@ const CalendarView = () => {
             );
           })}
         </div>
-      </Card>
+      </div>
     );
   };
 
   const renderSelectedDayPanel = () => (
-    <Card className="p-3">
+    <div className="p-3 border border-[var(--color-bg-border)]">
       <div className="grid grid-cols-2 gap-2 items-center mb-2 pb-2 border-b border-[var(--color-bg-border)]">
         <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">
           {selectedDay ? format(selectedDay, 'EEEE, MMM d') : 'Select a day'}
@@ -219,7 +218,7 @@ const CalendarView = () => {
           })}
         </div>
       )}
-    </Card>
+    </div>
   );
 
   return (
@@ -233,8 +232,8 @@ const CalendarView = () => {
         <aside className="w-full lg:w-72 space-y-4 shrink-0">
            {renderMiniCalendar()}
            {renderSelectedDayPanel()}
-           <Card className="p-4 space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Calendar Filters</h4>
+           <div className="p-4 space-y-4 border border-[var(--color-bg-border)]">
+              <h4 className="tm-widget-label">Calendar Filters</h4>
               <div className="space-y-2">
                  <div
                    className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-all cursor-pointer"
@@ -277,11 +276,11 @@ const CalendarView = () => {
                     <Star size={10} className={showHolidays ? 'text-rose-500' : 'text-[var(--color-text-muted)]'} />
                  </div>
               </div>
-           </Card>
+           </div>
         </aside>
 
         <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-           <Card className="overflow-hidden flex flex-col flex-1 min-h-0">
+           <div className="overflow-hidden flex flex-col flex-1 min-h-0 border border-[var(--color-bg-border)]">
               <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between shrink-0">
                  <div className="flex items-center gap-4">
                     <Button variant="secondary" size="xs" onClick={() => { const today = new Date(); setCurrentMonth(today); setSelectedDay(today); }}>Today</Button>
@@ -369,7 +368,7 @@ const CalendarView = () => {
                     );
                  })}
               </div>
-           </Card>
+           </div>
         </main>
       </div>
 

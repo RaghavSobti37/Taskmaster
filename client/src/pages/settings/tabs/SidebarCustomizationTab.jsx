@@ -160,7 +160,7 @@ export default function SidebarCustomizationTab() {
               <Reorder.Group axis="y" values={groups} onReorder={handleReorderGroups} className="space-y-4">
                 <AnimatePresence>
                   {groups.map((group) => (
-                    <Reorder.Item key={group.id} value={group} className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl shadow-sm overflow-hidden group/item">
+                    <Reorder.Item key={group.id} value={group} className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden group/item">
                       {/* Group header */}
                       <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
                         <div className="cursor-grab active:cursor-grabbing p-1 text-[var(--color-text-muted)] hover:text-blue-500 hover:bg-blue-500/10 rounded transition-colors">
@@ -213,7 +213,7 @@ export default function SidebarCustomizationTab() {
                                 {/* Move + visibility */}
                                 <div className="flex items-center gap-2 shrink-0">
                                   <select
-                                    className="text-[11px] font-medium bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md px-2 py-1 outline-none text-[var(--color-text-primary)] hover:border-blue-500 transition-colors cursor-pointer shadow-sm"
+                                    className="text-[11px] font-medium bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-2 py-1 outline-none text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)] transition-colors cursor-pointer"
                                     value={group.id}
                                     onChange={(e) => movePageToGroup(page.path, group.id, e.target.value)}
                                   >
@@ -237,7 +237,7 @@ export default function SidebarCustomizationTab() {
 
           {/* RIGHT — Group management panel */}
           <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-0">
-            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden">
               <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
                 <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Tab Groups</h3>
                 <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Manage sidebar sections</p>
@@ -271,7 +271,7 @@ export default function SidebarCustomizationTab() {
                 ))}
               </div>
               <div className="p-3 pt-0">
-                <Button size="sm" onClick={handleCreateGroup} variant="outline" className="w-full gap-2 shadow-sm rounded-lg text-xs">
+                <Button size="sm" onClick={handleCreateGroup} variant="secondary" className="w-full gap-2 rounded-[var(--radius-atomic)] text-xs">
                   <Plus size={14} /> Add Custom Group
                 </Button>
               </div>

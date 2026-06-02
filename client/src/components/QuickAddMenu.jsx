@@ -128,14 +128,14 @@ const QuickAddMenu = () => {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="flex flex-col gap-1.5 mb-1 p-2 rounded-2xl bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-xl"
+              className="tm-floating flex flex-col gap-1.5 mb-1 p-2 rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-xl"
             >
               {actions.map((a) => (
                 <button
                   key={a.id}
                   type="button"
                   onClick={a.onClick}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold hover:bg-[var(--color-bg-secondary)] whitespace-nowrap"
+                  className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-atomic)] text-xs font-bold hover:bg-[var(--color-bg-secondary)] whitespace-nowrap"
                 >
                   <a.icon size={14} /> {a.label}
                 </button>
@@ -160,7 +160,7 @@ const QuickAddMenu = () => {
       <NexusModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} title="New Note" showFooter={false}>
         <div className="space-y-3 pt-2">
           <Input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Title" />
-          <textarea value={noteContent} onChange={(e) => setNoteContent(e.target.value)} className="w-full min-h-[100px] p-3 rounded-xl border border-[var(--color-bg-border)] text-sm" placeholder="Note content..." />
+          <Input multiline rows={4} value={noteContent} onChange={(e) => setNoteContent(e.target.value)} placeholder="Note content..." />
           <Button onClick={submitNote} disabled={createNote.isPending}>Save Note</Button>
         </div>
       </NexusModal>
@@ -169,10 +169,11 @@ const QuickAddMenu = () => {
         <div className="space-y-3 pt-2">
           <p className="text-xs text-[var(--color-text-muted)]">Shared on the team pinboard — visible to everyone.</p>
           <Input value={pinTitle} onChange={(e) => setPinTitle(e.target.value)} placeholder="Title (optional)" />
-          <textarea
+          <Input
+            multiline
+            rows={4}
             value={pinContent}
             onChange={(e) => setPinContent(e.target.value)}
-            className="w-full min-h-[100px] p-3 rounded-xl border border-[var(--color-bg-border)] text-sm"
             placeholder="Pin something for the team..."
           />
           <Button onClick={submitPin} disabled={createPin.isPending || !pinContent.trim()}>
@@ -212,7 +213,7 @@ const QuickAddMenu = () => {
             <select
               value={bugSeverity}
               onChange={(e) => setBugSeverity(e.target.value)}
-              className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
             >
               {BUG_SEVERITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -230,7 +231,7 @@ const QuickAddMenu = () => {
                 e.currentTarget.form?.requestSubmit();
               }
             }}
-            className="w-full min-h-[100px] p-3 rounded-xl border border-[var(--color-bg-border)] text-sm"
+            className="w-full min-h-[100px] p-3 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] text-sm outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30"
             placeholder="Steps to reproduce (optional). Ctrl+Enter to submit."
           />
           <div className="flex justify-end">

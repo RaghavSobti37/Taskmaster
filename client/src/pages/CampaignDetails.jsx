@@ -404,7 +404,7 @@ export default function CampaignDetails() {
         </Card>
       </div>
 
-      <Card className="p-6 bg-[#0B0F19] border border-blue-500/30 rounded-2xl space-y-4 shadow-2xl relative overflow-hidden">
+      <Card className="p-6 bg-[#0B0F19] border border-blue-500/30 rounded-[var(--radius-atomic)] space-y-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
         <div className="flex items-center justify-between border-b border-blue-500/20 pb-3">
           <div className="flex items-center gap-2">

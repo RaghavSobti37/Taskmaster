@@ -73,10 +73,10 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
         key={task._id}
         data-highlight-id={task._id}
         onClick={(e) => { if (!e.target.closest('button')) onDetail(task); }}
-        className={`tm-task-row cursor-pointer rounded-xl overflow-hidden transition-colors group ${isDone ? 'tm-task-row--completed' : ''}`}
+        className={`tm-task-row cursor-pointer transition-colors group border-b border-[var(--color-bg-border)] ${isDone ? 'tm-task-row--completed' : ''}`}
         style={isDone ? getCompletedTaskRowStyle() : getTaskRowStyle(resolveTaskWorkspaceColor(task, workspaces, projects))}
       >
-        <td className="px-6 py-4">
+        <td className="px-4 py-2">
           <button
             type="button"
             onClick={(e) => {
@@ -88,7 +88,7 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
             {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
           </button>
         </td>
-        <td className="px-6 py-4 max-w-0 w-full">
+        <td className="px-4 py-2 max-w-0 w-full">
           <div className="cursor-pointer min-w-0" onClick={() => onDetail(task)}>
             <div className={`text-sm font-bold transition-all min-w-0 ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
               <MentionTitle text={task.title} className="tm-task-title" truncate />
@@ -100,17 +100,17 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
             )}
           </div>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 py-2">
           <TaskStatusSwitcher task={task} onUpdate={onUpdate} />
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 py-2">
           <Badge variant={isDone ? 'info' : getPriorityBadgeVariant(task.priority)}>
             {task.priority}
           </Badge>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 py-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[var(--color-bg-border)] flex items-center justify-center overflow-hidden border border-[var(--color-bg-border)] shadow-sm">
+            <div className="w-6 h-6 rounded-full bg-[var(--color-bg-border)] flex items-center justify-center overflow-hidden border border-[var(--color-bg-border)]">
               {task.assignees?.[0]?.avatar ? (
                 <img src={task.assignees[0].avatar} alt="" className="w-full h-full object-cover" />
               ) : (
@@ -122,10 +122,10 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
             </span>
           </div>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-4 py-2">
           <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
             <Calendar size={14} />
-            <span className="text-xs font-medium">
+            <span className="text-xs font-medium tabular-nums">
               {formatDueDate(task.dueDate)}
             </span>
           </div>
@@ -135,25 +135,24 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
   };
 
   return (
-    <div className="bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-separate border-spacing-y-2">
-          <thead>
-            <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)]">
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] w-10" />
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Name</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Priority</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Assignee</th>
-              <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Due Date</th>
-            </tr>
-          </thead>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b border-[var(--color-bg-border)]">
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] w-10" />
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Name</th>
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status</th>
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Priority</th>
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Assignee</th>
+            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Due Date</th>
+          </tr>
+        </thead>
           <tbody>
             {activeTasks.map(renderRow)}
 
             {hasBothSections && (
-              <tr className="bg-[var(--color-bg-workspace)]/60">
-                <td colSpan={6} className="px-6 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              <tr>
+                <td colSpan={6} className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">
                   Completed ({doneTasks.length})
                 </td>
               </tr>
@@ -163,14 +162,13 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
 
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-20 text-center text-[var(--color-text-muted)] italic">
+                <td colSpan={6} className="px-4 py-16 text-center text-[var(--color-text-muted)] italic">
                   No tasks found in this project.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
-      </div>
+      </table>
     </div>
   );
 };

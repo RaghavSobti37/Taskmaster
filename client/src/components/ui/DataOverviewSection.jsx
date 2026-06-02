@@ -32,27 +32,25 @@ export default function DataOverviewSection({
   const showCharts = hasCharts && (!showCollapsedMobile || insightsOpen);
 
   return (
-    <section className={`space-y-3 ${className}`} aria-label="Data overview">
+    <section className={`space-y-3 mb-8 ${className}`} aria-label="Data overview">
       {hasStats && (
         <div className={`grid gap-3 ${isMobile && insightsOpen ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
           {visibleStats.map((s) => {
             const Icon = s.icon || Database;
-            const wrapClass = s.active
-              ? 'rounded-[var(--radius-atomic)] border-2 border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20'
-              : 'rounded-[var(--radius-atomic)] border-2 border-[var(--color-bg-border)]';
             return (
-              <div key={s.id || s.label} className={wrapClass}>
-                <StatCard
-                  label={s.label}
-                  value={s.value}
-                  icon={Icon}
-                  variant={s.variant || 'info'}
-                  info={s.info}
-                  subValue={s.subValue}
-                  onClick={s.onClick}
-                  className={`border-0 h-full ${s.className || ''}`}
-                />
-              </div>
+              <StatCard
+                key={s.id || s.label}
+                label={s.label}
+                value={s.value}
+                icon={Icon}
+                variant={s.variant || 'info'}
+                info={s.info}
+                subValue={s.subValue}
+                onClick={s.onClick}
+                active={s.active}
+                delta={s.delta}
+                className={`h-full ${s.className || ''}`}
+              />
             );
           })}
         </div>

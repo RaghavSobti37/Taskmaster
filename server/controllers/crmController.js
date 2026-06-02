@@ -500,23 +500,23 @@ exports.updateLead = async (req, res) => {
             to: lead.email,
             subject: `Great! We connected - Next steps for ${courseTitle}`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Hi ${leadName},</h2>
-                <p>Thank you for connecting with us! We're excited to help you with <strong>${courseTitle}</strong>.</p>
-                <p><strong>Next Steps:</strong></p>
-                <ol>
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;color:#cbd5e1;">
+                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">Hi ${leadName},</h2>
+                <p style="margin:0 0 16px;line-height:1.6;">Thank you for connecting with us! We're excited to help you with <strong style="color:#f8fafc;">${courseTitle}</strong>.</p>
+                <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Next Steps</p>
+                <ol style="margin:0 0 20px;padding-left:20px;line-height:1.6;">
                   <li>Review the course details and curriculum</li>
                   <li>Proceed with payment using the link below</li>
                   <li>Complete the enrollment process</li>
                 </ol>
-                <p>
+                <p style="margin:0 0 24px;">
                   <a href="${paymentLink}" 
-                     style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                     style="background-color:#126d5e;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
                     Complete Payment
                   </a>
                 </p>
-                <p>If you have any questions, feel free to reach out!</p>
-                <p>Best regards,<br/>The Team</p>
+                <p style="margin:0 0 8px;line-height:1.6;">If you have any questions, feel free to reach out!</p>
+                <p style="margin:0;color:#64748b;font-size:13px;">Best regards,<br/>The Team</p>
               </div>
             `,
             from: 'support@coreknot.io'

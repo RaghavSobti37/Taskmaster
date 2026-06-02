@@ -4,7 +4,6 @@ import axios from 'axios';
 import { Wrench, Plus } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import {
-  Card,
   Button,
   Input,
   NexusModal,
@@ -138,7 +137,7 @@ const EquipmentPage = () => {
         sortKey: 'name',
         render: (row) => (
           <div className="min-w-0">
-            <span className="font-bold text-xs tracking-tight block truncate">{row.name}</span>
+            <span className="tm-data-primary text-xs tracking-tight block truncate">{row.name}</span>
             {row.description ? (
               <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{row.description}</span>
             ) : null}
@@ -225,17 +224,14 @@ const EquipmentPage = () => {
         </Button>
       }
     >
-      <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
-        <DataTable
-          columns={equipmentColumns}
-          data={filteredAssets}
-          onRowClick={openAssetEditor}
-          getRowId={(row) => row._id}
-          emptyTitle="No equipment found"
-          emptyDescription="Try a different search or add a new asset."
-          className="!border-none !rounded-none"
-        />
-      </Card>
+      <DataTable
+        columns={equipmentColumns}
+        data={filteredAssets}
+        onRowClick={openAssetEditor}
+        getRowId={(row) => row._id}
+        emptyTitle="No equipment found"
+        emptyDescription="Try a different search or add a new asset."
+      />
 
       <NexusModal
         isOpen={isAssetModalOpen}

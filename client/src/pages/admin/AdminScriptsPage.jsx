@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { Brackets, Play, Clock3, CheckCircle2, XCircle } from 'lucide-react';
-import { Badge, Button, Card, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
 
 const formatMs = (ms = 0) => {
   if (ms < 1000) return `${ms}ms`;
@@ -79,7 +79,7 @@ const AdminScriptsPage = () => {
           const isRunning = runningId === script.id;
 
           return (
-            <Card key={script.id} className="p-4 space-y-3">
+            <div key={script.id} className="p-4 space-y-3 border border-[var(--color-bg-border)]">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider">{script.title}</h3>
@@ -98,7 +98,7 @@ const AdminScriptsPage = () => {
               </div>
 
               {result && (
-                <div className="border border-[var(--color-bg-border)] rounded-xl p-3 space-y-2 bg-[var(--color-bg-workspace)]">
+                <div className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] p-3 space-y-2 bg-[var(--color-bg-workspace)]">
                   <div className="flex items-center gap-2">
                     <Badge variant={result.ok ? 'success' : 'danger'}>
                       {result.ok ? 'Success' : 'Failed'}
@@ -124,7 +124,7 @@ const AdminScriptsPage = () => {
                   ) : null}
                 </div>
               )}
-            </Card>
+            </div>
           );
         })}
       </div>

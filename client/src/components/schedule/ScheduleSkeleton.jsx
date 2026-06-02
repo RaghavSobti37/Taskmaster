@@ -21,7 +21,7 @@ const ScheduleSkeleton = ({
       {showStatCards && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-xl border border-[var(--color-bg-border)] p-4 space-y-2">
+            <div key={i} className="border-b border-[var(--color-bg-border)] pb-4 space-y-2">
               <Skeleton height={10} width="55%" />
               <Skeleton height={28} width="40%" />
             </div>
@@ -29,7 +29,7 @@ const ScheduleSkeleton = ({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]">
+      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)]">
         <table className="w-full min-w-[640px] text-xs">
           {!hideTableHeader && (
             <thead>

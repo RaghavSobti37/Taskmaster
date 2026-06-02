@@ -30,7 +30,7 @@ const SchedulePage = () => {
       icon={CalendarDays}
       title="Schedule"
       toolbarActions={
-        <div className="flex items-center gap-2.5 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-3 py-2">
+        <div className="flex items-center gap-2.5 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-3 py-2">
           <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">
             View
           </span>

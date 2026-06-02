@@ -111,7 +111,7 @@ const ScheduleGrid = ({
   return (
     <>
       {/* Desktop: horizontal grid table */}
-      <div className="hidden lg:block overflow-x-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]">
+      <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)]">
       <table className="w-full min-w-[640px] text-xs">
         {!hideTableHeader && (
           <ScheduleTableHeader dayColumns={dayColumns} slotHeaders={slotHeaders} memberPad={memberPad} />
@@ -150,7 +150,7 @@ const ScheduleGrid = ({
           });
           if (!dayTasks.length) return null;
           return (
-            <div key={dayKey} className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] overflow-hidden">
+            <div key={dayKey} className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] overflow-hidden">
               <div className="px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                   {format(parseISO(dayKey), 'EEE, MMM d')}

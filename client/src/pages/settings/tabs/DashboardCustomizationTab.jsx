@@ -567,7 +567,7 @@ export default function DashboardCustomizationTab() {
                 <div
                   key={el.componentId}
                   data-comp={el.componentId}
-                  className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-xl flex flex-col pt-3 pb-2 px-3 shadow-sm relative group select-none border-[var(--color-text-primary)] transition-all duration-300`}
+                  className={`${colSpanClass(el.size)} bg-[var(--color-bg-primary)] border-[3px] rounded-[var(--radius-atomic)] flex flex-col pt-3 pb-2 px-3 relative group select-none border-[var(--color-text-primary)] transition-all duration-300`}
                   style={{
                     gridColumnStart: cCol,
                     gridRowStart: el.row || 1,

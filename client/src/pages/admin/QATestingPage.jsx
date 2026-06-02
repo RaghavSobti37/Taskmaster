@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy, Lock, Globe, Gauge, FileWarning, ScrollText, RotateCcw, GitBranch } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, Badge } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Badge } from '../../components/ui';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -601,7 +601,7 @@ const QATestingPage = () => {
           const Icon = categoryIcons[cat] || Shield;
           const total = bucket.pass + bucket.fail + bucket.warn + bucket.skip;
           return (
-            <Card key={cat} className="p-5 border border-[var(--color-bg-border)]">
+            <div key={cat} className="p-5 border border-[var(--color-bg-border)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
                   <Icon size={20} className="text-indigo-600 dark:text-indigo-400" />
@@ -642,7 +642,7 @@ const QATestingPage = () => {
                   );
                 })}
               </ul>
-            </Card>
+            </div>
           );
         })}
       </div>
@@ -660,7 +660,7 @@ const QATestingPage = () => {
 
     if (bugs.length === 0) {
       return (
-        <Card className={`p-8 text-center mt-6 ${checklistFailCount > 0 ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200' : 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'}`}>
+        <div className={`p-8 text-center mt-6 border ${checklistFailCount > 0 ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200' : 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'}`}>
           <CheckCircle className={`mx-auto mb-3 ${checklistFailCount > 0 ? 'text-amber-500' : 'text-emerald-500'}`} size={40} />
           <h3 className={`text-xl font-bold ${checklistFailCount > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
             {checklistFailCount > 0 ? 'No Dynamic Scan Bugs' : 'Zero Bugs Found'}
@@ -670,7 +670,7 @@ const QATestingPage = () => {
               ? `Page pentest clean; ${checklistFailCount} pre-deploy check(s) failed above.`
               : 'The agent completed testing with a 100% pass rate.'}
           </p>
-        </Card>
+        </div>
       );
     }
 
@@ -708,7 +708,7 @@ const QATestingPage = () => {
             const Icon = categoryIcons[bug.category] || Bug;
             const isResolved = bug.resolved;
             return (
-              <Card key={bug._id} className={`p-5 transition-all ${isResolved ? 'opacity-60 grayscale' : 'border-l-4 border-l-rose-500'}`}>
+              <div key={bug._id} className={`p-5 border border-[var(--color-bg-border)] transition-all ${isResolved ? 'opacity-60 grayscale' : 'border-l-4 border-l-rose-500'}`}>
                 <div className="flex flex-col md:flex-row gap-5 items-start">
                   <div className={`p-3 rounded-lg ${isResolved ? 'bg-gray-100 dark:bg-gray-800' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
                     <Icon size={24} className={isResolved ? 'text-gray-500' : 'text-rose-500'} />
@@ -759,7 +759,7 @@ const QATestingPage = () => {
                     )}
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
@@ -819,9 +819,9 @@ const QATestingPage = () => {
       <div className="max-w-6xl mx-auto py-6 space-y-8">
 
         {/* Control Panel / Test Runner */}
-        <Card className="p-6 overflow-hidden relative min-h-[300px] flex flex-col justify-center">
+        <section className="p-6 overflow-hidden relative min-h-[300px] flex flex-col justify-center border border-[var(--color-bg-border)]">
           {isRunning ? (
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl border border-blue-200 dark:border-blue-800/50 w-full max-w-4xl mx-auto">
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-[var(--radius-atomic)] border border-blue-200 dark:border-blue-800/50 w-full max-w-4xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="font-bold text-xl text-blue-900 dark:text-blue-100 flex items-center gap-2 mb-1">
@@ -851,7 +851,7 @@ const QATestingPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-blue-800/50 p-4 rounded-xl space-y-3">
+                <div className="bg-blue-50 dark:bg-black/40 border border-blue-100 dark:border-blue-800/50 p-4 rounded-[var(--radius-atomic)] space-y-3">
                   <div>
                     <div className="text-xs uppercase font-bold text-blue-500 tracking-wider mb-1">Currently Testing</div>
                     <div className="text-blue-900 dark:text-blue-100 font-mono text-sm font-semibold">
@@ -867,7 +867,7 @@ const QATestingPage = () => {
                 </div>
 
                 {currentRun.errorDetails?.message && (
-                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3 rounded-xl text-sm text-red-700 dark:text-red-300">
+                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3 rounded-[var(--radius-atomic)] text-sm text-red-700 dark:text-red-300">
                     Run error ({currentRun.errorDetails.phase}): {currentRun.errorDetails.message}
                   </div>
                 )}
@@ -887,8 +887,8 @@ const QATestingPage = () => {
                       <div
                         key={agent.id}
                         onClick={() => !isRunning && setSelectedAgent(agent)}
-                        className={`flex items-center gap-4 p-3 rounded-xl border-2 cursor-pointer transition-all ${selectedAgent.id === agent.id
-                            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10 shadow-sm'
+                        className={`flex items-center gap-4 p-3 rounded-[var(--radius-atomic)] border-2 cursor-pointer transition-all ${selectedAgent.id === agent.id
+                            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10'
                             : 'border-transparent bg-[var(--color-bg-secondary)] hover:border-[var(--color-bg-border)]'
                           } ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
@@ -908,7 +908,7 @@ const QATestingPage = () => {
               </div>
 
               {/* Right: Actions & Info */}
-              <div className="flex flex-col justify-between bg-[var(--color-bg-secondary)] p-6 rounded-xl border border-[var(--color-bg-border)]/50">
+              <div className="flex flex-col justify-between bg-[var(--color-bg-secondary)] p-6 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
                 <div>
                   <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">Pre-Flight Checks</h3>
                   <ul className="space-y-3 text-sm text-[var(--color-text-secondary)] mb-6">
@@ -921,7 +921,7 @@ const QATestingPage = () => {
                 <Button
                   onClick={handleStart}
                   disabled={isRunning || startMutation.isPending || selectedCategories.size === 0}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2 py-4 rounded-xl text-lg font-bold shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2 py-4 rounded-[var(--radius-atomic)] text-lg font-bold transition-all disabled:opacity-50"
                 >
                   {startMutation.isPending ? <RefreshCw className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}
                   {runButtonLabel}
@@ -929,7 +929,7 @@ const QATestingPage = () => {
               </div>
             </div>
           )}
-        </Card>
+        </section>
 
         {/* Results Section */}
         {latestResults && !isRunning && (

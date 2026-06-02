@@ -1,6 +1,5 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { Card } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAttendance } from '../../../hooks/useTaskmasterQueries';
 
@@ -16,44 +15,42 @@ export default function AttendanceTab() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
-      <div>
+      <div className="border-b border-[var(--color-bg-border)] pb-4">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Attendance</h1>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <section>
+        <div className="pb-4 border-b border-[var(--color-bg-border)] mb-4">
+          <h3 className="tm-widget-label flex items-center gap-2">
             <Clock size={14} className="text-emerald-500" /> Attendance History
           </h3>
         </div>
-        <div className="p-4">
-          <div className="max-h-96 overflow-y-auto border border-[var(--color-bg-border)] rounded-xl custom-scrollbar">
-            <table className="min-w-full text-xs">
-              <thead className="bg-[var(--color-bg-secondary)] sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-left font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Date</th>
-                  <th className="px-4 py-3 text-left font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Time In</th>
-                  <th className="px-4 py-3 text-left font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Time Out</th>
+        <div className="max-h-96 overflow-y-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] custom-scrollbar">
+          <table className="min-w-full text-xs">
+            <thead className="sticky top-0 bg-[var(--color-bg-workspace)] border-b border-[var(--color-bg-border)]">
+              <tr>
+                <th className="px-4 py-3 text-left tm-widget-label !text-[10px]">Date</th>
+                <th className="px-4 py-3 text-left tm-widget-label !text-[10px]">Time In</th>
+                <th className="px-4 py-3 text-left tm-widget-label !text-[10px]">Time Out</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myAttendance.map((row) => (
+                <tr key={row?._id} className={`border-b border-[var(--color-bg-border)] last:border-0 ${getAttendanceRowClass(row)}`}>
+                  <td className="px-4 py-3 tabular-nums">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
+                  <td className="px-4 py-3 tabular-nums">{row.timeIn || '-'}</td>
+                  <td className="px-4 py-3 tabular-nums">{row.timeOut || '-'}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {myAttendance.map((row) => (
-                  <tr key={row?._id} className={`border-t border-[var(--color-bg-border)] ${getAttendanceRowClass(row)}`}>
-                    <td className="px-4 py-3">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
-                    <td className="px-4 py-3">{row.timeIn || '-'}</td>
-                    <td className="px-4 py-3">{row.timeOut || '-'}</td>
-                  </tr>
-                ))}
-                {myAttendance.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-[var(--color-text-muted)]">No attendance records yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {myAttendance.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center tm-data-meta">No attendance records yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </Card>
+      </section>
     </div>
   );
 }

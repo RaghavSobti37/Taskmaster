@@ -8,6 +8,7 @@ import {
   Card,
   DataTable,
   Button,
+  Input,
   PageSkeleton,
   ListPageLayout,
   SearchInput,
@@ -36,7 +37,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(25);
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -452,27 +453,25 @@ export default function LeadsPage() {
         </>
       }
     >
-      <Card className="p-0 overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={leads}
-          onRowClick={(row) => setSelectedLead(row)}
-          paginated
-          serverSide
-          totalItems={totalLeads}
-          totalPages={totalPages}
-          currentPage={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setPage(1);
-          }}
-          sortState={tableSortState}
-          onSortChange={handleTableSortChange}
-          isLoading={isLoading}
-        />
-      </Card>
+      <DataTable
+        columns={columns}
+        data={leads}
+        onRowClick={(row) => setSelectedLead(row)}
+        paginated
+        serverSide
+        totalItems={totalLeads}
+        totalPages={totalPages}
+        currentPage={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setPage(1);
+        }}
+        sortState={tableSortState}
+        onSortChange={handleTableSortChange}
+        isLoading={isLoading}
+      />
 
       <FullScreenWorkspace
         isOpen={!!selectedLead}
@@ -910,6 +909,9 @@ export default function LeadsPage() {
           </div>
           <Input
             label="Initial Remarks / Notes"
+            multiline
+            rows={3}
+            autoGrow
             placeholder="Interested in weekend music production batch..."
             value={newLeadData.remarks}
             onChange={e => setNewLeadData({ ...newLeadData, remarks: e.target.value })}

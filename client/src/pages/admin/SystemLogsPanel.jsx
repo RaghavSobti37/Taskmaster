@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Activity, BarChart3, Radio } from 'lucide-react';
-import { Badge, Button, Card, PageSkeleton } from '../../components/ui';
+import { Badge, Button, PageSkeleton } from '../../components/ui';
 import { useSystemLogs, useTopPages } from '../../hooks/useSystemLogs';
 import { SEVERITY } from '../../lib/systemLogContract';
 import SystemLogSandbox from '../../components/admin/SystemLogSandbox';
@@ -24,23 +24,23 @@ const LogFeedItem = ({ log }) => {
   const actorLabel = formatActorLabel(log);
 
   return (
-    <div className="p-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl space-y-1.5">
+    <div className="py-3 border-b border-[var(--color-bg-border)] last:border-0 space-y-1.5">
       <div className="flex justify-between items-start gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <div className="p-1.5 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] shrink-0">
+          <div className="p-1.5 bg-[var(--color-action-primary)]/10 rounded-[var(--radius-atomic)] text-[var(--color-action-primary)] shrink-0">
             <Activity size={12} />
           </div>
           <Badge variant={SEVERITY_VARIANT[log.severity] || 'default'}>{log.severity}</Badge>
           {log.module && <Badge variant="outline">{log.module}</Badge>}
-          <span className="text-xs font-semibold text-[var(--color-text-primary)] truncate">
+          <span className="text-xs font-semibold tm-data-primary truncate">
             {log.message}
           </span>
         </div>
-        <span className="text-[9px] font-mono text-[var(--color-text-muted)] shrink-0">
+        <span className="text-[9px] font-mono tm-data-meta shrink-0 tabular-nums">
           {format(new Date(log.timestamp), 'HH:mm:ss')}
         </span>
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[var(--color-text-muted)] font-mono pl-9">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] tm-data-meta font-mono pl-9">
         {log.route && <span>{log.method || '—'} {log.route}</span>}
         {actorLabel && <span>{actorLabel}</span>}
         {log.errorCode && log.errorCode !== 'PAGE_VIEW' && <span>{log.errorCode}</span>}
@@ -50,29 +50,29 @@ const LogFeedItem = ({ log }) => {
 };
 
 const TopPagesCard = ({ pages = [], isLoading }) => (
-  <Card className="p-4 space-y-3">
-    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+  <div className="p-4 border border-[var(--color-bg-border)] space-y-3">
+    <div className="flex items-center gap-2 tm-widget-label">
       <BarChart3 className="w-4 h-4" />
       Top pages · 7 days
     </div>
     {isLoading && <PageSkeleton />}
     {!isLoading && pages.length === 0 && (
-      <p className="text-xs text-[var(--color-text-muted)]">No page visits recorded yet. Browse the app to populate.</p>
+      <p className="text-xs tm-data-meta">No page visits recorded yet. Browse the app to populate.</p>
     )}
     <ul className="space-y-2">
       {pages.map((row, i) => (
-        <li key={row?.path} className="flex items-center justify-between gap-2 text-sm">
-          <span className="truncate text-[var(--color-text-primary)] font-medium">
-            <span className="text-[var(--color-text-muted)] mr-2">{i + 1}.</span>
+        <li key={row?.path} className="flex items-center justify-between gap-2 text-sm border-b border-[var(--color-bg-border)] pb-2 last:border-0">
+          <span className="truncate tm-data-primary font-medium">
+            <span className="tm-data-meta mr-2 tabular-nums">{i + 1}.</span>
             {row?.path}
           </span>
-          <span className="shrink-0 text-[10px] font-mono text-[var(--color-text-muted)]">
+          <span className="shrink-0 text-[10px] font-mono tm-data-meta tabular-nums">
             {row?.count} · {row?.uniqueUsers} users
           </span>
         </li>
       ))}
     </ul>
-  </Card>
+  </div>
 );
 
 const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
@@ -100,7 +100,7 @@ const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
           <Radio className={`w-3.5 h-3.5 mr-1.5 ${isFetching ? 'animate-pulse' : ''}`} />
           Refresh
         </Button>
-        <span className="text-xs text-[var(--color-text-muted)] ml-auto">
+        <span className="text-xs tm-data-meta ml-auto tabular-nums">
           {data?.pagination?.total ?? logs.length} events · all users
         </span>
       </div>
@@ -110,14 +110,14 @@ const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
           <TopPagesCard pages={topPagesData?.pages || []} isLoading={topLoading} />
         </div>
 
-        <Card className="lg:col-span-2 !p-0 overflow-hidden min-h-[480px]">
-          <div className="px-4 py-2.5 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+        <div className="lg:col-span-2 border border-[var(--color-bg-border)] min-h-[480px] flex flex-col">
+          <div className="px-4 py-2.5 border-b border-[var(--color-bg-border)] flex items-center justify-between">
+            <span className="tm-widget-label">
               Global activity
             </span>
             <span className="text-[9px] font-mono text-emerald-500">live</span>
           </div>
-          <div className="p-3 space-y-2 max-h-[70vh] overflow-y-auto">
+          <div className="p-3 flex-1 max-h-[70vh] overflow-y-auto">
             {logs.length === 0 && (
               <div className="py-16 text-center opacity-40">
                 <Activity size={28} className="mx-auto mb-2" />
@@ -128,7 +128,7 @@ const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
               <LogFeedItem key={log._id} log={log} />
             ))}
           </div>
-        </Card>
+        </div>
       </div>
 
       <SystemLogSandbox />

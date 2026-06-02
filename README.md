@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.0-126d5e?style=flat-square" alt="Version 1.9.0" />
+  <img src="https://img.shields.io/badge/version-1.9.1-126d5e?style=flat-square" alt="Version 1.9.1" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -75,6 +75,14 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ---
 
 ## 🚀 Key Features
+
+### 🎨 Subtractive Slate UI (v1.9.1)
+
+* **Design language:** Flat slate surfaces (`#0f172a` shell, `#1e293b` cards), minimal borders, no heavy shadows on static surfaces, emerald/teal accents (`#126d5e`, `#2dd4bf`), Geist/system sans typography.
+* **Dashboard widgets:** Shared `DashboardWidgetShell`, `ChartSurface`, `DeltaBadge`, and `DataListRow` primitives; leaderboard podium/card refresh; new `MarkAttendanceCard`.
+* **Todo cards:** Subtle priority gradients on today/overdue widgets; rule-divider layout replaces drop shadows per `index.css` shadow policy.
+* **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
+* **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
 
 ### 📊 Ultra-Density Productivity Engine
 
@@ -543,6 +551,17 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.1 — Subtractive Slate UI & Email Design Alignment
+
+- **Subtractive slate shell:** App-wide migration to flat slate surfaces, rule dividers instead of card shadows, emerald/teal action colors, and Geist typography (`index.css`, `design_guidelines.md`, `COMPONENT_STANDARDS.md`).
+- **Dashboard widgets:** `DashboardWidgetShell`, `ChartSurface`, `DeltaBadge`, `DataListRow`, `MarkAttendanceCard`; leaderboard podium/card polish; `GenericDashboardCard` chart token updates.
+- **Todo gradients:** Priority-tinted today/overdue dashboard cards without heavy elevation.
+- **Profile tab:** Settings profile save/display fix in `ProfileTab.jsx`.
+- **Email design (styling only):** `server/templates/*`, `AdminMailContent.jsx` defaults, announcement/CRM/calendar/subscription/backup transactional HTML — slate-900 backgrounds, flat emerald CTAs, teal accents; no tracking or geo logic changes.
+- **Template seeding:** Empty `TEMPLATE_DIR` now copies bundled `server/templates` files instead of inline duplicates.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.9.0 — Mobile UI, Project Analytics, Gamification & Chat Removal
 

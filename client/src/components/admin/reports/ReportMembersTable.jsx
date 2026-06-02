@@ -1,8 +1,8 @@
 import React from 'react';
-import { Card, Badge, DataTable } from '../../ui';
+import { Badge, DataTable } from '../../ui';
 
 const ReportMembersTable = ({ members = [] }) => (
-  <Card className="p-0 overflow-hidden">
+  <section className="border-t border-[var(--color-bg-border)] overflow-hidden">
     <div className="px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
         Members ({members.length})
@@ -63,7 +63,7 @@ const ReportMembersTable = ({ members = [] }) => (
     paginated
       />
     )}
-  </Card>
+  </section>
 );
 
 export default ReportMembersTable;

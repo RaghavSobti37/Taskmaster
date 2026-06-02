@@ -18,6 +18,7 @@ import { inrToUsd } from '../../utils/usdInr';
 import {
   Button,
   SearchInput,
+  NexusDropdown,
   EmptyState,
   IconButton,
   NexusModal,
@@ -594,89 +595,70 @@ const FinancePage = () => {
       )}
       toolbar={(
         <>
-      {/* Filters & Search */}
-      <div className="flex flex-wrap gap-3 items-center flex-1 min-w-0">
-        <SearchInput
-          placeholder="Search title, file name, vendor..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="min-w-[200px] flex-1 max-w-md"
-        />
-
-        {/* Workspace Select */}
-        <div className="relative shrink-0">
-          <select
+          <SearchInput
+            placeholder="Search title, file name, vendor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <NexusDropdown
+            variant="toolbar"
+            label="Workspace"
+            placeholder="All workspaces"
             value={selectedWorkspace}
-            onChange={(e) => {
-              setSelectedWorkspace(e.target.value);
+            onChange={(value) => {
+              setSelectedWorkspace(value);
               setSelectedProject('');
               goToProjectRoot();
             }}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
-          >
-            <option value="">All Workspaces</option>
-            {workspaces.map((w) => (
-              <option key={w._id || w.name} value={w.name}>{w.name}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Project Select */}
-        <div className="relative shrink-0">
-          <select
+            options={[
+              { value: '', label: 'All workspaces' },
+              ...workspaces.map((w) => ({ value: w.name, label: w.name })),
+            ]}
+          />
+          <NexusDropdown
+            variant="toolbar"
+            label="Project"
+            placeholder="All projects"
             value={selectedProject}
-            onChange={(e) => {
-              const projectId = e.target.value;
+            onChange={(projectId) => {
               setSelectedProject(projectId);
               const projectRecord = projects.find((p) => p._id === projectId);
               if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
               goToProjectRoot();
             }}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
-          >
-            <option value="">All Projects</option>
-            {filteredProjects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Category Select */}
-        <div className="relative shrink-0">
-          <select
+            options={[
+              { value: '', label: 'All projects' },
+              ...filteredProjects.map((p) => ({ value: p._id, label: p.name })),
+            ]}
+            searchable
+          />
+          <NexusDropdown
+            variant="toolbar"
+            label="Type"
+            placeholder="All types"
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
-          >
-            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Date Filters */}
-        <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-3 py-1 shrink-0">
-          <Calendar size={14} className="text-[var(--color-text-muted)]" />
-          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] whitespace-nowrap">From</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            aria-label="Document date from"
-            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+            onChange={setSelectedCategory}
+            options={CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
           />
-          <span className="text-[var(--color-text-muted)] text-[10px]">To</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            aria-label="Document date to"
-            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-          />
-          {(startDate || endDate) && (
-            <IconButton icon={X} label="Clear dates" size="sm" onClick={() => { setStartDate(''); setEndDate(''); }} />
-          )}
-        </div>
-      </div>
+          <div className="tm-toolbar-field tm-toolbar-date-range tm-toolbar-control shrink-0">
+            <Calendar size={14} className="text-[var(--color-text-muted)] shrink-0" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              aria-label="Document date from"
+            />
+            <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">–</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              aria-label="Document date to"
+            />
+            {(startDate || endDate) && (
+              <IconButton icon={X} label="Clear dates" size="sm" className="!p-1 shrink-0" onClick={() => { setStartDate(''); setEndDate(''); }} />
+            )}
+          </div>
         </>
       )}
     >
@@ -715,7 +697,7 @@ const FinancePage = () => {
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.metadata?.vendor || '—'}</td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.submittedBy?.name || inv.uploadedBy?.name || '—'}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)] tabular-nums">
                       {inv.metadata?.amount ? `₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">
@@ -757,7 +739,9 @@ const FinancePage = () => {
                 <p className="text-sm font-bold text-[var(--color-text-primary)]">{inv.title}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   {inv.project?.name ? formatProjectName(inv.project.name) : '—'}
-                  {inv.metadata?.amount ? ` · ₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : ''}
+                  {inv.metadata?.amount ? (
+                    <span className="tabular-nums">{` · ₹${Number(inv.metadata.amount).toLocaleString('en-IN')}`}</span>
+                  ) : ''}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {inv.fileUrl && (
@@ -782,7 +766,7 @@ const FinancePage = () => {
       )}
 
       {/* Documents Table */}
-      <div className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl overflow-hidden shadow-sm">
+      <div className="min-w-0 overflow-hidden">
         {tableBreadcrumb}
         {folderToolbar}
         {isLoading ? (
@@ -1156,7 +1140,7 @@ const FinancePage = () => {
                         download
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg hover:bg-blue-700 transition-colors"
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-action-primary)] text-white rounded-[var(--radius-atomic)] text-xs font-bold hover:opacity-90 transition-colors"
                       >
                         <Download size={14} /> Download File
                       </a>
@@ -1438,7 +1422,7 @@ const FinancePage = () => {
                 <div className="p-4 border-t border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex justify-end">
                   <button
                     onClick={() => setSelectedDoc(null)}
-                    className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all"
+                    className="px-5 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-[var(--radius-atomic)] hover:opacity-90 transition-all"
                   >
                     Done
                   </button>

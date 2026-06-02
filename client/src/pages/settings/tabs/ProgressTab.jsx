@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Target, Activity, RefreshCw } from 'lucide-react';
-import { Card, Badge, Button } from '../../../components/ui';
+import { Badge, Button } from '../../../components/ui';
 import {
   useGamificationProgress,
   useGamificationHistory,
@@ -44,15 +44,15 @@ export default function ProgressTab() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8 pb-24">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Progress & XP</h1>
         </div>
-        <Badge variant="warning" className="px-3 py-1.5 text-sm">Level {level}</Badge>
+        <Badge variant="warning" className="px-3 py-1.5 text-sm tabular-nums">Level {level}</Badge>
       </div>
 
       {showRecalcNotice && (
-        <div className="flex items-start gap-3 rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="flex items-start gap-3 rounded-[var(--radius-atomic)] border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
           <RefreshCw size={16} className="text-sky-500 shrink-0 mt-0.5" />
           <p>
             XP totals and weekly leaderboard were rebuilt from activity history using current rules.
@@ -66,21 +66,21 @@ export default function ProgressTab() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 md:col-span-2 flex flex-col justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-8 border-b border-[var(--color-bg-border)]">
+        <div className="md:col-span-2 flex flex-col justify-center">
           <div className="mb-5">
-            <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Current Journey</h3>
-            <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">
+            <h3 className="tm-widget-label">Current Journey</h3>
+            <p className="mt-1.5 text-xs tm-data-meta">
               {progressLoading ? 'Loading…' : `You are ${progressPercent.toFixed(1)}% through Level ${level}`}
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest shrink-0">
+              <span className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest shrink-0 tabular-nums">
                 Lvl {level}
               </span>
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest shrink-0">
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest shrink-0 tabular-nums">
                 Lvl {level + 1}
               </span>
             </div>
@@ -90,7 +90,7 @@ export default function ProgressTab() {
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 1.5, ease: 'easeOut' }}
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-400 to-amber-600 shadow-[0_0_15px_rgba(245,158,11,0.6)]"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-amber-400 to-amber-600"
               />
             </div>
 
@@ -98,20 +98,20 @@ export default function ProgressTab() {
               {exp} / {nextLevelExp} XP
             </p>
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-6 flex flex-col items-center justify-center text-center space-y-3 bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/20">
-          <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+        <div className="flex flex-col items-center justify-center text-center space-y-3 py-4 border border-amber-500/20 rounded-[var(--radius-atomic)] bg-gradient-to-br from-amber-500/10 to-transparent">
+          <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mb-2">
             <Target size={28} className="text-amber-500" />
           </div>
           <h3 className="text-lg font-black text-[var(--color-text-primary)]">Keep going!</h3>
           <p className="text-xs text-[var(--color-text-secondary)]">Complete tasks, log time, and finish daily missions to rank up.</p>
-        </Card>
+        </div>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <section className="pb-8 border-b border-[var(--color-bg-border)]">
+        <div className="pb-4 border-b border-[var(--color-bg-border)]">
+          <h3 className="tm-widget-label flex items-center gap-2">
             <Target size={14} className="text-emerald-500" /> Daily Missions
           </h3>
         </div>
@@ -127,8 +127,8 @@ export default function ProgressTab() {
             return (
               <div key={mission._id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold">{mission.title}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{mission.description}</p>
+                  <p className="text-sm font-bold tm-data-primary">{mission.title}</p>
+                  <p className="text-xs tm-data-meta">{mission.description}</p>
                   <div className="mt-2 h-2 bg-[var(--color-bg-border)] rounded-full overflow-hidden max-w-md">
                     <div
                       className={`h-full rounded-full ${mission.completed ? 'bg-emerald-500' : 'bg-amber-500'}`}
@@ -146,82 +146,80 @@ export default function ProgressTab() {
             );
           })}
         </div>
-      </Card>
+      </section>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <section>
+        <div className="pb-4 border-b border-[var(--color-bg-border)] flex items-center justify-between">
+          <h3 className="tm-widget-label flex items-center gap-2">
             <Activity size={14} className="text-blue-500" /> Recent XP Activity
           </h3>
         </div>
-        <div className="p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-xs">
-              <thead className="bg-[var(--color-bg-secondary)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--color-bg-border)]">
+                <th className="px-6 py-3 text-left tm-widget-label !text-[10px]">Action</th>
+                <th className="px-6 py-3 text-left tm-widget-label !text-[10px]">XP</th>
+                <th className="px-6 py-3 text-right tm-widget-label !text-[10px]">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-bg-border)]">
+              {historyLoading && (
                 <tr>
-                  <th className="px-6 py-3 text-left font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Action</th>
-                  <th className="px-6 py-3 text-left font-bold uppercase tracking-wider text-[var(--color-text-muted)]">XP</th>
-                  <th className="px-6 py-3 text-right font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Date</th>
+                  <td colSpan={3} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
+                    Loading XP history…
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-bg-border)]">
-                {historyLoading && (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
-                      Loading XP history…
-                    </td>
-                  </tr>
-                )}
-                {!historyLoading && logsList.map((log) => (
-                  <tr key={log._id} className="hover:bg-[var(--color-bg-secondary)]/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-[var(--color-text-primary)]">
-                      <span className="inline-flex items-center gap-2 flex-wrap">
-                        {log.message || log.actionLabel}
-                        {log.adjusted && (
-                          <Badge variant="info" className="text-[8px] py-0" title={
-                            log.previousAmount != null
-                              ? `Previously ${log.previousAmount} XP`
-                              : 'Amount updated during recalculation'
-                          }>
-                            Adjusted
-                          </Badge>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-amber-500 font-black tabular-nums">
-                      {log.amount > 0 ? `+${log.amount}` : '0'}
-                      {log.adjusted && log.previousAmount != null && log.previousAmount !== log.amount && (
-                        <span className="block text-[10px] font-bold text-sky-500/90 line-through">
-                          was {log.previousAmount}
-                        </span>
+              )}
+              {!historyLoading && logsList.map((log) => (
+                <tr key={log._id} className="hover:bg-[var(--color-bg-secondary)]/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-[var(--color-text-primary)]">
+                    <span className="inline-flex items-center gap-2 flex-wrap">
+                      {log.message || log.actionLabel}
+                      {log.adjusted && (
+                        <Badge variant="info" className="text-[8px] py-0" title={
+                          log.previousAmount != null
+                            ? `Previously ${log.previousAmount} XP`
+                            : 'Amount updated during recalculation'
+                        }>
+                          Adjusted
+                        </Badge>
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-right text-[var(--color-text-muted)]">
-                      {formatTimestamp(log.createdAt)}
-                    </td>
-                  </tr>
-                ))}
-                {!historyLoading && logsList.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
-                      No XP activity yet. Complete tasks or log time to earn XP!
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {(page > 1 || page * limit < totalLogs) && (
-            <div className="p-4 border-t border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
-              <Button size="xs" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-              <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                Page {page} of {Math.max(1, Math.ceil(totalLogs / limit))}
-              </span>
-              <Button size="xs" variant="outline" disabled={page * limit >= totalLogs} onClick={() => setPage((p) => p + 1)}>Next</Button>
-            </div>
-          )}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-amber-500 font-black tabular-nums">
+                    {log.amount > 0 ? `+${log.amount}` : '0'}
+                    {log.adjusted && log.previousAmount != null && log.previousAmount !== log.amount && (
+                      <span className="block text-[10px] font-bold text-sky-500/90 line-through">
+                        was {log.previousAmount}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right tm-data-meta">
+                    {formatTimestamp(log.createdAt)}
+                  </td>
+                </tr>
+              ))}
+              {!historyLoading && logsList.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-[var(--color-text-muted)]">
+                    No XP activity yet. Complete tasks or log time to earn XP!
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </Card>
+        {(page > 1 || page * limit < totalLogs) && (
+          <div className="py-4 border-t border-[var(--color-bg-border)] flex items-center justify-between">
+            <Button size="xs" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider tabular-nums">
+              Page {page} of {Math.max(1, Math.ceil(totalLogs / limit))}
+            </span>
+            <Button size="xs" variant="outline" disabled={page * limit >= totalLogs} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

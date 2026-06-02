@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Play, Plus, Zap, Filter, Send, Settings, RefreshCw, Layers } from 'lucide-react';
-import { PageContainer, PageHeader, Button, Card, Badge } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Badge } from '../../components/ui';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const initialNodes = [
@@ -93,7 +93,7 @@ const WorkflowCanvas = () => {
         }
       />
 
-      <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-xl border border-[var(--color-bg-border)] shadow-md">
+      <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
         <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-wider px-2 flex items-center gap-1.5">
           <Layers size={14} className="text-[var(--color-action-primary)]" /> Toolbox:
         </span>
@@ -108,7 +108,7 @@ const WorkflowCanvas = () => {
         </Button>
       </div>
 
-      <div className="flex-1 w-full bg-[var(--color-bg-secondary)]/30 rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] overflow-hidden relative shadow-inner">
+      <div className="flex-1 w-full bg-[var(--color-bg-secondary)]/30 rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] overflow-hidden relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}

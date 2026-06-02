@@ -117,7 +117,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
         flex items-center rounded-lg transition-all duration-200 relative
         ${iconOnly ? 'justify-center px-2 py-2 gap-0' : 'gap-2.5 px-2.5 py-1.5'}
         ${active
-            ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-[var(--color-action-primary)]/20'
+            ? 'bg-[var(--color-action-primary)] text-white'
             : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
       `;
       }}
@@ -297,11 +297,11 @@ const OutletSidebar = () => {
             : (isOpen ? 'open' : 'collapsed')
         }
         variants={sidebarVariants}
-        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col shadow-2xl shadow-black/5 transition-[width,transform] duration-300 ease-in-out`}
+        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col transition-[width,transform] duration-300 ease-in-out`}
       >
         <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
           <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
-            <img src="/favicon.png" alt="Coreknot Logo" className="w-7 h-7 shrink-0 rounded-md shadow-md shadow-purple-500/20 object-cover" />
+            <img src="/favicon.png" alt="Coreknot Logo" className="w-7 h-7 shrink-0 rounded-md border border-[var(--color-bg-border)] object-cover" />
             {showLabels && (
               <span className="font-bold text-sm tracking-tight text-[var(--color-text-primary)] truncate">
                 Coreknot

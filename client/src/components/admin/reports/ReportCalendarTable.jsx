@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
-import { Card, DataTable, Badge } from '../../ui';
+import { DataTable, Badge } from '../../ui';
 
 const EVENT_VARIANT = {
   meeting: 'info',
@@ -10,7 +10,7 @@ const EVENT_VARIANT = {
 };
 
 const ReportCalendarTable = ({ events = [] }) => (
-  <Card className="p-0 overflow-hidden">
+  <section className="border-t border-[var(--color-bg-border)] overflow-hidden">
     <div className="px-4 py-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
       <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
         <Calendar size={12} /> Calendar Events ({events.length})
@@ -48,7 +48,7 @@ const ReportCalendarTable = ({ events = [] }) => (
         paginated
       />
     )}
-  </Card>
+  </section>
 );
 
 export default ReportCalendarTable;

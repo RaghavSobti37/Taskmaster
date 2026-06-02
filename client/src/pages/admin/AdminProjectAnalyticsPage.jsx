@@ -26,7 +26,7 @@ const AdminProjectAnalyticsPage = () => {
   const rangeState = useProjectReportRangeState();
   const { queryParams, queryEnabled, rangeSubtitle } = rangeState;
 
-  const { data: summary, isLoading: summaryLoading, error: summaryError } = useProjectsAnalyticsSummary(
+  const { data: summary, isLoading: summaryLoading, isFetching: summaryFetching, error: summaryError } = useProjectsAnalyticsSummary(
     queryParams,
     queryEnabled
   );
@@ -206,13 +206,16 @@ const AdminProjectAnalyticsPage = () => {
               </div>
             </div>
 
-            {(summaryLoading || projectsLoading) && <DataLoading message="Loading project summary..." />}
-            {summaryError && (
+            {(summaryLoading && !summary) || (projectsLoading && !projects.length) ? (
+              <DataLoading message="Loading project summary..." />
+            ) : null}
+            {summaryError && !summary && (
               <p className="text-sm text-red-500">
                 {summaryError.response?.data?.error || summaryError.message || 'Failed to load summary.'}
               </p>
             )}
             {!summaryLoading && !projectsLoading && (
+              <div className={summaryFetching ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
               <DataTable
                 columns={columns}
                 data={rows}
@@ -220,6 +223,7 @@ const AdminProjectAnalyticsPage = () => {
                 emptyTitle="No projects found"
                 emptyDescription="No projects match your search."
               />
+              </div>
             )}
           </Card>
 

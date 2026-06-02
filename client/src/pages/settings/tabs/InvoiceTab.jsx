@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Receipt, FileText, Upload, Clock, CheckCircle, XCircle, Info, X } from 'lucide-react';
-import { Card, Input, Button, NexusModal, DataTable } from '../../../components/ui';
+import { Input, Button, NexusModal, DataTable } from '../../../components/ui';
 import WorkspaceProjectFields from '../../../components/forms/WorkspaceProjectFields';
 import { useProjects } from '../../../hooks/queries/projects';
 import { useWorkspaces } from '../../../hooks/useTaskmasterQueries';
@@ -70,7 +70,7 @@ export default function InvoiceTab() {
 
   const reimbursementColumns = useMemo(
     () => [
-      { header: 'Title', render: (item) => <span className="font-semibold">{item.title}</span> },
+      { header: 'Title', render: (item) => <span className="tm-data-primary font-semibold">{item.title}</span> },
       {
         header: 'Project',
         render: (item) => (item.project?.name ? formatProjectName(item.project.name) : '—'),
@@ -79,7 +79,9 @@ export default function InvoiceTab() {
       {
         header: 'Amount',
         render: (item) =>
-          item.metadata?.amount ? `₹${Number(item.metadata.amount).toLocaleString('en-IN')}` : '—',
+          item.metadata?.amount ? (
+            <span className="tabular-nums">₹{Number(item.metadata.amount).toLocaleString('en-IN')}</span>
+          ) : '—',
       },
       {
         header: 'Files',
@@ -211,13 +213,13 @@ export default function InvoiceTab() {
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Raise Reimbursement</h1>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+      <section className="border-b border-[var(--color-bg-border)] pb-6">
+        <div className="pb-4 border-b border-[var(--color-bg-border)] mb-6">
+          <h3 className="tm-widget-label flex items-center gap-2">
             <Receipt size={14} className="text-blue-500" /> Reimbursement Details
           </h3>
         </div>
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           <Input
             label="Title *"
             value={form.title}
@@ -242,7 +244,7 @@ export default function InvoiceTab() {
             emptyProjectLabel="No Project"
           />
 
-          <div className="p-4 bg-slate-100/60 dark:bg-slate-800/25 border border-[var(--color-bg-border)] rounded-xl space-y-4">
+          <div className="p-4 bg-slate-100/60 dark:bg-slate-800/25 border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
               <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
                 Expense Details
@@ -316,7 +318,7 @@ export default function InvoiceTab() {
             <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-2 block">
               Receipts / Proof * <span className="normal-case font-medium">(at least one, multiple allowed)</span>
             </label>
-            <div className="p-4 border border-dashed border-[var(--color-bg-border)] rounded-xl bg-[var(--color-bg-workspace)] space-y-3">
+            <div className="p-4 border border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-workspace)] space-y-3">
               <input
                 ref={receiptFileRef}
                 type="file"
@@ -360,12 +362,12 @@ export default function InvoiceTab() {
             </Button>
           </div>
         </div>
-      </Card>
+      </section>
 
       {myReimbursements.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-            <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+        <section className="pt-2">
+          <div className="pb-4 border-b border-[var(--color-bg-border)]">
+            <h3 className="tm-widget-label flex items-center gap-2">
               <Clock size={14} className="text-amber-500" /> Your Reimbursements
             </h3>
           </div>
@@ -376,12 +378,11 @@ export default function InvoiceTab() {
             paginated={myReimbursements.length > 10}
             defaultPageSize={10}
             emptyTitle="No reimbursements"
-            className="border-0 rounded-none"
           />
-          <p className="px-4 py-3 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-bg-border)]">
+          <p className="px-4 py-3 text-[10px] tm-data-meta border-t border-[var(--color-bg-border)]">
             Pending claims appear here until ops approves them on the Finance page.
           </p>
-        </Card>
+        </section>
       )}
 
       <NexusModal

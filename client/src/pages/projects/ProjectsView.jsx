@@ -8,7 +8,6 @@ import {
 import {
   Badge,
   ProgressBar,
-  Card,
   Button,
   Input,
   PageSkeleton,
@@ -30,7 +29,7 @@ const ProjectPreview = ({
   project, accent, onNavigate, onToggleStar, canMove, onDragStart, onDragEnd, reviewCount = 0,
 }) => (
   <div
-    className={`p-2.5 rounded-xl border bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-all cursor-pointer group/preview ${reviewCount > 0 ? 'border-amber-500/50 ring-1 ring-amber-500/25' : 'border-[var(--color-bg-border)]'}`}
+    className={`p-2.5 bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-secondary)]/40 transition-colors cursor-pointer group/preview min-w-0 ${reviewCount > 0 ? 'border-l-2 border-l-amber-500 bg-amber-500/5' : ''}`}
     onClick={() => onNavigate(project._id)}
   >
     <div className="flex items-start justify-between gap-2 mb-2">
@@ -80,7 +79,7 @@ const ProjectPreview = ({
     </div>
     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
       <span>{project.totalTasks || 0} tasks</span>
-      <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
+      <span className="tabular-nums" title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
     </div>
     <ProgressBar progress={project.progress || 0} className="h-1" />
     <div className="flex justify-end mt-1">
@@ -315,15 +314,15 @@ const ProjectsView = () => {
           <div
             data-mobile-inline
             data-filter-label="View"
-            className="inline-flex shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5"
+            className="tm-toolbar-control inline-flex shrink-0 items-center rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-1 gap-0.5"
           >
             <button
               type="button"
               onClick={() => setViewMode('workspace')}
               title="Workspaces"
-              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
-                ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 h-7 rounded-[var(--radius-atomic)] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
+                ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
             >
               <LayoutGrid size={12} className="shrink-0" />
@@ -334,9 +333,9 @@ const ProjectsView = () => {
               type="button"
               onClick={() => setViewMode('all')}
               title="All projects"
-              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
-                ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 h-7 rounded-[var(--radius-atomic)] text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
+                ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
             >
               <List size={12} className="shrink-0" />
@@ -395,7 +394,7 @@ const ProjectsView = () => {
         </>
       }
     >
-      <Card className="flex flex-col border-none shadow-none bg-transparent">
+      <div className="flex flex-col">
         {draggingProjectId && (
           <div className="mb-4 p-3 rounded-xl border-2 border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)] mb-2">
@@ -436,9 +435,9 @@ const ProjectsView = () => {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.2, delay: index * 0.04 }}
                 >
-                  <Card
-                    className={`p-0 flex flex-col h-full overflow-hidden transition-all ${dragOverWorkspace === group.name
-                      ? `ring-2 scale-[1.01] ${draggingWorkspaceName ? 'ring-amber-500/60' : 'ring-[var(--color-action-primary)]'}`
+                  <div
+                    className={`flex flex-col h-full overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] transition-colors ${dragOverWorkspace === group.name
+                      ? `ring-1 ${draggingWorkspaceName ? 'ring-amber-500/60' : 'ring-[var(--color-action-primary)]'}`
                       : ''
                       } ${draggingWorkspaceName === group.name ? 'opacity-70' : ''}`}
                     onDragOver={(e) => {
@@ -448,9 +447,9 @@ const ProjectsView = () => {
                     onDragLeave={() => setDragOverWorkspace(null)}
                     onDrop={(e) => handleWorkspaceDrop(e, group.name)}
                   >
-                    <div className="h-1.5 w-full" style={{ backgroundColor: group.color }} />
+                    <div className="h-1 w-full shrink-0" style={{ backgroundColor: group.color }} />
                     <div
-                      className="p-4 space-y-3"
+                      className="p-3 space-y-3"
                       onDragOver={(e) => {
                         e.preventDefault();
                         if (e.dataTransfer.types.includes('application/project-id')) {
@@ -546,7 +545,7 @@ const ProjectsView = () => {
                       </div>
 
                       {group.projects.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-px bg-[var(--color-bg-border)] border-t border-[var(--color-bg-border)]">
                           {group.projects.map(project => (
                             <ProjectPreview
                               key={project._id}
@@ -562,12 +561,12 @@ const ProjectsView = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="py-8 text-center border border-dashed border-[var(--color-bg-border)] rounded-xl">
+                        <div className="py-8 text-center border-t border-dashed border-[var(--color-bg-border)]">
                           <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No projects yet</p>
                         </div>
                       )}
                     </div>
-                  </Card>
+                  </div>
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -595,15 +594,15 @@ const ProjectsView = () => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, delay: index * 0.04 }}
                   >
-                    <Card
-                      className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
-                        } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''}`}
-                      style={{ borderColor: project.starred ? accent : undefined }}
+                    <div
+                      className={`flex flex-col h-full group relative overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] cursor-pointer transition-colors hover:bg-[var(--color-bg-secondary)]/30 ${draggingProjectId === project._id ? 'opacity-50' : ''
+                        } ${reviewCount > 0 ? 'border-l-2 border-l-amber-500' : ''}`}
+                      style={project.starred ? { borderTopColor: accent, borderTopWidth: 2 } : undefined}
                       onClick={() => navigateToProject(project._id)}
                     >
-                      <div className="h-1 w-full" style={{ backgroundColor: accent }} />
+                      <div className="h-0.5 w-full shrink-0" style={{ backgroundColor: accent }} />
 
-                      <div className="p-3 space-y-3 flex flex-col flex-1 group-hover:bg-[var(--color-bg-secondary)]/30 transition-colors duration-200">
+                      <div className="p-3 space-y-3 flex flex-col flex-1">
                         <div className="flex justify-between items-start">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
@@ -664,7 +663,7 @@ const ProjectsView = () => {
                         <div className="space-y-1 mt-auto">
                           <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                             <span>Progress · <span className="normal-case">{project.totalTasks || 0} tasks</span></span>
-                            <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
+                            <span className="tabular-nums" title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
                           </div>
                           <ProgressBar progress={project.progress || 0} className="h-1" />
                           <div className="flex justify-end">
@@ -681,7 +680,7 @@ const ProjectsView = () => {
                           </div>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   </motion.div>
                 );
               })}
@@ -695,7 +694,7 @@ const ProjectsView = () => {
             )}
           </div>
         )}
-      </Card>
+      </div>
 
       <NexusModal
         isOpen={createModalOpen}

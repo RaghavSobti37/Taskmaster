@@ -168,7 +168,7 @@ const ProjectTeam = ({ project, onRemoveMember }) => {
                 return (
                   <div
                     key={member._id}
-                    className="bg-[var(--color-bg-surface)] rounded-2xl border border-[var(--color-bg-border)] p-4 shadow-sm hover:shadow-md transition-all group relative"
+                    className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] p-4 transition-colors hover:bg-[var(--color-bg-secondary)]/30 group relative"
                   >
                     {canRemoveMember(member) && (
                       <button

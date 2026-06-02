@@ -71,7 +71,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-2.5rem)] w-full min-w-0 bg-[var(--color-bg-workspace)] overflow-hidden rounded-xl border border-[var(--color-bg-border)] shadow-lg">
+    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-2.5rem)] w-full min-w-0 bg-[var(--color-bg-workspace)] overflow-hidden border border-[var(--color-bg-border)]">
       {/* Mobile tab pills */}
       <div className="lg:hidden shrink-0 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-3">
         <div className="flex items-center gap-2 mb-3">

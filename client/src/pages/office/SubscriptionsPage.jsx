@@ -7,7 +7,6 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import {
-  Card,
   Button,
   Input,
   NexusModal,
@@ -20,6 +19,7 @@ import {
   UserLabel,
 } from '../../components/ui';
 import { distributionFromField } from '../../utils/buildChartSeries';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const SUBSCRIPTION_TYPES = ['Software', 'SaaS', 'Hosting', 'Domain', 'Service', 'Other'];
@@ -77,6 +77,7 @@ const toPayload = (form) => ({
 });
 
 const SubscriptionsPage = () => {
+  const { confirm } = useConfirm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
@@ -251,18 +252,16 @@ const SubscriptionsPage = () => {
         </Button>
       }
     >
-      <Card className="p-0 overflow-hidden">
-        <DataTable
-          columns={subscriptionColumns}
-          data={filtered}
-          onRowClick={openEdit}
-          getRowId={(sub) => sub._id}
-          isLoading={isLoading}
-          defaultPageSize={15}
-          emptyTitle="No subscriptions"
-          emptyDescription="Add one to get started."
-        />
-      </Card>
+      <DataTable
+        columns={subscriptionColumns}
+        data={filtered}
+        onRowClick={openEdit}
+        getRowId={(sub) => sub._id}
+        isLoading={isLoading}
+        defaultPageSize={15}
+        emptyTitle="No subscriptions"
+        emptyDescription="Add one to get started."
+      />
 
       <NexusModal
         isOpen={isModalOpen}
@@ -389,6 +388,9 @@ const SubscriptionsPage = () => {
           </div>
           <Input
             label="Notes"
+            multiline
+            rows={3}
+            autoGrow
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
@@ -403,10 +405,14 @@ const SubscriptionsPage = () => {
                 type="button"
                 variant="destructive"
                 disabled={deleteMutation.isPending}
-                onClick={() => {
-                  if (window.confirm(`Delete subscription "${editing.name}"?`)) {
-                    deleteMutation.mutate(editing._id);
-                  }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Delete subscription?',
+                    message: `Delete subscription "${editing.name}"?`,
+                    confirmLabel: 'Delete',
+                    type: 'danger',
+                  });
+                  if (ok) deleteMutation.mutate(editing._id);
                 }}
               >
                 <Trash2 size={14} /> Delete

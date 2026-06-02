@@ -21,7 +21,7 @@ import {
   Ghost,
   Heart,
 } from 'lucide-react';
-import { Card, Input, Button, Badge, NexusDropdown, ModalShell, NexusModal } from '../../../components/ui';
+import { Input, Button, Badge, NexusDropdown, ModalShell, NexusModal } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useDepartments } from '../../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../../utils/departmentPermissions';
@@ -225,9 +225,9 @@ export default function ProfileTab() {
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
      
 
-      <Card className="p-6 space-y-8">
-        <div className="flex items-center gap-6 p-4 rounded-[var(--radius-atomic)] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)]">
-          <div className="relative group cursor-pointer" onClick={() => setIsAvatarModalOpen(true)}>
+      <section className="border-b border-[var(--color-bg-border)] pb-8 space-y-8">
+        <div className="flex items-center gap-6 p-4 rounded-[var(--radius-atomic)] bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] min-w-0">
+          <div className="relative group cursor-pointer shrink-0" onClick={() => setIsAvatarModalOpen(true)}>
             <div className="w-16 h-16 rounded-[var(--radius-atomic)] border-2 border-[var(--color-bg-border)] overflow-hidden bg-[var(--color-bg-secondary)] group-hover:border-[var(--color-action-primary)] transition-all">
               {avatar ? (
                 <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -239,9 +239,9 @@ export default function ProfileTab() {
               <Camera size={16} className="text-white" />
             </div>
           </div>
-          <div>
-            <h4 className="text-sm font-black uppercase tracking-tight">{name || 'User'}</h4>
-            <p className="text-xs text-[var(--color-text-muted)] font-bold uppercase tracking-widest">
+          <div className="min-w-0 flex-1">
+            <h4 className="tm-data-primary text-sm font-black uppercase tracking-tight truncate">{name || 'User'}</h4>
+            <p className="text-xs tm-data-meta font-bold uppercase tracking-widest truncate">
               {user?.email}
             </p>
             <Button variant="ghost" size="xs" className="mt-2" onClick={() => setIsAvatarModalOpen(true)}>
@@ -304,13 +304,13 @@ export default function ProfileTab() {
               className="!text-xs"
               endAdornment={passwordToggle(showNewPassword, setShowNewPassword)}
             />
-            <div className="p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+            <div className="p-3 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
               <PasswordRequirements password={newPassword} />
             </div>
             {passwordError && <p className="text-xs text-rose-500 font-medium">{passwordError}</p>}
           </div>
         </div>
-      </Card>
+      </section>
 
       <ModalShell isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} size="xl" zIndex={200}>
         <header className="p-4 sm:p-6 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)] shrink-0 gap-3">
@@ -364,7 +364,7 @@ export default function ProfileTab() {
                     setAvatar(url);
                     setIsAvatarModalOpen(false);
                   }}
-                  className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
+                  className={`aspect-square rounded-[var(--radius-atomic)] border-2 overflow-hidden transition-all hover:scale-105 ${
                     avatar === url
                       ? 'border-[var(--color-action-primary)] ring-2 ring-[var(--color-action-primary)]/30'
                       : 'border-[var(--color-bg-border)] opacity-80 hover:opacity-100'

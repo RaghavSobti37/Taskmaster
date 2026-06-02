@@ -7,7 +7,7 @@ import {
   Trash2, 
   X
 } from 'lucide-react';
-import { Card, Badge, NexusDropdown, SearchInput, Button } from '../ui';
+import { NexusDropdown, SearchInput, Button } from '../ui';
 import {
   AssetTypeIconBadge,
   ASSET_TYPE_FORM_OPTIONS,
@@ -115,21 +115,20 @@ const ProjectAssets = ({ projectId }) => {
         </Button>
       </div>
 
-      <Card className="overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+      <div className="overflow-x-auto border-t border-[var(--color-bg-border)]">
+        <table className="w-full text-left border-collapse">
+          <thead className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
+            <tr>
+              <th className="px-4 py-2 text-left">Asset Name</th>
+              <th className="px-4 py-2 text-left">Link / Resource</th>
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-bg-border)]">
+            {filteredAssets.length === 0 ? (
               <tr>
-                <th className="px-8 py-5">Asset Name</th>
-                <th className="px-8 py-5">Link / Resource</th>
-                <th className="px-8 py-5">Date</th>
-                <th className="px-8 py-5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-bg-border)]">
-              {filteredAssets.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="px-8 py-20 text-center opacity-30">
+                <td colSpan="4" className="px-4 py-16 text-center opacity-30">
                     <Database size={48} className="mx-auto mb-4" />
                     <p className="text-[10px] font-black uppercase">
                       {hasSearch && assets.length > 0 ? 'No assets match your search' : 'No assets for this project'}
@@ -144,7 +143,7 @@ const ProjectAssets = ({ projectId }) => {
                     onClick={() => { if (hasLink) openAssetLink(asset.link); }}
                     className={`hover:bg-[var(--color-bg-secondary)]/50 transition-all group ${hasLink ? 'cursor-pointer' : ''}`}
                   >
-                    <td className="px-8 py-5">
+                    <td className="px-4 py-2">
                       <div className="flex items-center gap-3 min-w-0">
                         <AssetTypeIconBadge type={asset.type} link={asset.link} size={14} className="shrink-0" />
                         <span
@@ -155,7 +154,7 @@ const ProjectAssets = ({ projectId }) => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 py-2">
                       {hasLink ? (
                         <span
                           className="text-[9px] font-bold text-blue-500 truncate block max-w-[200px]"
@@ -167,10 +166,10 @@ const ProjectAssets = ({ projectId }) => {
                         <span className="text-[9px] italic opacity-30">—</span>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">
+                    <td className="px-4 py-2 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest tabular-nums">
                       {format(new Date(asset.createdAt), 'MMM dd, yyyy')}
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-4 py-2 text-right">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -186,10 +185,9 @@ const ProjectAssets = ({ projectId }) => {
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          </tbody>
+        </table>
+      </div>
 
       <AnimatePresence>
         {showAddModal && (

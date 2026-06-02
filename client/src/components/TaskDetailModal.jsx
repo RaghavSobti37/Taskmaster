@@ -172,10 +172,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               onDescriptionChange={setDesc}
               lockedAssigneeIds={creatorId ? [creatorId] : []}
               mentionSessionKey={isOpen ? task._id : undefined}
+              inlineEdit
             />
 
             {isInReview && canReview && (
-              <div className="flex gap-3 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+              <div className="flex gap-3 py-3 border-t border-amber-500/30">
                 <Button type="button" variant="primary" size="sm" onClick={(e) => handleSubmit(e, 'approve')}>
                   <Check size={14} className="mr-1" /> Approve & Close
                 </Button>
@@ -206,7 +207,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 <button
                   type="submit"
                   disabled={!title}
-                  className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                  className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50"
                 >
                   <CheckCircle2 size={18} /> Save
                 </button>

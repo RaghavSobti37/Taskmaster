@@ -1,8 +1,7 @@
 import React from 'react';
-import { Card } from './primitives';
 
 /**
- * SectionCard — card with optional header bar for grouped content.
+ * SectionCard — flat section with optional header bar (border dividers, no card shadow).
  */
 const SectionCard = ({
   title,
@@ -13,12 +12,12 @@ const SectionCard = ({
   bodyClassName = '',
   noPadding = false,
 }) => (
-  <Card className={`overflow-hidden flex flex-col ${className}`}>
+  <section className={`flex flex-col border-t border-[var(--color-bg-border)] ${className}`}>
     {(title || actions) && (
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 border-b border-[var(--color-bg-border)]">
         <div>
           {title && (
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+            <h3 className="tm-widget-label text-[var(--color-text-primary)]">
               {title}
             </h3>
           )}
@@ -29,8 +28,8 @@ const SectionCard = ({
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
     )}
-    <div className={noPadding ? bodyClassName : `p-4 ${bodyClassName}`}>{children}</div>
-  </Card>
+    <div className={noPadding ? bodyClassName : `py-4 ${bodyClassName}`}>{children}</div>
+  </section>
 );
 
 export default SectionCard;

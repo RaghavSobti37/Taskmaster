@@ -40,7 +40,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
+    <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
       {/* Paper texture & Ink spill background */}
       <div
         className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"

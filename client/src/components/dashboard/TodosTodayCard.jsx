@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo, ArrowDown, ArrowUp } from 'lucide-react';
-import { Card, Badge, DataLoading, Button, TimeframeFilter } from '../ui';
+import { DashboardWidgetShell, Badge, DataLoading, Button, TimeframeFilter } from '../ui';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterTasksByTimeframe, sortTasksByDate } from '../../utils/dashboardTasks';
@@ -38,25 +38,28 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
   };
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden h-full">
-      <div className="p-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-wrap items-center justify-between w-full gap-2 shrink-0">
+    <DashboardWidgetShell
+      className="h-full overflow-hidden"
+      bodyClassName="p-0 flex flex-col flex-1 min-h-0"
+      title={
         <button
           type="button"
           onClick={() => navigate('/todo')}
           className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
         >
-          <h4 className="tm-section-label flex items-center gap-2 text-[var(--color-text-primary)] mb-0">
-            <ListTodo size={16} className="text-[var(--color-brand-teal)]" /> Tasks ({timeframe})
-          </h4>
+          Tasks ({timeframe})
         </button>
-        <div className="flex items-center gap-2 ml-auto">
+      }
+      icon={ListTodo}
+      actions={
+        <>
           <TimeframeFilter value={timeframe} onChange={setTimeframe} />
           <SortToggle direction={todaySort} onToggle={() => setTodaySort((d) => (d === 'asc' ? 'desc' : 'asc'))} label="date" />
           <Badge variant="info">{todayTasks.length}</Badge>
-        </div>
-      </div>
-
-      <div className="p-3 space-y-2 overflow-y-auto custom-scrollbar flex-1">
+        </>
+      }
+    >
+      <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
         {loading && <DataLoading message="Loading today's tasks..." className="!py-3" />}
         {!loading && todayTasks.length === 0 && (
           <p className="tm-caption italic text-center py-4">Nothing due today. Great job!</p>
@@ -73,7 +76,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
           />
         ))}
       </div>
-    </Card>
+    </DashboardWidgetShell>
   );
 };
 

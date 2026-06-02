@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
+import { PageContainer, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
 import {
   useAttendance,
   useUpsertAttendance,
@@ -353,12 +353,30 @@ const AttendancePage = () => {
   return (
     <PageContainer className="!py-4 !space-y-6">
       <DesktopRecommendedBanner message="Team attendance matrix is best viewed on desktop. Use Settings → Attendance for your personal log on mobile." />
-      <PageHeader
-        title="Attendance"
-        icon={ClipboardCheck}
-        actions={
-          canEdit ? (
-            <Button variant={showTeamOverview ? "primary" : "outline"} onClick={() => {
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 min-h-[44px] pb-3 mb-4 border-b border-[var(--color-bg-border)]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10">
+              <ClipboardCheck size={18} strokeWidth={2.5} />
+            </div>
+            <h1 className="tm-page-title uppercase whitespace-nowrap">Attendance</h1>
+          </div>
+          {!showTeamOverview && (
+            <>
+              <span className="hidden sm:block w-px h-5 bg-[var(--color-bg-border)] shrink-0" aria-hidden />
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">Today</span>
+                <span className="text-sm font-black truncate">{format(today, 'EEEE, MMMM d')}</span>
+              </div>
+            </>
+          )}
+        </div>
+        {canEdit ? (
+          <Button
+            size="sm"
+            variant={showTeamOverview ? 'primary' : 'secondary'}
+            className="shrink-0"
+            onClick={() => {
               if (showTeamOverview) {
                 setShowTeamOverview(false);
                 navigate('/attendance');
@@ -366,20 +384,19 @@ const AttendancePage = () => {
                 setShowTeamOverview(true);
                 navigate('/attendance/all');
               }
-            }}>
-              <Users size={16} className="mr-2" />
-              {showTeamOverview ? "Hide Team Overview" : "View Team Attendance Overview"}
-            </Button>
-          ) : null
-        }
-      />
+            }}
+          >
+            <Users size={16} />
+            {showTeamOverview ? 'Hide Team Overview' : 'View Team Attendance Overview'}
+          </Button>
+        ) : null}
+      </header>
 
       {/* Unified Time Card for Current User */}
       {!showTeamOverview && (
         <UnifiedTimeCard 
           entry={selfTodayRows[0]}
-          title={format(today, 'EEEE, MMMM d')}
-          subTitle="Today"
+          hideTitleRow
           isSelfMode={true}
           onCheckIn={(t) => executeGeolocationCheck('in', t)}
           onCheckOut={(t) => executeGeolocationCheck('out', t)}
@@ -401,9 +418,9 @@ const AttendancePage = () => {
 
       {/* Team Overview Matrix for Admins */}
       {showTeamOverview && canEdit && (
-        <Card className="p-4 space-y-4 bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-primary)]">Team Matrix Overview</h3>
+        <section className="p-4 space-y-4 border border-[var(--color-bg-border)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-bg-border)] pb-4">
+            <h3 className="tm-widget-label">Team Matrix Overview</h3>
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex rounded-lg border border-[var(--color-bg-border)] overflow-hidden">
                 <button type="button" onClick={() => setViewMode(VIEW_MODES.DAILY)} className={`px-3 py-1.5 text-xs font-bold transition-colors ${viewMode === VIEW_MODES.DAILY ? 'bg-[var(--color-action-primary)] text-white' : 'bg-[var(--color-bg-primary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}>Daily</button>
@@ -440,7 +457,7 @@ const AttendancePage = () => {
             />
             </div>
           ) : (
-            <div className="hidden lg:block overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
+            <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)]">
               <table className="min-w-full text-xs">
                 <thead className="bg-[var(--color-bg-primary)]">
                   <tr>
@@ -482,7 +499,7 @@ const AttendancePage = () => {
               </table>
             </div>
           )}
-        </Card>
+        </section>
       )}
 
       <NexusModal

@@ -50,30 +50,30 @@ const buildAnnouncementEmailHtml = ({ title, message, createdByName, ctaText, ct
   const expiryLabel = hasExpiry ? new Date(expiresAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '';
 
   return `
-    <div style="background:#f8fafc;padding:24px 12px;font-family:Inter,Arial,sans-serif;color:#0f172a;">
-      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
-        <div style="padding:18px 22px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#ffffff;">
-          <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;opacity:0.85;">CoreKnot Announcement</div>
-          <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;font-weight:800;">${safeTitle}</h1>
+    <div style="background:#0f172a;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#f8fafc;">
+      <div style="max-width:640px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;">
+        <div style="padding:20px 24px;border-bottom:1px solid #334155;">
+          <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;color:#94a3b8;">CoreKnot Announcement</div>
+          <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;font-weight:700;color:#f8fafc;">${safeTitle}</h1>
         </div>
-        <div style="padding:22px;">
-          <p style="margin:0 0 12px;font-size:13px;color:#475569;">
-            Sent by <strong>${safeCreator}</strong>
+        <div style="padding:22px 24px;">
+          <p style="margin:0 0 12px;font-size:13px;color:#94a3b8;">
+            Sent by <strong style="color:#cbd5e1;">${safeCreator}</strong>
           </p>
-          <div style="font-size:15px;line-height:1.65;color:#0f172a;">
+          <div style="font-size:15px;line-height:1.65;color:#cbd5e1;">
             ${safeMessage}
           </div>
-          ${hasExpiry ? `<p style="margin:14px 0 0;font-size:12px;color:#b45309;"><strong>Valid until:</strong> ${escapeHtml(expiryLabel)}</p>` : ''}
+          ${hasExpiry ? `<p style="margin:14px 0 0;font-size:12px;color:#fbbf24;"><strong>Valid until:</strong> ${escapeHtml(expiryLabel)}</p>` : ''}
           ${safeCtaText && safeCtaLink ? `
             <div style="margin-top:22px;">
-              <a href="${safeCtaLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;">
+              <a href="${safeCtaLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#126d5e;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:6px;">
                 ${safeCtaText}
               </a>
             </div>
           ` : ''}
         </div>
-        <div style="padding:14px 22px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;">
-          Open CoreKnot: <a href="${escapeHtml(process.env.CLIENT_URL || FALLBACK_APP_URL)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(process.env.CLIENT_URL || FALLBACK_APP_URL)}</a>
+        <div style="padding:14px 24px;border-top:1px solid #334155;font-size:12px;color:#64748b;">
+          Open CoreKnot: <a href="${escapeHtml(process.env.CLIENT_URL || FALLBACK_APP_URL)}" style="color:#2dd4bf;text-decoration:none;">${escapeHtml(process.env.CLIENT_URL || FALLBACK_APP_URL)}</a>
         </div>
       </div>
     </div>

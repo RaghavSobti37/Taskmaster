@@ -169,6 +169,7 @@ const NexusDropdown = ({
     : options;
 
   const isCompact = variant === 'compact';
+  const isToolbar = variant === 'toolbar';
 
   const portalMenuClass =
     'bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] shadow-2xl';
@@ -250,8 +251,12 @@ const NexusDropdown = ({
     : null;
 
   return (
-    <div className={`relative flex flex-col gap-2 w-full min-w-0 ${className}`} ref={dropdownRef}>
-      {label && (
+    <div
+      className={`relative w-full min-w-0 ${isToolbar ? 'tm-toolbar-field' : 'flex flex-col gap-2'} ${className}`}
+      ref={dropdownRef}
+      data-toolbar-field={isToolbar ? '' : undefined}
+    >
+      {label && !isToolbar && (
         <label className="block tm-section-label">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
@@ -263,11 +268,14 @@ const NexusDropdown = ({
         disabled={disabled}
         onClick={handleToggle}
         title={hasSelection ? displayText : undefined}
+        aria-label={isToolbar && label ? `${label}: ${displayText}` : undefined}
         className={`
-          w-full min-h-[2.5rem] flex items-center justify-between gap-2 transition-all outline-none overflow-hidden whitespace-nowrap
+          w-full flex items-center justify-between gap-2 transition-all outline-none overflow-hidden whitespace-nowrap
           bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]
           rounded-[var(--radius-atomic)]
-          ${isCompact ? 'px-2 py-1 text-[11px] min-h-[2rem]' : 'px-3 py-2 text-sm'}
+          ${isToolbar ? 'tm-toolbar-control px-3 text-xs' : ''}
+          ${isCompact ? 'px-2 py-1 text-[11px] min-h-[2rem]' : ''}
+          ${!isToolbar && !isCompact ? 'min-h-[2.5rem] px-3 py-2 text-sm' : ''}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] cursor-pointer'}
           ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
         `}
@@ -291,5 +299,7 @@ const NexusDropdown = ({
     </div>
   );
 };
+
+NexusDropdown.displayName = 'NexusDropdown';
 
 export default NexusDropdown;

@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import {
-  Badge, Card, DataTable, Button,
-  TabSwitcher, PageSkeleton, FullScreenWorkspace, Input, NexusModal,
+  Badge, DataTable, Button,
+  TabSwitcher, PageSkeleton, Input, NexusModal,
   ListPageLayout, SearchInput,
 } from '../../components/ui';
 import { distributionFromField } from '../../utils/buildChartSeries';
@@ -229,19 +229,12 @@ export default function ArtistsCollection() {
       )}
     >
       <div className="space-y-4">
-        <Card className="p-0 overflow-hidden">
-          <DataTable
-            columns={columns}
-            data={filteredArtists}
-            onRowClick={(row) => navigate(`/artists/${row?._id}`)}
-          />
-          {filteredArtists.length === 0 && (
-            <div className="p-16 text-center text-[var(--color-text-muted)]">
-              <Users size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="text-xs font-black uppercase tracking-widest">No artists found in roster</p>
-            </div>
-          )}
-        </Card>
+        <DataTable
+          columns={columns}
+          data={filteredArtists}
+          onRowClick={(row) => navigate(`/artists/${row?._id}`)}
+          emptyTitle="No artists found in roster"
+        />
 
         <div className="flex items-center justify-between pt-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">

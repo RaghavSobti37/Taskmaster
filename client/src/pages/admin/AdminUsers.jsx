@@ -225,7 +225,9 @@ const AdminUsers = () => {
             info: 'Total number of automated emails sent.',
           },
         ],
-       
+        charts: deptChart.length
+          ? [{ id: 'dept', title: 'By department', type: 'donut', data: deptChart }]
+          : [],
       }}
       toolbar={
         <SearchInput
@@ -243,15 +245,12 @@ const AdminUsers = () => {
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8">
-          <Card className="flex flex-col h-full p-0 overflow-hidden">
-            <DataTable
-              columns={userColumns}
-              data={filteredUsers}
-              className="!border-none"
-              onRowClick={(u) => setSelectedUser(u)}
-              getRowId={(u) => u._id}
-            />
-          </Card>
+          <DataTable
+            columns={userColumns}
+            data={filteredUsers}
+            onRowClick={(u) => setSelectedUser(u)}
+            getRowId={(u) => u._id}
+          />
         </div>
 
         <aside className="lg:col-span-4">

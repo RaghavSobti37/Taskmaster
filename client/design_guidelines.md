@@ -72,12 +72,27 @@ This document acts as the structural blueprint for all page development within t
 
 ### Phase 5: Brand Aesthetics & Visual Identity
 
-*   **TSC Brandbook Colors**:
+*   **TSC Brandbook Colors** (marketing/auth only — `.tm-marketing-page`):
     - **Background**: Lighter Cream (`#fcf8f2`)
     - **Text Primary**: Deep Teal (`#083d3a`)
     - **Accents**: Sea Foam (`#126d5e`), Pumpkin (`#b74b02`)
-*   **The Paperish Feel**:
+*   **App shell** (Dashboard, CRM, Projects, Settings): Slate neutrals via CSS vars in `index.css` — not cream/teal.
+*   **The Paperish Feel** (marketing/auth only):
     - Use the extracted PDF repeating patterns (`pattern_0.png`) with `mix-blend-overlay` combined with the generated ink spill texture (`ink_spill_bg.png`) with `mix-blend-multiply` (or screen for dark mode) to create an elegant, subtle, paper-like background on static pages (Auth/Landing).
 *   **Project Context Integration**:
     - All tasks in the dashboard and related views must display a left-border with the associated project's color to establish instant visual linking.
     - Accompany the project name with its shortened ID.
+
+---
+
+### Phase 6: Subtractive Visual Language
+
+High-end enterprise UI is subtractive — separate information with typography and spacing, not boxes.
+
+*   **Flatten the Z-Axis**: No drop shadows on static elements. Shadows reserved for floating UI (dropdowns, Command Palette, modals).
+*   **Rule dividers over borders**: Use `border-b` between rows/sections; avoid full `border` boxes around data.
+*   **Typography hierarchy**: Primary data = `.tm-data-primary`; metadata = `.tm-data-meta` / `.tm-widget-label`.
+*   **Tabular figures**: All financial/analytics columns use `tabular-nums` and right alignment.
+*   **Glanceable analytics**: Delta chips (`.tm-delta-positive` / `.tm-delta-negative`); muted chart axes (see `ChartSurface`).
+*   **FullScreenWorkspace**: 70/30 split via background shift (`surface` vs `workspace-sidebar`), ghost inputs for inline edit.
+*   **List page rhythm**: `DataOverviewSection` → `mb-8` → `PageToolbar` → flush `DataTable` (never wrap table in Card).

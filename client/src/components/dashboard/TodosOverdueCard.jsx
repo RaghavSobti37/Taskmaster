@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
-import { Card, Badge, DataLoading } from '../ui';
+import { DashboardWidgetShell, Badge, DataLoading } from '../ui';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterOverdueTasks, sortTasksByPriority } from '../../utils/dashboardTasks';
@@ -22,19 +22,23 @@ const TodosOverdueCard = ({ tasks = [], projects = [], loading, onComplete, onOp
   };
 
   return (
-    <Card className="p-0 flex flex-col shadow-md overflow-hidden h-full">
-      <button
-        type="button"
-        onClick={() => navigate('/todo')}
-        className="p-4 border-b border-[var(--color-bg-border)] bg-red-50 dark:bg-red-900/10 flex items-center justify-between w-full text-left hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors shrink-0"
-      >
-        <h4 className="tm-section-label flex items-center gap-2 text-red-700 dark:text-red-400">
-          <AlertCircle size={16} /> Overdue Tasks
-        </h4>
-        <Badge variant="overdue">{overdueTasks.length}</Badge>
-      </button>
-
-      <div className="p-3 space-y-2 overflow-y-auto custom-scrollbar flex-1">
+    <DashboardWidgetShell
+      className="h-full overflow-hidden"
+      bodyClassName="p-0 flex flex-col flex-1 min-h-0"
+      headerClassName="hover:bg-[var(--color-bg-secondary)] transition-colors"
+      title={
+        <button
+          type="button"
+          onClick={() => navigate('/todo')}
+          className="flex items-center gap-2 text-left text-red-700 dark:text-red-400 hover:opacity-80 transition-opacity"
+        >
+          Overdue Tasks
+        </button>
+      }
+      icon={AlertCircle}
+      actions={<Badge variant="overdue">{overdueTasks.length}</Badge>}
+    >
+      <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
         {loading && <DataLoading message="Loading overdue tasks..." className="!py-3" />}
         {!loading && overdueTasks.length === 0 && (
           <p className="tm-caption italic text-center py-4 text-green-600 dark:text-green-400">All caught up! No overdue tasks.</p>
@@ -51,7 +55,7 @@ const TodosOverdueCard = ({ tasks = [], projects = [], loading, onComplete, onOp
           />
         ))}
       </div>
-    </Card>
+    </DashboardWidgetShell>
   );
 };
 

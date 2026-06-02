@@ -5,7 +5,7 @@ import {
   IndianRupee, Users, Search,
   SlidersHorizontal, BarChart3, TrendingUp, UserPlus
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, FullScreenWorkspace, Input, Skeleton } from '../ui';
+import { Badge, DataTable, Button, FullScreenWorkspace, Input, Skeleton } from '../ui';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
@@ -649,7 +649,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       {/* Removed Sub-tab Switcher Navigation because it is controlled by the router now */}
 
       {error && (
-        <div className="p-3 bg-[#FCE8E6] text-[#C5221F] rounded-xl flex items-center gap-2 text-[10px] font-bold">
+        <div className="py-3 border-b border-[#C5221F]/20 bg-[#FCE8E6] text-[#C5221F] flex items-center gap-2 text-[10px] font-bold">
           <AlertCircle size={14} />
           <span>{error}</span>
         </div>
@@ -659,7 +659,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
         <>
           {/* Summary — 3 grouped panels instead of 8 cramped cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
                 <Database size={14} className="text-[var(--color-text-muted)]" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bookings</span>
@@ -675,9 +675,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   <MetricBlock label="All rows" value={displayTotalBookings.toLocaleString('en-IN')} tone="muted" />
                 </div>
               )}
-            </Card>
+            </section>
 
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
                 <IndianRupee size={14} className="text-[var(--color-text-muted)]" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Revenue</span>
@@ -703,9 +703,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </p>
                 </div>
               )}
-            </Card>
+            </section>
 
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--color-bg-border)]">
                 <Users size={14} className="text-[var(--color-text-muted)]" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Overview</span>
@@ -735,12 +735,12 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </button>
                 </div>
               )}
-            </Card>
+            </section>
           </div>
 
           {/* Recharts Overall Analytics Visuals */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center justify-between mb-3 border-b border-[var(--color-bg-border)] pb-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                   Revenue Over Time
@@ -799,9 +799,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </ResponsiveContainer>
                 </div>
               )}
-            </Card>
+            </section>
 
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="flex items-center justify-between mb-3 border-b border-[var(--color-bg-border)] pb-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                   Booking Volume Trend
@@ -860,11 +860,11 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </ResponsiveContainer>
                 </div>
               )}
-            </Card>
+            </section>
           </div>
 
           {/* Offerings Table with Sort/Filter Ribbon */}
-          <Card className="p-0 overflow-hidden">
+          <section className="border-t border-[var(--color-bg-border)] overflow-hidden">
             <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal size={14} className="text-[var(--color-text-muted)]" />
@@ -968,11 +968,11 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                 onRowClick={handleRowClick}
               />
             )}
-          </Card>
+          </section>
 
           {/* Real-time Webhook / CSV Stream Debugger Card */}
           {!statsLoading && dashboardStats?.recentBooking ? (
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="border-b border-[var(--color-bg-border)] pb-2 mb-3">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-pastel-mint-text)]">
                   Most Recent Booking Debug logs (Real-time Stream)
@@ -1019,9 +1019,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   <p className="text-[var(--color-text-primary)] uppercase font-mono">{dashboardStats.recentBooking.payoutStatus || 'Processed'}</p>
                 </div>
               </div>
-            </Card>
+            </section>
           ) : statsLoading ? (
-            <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+            <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
               <div className="border-b border-[var(--color-bg-border)] pb-2 mb-3">
                 <Skeleton width="220px" height="12px" />
               </div>
@@ -1033,12 +1033,12 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </div>
                 ))}
               </div>
-            </Card>
+            </section>
           ) : null}
         </>
       ) : (
         /* Unlinked Bookings Page View */
-        <Card className="p-0 overflow-hidden flex flex-col border border-[var(--color-bg-border)]">
+        <section className="border-t border-[var(--color-bg-border)] overflow-hidden flex flex-col">
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
             <div className="flex items-center gap-2">
               <div className="p-1 rounded bg-[var(--color-pastel-apricot-bg)] text-[var(--color-pastel-apricot-text)]">
@@ -1277,7 +1277,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
               </div>
             </div>
           )}
-        </Card>
+        </section>
       )}
 
       {/* Immersive Workspace Modal Sheet */}
@@ -1404,7 +1404,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
         }
       >
         {detailsError ? (
-          <div className="p-4 bg-[#FCE8E6] text-[#C5221F] rounded-xl flex items-center gap-2 text-[10px] font-bold">
+          <div className="py-3 border-b border-[#C5221F]/20 bg-[#FCE8E6] text-[#C5221F] flex items-center gap-2 text-[10px] font-bold">
             <AlertCircle size={14} />
             <span>{detailsError}</span>
           </div>
@@ -1412,7 +1412,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
           <div className="space-y-6">
             {/* Offering summary — grouped panels */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Bookings</p>
                 {detailsLoading ? (
                   <div className="grid grid-cols-3 gap-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -1423,8 +1423,8 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     <MetricBlock label="Total" value={(offeringMetrics?.totalBookings ?? 0).toLocaleString('en-IN')} tone="muted" />
                   </div>
                 )}
-              </Card>
-              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              </section>
+              <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Revenue</p>
                 {detailsLoading ? (
                   <div className="space-y-2"><Skeleton className="h-8 w-36" /><Skeleton className="h-4 w-24" /></div>
@@ -1438,8 +1438,8 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     </p>
                   </div>
                 )}
-              </Card>
-              <Card className="p-4 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]">
+              </section>
+              <section className="py-4 border-t border-[var(--color-bg-border)] space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3 pb-2 border-b border-[var(--color-bg-border)]">Customers</p>
                 {detailsLoading || cohortLoading ? (
                   <div className="grid grid-cols-2 gap-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -1451,7 +1451,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     <MetricBlock label="Loyal" value={(cohortAnalytics?.loyalCustomers ?? 0).toLocaleString('en-IN')} />
                   </div>
                 )}
-              </Card>
+              </section>
             </div>
 
             {/* Cohort extras — single compact row */}
@@ -1465,7 +1465,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
             {/* Campaign-level Charts with Part-by-part Skeleton Hydration */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+              <section className="py-3 border-t border-[var(--color-bg-border)] space-y-3">
                 <div className="border-b border-[var(--color-bg-border)] pb-2 mb-2">
                   <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                     Campaign Revenue Flow
@@ -1508,9 +1508,9 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     </ResponsiveContainer>
                   </div>
                 )}
-              </Card>
+              </section>
 
-              <Card className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
+              <section className="py-3 border-t border-[var(--color-bg-border)] space-y-3">
                 <div className="border-b border-[var(--color-bg-border)] pb-2 mb-2">
                   <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                     Campaign Booking Flow
@@ -1553,7 +1553,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                     </ResponsiveContainer>
                   </div>
                 )}
-              </Card>
+              </section>
             </div>
 
             {/* Customers List Section */}

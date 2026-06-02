@@ -200,14 +200,14 @@ router.post('/', async (req, res) => {
             to: user.email,
             subject: `📅 New Public Event: ${title}`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #1e40af;">${title}</h2>
-                <p><strong>Date:</strong> ${eventDate}</p>
-                <p><strong>Created by:</strong> ${populated.createdBy.name}</p>
-                ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
-                <p>
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;color:#cbd5e1;">
+                <h2 style="color:#2dd4bf;margin:0 0 16px;font-size:20px;font-weight:600;">${title}</h2>
+                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Date:</strong> ${eventDate}</p>
+                <p style="margin:0 0 8px;line-height:1.6;"><strong style="color:#f8fafc;">Created by:</strong> ${populated.createdBy.name}</p>
+                ${description ? `<p style="margin:0 0 16px;line-height:1.6;"><strong style="color:#f8fafc;">Description:</strong> ${description}</p>` : ''}
+                <p style="margin:0;">
                   <a href="${process.env.CLIENT_URL || 'https://coreknot.app'}/calendar"
-                     style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                     style="background-color:#126d5e;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;">
                     View Event
                   </a>
                 </p>

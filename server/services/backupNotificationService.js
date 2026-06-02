@@ -40,43 +40,43 @@ const buildSuccessHtml = (result) => {
     .join('');
 
   return `
-    <div style="font-family:Arial,sans-serif;color:#111;max-width:640px;">
-      <h2 style="color:#15803d;">Daily backup succeeded</h2>
-      <p>Production database backup completed successfully.</p>
-      <table style="border-collapse:collapse;width:100%;margin:16px 0;">
-        <tr><td><strong>Snapshot date (IST)</strong></td><td>${result.date}</td></tr>
-        <tr><td><strong>Original DB size</strong></td><td>${formatOriginalDbSize(result)}</td></tr>
-        <tr><td><strong>Backup database</strong></td><td>${result.backupDatabase}</td></tr>
-        <tr><td><strong>Collections</strong></td><td>${result.collectionCount}</td></tr>
-        <tr><td><strong>Compressed backup size</strong></td><td>${formatBytes(result.totalBytes)}</td></tr>
-        <tr><td><strong>Duration</strong></td><td>${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
-        <tr><td><strong>Retention</strong></td><td>${result.retentionDays} days</td></tr>
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;">
+      <h2 style="color:#10b981;margin:0 0 12px;font-size:20px;font-weight:600;">Daily backup succeeded</h2>
+      <p style="margin:0 0 16px;line-height:1.6;">Production database backup completed successfully.</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.date}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Original DB size</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatOriginalDbSize(result)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.backupDatabase}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Collections</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.collectionCount}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Compressed backup size</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatBytes(result.totalBytes)}</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Duration</strong></td><td style="padding:6px 0;color:#f8fafc;">${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Retention</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.retentionDays} days</td></tr>
       </table>
       ${
         collectionRows
-          ? `<h3>Collections</h3>
-             <table style="border-collapse:collapse;width:100%;">
-               <thead><tr><th align="left">Collection</th><th align="left">Documents</th><th align="left">Size</th></tr></thead>
+          ? `<h3 style="color:#2dd4bf;font-size:15px;font-weight:600;margin:20px 0 12px;">Collections</h3>
+             <table style="border-collapse:collapse;width:100%;font-size:14px;">
+               <thead><tr><th align="left" style="padding:6px 0;color:#94a3b8;">Collection</th><th align="left" style="padding:6px 0;color:#94a3b8;">Documents</th><th align="left" style="padding:6px 0;color:#94a3b8;">Size</th></tr></thead>
                <tbody>${collectionRows}</tbody>
              </table>`
           : ''
       }
-      <p style="color:#666;font-size:13px;">Older snapshots are auto-deleted after ${result.retentionDays} days.</p>
+      <p style="color:#64748b;font-size:13px;margin:16px 0 0;">Older snapshots are auto-deleted after ${result.retentionDays} days.</p>
     </div>
   `;
 };
 
 const buildFailureHtml = (result) => `
-  <div style="font-family:Arial,sans-serif;color:#111;max-width:640px;">
-    <h2 style="color:#b91c1c;">Daily backup failed</h2>
-    <p>Production database backup did not complete.</p>
-    <table style="border-collapse:collapse;width:100%;margin:16px 0;">
-      <tr><td><strong>Snapshot date (IST)</strong></td><td>${result.date || 'unknown'}</td></tr>
-      <tr><td><strong>Backup database</strong></td><td>${result.backupDatabase || 'coreknot_backups'}</td></tr>
-      <tr><td><strong>Error</strong></td><td>${result.error || 'Unknown error'}</td></tr>
-      <tr><td><strong>Duration</strong></td><td>${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#cbd5e1;max-width:640px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:28px;">
+    <h2 style="color:#f87171;margin:0 0 12px;font-size:20px;font-weight:600;">Daily backup failed</h2>
+    <p style="margin:0 0 16px;line-height:1.6;">Production database backup did not complete.</p>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;">
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Snapshot date (IST)</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.date || 'unknown'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Backup database</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.backupDatabase || 'coreknot_backups'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Error</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.error || 'Unknown error'}</td></tr>
+      <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Duration</strong></td><td style="padding:6px 0;color:#f8fafc;">${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
     </table>
-    <p style="color:#666;font-size:13px;">Check Render cron logs for coreknot-daily-backup.</p>
+    <p style="color:#64748b;font-size:13px;margin:0;">Check Render cron logs for coreknot-daily-backup.</p>
   </div>
 `;
 

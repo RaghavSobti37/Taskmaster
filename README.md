@@ -69,7 +69,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Backend** | API Engine | Node.js, Express, Mongoose ODM, BullMQ, Trigger.dev |
 | **Data & Cache** | Storage Engine | MongoDB Atlas, Redis (asynchronous queues & cache clusters) |
 | **Realtime** | Transport Layer | Socket.IO WebSockets with automatic fallback protocols |
-| **Security** | Authentication | HttpOnly JWT cookie (`coreknot_token`), Google OAuth 2.0, RBAC, webhook HMAC, registration lockdown |
+| **Security** | Authentication | HttpOnly JWT cookie (`coreknot_token_v2`), Google OAuth 2.0, RBAC, webhook HMAC, registration lockdown |
 | **Deployment** | CI/CD Infrastructure | Render (Web Services + Managed Static CDN handles asset distribution) |
 
 ---
@@ -157,7 +157,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Webhook auth:** `BOOK_CALL_WEBHOOK_SECRET` via `X-Webhook-Secret` (same pattern as artist enquiry); `rejectUnlessBookCallAuthorized` in `webhookAuth.js`.
 * **Rep assignment:** `bookedCallRepAssignment.js` — weighted 2:1:1 across Satyam (`sr06`), Aryaman (`sr09`), and Akash.
 * **Team chat:** Linked channels, DMs, file uploads (`chatRoutes.js`, `ChatChannel` / `ChatMessage` models, `client/src/pages/chat/`).
-* **Unsaved changes:** Global `UnsavedChangesProvider` + bottom bar on settings, CRM workspaces, admin panels, and `FullScreenWorkspace` flows (`useUnsavedChanges.js`).
+* **Unsaved changes:** Global `UnsavedChangesProvider` + bottom bar on settings, CRM workspaces, admin panels, and `FullScreenWorkspace` flows (`useUnsavedChanges.js`). v1.8.0 adds field-level diff preview in the bar and inline Discard/Save in modals that opt out of the global bar.
 
 **Deploy env (Taskmaster + TSC Website):**
 
@@ -225,9 +225,9 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 
 ### 🛡️ Security Hardening (v1.7.47)
 
-* **Auth cookies:** JWT stored in HttpOnly `coreknot_token` cookie — not `localStorage`. `POST /api/auth/logout` clears session. Client uses `axios.defaults.withCredentials = true`.
+* **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v2` cookie — not `localStorage`. Legacy `coreknot_token` is purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
 * **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
-* **Logout (v1.7.52):** Logout bumps an auth epoch so in-flight `/me` retries from post-login sync cannot re-set the user after sign-out. Client clears user state before the logout API call completes.
+* **Logout (v1.7.52 / v1.8.0):** Logout bumps an auth epoch so in-flight `/me` retries cannot re-set the user after sign-out. v1.8.0 adds `authSession.js` force-logout flag across redirect and treats 403 like 401 on session fetch.
 * **CRM lead updates (v1.7.55):** Lead modal uses country-code + national-number fields with strict per-country digit rules (no silent truncation). Invalid phones block save with clear errors; server validates via `phoneCountryValidation.js`. Lead table refreshes after save (`useUpdateLead` cache fix). Legacy overlong/concatenated phones repaired via `leadPhoneRepair.js` and QA audit/cleanup CLI scripts.
 * **CRM lead updates (v1.7.54):** Legacy `-DUP-{id}` / `EMPTY-{id}` corrupt phones (from old `dbPush.js` duplicate resolution) are auto-repaired on save, bulk-repairable via `npm run repair:lead-phones`, and cleaned during QA purge. Saving leads with unchanged corrupt phones no longer fails validation.
 * **CRM lead updates (v1.7.53):** Saving a lead no longer fails when phone/email normalize to the same value (e.g. `9876543210` → `+919876543210`). Duplicate phone/email returns **409** with a clear message instead of generic **400 Failed to update lead**.
@@ -244,7 +244,8 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 ### 💱 USD ↔ INR Conversion
 
 * **Live rate:** `GET /api/finance/usd-inr-rate` — cached FX rate for finance, subscriptions, and project finance forms.
-* **Shared fields:** `UsdInrAmountFields.jsx` + `useUsdInrRate.js` sync USD/INR amounts across Finance, Subscriptions, Invoice settings, and Project Finance.
+* **Shared fields:** `UsdInrAmountFields.jsx` + `useUsdInrRate.js` sync USD/INR amounts across Finance, Subscriptions, and Project Finance.
+* **Invoice & reimbursement submissions (v1.8.0):** Settings → Invoice tab — workspace/project picker, multi-file receipts, invoice vs reimbursement type, submission history with status badges. Ops/admin approve or reject via Finance page pending queue (`GET /api/finance/pending`, `PATCH /api/finance/:id/approve|reject`). User history: `GET /api/finance/my-invoices`.
 
 ### 🛡️ Local Development Safeguards
 
@@ -527,6 +528,19 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.8.0 — Invoice Approval, Auth Cookie v2 & Unsaved-Changes UX
+
+- **Invoice workflow:** Settings `InvoiceTab.jsx` — submit invoices/reimbursements with workspace, project, vendor, amount, tax, expense date, and multi-file attachments via UploadThing. Submissions stay `pending` until ops approves; Finance page shows amber approval queue with view/approve/reject actions.
+- **Finance API:** `submitInvoice` accepts `metadata.submissionType`, `attachments[]`, and project; `listMyInvoices` for submitter history; `FinanceDocument.metadata` gains `submissionType` and `attachments`.
+- **Auth cookie v2:** Session cookie renamed to `coreknot_token_v2`; `purgeLegacyAuthCookies` middleware strips stuck `coreknot_token` on every response; logout clears all SameSite/Partitioned variants.
+- **Logout hardening:** `authSession.js` force-logout flag survives redirect; `AuthContext` skips `/me` while logging out; 403 clears session like 401.
+- **Unsaved changes:** `formFieldChanges.js` + enhanced `UnsavedChangesBar` (field diff list, portal for elevated z-index, mobile safe-area offset). Modals (dashboard editor, project settings, departments, channel links) use inline Discard/Save instead of global bar (`enabled: false`).
+- **ConfirmContext split:** `confirmContext.js` + `ConfirmProvider.jsx` for React Fast Refresh compatibility.
+- **Mobile chat:** Bottom nav visible on `/chat`; main content gets `pb-24` padding on mobile.
+- **UploadThing:** Credentials sent only to CoreKnot API routes, not `ingest.uploadthing.com`. Vite dev proxy sets `cookieDomainRewrite: ''`.
+
+No DB migration. Redeploy API + static client (one deploy clears legacy auth cookies).
 
 ### v1.7.55 — CRM Phone Validation, Lead Save Fix & QA Cleanup CLI
 

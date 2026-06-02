@@ -7,11 +7,24 @@ export const PRIORITY_RANK = {
   low: 1,
 };
 
-export function getTaskDay(task) {
-  const raw = task?.scheduleDate || task?.dueDate;
+/** @param {'schedule'|'due'} prefer — which date field wins when both exist */
+export function getTaskDay(task, prefer = 'schedule') {
+  const raw =
+    prefer === 'due'
+      ? task?.dueDate || task?.scheduleDate
+      : task?.scheduleDate || task?.dueDate;
   if (!raw) return null;
   const day = startOfDay(new Date(raw));
   return Number.isNaN(day.getTime()) ? null : day;
+}
+
+const NO_TASK_DAY = Infinity;
+
+function compareTaskDayTime(a, b, prefer, direction) {
+  const aTime = getTaskDay(a, prefer)?.getTime() ?? NO_TASK_DAY;
+  const bTime = getTaskDay(b, prefer)?.getTime() ?? NO_TASK_DAY;
+  if (aTime !== bTime) return direction === 'asc' ? aTime - bTime : bTime - aTime;
+  return getPriorityRank(b.priority) - getPriorityRank(a.priority);
 }
 
 export function isTaskOverdue(task, today = startOfDay(new Date())) {
@@ -78,15 +91,14 @@ export function sortTasksByPriority(tasks, direction = 'desc') {
   });
 }
 
-/** direction: 'asc' | 'desc' */
-export function sortTasksByDate(tasks, direction = 'asc') {
-  const mult = direction === 'asc' ? 1 : -1;
-  return [...tasks].sort((a, b) => {
-    const aTime = getTaskDay(a)?.getTime() ?? 0;
-    const bTime = getTaskDay(b)?.getTime() ?? 0;
-    if (aTime !== bTime) return (aTime - bTime) * mult;
-    return getPriorityRank(b.priority) - getPriorityRank(a.priority);
-  });
+/** direction: 'asc' | 'desc' — tasks without a date sort last */
+export function sortTasksByDate(tasks, direction = 'asc', prefer = 'schedule') {
+  return [...tasks].sort((a, b) => compareTaskDayTime(a, b, prefer, direction));
+}
+
+/** Todo page: due date sort (no due date always last). */
+export function sortTasksByDueDate(tasks, direction = 'asc') {
+  return sortTasksByDate(tasks, direction, 'due');
 }
 
 /** Overdue first (oldest first), then today. */

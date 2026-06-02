@@ -1,50 +1,27 @@
-const {
-  sanitizeName,
-  sanitizeEmail,
-  normalizePhone,
-  sanitizeLocation,
-  isValidEmail,
-  isValidPhone,
-  MAX_NAME_LENGTH,
-} = require('./sanitizer');
+const { MAX_NAME_LENGTH } = require('./sanitizer');
+const { normalizePersonRecord, applyPersonFieldsTo } = require('./personNormalization');
 
 /**
  * Normalize lead fields in place (same rules as CRM API).
  * @returns {string[]} validation errors; empty if ok
  */
-function normalizeAndValidateLeadFields(leadData, { requireName = false, requirePhone = false } = {}) {
-  const errors = [];
+function normalizeAndValidateLeadFields(leadData, options = {}) {
+  const {
+    requireName = false,
+    requirePhone = false,
+    tryRepairPhone = false,
+  } = options;
 
-  if (leadData.name != null) {
-    leadData.name = sanitizeName(leadData.name);
-    if (!leadData.name) errors.push('Invalid name');
-    else if (leadData.name.length > MAX_NAME_LENGTH) {
-      errors.push(`Name must be at most ${MAX_NAME_LENGTH} characters`);
-    }
-  } else if (requireName) {
-    errors.push('Name is required');
-  }
+  const normalized = normalizePersonRecord(leadData, {
+    requireName,
+    requirePhone,
+    rejectPlaceholderPhone: requirePhone,
+    tryRepairPhone,
+  });
 
-  if (leadData.email != null && leadData.email !== '') {
-    leadData.email = sanitizeEmail(leadData.email);
-    if (!isValidEmail(leadData.email)) errors.push('Invalid email format');
-  }
+  applyPersonFieldsTo(leadData, normalized);
 
-  if (leadData.phone != null && leadData.phone !== '') {
-    leadData.phone = normalizePhone(leadData.phone);
-    if (!isValidPhone(leadData.phone)) errors.push('Invalid phone number');
-  } else if (requirePhone) {
-    errors.push('Phone is required');
-  }
-
-  if (leadData.city && typeof leadData.city === 'string') {
-    leadData.city = sanitizeLocation(leadData.city);
-  }
-  if (leadData.location && typeof leadData.location === 'string') {
-    leadData.location = sanitizeLocation(leadData.location);
-  }
-
-  return errors;
+  return normalized.errors;
 }
 
-module.exports = { normalizeAndValidateLeadFields };
+module.exports = { normalizeAndValidateLeadFields, normalizePersonRecord };

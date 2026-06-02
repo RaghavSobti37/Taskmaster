@@ -265,22 +265,19 @@ const queueGamificationEvent = async (eventType, payload) => {
     await GamificationService.handleGamificationEvent(eventType, payload);
   };
 
+  // QA runs: inline only — avoids Bull waitUntilFinished exceeding HTTP client timeouts
+  if (process.env.QA_SYNC_GAMIFICATION === 'true') {
+    await runEvent();
+    return;
+  }
+
   if (redisAvailable && gamificationQueue) {
     try {
-      const job = await gamificationQueue.add(
+      await gamificationQueue.add(
         eventType,
         { eventType, payload },
         { removeOnComplete: true, removeOnFail: false }
       );
-      if (process.env.QA_SYNC_GAMIFICATION === 'true') {
-        const { QueueEvents } = require('bullmq');
-        const events = new QueueEvents('gamificationQueue', { connection: redisConnection });
-        try {
-          await job.waitUntilFinished(events, 30000);
-        } finally {
-          await events.close().catch(() => {});
-        }
-      }
       return;
     } catch (e) {
       logger.error('Queue', 'Gamification queue failed — running inline', { error: e.message });

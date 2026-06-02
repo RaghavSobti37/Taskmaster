@@ -3,6 +3,7 @@ import { Briefcase, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, DataTable, Badge } from '../ui';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
+import MentionTitle from '../mentions/MentionTitle';
 
 const TaskTable = ({
   tasks = [],
@@ -93,9 +94,11 @@ const TaskTable = ({
               )}
             </button>
             <div className="flex flex-col gap-0.5 pl-2.5 py-0.5" style={{ borderLeft: `3px solid ${workspaceColor}` }}>
-              <span className="font-bold text-sm text-[var(--color-text-primary)] leading-snug tracking-tight">
-                {row.title}
-              </span>
+              <MentionTitle
+                text={row.title}
+                className="font-bold text-sm text-[var(--color-text-primary)] leading-snug tracking-tight"
+                truncate
+              />
               <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase tracking-wider">
                 {projectName?.toUpperCase()} · {workspaceLabel}
               </span>

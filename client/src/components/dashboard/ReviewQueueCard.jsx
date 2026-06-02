@@ -6,6 +6,7 @@ import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { resolveTaskId } from '../../utils/taskCompletion';
+import MentionTitle from '../mentions/MentionTitle';
 
 const ReviewTaskRow = ({
   task,
@@ -36,7 +37,7 @@ const ReviewTaskRow = ({
             onClick={() => projectId && navigate(`/projects/${projectId}`)}
             className="text-left min-w-0 flex-1 hover:text-[var(--color-action-primary)] transition-colors"
           >
-            <p className="tm-task-title truncate">{task.title}</p>
+            <MentionTitle text={task.title} className="tm-task-title" truncate />
             {projectName && (
               <p className="tm-caption mt-0.5 truncate">{projectName}</p>
             )}

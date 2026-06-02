@@ -56,6 +56,7 @@ const LEGACY_TYPE_MAP = {
   fix: 'bug',
   feature: 'feature',
   design: 'design',
+  sales: 'sales',
   general: 'general',
 };
 

@@ -1,8 +1,15 @@
 import React from 'react';
 import { Skeleton } from '../ui';
 
-const ScheduleSkeleton = ({ compact = false, showStatCards = false, departmentCount = 2, memberRowsPerDept = 4, hideTableHeader = false }) => {
-  const slotCount = 4;
+const ScheduleSkeleton = ({
+  compact = false,
+  showStatCards = false,
+  departmentCount = 2,
+  memberRowsPerDept = 4,
+  hideTableHeader = false,
+  dayCount = 2,
+}) => {
+  const slotCount = dayCount * 2;
   const colSpan = 1 + slotCount;
   const memberPad = compact ? 'px-2 py-1.5' : 'px-2.5 py-2';
   const cellPad = compact ? 'px-1 py-0.5' : 'px-1.5 py-0.5';
@@ -30,7 +37,7 @@ const ScheduleSkeleton = ({ compact = false, showStatCards = false, departmentCo
                 <th className={`text-left ${memberPad} w-36`}>
                   <Skeleton height={9} width={48} />
                 </th>
-                {[0, 1].map((col) => (
+                {[...Array(dayCount)].map((_, col) => (
                   <th key={col} colSpan={2} className="text-center px-1.5 py-1 border-l border-[var(--color-bg-border)]">
                     <Skeleton height={9} width={40} className="mx-auto mb-0.5" />
                     <Skeleton height={9} width={64} className="mx-auto" />
@@ -39,7 +46,7 @@ const ScheduleSkeleton = ({ compact = false, showStatCards = false, departmentCo
               </tr>
               <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/50">
                 <th />
-                {[0, 1, 2, 3].map((slot) => (
+                {[...Array(slotCount)].map((_, slot) => (
                   <th key={slot} className="text-center px-1 py-0.5 border-l border-[var(--color-bg-border)]">
                     <Skeleton height={8} width={56} className="mx-auto" />
                   </th>
@@ -63,7 +70,7 @@ const ScheduleSkeleton = ({ compact = false, showStatCards = false, departmentCo
                         <Skeleton height={11} width={row % 2 === 0 ? '60%' : '45%'} />
                       </div>
                     </td>
-                    {[0, 1, 2, 3].map((cell) => (
+                    {[...Array(slotCount)].map((_, cell) => (
                       <td
                         key={cell}
                         className={`${cellPad} ${cellAlign} border-l border-[var(--color-bg-border)]/40 min-w-[90px]`}

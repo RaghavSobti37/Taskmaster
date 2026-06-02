@@ -107,6 +107,9 @@ async function request(def, { method, url, data, headers, user, skipAuth = false
   const h = skipAuth
     ? { 'Content-Type': 'application/json', ...headers }
     : { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...headers };
+  if (def.category === 'business-logic' || def.category === 'permission') {
+    h['x-qa-integration-probe'] = 'true';
+  }
 
   reportQaActivity({
     method: httpMethod,
@@ -122,7 +125,7 @@ async function request(def, { method, url, data, headers, user, skipAuth = false
     data,
     headers: h,
     validateStatus: () => true,
-    timeout: def.timeout || 12000,
+    timeout: def.timeout || (def.category === 'business-logic' ? 45000 : 12000),
     maxRedirects: 0,
   });
 

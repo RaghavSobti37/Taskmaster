@@ -7,7 +7,7 @@ const Lead = require('../models/Lead');
 const User = require('../models/User');
 const CRMImport = require('../models/CRMImport');
 const logger = require('../utils/logger');
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: null,
@@ -57,6 +57,7 @@ const initImportWorker = () => {
 
       const processBatch = async (rows) => {
         const leadDocs = [];
+        let skippedRows = 0;
         for (const row of rows) {
           const rawRepName = (row.assigned_rep_id || row.Assigned_Rep_Id || '').toLowerCase().trim();
           let assignedRepId = null;
@@ -89,14 +90,28 @@ const initImportWorker = () => {
           }
 
           if (!leadDoc.name) leadDoc.name = row.name || row.Name || row['Full Name'] || 'Unknown';
-          if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '0000000000';
+          if (!leadDoc.phone) leadDoc.phone = row.phone || row.Phone || row['Mobile Number'] || '';
           if (!leadDoc.email) leadDoc.email = row.email || row.Email || '';
           if (!leadDoc.city) leadDoc.city = row.city || row.City || row.location || row.Location || '';
 
-          leadDoc.name = sanitizeName(leadDoc.name);
-          leadDoc.email = sanitizeEmail(leadDoc.email);
-          leadDoc.phone = normalizePhone(leadDoc.phone);
-          leadDoc.city = sanitizeLocation(leadDoc.city);
+          const normalized = normalizePersonRecord(leadDoc, {
+            requireName: true,
+            requirePhone: true,
+            tryRepairPhone: true,
+          });
+          if (normalized.errors.length) {
+            skippedRows += 1;
+            logger.warn('importWorker', `Skipped row: ${normalized.errors[0]}`, {
+              name: leadDoc.name,
+              email: leadDoc.email,
+            });
+            continue;
+          }
+          leadDoc.name = normalized.name;
+          leadDoc.nameKey = normalized.nameKey;
+          leadDoc.email = normalized.email;
+          leadDoc.phone = normalized.phone;
+          leadDoc.city = normalized.city;
 
           leadDocs.push(leadDoc);
         }

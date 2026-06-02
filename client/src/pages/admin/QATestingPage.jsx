@@ -7,6 +7,7 @@ import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
+import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 const PREDEPLOY_CATEGORIES = new Set([
   'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
@@ -308,8 +309,14 @@ const QATestingPage = () => {
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await axios.post('/api/qa/purge-test-data');
-      return data;
+      try {
+        const { data } = await axios.post('/api/qa/purge-test-data', {}, AXIOS_SKIP_TOAST);
+        return data;
+      } catch (err) {
+        if (err.response?.status !== 404) throw err;
+        const { data } = await axios.delete('/api/crm/leads/cleanup-test-data', AXIOS_SKIP_TOAST);
+        return data;
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries(['qa-history']);

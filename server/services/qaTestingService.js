@@ -13,7 +13,7 @@ const Project = require('../models/Project');
 const Lead = require('../models/Lead');
 const Contact = require('../models/Contact');
 const FinanceDocument = require('../models/FinanceDocument');
-const { purgeQaTestData } = require('./qa/qaTestData');
+const { purgeQaTestData, purgeQaRunArtifacts } = require('./qa/qaTestData');
 const DataHubService = require('./DataHubService');
 const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
 const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
@@ -141,6 +141,12 @@ class QATestingService {
       });
 
       for (let i = 0; i < testCases.length; i++) {
+        const cancelled = await QATestRun.findById(this.testRunId).select('status').lean();
+        if (cancelled?.status === 'cancelled') {
+          logger.info('QA', `Test run cancelled — stopping at case ${i + 1}/${testCases.length}`);
+          break;
+        }
+
         const testCase = testCases[i];
         
         const progress = Math.round((i / testCases.length) * 100);
@@ -604,36 +610,18 @@ class QATestingService {
   async cleanupTestData() {
     try {
       const testRun = await QATestRun.findById(this.testRunId);
-      const cleanupResults = { deleted: { tasks: 0, projects: 0, logs: 0, finance: 0, leads: 0, contacts: 0, audits: 0 }, errors: [] };
+      const cleanupResults = {
+        deleted: {
+          tasks: 0, projects: 0, logs: 0, finance: 0, leads: 0, contacts: 0, audits: 0,
+          users: 0, notifications: 0, xpAudits: 0, tracked: 0,
+        },
+        errors: [],
+      };
 
-      // Delete created artifacts in reverse order
-      for (const artifact of (testRun?.createdArtifacts || []).slice().reverse()) {
-        try {
-          if (artifact.type === 'task') {
-            await Task.findByIdAndDelete(artifact.id);
-            cleanupResults.deleted.tasks++;
-          } else if (artifact.type === 'log') {
-            await Log.findByIdAndDelete(artifact.id);
-            cleanupResults.deleted.logs++;
-          } else if (artifact.type === 'finance') {
-            await FinanceDocument.findByIdAndDelete(artifact.id);
-            cleanupResults.deleted.finance = (cleanupResults.deleted.finance || 0) + 1;
-          } else if (artifact.type === 'project') {
-            await Project.findByIdAndDelete(artifact.id);
-            cleanupResults.deleted.projects = (cleanupResults.deleted.projects || 0) + 1;
-          } else if (artifact.type === 'lead') {
-            await Lead.findByIdAndDelete(artifact.id).setOptions({ bypassTenant: true });
-            cleanupResults.deleted.leads = (cleanupResults.deleted.leads || 0) + 1;
-          } else if (artifact.type === 'contact') {
-            await Contact.findByIdAndDelete(artifact.id).setOptions({ bypassTenant: true });
-            cleanupResults.deleted.contacts = (cleanupResults.deleted.contacts || 0) + 1;
-          }
-        } catch (error) {
-          cleanupResults.errors.push(`Failed to delete ${artifact.type} ${artifact.id}: ${error.message}`);
-        }
-      }
+      const tracked = await purgeQaRunArtifacts(testRun);
+      cleanupResults.deleted.tracked = tracked.deleted;
+      cleanupResults.errors.push(...tracked.errors);
 
-      // Sweep all QA-pattern leads/contacts (integration probes, sanitization tests, etc.)
       const { repairCorruptLeadPhones } = require('./leadPhoneRepair');
       const [swept, phoneRepair] = await Promise.all([
         purgeQaTestData(),
@@ -645,7 +633,11 @@ class QATestingService {
       cleanupResults.deleted.audits = swept.deleted.audits;
       cleanupResults.deleted.logs += swept.deleted.logs;
       cleanupResults.deleted.users = swept.deleted.users;
-      cleanupResults.deleted.tasks = swept.deleted.tasks;
+      cleanupResults.deleted.tasks += swept.deleted.tasks;
+      cleanupResults.deleted.finance = swept.deleted.finance;
+      cleanupResults.deleted.projects = swept.deleted.projects;
+      cleanupResults.deleted.notifications = swept.deleted.notifications;
+      cleanupResults.deleted.xpAudits = swept.deleted.xpAudits;
       cleanupResults.phoneRepair = phoneRepair;
 
       if (this.testRunId) {

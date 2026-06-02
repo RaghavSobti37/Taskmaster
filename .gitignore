@@ -26,3 +26,4 @@ setup.cd
 server/backup_db.js
 TSC_BrandBook.pdf
 vendor/
+server/reports/

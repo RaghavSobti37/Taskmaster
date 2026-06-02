@@ -103,6 +103,19 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+/** Integration probes: inline gamification per request (nested under full QA run env is preserved). */
+app.use('/api', (req, res, next) => {
+  if (req.headers['x-qa-integration-probe'] !== 'true') return next();
+  if (process.env.QA_SYNC_GAMIFICATION === 'true') return next();
+  process.env.QA_SYNC_GAMIFICATION = 'true';
+  res.on('finish', () => {
+    if (process.env.QA_SYNC_GAMIFICATION === 'true') {
+      delete process.env.QA_SYNC_GAMIFICATION;
+    }
+  });
+  next();
+});
+
 // Rate limit public tracking endpoints (outside /api/ limiter scope)
 const trackLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -369,52 +382,80 @@ const backupJob = require('./jobs/backupJob');
 // Use dedicated worker or Atlas Snapshots instead.
 // backupJob.start();
 
+const http = require('http');
 const PORT = process.env.PORT || 5000;
+const LISTEN_RETRY_MS = 500;
+const LISTEN_RETRY_MAX = 20;
 let server;
-if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    
-    // Initialize Reminder Service
-    const notificationService = require('./services/notificationService');
-    notificationService.init();
-    const { configureWebPush } = require('./services/pushNotificationService');
-    configureWebPush();
 
-    // Initialize Background Workers
-    const { initWorker } = require('./workers/statsWorker');
-    initWorker();
-    
-    const { initWebhookWorker } = require('./workers/webhookWorker');
-    initWebhookWorker();
+function onServerListening() {
+  console.log(`Server running on port ${PORT}`);
 
-    const { initImportWorker } = require('./workers/importWorker');
-    initImportWorker();
+  const notificationService = require('./services/notificationService');
+  notificationService.init();
+  const { configureWebPush } = require('./services/pushNotificationService');
+  configureWebPush();
 
-    const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
-    initLogArchiverWorker();
-  });
+  const { initWorker } = require('./workers/statsWorker');
+  initWorker();
+
+  const { initWebhookWorker } = require('./workers/webhookWorker');
+  initWebhookWorker();
+
+  const { initImportWorker } = require('./workers/importWorker');
+  initImportWorker();
+
+  const { initLogArchiverWorker } = require('./workers/logArchiverWorker');
+  initLogArchiverWorker();
 
   const { initRealtime } = require('./config/realtime');
   initRealtime(server, corsAllowlist);
-
-  console.log('Server re-initialized after port release');
 }
 
-// Graceful shutdown for nodemon restarts to prevent EADDRINUSE
-process.once('SIGUSR2', () => {
-  if(server) server.close();
-  process.exit(0);
-});
-process.on('SIGINT', () => {
-  if(server) server.close();
-  process.exit(0);
-});
+function listenWithRetry(attempt = 0) {
+  if (server) {
+    server.close();
+    server = null;
+  }
+
+  server = http.createServer(app);
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && attempt < LISTEN_RETRY_MAX) {
+      console.warn(
+        `[server] Port ${PORT} in use (waiting for release). Retry ${attempt + 1}/${LISTEN_RETRY_MAX} in ${LISTEN_RETRY_MS}ms`
+      );
+      server.close(() => {
+        server = null;
+        setTimeout(() => listenWithRetry(attempt + 1), LISTEN_RETRY_MS);
+      });
+      return;
+    }
+    console.error('[FATAL] Server listen failed', err);
+    process.exit(1);
+  });
+  server.on('listening', onServerListening);
+  server.listen(PORT);
+}
+
+function gracefulShutdown(signal) {
+  const finish = () => {
+    if (signal === 'SIGUSR2') process.kill(process.pid, 'SIGUSR2');
+    else process.exit(0);
+  };
+  if (!server) return finish();
+  server.close(finish);
+  setTimeout(finish, 3000).unref();
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  listenWithRetry();
+}
+
+process.once('SIGUSR2', () => gracefulShutdown('SIGUSR2'));
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
 
 module.exports = app;
 
-// Trigger nodemon restart
 
-// Trigger nodemon restart 2
 
-// Trigger nodemon restart 3

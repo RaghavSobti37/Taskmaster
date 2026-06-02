@@ -3,7 +3,8 @@ const Lead = require('../models/Lead');
 const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
 const fs = require('fs');
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation, escapeRegExp } = require('../utils/sanitizer');
+const { escapeRegExp } = require('../utils/sanitizer');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 const logger = require('../utils/logger');
 const ContactService = require('../services/ContactService');
 const { isCommunityText } = require('../../shared/dataInlets');
@@ -275,16 +276,21 @@ exports.importTscData = async (req, res) => {
           }
 
           if (!doc.name) doc.name = row.Name || row.name || 'Unknown';
-          
-          // Apply sanitization
-          doc.name = sanitizeName(doc.name);
-          doc.email = sanitizeEmail(doc.email);
-          doc.phone = normalizePhone(doc.phone);
-          doc.city = sanitizeLocation(doc.city);
-          doc.state = sanitizeLocation(doc.state);
+
+          const normalized = normalizePersonRecord(doc, { tryRepairPhone: true });
+          if (normalized.errors.length) return null;
+          doc.name = normalized.name;
+          doc.nameKey = normalized.nameKey;
+          doc.email = normalized.email;
+          doc.phone = normalized.phone;
+          doc.city = normalized.city;
+          if (doc.state && typeof doc.state === 'string') {
+            const { sanitizeLocation } = require('../utils/sanitizer');
+            doc.state = sanitizeLocation(doc.state);
+          }
 
           return doc;
-        });
+        }).filter(Boolean);
 
         const bulkOps = tscDocs.map(doc => {
           const filter = { $or: [] };

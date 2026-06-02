@@ -888,8 +888,12 @@ class DataHubService {
 
     const runBatch = async (items, label, handler) => {
       if (!items.length) return;
+      log(`${label}: merging ${items.length} records…`);
       for (let i = 0; i < items.length; i += BATCH) {
         const batch = items.slice(i, i + BATCH);
+        if (i === 0 || (i + BATCH) % 500 === 0 || i + BATCH >= items.length) {
+          log(`${label}: ${Math.min(i + BATCH, items.length)}/${items.length}`);
+        }
         await Promise.all(batch.map(async (item) => {
           try {
             await handler(item);
@@ -902,6 +906,7 @@ class DataHubService {
 
     const leadFilter = since ? changedSince(since) : {};
     const leads = await Lead.find(leadFilter).lean();
+    log(`leads: loaded ${leads.length} for merge`);
     await runBatch(leads, 'leads', async (lead) => {
       if (!lead.email && !lead.phone) return;
       const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
@@ -929,6 +934,7 @@ class DataHubService {
     });
 
     const tscRows = await TscData.find(since ? changedSince(since) : {}).lean();
+    log(`tsc: loaded ${tscRows.length} for merge`);
     await runBatch(tscRows, 'tsc', async (row) => {
       if (!row.email && !row.phone) return;
       const isCommunity = isCommunityText(row.campaign) || isCommunityText(row.originSource);

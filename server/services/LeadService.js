@@ -3,8 +3,9 @@ const backgroundQueue = require('./backgroundQueue');
 const followupCache = require('./followupCache');
 const ContactService = require('./ContactService');
 const { parse } = require('date-fns');
-const { sanitizeName, sanitizeEmail, repairPhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { validateDate } = require('../utils/sanitizer');
 const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
+const { normalizePersonRecord, applyPersonFieldsTo } = require('../utils/personNormalization');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isBookedCallSource } = require('../../shared/dataInlets');
 
@@ -141,11 +142,8 @@ class LeadService {
 
   sanitizeAndNormalize(data) {
     const clean = { ...data };
-    if (clean.name) clean.name = sanitizeName(clean.name);
-    if (clean.email) clean.email = sanitizeEmail(clean.email);
-    if (clean.phone) clean.phone = repairPhone(clean.phone);
-    if (clean.city) clean.city = sanitizeLocation(clean.city);
-    if (clean.location) clean.location = sanitizeLocation(clean.location);
+    const normalized = normalizePersonRecord(clean, { tryRepairPhone: true });
+    applyPersonFieldsTo(clean, normalized);
     if (clean.nextFollowupDate && !validateDate(clean.nextFollowupDate)) {
       clean.nextFollowupDate = '';
     }
@@ -156,16 +154,11 @@ class LeadService {
     if (!update) return update;
     const clean = { ...update };
     const set = clean.$set || clean;
-    
-    if (set.name) set.name = sanitizeName(set.name);
-    if (set.email) set.email = sanitizeEmail(set.email);
-    if (set.phone) set.phone = repairPhone(set.phone);
-    if (set.city) set.city = sanitizeLocation(set.city);
-    if (set.location) set.location = sanitizeLocation(set.location);
+    const normalized = normalizePersonRecord(set, { tryRepairPhone: true });
+    applyPersonFieldsTo(set, normalized);
     if (set.nextFollowupDate && !validateDate(set.nextFollowupDate)) {
       set.nextFollowupDate = '';
     }
-    
     return clean;
   }
 }

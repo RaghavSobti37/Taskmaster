@@ -4,6 +4,7 @@ const { createNotification } = require('../services/notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const { assignLeadToRep } = require('./crmController');
 const LeadService = require('../services/LeadService');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
 const { google } = require('googleapis');
 const path = require('path');
@@ -30,8 +31,29 @@ exports.processBookedCallLogic = async (data) => {
   try {
     const { name, email, phone, whatsapp, course, referral, date, time, timezone = 'Asia/Kolkata' } = data;
 
+    const identity = normalizePersonRecord(
+      {
+        name,
+        email,
+        phone: whatsapp || phone,
+      },
+      { requireName: true, requirePhone: true, tryRepairPhone: true }
+    );
+    if (identity.errors.length) {
+      throw new Error(identity.errors[0]);
+    }
+
+    const normalizedName = identity.name;
+    const normalizedEmail = identity.email;
+    const normalizedPhone = identity.phone;
+
     // 1. Assign Rep (Only if new lead or lead has no rep)
-    let lead = await Lead.findOne({ email });
+    const leadLookup = { $or: [] };
+    if (normalizedEmail) leadLookup.$or.push({ email: normalizedEmail });
+    if (normalizedPhone) leadLookup.$or.push({ phone: normalizedPhone });
+    let lead = leadLookup.$or.length
+      ? await Lead.findOne(leadLookup)
+      : null;
     let rep = null;
 
     if (lead && lead.assignedRepId) {
@@ -99,8 +121,9 @@ exports.processBookedCallLogic = async (data) => {
 
     // 2. Upsert Lead in CRM
     const leadData = {
-      name,
-      phone: whatsapp || phone,
+      name: normalizedName,
+      nameKey: identity.nameKey,
+      phone: normalizedPhone,
       course,
       assignedRepId: rep._id,
       leadStatus: lead ? lead.leadStatus : 'New',
@@ -116,7 +139,7 @@ exports.processBookedCallLogic = async (data) => {
         {
           $set: {
             ...leadData,
-            email,
+            email: normalizedEmail,
             reminderSent: false,
             notifiedOverdue: false,
           },
@@ -125,7 +148,7 @@ exports.processBookedCallLogic = async (data) => {
       lead = await Lead.findById(lead._id);
     } else {
       lead = await LeadService.createLead({
-        email,
+        email: normalizedEmail,
         ...leadData,
         reminderSent: false,
         notifiedOverdue: false,

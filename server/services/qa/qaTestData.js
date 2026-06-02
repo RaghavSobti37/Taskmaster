@@ -6,6 +6,9 @@ const User = require('../../models/User');
 const Task = require('../../models/Task');
 const TaskAssignment = require('../../models/TaskAssignment');
 const Project = require('../../models/Project');
+const FinanceDocument = require('../../models/FinanceDocument');
+const Notification = require('../../models/Notification');
+const XPAuditLog = require('../../models/XPAuditLog');
 const { isRootAdminEmail } = require('../../../shared/rootAdminEmails');
 
 const BYPASS = { bypassTenant: true };
@@ -71,7 +74,71 @@ function buildQaTaskFilter() {
       { title: { $regex: /<script/i } },
       { title: { $regex: /alert\s*\(\s*['"]xss['"]\s*\)/i } },
       { title: { $regex: /^Backdated QA/i } },
+      { title: { $regex: /^QA probe bug/i } },
     ],
+  };
+}
+
+function buildQaFinanceFilter() {
+  return { title: { $regex: /^QA /i } };
+}
+
+function buildQaProjectFilter() {
+  return { name: { $regex: /^QA /i } };
+}
+
+async function collectQaTaskIds() {
+  const tasks = await Task.find(buildQaTaskFilter()).setOptions(BYPASS).select('_id').lean();
+  return tasks.map((t) => t._id);
+}
+
+async function collectQaLeadIds() {
+  const leads = await Lead.find(buildQaTestDataFilter()).setOptions(BYPASS).select('_id').lean();
+  return leads.map((l) => l._id);
+}
+
+async function deleteTasksByIds(taskIds) {
+  if (!taskIds.length) return { deletedCount: 0, assignments: 0, logs: 0 };
+
+  const tasks = await Task.find({ _id: { $in: taskIds } }).setOptions(BYPASS).select('_id status projectId').lean();
+  const ids = tasks.map((t) => t._id);
+  if (!ids.length) return { deletedCount: 0, assignments: 0, logs: 0 };
+
+  const projectDeltas = new Map();
+  for (const task of tasks) {
+    if (!task.projectId) continue;
+    const key = String(task.projectId);
+    const delta = projectDeltas.get(key) || { totalTasksCount: 0, completedTasksCount: 0 };
+    delta.totalTasksCount -= 1;
+    if (task.status === 'done') delta.completedTasksCount -= 1;
+    projectDeltas.set(key, delta);
+  }
+
+  const [assignments, logs, taskResult, notifications, xpAudits] = await Promise.all([
+    TaskAssignment.deleteMany({ taskId: { $in: ids } }),
+    Log.deleteMany({
+      $or: [
+        { targetId: { $in: ids } },
+        { targetType: 'Task', targetId: { $in: ids.map(String) } },
+      ],
+    }).setOptions(BYPASS),
+    Task.deleteMany({ _id: { $in: ids } }).setOptions(BYPASS),
+    Notification.deleteMany({ relatedTaskId: { $in: ids } }).setOptions(BYPASS),
+    XPAuditLog.deleteMany({ 'details.taskId': { $in: ids } }),
+  ]);
+
+  await Promise.all(
+    [...projectDeltas.entries()].map(([projectId, delta]) =>
+      Project.findByIdAndUpdate(projectId, { $inc: delta }).setOptions(BYPASS)
+    )
+  );
+
+  return {
+    deletedCount: taskResult.deletedCount || 0,
+    assignments: assignments.deletedCount || 0,
+    logs: logs.deletedCount || 0,
+    notifications: notifications.deletedCount || 0,
+    xpAudits: xpAudits.deletedCount || 0,
   };
 }
 
@@ -85,74 +152,98 @@ async function purgeQaUsers() {
 }
 
 async function purgeQaTasks() {
-  const tasks = await Task.find(buildQaTaskFilter()).setOptions(BYPASS).select('_id status projectId').lean();
-  if (!tasks.length) return { deletedCount: 0, assignments: 0, logs: 0 };
+  const taskIds = await collectQaTaskIds();
+  return deleteTasksByIds(taskIds);
+}
 
-  const taskIds = tasks.map((t) => t._id);
-  const projectDeltas = new Map();
-  for (const task of tasks) {
-    if (!task.projectId) continue;
-    const key = String(task.projectId);
-    const delta = projectDeltas.get(key) || { totalTasksCount: 0, completedTasksCount: 0 };
-    delta.totalTasksCount -= 1;
-    if (task.status === 'done') delta.completedTasksCount -= 1;
-    projectDeltas.set(key, delta);
-  }
+async function purgeQaNotifications(taskIds, leadIds) {
+  const clauses = [{ title: { $regex: /^QA /i } }];
+  if (taskIds.length) clauses.push({ relatedTaskId: { $in: taskIds } });
+  if (leadIds.length) clauses.push({ relatedLeadId: { $in: leadIds } });
+  const result = await Notification.deleteMany({ $or: clauses }).setOptions(BYPASS);
+  return result.deletedCount || 0;
+}
 
-  const [assignments, logs, taskResult] = await Promise.all([
-    TaskAssignment.deleteMany({ taskId: { $in: taskIds } }),
-    Log.deleteMany({
-      $or: [
-        { targetId: { $in: taskIds } },
-        { targetType: 'Task', targetId: { $in: taskIds.map(String) } },
-      ],
-    }).setOptions(BYPASS),
-    Task.deleteMany({ _id: { $in: taskIds } }).setOptions(BYPASS),
+async function purgeQaXpAudits(taskIds, leadIds) {
+  const clauses = [{ 'details.qaProbe': true }];
+  if (taskIds.length) clauses.push({ 'details.taskId': { $in: taskIds } });
+  if (leadIds.length) clauses.push({ 'details.leadId': { $in: leadIds } });
+  const result = await XPAuditLog.deleteMany({ $or: clauses });
+  return result.deletedCount || 0;
+}
+
+async function purgeQaFinance() {
+  const result = await FinanceDocument.deleteMany(buildQaFinanceFilter()).setOptions(BYPASS);
+  return result.deletedCount || 0;
+}
+
+async function purgeQaProjects() {
+  const projects = await Project.find(buildQaProjectFilter()).setOptions(BYPASS).select('_id').lean();
+  const ids = projects.map((p) => p._id);
+  if (!ids.length) return 0;
+  const result = await Project.deleteMany({ _id: { $in: ids } }).setOptions(BYPASS);
+  return result.deletedCount || 0;
+}
+
+async function purgeQaLeadsAndContacts() {
+  const filter = buildQaTestDataFilter();
+  const leadIds = await collectQaLeadIds();
+
+  const [contacts, audits, leads, leadXp, leadNotifications] = await Promise.all([
+    Contact.deleteMany(filter).setOptions(BYPASS),
+    leadIds.length ? CRMAudit.deleteMany({ leadId: { $in: leadIds } }).setOptions(BYPASS) : { deletedCount: 0 },
+    Lead.deleteMany(filter).setOptions(BYPASS),
+    leadIds.length ? XPAuditLog.deleteMany({ 'details.leadId': { $in: leadIds } }) : { deletedCount: 0 },
+    leadIds.length
+      ? Notification.deleteMany({ relatedLeadId: { $in: leadIds } }).setOptions(BYPASS)
+      : { deletedCount: 0 },
   ]);
 
-  await Promise.all(
-    [...projectDeltas.entries()].map(([projectId, delta]) =>
-      Project.findByIdAndUpdate(projectId, { $inc: delta }).setOptions(BYPASS)
-    )
-  );
-
   return {
-    deletedCount: taskResult.deletedCount || 0,
-    assignments: assignments.deletedCount || 0,
-    logs: logs.deletedCount || 0,
+    contacts: contacts.deletedCount || 0,
+    leads: leads.deletedCount || 0,
+    audits: audits.deletedCount || 0,
+    leadXp: leadXp.deletedCount || 0,
+    leadNotifications: leadNotifications.deletedCount || 0,
   };
 }
 
 async function purgeQaTestData() {
-  const filter = buildQaTestDataFilter();
-  const leadIds = await Lead.find(filter).setOptions(BYPASS).select('_id').lean();
-  const ids = leadIds.map((l) => l._id);
+  const taskIds = await collectQaTaskIds();
+  const leadIds = await collectQaLeadIds();
 
-  const [contacts, audits, leads, logs, users, tasks] = await Promise.all([
-    Contact.deleteMany(filter).setOptions(BYPASS),
-    ids.length ? CRMAudit.deleteMany({ leadId: { $in: ids } }).setOptions(BYPASS) : { deletedCount: 0 },
-    Lead.deleteMany(filter).setOptions(BYPASS),
+  const [crm, tasks, users, finance, projects, notifications, xpAudits, logs] = await Promise.all([
+    purgeQaLeadsAndContacts(),
+    purgeQaTasks(),
+    purgeQaUsers(),
+    purgeQaFinance(),
+    purgeQaProjects(),
+    purgeQaNotifications(taskIds, leadIds),
+    purgeQaXpAudits(taskIds, leadIds),
     Log.deleteMany({
       $or: [
         { action: 'QA_TEST' },
         { module: 'QA_TESTING' },
         { origin: 'QA_AGENT_TEST' },
         { 'details.title': { $regex: /^QA /i } },
+        { 'details.testName': { $regex: /^QA /i } },
       ],
     }).setOptions(BYPASS),
-    purgeQaUsers(),
-    purgeQaTasks(),
   ]);
 
   return {
     deleted: {
-      contacts: contacts.deletedCount || 0,
-      leads: leads.deletedCount || 0,
-      audits: audits.deletedCount || 0,
+      contacts: crm.contacts,
+      leads: crm.leads,
+      audits: crm.audits,
       logs: logs.deletedCount || 0,
       users: users.deletedCount || 0,
       tasks: tasks.deletedCount || 0,
       taskAssignments: tasks.assignments || 0,
+      notifications: notifications + (crm.leadNotifications || 0) + (tasks.notifications || 0),
+      xpAudits: (xpAudits || 0) + (crm.leadXp || 0) + (tasks.xpAudits || 0),
+      finance,
+      projects,
     },
   };
 }
@@ -170,8 +261,111 @@ async function purgeQaIdentity({ email, phone } = {}) {
   await Promise.all([
     Contact.deleteMany(match).setOptions(BYPASS),
     leadIds.length ? CRMAudit.deleteMany({ leadId: { $in: leadIds } }).setOptions(BYPASS) : Promise.resolve(),
+    leadIds.length ? Notification.deleteMany({ relatedLeadId: { $in: leadIds } }).setOptions(BYPASS) : Promise.resolve(),
+    leadIds.length ? XPAuditLog.deleteMany({ 'details.leadId': { $in: leadIds } }) : Promise.resolve(),
     Lead.deleteMany(match).setOptions(BYPASS),
   ]);
+}
+
+/** Delete one tracked artifact from a QA run (cascade children). */
+async function deleteTrackedArtifact(artifact) {
+  if (!artifact?.type || !artifact?.id) return { ok: false, reason: 'invalid' };
+
+  const id = artifact.id;
+  switch (artifact.type) {
+    case 'task': {
+      const r = await deleteTasksByIds([id]);
+      return { ok: true, ...r };
+    }
+    case 'lead': {
+      const lead = await Lead.findById(id).setOptions(BYPASS).select('email phone name').lean();
+      const leadIds = [id];
+      const contactMatch = lead
+        ? {
+            $or: [
+              ...(lead.email ? [{ email: lead.email }] : []),
+              ...(lead.phone ? [{ phone: lead.phone }] : []),
+            ],
+          }
+        : null;
+      await Promise.all([
+        CRMAudit.deleteMany({ leadId: { $in: leadIds } }).setOptions(BYPASS),
+        Notification.deleteMany({ relatedLeadId: { $in: leadIds } }).setOptions(BYPASS),
+        XPAuditLog.deleteMany({ 'details.leadId': { $in: leadIds } }),
+        contactMatch?.$or?.length
+          ? Contact.deleteMany(contactMatch).setOptions(BYPASS)
+          : Promise.resolve(),
+        Lead.deleteOne({ _id: id }).setOptions(BYPASS),
+      ]);
+      return { ok: true };
+    }
+    case 'contact':
+      await Contact.deleteOne({ _id: id }).setOptions(BYPASS);
+      return { ok: true };
+    case 'finance':
+      await FinanceDocument.deleteOne({ _id: id }).setOptions(BYPASS);
+      return { ok: true };
+    case 'project':
+      await Project.deleteOne({ _id: id }).setOptions(BYPASS);
+      return { ok: true };
+    case 'log':
+      await Log.deleteOne({ _id: id }).setOptions(BYPASS);
+      return { ok: true };
+    case 'user': {
+      const u = await User.findById(id).select('email').lean();
+      if (u && !isRootAdminEmail(u.email)) {
+        await User.deleteOne({ _id: id }).setOptions(BYPASS);
+      }
+      return { ok: true };
+    }
+    default:
+      return { ok: false, reason: `unknown type ${artifact.type}` };
+  }
+}
+
+/** Purge artifacts recorded on a single QATestRun (+ bug tasks). */
+async function purgeQaRunArtifacts(testRun) {
+  const seen = new Set();
+  const artifacts = [];
+  for (const a of testRun?.createdArtifacts || []) {
+    const key = `${a.type}:${a.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      artifacts.push(a);
+    }
+  }
+  for (const bugId of testRun?.bugsCreated || []) {
+    const key = `task:${bugId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      artifacts.push({ type: 'task', id: bugId });
+    }
+  }
+
+  const stats = { deleted: 0, errors: [] };
+  for (const artifact of artifacts.slice().reverse()) {
+    try {
+      await deleteTrackedArtifact(artifact);
+      stats.deleted += 1;
+    } catch (err) {
+      stats.errors.push(`${artifact.type} ${artifact.id}: ${err.message}`);
+    }
+  }
+  return stats;
+}
+
+/** Count residual QA-pattern rows (for verification scripts). */
+async function countQaResiduals() {
+  const [leads, contacts, tasks, users, finance, projects, notifications] = await Promise.all([
+    Lead.countDocuments(buildQaTestDataFilter()).setOptions(BYPASS),
+    Contact.countDocuments(buildQaTestDataFilter()).setOptions(BYPASS),
+    Task.countDocuments(buildQaTaskFilter()).setOptions(BYPASS),
+    User.countDocuments(buildQaUserFilter()).setOptions(BYPASS),
+    FinanceDocument.countDocuments(buildQaFinanceFilter()).setOptions(BYPASS),
+    Project.countDocuments(buildQaProjectFilter()).setOptions(BYPASS),
+    Notification.countDocuments({ title: { $regex: /^QA /i } }).setOptions(BYPASS),
+  ]);
+  return { leads, contacts, tasks, users, finance, projects, notifications, total: leads + contacts + tasks + users + finance + projects + notifications };
 }
 
 module.exports = {
@@ -185,4 +379,7 @@ module.exports = {
   purgeQaTasks,
   purgeQaTestData,
   purgeQaIdentity,
+  deleteTrackedArtifact,
+  purgeQaRunArtifacts,
+  countQaResiduals,
 };

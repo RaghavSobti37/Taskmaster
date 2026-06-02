@@ -3,7 +3,7 @@ const Lead = require('../models/Lead');
 const CRMAudit = require('../models/CRMAudit');
 const LeadService = require('./LeadService');
 const { assignLeadToRep } = require('../controllers/crmController');
-const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 const logger = require('../utils/logger');
 
 /**
@@ -33,12 +33,20 @@ async function syncFromHolySheet({ sheetName = 'BookedCalls', userId = null, use
     const rawPhone = row.phone || row.Phone || row['Mobile Number'] || row['Phone Number'] || '';
     const rawEmail = row.email || row.Email || row['Email Address'] || '';
 
-    const phone = normalizePhone(rawPhone);
-    const email = sanitizeEmail(rawEmail);
+    const identity = normalizePersonRecord(
+      {
+        name: row.name || row.Name || row['Full Name'] || row.full_name || 'Booked Discovery Lead',
+        email: rawEmail,
+        phone: rawPhone,
+      },
+      { tryRepairPhone: true }
+    );
+    if (identity.errors.length || (!identity.phone && !identity.email)) continue;
 
-    if (!phone && !email) continue;
-
-    const name = sanitizeName(row.name || row.Name || row['Full Name'] || row.full_name || 'Booked Discovery Lead');
+    const phone = identity.phone;
+    const email = identity.email;
+    const name = identity.name;
+    const nameKey = identity.nameKey;
 
     const rawDate = row.date || row.Date || row.booking_date || row.bookingDate || row.event_date || row.call_date || '';
     const date = rawDate.trim() ? new Date(rawDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
@@ -48,7 +56,7 @@ async function syncFromHolySheet({ sheetName = 'BookedCalls', userId = null, use
 
     const source = row.source || row.Source || 'Booked Call';
     const remarks = row.remarks || row.Remarks || row.notes || row.Notes || `Booked a discovery call for ${date} at ${time}.`;
-    const city = row.city || row.City || row.location || row.Location || '';
+    const city = identity.city || row.city || row.City || row.location || row.Location || '';
 
     const filter = { $or: [] };
     if (phone) filter.$or.push({ phone });
@@ -84,8 +92,9 @@ async function syncFromHolySheet({ sheetName = 'BookedCalls', userId = null, use
       const assignedRepId = await assignLeadToRep();
       await LeadService.createLead({
         name,
+        nameKey,
         email,
-        phone: phone || '0000000000',
+        phone,
         city,
         leadStatus: 'Warm',
         callStatus: 'Scheduled',

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
+const { applyPersonIdentityToDoc } = require('../utils/personNormalization');
 
 const inletEntrySchema = new mongoose.Schema({
   key: { type: String, required: true },
@@ -11,6 +12,7 @@ const inletEntrySchema = new mongoose.Schema({
 
 const contactSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  nameKey: { type: String, index: true },
   email: { type: String, index: true },
   phone: { type: String, index: true },
 
@@ -47,6 +49,16 @@ const contactSchema = new mongoose.Schema({
 
 contactSchema.index({ phone: 1 });
 contactSchema.index({ email: 1 });
+contactSchema.index({ nameKey: 1 });
+
+contactSchema.pre('save', function(next) {
+  try {
+    applyPersonIdentityToDoc(this);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 contactSchema.index({ 'inlets.key': 1 });
 contactSchema.index({ updatedAt: -1 });
 

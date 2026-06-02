@@ -145,9 +145,18 @@ const qaTestRunSchema = new mongoose.Schema({
     deleted: {
       tasks: { type: Number, default: 0 },
       projects: { type: Number, default: 0 },
-      logs: { type: Number, default: 0 }
+      logs: { type: Number, default: 0 },
+      finance: { type: Number, default: 0 },
+      leads: { type: Number, default: 0 },
+      contacts: { type: Number, default: 0 },
+      audits: { type: Number, default: 0 },
+      users: { type: Number, default: 0 },
+      notifications: { type: Number, default: 0 },
+      xpAudits: { type: Number, default: 0 },
+      tracked: { type: Number, default: 0 },
     },
-    errors: [String]
+    phoneRepair: mongoose.Schema.Types.Mixed,
+    errors: [String],
   },
   selectedCategories: [String],
   errorDetails: {

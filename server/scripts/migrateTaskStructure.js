@@ -18,6 +18,7 @@ const LEGACY_TYPE_MAP = {
   review: 'review',
   bug: 'bug',
   feature: 'feature',
+  sales: 'sales',
 };
 
 function normalizeType(raw) {

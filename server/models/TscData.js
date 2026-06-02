@@ -1,10 +1,18 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const { sanitizeName, sanitizeEmail, normalizePhone, sanitizeLocation } = require('../utils/sanitizer');
+const {
+  sanitizeEmail,
+  sanitizeLocation,
+  normalizePersonName,
+  repairPhone,
+  isCorruptLeadPhone,
+} = require('../utils/sanitizer');
+const { validatePhoneE164 } = require('../utils/phoneCountryValidation');
 
 const TscDataSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  nameKey: { type: String, index: true },
   email: { type: String, index: true },
   phone: { type: String, index: true },
   city: { type: String },
@@ -31,11 +39,38 @@ const TscDataSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Sanitization Hook
+const normalizeTscPhone = (phone) => {
+  if (!phone) return '';
+  let raw = phone;
+  if (isCorruptLeadPhone(raw)) {
+    const repaired = repairPhone(raw);
+    if (repaired) raw = repaired;
+  }
+  const check = validatePhoneE164(raw);
+  return check.valid ? check.phone : repairPhone(raw) || raw;
+};
+
+const applyTscIdentityFields = (set) => {
+  if (!set) return;
+  if (set.name && typeof set.name === 'string') {
+    const { name, nameKey } = normalizePersonName(set.name);
+    set.name = name;
+    set.nameKey = nameKey;
+  }
+  if (set.email && typeof set.email === 'string') set.email = sanitizeEmail(set.email);
+  if (set.phone && typeof set.phone === 'string') set.phone = normalizeTscPhone(set.phone);
+  if (set.city && typeof set.city === 'string') set.city = sanitizeLocation(set.city);
+  if (set.state && typeof set.state === 'string') set.state = sanitizeLocation(set.state);
+};
+
 TscDataSchema.pre('save', function(next) {
-  if (this.isModified('name')) this.name = sanitizeName(this.name);
-  if (this.isModified('email')) this.email = sanitizeEmail(this.email);
-  if (this.isModified('phone')) this.phone = normalizePhone(this.phone);
+  if (this.isModified('name') || this.name) {
+    const { name, nameKey } = normalizePersonName(this.name);
+    this.name = name || this.name;
+    this.nameKey = nameKey;
+  }
+  if (this.isModified('email') && this.email) this.email = sanitizeEmail(this.email);
+  if (this.isModified('phone') && this.phone) this.phone = normalizeTscPhone(this.phone);
   if (this.isModified('city') && this.city) this.city = sanitizeLocation(this.city);
   if (this.isModified('state') && this.state) this.state = sanitizeLocation(this.state);
   next();
@@ -44,11 +79,7 @@ TscDataSchema.pre('save', function(next) {
 const sanitizeUpdate = (update) => {
   if (!update) return;
   const set = update.$set || update;
-  if (set.name && typeof set.name === 'string') set.name = sanitizeName(set.name);
-  if (set.email && typeof set.email === 'string') set.email = sanitizeEmail(set.email);
-  if (set.phone && typeof set.phone === 'string') set.phone = normalizePhone(set.phone);
-  if (set.city && typeof set.city === 'string') set.city = sanitizeLocation(set.city);
-  if (set.state && typeof set.state === 'string') set.state = sanitizeLocation(set.state);
+  applyTscIdentityFields(set);
 };
 
 TscDataSchema.pre('findOneAndUpdate', function(next) {

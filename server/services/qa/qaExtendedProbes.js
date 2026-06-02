@@ -470,8 +470,8 @@ const PROBE_DEFS = [
     async run() {
       const { adminUser } = await resolveTestUsers();
       const phone = `98${String(Date.now()).slice(-8)}`;
-      const emailA = `qa-dup-a-${Date.now()}@test.com`;
-      const emailB = `qa-dup-b-${Date.now()}@test.com`;
+      const emailA = `qa-dup-a-${Date.now()}@example.com`;
+      const emailB = `qa-dup-b-${Date.now()}@example.com`;
       const payload = { name: 'QA Dup A', phone, email: emailA };
       try {
         const r1 = await request(this, {

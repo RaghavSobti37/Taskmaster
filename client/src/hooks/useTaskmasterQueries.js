@@ -1268,6 +1268,7 @@ export const useTaskTypes = () => {
     { name: 'design', label: 'Design' },
     { name: 'ops', label: 'Operations' },
     { name: 'review', label: 'Review' },
+    { name: 'sales', label: 'Sales' },
     { name: 'general', label: 'General' },
   ];
   return useQuery({
@@ -1285,7 +1286,8 @@ export const useSchedule = ({ start, end, projectId, departmentId } = {}, enable
       params: { start, end, projectId, departmentId }
     })).data,
     enabled: enabled && !!start && !!end,
-    staleTime: 1000 * 30
+    staleTime: 1000 * 30,
+    placeholderData: keepPreviousData,
   });
 };
 

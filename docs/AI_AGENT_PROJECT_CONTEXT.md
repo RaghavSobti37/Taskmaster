@@ -1593,6 +1593,7 @@ FinanceDocument ──> Project (self-referential folders)
 | Production Migration | `docs/PRODUCTION_MIGRATION.md` | Deploy migration steps |
 | Data Backup | `docs/DATA_BACKUP.md` | Backup procedures |
 | Version History | `docs/VERSION_HISTORY.md` | Release changelog |
+| Data Sanitation Spec | `docs/DATA_SANITATION_SPEC.md` | Person name/phone/email normalization, nameKey, backfill script |
 | Architecture Map | `.specify/memory/architecture_map.md` | Mermaid system diagrams |
 | Backend Memory | `.specify/memory/backend.md` | Backend-specific notes |
 | Features Page | `.specify/memory/features_page.md` | Feature completion checklist |

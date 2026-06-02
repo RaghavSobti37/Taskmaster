@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
+const { applyPersonIdentityToDoc } = require('../utils/personNormalization');
 
 
 const ExlyBookingSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  nameKey: { type: String, index: true },
   email: { type: String, index: true },
   phone: { type: String, required: true, index: true },
   offeringTitle: { type: String, required: true, index: true },
@@ -30,6 +32,16 @@ const ExlyBookingSchema = new mongoose.Schema({
 
 // Compound index to prevent duplicate booking imports
 ExlyBookingSchema.index({ email: 1, phone: 1, offeringId: 1, bookedOn: 1 }, { unique: true });
+ExlyBookingSchema.index({ nameKey: 1 });
+
+ExlyBookingSchema.pre('save', function(next) {
+  try {
+    applyPersonIdentityToDoc(this, { phoneRequired: true });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 ExlyBookingSchema.plugin(tenantPlugin);
 

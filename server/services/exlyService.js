@@ -92,7 +92,7 @@ class ExlyService {
 
     // 2. Sync Bookings/Leads into CRM
     const { assignLeadToRep } = require('../controllers/crmController');
-    const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
+    const { normalizePersonRecord } = require('../utils/personNormalization');
     
     let addedCount = 0;
     let updatedCount = 0;
@@ -105,12 +105,20 @@ class ExlyService {
 
       const rawPhone = b.phone || b.customerPhone || '';
       const rawEmail = b.email || b.customerEmail || '';
-      const phone = normalizePhone(rawPhone);
-      const email = sanitizeEmail(rawEmail);
+      const identity = normalizePersonRecord(
+        {
+          name: b.name || b.customerName || 'Exly Lead',
+          email: rawEmail,
+          phone: rawPhone,
+        },
+        { tryRepairPhone: true }
+      );
+      if (identity.errors.length || (!identity.phone && !identity.email)) continue;
 
-      if (!phone && !email) continue;
-
-      const name = sanitizeName(b.name || b.customerName || 'Exly Lead');
+      const phone = identity.phone;
+      const email = identity.email;
+      const name = identity.name;
+      const nameKey = identity.nameKey;
       const offeringId = b.offeringId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
       const txnId = b.transactionId || b.transactionIdExly || '';
       const custId = b.customerId || b.customerIdExly || '';
@@ -136,6 +144,7 @@ class ExlyService {
             offeringId,
             offeringTitle: cleanTitle,
             name,
+            nameKey,
             email,
             phone,
             pricePaid,

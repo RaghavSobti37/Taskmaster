@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const { sanitizeName, sanitizeEmail, repairPhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { validateDate } = require('../utils/sanitizer');
+const { applyPersonIdentityToDoc } = require('../utils/personNormalization');
 const auditPlugin = require('./plugins/auditPlugin');
 
 /**
@@ -24,6 +25,7 @@ const LeadSchema = new mongoose.Schema({
   
   // Basic Information
   name: { type: String, required: true },
+  nameKey: { type: String, index: true },
   email: { type: String, index: true },
   phone: { type: String, required: true, index: true },
   city: { type: String, index: true },
@@ -88,14 +90,31 @@ const LeadSchema = new mongoose.Schema({
 
 
 LeadSchema.pre('save', function(next) {
-  if (this.name) this.name = sanitizeName(this.name);
-  if (this.email) this.email = sanitizeEmail(this.email);
-  if (this.phone) this.phone = repairPhone(this.phone);
-  if (this.city) this.city = sanitizeLocation(this.city);
+  try {
+    applyPersonIdentityToDoc(this, { phoneRequired: true });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const sanitizeLeadUpdate = (update) => {
+  if (!update) return;
+  const set = update.$set || update;
+  if (set.name || set.email || set.phone || set.city) {
+    applyPersonIdentityToDoc(set, { phoneRequired: false });
+  }
+};
+
+LeadSchema.pre('findOneAndUpdate', function(next) {
+  sanitizeLeadUpdate(this.getUpdate());
   next();
 });
 
-// Update hooks moved to LeadService.js
+LeadSchema.pre('updateOne', function(next) {
+  sanitizeLeadUpdate(this.getUpdate());
+  next();
+});
 
 // Apply Audit Plugin
 LeadSchema.plugin(auditPlugin);

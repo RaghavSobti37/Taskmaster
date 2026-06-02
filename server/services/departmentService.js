@@ -24,6 +24,7 @@ const TASK_CATEGORIES = [
   { value: 'design', label: 'Design', keywords: ['design', 'ui', 'mockup', 'layout', 'visual'] },
   { value: 'ops', label: 'Operations', keywords: ['plan', 'planning', 'schedule', 'support', 'ops', 'operation', 'deploy'] },
   { value: 'review', label: 'Review', keywords: ['review', 'approve', 'feedback', 'qa', 'check'] },
+  { value: 'sales', label: 'Sales', keywords: ['sales', 'deal', 'client', 'lead', 'crm', 'pitch', 'prospect', 'call', 'follow up', 'followup', 'pipeline', 'quota'] },
   { value: 'general', label: 'General', keywords: [] },
 ];
 

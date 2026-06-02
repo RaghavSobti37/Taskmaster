@@ -1,36 +1,79 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format, addDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { PageContainer, PageHeader, EmptyState } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
-import { useSchedule } from '../../hooks/useTaskmasterQueries';
+import { useSchedule, useWorkspaces, useProjects } from '../../hooks/useTaskmasterQueries';
 import TaskDetailModal from '../../components/TaskDetailModal';
 import { CalendarDays } from 'lucide-react';
 
+export const MAX_SCHEDULE_DAYS = 5;
+
 const SchedulePage = () => {
   const queryClient = useQueryClient();
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-  const { data, isLoading, isError, error } = useSchedule({ start: today, end: tomorrow });
+  const [dayCount, setDayCount] = useState(2);
   const [selectedTask, setSelectedTask] = useState(null);
-  const tz = Intl.DateTimeFormat(undefined, { timeZoneName: 'short' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value || '';
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const scheduleEnd = format(addDays(new Date(), MAX_SCHEDULE_DAYS - 1), 'yyyy-MM-dd');
+  // Prefetch color metadata in parallel with schedule (ScheduleGrid consumes same cache).
+  useWorkspaces();
+  useProjects();
+  const { data, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
+
+  const scheduleData = useMemo(() => {
+    if (!data) return data;
+    return {
+      ...data,
+      tasks: (data.tasks || []).filter((task) => task.status !== 'done'),
+    };
+  }, [data]);
+
+  const dayLabel = dayCount === 1 ? '1 day' : `${dayCount} days`;
+  const showInitialSkeleton = isPending && !scheduleData;
 
   return (
     <PageContainer className="!py-4 !space-y-4">
       <PageHeader
         title="Schedule"
-        subtitle={`Today & tomorrow (${format(new Date(today), 'MMM d')} – ${format(new Date(tomorrow), 'MMM d')})${tz ? ` · ${tz}` : ''}`}
         icon={CalendarDays}
+        actions={
+          <div className="flex items-center gap-2.5 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">
+              View
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={MAX_SCHEDULE_DAYS}
+              step={1}
+              value={dayCount}
+              onChange={(e) => setDayCount(Number(e.target.value))}
+              aria-label="Days to show in schedule"
+              className="schedule-day-slider w-24 sm:w-28 accent-[var(--color-action-primary)] cursor-pointer"
+            />
+            <span className="text-[10px] font-bold text-[var(--color-text-primary)] tabular-nums min-w-[3rem] text-right">
+              {dayLabel}
+            </span>
+          </div>
+        }
       />
-      {isLoading ? (
-        <ScheduleSkeleton />
-      ) : isError ? (
+      {isError ? (
         <EmptyState title="Could not load schedule" description={error?.message || 'Try refreshing the page.'} variant="subtle" />
-      ) : !data?.departments?.length ? (
-        <EmptyState title="No scheduled tasks" description="No tasks are scheduled for today or tomorrow." variant="subtle" />
+      ) : showInitialSkeleton ? (
+        <ScheduleSkeleton dayCount={dayCount} />
+      ) : !scheduleData?.departments?.length ? (
+        <EmptyState
+          title="No scheduled tasks"
+          description={`No active tasks are scheduled for the next ${dayLabel}.`}
+          variant="subtle"
+        />
       ) : (
-        <ScheduleGrid data={data} onTaskClick={setSelectedTask} />
+        <ScheduleGrid
+          data={scheduleData}
+          visibleDayCount={dayCount}
+          onTaskClick={setSelectedTask}
+        />
       )}
 
       <TaskDetailModal

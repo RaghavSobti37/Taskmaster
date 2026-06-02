@@ -64,6 +64,7 @@ export const TASK_CATEGORY_OPTIONS = [
   { value: 'design', label: 'Design' },
   { value: 'ops', label: 'Operations' },
   { value: 'review', label: 'Review' },
+  { value: 'sales', label: 'Sales' },
   { value: 'general', label: 'General' },
 ];
 
@@ -88,6 +89,7 @@ const LEGACY_TYPE_MAP = {
   fix: 'bug',
   feature: 'feature',
   design: 'design',
+  sales: 'sales',
   general: 'general',
 };
 

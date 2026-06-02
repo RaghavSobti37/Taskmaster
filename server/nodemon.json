@@ -1,0 +1,5 @@
+﻿{
+  "delay": 1500,
+  "signal": "SIGTERM",
+  "ext": "js,json"
+}

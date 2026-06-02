@@ -32,7 +32,7 @@ const MentionRichText = ({ text, users = [], assets = [], className = '', inline
           return (
             <span
               key={index}
-              className="text-[var(--color-action-primary)] font-semibold"
+              className="tm-mention-chip"
               title={seg.displayName}
             >
               @{seg.label}
@@ -48,7 +48,7 @@ const MentionRichText = ({ text, users = [], assets = [], className = '', inline
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--color-brand-teal)] font-semibold hover:underline"
+                className="tm-hashtag-chip"
                 title={`Open ${seg.displayName}`}
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -58,7 +58,7 @@ const MentionRichText = ({ text, users = [], assets = [], className = '', inline
             );
           }
           return (
-            <span key={index} className="text-[var(--color-brand-teal)] font-semibold">
+            <span key={index} className="tm-hashtag-chip">
               #{seg.label}
             </span>
           );

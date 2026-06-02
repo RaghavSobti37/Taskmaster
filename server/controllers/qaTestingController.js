@@ -33,8 +33,11 @@ exports.startQATesting = async (req, res, next) => {
 
     await qaService.initTestRun();
 
+    process.env.QA_SYNC_GAMIFICATION = 'true';
     qaService.executeTests().catch((err) => {
       logger.error('QA', 'Error in background testing', { error: err.message });
+    }).finally(() => {
+      delete process.env.QA_SYNC_GAMIFICATION;
     });
 
     broadcastRealtimeEvent(`qa-test:global`, 'started', {
@@ -175,11 +178,17 @@ exports.cancelTest = async (req, res, next) => {
       return res.status(404).json({ error: 'Test run not found' });
     }
 
+    const qaService = new QATestingService(null, req.user._id);
+    qaService.testRunId = testRunId;
+    qaService.cleanupTestData().catch((err) => {
+      logger.error('QA', 'Cleanup after cancel failed', { error: err.message, testRunId });
+    });
+
     broadcastRealtimeEvent(`qa-test:global`, 'cancelled', {
       testRunId: testRunId
     });
 
-    res.json({ success: true, message: 'Test cancelled' });
+    res.json({ success: true, message: 'Test cancelled; QA data cleanup started' });
   } catch (error) {
     logger.error('QA', 'Error cancelling test', { error: error.message });
     next(error);
@@ -226,12 +235,17 @@ exports.listCategories = async (req, res) => {
 /** Purge all QA-pattern data globally (Data Hub, CRM, logs) — no test run required */
 exports.purgeAllTestData = async (req, res, next) => {
   try {
-    const swept = await purgeQaTestData();
+    const { repairCorruptLeadPhones } = require('../services/leadPhoneRepair');
+    const [swept, phoneRepair] = await Promise.all([
+      purgeQaTestData(),
+      repairCorruptLeadPhones(),
+    ]);
     DataHubService.clearFolderCache();
     res.json({
       success: true,
-      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records`,
+      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records. Repaired ${phoneRepair.repaired} corrupt phones, deleted ${phoneRepair.deleted} redundant duplicates.`,
       deleted: swept.deleted,
+      phoneRepair,
     });
   } catch (error) {
     logger.error('QA', 'Error purging QA test data', { error: error.message });

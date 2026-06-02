@@ -22,8 +22,9 @@ import { taskCompletionToast, canMarkTaskComplete, pendingReviewToast } from '..
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
+import { sortTasksByDueDate } from '../../utils/dashboardTasks';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
-import { Circle, CheckCircle2 } from 'lucide-react';
+import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 
@@ -46,6 +47,7 @@ const TodoPage = () => {
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
+  const [dueDateSort, setDueDateSort] = useState('asc');
 
   const typeOptions = useMemo(
     () => [{ value: 'all', label: 'All categories' }, ...TASK_CATEGORY_OPTIONS],
@@ -78,8 +80,13 @@ const TodoPage = () => {
     });
   }, [tasks, search, statusFilter, priorityFilter, typeFilter, projectFilter]);
 
-  const activeTasks = filtered.filter((t) => t.status !== 'done');
-  const doneTasks = filtered.filter((t) => t.status === 'done');
+  const sortedFiltered = useMemo(
+    () => sortTasksByDueDate(filtered, dueDateSort),
+    [filtered, dueDateSort]
+  );
+
+  const activeTasks = sortedFiltered.filter((t) => t.status !== 'done');
+  const doneTasks = sortedFiltered.filter((t) => t.status === 'done');
 
   const handleCompleteRequest = (task) => {
     const intent = resolveTaskFinishIntent(task, user, projects, users);
@@ -213,7 +220,17 @@ const TodoPage = () => {
                 <th className="px-4 py-3">Project</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Priority</th>
-                <th className="px-4 py-3">Due</th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setDueDateSort((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    className="inline-flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
+                    title={`Sort due date ${dueDateSort === 'asc' ? 'ascending' : 'descending'}`}
+                  >
+                    Due
+                    {dueDateSort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>

@@ -23,6 +23,7 @@ const { broadcastRealtimeEvent } = require('../config/realtime');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
 const Department = require('../models/Department');
 const { isAdminUser, getDepartmentSlug, SALES_SLUG } = require('../utils/departmentPermissions');
+const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
 const {
   FOLLOWUP_DATE_FIELD,
   followupDateExistsStage,
@@ -73,7 +74,7 @@ const getSalesRepUsers = async (session = null) => {
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
-  'name', 'email', 'phone', 'city', 'webinarDates', 'attended', 'attendanceDurationMin',
+  'name', 'nameKey', 'email', 'phone', 'city', 'webinarDates', 'attended', 'attendanceDurationMin',
   'meaningfulConnect', 'leadQuality', 'callStatus', 'leadStatus', 'remarks',
   'planOption', 'assignedRepId', 'rowId', 'customerIdExly', 'transactionIdExly',
   'exlyOfferingId', 'exlyOfferingTitle',
@@ -116,6 +117,14 @@ const prepareLeadContactUpdates = (updates, currentLead, res) => {
       } else {
         updates.phone = normalized;
       }
+    }
+  }
+
+  if (updates.name !== undefined && updates.name !== '') {
+    const nameErrors = normalizeAndValidateLeadFields(updates, { requireName: true });
+    if (nameErrors.length) {
+      res.status(400).json({ error: nameErrors[0] });
+      return false;
     }
   }
 
@@ -310,42 +319,23 @@ exports.getLeads = async (req, res) => {
   }
 };
 
-const normalizeLeadInput = (leadData, res) => {
-  if (leadData.name != null) {
-    leadData.name = sanitizeName(leadData.name);
-    if (!leadData.name) {
-      res.status(400).json({ error: 'Invalid name' });
-      return false;
-    }
-    if (leadData.name.length > MAX_NAME_LENGTH) {
-      res.status(400).json({ error: `Name must be at most ${MAX_NAME_LENGTH} characters` });
-      return false;
-    }
+const normalizeLeadInput = (leadData, res, { requireName = false, requirePhone = false } = {}) => {
+  const errors = normalizeAndValidateLeadFields(leadData, {
+    requireName,
+    requirePhone,
+    tryRepairPhone: true,
+  });
+  if (errors.length) {
+    res.status(400).json({ error: errors[0] });
+    return false;
   }
-  if (leadData.email != null && leadData.email !== '') {
-    leadData.email = sanitizeEmail(leadData.email);
-    if (!isValidEmail(leadData.email)) {
-      res.status(400).json({ error: 'Invalid email format' });
-      return false;
-    }
-  }
-  if (leadData.phone != null && leadData.phone !== '') {
-    const { validatePhoneE164 } = require('../utils/phoneCountryValidation');
-    const check = validatePhoneE164(leadData.phone);
-    if (!check.valid) {
-      res.status(400).json({ error: check.error });
-      return false;
-    }
-    leadData.phone = check.phone;
-  }
-  if (leadData.city && typeof leadData.city === 'string') leadData.city = sanitizeLocation(leadData.city);
   return true;
 };
 
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
-    if (!normalizeLeadInput(leadData, res)) return;
+    if (!normalizeLeadInput(leadData, res, { requireName: true, requirePhone: true })) return;
 
     // Duplicate check
     const filter = { $or: [] };

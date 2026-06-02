@@ -13,6 +13,34 @@ const sanitizeName = (name) => {
     .trim();                   // Trim leading/trailing
 };
 
+/** Title-case each word after sanitizeName; build case-insensitive match key. */
+const titleCaseWord = (word) => {
+  if (!word) return '';
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+};
+
+const normalizePersonName = (name) => {
+  const cleaned = sanitizeName(name);
+  if (!cleaned) return { name: '', nameKey: '' };
+  const display = cleaned
+    .split(' ')
+    .filter(Boolean)
+    .map(titleCaseWord)
+    .join(' ');
+  const nameKey = display.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return { name: display, nameKey };
+};
+
+/** Apply person name normalization to a fields object (mutates name, sets nameKey). */
+const normalizePersonFields = (fields) => {
+  if (!fields || fields.name == null) return fields;
+  const { name, nameKey } = normalizePersonName(fields.name);
+  fields.name = name;
+  if (nameKey) fields.nameKey = nameKey;
+  else if ('nameKey' in fields) fields.nameKey = '';
+  return fields;
+};
+
 const sanitizeEmail = (email) => {
   if (!email) return '';
   const str = email.toString().trim();
@@ -174,8 +202,18 @@ const escapeRegExp = (str) => {
   return output;
 };
 
+const PLACEHOLDER_PHONE_DIGITS = /^0{10,}$/;
+
+const isPlaceholderPhone = (phone) => {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return PLACEHOLDER_PHONE_DIGITS.test(digits);
+};
+
 module.exports = {
   sanitizeName,
+  normalizePersonName,
+  normalizePersonFields,
+  isPlaceholderPhone,
   sanitizeEmail,
   normalizePhone,
   repairPhone,

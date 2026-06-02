@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const Department = require('../models/Department');
 const Task = require('../models/Task');
 const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
@@ -23,6 +22,23 @@ const getScheduleDate = (task) => {
   return null;
 };
 
+const resolveTaskRange = (task) => {
+  const pick = (field) => (field ? startOfDay(new Date(field)) : null);
+  let start = pick(task.startDate) || pick(task.scheduleDate) || pick(task.dueDate);
+  let end = pick(task.dueDate) || pick(task.startDate) || pick(task.scheduleDate);
+  if (!start && !end) return null;
+  if (!start) start = end;
+  if (!end) end = start;
+  if (start > end) [start, end] = [end, start];
+  return { start, end };
+};
+
+const taskOverlapsRange = (task, rangeStart, rangeEnd) => {
+  const span = resolveTaskRange(task);
+  if (!span) return false;
+  return span.start <= rangeEnd && span.end >= rangeStart;
+};
+
 const totalTasksForUser = (uid, workload, startDate, endDate) => {
   let total = 0;
   let cursor = startOfDay(startDate);
@@ -33,84 +49,149 @@ const totalTasksForUser = (uid, workload, startDate, endDate) => {
   return total;
 };
 
+/** Broad MongoDB pre-filter — superset of tasks that may overlap the visible range. */
+const buildTaskDatePrefilter = (startDate, endDate) => ({
+  $or: [
+    { scheduleDate: { $gte: startDate, $lte: endDate } },
+    { startDate: { $lte: endDate }, dueDate: { $gte: startDate } },
+    { startDate: { $gte: startDate, $lte: endDate } },
+    { dueDate: { $gte: startDate, $lte: endDate } },
+    { startDate: { $lte: endDate }, dueDate: null },
+    { dueDate: { $gte: startDate }, startDate: null, scheduleDate: null },
+  ],
+});
+
+const collectProjectMemberIds = (projects) => {
+  const ids = new Set();
+  for (const proj of projects) {
+    if (proj.owner) ids.add(proj.owner.toString());
+    for (const memberId of proj.members || []) ids.add(memberId.toString());
+  }
+  return ids;
+};
+
 router.get('/', async (req, res) => {
   try {
     const { start, end, projectId, departmentId } = req.query;
     const { startDate, endDate } = parseDateRange(start, end);
 
-    let userProjectIds = [];
-    if (!projectId) {
-      const userProjects = await Project.find({
-        $or: [{ owner: req.user._id }, { members: req.user._id }]
-      }).select('_id members owner').lean();
-      userProjectIds = userProjects.map((p) => p._id.toString());
+    let userProjects = [];
+    if (projectId) {
+      const project = await Project.findById(projectId).select('_id members owner').lean();
+      if (!project) return res.status(404).json({ error: 'Project not found' });
+      userProjects = [project];
+    } else {
+      userProjects = await Project.find({
+        $or: [{ owner: req.user._id }, { members: req.user._id }],
+      })
+        .select('_id members owner')
+        .lean();
     }
 
-    let userFilter = {};
+    const userProjectIds = userProjects.map((p) => p._id);
+    const emptyResponse = {
+      start: format(startDate, 'yyyy-MM-dd'),
+      end: format(endDate, 'yyyy-MM-dd'),
+      departments: [],
+      tasks: [],
+    };
+
+    if (!projectId && userProjectIds.length === 0) {
+      return res.json(emptyResponse);
+    }
+
+    const taskFilter = {
+      ...(projectId
+        ? { projectId }
+        : { projectId: { $in: userProjectIds } }),
+      ...buildTaskDatePrefilter(startDate, endDate),
+    };
+
+    const candidateTasks = await Task.find(taskFilter)
+      .select('title status scheduleSlot scheduleDate startDate dueDate projectId workspace color')
+      .populate('projectId', 'name workspace color')
+      .lean();
+
+    const scheduleTasks = candidateTasks.filter((task) => taskOverlapsRange(task, startDate, endDate));
+    if (scheduleTasks.length === 0 && projectId) {
+      const memberIds = collectProjectMemberIds(userProjects);
+      if (memberIds.size === 0) return res.json(emptyResponse);
+
+      const userFilter = { _id: { $in: [...memberIds] } };
+      if (departmentId) userFilter.departmentId = departmentId;
+
+      const users = await User.find(userFilter)
+        .select('name avatar departmentId')
+        .populate('departmentId', 'name slug color sortOrder')
+        .sort('name')
+        .lean();
+
+      const deptMap = new Map();
+      for (const user of users) {
+        const dept = user.departmentId || {
+          _id: 'unassigned',
+          name: 'Unassigned',
+          slug: 'unassigned',
+          color: '#6b7280',
+          sortOrder: 999,
+        };
+        const deptKey = dept._id?.toString() || 'unassigned';
+        if (!deptMap.has(deptKey)) deptMap.set(deptKey, { department: dept, users: [] });
+        deptMap.get(deptKey).users.push({ _id: user._id, name: user.name, avatar: user.avatar });
+      }
+
+      const departments = [...deptMap.values()].sort(
+        (a, b) => (a.department.sortOrder ?? 999) - (b.department.sortOrder ?? 999)
+      );
+
+      return res.json({ ...emptyResponse, departments });
+    }
+
+    if (scheduleTasks.length === 0) {
+      return res.json(emptyResponse);
+    }
+
+    const scheduleTaskIds = scheduleTasks.map((t) => t._id);
+    const assignments = await TaskAssignment.find({ taskId: { $in: scheduleTaskIds } })
+      .select('taskId userId assignedBy assignedAt')
+      .lean();
+
+    const assignmentMap = {};
+    const assignedUserIds = new Set();
+    for (const a of assignments) {
+      const tid = a.taskId.toString();
+      if (!assignmentMap[tid]) assignmentMap[tid] = [];
+      assignmentMap[tid].push({
+        userId: a.userId,
+        assignedBy: a.assignedBy,
+        assignedAt: a.assignedAt,
+      });
+      assignedUserIds.add(a.userId.toString());
+    }
+
+    const tasksWithAssignments = scheduleTasks.map((task) => ({
+      ...task,
+      assignments: assignmentMap[task._id.toString()] || [],
+    }));
+
+    const activeUserIds = new Set(assignedUserIds);
+    for (const memberId of collectProjectMemberIds(userProjects)) {
+      activeUserIds.add(memberId);
+    }
+
+    const userFilter = { _id: { $in: [...activeUserIds] } };
     if (departmentId) userFilter.departmentId = departmentId;
 
-    if (projectId) {
-      const project = await Project.findById(projectId).lean();
-      if (!project) return res.status(404).json({ error: 'Project not found' });
-      userFilter._id = { $in: [...(project.members || []), project.owner].filter(Boolean) };
-    }
-
     let users = await User.find(userFilter)
-      .select('name email avatar role departmentId')
+      .select('name avatar departmentId')
       .populate('departmentId', 'name slug color sortOrder')
       .sort('name')
       .lean();
 
-    const userIds = users.map((u) => u._id);
-    const assignments = await TaskAssignment.find({ userId: { $in: userIds } }).lean();
-    const taskIds = [...new Set(assignments.map((a) => a.taskId.toString()))];
-
-    const taskFilter = { _id: { $in: taskIds } };
     if (projectId) {
-      taskFilter.projectId = projectId;
-    } else if (userProjectIds.length) {
-      taskFilter.projectId = { $in: userProjectIds };
+      const memberIds = collectProjectMemberIds(userProjects);
+      users = users.filter((u) => memberIds.has(u._id.toString()));
     } else {
-      taskFilter.projectId = { $in: [] };
-    }
-
-    const tasks = await Task.find(taskFilter)
-      .select('title status priority type scheduleSlot scheduleDate startDate dueDate projectId plannedHours createdBy color')
-      .populate('createdBy', 'name avatar')
-      .populate('projectId', 'name workspace color')
-      .lean();
-
-    const assignmentMap = {};
-    for (const a of assignments) {
-      const tid = a.taskId.toString();
-      if (!assignmentMap[tid]) assignmentMap[tid] = [];
-      assignmentMap[tid].push({ userId: a.userId, assignedBy: a.assignedBy, assignedAt: a.assignedAt });
-    }
-
-    const scheduleTasks = [];
-    for (const task of tasks) {
-      const schedDate = getScheduleDate(task);
-      if (!schedDate) continue;
-      if (schedDate < startDate || schedDate > endDate) continue;
-      scheduleTasks.push({
-        ...task,
-        assignments: assignmentMap[task._id.toString()] || []
-      });
-    }
-
-    if (!projectId && userProjectIds.length) {
-      const activeUserIds = new Set();
-      for (const task of scheduleTasks) {
-        for (const a of task.assignments) {
-          activeUserIds.add(a.userId.toString());
-        }
-      }
-      for (const pid of userProjectIds) {
-        const proj = await Project.findById(pid).select('members owner').lean();
-        if (proj) {
-          [...(proj.members || []), proj.owner].forEach((id) => activeUserIds.add(id.toString()));
-        }
-      }
       users = users.filter((u) => activeUserIds.has(u._id.toString()));
     }
 
@@ -126,14 +207,13 @@ router.get('/', async (req, res) => {
       }
     }
 
-    for (const task of scheduleTasks) {
+    for (const task of tasksWithAssignments) {
       const dateKey = format(getScheduleDate(task), 'yyyy-MM-dd');
       const slot = task.scheduleSlot || 'FULL';
       for (const a of task.assignments) {
         const uid = a.userId.toString();
         if (!workload[uid]?.[dateKey]) continue;
         workload[uid][dateKey].totalTasks += 1;
-        workload[uid][dateKey].plannedHours += task.plannedHours || 0;
         if (slot === 'AM') workload[uid][dateKey].amCount += 1;
         else if (slot === 'PM') workload[uid][dateKey].pmCount += 1;
         else workload[uid][dateKey].fullCount += 1;
@@ -142,14 +222,21 @@ router.get('/', async (req, res) => {
 
     const deptMap = new Map();
     for (const user of users) {
-      const dept = user.departmentId || { _id: 'unassigned', name: 'Unassigned', slug: 'unassigned', color: '#6b7280', sortOrder: 999 };
+      const dept = user.departmentId || {
+        _id: 'unassigned',
+        name: 'Unassigned',
+        slug: 'unassigned',
+        color: '#6b7280',
+        sortOrder: 999,
+      };
       const deptKey = dept._id?.toString() || 'unassigned';
       if (!deptMap.has(deptKey)) {
         deptMap.set(deptKey, { department: dept, users: [] });
       }
       deptMap.get(deptKey).users.push({
-        ...user,
-        workload: workload[user._id.toString()] || {}
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
       });
     }
 
@@ -170,7 +257,7 @@ router.get('/', async (req, res) => {
       start: format(startDate, 'yyyy-MM-dd'),
       end: format(endDate, 'yyyy-MM-dd'),
       departments,
-      tasks: scheduleTasks
+      tasks: tasksWithAssignments,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

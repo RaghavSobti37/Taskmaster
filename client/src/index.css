@@ -251,6 +251,35 @@ select option {
   color: var(--color-text-primary);
 }
 
+/* @mention / #hashtag chips — high contrast on workspace-tinted task rows */
+.tm-mention-chip,
+.tm-hashtag-chip {
+  display: inline;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 0.05em 0.35em;
+  border-radius: var(--radius-sm);
+  margin-inline: 0.35em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.tm-mention-chip {
+  background: var(--color-pastel-blue-bg);
+  color: var(--color-pastel-blue-text);
+}
+
+.tm-hashtag-chip {
+  background: var(--color-pastel-apricot-bg);
+  color: var(--color-pastel-apricot-text);
+  text-decoration: none;
+}
+
+a.tm-hashtag-chip:hover {
+  text-decoration: underline;
+  filter: brightness(1.08);
+}
+
 /* Task rows — workspace tint (--workspace-accent set inline) */
 .tm-task-row {
   background-color: color-mix(in srgb, var(--workspace-accent, #64748b) 28%, var(--color-bg-surface)) !important;
@@ -272,7 +301,8 @@ select option {
   .tm-modal-overlay,
   .fixed.inset-0.flex.items-center.justify-center:not(.flex-col),
   .min-h-screen.flex.items-center.justify-center,
-  .min-h-screen.grid.place-items-center {
+  .min-h-screen.grid.place-items-center,
+  .min-h-\[100dvh\].grid.place-items-center {
     display: grid !important;
     place-items: center;
   }
@@ -285,6 +315,13 @@ select option {
     width: min(var(--tm-modal-width, 512px), calc(100vw - 2rem));
     min-width: min(320px, calc(100vw - 2rem)) !important;
     max-width: calc(100vw - 2rem) !important;
+  }
+
+  /* Auth cards: never stretch full viewport (Tailwind w-full must not win) */
+  .tm-modal-panel.tm-modal-sm,
+  .tm-modal-panel.max-w-md {
+    width: min(var(--tm-modal-width, 448px), calc(100vw - 2rem)) !important;
+    max-width: min(448px, calc(100vw - 2rem)) !important;
   }
 
   /* Size tokens (match ModalShell MODAL_WIDTH_PX) */
@@ -372,7 +409,8 @@ select option {
   .tm-modal-overlay > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-md,
   .fixed.inset-0.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full):not(.w-full.h-full)).max-w-md,
   .min-h-screen.flex.items-center.justify-center > :where(:not(.absolute):not(.h-full)).max-w-md,
-  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-md {
+  .min-h-screen.grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-md,
+  .min-h-\[100dvh\].grid.place-items-center > :where(:not(.absolute):not(.h-full)).max-w-md {
     --tm-modal-width: 448px;
     width: min(448px, calc(100vw - 2rem)) !important;
   }
@@ -504,4 +542,32 @@ select option {
     -webkit-user-select: auto;
     user-select: auto;
   }
+}
+
+.schedule-day-slider {
+  height: 4px;
+  background: var(--color-bg-border);
+  border-radius: 999px;
+  appearance: none;
+}
+
+.schedule-day-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-action-primary);
+  border: 2px solid var(--color-bg-primary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  cursor: pointer;
+}
+
+.schedule-day-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-action-primary);
+  border: 2px solid var(--color-bg-primary);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  cursor: pointer;
 }

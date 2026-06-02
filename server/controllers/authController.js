@@ -5,6 +5,7 @@ const { google } = require('googleapis');
 const logger = require('../utils/logger');
 const { setAuthCookie, clearAuthCookie } = require('../utils/authCookie');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
+const { normalizePersonName } = require('../utils/sanitizer');
 const { attachProfileCompletion } = require('../utils/profileCompleteness');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 
@@ -89,8 +90,12 @@ exports.register = async (req, res) => {
     }
 
     const { getRandomAvatar } = require('../utils/avatarGenerator');
+    const { name: displayName } = normalizePersonName(name);
+    if (!displayName) {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
     const user = await User.create({
-      name: name.trim(),
+      name: displayName,
       email: emailLower,
       password,
       gender: gender || 'male',

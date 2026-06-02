@@ -1,5 +1,6 @@
 const Contact = require('../models/Contact');
-const { sanitizeEmail, normalizePhone, sanitizeName } = require('../utils/sanitizer');
+const { sanitizeLocation } = require('../utils/sanitizer');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 const { SOURCE_TO_INLET, dedupeInletEntries } = require('../../shared/dataInlets');
 
 class ContactService {
@@ -9,9 +10,19 @@ class ContactService {
    * @param {string} source - Legacy source: crm | exly | mailer | tsc | booked_calls | enquiries
    */
   async mergeContact(data, source = 'crm') {
-    const email = sanitizeEmail(data.email);
-    const phone = normalizePhone(data.phone);
-    const name = sanitizeName(data.name || 'Anonymous');
+    const normalized = normalizePersonRecord(
+      {
+        name: data.name || 'Anonymous',
+        email: data.email,
+        phone: data.phone,
+        city: data.city,
+      },
+      { tryRepairPhone: true }
+    );
+    const email = normalized.email;
+    const phone = normalized.phone;
+    const name = normalized.name || 'Anonymous';
+    const nameKey = normalized.nameKey;
 
     if (!email && !phone) return null;
 
@@ -30,10 +41,14 @@ class ContactService {
       $addToSet: {},
     };
 
-    if (name && name !== 'Anonymous') updatePayload.$set.name = name;
+    if (name && name !== 'Anonymous') {
+      updatePayload.$set.name = name;
+      if (nameKey) updatePayload.$set.nameKey = nameKey;
+    }
     if (email) updatePayload.$set.email = email;
     if (phone) updatePayload.$set.phone = phone;
-    if (data.city) updatePayload.$set.city = data.city;
+    if (normalized.city) updatePayload.$set.city = normalized.city;
+    else if (data.city) updatePayload.$set.city = sanitizeLocation(data.city);
     if (data.sourceFilename) updatePayload.$set.sourceFilename = data.sourceFilename;
     if (data.emailStatus) updatePayload.$set.emailStatus = data.emailStatus;
     if (data.unsubscribed !== undefined) updatePayload.$set.unsubscribed = data.unsubscribed;

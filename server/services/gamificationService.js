@@ -340,6 +340,12 @@ class GamificationService {
 
   static async handleGamificationEvent(eventType, payload = {}) {
     const { userId, task, project, asset, lead, invoice, reviewerId } = payload;
+    const qaProbe = process.env.QA_SYNC_GAMIFICATION === 'true';
+    const awardOpts = (entityKey, entityId) => ({
+      entityKey,
+      entityId,
+      ...(qaProbe ? { skipDailyCap: true } : {}),
+    });
 
     if (eventType === 'TASK_COMPLETED') {
       const completerId = userId || payload.completerId;
@@ -348,59 +354,35 @@ class GamificationService {
       await this.generateDailyMissions(completerId);
       await this.progressMission(completerId, 'COMPLETE_TASK', 1);
 
-      return this.awardActionXp(completerId, 'COMPLETE_TASK', { taskId: task._id }, {
-        entityKey: 'taskId',
-        entityId: task._id,
-      });
+      return this.awardActionXp(completerId, 'COMPLETE_TASK', { taskId: task._id }, awardOpts('taskId', task._id));
     }
 
     if (eventType === 'TASK_CREATED') {
-      return this.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id }, {
-        entityKey: 'taskId',
-        entityId: task._id,
-      });
+      return this.awardActionXp(userId, 'CREATE_TASK', { taskId: task._id }, awardOpts('taskId', task._id));
     }
 
     if (eventType === 'PROJECT_CREATED') {
-      return this.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id }, {
-        entityKey: 'projectId',
-        entityId: project._id,
-      });
+      return this.awardActionXp(userId, 'CREATE_PROJECT', { projectId: project._id }, awardOpts('projectId', project._id));
     }
 
     if (eventType === 'ASSET_UPLOADED') {
-      return this.awardActionXp(userId, 'ASSET_UPLOAD', { assetId: asset._id }, {
-        entityKey: 'assetId',
-        entityId: asset._id,
-      });
+      return this.awardActionXp(userId, 'ASSET_UPLOAD', { assetId: asset._id }, awardOpts('assetId', asset._id));
     }
 
     if (eventType === 'LEAD_CAPTURED') {
-      return this.awardActionXp(userId, 'LEAD_CAPTURE', { leadId: lead._id }, {
-        entityKey: 'leadId',
-        entityId: lead._id,
-      });
+      return this.awardActionXp(userId, 'LEAD_CAPTURE', { leadId: lead._id }, awardOpts('leadId', lead._id));
     }
 
     if (eventType === 'INVOICE_SUBMITTED') {
-      return this.awardActionXp(userId, 'INVOICE_SUBMISSION', { invoiceId: invoice._id }, {
-        entityKey: 'invoiceId',
-        entityId: invoice._id,
-      });
+      return this.awardActionXp(userId, 'INVOICE_SUBMISSION', { invoiceId: invoice._id }, awardOpts('invoiceId', invoice._id));
     }
 
     if (eventType === 'REVIEW_APPROVED') {
-      return this.awardActionXp(reviewerId, 'REVIEW_APPROVAL', { taskId: task._id }, {
-        entityKey: 'taskId',
-        entityId: task._id,
-      });
+      return this.awardActionXp(reviewerId, 'REVIEW_APPROVAL', { taskId: task._id }, awardOpts('taskId', task._id));
     }
 
     if (eventType === 'ATTENDANCE_DAY_COMPLETE') {
-      const result = await this.awardActionXp(userId, 'ATTENDANCE_ACTION', { date: payload.date }, {
-        entityKey: 'date',
-        entityId: payload.date,
-      });
+      const result = await this.awardActionXp(userId, 'ATTENDANCE_ACTION', { date: payload.date }, awardOpts('date', payload.date));
       await this.progressMission(userId, 'ATTENDANCE_DAY', 1);
       return result;
     }

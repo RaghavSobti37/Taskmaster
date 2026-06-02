@@ -6,7 +6,7 @@ const CRMAudit = require('../models/CRMAudit');
 const Lead = require('../models/Lead');
 const LeadService = require('../services/LeadService');
 const { assignLeadToRep } = require('./crmController');
-const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
+const { normalizePersonRecord } = require('../utils/personNormalization');
 const logger = require('../utils/logger');
 const { rejectUnlessWebhookSignature } = require('../utils/webhookAuth');
 const { getDepartmentSlug } = require('../utils/departmentPermissions');
@@ -175,8 +175,18 @@ exports.handleExlyWebhook = async (req, res) => {
 
     const rawPhone = getPayloadValue(payload, ['phone', 'customerPhone', 'mobile', 'phoneMobile', 'phoneNumber', 'Phone Number', 'Phone/Mobile', 'Customer Phone Number', 'Customer Phone']);
     const rawEmail = getPayloadValue(payload, ['email', 'customerEmail', 'emailProfile', 'emailAddress', 'Email', 'Customer Email', 'Email Profile', 'Email Address']);
-    const phone = normalizePhone(rawPhone);
-    const email = sanitizeEmail(rawEmail);
+    const rawName = getPayloadValue(payload, ['name', 'customerName', 'fullName', 'clientName', 'Name', 'Customer Name', 'Full Name', 'Client Name', 'customer_name']) || 'Exly Lead';
+    const identity = normalizePersonRecord(
+      { name: rawName, email: rawEmail, phone: rawPhone },
+      { tryRepairPhone: true }
+    );
+    if (identity.errors.length) {
+      return res.status(400).json({ success: false, message: identity.errors[0] });
+    }
+    const phone = identity.phone;
+    const email = identity.email;
+    const name = identity.name;
+    const nameKey = identity.nameKey;
 
     if (!phone && !email) {
       return res.status(400).json({ success: false, message: 'Invalid payload: phone or email required.' });
@@ -192,7 +202,6 @@ exports.handleExlyWebhook = async (req, res) => {
 
     const { cleanTitle, dateStr, timeStr } = parseOfferingTitle(rawOfferingTitle);
 
-    const name = sanitizeName(getPayloadValue(payload, ['name', 'customerName', 'fullName', 'clientName', 'Name', 'Customer Name', 'Full Name', 'Client Name', 'customer_name']) || 'Exly Lead');
     const txnId = getPayloadValue(payload, ['transactionId', 'transactionID', 'Transaction Id', 'Transaction ID', 'transactionIdExly', 'txnId', 'txnID', 'transaction_id']);
     const custId = getPayloadValue(payload, ['customerId', 'customerID', 'Customer Id', 'Customer ID', 'customerIdExly', 'custId', 'custID', 'customer_id']);
     const priceRaw = getPayloadValue(payload, ['price', 'amount', 'pricePaid', 'Price Paid', 'Transaction Amount', 'transactionAmount', 'priceSettled', 'Price Settled']);
@@ -260,9 +269,10 @@ exports.handleExlyWebhook = async (req, res) => {
           customerId: custId,
           offeringId: offId,
           offeringTitle: cleanTitle,
-          name: name,
-          email: email,
-          phone: phone,
+          name,
+          nameKey,
+          email,
+          phone,
           pricePaid: price,
           state: state,
           payoutStatus: payoutStatus,

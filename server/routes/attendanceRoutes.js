@@ -31,7 +31,8 @@ const DISCREPANCY_THRESHOLD_MINUTES = 30;
 
 const NASHIK_OFFICE_LAT = 19.9975;
 const NASHIK_OFFICE_LNG = 73.7898;
-const OFFICE_RADIUS_KM = 0.150; // 150 meters
+const OFFICE_RADIUS_METERS = 1000;
+const OFFICE_RADIUS_KM = OFFICE_RADIUS_METERS / 1000;
 
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
@@ -55,6 +56,20 @@ const resolveClientIp = (req) => {
   }
   return ip || '';
 };
+
+/** Comma-separated office egress IPs (v4/v6). OFFICE_IP_WHITELIST is legacy alias — both are merged. */
+function getOfficeIpTargets() {
+  const chunks = [
+    process.env.OFFICE_PUBLIC_IP,
+    process.env.OFFICE_IP_WHITELIST,
+  ];
+  return [...new Set(
+    chunks
+      .flatMap((v) => String(v || '').split(','))
+      .map((s) => s.trim())
+      .filter(Boolean)
+  )];
+}
 
 function verifyNetworkMatch(clientRawIp, targetOfficeIp) {
   if (!clientRawIp || !targetOfficeIp) return false;
@@ -182,15 +197,19 @@ router.post('/check', async (req, res) => {
     if (req.body.lat && req.body.lng) {
       const computedDistance = getDistanceFromLatLonInKm(parseFloat(req.body.lat), parseFloat(req.body.lng), NASHIK_OFFICE_LAT, NASHIK_OFFICE_LNG) * 1000;
       console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Distance to Nashik Office Center: ${computedDistance} meters`);
-      console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Inside 150m Radius? ${computedDistance <= 150}`);
+      console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Inside ${OFFICE_RADIUS_METERS}m Radius? ${computedDistance <= OFFICE_RADIUS_METERS}`);
     } else {
       console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - GPS Coordinates missing or denied by browser payload.`);
     }
 
     const clientIp = resolveClientIp(req);
+    const officeIpTargets = getOfficeIpTargets();
+    const officeIpList = officeIpTargets.join(',') || '(none configured)';
+    const networkMatchPreview = officeIpTargets.length > 0
+      && verifyNetworkMatch(clientIp, officeIpList);
     console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Raw Detected Client IP: "${clientIp}"`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Environment Target IP: "${process.env.OFFICE_PUBLIC_IP}"`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Direct Network Match? ${clientIp === process.env.OFFICE_PUBLIC_IP}`);
+    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Office IP targets (${officeIpTargets.length}): ${officeIpList}`);
+    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Network Match? ${networkMatchPreview}`);
 
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -218,14 +237,16 @@ router.post('/check', async (req, res) => {
       }
     }
 
-    // Tier 2: Office Network / Fixed IP Check
-    if (workMode !== 'office' && process.env.OFFICE_PUBLIC_IP) {
-      const isOfficeNetwork = verifyNetworkMatch(clientIp, process.env.OFFICE_PUBLIC_IP);
+    // Tier 2: Office Network / Fixed IP Check (v4 + v6 whitelist)
+    if (workMode !== 'office' && officeIpTargets.length > 0) {
+      const isOfficeNetwork = verifyNetworkMatch(clientIp, officeIpTargets.join(','));
       if (isOfficeNetwork) {
         workMode = 'office';
         verificationMethod = 'NETWORK';
       }
     } // Tier 3: WFH fallback is already set above
+
+    console.log(`[ATTENDANCE DIAGNOSTIC] RESULT - workMode=${workMode} verificationMethod=${verificationMethod}`);
 
     const updateBlock = type === 'in'
       ? { 'inTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, checkInIp: clientIp, verificationMethod, isApproved: false } }
@@ -254,7 +275,17 @@ router.post('/check', async (req, res) => {
       });
     }
 
-    res.json(attendance);
+    const payload = attendance.toObject ? attendance.toObject() : attendance;
+    res.json({
+      ...payload,
+      _attendanceDiagnostic: {
+        workMode,
+        verificationMethod,
+        clientIp,
+        officeIpTargetCount: officeIpTargets.length,
+        tier1Gps: lat && lng ? 'attempted' : 'missing',
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

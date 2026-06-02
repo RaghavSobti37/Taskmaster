@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.48-126d5e?style=flat-square" alt="Version 1.7.48" />
+  <img src="https://img.shields.io/badge/version-1.7.49-126d5e?style=flat-square" alt="Version 1.7.49" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -178,6 +178,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Independent mark-in / mark-out:** Self-service and admin flows treat check-in and check-out as separate inputs; server no longer blocks checkout without check-in.
 * **Split admin modals:** Team matrix opens dedicated Morning Check-In and Evening Check-Out modals (not one combined panel).
 * **Visual states:** Approved (locked) cells use blue tint; pending present cells stay emerald.
+* **Office auto-detect (waterfall):** Check-in defaults to WFH until proven otherwise — **Tier 1** GPS within **1 km** of Nashik office (`19.9975, 73.7898`); **Tier 2** client IP matches `OFFICE_PUBLIC_IP` and/or `OFFICE_IP_WHITELIST` (comma-separated IPv4/IPv6 + localhost for dev). Render must list current office egress IPs (e.g. `49.36.41.118`).
+* **Diagnostics:** `POST /api/attendance/check` logs `[ATTENDANCE DIAGNOSTIC]` tiers and returns `_attendanceDiagnostic` in the JSON response. Ops audit: `node server/scripts/auditAttendanceProd.js`.
 * **Default work mode:** Admin Mode Override dropdown defaults to **Office** (self check-in still auto-detects via GPS/IP).
 
 ### 🔐 Admin Access Hardening
@@ -465,6 +467,15 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.49 — Attendance Office Detection Fix
+
+- **Geofence:** Office GPS radius increased from 150 m to **1000 m** (`OFFICE_RADIUS_METERS` in `attendanceRoutes.js`).
+- **IP whitelist:** Tier 2 now merges **`OFFICE_PUBLIC_IP`** and **`OFFICE_IP_WHITELIST`** (fixes production WFH when only the legacy var was set).
+- **Env:** On Render, set both vars with current office egress IPv4/IPv6 (comma-separated, spaces trimmed). Example: `49.36.41.166,49.36.41.118` plus office IPv6 if used.
+- **Script:** `server/scripts/auditAttendanceProd.js` — read-only prod/local audit of today’s `workMode`, `verificationMethod`, and `checkInIp`.
+
+No DB migration. Redeploy API, then undo/re check-in to refresh today’s mode if needed.
 
 ### v1.7.48 — QA v2 Engine, Security Hardening & Gamification Test Sync
 

@@ -29,9 +29,12 @@ import {
   useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
 } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { isRootAdminEmail } from '../../utils/rootAdminEmails';
 
 const AdminPanel = () => {
   const { confirm } = useConfirm();
+  const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'users');
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +99,13 @@ const AdminPanel = () => {
     }
   }, [confirm, deleteUserMutation]);
 
+  const getDeleteBlockReason = useCallback((targetUser) => {
+    if (!targetUser) return 'No user selected';
+    if (currentUser?._id && targetUser._id === currentUser._id) return 'You cannot delete your own account';
+    if (isRootAdminEmail(targetUser.email)) return 'Root admin accounts are protected';
+    return null;
+  }, [currentUser?._id]);
+
   const handleCreateTeam = useCallback(async () => {
     if (!newTeamName) return;
     try {
@@ -153,7 +163,32 @@ const AdminPanel = () => {
           {u.lastOnline ? format(new Date(u.lastOnline), 'MMM dd, yyyy h:mm a') : 'No record'}
         </span>
       )
-    }
+    },
+    {
+      header: 'Actions',
+      render: (u) => {
+        const blockReason = getDeleteBlockReason(u);
+        return (
+          <button
+            type="button"
+            title={blockReason || 'Delete user'}
+            disabled={Boolean(blockReason) || deleteUserMutation.isPending}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (blockReason) return;
+              handleDeleteUser(u._id);
+            }}
+            className={`p-1.5 rounded-md transition-colors ${
+              blockReason
+                ? 'opacity-30 cursor-not-allowed text-[var(--color-text-muted)]'
+                : 'text-rose-500 hover:bg-rose-500/10 hover:text-rose-600'
+            }`}
+          >
+            <Trash2 size={14} />
+          </button>
+        );
+      },
+    },
   ];
 
   const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, and system data." };
@@ -368,12 +403,15 @@ const AdminPanel = () => {
             </Card>
             <Card className="p-4 bg-[var(--color-bg-primary)] border border-rose-500/30">
                <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-3">Danger Zone</h4>
+               {getDeleteBlockReason(selectedUser) && (
+                 <p className="text-[10px] text-[var(--color-text-muted)] mb-3">{getDeleteBlockReason(selectedUser)}</p>
+               )}
                <Button 
                  variant="danger" 
                  size="sm" 
                  className="w-full justify-center !py-2" 
                  onClick={() => handleDeleteUser(selectedUser._id)}
-                 disabled={deleteUserMutation.isPending}
+                 disabled={Boolean(getDeleteBlockReason(selectedUser)) || deleteUserMutation.isPending}
                >
                  <Trash2 size={14} className="mr-2" /> 
                  {deleteUserMutation.isPending ? 'Removing...' : 'Remove User Account'}

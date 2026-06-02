@@ -8,17 +8,11 @@ const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
-
-const isUserOnline = (u) => {
+const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
   if (!u.lastOnline) return false;
   const fiveMinAgo = subMinutes(new Date(), 5);
   return isAfter(u.lastOnline, fiveMinAgo);
 };
-
-const ROOT_ADMIN_EMAILS = new Set([
-  'test@example.com',
-  'REDACTED_ADMIN@example.com',
-]);
 
 async function validateDepartmentAssignment(departmentId, requester) {
   if (departmentId === null || departmentId === '' || departmentId === undefined) {
@@ -33,7 +27,7 @@ async function validateDepartmentAssignment(departmentId, requester) {
 }
 
 async function ensureRootAdminDepartment(user, departmentId) {
-  if (!ROOT_ADMIN_EMAILS.has(user.email)) return null;
+  if (!isRootAdminEmail(user.email)) return null;
   const adminDept = await Department.findOne({ slug: ADMIN_SLUG });
   if (!adminDept) return 'Admin department not configured';
   if (departmentId && departmentId.toString() !== adminDept._id.toString()) {
@@ -232,13 +226,26 @@ exports.deleteUser = async (req, res) => {
     if (req.params.id === req.user._id.toString()) {
       return res.status(403).json({ error: 'Cannot delete your own account' });
     }
+
     const targetUser = await User.findById(req.params.id);
-    if (targetUser && ROOT_ADMIN_EMAILS.has(targetUser.email)) {
-      return res.status(403).json({ error: 'Root Admin cannot be deleted' });
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (isRootAdminEmail(targetUser.email)) {
+      return res.status(403).json({ error: 'Root admin accounts cannot be deleted' });
+    }
+
+    const adminDept = await Department.findOne({ slug: ADMIN_SLUG });
+    if (adminDept && targetUser.departmentId?.toString() === adminDept._id.toString()) {
+      const adminUserCount = await User.countDocuments({ departmentId: adminDept._id });
+      if (adminUserCount <= 1) {
+        return res.status(403).json({ error: 'Cannot delete the last admin user' });
+      }
     }
 
     await User.findByIdAndDelete(req.params.id);
-    res.json({ message: 'User de-authenticated and purged from nexus.' });
+    res.json({ message: 'User deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
   }

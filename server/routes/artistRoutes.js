@@ -16,7 +16,6 @@ router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.post('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.get('/config/integrations', artistController.getIntegrationsConfig);
 router.get('/:id/preview', artistShareController.getArtistPreview);
-router.get('/:id/analytics/:platform', artistAnalyticsController.getPlatformAnalytics);
 
 // Unified + legacy OAuth callbacks (same redirect URIs registered in Spotify/Google consoles)
 router.get('/auth/callback/spotify', callback('spotify'));
@@ -43,6 +42,7 @@ router.post('/:id/inject-event', artistOrAdmin, artistController.injectEvent);
 router.post('/:id/sync-stats', artistOrAdmin, artistAnalyticsController.syncArtistStats);
 router.post('/:id/tracked-video', artistOrAdmin, artistAnalyticsController.addTrackedVideo);
 router.post('/:id/webhooks/subscribe', artistOrAdmin, artistAnalyticsController.enableInstagramWebhooks);
+router.get('/:id/analytics/:platform', artistOrAdmin, artistAnalyticsController.getPlatformAnalytics);
 router.get('/:id', artistController.getArtistById);
 
 module.exports = router;

@@ -44,6 +44,36 @@ function isCommunityText(text) {
   return COMMUNITY_RE.test(String(text || ''));
 }
 
+/** Merge duplicate inlet keys on a contact (legacy data may have repeats). */
+function dedupeInletEntries(inlets = []) {
+  const map = new Map();
+  for (const inlet of inlets) {
+    if (!inlet?.key) continue;
+    const existing = map.get(inlet.key);
+    if (!existing) {
+      map.set(inlet.key, {
+        ...inlet,
+        recordIds: [...(inlet.recordIds || [])],
+      });
+      continue;
+    }
+    const idSet = new Set([
+      ...(existing.recordIds || []).map(String),
+      ...(inlet.recordIds || []).map(String),
+    ]);
+    existing.recordIds = [...idSet];
+    if (inlet.lastSeenAt && (!existing.lastSeenAt || new Date(inlet.lastSeenAt) > new Date(existing.lastSeenAt))) {
+      existing.lastSeenAt = inlet.lastSeenAt;
+    }
+    if (inlet.firstSeenAt && (!existing.firstSeenAt || new Date(inlet.firstSeenAt) < new Date(existing.firstSeenAt))) {
+      existing.firstSeenAt = inlet.firstSeenAt;
+    }
+    existing.summary = { ...(existing.summary || {}), ...(inlet.summary || {}) };
+    map.set(inlet.key, existing);
+  }
+  return [...map.values()];
+}
+
 module.exports = {
   DATA_INLETS,
   INLET_KEYS,
@@ -53,4 +83,5 @@ module.exports = {
   inletLabel,
   isBookedCallSource,
   isCommunityText,
+  dedupeInletEntries,
 };

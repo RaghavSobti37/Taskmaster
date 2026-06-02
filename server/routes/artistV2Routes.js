@@ -34,7 +34,10 @@ router.get('/:id/stats', protect, async (req, res) => {
       meta: null
     };
 
-    const SONGSTATS_KEY = process.env.SONGSTATS_API_KEY || "f87dfac1-0f05-4898-b2e1-43488dd90073";
+    const SONGSTATS_KEY = process.env.SONGSTATS_API_KEY;
+    if (!SONGSTATS_KEY) {
+      return res.status(503).json({ error: 'Songstats API key not configured', data: null });
+    }
     
     if (spotifyProfile || ssProfile) {
       try {

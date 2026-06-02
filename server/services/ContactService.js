@@ -1,6 +1,6 @@
 const Contact = require('../models/Contact');
 const { sanitizeEmail, normalizePhone, sanitizeName } = require('../utils/sanitizer');
-const { SOURCE_TO_INLET } = require('../../shared/dataInlets');
+const { SOURCE_TO_INLET, dedupeInletEntries } = require('../../shared/dataInlets');
 
 class ContactService {
   /**
@@ -107,18 +107,18 @@ class ContactService {
       });
     }
 
-    const uniqueKeys = new Set((contact.inlets || []).map((i) => i.key));
-    contact.inletCount = uniqueKeys.size;
-    contact.isMultiInlet = uniqueKeys.size >= 2;
+    contact.inlets = dedupeInletEntries(contact.inlets || []);
+    contact.inletCount = contact.inlets.length;
+    contact.isMultiInlet = contact.inlets.length >= 2;
     await contact.save();
   }
 
   async recomputeInletCounts(contactId) {
     const contact = await Contact.findById(contactId);
     if (!contact) return null;
-    const uniqueKeys = new Set((contact.inlets || []).map((i) => i.key));
-    contact.inletCount = uniqueKeys.size;
-    contact.isMultiInlet = uniqueKeys.size >= 2;
+    contact.inlets = dedupeInletEntries(contact.inlets || []);
+    contact.inletCount = contact.inlets.length;
+    contact.isMultiInlet = contact.inlets.length >= 2;
     await contact.save();
     return contact;
   }

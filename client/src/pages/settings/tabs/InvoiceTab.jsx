@@ -2,11 +2,13 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Receipt, FileText, Upload } from 'lucide-react';
 import { Card, Input, Button, NexusModal } from '../../../components/ui';
+import UsdInrAmountFields from '../../../components/finance/UsdInrAmountFields';
 import { uploadFiles } from '../../../utils/uploadthing';
 
 export default function InvoiceTab() {
   const [invoiceTitle, setInvoiceTitle] = useState('');
   const [invoiceAmount, setInvoiceAmount] = useState('');
+  const [invoiceAmountUsd, setInvoiceAmountUsd] = useState('');
   const [invoiceDescription, setInvoiceDescription] = useState('');
   const [invoiceFile, setInvoiceFile] = useState(null);
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
@@ -26,7 +28,6 @@ export default function InvoiceTab() {
     try {
       const uploadRes = await uploadFiles('financeDocUploader', {
         files: [invoiceFile],
-        headers: { authorization: `Bearer ${localStorage.getItem('coreknot_token')}` },
       });
 
       const uploaded = uploadRes?.[0];
@@ -45,6 +46,7 @@ export default function InvoiceTab() {
 
       setInvoiceTitle('');
       setInvoiceAmount('');
+      setInvoiceAmountUsd('');
       setInvoiceDescription('');
       setInvoiceFile(null);
       if (invoiceFileRef.current) invoiceFileRef.current.value = '';
@@ -71,10 +73,13 @@ export default function InvoiceTab() {
           </h3>
         </div>
         <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="Title" value={invoiceTitle} onChange={(e) => setInvoiceTitle(e.target.value)} icon={FileText} />
-            <Input label="Amount (INR)" type="text" inputMode="decimal" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value.replace(/[^0-9.]/g, ''))} />
-          </div>
+          <Input label="Title" value={invoiceTitle} onChange={(e) => setInvoiceTitle(e.target.value)} icon={FileText} />
+          <UsdInrAmountFields
+            inrValue={invoiceAmount}
+            usdValue={invoiceAmountUsd}
+            onInrChange={setInvoiceAmount}
+            onUsdChange={setInvoiceAmountUsd}
+          />
           <Input label="Description" value={invoiceDescription} onChange={(e) => setInvoiceDescription(e.target.value)} />
           
           <div className="pt-2">

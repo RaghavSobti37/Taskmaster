@@ -1,9 +1,19 @@
 const Subscription = require('../models/Subscription');
+const { getUsdInrRate } = require('../services/usdInrRateService');
 
 const populateFields = (query) =>
   query
     .populate('usedBy', 'name email avatar')
     .populate('updatedBy', 'name email avatar');
+
+exports.getUsdInrRate = async (req, res) => {
+  try {
+    const data = await getUsdInrRate();
+    res.json(data);
+  } catch (error) {
+    res.status(503).json({ error: 'Unable to fetch USD/INR exchange rate' });
+  }
+};
 
 exports.listSubscriptions = async (req, res) => {
   try {

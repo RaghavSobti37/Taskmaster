@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const GamificationConfig = require('../models/GamificationConfig');
 const GamificationService = require('../services/gamificationService');
+const logger = require('../utils/logger');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 const ALLOWED_CONFIG_FIELDS = [
@@ -53,13 +54,23 @@ router.put('/config', protect, admin, async (req, res) => {
       config = new GamificationConfig();
     }
 
+    const changedFields = [];
     ALLOWED_CONFIG_FIELDS.forEach((field) => {
       if (field in updates && typeof updates[field] === 'number' && updates[field] >= 0) {
         config[field] = updates[field];
+        changedFields.push(field);
       }
     });
 
     await config.save();
+
+    const auditSync = await GamificationService.syncAuditLogAmountsFromConfig({ log: true });
+    logger.info('Gamification', 'Config saved', {
+      changedFields,
+      updatedAuditLogs: auditSync.updatedLogs,
+      configRates: auditSync.configRates,
+    });
+
     res.json(config);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,14 +96,21 @@ router.get('/config/:field', protect, admin, async (req, res) => {
 router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
   try {
     const config = await GamificationService.getConfig();
-    const { totalUsers, updatedUsers, changes } = await GamificationService.recalculateAllUsersFromConfig();
+    const { totalUsers, updatedUsers, changes, auditSync, weeklyPreview } = await GamificationService.recalculateAllUsersFromConfig();
 
     const unchanged = totalUsers - updatedUsers;
     let message;
-    if (updatedUsers === 0) {
-      message = `No changes needed — all ${totalUsers} users already match XP totals from activity history at current config rates.`;
+    if (updatedUsers === 0 && auditSync.updatedLogs === 0) {
+      message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates.`;
     } else {
-      message = `Recalculated XP for ${updatedUsers} of ${totalUsers} users using current config (stepXp: ${config.stepXp}).`;
+      const parts = [];
+      if (auditSync.updatedLogs > 0) {
+        parts.push(`updated ${auditSync.updatedLogs} audit log entries`);
+      }
+      if (updatedUsers > 0) {
+        parts.push(`synced XP/levels for ${updatedUsers} of ${totalUsers} users`);
+      }
+      message = `Recalculated using current config (stepXp: ${config.stepXp}) — ${parts.join('; ')}.`;
     }
 
     res.json({
@@ -101,7 +119,9 @@ router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
       totalUsers,
       updatedUsers,
       unchangedUsers: unchanged,
+      updatedAuditLogs: auditSync.updatedLogs,
       stepXp: config.stepXp,
+      weeklyPreview: weeklyPreview?.entries?.map(([userId, weeklyXp]) => ({ userId, weeklyXp })),
       changes: changes.map((c) => ({
         userId: c.userId,
         exp: { from: c.prevExp, to: c.newExp },

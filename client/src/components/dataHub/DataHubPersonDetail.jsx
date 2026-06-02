@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Badge, Card, FullScreenWorkspace } from '../ui';
 import { useDataHubPerson } from '../../hooks/useTaskmasterQueries';
+import { dedupeInletEntries } from '../../utils/dataHubInlets';
 
 const INLET_COLORS = {
   exly: 'info',
@@ -162,7 +163,7 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
           <Card className="p-4 space-y-2">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Inlets</h4>
             <div className="flex flex-wrap gap-1">
-              {(contact?.inlets || []).map((inlet) => (
+              {dedupeInletEntries(contact?.inlets || []).map((inlet) => (
                 <Badge key={inlet.key} variant={INLET_COLORS[inlet.key] || 'neutral'}>
                   {INLET_LABELS[inlet.key] || inlet.key}
                 </Badge>
@@ -211,7 +212,7 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               <Card className="p-4">
                 <h4 className="text-[10px] font-black uppercase mb-3">Data Inlets</h4>
                 <div className="space-y-3">
-                  {(contact.inlets || []).map((inlet) => (
+                  {dedupeInletEntries(contact.inlets || []).map((inlet) => (
                     <div key={inlet.key} className="p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <Badge variant={INLET_COLORS[inlet.key] || 'neutral'}>

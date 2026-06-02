@@ -29,30 +29,6 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file provided' });
     }
 
-    // #region agent log
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      fs.appendFileSync(
-        path.join(__dirname, '../../debug-0c5d79.log'),
-        `${JSON.stringify({
-          sessionId: '0c5d79',
-          runId: 'post-fix',
-          timestamp: Date.now(),
-          location: 'financeController.js:uploadFile',
-          message: 'server-side invoice upload started',
-          hypothesisId: 'H2',
-          data: {
-            route: req.originalUrl,
-            fileName: req.file.originalname,
-            fileType: req.file.mimetype,
-            fileSize: req.file.size,
-          },
-        })}\n`
-      );
-    } catch (_) {}
-    // #endregion
-
     const { buffer, originalname, mimetype, size } = req.file;
     const utFile = new UTFile([buffer], originalname, { type: mimetype });
     const uploadResult = await utapi.uploadFiles([utFile]);
@@ -669,6 +645,34 @@ const canManageFinanceDoc = (user, doc) => (
   || doc.uploadedBy?.toString() === user._id.toString()
 );
 
+const FINANCE_TENANT_FORBIDDEN = 'Not authorized for this tenant';
+
+/** Reject cross-tenant spoof in mutation body (QA probes send tenantId). */
+const rejectSpoofedTenantPayload = (req, res) => {
+  const bodyTenant = req.body?.tenantId;
+  if (bodyTenant == null || bodyTenant === '') return false;
+  const userTenant = req.user?.tenantId;
+  if (!userTenant || String(bodyTenant) === String(userTenant)) return false;
+  res.status(403).json({ success: false, message: FINANCE_TENANT_FORBIDDEN });
+  return true;
+};
+
+/** Tenant-scoped load; 403 if id exists in another tenant, 404 if missing. */
+const loadFinanceDocForMutation = async (req, res, notFoundMessage = 'Invoice not found') => {
+  const doc = await FinanceDocument.findOne({ _id: req.params.id });
+  if (doc) return doc;
+  const foreign = await FinanceDocument.findOne({ _id: req.params.id })
+    .setOptions({ bypassTenant: true })
+    .select('tenantId approvalStatus')
+    .lean();
+  if (foreign) {
+    res.status(403).json({ success: false, message: FINANCE_TENANT_FORBIDDEN });
+    return null;
+  }
+  res.status(404).json({ success: false, message: notFoundMessage });
+  return null;
+};
+
 const updateDocument = async (req, res) => {
   try {
     const { title, description, project, category, metadata } = req.body;
@@ -783,10 +787,11 @@ const applyPendingInvoiceEdits = (doc, body) => {
 
 const approveInvoice = async (req, res) => {
   try {
-    const doc = await FinanceDocument.findById(req.params.id);
-    if (!doc) {
-      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    if (rejectSpoofedTenantPayload(req, res)) {
+      return;
     }
+    const doc = await loadFinanceDocForMutation(req, res);
+    if (!doc) return;
     if (doc.approvalStatus !== 'pending') {
       return res.status(400).json({ success: false, message: 'Invoice already processed' });
     }
@@ -818,10 +823,9 @@ const approveInvoice = async (req, res) => {
 
 const rejectInvoice = async (req, res) => {
   try {
-    const doc = await FinanceDocument.findById(req.params.id);
-    if (!doc) {
-      return res.status(404).json({ success: false, message: 'Invoice not found' });
-    }
+    if (rejectSpoofedTenantPayload(req, res)) return;
+    const doc = await loadFinanceDocForMutation(req, res);
+    if (!doc) return;
     if (doc.approvalStatus !== 'pending') {
       return res.status(400).json({ success: false, message: 'Invoice already processed' });
     }

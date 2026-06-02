@@ -7,6 +7,9 @@ import {
   ChevronLeft, ChevronRight, X, Eye, Check, Info, ArrowLeft
 } from 'lucide-react';
 import { Card } from '../ui';
+import UsdInrAmountFields from '../finance/UsdInrAmountFields';
+import { useUsdInrRate } from '../../hooks/useUsdInrRate';
+import { inrToUsd } from '../../utils/usdInr';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
 const CATEGORIES = [
@@ -75,6 +78,10 @@ const ProjectFinance = ({ projectId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [editAmountUsd, setEditAmountUsd] = useState('');
+
+  const { data: rateData } = useUsdInrRate({ enabled: !!selectedDoc });
+  const usdInrRate = rateData?.rate;
 
   useEffect(() => {
     if (selectedDoc) {
@@ -90,10 +97,18 @@ const ProjectFinance = ({ projectId }) => {
           date: selectedDoc.metadata?.date ? new Date(selectedDoc.metadata.date).toISOString().split('T')[0] : ''
         }
       });
+      setEditAmountUsd('');
     } else {
       setEditForm(null);
+      setEditAmountUsd('');
     }
   }, [selectedDoc?._id]);
+
+  useEffect(() => {
+    if (!selectedDoc || !editForm?.metadata?.amount) return;
+    if (!Number.isFinite(usdInrRate) || usdInrRate <= 0) return;
+    setEditAmountUsd((prev) => (prev === '' ? String(inrToUsd(editForm.metadata.amount, usdInrRate)) : prev));
+  }, [selectedDoc?._id, usdInrRate, editForm?.metadata?.amount]);
 
   // Reset page when search or category changes
   useEffect(() => {
@@ -482,26 +497,34 @@ const ProjectFinance = ({ projectId }) => {
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
                           />
                         </div>
-                        <div>
-                          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-                            Total Amount
-                            <InfoTooltip content="Grand Total/Amount parsed. Represented in detected currency." />
-                          </label>
-                          <input
-                            type="number"
-                            value={editForm.metadata?.amount || ''}
-                            onChange={(e) => setEditForm(prev => ({
-                              ...prev,
-                              metadata: { ...prev.metadata, amount: e.target.value }
-                            }))}
-                            onBlur={() => updateMutation.mutate({
-                              id: selectedDoc._id,
-                              payload: { metadata: { ...selectedDoc.metadata, amount: parseFloat(editForm.metadata.amount) || 0 } }
-                            })}
-                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
-                          />
-                        </div>
                       </div>
+
+                      <UsdInrAmountFields
+                        compact
+                        enabled={!!selectedDoc}
+                        inrLabel="Total Amount (INR)"
+                        usdLabel="Amount (USD)"
+                        inrValue={editForm.metadata?.amount === 0 || editForm.metadata?.amount === '' ? '' : String(editForm.metadata?.amount ?? '')}
+                        usdValue={editAmountUsd}
+                        onInrChange={(amount) => setEditForm((prev) => ({
+                          ...prev,
+                          metadata: { ...prev.metadata, amount, currency: 'INR' },
+                        }))}
+                        onUsdChange={setEditAmountUsd}
+                        inrInputProps={{
+                          onBlur: () => updateMutation.mutate({
+                            id: selectedDoc._id,
+                            payload: {
+                              metadata: {
+                                ...selectedDoc.metadata,
+                                amount: parseFloat(editForm.metadata.amount) || 0,
+                                currency: 'INR',
+                              },
+                            },
+                          }),
+                        }}
+                        rateHintClassName="mt-1 text-[9px] text-[var(--color-text-muted)]"
+                      />
 
                       <div className="grid grid-cols-3 gap-2">
                         <div>

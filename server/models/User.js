@@ -30,6 +30,8 @@ const userSchema = new mongoose.Schema({
     linkedAt: { type: Date, default: Date.now }
   }],
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)
+  mustChangePassword: { type: Boolean, default: false },
+  passwordChangedAt: { type: Date },
   pushSubscriptions: [{
     endpoint: { type: String, required: true },
     keys: {

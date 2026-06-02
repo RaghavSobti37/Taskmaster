@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge } from '../../components/ui';
 import { Edit2, Save, X, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
 const AdminGamification = () => {
   const { confirm } = useConfirm();
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState(null);
   const [rules, setRules] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,11 @@ const AdminGamification = () => {
     setEditValue(String(value));
   }, []);
 
+  const invalidateLeaderboardQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
+    queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
+  }, [queryClient]);
+
   const handleSave = useCallback(async (field = editingField) => {
     if (!field) return;
     try {
@@ -49,7 +56,8 @@ const AdminGamification = () => {
       }
       await axios.put('/api/gamification-admin/config', { [field]: numValue });
       setConfig((prev) => ({ ...prev, [field]: numValue }));
-      setMessage({ type: 'success', text: `${field} updated` });
+      invalidateLeaderboardQueries();
+      setMessage({ type: 'success', text: `${field} updated — audit logs synced` });
       setEditingField(null);
       setEditValue('');
     } catch (err) {
@@ -57,7 +65,7 @@ const AdminGamification = () => {
     } finally {
       setSaving(false);
     }
-  }, [editingField, editValue]);
+  }, [editingField, editValue, invalidateLeaderboardQueries]);
 
   const handleCancel = useCallback(() => {
     setEditingField(null);
@@ -75,13 +83,14 @@ const AdminGamification = () => {
     try {
       setRecalculating(true);
       const res = await axios.post('/api/gamification-admin/recalculate-all-levels');
+      invalidateLeaderboardQueries();
       setMessage({ type: 'success', text: res.data.message });
     } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.error || 'Recalculate failed' });
     } finally {
       setRecalculating(false);
     }
-  }, [confirm]);
+  }, [confirm, invalidateLeaderboardQueries]);
 
   const xpRuleRows = useMemo(() => {
     if (!rules?.xpRules || !config) return [];
@@ -301,7 +310,7 @@ const AdminGamification = () => {
       <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
         <h4 className="font-bold text-sm mb-3">Recalculate stored user XP</h4>
         <p className="text-sm text-[var(--color-text-muted)] mb-3">
-          After changing XP rates, rebuild each user&apos;s total from their activity history using the new rates, then sync levels.
+          After changing XP rates, rebuild audit log amounts, each user&apos;s total XP, and levels from activity history using the new rates (including the weekly leaderboard).
         </p>
         <Button onClick={handleRecalculateAllLevels} disabled={recalculating} className="gap-2">
           <RefreshCw size={16} className={recalculating ? 'animate-spin' : ''} />

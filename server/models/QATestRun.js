@@ -70,14 +70,22 @@ const qaTestRunSchema = new mongoose.Schema({
     name: String,
     category: {
       type: String,
-      enum: ['frontend', 'backend', 'permission', 'data', 'bottleneck', 'mobile', 'desktop'],
+      enum: [
+        'frontend', 'backend', 'permission', 'data', 'bottleneck', 'mobile', 'desktop',
+        'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
+        'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
+        'security-hardening',
+      ],
       default: 'backend'
     },
     status: {
       type: String,
-      enum: ['pending', 'running', 'passed', 'failed'],
+      enum: ['pending', 'running', 'passed', 'failed', 'warn', 'skip'],
       default: 'pending'
     },
+    checklistId: String,
+    checkStatus: { type: String, enum: ['pass', 'fail', 'warn', 'skip'] },
+    evidence: String,
     severity: {
       type: String,
       enum: ['high', 'medium', 'low'],
@@ -92,7 +100,7 @@ const qaTestRunSchema = new mongoose.Schema({
   createdArtifacts: [{
     type: {
       type: String,
-      enum: ['task', 'project', 'user', 'log']
+      enum: ['task', 'project', 'user', 'log', 'finance', 'lead', 'contact']
     },
     id: mongoose.Schema.Types.ObjectId,
     createdAt: {

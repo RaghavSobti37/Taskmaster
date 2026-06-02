@@ -9,10 +9,7 @@ const getSocketUrl = () => {
 };
 
 const connect = () => {
-  const token = localStorage.getItem('coreknot_token');
-  if (!token) return null;
-
-  if (socket?.connected && socket.auth?.token === token) {
+  if (socket?.connected) {
     return socket;
   }
 
@@ -22,7 +19,7 @@ const connect = () => {
   }
 
   socket = io(getSocketUrl(), {
-    auth: { token },
+    withCredentials: true,
     transports: ['websocket', 'polling'],
     autoConnect: true,
   });
@@ -41,9 +38,6 @@ export const disconnectRealtime = () => {
  * Subscribe to realtime broadcast events on a channel (Socket.io replacement for Supabase Realtime)
  */
 export const subscribeToChannel = (channelName, event, callback) => {
-  const token = localStorage.getItem('coreknot_token');
-  if (!token) return () => {};
-
   const s = connect();
   if (!s) return () => {};
 

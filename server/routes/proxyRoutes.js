@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 const { handleProxyRequest } = require('../controllers/proxyController');
 
 const proxyLimiter = rateLimit({
@@ -10,7 +10,7 @@ const proxyLimiter = rateLimit({
   message: { error: 'Too many proxy requests, please try again later.' }
 });
 
-router.all('/:service', protect, proxyLimiter, handleProxyRequest);
-router.all('/:service/*', protect, proxyLimiter, handleProxyRequest);
+router.all('/:service', protect, opsOrAdmin, proxyLimiter, handleProxyRequest);
+router.all('/:service/*', protect, opsOrAdmin, proxyLimiter, handleProxyRequest);
 
 module.exports = router;

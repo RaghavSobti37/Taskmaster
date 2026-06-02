@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.46-126d5e?style=flat-square" alt="Version 1.7.46" />
+  <img src="https://img.shields.io/badge/version-1.7.47-126d5e?style=flat-square" alt="Version 1.7.47" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -69,7 +69,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Backend** | API Engine | Node.js, Express, Mongoose ODM, BullMQ, Trigger.dev |
 | **Data & Cache** | Storage Engine | MongoDB Atlas, Redis (asynchronous queues & cache clusters) |
 | **Realtime** | Transport Layer | Socket.IO WebSockets with automatic fallback protocols |
-| **Security** | Authentication | Stateless JWT, Google OAuth 2.0 Passport flow, Role-Based Access Control (RBAC) |
+| **Security** | Authentication | HttpOnly JWT cookie (`coreknot_token`), Google OAuth 2.0, RBAC, webhook HMAC, registration lockdown |
 | **Deployment** | CI/CD Infrastructure | Render (Web Services + Managed Static CDN handles asset distribution) |
 
 ---
@@ -186,6 +186,24 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **UI leaks fixed:** Dashboard widgets, sidebar customization, daily logs `?user=`, `/components`, and `/attendance/all` are hidden or redirected for non-admin/ops users.
 * **API guards:** QA routes, HolySheet bulk fetch, log cross-user reads, and attendance reset require admin; dashboard/nav customization filters admin-only entries on save.
 
+### 🛡️ Security Hardening (v1.7.47)
+
+* **Auth cookies:** JWT stored in HttpOnly `coreknot_token` cookie — not `localStorage`. `POST /api/auth/logout` clears session. Client uses `axios.defaults.withCredentials = true`.
+* **Webhook signatures:** HMAC-SHA256 via `X-Webhook-Signature: sha256=…` for book-call, Exly, and artist-enquiry ingress (`server/utils/webhookAuth.js`). Set `BOOK_CALL_WEBHOOK_SECRET`, `EXLY_WEBHOOK_SECRET`, `ARTIST_ENQUIRY_WEBHOOK_SECRET` on Render.
+* **Registration lockdown:** Production signup restricted to `ALLOWED_DOMAIN` and departments with `signupAllowed`. Password strength enforced server-side.
+* **Route guards:** Artist analytics, subscriptions CRUD, API proxy, and Meta webhooks require auth or valid signatures.
+* **CORS:** `*.vercel.app` blocked in production unless `CORS_ALLOW_VERCEL_PREVIEWS=true`.
+* **Default passwords:** Org seed password `1Million#` via `DEFAULT_SEED_PASSWORD` / `shared/defaultPassword.js`. Weak-password reset script sets `mustChangePassword: true`.
+* **Profile completion alerts:** Amber banners in `MainLayout` for missing phone, DOB, or unchanged default password — links to Settings → Profile.
+* **Login notice:** Amber banner on login page when default passwords were rotated org-wide.
+* **QA security category:** Pre-deployment checklist includes static + live HTTP security probes (`security-hardening`).
+* **Full spec:** [`docs/SECURITY.md`](docs/SECURITY.md)
+
+### 💱 USD ↔ INR Conversion
+
+* **Live rate:** `GET /api/finance/usd-inr-rate` — cached FX rate for finance, subscriptions, and project finance forms.
+* **Shared fields:** `UsdInrAmountFields.jsx` + `useUsdInrRate.js` sync USD/INR amounts across Finance, Subscriptions, Invoice settings, and Project Finance.
+
 ### 🛡️ Local Development Safeguards
 
 * **Env Templates:** `server/.env.example` and `client/.env.example` document required variables without secrets.
@@ -291,6 +309,18 @@ node scripts/seedMusicContentCalendar.js --year=2026 --prod
 node scripts/reconcileDataHub.js --prod --full
 ```
 
+**Password reset (weak → org default `1Million#`):**
+
+```bash
+cd server
+npm run reset-weak-passwords              # dry-run local
+npm run reset-weak-passwords:local:apply  # apply local
+npm run reset-weak-passwords:prod         # dry-run production
+$env:RESET_WEAK_PASSWORDS_CONFIRM=1; npm run reset-weak-passwords:prod:apply
+```
+
+Force specific accounts: `--accounts=email1@x.com,email2@y.com --apply`
+
 #### 4. Run the Local Development Environment
 
 Execute both runtime nodes concurrently in isolated terminal shells:
@@ -333,6 +363,12 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `MONGODB_DB_LOCAL` | Optional | Database name override for sync scripts (default: `taskmaster_local`). |
 | `MONGODB_DB_PROD` | Optional | Production database name override for sync scripts (default: `taskmaster_production`). |
 | `ALLOW_PROD_DB_IN_DEV` | Development Only | Permits connecting to a production-like database name from local dev (default: blocked). |
+| `DEFAULT_SEED_PASSWORD` | Recommended | Org default seed password for Clerk auto-create and weak-password reset (default: `1Million#`). |
+| `BOOK_CALL_WEBHOOK_SECRET` | Production | HMAC secret for book-call webhook signature verification. |
+| `EXLY_WEBHOOK_SECRET` | Production | HMAC secret for Exly webhook signature verification. |
+| `ARTIST_ENQUIRY_WEBHOOK_SECRET` | Production | Required in production for artist-enquiry webhook. |
+| `CORS_ALLOW_VERCEL_PREVIEWS` | Optional | Set `true` to allow `*.vercel.app` origins in production CORS. |
+| `RESET_WEAK_PASSWORDS_CONFIRM` | Script Only | Must be `1` when running production weak-password reset with `--apply`. |
 
 ### Local vs Production Database Isolation
 
@@ -401,6 +437,7 @@ CoreKnot features a project-wide autonomous auditing infrastructure powered by R
 | --- | --- |
 | [`docs/STARTUP_GUIDE.md`](docs/STARTUP_GUIDE.md) | Step-by-step local environment bootstrap |
 | [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) | Local vs production MongoDB isolation |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Auth cookies, webhooks, CORS, password policy, QA security checks |
 | [`docs/AI_AGENT_PROJECT_CONTEXT.md`](docs/AI_AGENT_PROJECT_CONTEXT.md) | Complete AI agent reference (routes, models, rules) |
 | [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CommandPalette from './CommandPalette';
 import NotificationBridge from './NotificationBridge';
 import PwaInstallBanner from './PwaInstallBanner';
+import ProfileCompletionAlerts from './ProfileCompletionAlerts';
 import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
@@ -64,6 +65,7 @@ const MainLayout = () => {
       >
         <main className="flex-1 p-4 pb-24 lg:p-5">
           <div className="w-full">
+            <ProfileCompletionAlerts />
             <Outlet />
           </div>
         </main>

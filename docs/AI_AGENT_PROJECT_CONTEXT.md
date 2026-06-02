@@ -2,8 +2,8 @@
 
 > **Purpose:** Single authoritative export for any AI coding agent working on this codebase.  
 > **Product name:** CoreKnot (repo folder: `Taskmaster`, GitHub: `CoreKnot`)  
-> **Version:** 1.7.38 (as of README; package.json may show 1.7.30)  
-> **Last compiled:** 2026-06-01  
+> **Version:** 1.7.46 (README badge; package.json may lag)  
+> **Last compiled:** 2026-06-02  
 > **Read this entire document before making changes.**
 
 ---
@@ -46,6 +46,7 @@ CoreKnot is an **enterprise multi-tenant CRM & operations hub** built for agency
 
 - **Project & task management** with strict peer-review governance
 - **CRM & sales pipelines** (leads, follow-ups, Exly bookings, HolySheet sync)
+- **Data Hub** — unified contact graph across Exly, leads, TSC, booked calls, enquiries, mail, community inlets
 - **Email campaigns** with open/click tracking and geo resolution
 - **Finance document management** with OCR (pdf-parse, tesseract.js)
 - **HR/attendance** with IP-based office verification
@@ -70,22 +71,22 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   │   ├── index.css                  # Design tokens, Tailwind v4
 │   │   ├── sw.js                      # Service worker (injectManifest)
 │   │   ├── contexts/                  # Auth, Theme, Sidebar, Toast, Confirm
-│   │   ├── hooks/                     # useTaskmasterQueries (~1400 lines), useSystemLogs, etc.
+│   │   ├── hooks/                     # useTaskmasterQueries, useUsdInrRate, useSystemLogs, etc.
 │   │   ├── lib/                       # realtime, notifications, systemLogBridge, pageAnalytics
-│   │   ├── utils/                     # 33 utility files (CRM, attendance, mail, etc.)
+│   │   ├── utils/                     # CRM, attendance, mail, usdInr, dataHubInlets, devEnvGuard, etc.
 │   │   ├── constants/                 # calendarOptions, etc.
 │   │   ├── config/                    # integrations.config.js (OAuth paths)
-│   │   ├── pages/                     # 57 page files across 15 subdirs
-│   │   └── components/                # 108+ component files
+│   │   ├── pages/                     # 57+ page files (admin DataHub, office Subscriptions, etc.)
+│   │   └── components/                # 110+ components (dataHub/, finance/UsdInrAmountFields, mentions/)
 │   ├── vite.config.js
 │   ├── vercel.json                    # API proxy to Render
 │   └── package.json                   # CoreKnot-client v1.7.30
 ├── server/                            # Node.js Express API
 │   ├── server.js                      # Entry point, middleware, startup
-│   ├── routes/                        # 41 route files
-│   ├── controllers/                   # 29 controller files
-│   ├── models/                        # 58 Mongoose models + plugins
-│   ├── services/                      # 39 service files
+│   ├── routes/                        # 43 route files
+│   ├── controllers/                   # 30 controller files
+│   ├── models/                        # 59 Mongoose models + plugins
+│   ├── services/                      # 46 service files
 │   ├── middleware/                    # auth, logger, trace, error, concurrency
 │   ├── utils/                         # 39 utility files
 │   ├── workers/                       # statsWorker, webhookWorker, importWorker, logArchiverWorker
@@ -100,7 +101,11 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   ├── taskReviewRules.js             # Strict task review governance
 │   ├── projectRoles.js                # Project role ranks
 │   ├── systemLogContract.js           # Severity, module enums, toast contract
-│   └── taskPriorityDates.js           # Task date helpers
+│   ├── taskPriorityDates.js           # Task date/priority helpers
+│   ├── dataInlets.js                  # Data Hub folder taxonomy + inlet merge helpers
+│   ├── gamificationRules.js           # Shared XP/action rules
+│   ├── dateValidation.js              # IST date-key + no-past-date guards (CJS)
+│   └── mentionTokens.js               # @user / #asset token parsing
 ├── docs/                              # Architecture docs (this file lives here)
 ├── render.yaml                        # Render cron for daily backup
 └── README.md                          # Human-facing overview
@@ -161,9 +166,8 @@ Browser → tsccoreknot.com (Vercel CDN)
 - `/(.*)` → `/index.html` (SPA fallback)
 
 **Render config** (`render.yaml`):
-- Cron job `CoreKnot-daily-backup` at `31 18 * * *` (12:01 AM IST)
-- Runs `node scripts/runDailyBackup.js`
-- Backups to GridFS in `taskmaster_backups` DB, 7-day retention
+- Cron `CoreKnot-daily-backup` at `31 18 * * *` (12:01 AM IST) → `runDailyBackup.js` → GridFS `taskmaster_backups`, 7-day retention
+- Cron `CoreKnot-subscription-reminders` at `30 3 * * *` → `runSubscriptionReminders.js` (due-date alerts; `SUBSCRIPTION_REMINDERS_ENABLED`)
 
 **Production build:** In production, `server/server.js` serves `client/dist` as static SPA with cache headers.
 
@@ -315,6 +319,8 @@ Set `MAIL_USE_PROD_DB=true` so EmailLog/MailEvent writes go to production DB whe
 | `HOLYSHEET_BOOKED_CALLS_API_KEY` / `HOLYSHEET_API_KEY` | HolySheet |
 | `ENCRYPTION_KEY` | Token encryption (ConnectedProfile) |
 | `LOG_LEVEL` | Logger verbosity |
+| `USD_INR_RATE_OVERRIDE` | Dev/test fixed USD→INR rate (skips Frankfurter API) |
+| `SUBSCRIPTION_REMINDERS_ENABLED` | Enable subscription due-date cron reminders |
 
 **Config module:** `server/config/environment.js` — mail provider selection logic.
 
@@ -333,9 +339,9 @@ graph TD
 
     subgraph API ["Express API (server.js)"]
         MW[Middleware Stack]
-        Routes[41 Route Files]
-        Ctrl[29 Controllers]
-        Svc[39 Services]
+        Routes[43 Route Files]
+        Ctrl[30 Controllers]
+        Svc[46 Services]
     end
 
     subgraph Data ["Data Layer"]
@@ -445,7 +451,9 @@ Defined in `server/utils/pagePermissions.js` and mirrored in `client/src/utils/p
 | `artist-management` | Base + artists |
 | `standard` | Base pages only |
 
-**Base pages:** dashboard, calendar, todo, inbox, projects, assets, schedule, logs, equipment, contacts, attendance
+**Base pages:** dashboard, calendar, todo, inbox, projects, assets, schedule, logs, equipment, contacts, attendance, subscriptions
+
+**Office group:** equipment, contacts, attendance, subscriptions (`/subscriptions`; legacy `/office/subscriptions` redirects)
 
 **Frontend enforcement:** `PageRoute` component wraps routes; redirects unauthorized users.
 
@@ -488,7 +496,7 @@ Track routes create events without user tenant context.
 
 `server/server.js` — mounts all routes, middleware, workers, static SPA in production.
 
-### All route files (41)
+### All route files (43)
 
 Path: `server/routes/`
 
@@ -531,33 +539,38 @@ Path: `server/routes/`
 | `officeAssetRoutes.js` | `/api/office-assets` | protect/opsOrAdmin | Hardware inventory |
 | `contactRoutes.js` | `/api/contacts` | protect/opsOrAdmin | Contact directory |
 | `exlyRoutes.js` | `/api/exly` | Public webhook; admin protected | Exly bookings, offerings |
-| `financeRoutes.js` | `/api/finance` | protect; opsOnly | Invoices, folders, UploadThing |
+| `financeRoutes.js` | `/api/finance` | protect; opsOnly (after gate) | Invoices, folders, UploadThing, `GET /usd-inr-rate` |
 | `attendanceRoutes.js` | `/api/attendance` | protect | Check-in/out, leave |
 | `announcementRoutes.js` | `/api/announcements` | Public pixel; rest protect | Broadcast announcements |
 | `adminScriptsRoutes.js` | `/api/admin/scripts` | protect + admin | Maintenance script runner |
+| `dataHubRoutes.js` | `/api/data-hub` | protect + admin | Unified CRM hub: folders, people, analytics, reconcile |
+| `subscriptionRoutes.js` | `/api/subscriptions` | protect; delete opsOrAdmin | Office subscription CRUD + USD/INR rate |
 
 **Inline in server.js:** `POST /api/crm/unsubscribe` — manual CRM opt-out + HolySheet sync.
 
-### Controllers (29)
+### Controllers (30)
 
 Path: `server/controllers/`
 
-`authController`, `userController`, `projectController`, `taskController`, `crmController`, `syncController`, `webhookController`, `mailAnalyticsController`, `analyticsController`, `dashboardController`, `financeController`, `googleController`, `artistController`, `artistAnalyticsController`, `artistShareController`, `connectionAuthController`, `spotifyAuthController`, `youtubeAuthController`, `teamController`, `assetController`, `tscController`, `exlyController`, `customizationController`, `noteController`, `pinBoardController`, `proxyController`, `qaTestingController`, `sheetController`
+`authController`, `userController`, `projectController`, `taskController`, `crmController`, `syncController`, `webhookController`, `mailAnalyticsController`, `analyticsController`, `dashboardController`, `financeController`, `googleController`, `artistController`, `artistAnalyticsController`, `artistShareController`, `connectionAuthController`, `spotifyAuthController`, `youtubeAuthController`, `teamController`, `assetController`, `tscController`, `exlyController`, `customizationController`, `noteController`, `pinBoardController`, `proxyController`, `qaTestingController`, `sheetController`, `dataHubController`, `subscriptionController`
 
-### Services (39)
+### Services (46)
 
 Path: `server/services/`
 
 Key services:
 - **Mail:** `mailService`, `mailDriver`, `emailProcessor`, `queueService`, `profileSendStats`
-- **CRM:** `LeadService`, `ContactService`, `FollowupService`, `followupCache`, `holySheetService`
+- **CRM / Data Hub:** `LeadService`, `ContactService`, `DataHubService`, `FollowupService`, `followupCache`, `holySheetService`, `bookedCallsSyncService`
 - **Tasks:** `TaskService`, `notificationService`, `notificationDispatcher`
 - **Gamification:** `gamificationService`
 - **Artists:** `analyticsService`, `analyticsCron`, `metaGraphService`, `connectionService`, `artistEnrichmentService`, `spotifyTokenManager`, `TokenManager`
 - **Exly:** `exlyService`, `exlyOfferingMetrics`, `exlyOfferingMigration`
 - **Infrastructure:** `backgroundQueue`, `eventDispatcher`, `triggerService`, `SystemHealthService`, `systemLogService`, `cacheService`
 - **Backup:** `databaseBackupService`, `csvBackupService`, `backupNotificationService`
-- **Other:** `pushNotificationService`, `departmentService`, `tenantProvisioning`, `monthlyReportService`, `qaTestingService`, `metricsNormalizer`
+- **Finance / FX:** `usdInrRateService` — Frankfurter USD→INR with Redis/memory cache + stale fallback
+- **Office:** `subscriptionReminderService` — due-date notification pipeline
+- **Calendar:** `musicCalendarSeedService` — Music Content Calendar public events
+- **Other:** `pushNotificationService`, `departmentService`, `tenantProvisioning`, `monthlyReportService`, `qaTestingService`, `qaPreDeploymentChecklist`, `metricsNormalizer`, `artistEnquiryService`
 
 ### Middleware
 
@@ -681,7 +694,9 @@ Components: Button, Card, Input, Badge, DataTable, TabSwitcher, Switch, NexusMod
 | `artists/` | UnifiedReachCard, MetricChart, ConnectAccountButton, ArtistEditDrawer |
 | `attendance/` | UnifiedTimeCard, MonthlyAttendanceGrid, SelfMonthlyAttendanceCalendar |
 | `dashboard/` | StatCards, LeaderboardPodium, PinBoard, TaskTable, widget registry |
-| `finance/` | UploadDocumentModal |
+| `finance/` | UploadDocumentModal, UsdInrAmountFields (live USD↔INR conversion) |
+| `dataHub/` | DataHubFolderSidebar, DataHubStatsBar, DataHubPersonDetail, DataHubAnalyticsPanel, DataHubTscImport |
+| `mentions/` | MentionInput, MentionTextarea (@user / #asset tokens) |
 | `project/` | ProjectKanban, ProjectList, ProjectTeam, ProjectAssets, ProjectFinance |
 | `tasks/` | TaskCreateModal, TaskDetailModal, TaskCompletionModal |
 | `schedule/` | ScheduleGrid |
@@ -714,6 +729,8 @@ Components: Button, Card, Input, Badge, DataTable, TabSwitcher, Switch, NexusMod
 owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 20
 ```
 
+**Workspace settings:** `/projects/workspaces/:name/settings` — members, linked projects, accent color (`WorkspaceColorPicker`; admin-only color PATCH via `workspaceColors.js` / `projectController.js`).
+
 **Task review workflow** (`shared/taskReviewRules.js`):
 - Tasks **delegated** to someone else (assigner ≠ assignee) → completion goes to `in-review`
 - Self-assigned tasks bypass review
@@ -726,9 +743,30 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 - Assigns to platform owner (`REDACTED_ADMIN@example.com`)
 - `syncTechProjectMembers()` adds all users with `artist_management` role
 
+### Data Hub (Unified CRM)
+
+**Page:** Admin Panel → CRM tab (`/admin`) — renders `DataHubPage` via `AdminCRM.jsx`. Sidebar label: **Data Hub**.
+
+**Inlet folders** (`shared/dataInlets.js`): Exly, Leads, TSC/HolySheet, Booked Calls, Enquiries, Mail Engagement, Community, Active Users, Unsubscribed, Loyal (multi-inlet). Client mirror: `client/src/utils/dataHubInlets.js` (`dedupeInletEntries`).
+
+**Contact model flags:** `inCRM`, `inExly`, `inTsc`, `inBookedCalls`, `inEnquiries`, `inMailer`, `inCommunity`, `inlets[]`, `inletCount`, `isMultiInlet`, `unsubscribed` / `emailStatus`.
+
+**Service:** `DataHubService.js` — `reconcilePerson`, `syncAllInlets`, folder counts (5min cache), incremental bootstrap (24h on first run). Merges Lead, ExlyBooking, TscData, MailEvent, enquiry Tasks, booked-call webhooks into unified `Contact` records with `bypassTenant` where needed.
+
+**API** (`/api/data-hub`, admin only):
+- `GET /folders`, `GET /people`, `GET /people/:id`
+- `GET /analytics`, `GET /analytics/overlap`
+- `GET /sync-status`, `POST /reconcile?full=true`, `POST /sync-booked-calls`
+
+**UI actions:** Full Sync (complete re-merge), Sync New (incremental), TSC HolySheet import panel.
+
+**Scripts:** `reconcileDataHub.js`, `syncDataHubToProd.js`, `compareDataHubDbs.js`, `seedProductionContent.js` (bundles music calendar + full reconcile).
+
+**State:** `DataHubSyncState` model tracks `lastSyncedAt` / `lastFullSyncAt`.
+
 ### CRM & Sales
 
-**Pages:** LeadsPage, FollowupsPage, ExlyBookingsPage
+**Pages:** LeadsPage, FollowupsPage, ExlyBookingsPage (legacy list views; Data Hub is admin unified view)
 
 **Lead model key fields:**
 - callStatus, leadStatus, follow-ups, emailStatus
@@ -772,16 +810,49 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 ### Finance
 
-**Page:** FinancePage
+**Page:** FinancePage, ProjectFinance, InvoiceTab (settings), ExlyDataContent (admin)
 
 **Features:**
 - Folder tree structure (FinanceDocument model)
 - UploadThing for file storage
 - OCR via pdf-parse + tesseract.js
-- Approval workflow
+- Approval workflow (`submit-invoice` any user; `pending` / approve / reject ops-only)
 - Project-linked documents
+- **USD↔INR:** `UsdInrAmountFields` + `useUsdInrRate` — live rate from Frankfurter via `GET /api/finance/usd-inr-rate` or `/api/subscriptions/usd-inr-rate`; helpers in `client/src/utils/usdInr.js`; server `usdInrRateService.js` (1h Redis cache, stale fallback, `USD_INR_RATE_OVERRIDE` for dev)
 
-**API:** `/api/finance/*` — opsOnly for sensitive operations
+**API:** `/api/finance/*` — `GET /usd-inr-rate` (any authenticated); opsOnly for bulk upload/OCR/approval after gate
+
+### Office Subscriptions
+
+**Page:** `/subscriptions` (`SubscriptionsPage.jsx`) — Office nav group; `/office/subscriptions` redirects.
+
+**Model:** `Subscription` — name, INR amount, dueDate, type, periodicity, paymentMode, usedBy (User), reminder tracking.
+
+**API:** `/api/subscriptions` — CRUD (delete requires opsOrAdmin); shares `getUsdInrRate` with finance.
+
+**Reminders:** Render cron `CoreKnot-subscription-reminders` → `runSubscriptionReminders.js` → `subscriptionReminderService.js`.
+
+### Calendar & Music Content
+
+**Page:** CalendarView
+
+**Guards:** No past dates for tasks/calendar — `shared/dateValidation.js` + client `dateValidation.js` + `TaskService` / `calendarRoutes`.
+
+**Music Content Calendar:** 35 public `musical_day` events from `Music_Content_Calendar.pdf`; seed via admin **Birthdays** button, `POST /api/calendar/seed-music-content`, or `npm run seed:music-calendar:prod`. Cross-tenant public events use `bypassTenant` on calendar reads.
+
+**Event types:** `meeting`, `instagram_post`, `youtube_post`, `shoot_day`, `event`, `musical_day`.
+
+### Department Stats (Admin Dashboard)
+
+**Widget:** `dept-stats` in `componentRegistry.js` (admin-only).
+
+**API:** `GET /api/dashboard/dept-stats?timeframe=1d|7d|30d` — task completion %, converted leads, focus hours from daily logs.
+
+### Task Mentions & Assets
+
+**Components:** `MentionInput`, `MentionTextarea` in task create/edit.
+
+**Logic:** `shared/mentionTokens.js`, `server/utils/mentionNotifications.js` — notifies @mentioned users not already assignees; `#asset` tokens link URLs in title/description.
 
 ### Attendance & Leave
 
@@ -791,7 +862,9 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 - IST week boundaries
 - Office IP verification via OFFICE_PUBLIC_IP / whitelist
 - Weekends + office holidays = default leave
-- Check-in/out with workMode, hours, discrepancy tracking
+- **Independent mark-in / mark-out** — checkout no longer blocked without prior check-in
+- Split admin modals: Morning Check-In vs Evening Check-Out
+- Default admin override work mode: **Office** (self-service still GPS/IP)
 - Leave request approval workflow (ops/admin)
 
 **Utils:** `attendanceUtils.js`, `attendanceUsers.js`, `officeHolidays.js`
@@ -813,7 +886,7 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 **Page:** AdminGamification (config), Dashboard leaderboard widget
 
 **Mechanics:**
-- XP from GamificationConfig per action
+- XP from GamificationConfig per action; shared rules in `shared/gamificationRules.js`
 - User.exp, User.level, User.streak
 - XPAuditLog for change audit
 - Weekly leaderboard resets Monday 00:00 IST
@@ -838,6 +911,11 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 - Open tracking pixel per recipient
 - Tri-channel: in-app + email + web push
 
+### Notification policy (2026)
+
+- **Overdue cron removed:** `checkOverdue` (task/lead overdue push alerts) no longer runs in `notificationService.js`. Dashboard overdue UI remains visual-only.
+- **Still active:** Upcoming call reminders (~30 min before follow-ups), tri-channel inbox delivery.
+
 ### Inbox / Notifications
 
 **Page:** InboxPage
@@ -855,7 +933,9 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 ### Admin / Ops
 
-**Pages:** AdminUsers, AdminPanel, AdminCRM (TscData), AdminScriptsPage, QATestingPage, SystemLogsPage, ExlyCampaignsPage, AdminGamification
+**Pages:** AdminUsers, AdminPanel, AdminCRM (**Data Hub** at `/admin`), AdminScriptsPage, QATestingPage, SystemLogsPage, ExlyCampaignsPage, AdminGamification
+
+**Access hardening:** `isAdminUser()` uses department slug/preset `admin` (not legacy `user.role`). QA routes, HolySheet bulk, cross-user logs, attendance reset require admin; dashboard/nav customization strips admin-only widgets for non-admins on save.
 
 **System logs:** Unified SystemLog model, trace middleware, ops-logs page with severity/module filters
 
@@ -921,7 +1001,10 @@ Redis-down paths fall back to synchronous processing or in-memory queues.
 
 ### External cron (Render)
 
-`render.yaml` → `runDailyBackup.js` nightly
+| Cron | Schedule | Script |
+|------|----------|--------|
+| `CoreKnot-daily-backup` | `31 18 * * *` (12:01 AM IST) | `runDailyBackup.js` |
+| `CoreKnot-subscription-reminders` | `30 3 * * *` | `runSubscriptionReminders.js` |
 
 ### Public webhook endpoints
 
@@ -1010,6 +1093,19 @@ Path: `shared/`
 ### taskPriorityDates.js
 - Task date/priority helpers shared between client and server
 
+### dataInlets.js
+- `DATA_INLETS`, `INLET_KEYS`, `SOURCE_TO_INLET` — folder taxonomy
+- `isBookedCallSource`, `isCommunityText`, `dedupeInletEntries`
+
+### gamificationRules.js
+- Shared XP values and action keys (client + server gamification)
+
+### dateValidation.js
+- `getDateKey()` (IST), `assertNotPastDateKey`, calendar datetime guards
+
+### mentionTokens.js
+- Parse/render `@user` and `#asset` tokens in task text
+
 ---
 
 ## 17. Critical Business Rules
@@ -1047,6 +1143,18 @@ Path: `shared/`
 
 - Ops/admin only for approval workflows
 - UploadThing fileKey stored on FinanceDocument
+- USD→INR: persisted amounts are INR; USD field is UI helper unless caller saves both. Rate from Frankfurter with cache; use `USD_INR_RATE_OVERRIDE` locally
+
+### Data Hub
+
+- Reconcile merges by email/phone identity; use `?full=true` for complete backfill after schema/import changes
+- Booked-call sources matched via `BOOKED_CALL_SOURCE_RE` in `shared/dataInlets.js`
+- Admin-only API; Contact queries often use `bypassTenant: true` inside service
+
+### Subscriptions
+
+- Delete restricted to ops/admin
+- Reminder cron respects `SUBSCRIPTION_REMINDERS_ENABLED`
 
 ### Notifications
 
@@ -1146,6 +1254,11 @@ Path: `server/scripts/` (57 files)
 | `runQAScan.js` | AST + API security scan |
 | `keepOnlyCampaign.js` | Campaign cleanup |
 | `sync-prod-to-local.js` | Prod → local DB sync |
+| `reconcileDataHub.js` | Data Hub inlet backfill (`--full`, `--prod`) |
+| `runSubscriptionReminders.js` | Subscription due-date notifications (Render cron) |
+| `seedProductionContent.js` | Prod: music calendar seed + full Data Hub reconcile |
+| `syncDataHubToProd.js` | Push local Data Hub collections → prod (destructive) |
+| `compareDataHubDbs.js` | Compare local vs prod Data Hub collection counts |
 
 ### Production migration sequence (v1.7.37+)
 
@@ -1224,6 +1337,18 @@ Dashboard widgets registered in `lib/componentRegistry.js` with department prese
 ### Idempotent webhooks
 Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-once delivery.
 
+### Data Hub inlet merge
+Single `Contact` per email/phone; `DataHubService.reconcilePerson` sets boolean flags and `inlets[]` from Lead, Exly, TSC, mail events, enquiries, booked calls. Taxonomy centralized in `shared/dataInlets.js`.
+
+### USD/INR dual endpoint
+Client `useUsdInrRate` tries `/api/finance/usd-inr-rate` then `/api/subscriptions/usd-inr-rate` — same `subscriptionController.getUsdInrRate` + `usdInrRateService`.
+
+### Local dev safeguards
+`client/src/utils/devEnvGuard.js` warns if `VITE_API_URL` points at production. See `docs/LOCAL_DEV_DATABASE.md` for prod→local sync.
+
+### Push notification dedupe
+Prune subscriptions on subscribe; OS+browser bucket dedupe; SW tag guards; `BroadcastChannel` + `localStorage` cross-tab dedupe (`pushSubscriptions.js`, `notifications.js`).
+
 ---
 
 ## 24. Complete Route Map
@@ -1263,6 +1388,7 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 | `/campaign/:campaignId` | campaigns | CampaignDetails |
 | `/management/equipment` | equipment | EquipmentPage |
 | `/management/contacts` | contacts | ContactsPage |
+| `/subscriptions` | subscriptions | SubscriptionsPage |
 | `/attendance` | attendance | AttendancePage |
 | `/management/announcements` | announcements | AnnouncementsPage |
 | `/management/ops-logs` | ops_logs | SystemLogsPage |
@@ -1272,7 +1398,7 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 | `/finance` | finance | FinancePage |
 | `/artists` | artists | ArtistsCollection |
 | `/artists/:id/*` | artists | ArtistDetail |
-| `/admin` | admin_data | AdminCRM |
+| `/admin` | admin_data | Data Hub (AdminCRM → DataHubPage) |
 | `/admin/control` | admin_data | AdminPanel |
 | `/admin/qa` | admin_data | QATestingPage |
 | `/admin/users` | admin_users | AdminUsers |
@@ -1286,6 +1412,7 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 ### Redirects
 
 - `/management/attendance` → `/attendance`
+- `/office/subscriptions` → `/subscriptions`
 - `/admin/audits` → `/logs?view=lead-audits`
 - Unknown routes → `/`
 
@@ -1315,8 +1442,8 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 ├── /google            → Calendar, Drive, holidays
 ├── /google/accounts   → Multi-account OAuth
 ├── /proxy             → Authenticated external API proxy
-├── /dashboard         → Dashboard summary
-├── /calendar          → Calendar events
+├── /dashboard         → Dashboard summary (+ /dept-stats admin widget data)
+├── /calendar          → Calendar events (+ POST /seed-music-content admin)
 ├── /departments       → Departments, task types, permissions
 ├── /schedule          → User schedule
 ├── /notifications     → In-app + web push
@@ -1331,7 +1458,9 @@ Book-call and Exly webhooks designed for retry safety; BullMQ provides at-least-
 ├── /office-assets     → Hardware inventory
 ├── /contacts          → Contact directory
 ├── /exly              → Exly bookings/offerings
-├── /finance           → Documents, folders, OCR
+├── /finance           → Documents, folders, OCR, GET /usd-inr-rate
+├── /data-hub          → Unified CRM hub (admin)
+├── /subscriptions     → Office subscription CRUD, GET /usd-inr-rate
 ├── /attendance        → Check-in/out, leave
 ├── /announcements     → Broadcasts
 ├── /admin/scripts     → Script runner (admin)
@@ -1348,7 +1477,7 @@ Public (no /api prefix):
 
 ## 26. Complete Model Catalog
 
-Path: `server/models/` (58 files)
+Path: `server/models/` (59 files)
 
 ### Core / Identity
 - **User** — email, password (bcrypt), departmentId, teams, Google OAuth, pushSubscriptions, gamification (exp/level/streak), repId
@@ -1365,6 +1494,7 @@ Path: `server/models/` (58 files)
 - **TaskAssignment** — taskId + userId (unique pair)
 - **TaskType** — department task type definitions
 - **Workspace** — named workspace buckets
+- **WorkspacePreference** — per-user workspace UI prefs
 
 ### CRM & Sales
 - **Lead** — full CRM funnel, audit plugin, unique phone/email per tenant
@@ -1373,8 +1503,10 @@ Path: `server/models/` (58 files)
 - **CRMConfig** — dynamic dropdown values
 - **CRMAudit** — field-level lead change audit
 - **CRMStatSnapshot** — cached aggregate metrics
-- **Contact** — unified contact (CRM/Exly/Mailer flags)
+- **Contact** — unified Data Hub person: inlet flags (`inCRM`, `inExly`, `inTsc`, `inBookedCalls`, `inEnquiries`, `inMailer`, `inCommunity`), `inlets[]`, `inletCount`, `isMultiInlet`, role, emailStatus
+- **DataHubSyncState** — incremental/full sync timestamps and stats
 - **TscData** — HolySheet/TSC imported rows
+- **Subscription** — office SaaS/vendor renewals (tenant-scoped)
 
 ### Email / Campaigns
 - **Campaign** — primary campaign engine (senderMode, recipients, metrics, locationBreakdown)
@@ -1449,6 +1581,7 @@ FinanceDocument ──> Project (self-referential folders)
 | Email Engine Locked | `docs/EMAIL_ENGINE_LOCKED.md` | Frozen email tracking spec |
 | Transaction Architecture | `docs/transaction_architecture.md` | MongoDB transaction patterns |
 | Startup Guide | `docs/STARTUP_GUIDE.md` | Local setup steps |
+| Local Dev Database | `docs/LOCAL_DEV_DATABASE.md` | Prod→local Mongo sync |
 | Production Migration | `docs/PRODUCTION_MIGRATION.md` | Deploy migration steps |
 | Data Backup | `docs/DATA_BACKUP.md` | Backup procedures |
 | Version History | `docs/VERSION_HISTORY.md` | Release changelog |
@@ -1478,7 +1611,10 @@ Before making changes, verify:
 - [ ] Large payloads bypass Vercel proxy via VITE_API_URL
 - [ ] Follow 4px grid, high-density UI conventions
 - [ ] No mock/placeholder data in pages
+- [ ] Data Hub changes: update `shared/dataInlets.js` + client `dataHubInlets.js` if inlet keys change
+- [ ] USD/INR UI: use `UsdInrAmountFields` / `useUsdInrRate`; do not hardcode exchange rates
+- [ ] Calendar/task dates: respect `shared/dateValidation.js` no-past rules
 
 ---
 
-*This document was auto-generated from codebase exploration on 2026-06-01. For the latest locked email spec, always re-read `docs/EMAIL_ENGINE_LOCKED.md` before touching mail/tracking code.*
+*Compiled from codebase exploration on 2026-06-02 (v1.7.46). For the latest locked email spec, always re-read `docs/EMAIL_ENGINE_LOCKED.md` before touching mail/tracking code.*

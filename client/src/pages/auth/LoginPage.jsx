@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
 import axios from 'axios';
@@ -38,7 +38,7 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/login', { email, password }, AXIOS_SKIP_TOAST);
-      login(res.data.token, res.data);
+      login(res.data);
       navigate('/');
     } catch (err) {
       const message =
@@ -71,6 +71,18 @@ const LoginPage = () => {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Coreknot</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
             A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
+          </p>
+        </div>
+
+        <div
+          role="status"
+          className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-100 text-sm rounded-xl font-medium flex gap-3"
+        >
+          <Info size={18} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <p className="leading-relaxed">
+            <span className="font-bold">Default passwords have changed.</span>{' '}
+            If you previously used a simple password (for example 1234), it no longer works.
+            Contact <span className="font-semibold">Raghav</span> for your updated login password.
           </p>
         </div>
 

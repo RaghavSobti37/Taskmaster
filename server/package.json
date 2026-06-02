@@ -16,7 +16,11 @@
     "seed:music-calendar": "node scripts/seedMusicContentCalendar.js --year=2026",
     "seed:music-calendar:prod": "node scripts/seedMusicContentCalendar.js --year=2026 --prod",
     "reconcile:datahub:prod": "node scripts/reconcileDataHub.js --prod --full",
-    "seed:prod-content": "node scripts/seedProductionContent.js"
+    "seed:prod-content": "node scripts/seedProductionContent.js",
+    "reset-weak-passwords": "node scripts/resetWeakUserPasswords.js",
+    "reset-weak-passwords:local:apply": "node scripts/resetWeakUserPasswords.js --apply",
+    "reset-weak-passwords:prod": "node scripts/resetWeakUserPasswords.js --prod",
+    "reset-weak-passwords:prod:apply": "node scripts/resetWeakUserPasswords.js --prod --apply"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
@@ -28,6 +32,7 @@
     "bullmq": "^5.77.6",
     "cheerio": "^1.2.0",
     "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.1",
     "date-fns": "^4.1.0",

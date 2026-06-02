@@ -91,7 +91,7 @@ export default function ProfileTab() {
         payload.newPassword = newPassword;
       }
       const res = await axios.put('/api/users/profile', payload);
-      login(localStorage.getItem('coreknot_token'), res.data);
+      login(res.data);
       setPassword('');
       setNewPassword('');
       setModalConfig({ isOpen: true, title: 'Success', message: 'Profile updated successfully.', type: 'success' });

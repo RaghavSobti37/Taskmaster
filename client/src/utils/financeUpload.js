@@ -11,10 +11,8 @@ const BATCH_SIZE = 8;
 export async function uploadFinanceFiles(files, { onProgress } = {}) {
   if (!files?.length) return [];
 
-  const token = localStorage.getItem('coreknot_token');
   const headers = {
     'Content-Type': 'multipart/form-data',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     'x-skip-toast': 'true',
   };
 
@@ -29,6 +27,7 @@ export async function uploadFinanceFiles(files, { onProgress } = {}) {
 
     const res = await axios.post('/api/finance/upload-many', formData, {
       headers,
+      withCredentials: true,
       timeout: 0,
       onUploadProgress: (event) => {
         if (!event.total || !onProgress) return;

@@ -183,7 +183,6 @@ const urlBase64ToUint8Array = (base64String) => {
 
 export const subscribeToPush = async () => {
   if (!isPushPreferenceEnabled()) return false;
-  if (!localStorage.getItem('coreknot_token')) return false;
 
   const granted = await requestNotificationPermission();
   if (!granted) return false;

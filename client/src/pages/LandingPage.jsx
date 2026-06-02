@@ -16,10 +16,10 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LandingPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
 
   // If already authenticated, redirect to the dashboard page directly
-  if (token) {
+  if (user) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -40,6 +40,15 @@ const DEFAULT_DAILY_CAPS = {
   leaveApplied: 0,
 };
 
+/** Legacy audit-log action codes → canonical action (for recalc + leaderboard). */
+const LEGACY_ACTION_ALIASES = {
+  TASK_COMPLETED: 'COMPLETE_TASK',
+  ATTENDANCE_CHECKIN_WINDOW: 'ATTENDANCE_ACTION',
+  ATTENDANCE_CHECKOUT_WINDOW: 'ATTENDANCE_ACTION',
+};
+
+const normalizeGamificationAction = (action) => LEGACY_ACTION_ALIASES[action] || action;
+
 /** Maps internal action codes → GamificationConfig field names. */
 const ACTION_CONFIG_KEY = {
   COMPLETE_TASK: 'taskCompletion',
@@ -148,6 +157,8 @@ const NO_XP_ACTIONS = [
 module.exports = {
   DEFAULT_XP,
   DEFAULT_DAILY_CAPS,
+  LEGACY_ACTION_ALIASES,
+  normalizeGamificationAction,
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,

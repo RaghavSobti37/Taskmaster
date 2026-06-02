@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -66,11 +67,14 @@ const corsAllowlist = new Set([
   ...allowedOrigins
 ]);
 
+const allowVercelPreviews = process.env.NODE_ENV !== 'production'
+  || String(process.env.CORS_ALLOW_VERCEL_PREVIEWS).trim() === 'true';
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
     if (corsAllowlist.has(origin)) return callback(null, true);
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    if (allowVercelPreviews && origin.endsWith('.vercel.app')) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -81,6 +85,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+app.use(cookieParser());
 
 app.use(express.json({ 
   limit: '50mb',
@@ -295,35 +300,6 @@ app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");
-
-// #region agent log
-app.use("/api/uploadthing", (req, res, next) => {
-  const started = Date.now();
-  res.on("finish", () => {
-    try {
-      fs.appendFileSync(
-        path.join(__dirname, "../debug-0c5d79.log"),
-        `${JSON.stringify({
-          sessionId: "0c5d79",
-          timestamp: Date.now(),
-          location: "server.js:/api/uploadthing",
-          message: "uploadthing route finished",
-          hypothesisId: "H5",
-          data: {
-            method: req.method,
-            url: req.originalUrl,
-            status: res.statusCode,
-            ms: Date.now() - started,
-            hasAuth: Boolean(req.headers.authorization),
-            slug: req.query?.slug || null,
-          },
-        })}\n`
-      );
-    } catch (_) {}
-  });
-  next();
-});
-// #endregion
 
 app.use(
   "/api/uploadthing",

@@ -96,14 +96,44 @@ exports.getTestResults = async (req, res, next) => {
       return res.status(404).json({ error: 'Test run not found' });
     }
 
+    const predeployCategories = new Set([
+      'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
+      'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
+      'security-hardening',
+    ]);
+    const checklistCases = testRun.testCases.filter((t) => predeployCategories.has(t.category));
+    const byCategory = {};
+    for (const tc of checklistCases) {
+      if (!byCategory[tc.category]) {
+        byCategory[tc.category] = { pass: 0, fail: 0, warn: 0, skip: 0, checks: [] };
+      }
+      const bucket = byCategory[tc.category];
+      const st = tc.checkStatus || (tc.status === 'failed' ? 'fail' : tc.status === 'warn' ? 'warn' : tc.status === 'skip' ? 'skip' : 'pass');
+      if (st === 'fail') bucket.fail++;
+      else if (st === 'warn') bucket.warn++;
+      else if (st === 'skip') bucket.skip++;
+      else bucket.pass++;
+      bucket.checks.push(tc);
+    }
+
     // Categorize test cases by result
     const results = {
       totalTests: testRun.testCases.length,
       passed: testRun.testCases.filter(t => t.status === 'passed').length,
       failed: testRun.testCases.filter(t => t.status === 'failed').length,
+      warned: testRun.testCases.filter(t => t.status === 'warn').length,
+      skipped: testRun.testCases.filter(t => t.status === 'skip').length,
       passRate: testRun.testCases.length > 0 
         ? ((testRun.testCases.filter(t => t.status === 'passed').length / testRun.testCases.length) * 100).toFixed(2)
         : 0,
+      checklistSummary: {
+        total: checklistCases.length,
+        pass: checklistCases.filter((t) => (t.checkStatus || t.status) === 'pass' || t.status === 'passed').length,
+        fail: checklistCases.filter((t) => t.checkStatus === 'fail' || t.status === 'failed').length,
+        warn: checklistCases.filter((t) => t.checkStatus === 'warn' || t.status === 'warn').length,
+        skip: checklistCases.filter((t) => t.checkStatus === 'skip' || t.status === 'skip').length,
+        byCategory,
+      },
       testCases: testRun.testCases,
       bugsCreated: testRun.bugsCreated || [],
       cleanupResults: testRun.cleanupResults,

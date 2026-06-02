@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { CreditCard, Plus, Search, Trash2 } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { useUsdInrRate } from '../../hooks/useUsdInrRate';
+import { inrToUsd, roundMoney } from '../../utils/usdInr';
+import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import {
   PageContainer,
   PageHeader,
@@ -21,6 +24,7 @@ const PAYMENT_MODES = ['Credit Card', 'Debit Card', 'UPI', 'Bank Transfer', 'Cas
 const EMPTY_FORM = {
   name: '',
   amount: '',
+  amountUsd: '',
   dueDate: '',
   type: 'Software',
   periodicity: 'Monthly',
@@ -30,25 +34,35 @@ const EMPTY_FORM = {
 };
 
 const formatInr = (amount) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
-const toFormData = (sub) => ({
-  name: sub.name || '',
-  amount: sub.amount != null ? String(sub.amount) : '',
-  dueDate: sub.dueDate ? new Date(sub.dueDate).toISOString().slice(0, 10) : '',
-  type: SUBSCRIPTION_TYPES.includes(sub.type) ? sub.type : 'Software',
-  periodicity: PERIODICITY_OPTIONS.includes(sub.periodicity) ? sub.periodicity : 'Monthly',
-  paymentMode: PAYMENT_MODES.includes(sub.paymentMode) ? sub.paymentMode : 'Credit Card',
-  usedBy: sub.usedBy?._id || sub.usedBy || '',
-  notes: sub.notes || '',
-});
+const toFormData = (sub, rate) => {
+  const amount = sub.amount != null ? roundMoney(sub.amount) : '';
+  const hasRate = Number.isFinite(rate) && rate > 0;
+  return {
+    name: sub.name || '',
+    amount: amount !== '' ? String(amount) : '',
+    amountUsd: amount !== '' && hasRate ? String(inrToUsd(amount, rate)) : '',
+    dueDate: sub.dueDate ? new Date(sub.dueDate).toISOString().slice(0, 10) : '',
+    type: SUBSCRIPTION_TYPES.includes(sub.type) ? sub.type : 'Software',
+    periodicity: PERIODICITY_OPTIONS.includes(sub.periodicity) ? sub.periodicity : 'Monthly',
+    paymentMode: PAYMENT_MODES.includes(sub.paymentMode) ? sub.paymentMode : 'Credit Card',
+    usedBy: sub.usedBy?._id || sub.usedBy || '',
+    notes: sub.notes || '',
+  };
+};
 
 const toPayload = (form) => ({
   name: form.name.trim(),
-  amount: Number(form.amount) || 0,
+  amount: roundMoney(form.amount) || 0,
   dueDate: form.dueDate || undefined,
   type: form.type,
   periodicity: form.periodicity,
@@ -62,8 +76,28 @@ const SubscriptionsPage = () => {
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const rateAppliedRef = useRef(false);
   const queryClient = useQueryClient();
   const { data: users = [] } = useUserDirectory();
+
+  const { data: rateData } = useUsdInrRate({ enabled: isModalOpen });
+  const usdInrRate = rateData?.rate;
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      rateAppliedRef.current = false;
+      return;
+    }
+    if (!Number.isFinite(usdInrRate) || usdInrRate <= 0 || rateAppliedRef.current) return;
+    rateAppliedRef.current = true;
+    setFormData((prev) => {
+      if (prev.amount === '' || prev.amount === '.') return prev;
+      return {
+        ...prev,
+        amountUsd: String(inrToUsd(prev.amount, usdInrRate)),
+      };
+    });
+  }, [isModalOpen, usdInrRate]);
 
   const { data: subscriptions = [], isLoading } = useQuery({
     queryKey: ['subscriptions'],
@@ -114,7 +148,7 @@ const SubscriptionsPage = () => {
 
   const openEdit = (sub) => {
     setEditing(sub);
-    setFormData(toFormData(sub));
+    setFormData(toFormData(sub, usdInrRate));
     setIsModalOpen(true);
   };
 
@@ -214,15 +248,17 @@ const SubscriptionsPage = () => {
             icon={CreditCard}
             required
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input
-              label="Amount (INR)"
-              type="number"
-              min="0"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-2">
+              <UsdInrAmountFields
+                enabled={isModalOpen}
+                inrValue={formData.amount}
+                usdValue={formData.amountUsd}
+                onInrChange={(amount) => setFormData((prev) => ({ ...prev, amount }))}
+                onUsdChange={(amountUsd) => setFormData((prev) => ({ ...prev, amountUsd }))}
+                inrRequired
+              />
+            </div>
             <Input
               label="Due Date"
               type="date"

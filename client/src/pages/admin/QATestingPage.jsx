@@ -1,10 +1,31 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, Clock, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy } from 'lucide-react';
+import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy, Lock, Globe, Gauge, FileWarning, ScrollText, RotateCcw, GitBranch } from 'lucide-react';
 import { PageContainer, PageHeader, Card, Button, Badge } from '../../components/ui';
-import { toast } from 'react-hot-toast';
+import { useSystemToast } from '../../lib/systemLogBridge';
+import { MODULE } from '../../lib/systemLogContract';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
+
+const PREDEPLOY_CATEGORIES = new Set([
+  'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
+  'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
+  'security-hardening',
+]);
+
+const PRE_DEPLOY_LABELS = {
+  authorization: 'Authorization',
+  'password-reset': 'Password reset',
+  'input-validation': 'Input validation',
+  cors: 'CORS',
+  'rate-limiting': 'Rate limiting',
+  'error-handling': 'Error handling',
+  'database-indexes': 'Database indexes',
+  'logging-monitoring': 'Logging & monitoring',
+  rollback: 'Rollback / deploy',
+  'business-logic': 'Business logic interconnect',
+  'security-hardening': 'Security hardening (Jun 2026)',
+};
 
 // Icons mapped to test categories
 const categoryIcons = {
@@ -14,7 +35,25 @@ const categoryIcons = {
   backend: Server,
   permission: ShieldAlert,
   data: Database,
-  bottleneck: Timer
+  bottleneck: Timer,
+  authorization: Shield,
+  'password-reset': Lock,
+  'input-validation': FileWarning,
+  cors: Globe,
+  'rate-limiting': Gauge,
+  'error-handling': AlertTriangle,
+  'database-indexes': Database,
+  'logging-monitoring': ScrollText,
+  rollback: RotateCcw,
+  'business-logic': GitBranch,
+  'security-hardening': ShieldAlert,
+};
+
+const checkStatusStyles = {
+  pass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+  fail: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+  warn: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+  skip: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
 };
 
 // Colors mapped to severity
@@ -44,6 +83,7 @@ const useQAProgress = (testRunId) => {
 };
 
 const QATestingPage = () => {
+  const { success: toastSuccess, error: toastError } = useSystemToast();
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(QA_AGENTS[0]);
@@ -69,7 +109,7 @@ const QATestingPage = () => {
       setActiveTestRunId(activeRun._id);
     } else if (!activeRun && (progressData?.status === 'completed' || progressData?.status === 'error')) {
       if (progressData?.status === 'completed') {
-        toast.success('Omni-Security Test Completed!');
+        toastSuccess('Omni-Security test completed', { module: MODULE.SYSTEM });
       }
       setActiveTestRunId(null);
       queryClient.invalidateQueries(['qa-history']);
@@ -100,12 +140,11 @@ const QATestingPage = () => {
       return data;
     },
     onSuccess: (data) => {
-      toast.success('Omni-Security Engine Initiated.');
       setActiveTestRunId(data.testRunId);
       queryClient.invalidateQueries(['qa-history']);
     },
     onError: (err) => {
-      toast.error(err.response?.data?.error || 'Failed to start QA test');
+      toastError(err.response?.data?.error || 'Failed to start QA test', { module: MODULE.SYSTEM });
     }
   });
 
@@ -114,7 +153,6 @@ const QATestingPage = () => {
       await axios.post(`/api/qa/cancel/${testRunId}`);
     },
     onSuccess: () => {
-      toast.success('Test cancelled');
       setActiveTestRunId(null);
       queryClient.invalidateQueries(['qa-history']);
     }
@@ -125,7 +163,6 @@ const QATestingPage = () => {
       await axios.post(`/api/qa/cleanup/${testRunId}`);
     },
     onSuccess: () => {
-      toast.success('All test data purged successfully');
       queryClient.invalidateQueries(['qa-history']);
       queryClient.invalidateQueries(['qa-results']);
     }
@@ -136,7 +173,6 @@ const QATestingPage = () => {
       await axios.post(`/api/qa/resolve/${testRunId}/${testCaseId}`);
     },
     onSuccess: () => {
-      toast.success('Bug marked as resolved');
       queryClient.invalidateQueries(['qa-results']);
     }
   });
@@ -148,9 +184,22 @@ const QATestingPage = () => {
   const handleCopyErrors = useCallback(() => {
     if (!latestResults || !latestResults.testCases) return;
     const failedBugs = latestResults.testCases.filter(t => t.status === 'failed');
-    if (failedBugs.length === 0) return;
+    const checklistFails = latestResults.testCases.filter(
+      t => PREDEPLOY_CATEGORIES.has(t.category) && (t.checkStatus === 'fail' || t.status === 'failed')
+    );
+    if (failedBugs.length === 0 && checklistFails.length === 0) return;
 
     let textToCopy = 'QA Testing Error Report\n' + '='.repeat(30) + '\n\n';
+
+    if (checklistFails.length > 0) {
+      textToCopy += '--- Pre-Deployment Checklist Failures ---\n\n';
+      checklistFails.forEach((c, index) => {
+        textToCopy += `${index + 1}. [${c.category}] ${c.name}\n`;
+        textToCopy += `   ${c.error || c.description}\n`;
+        if (c.evidence) textToCopy += `   Evidence: ${c.evidence}\n`;
+        textToCopy += '\n';
+      });
+    }
 
     failedBugs.forEach((bug, index) => {
       textToCopy += `${index + 1}. [${(bug.severity || 'Medium').toUpperCase()}] ${bug.name}\n`;
@@ -163,27 +212,120 @@ const QATestingPage = () => {
     });
 
     navigator.clipboard.writeText(textToCopy).then(() => {
-      toast.success('Error report copied to clipboard');
+      toastSuccess('Error report copied to clipboard', { module: MODULE.SYSTEM });
     }).catch(err => {
-      toast.error('Failed to copy to clipboard');
+      toastError('Failed to copy to clipboard', { module: MODULE.SYSTEM });
       console.error(err);
     });
-  }, [latestResults]);
+  }, [latestResults, toastSuccess, toastError]);
 
   const currentRun = activeTestRunId ? (progressData || activeRun) : null;
   const isRunning = currentRun && ['running', 'pending', 'in-progress'].includes(currentRun.status);
 
-  // Render bugs if there are results
+  const renderPreDeploymentChecklist = () => {
+    const summary = latestResults?.checklistSummary;
+    if (!summary?.total) return null;
+
+    const categoryOrder = Object.keys(PRE_DEPLOY_LABELS);
+    const entries = categoryOrder
+      .filter((cat) => summary.byCategory?.[cat])
+      .map((cat) => [cat, summary.byCategory[cat]]);
+
+    return (
+      <div className="mt-8 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+            <Shield className="text-indigo-500" /> Pre-Deployment Checklist
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="px-2 py-1 rounded-full border border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
+              {summary.pass} pass
+            </span>
+            <span className="px-2 py-1 rounded-full border border-red-500/30 text-red-700 dark:text-red-400">
+              {summary.fail} fail
+            </span>
+            <span className="px-2 py-1 rounded-full border border-amber-500/30 text-amber-700 dark:text-amber-400">
+              {summary.warn} warn
+            </span>
+            <span className="px-2 py-1 rounded-full border border-gray-500/30 text-gray-600 dark:text-gray-400">
+              {summary.skip} skip
+            </span>
+          </div>
+        </div>
+
+        {entries.map(([cat, bucket]) => {
+          const Icon = categoryIcons[cat] || Shield;
+          const total = bucket.pass + bucket.fail + bucket.warn + bucket.skip;
+          return (
+            <Card key={cat} className="p-5 border border-[var(--color-bg-border)]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                  <Icon size={20} className="text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-[var(--color-text-primary)]">{PRE_DEPLOY_LABELS[cat]}</h3>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {bucket.pass} pass · {bucket.fail} fail · {bucket.warn} warn · {bucket.skip} skip ({total} checks)
+                  </p>
+                </div>
+              </div>
+              <ul className="space-y-2">
+                {bucket.checks.map((check) => {
+                  const st = check.checkStatus || (check.status === 'failed' ? 'fail' : check.status === 'warn' ? 'warn' : check.status === 'skip' ? 'skip' : 'pass');
+                  return (
+                    <li
+                      key={check._id || check.checklistId || check.name}
+                      className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 rounded-lg bg-[var(--color-bg-secondary)]"
+                    >
+                      <span className={`shrink-0 px-2 py-0.5 text-xs font-bold uppercase rounded-full border ${checkStatusStyles[st]}`}>
+                        {st}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-[var(--color-text-primary)]">{check.name}</div>
+                        {check.description && (
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1">{check.description}</p>
+                        )}
+                        {check.evidence && (
+                          <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1 truncate" title={check.evidence}>
+                            {check.evidence}
+                          </p>
+                        )}
+                        {check.error && st === 'fail' && (
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">{check.error}</p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Render dynamic-scan bugs (excludes pre-deploy checklist failures shown above)
   const renderBugList = () => {
     if (!latestResults || !latestResults.testCases) return null;
 
-    const bugs = latestResults.testCases.filter(t => t.status === 'failed');
+    const bugs = latestResults.testCases.filter(
+      t => t.status === 'failed' && !PREDEPLOY_CATEGORIES.has(t.category)
+    );
+    const checklistFailCount = latestResults.checklistSummary?.fail || 0;
+
     if (bugs.length === 0) {
       return (
-        <Card className="p-8 text-center mt-6 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800">
-          <CheckCircle className="mx-auto text-emerald-500 mb-3" size={40} />
-          <h3 className="text-xl font-bold text-emerald-700 dark:text-emerald-400">Zero Bugs Found</h3>
-          <p className="text-emerald-600 dark:text-emerald-500 mt-1">The agent completed testing with a 100% pass rate.</p>
+        <Card className={`p-8 text-center mt-6 ${checklistFailCount > 0 ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200' : 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800'}`}>
+          <CheckCircle className={`mx-auto mb-3 ${checklistFailCount > 0 ? 'text-amber-500' : 'text-emerald-500'}`} size={40} />
+          <h3 className={`text-xl font-bold ${checklistFailCount > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+            {checklistFailCount > 0 ? 'No Dynamic Scan Bugs' : 'Zero Bugs Found'}
+          </h3>
+          <p className={`mt-1 ${checklistFailCount > 0 ? 'text-amber-600' : 'text-emerald-600 dark:text-emerald-500'}`}>
+            {checklistFailCount > 0
+              ? `Page pentest clean; ${checklistFailCount} pre-deploy check(s) failed above.`
+              : 'The agent completed testing with a 100% pass rate.'}
+          </p>
         </Card>
       );
     }
@@ -359,9 +501,9 @@ const QATestingPage = () => {
                 <div>
                   <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">Pre-Flight Checks</h3>
                   <ul className="space-y-3 text-sm text-[var(--color-text-secondary)] mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Multi-layered tests prepared (Frontend, Backend, Bottleneck)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Pre-deployment checklist (9 categories + business logic)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Dynamic page pentest (CRM, Finance, Projects)</li>
                     <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Agent {selectedAgent.name} primed with {selectedAgent.role} access</li>
-                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Plain-english reporting module online</li>
                   </ul>
                 </div>
 
@@ -381,6 +523,7 @@ const QATestingPage = () => {
         {/* Results Section */}
         {latestResults && !isRunning && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {renderPreDeploymentChecklist()}
             {renderBugList()}
 
             {/* Actions / Cleanup */}

@@ -6,87 +6,79 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const defaultAuthContext = {
   user: null,
-  token: null,
   loading: true,
   login: () => {},
   logout: () => {},
+  refreshUser: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContext);
+
 if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = import.meta.env.VITE_API_URL;
 }
+axios.defaults.withCredentials = true;
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('coreknot_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('coreknot_token'));
-
-  // Use ref to track current user state for deep comparison during polling without triggering re-evaluations
   const userRef = useRef(user);
+
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
   const logout = useCallback(async () => {
     disconnectRealtime();
-    localStorage.removeItem('coreknot_token');
-    localStorage.removeItem('coreknot_user');
-    setToken(null);
+    try {
+      await axios.post('/api/auth/logout');
+    } catch {
+      // Cookie may already be cleared
+    }
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   }, []);
 
   const fetchUser = useCallback(async () => {
     try {
       const res = await axios.get('/api/auth/me');
       const newData = res.data;
-      
-      // Prevent unnecessary re-renders by comparing deep equality
       if (JSON.stringify(userRef.current) !== JSON.stringify(newData)) {
         setUser(newData);
-        localStorage.setItem('coreknot_user', JSON.stringify(newData));
       }
       setLoading(false);
+      return newData;
     } catch (err) {
       if (err.response?.status === 401) {
-        logout();
+        setUser(null);
       }
       setLoading(false);
+      return null;
     }
-  }, [logout]);
+  }, []);
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      fetchUser();
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-      setLoading(false);
-    }
-  }, [token, fetchUser]);
+    fetchUser();
+  }, [fetchUser]);
 
   useEffect(() => {
-    if (token) {
+    if (user?._id) {
       const interval = setInterval(fetchUser, 30000);
       return () => clearInterval(interval);
     }
-  }, [token, fetchUser]);
+    return undefined;
+  }, [user?._id, fetchUser]);
 
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (user?._id) {
       const unsubscribe = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
-        setUser(prev => ({ 
-          ...prev, 
-          exp: payload.newTotal, 
-          level: payload.leveledUp ? (prev.level || 1) + 1 : prev.level 
+        setUser((prev) => ({
+          ...prev,
+          exp: payload.newTotal,
+          level: payload.leveledUp ? (prev.level || 1) + 1 : prev.level,
         }));
-        
+
         queryClient.invalidateQueries({ queryKey: ['missions'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
 
@@ -121,23 +113,21 @@ export const AuthProvider = ({ children }) => {
       });
       return () => unsubscribe();
     }
+    return undefined;
   }, [user?._id, queryClient]);
 
-  const login = useCallback((newToken, userData) => {
-    localStorage.setItem('coreknot_token', newToken);
-    localStorage.setItem('coreknot_user', JSON.stringify(userData));
-    setToken(newToken);
+  const login = useCallback((userData) => {
     setUser(userData);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-  }, []);
+    fetchUser();
+  }, [fetchUser]);
 
   const value = useMemo(() => ({
     user,
-    token,
     loading,
     login,
-    logout
-  }), [user, token, loading, login, logout]);
+    logout,
+    refreshUser: fetchUser,
+  }), [user, loading, login, logout, fetchUser]);
 
   return (
     <AuthContext.Provider value={value}>

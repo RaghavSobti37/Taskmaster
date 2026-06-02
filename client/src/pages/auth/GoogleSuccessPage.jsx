@@ -6,22 +6,29 @@ import { DashboardSkeleton } from "../../components/ui";
 const GoogleSuccessPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
 
   const processed = React.useRef(false);
 
   useEffect(() => {
     if (processed.current) return;
-    
-    const params = new URLSearchParams(location.search);
-    const token = params.get('token');
-    const userStr = params.get('user');
 
-    if (token && userStr) {
+    const params = new URLSearchParams(location.search);
+    const userStr = params.get('user');
+    const linkSuccess = params.get('link') === 'success';
+
+    if (linkSuccess) {
+      processed.current = true;
+      navigate('/settings?tab=profile', { replace: true });
+      return;
+    }
+
+    if (userStr) {
       processed.current = true;
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
-        login(token, user);
+        login(user);
+        refreshUser();
         navigate('/', { replace: true });
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -29,9 +36,11 @@ const GoogleSuccessPage = () => {
       }
     } else if (location.search) {
       processed.current = true;
-      navigate('/login?error=auth_failed', { replace: true });
+      refreshUser().then((user) => {
+        navigate(user ? '/' : '/login?error=auth_failed', { replace: true });
+      });
     }
-  }, [location.search, login, navigate]);
+  }, [location.search, login, navigate, refreshUser]);
 
   return <DashboardSkeleton />;
 };

@@ -203,12 +203,7 @@ exports.processBookedCallLogic = async (data) => {
   }
 };
 
-function verifyArtistEnquirySecret(req) {
-  const secret = process.env.ARTIST_ENQUIRY_WEBHOOK_SECRET;
-  if (!secret) return true;
-  const received = req.headers['x-webhook-secret'];
-  return received && received === secret;
-}
+const { rejectUnlessWebhookSignature, verifyArtistEnquirySecret } = require('../utils/webhookAuth');
 
 exports.processArtistEnquiryLogic = processArtistEnquiryLogic;
 
@@ -246,6 +241,10 @@ exports.handleArtistEnquiry = async (req, res) => {
 };
 
 exports.handleBookedCall = async (req, res) => {
+  if (!rejectUnlessWebhookSignature(req, res, 'BOOK_CALL_WEBHOOK_SECRET')) {
+    return;
+  }
+
   try {
     if (connection.status === 'ready') {
       await webhookQueue.add('book-call', req.body, {
@@ -266,7 +265,7 @@ exports.handleBookedCall = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Call booked and synced synchronously' });
     } catch (syncError) {
       console.error('Sync Fallback Error:', syncError);
-      return res.status(500).json({ error: 'Failed to queue webhook and sync processing failed', details: syncError.message, stack: syncError.stack });
+      return res.status(500).json({ error: 'Failed to queue webhook and sync processing failed', details: syncError.message });
     }
   }
 };

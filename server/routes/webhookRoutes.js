@@ -33,14 +33,19 @@ const crypto = require('crypto');
 router.post('/instagram', (req, res) => {
   try {
     const signatureHeader = req.headers['x-hub-signature-256'];
-    if (signatureHeader && req.rawBody && process.env.META_APP_SECRET) {
-      const hmac = crypto.createHmac('sha256', process.env.META_APP_SECRET);
-      const digest = 'sha256=' + hmac.update(req.rawBody).digest('hex');
-      if (digest !== signatureHeader) {
-        console.warn('❌ [Meta Webhook] Signature mismatch! Expected:', digest, 'Received:', signatureHeader);
-      } else {
-        console.log('🔒 [Meta Webhook] SHA256 payload signature verified successfully.');
+    if (process.env.META_APP_SECRET) {
+      if (!signatureHeader || !req.rawBody) {
+        return res.status(401).send('MISSING_SIGNATURE');
       }
+      const hmac = crypto.createHmac('sha256', process.env.META_APP_SECRET);
+      const digest = `sha256=${hmac.update(req.rawBody).digest('hex')}`;
+      if (digest !== signatureHeader) {
+        console.warn('❌ [Meta Webhook] Signature mismatch');
+        return res.status(401).send('INVALID_SIGNATURE');
+      }
+      console.log('🔒 [Meta Webhook] SHA256 payload signature verified successfully.');
+    } else if (process.env.NODE_ENV === 'production') {
+      return res.status(503).send('META_APP_SECRET_NOT_CONFIGURED');
     }
 
     const body = req.body;

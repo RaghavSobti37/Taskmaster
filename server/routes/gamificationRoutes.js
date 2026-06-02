@@ -4,6 +4,7 @@ const GamificationService = require('../services/gamificationService');
 const DailyMission = require('../models/DailyMission');
 const { protect } = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 const { getCurrentWeekRange } = require('../utils/attendanceDate');
 const { ACTION_LABELS } = require('../../shared/gamificationRules');
 
@@ -55,26 +56,33 @@ router.get('/progress', protect, async (req, res) => {
 
 router.get('/leaderboard', protect, async (req, res) => {
   try {
-    const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
-    const { weekStart, weekEnd } = getCurrentWeekRange();
+    const weekly = await GamificationService.getWeeklyLeaderboard(10);
 
-    const leaderboard = await XPAuditLog.aggregate([
-      { $match: { createdAt: { $gte: weekStart, $lte: weekEnd } } },
-      { $group: { _id: '$userId', weeklyXp: { $sum: '$amount' } } },
-      { $sort: { weeklyXp: -1 } },
-      { $limit: 10 },
-    ]);
-
-    const userIds = leaderboard.map((entry) => entry._id);
+    const userIds = weekly.entries.map(([userId]) => userId);
     const users = await User.find({ _id: { $in: userIds } }, 'name avatar xp level').lean();
     const usersById = new Map(users.map((u) => [String(u._id), u]));
 
-    const top = leaderboard.map((entry, index) => ({
+    const top = weekly.entries.map(([userId, weeklyXp], index) => ({
       rank: index + 1,
-      weeklyXp: entry.weeklyXp,
-      ...(usersById.get(String(entry._id)) || { _id: entry._id, name: 'Unknown' }),
+      weeklyXp,
+      ...(usersById.get(String(userId)) || { _id: userId, name: 'Unknown' }),
     }));
+
+    logger.debug('Gamification', 'Leaderboard fetch', {
+      weekStart: weekly.weekStartKey,
+      weekEnd: weekly.weekEndKey,
+      logCount: weekly.logCount,
+      storedSum: weekly.storedSum,
+      resolvedSum: weekly.resolvedSum,
+      configTaskCompletion: weekly.configRates?.taskCompletion,
+      top3: top.slice(0, 3).map((entry) => ({
+        userId: entry._id,
+        name: entry.name,
+        weeklyXp: entry.weeklyXp,
+      })),
+      cacheHit: false,
+    });
 
     res.json(top);
   } catch (err) {
@@ -91,8 +99,8 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
 
     const XPAuditLog = require('../models/XPAuditLog');
     const User = require('../models/User');
-
-    const { weekStart, weekEnd } = getCurrentWeekRange();
+    const config = await GamificationService.getConfigPlain();
+    const { weekStart, weekEnd, weekStartKey, weekEndKey } = getCurrentWeekRange();
 
     const logs = await XPAuditLog.find({
       userId,
@@ -105,12 +113,13 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
 
     const groupedMap = new Map();
     for (const log of logs) {
-      const key = `${log.action}::${log.amount}`;
+      const resolvedAmount = GamificationService.resolveLogAmount(config, log);
+      const key = `${log.action}::${resolvedAmount}`;
       if (!groupedMap.has(key)) {
         groupedMap.set(key, {
           action: log.action,
           actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
-          amountPerAction: log.amount,
+          amountPerAction: resolvedAmount,
           count: 0,
           totalXp: 0,
           sampleMessage: toSimpleMessage(log),
@@ -118,21 +127,26 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
       }
       const group = groupedMap.get(key);
       group.count += 1;
-      group.totalXp += log.amount;
+      group.totalXp += resolvedAmount;
     }
 
     const groupedBreakdown = Array.from(groupedMap.values()).sort((a, b) => b.totalXp - a.totalXp);
-    const totalXp = logs.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const totalXp = logs.reduce(
+      (sum, item) => sum + GamificationService.resolveLogAmount(config, item),
+      0
+    );
 
     res.json({
       user: user || { _id: userId, name: 'Unknown' },
       weekStart,
       weekEnd,
+      weekStartKey,
+      weekEndKey,
       totalXp,
       groupedBreakdown,
       recentLogs: logs.slice(0, 15).map((log) => ({
         _id: log._id,
-        amount: log.amount,
+        amount: GamificationService.resolveLogAmount(config, log),
         action: log.action,
         actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
         message: toSimpleMessage(log),

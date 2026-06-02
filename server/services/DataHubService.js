@@ -17,10 +17,14 @@ const {
   isBookedCallSource,
   isCommunityText,
   BOOKED_CALL_SOURCE_RE,
+  dedupeInletEntries,
 } = require('../../shared/dataInlets');
 
 const FOLDER_CACHE_TTL_MS = 5 * 60 * 1000;
 const INCREMENTAL_BOOTSTRAP_MS = 24 * 60 * 60 * 1000; // first run: last 24h only
+const CONTACT_BYPASS = { bypassTenant: true };
+const CUSTOMER_ROLE_MATCH = { role: { $in: ['Customer', 'customer', null] } };
+const WEEKLY_DATE_FORMAT = '%Y-%U';
 let folderCache = { data: null, expiresAt: 0 };
 
 const changedSince = (since) => {
@@ -243,8 +247,9 @@ class DataHubService {
 
     const skip = (page - 1) * limit;
     const [total, data] = await Promise.all([
-      Contact.countDocuments(query),
+      Contact.countDocuments(query).setOptions(CONTACT_BYPASS),
       Contact.find(query)
+        .setOptions(CONTACT_BYPASS)
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -252,10 +257,16 @@ class DataHubService {
     ]);
 
     return {
-      data: data.map((c) => ({
-        ...c,
-        inletLabels: (c.inlets || []).map((i) => DATA_INLETS[i.key]?.label || i.key),
-      })),
+      data: data.map((c) => {
+        const inlets = dedupeInletEntries(c.inlets || []);
+        return {
+          ...c,
+          inlets,
+          inletCount: inlets.length,
+          isMultiInlet: inlets.length >= 2,
+          inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
+        };
+      }),
       total,
       page,
       pages: Math.ceil(total / limit) || 0,
@@ -263,8 +274,9 @@ class DataHubService {
   }
 
   async getPerson360(contactId) {
-    const contact = await Contact.findById(contactId).lean();
+    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
     if (!contact) return null;
+    contact.inlets = dedupeInletEntries(contact.inlets || []);
 
     const match = identityMatch(contact.email, contact.phone);
     if (!match) return { contact, overview: contact };
@@ -357,7 +369,7 @@ class DataHubService {
     const counts = {};
     await Promise.all(
       folderKeys.map(async (key) => {
-        counts[key] = await Contact.countDocuments(buildFolderQuery(key));
+        counts[key] = await Contact.countDocuments(buildFolderQuery(key)).setOptions(CONTACT_BYPASS);
       })
     );
 
@@ -414,30 +426,37 @@ class DataHubService {
       newThisWeek,
       overlapPairs,
     ] = await Promise.all([
-      Contact.countDocuments({ role: { $in: ['Customer', 'customer', null] } }),
+      Contact.countDocuments(CUSTOMER_ROLE_MATCH).setOptions(CONTACT_BYPASS),
       Contact.aggregate([
+        { $match: CUSTOMER_ROLE_MATCH },
         { $group: { _id: '$emailStatus', count: { $sum: 1 } } },
       ]),
       Contact.aggregate([
+        { $match: CUSTOMER_ROLE_MATCH },
         { $unwind: { path: '$inlets', preserveNullAndEmptyArrays: false } },
         { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
       Contact.countDocuments({
+        ...CUSTOMER_ROLE_MATCH,
         createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      }),
+      }).setOptions(CONTACT_BYPASS),
       this.getOverlapMatrix(),
     ]);
 
     const growth = await Contact.aggregate([
       {
         $match: {
-          createdAt: { $gte: new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000) },
+          ...CUSTOMER_ROLE_MATCH,
+          createdAt: {
+            $gte: new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000),
+            $type: 'date',
+          },
         },
       },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%W', date: '$createdAt' } },
+          _id: { $dateToString: { format: WEEKLY_DATE_FORMAT, date: '$createdAt' } },
           count: { $sum: 1 },
         },
       },
@@ -452,7 +471,7 @@ class DataHubService {
       kpis: [
         { key: 'total', label: 'Unique People', value: totalContacts },
         { key: 'newWeek', label: 'New This Week', value: newThisWeek },
-        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: await Contact.countDocuments({ isMultiInlet: true }) },
+        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS) },
         {
           key: 'unsubRate',
           label: 'Unsub Rate',
@@ -470,12 +489,12 @@ class DataHubService {
       })),
       growth,
       overlap: overlapPairs,
-      loyalCount: await Contact.countDocuments({ isMultiInlet: true }),
+      loyalCount: await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS),
     };
   }
 
   async getLoyalAnalytics() {
-    const total = await Contact.countDocuments({ isMultiInlet: true });
+    const total = await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS);
     const overlap = await this.getOverlapMatrix();
 
     const inletDistribution = await Contact.aggregate([
@@ -502,7 +521,7 @@ class DataHubService {
     const newLoyalThisWeek = await Contact.countDocuments({
       isMultiInlet: true,
       updatedAt: { $gte: this._weekAgo() },
-    });
+    }).setOptions(CONTACT_BYPASS);
 
     return {
       folder: 'loyal',
@@ -528,7 +547,7 @@ class DataHubService {
 
   async getInletAnalytics(folder) {
     const query = buildFolderQuery(folder);
-    const total = await Contact.countDocuments(query);
+    const total = await Contact.countDocuments(query).setOptions(CONTACT_BYPASS);
     const weekAgo = this._weekAgo();
     const monthAgo = this._monthAgo();
 
@@ -577,7 +596,7 @@ class DataHubService {
         ExlyBooking.countDocuments({ bookedOn: { $gte: monthAgo } }),
         ExlyBooking.aggregate([
           { $match: { bookedOn: { $gte: new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000) } } },
-          { $group: { _id: { $dateToString: { format: '%Y-%W', date: '$bookedOn' } }, count: { $sum: 1 }, revenue: { $sum: '$pricePaid' } } },
+          { $group: { _id: { $dateToString: { format: WEEKLY_DATE_FORMAT, date: '$bookedOn' } }, count: { $sum: 1 }, revenue: { $sum: '$pricePaid' } } },
           { $sort: { _id: 1 } },
         ]),
       ]);
@@ -606,7 +625,7 @@ class DataHubService {
         TscData.countDocuments({}),
         TscData.countDocuments({ email: { $nin: [null, ''] } }),
         TscData.countDocuments({ phone: { $nin: [null, ''] } }),
-        Contact.countDocuments({ inTsc: true, inCRM: true }),
+        Contact.countDocuments({ inTsc: true, inCRM: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.topCampaigns = topCampaigns;
       result.topSources = topSources;
@@ -673,7 +692,7 @@ class DataHubService {
     }
 
     if (folder === 'unsubscribed') {
-      const allPeople = await Contact.countDocuments({ role: { $in: ['Customer', 'customer', null] } });
+      const allPeople = await Contact.countDocuments(CUSTOMER_ROLE_MATCH).setOptions(CONTACT_BYPASS);
       const [byReason, byInlet, recentUnsubs] = await Promise.all([
         Contact.aggregate([{ $match: query }, { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
         Contact.aggregate([
@@ -682,7 +701,7 @@ class DataHubService {
           { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ]),
-        Contact.countDocuments({ ...query, updatedAt: { $gte: weekAgo } }),
+        Contact.countDocuments({ ...query, updatedAt: { $gte: weekAgo } }).setOptions(CONTACT_BYPASS),
       ]);
       result.byReason = byReason;
       result.byInlet = byInlet.map((r) => ({ label: DATA_INLETS[r._id]?.label || r._id, count: r.count }));
@@ -744,10 +763,10 @@ class DataHubService {
 
     if (folder === 'active') {
       const [inMailer, inExly, inCRM, multiInlet] = await Promise.all([
-        Contact.countDocuments({ ...query, inMailer: true }),
-        Contact.countDocuments({ ...query, inExly: true }),
-        Contact.countDocuments({ ...query, inCRM: true }),
-        Contact.countDocuments({ ...query, isMultiInlet: true }),
+        Contact.countDocuments({ ...query, inMailer: true }).setOptions(CONTACT_BYPASS),
+        Contact.countDocuments({ ...query, inExly: true }).setOptions(CONTACT_BYPASS),
+        Contact.countDocuments({ ...query, inCRM: true }).setOptions(CONTACT_BYPASS),
+        Contact.countDocuments({ ...query, isMultiInlet: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.engagementFlags = [
         { label: 'Mail Engagement', count: inMailer },
@@ -772,7 +791,7 @@ class DataHubService {
   }
 
   async getOverlapMatrix() {
-    const multi = await Contact.find({ isMultiInlet: true }).select('inlets').lean();
+    const multi = await Contact.find({ isMultiInlet: true }).setOptions(CONTACT_BYPASS).select('inlets').lean();
     const pairCounts = {};
 
     for (const c of multi) {
@@ -823,6 +842,8 @@ class DataHubService {
     }
 
     const stats = await this._runInletMerge({ since, onProgress, full: !incremental || full });
+    const repairedInlets = await this.repairDuplicateInlets({ onProgress });
+    if (repairedInlets) stats.repairedInlets = repairedInlets;
 
     await DataHubSyncState.findOneAndUpdate(
       { configKey: 'incremental' },
@@ -980,6 +1001,31 @@ class DataHubService {
 
   clearFolderCache() {
     folderCache = { data: null, expiresAt: 0 };
+  }
+
+  async repairDuplicateInlets({ onProgress } = {}) {
+    const contacts = await Contact.find({ inlets: { $exists: true, $not: { $size: 0 } } })
+      .setOptions(CONTACT_BYPASS)
+      .select('inlets')
+      .lean();
+    let fixed = 0;
+    for (const contact of contacts) {
+      const deduped = dedupeInletEntries(contact.inlets || []);
+      if (deduped.length === (contact.inlets || []).length) continue;
+      await Contact.updateOne(
+        { _id: contact._id },
+        {
+          $set: {
+            inlets: deduped,
+            inletCount: deduped.length,
+            isMultiInlet: deduped.length >= 2,
+          },
+        }
+      ).setOptions(CONTACT_BYPASS);
+      fixed += 1;
+    }
+    if (fixed && onProgress) onProgress(`repaired duplicate inlets on ${fixed} contacts`);
+    return fixed;
   }
 }
 

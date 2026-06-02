@@ -2,6 +2,10 @@ const request = require('supertest');
 const app = require('../server');
 const User = require('../models/User');
 
+const { DEV_DEFAULT_PASSWORD } = require('../../shared/defaultPassword');
+
+const TEST_PASSWORD = DEV_DEFAULT_PASSWORD;
+
 describe('Authentication API', () => {
   beforeEach(async () => {
     await User.deleteMany();
@@ -14,12 +18,15 @@ describe('Authentication API', () => {
         .send({
           name: 'Test User',
           email: 'test@example.com',
-          password: 'password123',
-          gender: 'male'
+          password: TEST_PASSWORD,
+          gender: 'male',
         });
-      
+
       expect(res.statusCode).toEqual(201);
-      expect(res.body).toHaveProperty('token');
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringContaining('coreknot_token=')])
+      );
+      expect(res.body).not.toHaveProperty('token');
       expect(res.body.email).toEqual('test@example.com');
       expect(res.body).not.toHaveProperty('password');
     });
@@ -30,9 +37,9 @@ describe('Authentication API', () => {
         .send({
           name: { $ne: 'test' },
           email: { $ne: 'test@example.com' },
-          password: { $gt: '' }
+          password: { $gt: '' },
         });
-      
+
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('error', 'Invalid input format');
     });
@@ -45,8 +52,8 @@ describe('Authentication API', () => {
         .send({
           name: 'Test User',
           email: 'test@example.com',
-          password: 'password123',
-          gender: 'male'
+          password: TEST_PASSWORD,
+          gender: 'male',
         });
     });
 
@@ -55,11 +62,14 @@ describe('Authentication API', () => {
         .post('/api/auth/login')
         .send({
           email: 'test@example.com',
-          password: 'password123'
+          password: TEST_PASSWORD,
         });
-      
+
       expect(res.statusCode).toEqual(200);
-      expect(res.body).toHaveProperty('token');
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringContaining('coreknot_token=')])
+      );
+      expect(res.body).not.toHaveProperty('token');
     });
 
     it('should reject invalid credentials format (NoSQL injection prevention)', async () => {
@@ -67,9 +77,9 @@ describe('Authentication API', () => {
         .post('/api/auth/login')
         .send({
           email: { $ne: 'test@example.com' },
-          password: { $gt: '' }
+          password: { $gt: '' },
         });
-      
+
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('error', 'Invalid credentials format');
     });

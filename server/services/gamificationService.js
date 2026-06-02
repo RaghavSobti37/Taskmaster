@@ -2,18 +2,35 @@ const User = require('../models/User');
 const DailyMission = require('../models/DailyMission');
 const XPAuditLog = require('../models/XPAuditLog');
 const GamificationConfig = require('../models/GamificationConfig');
+const logger = require('../utils/logger');
 const {
   DEFAULT_XP,
   DEFAULT_DAILY_CAPS,
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,
+  normalizeGamificationAction,
 } = require('../../shared/gamificationRules');
-const { todayStart, todayEnd } = require('../utils/attendanceDate');
+const { todayStart, todayEnd, getCurrentWeekRange } = require('../utils/attendanceDate');
 
 const STEP_XP = DEFAULT_XP.stepXp;
+const BULK_WRITE_CHUNK = 500;
 
-const getConfigKeyForAction = (action) => ACTION_CONFIG_KEY[action] || null;
+const getConfigKeyForAction = (action) => {
+  const normalized = normalizeGamificationAction(action);
+  return ACTION_CONFIG_KEY[normalized] || null;
+};
+
+const toPlainConfig = (config) => (config?.toObject ? config.toObject() : config);
+
+const configSnapshot = (config) => {
+  const plain = toPlainConfig(config);
+  return Object.fromEntries(
+    Object.entries(ACTION_CONFIG_KEY)
+      .filter(([, configKey]) => configKey)
+      .map(([, configKey]) => [configKey, plain?.[configKey]])
+  );
+};
 
 const getDailyCapForAction = (action) => {
   const configKey = getConfigKeyForAction(action);
@@ -31,6 +48,10 @@ class GamificationService {
       config = await GamificationConfig.create({});
     }
     return config;
+  }
+
+  static async getConfigPlain() {
+    return toPlainConfig(await this.getConfig());
   }
 
   static getXpAmount(config, action) {
@@ -71,25 +92,145 @@ class GamificationService {
     return Boolean(existing);
   }
 
+  static resolveLogAmount(config, log) {
+    const plain = toPlainConfig(config);
+    const configKey = getConfigKeyForAction(log.action);
+    if (configKey && plain[configKey] != null) {
+      return Number(plain[configKey]) || 0;
+    }
+    return Number(log.amount) || 0;
+  }
+
   static async recalculateExpFromAudit(userId) {
     const config = await this.getConfig();
     const logs = await XPAuditLog.find({ userId }).select('action amount').lean();
 
     let total = 0;
     for (const log of logs) {
-      const configKey = getConfigKeyForAction(log.action);
-      if (configKey && config[configKey] != null) {
-        total += config[configKey];
-      } else if (log.action === 'MISSION_COMPLETE') {
-        total += log.amount || 0;
-      } else {
-        total += log.amount || 0;
-      }
+      total += this.resolveLogAmount(config, log);
     }
     return total;
   }
 
+  static async syncAuditLogAmountsFromConfig(options = {}) {
+    const config = await this.getConfigPlain();
+    const logs = await XPAuditLog.find().select('action amount').lean();
+
+    const bulkOps = [];
+    const unmappedActions = {};
+    const samples = [];
+    const actionStats = {};
+
+    for (const log of logs) {
+      const configKey = getConfigKeyForAction(log.action);
+      if (!configKey) {
+        unmappedActions[log.action] = (unmappedActions[log.action] || 0) + 1;
+        continue;
+      }
+      if (config[configKey] == null) continue;
+
+      const newAmount = Number(config[configKey]) || 0;
+      const oldAmount = Number(log.amount) || 0;
+      if (!actionStats[log.action]) {
+        actionStats[log.action] = { configKey, count: 0, oldAmount, newAmount };
+      }
+      actionStats[log.action].count += 1;
+
+      if (newAmount !== oldAmount) {
+        if (samples.length < 5 && (log.action === 'COMPLETE_TASK' || configKey === 'taskCompletion')) {
+          samples.push({ action: log.action, configKey, oldAmount, newAmount });
+        }
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: log._id },
+            update: { $set: { amount: newAmount } },
+          },
+        });
+      }
+    }
+
+    for (let i = 0; i < bulkOps.length; i += BULK_WRITE_CHUNK) {
+      await XPAuditLog.bulkWrite(bulkOps.slice(i, i + BULK_WRITE_CHUNK), { ordered: false });
+    }
+
+    const result = {
+      totalLogs: logs.length,
+      updatedLogs: bulkOps.length,
+      unmappedActions,
+      actionStats,
+      samples,
+      configRates: configSnapshot(config),
+    };
+
+    if (options.log !== false) {
+      logger.info('Gamification', 'Audit log sync from config', {
+        updatedLogs: result.updatedLogs,
+        totalLogs: result.totalLogs,
+        configRates: result.configRates,
+        samples: result.samples,
+        unmappedActions: result.unmappedActions,
+        completeTask: result.actionStats.COMPLETE_TASK || null,
+      });
+      if (Object.keys(unmappedActions).length > 0) {
+        logger.warn('Gamification', 'Audit logs with unmapped actions (stored amount kept)', {
+          unmappedActions,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  static aggregateWeeklyXpFromLogs(logs, config) {
+    const totalsByUser = new Map();
+    let storedSum = 0;
+    let resolvedSum = 0;
+
+    for (const log of logs) {
+      const stored = Number(log.amount) || 0;
+      const resolved = this.resolveLogAmount(config, log);
+      storedSum += stored;
+      resolvedSum += resolved;
+      const userKey = String(log.userId);
+      totalsByUser.set(userKey, (totalsByUser.get(userKey) || 0) + resolved);
+    }
+
+    return { totalsByUser, storedSum, resolvedSum, logCount: logs.length };
+  }
+
+  static async getWeeklyLeaderboard(limit = 10) {
+    const config = await this.getConfigPlain();
+    const { weekStart, weekEnd, weekStartKey, weekEndKey } = getCurrentWeekRange();
+
+    const logs = await XPAuditLog.find({
+      createdAt: { $gte: weekStart, $lte: weekEnd },
+    })
+      .select('userId action amount')
+      .lean();
+
+    const { totalsByUser, storedSum, resolvedSum, logCount } = this.aggregateWeeklyXpFromLogs(logs, config);
+
+    const sorted = [...totalsByUser.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit);
+
+    return {
+      weekStart,
+      weekEnd,
+      weekStartKey,
+      weekEndKey,
+      entries: sorted,
+      logCount,
+      storedSum,
+      resolvedSum,
+      configRates: configSnapshot(config),
+    };
+  }
+
   static async recalculateAllUsersFromConfig() {
+    const config = await this.getConfigPlain();
+    const auditSync = await this.syncAuditLogAmountsFromConfig({ log: true });
+
     const users = await User.find().select('_id exp level');
     let updatedUsers = 0;
     const changes = [];
@@ -115,7 +256,20 @@ class GamificationService {
       }
     }
 
-    return { totalUsers: users.length, updatedUsers, changes };
+    const weekly = await this.getWeeklyLeaderboard(3);
+
+    logger.info('Gamification', 'Recalculate all users complete', {
+      totalUsers: users.length,
+      updatedUsers,
+      updatedAuditLogs: auditSync.updatedLogs,
+      configRates: configSnapshot(config),
+      weeklyTop3: weekly.entries.map(([userId, weeklyXp]) => ({ userId, weeklyXp })),
+      weekRange: { start: weekly.weekStartKey, end: weekly.weekEndKey },
+      weeklyStoredSum: weekly.storedSum,
+      weeklyResolvedSum: weekly.resolvedSum,
+    });
+
+    return { totalUsers: users.length, updatedUsers, changes, auditSync, weeklyPreview: weekly };
   }
 
   static async awardExp(userId, amount, action, details = {}) {

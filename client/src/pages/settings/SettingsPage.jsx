@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, LayoutTemplate, LayoutDashboard, Clock, Target, CalendarDays, 
   Receipt, LogOut, ArrowLeft 
 } from 'lucide-react';
 import { PageContainer } from '../../components/ui';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirm } from '../../contexts/ConfirmContext';
 
@@ -21,7 +21,15 @@ import InvoiceTab from './tabs/InvoiceTab';
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { confirm } = useConfirm();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('Profile');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab?.toLowerCase() === 'profile') {
+      setActiveTab('Profile');
+    }
+  }, [searchParams]);
 
   const tabs = [
     { id: 'Profile', icon: User, label: 'Profile' },

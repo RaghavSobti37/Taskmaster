@@ -19,6 +19,7 @@ import {
 } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
+import { dedupeInletEntries } from '../../utils/dataHubInlets';
 
 const INLET_COLORS = {
   exly: 'info', leads: 'mint', tsc: 'neutral', booked_calls: 'warning',
@@ -137,7 +138,7 @@ export function DataHubContent() {
       header: 'Inlets',
       render: (item) => (
         <div className="flex flex-wrap gap-1">
-          {(item.inlets || []).map((inlet) => (
+          {(dedupeInletEntries(item.inlets || [])).map((inlet) => (
             <Badge key={inlet.key} variant={INLET_COLORS[inlet.key] || 'neutral'}>
               {inlet.key}
             </Badge>

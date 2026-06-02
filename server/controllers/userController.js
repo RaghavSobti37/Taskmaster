@@ -7,35 +7,12 @@ const { isAfter, subMinutes } = require('date-fns');
 const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
+const { validatePasswordStrength } = require('../utils/passwordValidation');
 
 const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
   const fiveMinAgo = subMinutes(new Date(), 5);
   return isAfter(u.lastOnline, fiveMinAgo);
-};
-
-const WEAK_PASSWORDS = new Set([
-  '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890',
-  'password', 'password1', 'password123', 'qwerty', 'qwerty123', 'admin', 'admin123',
-  'letmein', 'welcome', 'monkey', 'dragon', 'master', 'abc123', 'iloveyou',
-  'sunshine', 'princess', 'football', 'baseball', 'trustno1', '111111', '000000',
-]);
-
-const validatePasswordStrength = (password) => {
-  if (!password || password.length < 8) {
-    return 'Password must be at least 8 characters long';
-  }
-  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
-    return 'Password must contain at least one letter and one number';
-  }
-  const normalized = password.toLowerCase().trim();
-  if (WEAK_PASSWORDS.has(normalized)) {
-    return 'Password is too weak. Please choose a stronger password';
-  }
-  if (/^(.)\1+$/.test(password) || /^(\d+)$/.test(password)) {
-    return 'Password is too weak. Please choose a stronger password';
-  }
-  return null;
 };
 
 const ROOT_ADMIN_EMAILS = new Set([
@@ -196,6 +173,8 @@ exports.updateProfile = async (req, res) => {
       const passwordError = validatePasswordStrength(newPassword);
       if (passwordError) return res.status(400).json({ error: passwordError });
       user.password = newPassword;
+      user.mustChangePassword = false;
+      user.passwordChangedAt = new Date();
     }
 
     user.lastOnline = new Date();
@@ -298,6 +277,8 @@ exports.updateUserAdmin = async (req, res) => {
       const passwordError = validatePasswordStrength(newPassword);
       if (passwordError) return res.status(400).json({ error: passwordError });
       targetUser.password = newPassword;
+      targetUser.mustChangePassword = false;
+      targetUser.passwordChangedAt = new Date();
     }
 
     await targetUser.save();

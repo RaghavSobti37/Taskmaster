@@ -12,6 +12,16 @@ const User = require('../models/User');
 const Project = require('../models/Project');
 const Lead = require('../models/Lead');
 const FinanceDocument = require('../models/FinanceDocument');
+const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
+const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
+const { buildIntegrationTestCases } = require('./qa/qaIntegrationTests');
+const { QA_API_BASE } = require('./qa/qaApiClient');
+
+const PREDEPLOY_CATEGORIES = new Set([
+  'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
+  'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
+  'security-hardening',
+]);
 
 class QATestingService {
   constructor(projectId, userId, config = {}) {
@@ -128,8 +138,11 @@ class QATestingService {
   }
 
   async getTestCases() {
+    const preDeployCases = await buildPreDeploymentTestCases();
+    const extendedProbes = await buildExtendedProbeTestCases();
+    const integrationCases = await buildIntegrationTestCases();
     const targetDir = path.join(__dirname, '../../client/src/pages');
-    const testCases = [];
+    const testCases = [...preDeployCases, ...extendedProbes, ...integrationCases];
     
     // Recursive directory reader
     const walk = async (dir) => {
@@ -166,7 +179,7 @@ class QATestingService {
                 if(lead) dynamicId = lead._id;
                 endpoint = `/api/crm/leads/${dynamicId}`;
                 payloadMatrix = { status: 'won' }; // Intentionally missing tracking props
-                const probeUrl = `http://localhost:5000${endpoint}`;
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
                 
                 try {
                   const resCRM = await axios.put(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
@@ -185,7 +198,7 @@ class QATestingService {
                 if(doc) dynamicId = doc._id;
                 endpoint = `/api/finance/${dynamicId}/approve`;
                 payloadMatrix = { amount: 5000, status: 'approved', tenantId: 'spoofed_tenant_999' };
-                const probeUrl = `http://localhost:5000${endpoint}`;
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
                 
                 try {
                   const resFin = await axios.patch(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
@@ -204,7 +217,7 @@ class QATestingService {
                 if(project) dynamicId = project._id;
                 endpoint = `/api/projects/${dynamicId}`;
                 payloadMatrix = { visibility: 'public', assignedUsers: [testUser._id] };
-                const probeUrl = `http://localhost:5000${endpoint}`;
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
                 
                 try {
                   const [resP1, resP2] = await Promise.all([
@@ -224,7 +237,7 @@ class QATestingService {
               } else {
                 endpoint = '/api/general/ping';
                 payloadMatrix = { data: 'test' };
-                const probeUrl = `http://localhost:5000${endpoint}`;
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
                 
                 try {
                   const resPing = await axios.post(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
@@ -274,7 +287,15 @@ class QATestingService {
       // Execute test
       const result = await testCase.test();
       const duration = Date.now() - startTime;
-      const status = result.passed ? 'passed' : 'failed';
+      const checkStatus = result.checkStatus || (result.passed ? 'pass' : 'fail');
+      const status =
+        checkStatus === 'fail'
+          ? 'failed'
+          : checkStatus === 'warn'
+            ? 'warn'
+            : checkStatus === 'skip'
+              ? 'skip'
+              : 'passed';
 
       // Atomic push of completed test
       await QATestRun.updateOne(
@@ -289,14 +310,24 @@ class QATestingService {
               severity: result.severity || testCase.severity || 'medium',
               category: result.category || testCase.category,
               error: result.error || null,
-              description: result.description || null
+              description: result.description || null,
+              evidence: result.evidence || null,
+              checklistId: result.checklistId || testCase.checklistId || null,
+              checkStatus: checkStatus,
             }
           }
         }
       );
 
-      // Log failed tests
-      if (!result.passed) {
+      if (result.artifacts?.length) {
+        await QATestRun.updateOne(
+          { _id: this.testRunId },
+          { $push: { createdArtifacts: { $each: result.artifacts } } }
+        );
+      }
+
+      // Log failed tests (not warn/skip)
+      if (checkStatus === 'fail') {
         await Log.create({
           userId: this.userId,
           action: 'QA_TEST',
@@ -346,8 +377,9 @@ class QATestingService {
       // Count bugs
       const bugsFound = failedTests.length;
       
-      // Create tasks for critical/high bugs
+      // Create tasks for dynamic-scan bugs only (checklist shown in UI, no task spam)
       for (const failedTest of failedTests) {
+        if (PREDEPLOY_CATEGORIES.has(failedTest.category)) continue;
         try {
           const bugTaskData = {
             title: `[QA BUG] ${failedTest.name}`,
@@ -386,10 +418,10 @@ class QATestingService {
   async cleanupTestData() {
     try {
       const testRun = await QATestRun.findById(this.testRunId);
-      const cleanupResults = { deleted: { tasks: 0, projects: 0, logs: 0 }, errors: [] };
+      const cleanupResults = { deleted: { tasks: 0, projects: 0, logs: 0, finance: 0 }, errors: [] };
 
       // Delete created artifacts in reverse order
-      for (const artifact of testRun.createdArtifacts.reverse()) {
+      for (const artifact of (testRun.createdArtifacts || []).slice().reverse()) {
         try {
           if (artifact.type === 'task') {
             await Task.findByIdAndDelete(artifact.id);
@@ -397,6 +429,9 @@ class QATestingService {
           } else if (artifact.type === 'log') {
             await Log.findByIdAndDelete(artifact.id);
             cleanupResults.deleted.logs++;
+          } else if (artifact.type === 'finance') {
+            await FinanceDocument.findByIdAndDelete(artifact.id);
+            cleanupResults.deleted.finance = (cleanupResults.deleted.finance || 0) + 1;
           }
         } catch (error) {
           cleanupResults.errors.push(`Failed to delete ${artifact.type} ${artifact.id}: ${error.message}`);

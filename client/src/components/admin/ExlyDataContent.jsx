@@ -6,6 +6,9 @@ import {
   SlidersHorizontal, BarChart3, TrendingUp, UserPlus
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, FullScreenWorkspace, Input, Skeleton } from '../ui';
+import UsdInrAmountFields from '../finance/UsdInrAmountFields';
+import { useUsdInrRate } from '../../hooks/useUsdInrRate';
+import { inrToUsd } from '../../utils/usdInr';
 import { format } from 'date-fns';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as ChartTooltip, CartesianGrid } from 'recharts';
 import {
@@ -75,6 +78,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   // Workspace Edit States
   const [editedTitle, setEditedTitle] = useState('');
   const [editedPrice, setEditedPrice] = useState(0);
+  const [editedPriceUsd, setEditedPriceUsd] = useState('');
   const [editedType, setEditedType] = useState('program');
   const [editedStatus, setEditedStatus] = useState('active');
   const [editedEventDate, setEditedEventDate] = useState('');
@@ -121,6 +125,15 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
   const offeringTotals = useMemo(() => computeOfferingTotals(offerings), [offerings]);
 
+  const { data: rateData } = useUsdInrRate({ enabled: workspaceOpen });
+  const usdInrRate = rateData?.rate;
+
+  useEffect(() => {
+    if (!workspaceOpen || !editedPrice) return;
+    if (!Number.isFinite(usdInrRate) || usdInrRate <= 0) return;
+    setEditedPriceUsd((prev) => (prev === '' ? String(inrToUsd(editedPrice, usdInrRate)) : prev));
+  }, [workspaceOpen, usdInrRate, editedPrice]);
+
   const fetchOfferingDetails = useCallback(async (offeringId, page = 1, limit = bookingRowsPerPage, paymentFilter = bookingPaymentFilter, search = searchQuery) => {
     setDetailsLoading(true);
     setDetailsError('');
@@ -133,6 +146,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
       setDetailsPagination(res.data.pagination || null);
       setEditedTitle(res.data.offering.title || '');
       setEditedPrice(res.data.offering.price || 0);
+      setEditedPriceUsd('');
       setEditedType(res.data.offering.type || 'program');
       setEditedStatus(res.data.offering.status || 'active');
       setEditedEventDate(res.data.offering.eventDate || '');
@@ -318,6 +332,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
 
     setEditedTitle(offering.title || '');
     setEditedPrice(offering.price || 0);
+    setEditedPriceUsd('');
     setEditedType(offering.type || 'program');
     setEditedStatus(offering.status || 'active');
     setEditedEventDate(offering.eventDate || '');
@@ -1271,11 +1286,14 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   />
                 </div>
 
-                <Input 
-                  label="Base Price (INR)" 
-                  type="number"
-                  value={editedPrice} 
-                  onChange={(e) => setEditedPrice(Number(e.target.value) || 0)} 
+                <UsdInrAmountFields
+                  enabled={workspaceOpen}
+                  inrLabel="Base Price (INR)"
+                  inrValue={editedPrice === 0 ? '' : String(editedPrice)}
+                  usdValue={editedPriceUsd}
+                  onInrChange={(value) => setEditedPrice(Number(value) || 0)}
+                  onUsdChange={setEditedPriceUsd}
+                  layout="stack"
                 />
 
                 <div className="space-y-1 w-full">

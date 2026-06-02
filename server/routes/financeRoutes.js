@@ -21,6 +21,7 @@ const {
   getFolderBreadcrumb,
   syncFolderPlacementFromDiskHandler,
 } = require('../controllers/financeController');
+const { getUsdInrRate } = require('../controllers/subscriptionController');
 
 // Multer: memory storage for server-side UTApi upload
 const upload = multer({
@@ -32,7 +33,8 @@ const { isOpsUser } = require('../utils/departmentPermissions');
 
 // Department gate: ops or admin
 const opsOnly = (req, res, next) => {
-  if (req.user && isOpsUser(req.user)) {
+  const allowed = req.user && isOpsUser(req.user);
+  if (allowed) {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized for Finance/Ops' });
@@ -40,6 +42,8 @@ const opsOnly = (req, res, next) => {
 };
 
 router.use(protect);
+
+router.get('/usd-inr-rate', getUsdInrRate);
 
 // Any authenticated user can submit an invoice for ops review
 router.post('/submit-invoice', submitInvoice);

@@ -8,6 +8,7 @@ const LeadService = require('../services/LeadService');
 const { assignLeadToRep } = require('./crmController');
 const { normalizePhone, sanitizeEmail, sanitizeName } = require('../utils/sanitizer');
 const logger = require('../utils/logger');
+const { rejectUnlessWebhookSignature } = require('../utils/webhookAuth');
 const { getDepartmentSlug } = require('../utils/departmentPermissions');
 
 const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
@@ -164,6 +165,10 @@ exports.syncExlyData = async (req, res) => {
 };
 
 exports.handleExlyWebhook = async (req, res) => {
+  if (!rejectUnlessWebhookSignature(req, res, 'EXLY_WEBHOOK_SECRET')) {
+    return;
+  }
+
   try {
     const payload = req.body;
     logger.info('Exly Webhook', 'Payload received', { payload });

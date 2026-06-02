@@ -9,6 +9,7 @@ const authContext = (req, user) => ({
   userId: user._id?.toString?.() || user._id,
   traceId: req.traceId || getTraceId(),
 });
+const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 const {
   isAdminUser,
   isOpsUser,
@@ -33,12 +34,10 @@ const touchLastOnline = (userId) => {
   }).catch(() => {});
 };
 
-const protect = async (req, res, next) => {
-  let token;
+const { getTokenFromRequest } = require('../utils/authCookie');
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
+const protect = async (req, res, next) => {
+  const token = getTokenFromRequest(req);
 
   if (!token) {
     return res.status(401).json({ error: 'Not authorized, no token' });
@@ -82,7 +81,8 @@ const protect = async (req, res, next) => {
         dbUser = await User.create({
           name: email.split('@')[0],
           email,
-          password: process.env.DEFAULT_SEED_PASSWORD || (Math.random().toString(36).substring(2) + Date.now().toString(36)),
+          password: getDefaultSeedPassword(),
+          mustChangePassword: true,
         });
         dbUser = await populateDepartment(User.findById(dbUser._id).select('-password'));
       }

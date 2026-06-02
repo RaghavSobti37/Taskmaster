@@ -234,7 +234,7 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (isRootAdminEmail(targetUser.email) && !isRootAdminEmail(req.user.email)) {
+    if (isRootAdminEmail(targetUser.email)) {
       return res.status(403).json({ error: 'Root admin accounts are protected' });
     }
 

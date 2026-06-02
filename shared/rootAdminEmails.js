@@ -1,4 +1,4 @@
-/** Emails treated as platform owners — only other root admins may delete them. */
+/** Platform owner emails — never deletable via admin UI or API. */
 const ROOT_ADMIN_EMAILS = new Set([
   'test@example.com',
   'REDACTED_ADMIN@example.com',
@@ -17,7 +17,7 @@ const getDeleteUserBlockReason = (requester, targetUser) => {
     return 'You cannot delete your own account';
   }
 
-  if (isRootAdminEmail(targetUser.email) && !isRootAdminEmail(requester?.email)) {
+  if (isRootAdminEmail(targetUser.email)) {
     return 'Root admin accounts are protected';
   }
 

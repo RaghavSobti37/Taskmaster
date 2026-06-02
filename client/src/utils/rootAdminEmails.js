@@ -18,7 +18,7 @@ export const getDeleteUserBlockReason = (requester, targetUser) => {
     return 'You cannot delete your own account';
   }
 
-  if (isRootAdminEmail(targetUser.email) && !isRootAdminEmail(requester?.email)) {
+  if (isRootAdminEmail(targetUser.email)) {
     return 'Root admin accounts are protected';
   }
 

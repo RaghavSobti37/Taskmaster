@@ -23,25 +23,29 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const userRef = useRef(user);
+  const authEpochRef = useRef(0);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
   const logout = useCallback(async () => {
+    authEpochRef.current += 1;
     disconnectRealtime();
+    setUser(null);
     try {
       await axios.post('/api/auth/logout');
     } catch {
       // Cookie may already be cleared
     }
-    setUser(null);
   }, []);
 
   const fetchUser = useCallback(async (options = {}) => {
+    const epoch = authEpochRef.current;
     const { clearOn401 = true } = options;
     try {
       const res = await axios.get('/api/auth/me');
+      if (epoch !== authEpochRef.current) return null;
       const newData = res.data;
       if (JSON.stringify(userRef.current) !== JSON.stringify(newData)) {
         setUser(newData);
@@ -49,6 +53,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
       return newData;
     } catch (err) {
+      if (epoch !== authEpochRef.current) return null;
       if (err.response?.status === 401 && clearOn401) {
         setUser(null);
       }
@@ -58,9 +63,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const syncSessionAfterLogin = useCallback(async () => {
+    const epoch = authEpochRef.current;
     for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (epoch !== authEpochRef.current) return;
       if (attempt > 0) {
         await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+        if (epoch !== authEpochRef.current) return;
       }
       const sessionUser = await fetchUser({ clearOn401: false });
       if (sessionUser) return;
@@ -128,6 +136,7 @@ export const AuthProvider = ({ children }) => {
   }, [user?._id, queryClient]);
 
   const login = useCallback((userData) => {
+    authEpochRef.current += 1;
     setUser(userData);
     setLoading(false);
     syncSessionAfterLogin();

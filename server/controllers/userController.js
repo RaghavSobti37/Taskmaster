@@ -9,6 +9,8 @@ const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPerm
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
+
+const isUserOnline = (u) => {
   if (!u.lastOnline) return false;
   const fiveMinAgo = subMinutes(new Date(), 5);
   return isAfter(u.lastOnline, fiveMinAgo);

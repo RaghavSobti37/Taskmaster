@@ -44,7 +44,7 @@ const getSourceUri = () => {
   return uri;
 };
 
-const getBackupDbName = () => (process.env.MONGODB_BACKUP_DB || 'coreknot_backups').trim();
+const getBackupDbName = () => (process.env.MONGODB_BACKUP_DB || 'taskmaster_backups').trim();
 
 const getRetentionDays = () => {
   const parsed = parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10);

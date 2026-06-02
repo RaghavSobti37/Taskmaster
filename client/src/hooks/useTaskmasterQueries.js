@@ -1513,3 +1513,28 @@ export const useDataHubReconcile = () => {
     },
   });
 };
+
+export const useDataHubBackups = () => {
+  return useQuery({
+    queryKey: ['dataHub', 'backups'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/backups');
+      return data;
+    },
+    staleTime: 60 * 1000,
+  });
+};
+
+export const useDataHubProductionBackup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ notify = true } = {}) =>
+      axios.post('/api/data-hub/backup', null, {
+        params: notify ? {} : { notify: 'false' },
+        timeout: 300000,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataHub', 'backups'] });
+    },
+  });
+};

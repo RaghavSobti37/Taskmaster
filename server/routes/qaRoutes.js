@@ -12,6 +12,8 @@ router.use(protect, admin);
  */
 router.post('/start', qaTestingController.startQATesting);
 
+router.get('/categories', qaTestingController.listCategories);
+
 /**
  * @GET /api/qa/progress
  * Get real-time progress of ongoing test
@@ -36,6 +38,12 @@ router.post('/cancel/:testRunId', qaTestingController.cancelTest);
  * Manually trigger cleanup of test data
  */
 router.post('/cleanup/:testRunId', qaTestingController.cleanupTestData);
+
+/**
+ * @POST /api/qa/purge-test-data
+ * Purge all QA-pattern contacts/leads from Data Hub, CRM, etc.
+ */
+router.post('/purge-test-data', qaTestingController.purgeAllTestData);
 
 /**
  * @GET /api/qa/history

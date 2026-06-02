@@ -9,6 +9,7 @@ const {
   request,
   QA_API_BASE,
 } = require('./qaApiClient');
+const { purgeQaIdentity } = require('./qaTestData');
 
 /** Suite 4 + Suite 7 — dedicated HTTP probes (not tied to page filename). */
 const PROBE_DEFS = [
@@ -469,23 +470,30 @@ const PROBE_DEFS = [
     async run() {
       const { adminUser } = await resolveTestUsers();
       const phone = `98${String(Date.now()).slice(-8)}`;
-      const payload = { name: 'QA Dup A', phone, email: `qa-dup-a-${Date.now()}@test.com` };
-      const r1 = await request(this, {
-        method: 'POST',
-        url: '/api/crm/leads',
-        user: adminUser,
-        data: payload,
-      });
-      const r2 = await request(this, {
-        method: 'POST',
-        url: '/api/crm/leads',
-        user: adminUser,
-        data: { ...payload, name: 'QA Dup B', email: `qa-dup-b-${Date.now()}@test.com` },
-      });
-      const ok = r1.status < 400 && (r2.status === 409 || r2.status === 400);
-      return ok
-        ? probePass(this, `Duplicate phone blocked (${r2.status})`)
-        : probeFail(this, `Duplicate phone allowed (${r1.status}/${r2.status})`, r2.status);
+      const emailA = `qa-dup-a-${Date.now()}@test.com`;
+      const emailB = `qa-dup-b-${Date.now()}@test.com`;
+      const payload = { name: 'QA Dup A', phone, email: emailA };
+      try {
+        const r1 = await request(this, {
+          method: 'POST',
+          url: '/api/crm/leads',
+          user: adminUser,
+          data: payload,
+        });
+        const r2 = await request(this, {
+          method: 'POST',
+          url: '/api/crm/leads',
+          user: adminUser,
+          data: { ...payload, name: 'QA Dup B', email: emailB },
+        });
+        const ok = r1.status < 400 && (r2.status === 409 || r2.status === 400);
+        return ok
+          ? probePass(this, `Duplicate phone blocked (${r2.status})`)
+          : probeFail(this, `Duplicate phone allowed (${r1.status}/${r2.status})`, r2.status);
+      } finally {
+        await purgeQaIdentity({ phone, email: emailA }).catch(() => {});
+        await purgeQaIdentity({ email: emailB }).catch(() => {});
+      }
     },
   },
   {

@@ -545,19 +545,25 @@ async function runReviewApproveNotify(def, ctx) {
 async function runLeadSyncsContact(def, ctx) {
   const email = `qa-contact-sync-${Date.now()}@example.com`;
   const phone = `8${String(Date.now()).slice(-9)}`;
-  const lead = await LeadService.createLead({
-    name: 'QA Contact Sync',
-    email,
-    phone,
-    source: 'QA Integration',
-  });
-  track(ctx, 'lead', lead._id);
+  let lead;
+  try {
+    lead = await LeadService.createLead({
+      name: 'QA Contact Sync',
+      email,
+      phone,
+      source: 'QA Integration',
+    });
+    track(ctx, 'lead', lead._id);
 
-  const contact = await Contact.findOne({ email }).lean();
-  if (contact?.inCRM) {
-    return { ...probePass(def, 'LeadService.syncToContactHub set Contact.inCRM'), artifacts: ctx.artifacts };
+    const contact = await Contact.findOne({ email }).lean();
+    if (contact?._id) track(ctx, 'contact', contact._id);
+    if (contact?.inCRM) {
+      return { ...probePass(def, 'LeadService.syncToContactHub set Contact.inCRM'), artifacts: ctx.artifacts };
+    }
+    return { ...probeFail(def, 'Contact.inCRM not set after LeadService.createLead'), artifacts: ctx.artifacts };
+  } catch (err) {
+    return { ...probeFail(def, err.message), artifacts: ctx.artifacts };
   }
-  return { ...probeFail(def, 'Contact.inCRM not set after LeadService.createLead'), artifacts: ctx.artifacts };
 }
 
 async function runExlySyncsContact(def, ctx) {
@@ -581,13 +587,18 @@ async function runMailOpenContactSync(def, ctx) {
 async function runMultiinletFlagSet(def, ctx) {
   const email = `qa-multi-${Date.now()}@example.com`;
   const phone = `7${String(Date.now()).slice(-9)}`;
-  await ContactService.mergeContact({ name: 'QA Multi', email, phone }, 'crm');
-  await ContactService.mergeContact({ name: 'QA Multi', email, phone, exlyOfferingTitle: 'QA Course' }, 'exly');
-  const contact = await Contact.findOne({ email }).lean();
-  if (contact?.isMultiInlet && (contact.inletCount || 0) >= 2) {
-    return probePass(def, `isMultiInlet=true inletCount=${contact.inletCount}`);
+  try {
+    await ContactService.mergeContact({ name: 'QA Multi', email, phone }, 'crm');
+    await ContactService.mergeContact({ name: 'QA Multi', email, phone, exlyOfferingTitle: 'QA Course' }, 'exly');
+    const contact = await Contact.findOne({ email }).lean();
+    if (contact?._id) track(ctx, 'contact', contact._id);
+    if (contact?.isMultiInlet && (contact.inletCount || 0) >= 2) {
+      return { ...probePass(def, `isMultiInlet=true inletCount=${contact.inletCount}`), artifacts: ctx.artifacts };
+    }
+    return { ...probeFail(def, `Expected multi-inlet contact, got isMultiInlet=${contact?.isMultiInlet} count=${contact?.inletCount}`), artifacts: ctx.artifacts };
+  } catch (err) {
+    return { ...probeFail(def, err.message), artifacts: ctx.artifacts };
   }
-  return probeFail(def, `Expected multi-inlet contact, got isMultiInlet=${contact?.isMultiInlet} count=${contact?.inletCount}`);
 }
 
 async function runTaskMutationLogged(def, ctx) {

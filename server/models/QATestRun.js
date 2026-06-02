@@ -149,6 +149,7 @@ const qaTestRunSchema = new mongoose.Schema({
     },
     errors: [String]
   },
+  selectedCategories: [String],
   errorDetails: {
     phase: String,
     message: String,

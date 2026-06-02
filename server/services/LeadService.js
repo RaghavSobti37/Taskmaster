@@ -4,12 +4,19 @@ const followupCache = require('./followupCache');
 const ContactService = require('./ContactService');
 const { parse } = require('date-fns');
 const { sanitizeName, sanitizeEmail, normalizePhone, validateDate, sanitizeLocation } = require('../utils/sanitizer');
+const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isBookedCallSource } = require('../../shared/dataInlets');
 
 class LeadService {
   async createLead(rawLeadData) {
     const sanitizedData = this.sanitizeAndNormalize(rawLeadData);
+    const errors = normalizeAndValidateLeadFields(sanitizedData, { requireName: true, requirePhone: true });
+    if (errors.length) {
+      const err = new Error(errors[0]);
+      err.statusCode = 400;
+      throw err;
+    }
     const newLead = await Lead.create(sanitizedData);
     
     // Explicit Side-Effects

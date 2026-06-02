@@ -27,6 +27,21 @@ const PRE_DEPLOY_LABELS = {
   'security-hardening': 'Security hardening (Jun 2026)',
 };
 
+const DYNAMIC_CATEGORY_LABELS = {
+  backend: 'Backend / page scan',
+  permission: 'Permission',
+  bottleneck: 'Bottleneck / concurrency',
+  data: 'Data integrity',
+  frontend: 'Frontend',
+  mobile: 'Mobile',
+  desktop: 'Desktop',
+};
+
+const ALL_QA_CATEGORY_KEYS = [
+  ...Object.keys(PRE_DEPLOY_LABELS),
+  ...Object.keys(DYNAMIC_CATEGORY_LABELS),
+];
+
 // Icons mapped to test categories
 const categoryIcons = {
   frontend: Layout,
@@ -213,6 +228,7 @@ const QATestingPage = () => {
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(QA_AGENTS[0]);
+  const [selectedCategories, setSelectedCategories] = useState(() => new Set(ALL_QA_CATEGORY_KEYS));
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
@@ -258,10 +274,14 @@ const QATestingPage = () => {
 
   const startMutation = useMutation({
     mutationFn: async () => {
+      const categories = selectedCategories.size === ALL_QA_CATEGORY_KEYS.length
+        ? []
+        : [...selectedCategories];
       const { data } = await axios.post(`/api/qa/start`, {
         testAgentName: selectedAgent.name,
         testRole: selectedAgent.role,
-        permissions: []
+        permissions: [],
+        categories,
       });
       return data;
     },
@@ -285,13 +305,19 @@ const QATestingPage = () => {
   });
 
   const cleanupMutation = useMutation({
-    mutationFn: async (testRunId) => {
-      await axios.post(`/api/qa/cleanup/${testRunId}`);
+    mutationFn: async () => {
+      const { data } = await axios.post('/api/qa/purge-test-data');
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries(['qa-history']);
       queryClient.invalidateQueries(['qa-results']);
-    }
+      queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+      toastSuccess(data.message || 'QA test data purged', { module: MODULE.SYSTEM });
+    },
+    onError: (err) => {
+      toastError(err.response?.data?.error || 'Failed to purge QA test data', { module: MODULE.SYSTEM });
+    },
   });
 
   const resolveMutation = useMutation({
@@ -304,8 +330,30 @@ const QATestingPage = () => {
   });
 
   const handleStart = useCallback(() => {
+    if (selectedCategories.size === 0) {
+      toastError('Select at least one category to run', { module: MODULE.SYSTEM });
+      return;
+    }
     startMutation.mutate();
-  }, [startMutation]);
+  }, [startMutation, selectedCategories.size, toastError]);
+
+  const toggleCategory = useCallback((cat) => {
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }, []);
+
+  const copyToClipboard = useCallback((text, successMsg) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toastSuccess(successMsg, { module: MODULE.SYSTEM });
+    }).catch((err) => {
+      toastError('Failed to copy to clipboard', { module: MODULE.SYSTEM });
+      console.error(err);
+    });
+  }, [toastSuccess, toastError]);
 
   const formatCheckLine = (c, index) => {
     const st = c.checkStatus || (c.status === 'failed' ? 'fail' : c.status === 'warn' ? 'warn' : c.status === 'skip' ? 'skip' : 'pass');
@@ -360,16 +408,125 @@ const QATestingPage = () => {
       warned.forEach((c, i) => { text += formatCheckLine(c, i); });
     }
 
-    navigator.clipboard.writeText(text).then(() => {
-      toastSuccess(`Copied ${failed.length} failure(s)${includeWarns && warned.length ? ` + ${warned.length} warn` : ''}`, { module: MODULE.SYSTEM });
-    }).catch((err) => {
-      toastError('Failed to copy to clipboard', { module: MODULE.SYSTEM });
-      console.error(err);
-    });
-  }, [latestResults, toastSuccess, toastError]);
+    copyToClipboard(text, `Copied ${failed.length} failure(s)${includeWarns && warned.length ? ` + ${warned.length} warn` : ''}`);
+  }, [latestResults, copyToClipboard, toastError]);
+
+  const handleCopyFullReport = useCallback(() => {
+    if (!latestResults?.testCases?.length) {
+      toastError('No QA results to copy yet', { module: MODULE.SYSTEM });
+      return;
+    }
+
+    let text = 'QA Testing — Full Report\n';
+    text += `${'='.repeat(48)}\n`;
+    text += `Run: ${latestResults.testRunId || 'latest'}\n`;
+    if (latestResults.startedAt) text += `Started: ${new Date(latestResults.startedAt).toLocaleString()}\n`;
+    if (latestResults.completedAt) text += `Completed: ${new Date(latestResults.completedAt).toLocaleString()}\n`;
+    if (latestResults.duration != null) text += `Duration: ${Math.round(latestResults.duration / 1000)}s\n`;
+    if (latestResults.testIdentity?.name) {
+      text += `Agent: ${latestResults.testIdentity.name} (${latestResults.testIdentity.role})\n`;
+    }
+    text += latestResults.selectedCategories?.length
+      ? `Categories: ${latestResults.selectedCategories.join(', ')}\n`
+      : 'Categories: all\n';
+    text += `Total: ${latestResults.totalTests} · Pass: ${latestResults.passed} · Fail: ${latestResults.failed}`;
+    text += ` · Warn: ${latestResults.warned || 0} · Skip: ${latestResults.skipped || 0}\n`;
+    text += `Pass rate: ${latestResults.passRate}%\n\n`;
+
+    const byCategory = {};
+    for (const t of latestResults.testCases) {
+      const cat = t.category || 'other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(t);
+    }
+
+    Object.entries(byCategory)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([cat, items]) => {
+        text += `--- ${PRE_DEPLOY_LABELS[cat] || DYNAMIC_CATEGORY_LABELS[cat] || cat} (${items.length}) ---\n\n`;
+        items.forEach((c, i) => { text += formatCheckLine(c, i); });
+      });
+
+    copyToClipboard(text, 'Full report copied to clipboard');
+  }, [latestResults, copyToClipboard, toastError]);
 
   const currentRun = activeTestRunId ? (progressData || activeRun) : null;
   const isRunning = currentRun && ['running', 'pending', 'in-progress'].includes(currentRun.status);
+  const isFullScan = selectedCategories.size === ALL_QA_CATEGORY_KEYS.length;
+  const runButtonLabel = isFullScan
+    ? 'Initiate Full Project Scan'
+    : `Run ${selectedCategories.size} Categor${selectedCategories.size === 1 ? 'y' : 'ies'}`;
+
+  const renderCategoryPicker = () => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="text-sm font-bold text-[var(--color-text-primary)] uppercase tracking-wide">
+          Test categories
+        </label>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="xs" onClick={() => setSelectedCategories(new Set(ALL_QA_CATEGORY_KEYS))} disabled={isRunning}>
+            All
+          </Button>
+          <Button variant="ghost" size="xs" onClick={() => setSelectedCategories(new Set())} disabled={isRunning}>
+            Clear
+          </Button>
+        </div>
+      </div>
+      <p className="text-xs text-[var(--color-text-muted)]">
+        {isFullScan
+          ? 'All categories selected — full scan.'
+          : `${selectedCategories.size} of ${ALL_QA_CATEGORY_KEYS.length} selected.`}
+      </p>
+      <div className="space-y-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Pre-deploy</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(PRE_DEPLOY_LABELS).map(([key, label]) => {
+              const active = selectedCategories.has(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={isRunning}
+                  onClick={() => toggleCategory(key)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                    active
+                      ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
+                      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] opacity-60'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Dynamic scan</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(DYNAMIC_CATEGORY_LABELS).map(([key, label]) => {
+              const active = selectedCategories.has(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={isRunning}
+                  onClick={() => toggleCategory(key)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                    active
+                      ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] opacity-60'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderPreDeploymentChecklist = () => {
     const summary = latestResults?.checklistSummary;
@@ -600,6 +757,40 @@ const QATestingPage = () => {
         title="Omni-Security & React Doctor Engine"
         subtitle="Global App Scanning • SAST/SCA Analysis • Pentest Swarm • Automated PoC"
         icon={ShieldAlert}
+        actions={
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            {latestResults && !isRunning && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleCopyErrors(false)}
+                  className="gap-1.5"
+                >
+                  <Copy size={14} /> Copy errors
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyFullReport}
+                  className="gap-1.5"
+                >
+                  <Copy size={14} /> Copy full report
+                </Button>
+              </>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => cleanupMutation.mutate()}
+              disabled={cleanupMutation.isPending || isRunning}
+              className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 gap-2"
+            >
+              {cleanupMutation.isPending ? <RefreshCw className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              Purge QA Test Data
+            </Button>
+          </div>
+        }
       />
 
       <div className="max-w-6xl mx-auto py-6 space-y-8">
@@ -662,9 +853,9 @@ const QATestingPage = () => {
           ) : (
             <div className="grid md:grid-cols-2 gap-8 relative z-0">
 
-              {/* Left: Project & Agent Selection */}
+              {/* Left: Categories & Agent Selection */}
               <div className="space-y-6">
-                {/* Removed Project Selector as testing is Global */}
+                {renderCategoryPicker()}
 
                 <div>
                   <label className="block text-sm font-bold text-[var(--color-text-primary)] mb-3 uppercase tracking-wide">Select QA Identity</label>
@@ -706,11 +897,11 @@ const QATestingPage = () => {
 
                 <Button
                   onClick={handleStart}
-                  disabled={isRunning || startMutation.isPending}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2 py-4 rounded-xl text-lg font-bold shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5"
+                  disabled={isRunning || startMutation.isPending || selectedCategories.size === 0}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2 py-4 rounded-xl text-lg font-bold shadow-lg shadow-indigo-500/30 transition-all hover:-translate-y-0.5 disabled:opacity-50"
                 >
                   {startMutation.isPending ? <RefreshCw className="animate-spin" size={20} /> : <Play size={20} fill="currentColor" />}
-                  Initiate Full Project Scan
+                  {runButtonLabel}
                 </Button>
               </div>
             </div>
@@ -722,18 +913,6 @@ const QATestingPage = () => {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {renderPreDeploymentChecklist()}
             {renderBugList()}
-
-            {/* Actions / Cleanup */}
-            <div className="mt-12 flex justify-center">
-              <Button
-                onClick={() => cleanupMutation.mutate(historyData.testRuns[0]._id)}
-                disabled={cleanupMutation.isPending}
-                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 gap-2 py-3 px-6 rounded-xl"
-              >
-                {cleanupMutation.isPending ? <RefreshCw className="animate-spin" size={18} /> : <Trash2 size={18} />}
-                Purge All QA Test Data
-              </Button>
-            </div>
           </div>
         )}
 

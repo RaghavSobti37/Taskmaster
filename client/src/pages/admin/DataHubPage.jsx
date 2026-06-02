@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, RefreshCw, BarChart3, Star } from 'lucide-react';
+import { Search, RefreshCw, BarChart3, Star, Database } from 'lucide-react';
 import {
   PageContainer, PageHeader, Card, DataTable, Button, Input,
   Badge, NexusDropdown,
@@ -15,11 +15,14 @@ import {
   useDataHubAnalytics,
   useDataHubReconcile,
   useDataHubSyncStatus,
+  useDataHubBackups,
+  useDataHubProductionBackup,
   DATA_HUB_REFRESH_MS,
 } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
+import { emitSystemEvent } from '../../lib/systemLogBridge';
 
 const INLET_COLORS = {
   exly: 'info', leads: 'mint', tsc: 'neutral', booked_calls: 'warning',
@@ -37,6 +40,18 @@ function formatLastSynced(date) {
   return new Date(date).toLocaleString();
 }
 
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let i = 0;
+  while (size >= 1024 && i < units.length - 1) {
+    size /= 1024;
+    i += 1;
+  }
+  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 export function DataHubContent() {
   const [activeFolder, setActiveFolder] = useState('all');
   const [tscSubFilter, setTscSubFilter] = useState(null);
@@ -52,7 +67,9 @@ export function DataHubContent() {
   const queryClient = useQueryClient();
   const { data: folderData } = useDataHubFolders();
   const reconcileMutation = useDataHubReconcile();
+  const backupMutation = useDataHubProductionBackup();
   const { data: syncStatus } = useDataHubSyncStatus();
+  const { data: backupStatus } = useDataHubBackups();
   const autoSyncInFlight = useRef(false);
   const reconcileRef = useRef(reconcileMutation);
   reconcileRef.current = reconcileMutation;
@@ -91,6 +108,8 @@ export function DataHubContent() {
   const folders = folderData?.folders || [];
   const folderCounts = folderData?.counts || {};
   const lastSyncedAt = syncStatus?.lastSyncedAt || syncStatus?.lastStats?.syncedAt;
+  const latestBackup = backupStatus?.snapshots?.[0];
+  const backupDbLabel = backupStatus?.backupDatabase || 'taskmaster_backups';
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['dataHub'] });
@@ -111,6 +130,35 @@ export function DataHubContent() {
       handleRefresh();
     } catch (err) {
       alert(err.response?.data?.error || 'Full sync failed');
+    }
+  };
+
+  const handleProductionBackup = async () => {
+    const lastLabel = latestBackup?.date
+      ? `Latest snapshot: ${latestBackup.date} (${formatBytes(latestBackup.totalBytes)}).`
+      : 'No snapshots found yet.';
+    const ok = window.confirm(
+      `Back up the full production MongoDB into Atlas GridFS (${backupDbLabel})?\n\n`
+      + `${lastLabel}\n`
+      + 'This may take 1–2 minutes. You will get a success email when done.'
+    );
+    if (!ok) return;
+
+    try {
+      const { data } = await backupMutation.mutateAsync({ notify: true });
+      const warning = data.warning ? ` ${data.warning}` : '';
+      emitSystemEvent({
+        severity: 'SUCCESS',
+        module: 'BACKUP',
+        message: `Backup ${data.date}: ${data.collectionCount} collections, ${formatBytes(data.totalBytes)} compressed.${warning}`,
+      });
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Backup failed';
+      emitSystemEvent({
+        severity: 'ERROR',
+        module: 'BACKUP',
+        message: msg,
+      });
     }
   };
 
@@ -222,9 +270,25 @@ export function DataHubContent() {
                 />
               </div>
               <div className="flex items-center gap-1 shrink-0 justify-end">
-                <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden sm:inline">
-                  {reconcileMutation.isPending ? 'Syncing…' : `Synced ${formatLastSynced(lastSyncedAt)}`}
+                <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden lg:inline">
+                  {reconcileMutation.isPending
+                    ? 'Syncing…'
+                    : `Synced ${formatLastSynced(lastSyncedAt)}`}
+                  {latestBackup?.date && !reconcileMutation.isPending && (
+                    <> · Backup {latestBackup.date}</>
+                  )}
                 </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="!px-2.5 whitespace-nowrap"
+                  onClick={handleProductionBackup}
+                  disabled={backupMutation.isPending || reconcileMutation.isPending}
+                  title={`Full production DB backup → ${backupDbLabel} (GridFS, 7-day retention)`}
+                >
+                  <Database size={14} className={backupMutation.isPending ? 'animate-pulse' : ''} />
+                  {backupMutation.isPending ? 'Backing up…' : 'DB Backup'}
+                </Button>
                 <DataHubTscImport onImported={handleRefresh} compact />
                 <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleReconcile} disabled={reconcileMutation.isPending} title="Pull new/changed records from all inlets">
                   <RefreshCw size={14} className={reconcileMutation.isPending ? 'animate-spin' : ''} />

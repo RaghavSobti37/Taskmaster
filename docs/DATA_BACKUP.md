@@ -99,7 +99,17 @@ All commands assume you are in the `server` directory and `server/.env` is confi
 cd server
 ```
 
-### Run backup manually (production cron path)
+### Run backup from Data Hub (admin UI)
+
+1. Open **Admin → Data Hub** (`/admin`).
+2. Click **DB Backup** in the toolbar (next to Sync New / Full Sync).
+3. Confirm — runs full production backup to Atlas GridFS (`taskmaster_backups` by default).
+4. Success toast + email; latest snapshot date shown in the toolbar.
+
+**API:** `POST /api/data-hub/backup` (admin only). Optional `?notify=false` to skip email.  
+**List snapshots:** `GET /api/data-hub/backups`.
+
+### Run backup manually (CLI / cron path)
 
 ```bash
 npm run backup:daily

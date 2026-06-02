@@ -8,6 +8,7 @@ const CRMAudit = require('../models/CRMAudit');
 const EMI = require('../models/EMI');
 const User = require('../models/User');
 const ContactService = require('./ContactService');
+const { buildDataHubExcludeFilter } = require('./qa/qaTestData');
 const { syncFromHolySheet } = require('./bookedCallsSyncService');
 const DataHubSyncState = require('../models/DataHubSyncState');
 const { escapeRegExp } = require('../utils/sanitizer');
@@ -90,6 +91,8 @@ const buildFolderQuery = (folder, extra = {}) => {
     default:
       break;
   }
+  q.$and = q.$and || [];
+  q.$and.push(buildDataHubExcludeFilter());
   return q;
 };
 
@@ -1026,6 +1029,10 @@ class DataHubService {
     }
     if (fixed && onProgress) onProgress(`repaired duplicate inlets on ${fixed} contacts`);
     return fixed;
+  }
+
+  clearFolderCache() {
+    folderCache = { data: null, expiresAt: 0 };
   }
 }
 

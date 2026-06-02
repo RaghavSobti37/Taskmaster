@@ -1,5 +1,7 @@
 const QATestRun = require('../models/QATestRun');
 const QATestingService = require('../services/qaTestingService');
+const { purgeQaTestData } = require('../services/qa/qaTestData');
+const DataHubService = require('../services/DataHubService');
 const logger = require('../utils/logger');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 
@@ -7,7 +9,10 @@ const { broadcastRealtimeEvent } = require('../config/realtime');
 exports.startQATesting = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { testAgentName, testRole, permissions } = req.body || {};
+    const { testAgentName, testRole, permissions, categories } = req.body || {};
+    const normalizedCategories = Array.isArray(categories)
+      ? [...new Set(categories.map((c) => String(c).trim()).filter(Boolean))]
+      : [];
 
     // Check if test already running globally
     const existingRun = await QATestRun.findOne({
@@ -22,7 +27,8 @@ exports.startQATesting = async (req, res, next) => {
     const qaService = new QATestingService(null, userId, {
       testAgentName: testAgentName || 'QA Agent',
       testRole: testRole || 'user',
-      permissions: permissions || []
+      permissions: permissions || [],
+      categories: normalizedCategories,
     });
 
     await qaService.initTestRun();
@@ -120,6 +126,11 @@ exports.getTestResults = async (req, res, next) => {
 
     // Categorize test cases by result
     const results = {
+      testRunId: testRun._id,
+      selectedCategories: testRun.selectedCategories || [],
+      startedAt: testRun.startedAt,
+      completedAt: testRun.completedAt,
+      testIdentity: testRun.testIdentity,
       totalTests: testRun.testCases.length,
       passed: testRun.testCases.filter(t => t.status === 'passed').length,
       failed: testRun.testCases.filter(t => t.status === 'failed').length,
@@ -193,6 +204,37 @@ exports.cleanupTestData = async (req, res, next) => {
     res.json({ success: true, message: 'Cleanup completed' });
   } catch (error) {
     logger.error('QA', 'Error cleaning up test data', { error: error.message });
+    next(error);
+  }
+};
+
+/** List available QA test categories for filtered runs */
+exports.listCategories = async (req, res) => {
+  const preDeploy = [
+    'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
+    'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
+    'security-hardening',
+  ];
+  const dynamic = ['backend', 'permission', 'bottleneck', 'data', 'frontend', 'mobile', 'desktop'];
+  res.json({
+    preDeploy,
+    dynamic,
+    all: [...preDeploy, ...dynamic],
+  });
+};
+
+/** Purge all QA-pattern data globally (Data Hub, CRM, logs) — no test run required */
+exports.purgeAllTestData = async (req, res, next) => {
+  try {
+    const swept = await purgeQaTestData();
+    DataHubService.clearFolderCache();
+    res.json({
+      success: true,
+      message: `Purged ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records`,
+      deleted: swept.deleted,
+    });
+  } catch (error) {
+    logger.error('QA', 'Error purging QA test data', { error: error.message });
     next(error);
   }
 };

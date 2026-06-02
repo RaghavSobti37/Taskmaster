@@ -162,6 +162,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **API:** `/api/data-hub` — folders, people search/pagination, analytics, sync status, reconcile trigger.
 * **Sync:** `DataHubService.syncAllInlets()` merges contacts from leads, Exly, TSC, booked-call webhooks, mail events, and enquiries into the unified `Contact` hub with inlet flags.
 * **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; **Full Sync** button in UI for full re-merge; **Sync New** for incremental updates.
+* **Production DB backup:** **DB Backup** on Data Hub toolbar — `POST /api/data-hub/backup` (admin). Streams prod MongoDB → Atlas GridFS `taskmaster_backups` (7-day retention). Also: `npm run backup:daily` or GitHub Actions (free cron alternative to paid Render cron). See [`docs/DATA_BACKUP.md`](docs/DATA_BACKUP.md).
 
 ### ✍️ Task Mentions & Assets
 

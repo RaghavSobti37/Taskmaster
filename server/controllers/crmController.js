@@ -922,16 +922,12 @@ exports.getRepSummary = async (req, res) => {
 
 exports.cleanupTestData = async (req, res) => {
   try {
-    const filter = {
-      $or: [
-        { name: { $regex: /test|demo|dummy|invalid|john doe/i } },
-        { email: { $regex: /test|demo|dummy|invalid|john\.doe/i } },
-        { phone: { $in: ['+917777777777', '+919999999999', '7777777777', '9999999999'] } },
-        { emailStatus: { $in: ['Invalid', 'Bounced'] } }
-      ]
-    };
-    const result = await Lead.deleteMany(filter);
-    res.json({ message: `Purged ${result.deletedCount} testing/invalid records.` });
+    const { purgeQaTestData } = require('../services/qa/qaTestData');
+    const swept = await purgeQaTestData();
+    res.json({
+      message: `Purged ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records.`,
+      deleted: swept.deleted,
+    });
   } catch (error) {
     logger.error('crmController', 'Cleanup test data ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to cleanup test data' });

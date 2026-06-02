@@ -757,6 +757,7 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 - `GET /folders`, `GET /people`, `GET /people/:id`
 - `GET /analytics`, `GET /analytics/overlap`
 - `GET /sync-status`, `POST /reconcile?full=true`, `POST /sync-booked-calls`
+- `GET /backups`, `POST /backup` — manual full prod MongoDB backup to Atlas GridFS (admin UI **DB Backup**)
 
 **UI actions:** Full Sync (complete re-merge), Sync New (incremental), TSC HolySheet import panel.
 

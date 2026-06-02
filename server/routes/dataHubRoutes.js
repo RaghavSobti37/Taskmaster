@@ -11,5 +11,7 @@ router.get('/analytics/overlap', protect, admin, dataHubController.getOverlap);
 router.get('/sync-status', protect, admin, dataHubController.getSyncStatus);
 router.post('/reconcile', protect, admin, dataHubController.reconcile);
 router.post('/sync-booked-calls', protect, admin, dataHubController.syncBookedCalls);
+router.get('/backups', protect, admin, dataHubController.listBackups);
+router.post('/backup', protect, admin, dataHubController.runProductionBackup);
 
 module.exports = router;

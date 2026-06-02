@@ -1,6 +1,10 @@
 const DataHubService = require('../services/DataHubService');
 const { syncFromHolySheet } = require('../services/bookedCallsSyncService');
+const { runDailyBackup, listAvailableBackups, getBackupDbName } = require('../services/databaseBackupService');
+const { notifyBackupResult } = require('../services/backupNotificationService');
 const logger = require('../utils/logger');
+
+let backupInProgress = false;
 
 exports.getFolders = async (req, res) => {
   try {
@@ -106,5 +110,66 @@ exports.syncBookedCalls = async (req, res) => {
   } catch (error) {
     logger.error('dataHubController', 'syncBookedCalls', { error: error.message });
     res.status(500).json({ error: 'Booked calls sync failed' });
+  }
+};
+
+exports.listBackups = async (req, res) => {
+  try {
+    const snapshots = await listAvailableBackups();
+    res.json({
+      backupDatabase: getBackupDbName(),
+      snapshots,
+    });
+  } catch (error) {
+    logger.error('dataHubController', 'listBackups', { error: error.message });
+    res.status(500).json({ error: error.message || 'Failed to list backups' });
+  }
+};
+
+exports.runProductionBackup = async (req, res) => {
+  if (backupInProgress) {
+    return res.status(409).json({ error: 'A backup is already running. Wait for it to finish.' });
+  }
+
+  const notify = req.query.notify !== 'false';
+  backupInProgress = true;
+
+  try {
+    const result = await runDailyBackup();
+
+    if (notify) {
+      try {
+        await notifyBackupResult(result);
+      } catch (emailError) {
+        logger.error('dataHubController', 'runProductionBackup notify', {
+          error: emailError.message,
+        });
+        if (result.success) {
+          return res.status(200).json({
+            ...result,
+            emailSent: false,
+            warning: `Backup saved but notification email failed: ${emailError.message}`,
+          });
+        }
+      }
+    }
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: result.error || 'Backup failed',
+        ...result,
+      });
+    }
+
+    res.json({
+      message: 'Production database backup completed',
+      emailSent: notify,
+      ...result,
+    });
+  } catch (error) {
+    logger.error('dataHubController', 'runProductionBackup', { error: error.message });
+    res.status(500).json({ error: error.message || 'Backup failed' });
+  } finally {
+    backupInProgress = false;
   }
 };

@@ -11,7 +11,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Project = require('../models/Project');
 const Lead = require('../models/Lead');
+const Contact = require('../models/Contact');
 const FinanceDocument = require('../models/FinanceDocument');
+const { purgeQaTestData } = require('./qa/qaTestData');
+const DataHubService = require('./DataHubService');
 const { buildPreDeploymentTestCases } = require('./qaPreDeploymentChecklist');
 const { buildExtendedProbeTestCases } = require('./qa/qaExtendedProbes');
 const { buildIntegrationTestCases } = require('./qa/qaIntegrationTests');
@@ -29,6 +32,12 @@ const PREDEPLOY_CATEGORIES = new Set([
   'security-hardening',
 ]);
 
+function filterTestCasesByCategories(testCases, categories) {
+  if (!categories?.length) return testCases;
+  const allowed = new Set(categories.map((c) => String(c).toLowerCase()));
+  return testCases.filter((tc) => allowed.has(String(tc.category || '').toLowerCase()));
+}
+
 class QATestingService {
   constructor(projectId, userId, config = {}) {
     this.projectId = projectId;
@@ -45,6 +54,7 @@ class QATestingService {
       projectId: this.projectId,
       initiatedBy: this.userId,
       status: 'pending',
+      selectedCategories: this.config.categories?.length ? this.config.categories : [],
       testIdentity: {
         name: this.config.testAgentName || 'QA Agent',
         role: this.config.testRole || 'user',
@@ -101,8 +111,21 @@ class QATestingService {
         pagesTestedCount: 0,
       });
 
-      const testCases = await this.getTestCases();
+      const allTestCases = await this.getTestCases();
+      const testCases = filterTestCasesByCategories(allTestCases, this.config.categories);
       this.totalTestCases = testCases.length;
+
+      if (testCases.length === 0) {
+        await QATestRun.findByIdAndUpdate(this.testRunId, {
+          status: 'error',
+          completedAt: new Date(),
+          errorDetails: {
+            phase: 'discovery',
+            message: 'No tests matched the selected categories.',
+          },
+        });
+        return;
+      }
 
       await QATestRun.findByIdAndUpdate(this.testRunId, {
         progress: {
@@ -579,10 +602,10 @@ class QATestingService {
   async cleanupTestData() {
     try {
       const testRun = await QATestRun.findById(this.testRunId);
-      const cleanupResults = { deleted: { tasks: 0, projects: 0, logs: 0, finance: 0 }, errors: [] };
+      const cleanupResults = { deleted: { tasks: 0, projects: 0, logs: 0, finance: 0, leads: 0, contacts: 0, audits: 0 }, errors: [] };
 
       // Delete created artifacts in reverse order
-      for (const artifact of (testRun.createdArtifacts || []).slice().reverse()) {
+      for (const artifact of (testRun?.createdArtifacts || []).slice().reverse()) {
         try {
           if (artifact.type === 'task') {
             await Task.findByIdAndDelete(artifact.id);
@@ -597,19 +620,33 @@ class QATestingService {
             await Project.findByIdAndDelete(artifact.id);
             cleanupResults.deleted.projects = (cleanupResults.deleted.projects || 0) + 1;
           } else if (artifact.type === 'lead') {
-            await Lead.findByIdAndDelete(artifact.id);
+            await Lead.findByIdAndDelete(artifact.id).setOptions({ bypassTenant: true });
             cleanupResults.deleted.leads = (cleanupResults.deleted.leads || 0) + 1;
+          } else if (artifact.type === 'contact') {
+            await Contact.findByIdAndDelete(artifact.id).setOptions({ bypassTenant: true });
+            cleanupResults.deleted.contacts = (cleanupResults.deleted.contacts || 0) + 1;
           }
         } catch (error) {
           cleanupResults.errors.push(`Failed to delete ${artifact.type} ${artifact.id}: ${error.message}`);
         }
       }
 
-      // Update cleanup results
-      await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });
+      // Sweep all QA-pattern leads/contacts (integration probes, sanitization tests, etc.)
+      const swept = await purgeQaTestData();
+      DataHubService.clearFolderCache();
+      cleanupResults.deleted.leads += swept.deleted.leads;
+      cleanupResults.deleted.contacts += swept.deleted.contacts;
+      cleanupResults.deleted.audits = swept.deleted.audits;
+      cleanupResults.deleted.logs += swept.deleted.logs;
+
+      if (this.testRunId) {
+        await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });
+      }
       logger.info('QA', 'Cleanup completed', cleanupResults);
+      return cleanupResults;
     } catch (error) {
       logger.error('QA', 'Error during cleanup', { error: error.message });
+      throw error;
     }
   }
 

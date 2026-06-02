@@ -61,7 +61,7 @@ export default function PipelineSummaryCard() {
               </span>
               <div className="flex items-center gap-4">
                 <span className="text-[var(--color-text-secondary)]">{stage.value.toLocaleString()}</span>
-                <span className="text-right w-10 text-[var(--color-text-muted)] font-black">{stage.pct}%</span>
+                <span className="text-right text-[var(--color-text-muted)] font-black" title="% of total leads">{stage.pct}% of total</span>
               </div>
             </div>
             <div className="h-4 w-full bg-[var(--color-bg-secondary)] rounded-full overflow-hidden border border-[var(--color-bg-border)] relative">

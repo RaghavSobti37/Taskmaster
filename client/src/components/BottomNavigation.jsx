@@ -11,7 +11,7 @@ const BottomNavigation = () => {
   const { data: statusCounts = { notifications: { unread: 0 } } } = useStatusCounts(!!user);
 
   const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/projects', icon: Briefcase, label: 'Projects' },
     { to: '/inbox', icon: Inbox, label: 'Inbox', badge: statusCounts.notifications?.unread },
   ];

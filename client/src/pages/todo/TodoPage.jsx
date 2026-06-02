@@ -7,6 +7,7 @@ import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPriorityBadgeVariant } from '../../constants/taskOptions';
+import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { formatDueDate } from '../../utils/formatDueDate';
@@ -149,8 +150,9 @@ const TodoPage = () => {
           <button
             type="button"
             onClick={() => (isDone || isInReview ? null : handleCompleteRequest(task))}
-            className={isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
-            title={isInReview ? 'Awaiting reviewer approval' : undefined}
+            disabled={isInReview}
+            className={isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500 opacity-60 cursor-not-allowed' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
+            title={isInReview ? 'Awaiting reviewer approval' : isDone ? 'Completed' : 'Mark complete'}
           >
             {isDone ? <CheckCircle2 size={18} /> : <Circle size={18} />}
           </button>
@@ -167,8 +169,8 @@ const TodoPage = () => {
         </td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase truncate max-w-[120px]">{project || '—'}</td>
-        <td className="px-4 py-2"><Badge variant="todo">{task?.status}</Badge></td>
-        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{task?.priority}</Badge></td>
+        <td className="px-4 py-2"><Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge></td>
+        <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge></td>
         <td className="px-4 py-2 text-xs">{formatDueDate(task.dueDate || task.scheduleDate)}</td>
       </tr>
     );

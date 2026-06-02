@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.49-126d5e?style=flat-square" alt="Version 1.7.49" />
+  <img src="https://img.shields.io/badge/version-1.7.50-126d5e?style=flat-square" alt="Version 1.7.50" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -231,6 +231,7 @@ CoreKnot/
 │       │   └── forms/          # TaskFormFields, WorkspaceSelect, etc.
 │       ├── pages/              # Routed view targets (Dashboard, Inbox, Todo, CRM)
 │       ├── hooks/              # Isolated React Query abstractions & hardware listeners
+│       ├── utils/              # displayLabels, dateValidation, devEnvGuard, mail helpers
 │       ├── contexts/           # Global State Hubs (Auth, Theme, Socket, Toasts)
 │       └── sw.js               # Service Worker utilizing injectManifest compilation
 ├── server/                     # Backend API Application Root
@@ -435,7 +436,9 @@ CoreKnot ships a **209-case** pre-deployment QA engine (Admin → QA Testing) th
 | **Integration (45)** | End-to-end business logic | Task review → XP, lead lock 423, Data Hub reconcile, unsubscribe dual-write |
 | **Page scans** | Every `client/src/pages` route | Optional chaining, `useCallback` heuristics, endpoint exposure |
 
-**Operator UX (`QATestingPage.jsx`):** Live probe panel (method, URL, payload), grouped failure copy, checklist progress, and realtime Socket.IO updates.
+**Operator UX (`QATestingPage.jsx`):** Live probe panel (method, URL, payload), grouped failure copy, checklist progress, realtime Socket.IO updates, and **Purge QA Test Data** with confirm dialog.
+
+**Purge QA Test Data:** Admin → QA Testing removes probe CRM rows (`qa-*@example.com`, names starting with `QA `), probe user accounts (e.g. QA Login Probe), probe tasks (QA Proto, XSS titles, `[QA BUG]`, Backdated QA), related task assignments/logs, and QA audit logs — without touching production data outside those patterns (`server/services/qa/qaTestData.js`).
 
 **CLI runners:**
 
@@ -468,6 +471,17 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.7.50 — UX Clarity Remediation & QA Purge Extension
+
+- **Shared labels:** `client/src/utils/displayLabels.js` — humanized task status/priority, inbox categories, timeframe labels, timestamps with timezone.
+- **Dashboard & campaigns:** Fixed `totalOpened` metric; removed misleading empty chart; honest activity-stream copy; engagement rate rename; toast-based confirmations (no blocking alerts) in campaign and admin mail surfaces.
+- **CRM / Data Hub / Inbox / Todo:** Column and filter labels clarified; sync error handling; human status text; DataTable empty-state props; Review Queue “Assigned by” copy.
+- **Attendance / schedule / projects:** Geo toasts, team matrix legend, reset confirm, schedule PageHeader, progress tooltips.
+- **Settings / finance / admin:** Labeled date filters, delete confirms with filenames, inline validation, settings deep-link tabs, mobile-visible actions.
+- **QA purge:** `purgeQaUsers()` + `purgeQaTasks()` in `qaTestData.js` — deletes probe users, XSS/QA probe tasks, assignments, related logs, and adjusts project task counts; UI invalidates tasks/projects/user caches after purge.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.7.49 — Attendance Office Detection Fix
 

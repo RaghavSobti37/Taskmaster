@@ -69,11 +69,13 @@ const Dashboard = () => {
           checkIn.mutate({ type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime }, { onSettled: () => setIsLocating(false) });
         },
         (error) => {
-          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) }); // Fallback
+          addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
+          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     } else {
+      addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
       checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
     }
   };

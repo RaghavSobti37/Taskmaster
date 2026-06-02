@@ -638,6 +638,8 @@ class QATestingService {
       cleanupResults.deleted.contacts += swept.deleted.contacts;
       cleanupResults.deleted.audits = swept.deleted.audits;
       cleanupResults.deleted.logs += swept.deleted.logs;
+      cleanupResults.deleted.users = swept.deleted.users;
+      cleanupResults.deleted.tasks = swept.deleted.tasks;
 
       if (this.testRunId) {
         await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });

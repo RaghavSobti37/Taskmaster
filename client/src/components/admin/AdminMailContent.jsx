@@ -18,6 +18,7 @@ import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
 import axios from 'axios';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
 import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
 import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, countSignatureBlocks, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
 import {
@@ -28,6 +29,7 @@ import {
 
 export default function AdminMailContent({ initialMode = null, hideModeBar = false, standaloneWizard = false } = {}) {
   const { confirm } = useConfirm();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,7 +54,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [exlyContactsLoading, setExlyContactsLoading] = useState(false);
   const [templateVariables, setTemplateVariables] = useState({});
   const [showVariableWarning, setShowVariableWarning] = useState(false);
-  const [testCampaignEmail, setTestCampaignEmail] = useState('redacted@example.com');
+  const [testCampaignEmail, setTestCampaignEmail] = useState('');
   const [showHtmlPasteModal, setShowHtmlPasteModal] = useState(false);
   const [htmlPasteText, setHtmlPasteText] = useState('');
   const [isCustomHtml, setIsCustomHtml] = useState(false);
@@ -66,7 +68,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const leads = res.data?.leads || res.data || [];
       setAllContacts(leads.filter(l => l.email && !l.exlyOfferings));
     } catch (e) {
-      alert('Failed to load CRM Contacts: ' + e.message);
+      toast.error('Failed to load CRM Contacts: ' + e.message);
     }
     setContactsLoading(false);
   };
@@ -78,7 +80,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const leads = res.data?.leads || res.data || [];
       setAllExlyContacts(leads.filter(l => l.email && l.exlyOfferings && Array.isArray(l.exlyOfferings)));
     } catch (e) {
-      alert('Failed to load Exly Contacts: ' + e.message);
+      toast.error('Failed to load Exly Contacts: ' + e.message);
     }
     setExlyContactsLoading(false);
   };
@@ -599,7 +601,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const nameIdx = header.findIndex(h => h.includes('name'));
 
       if (emailIdx === -1) {
-        alert('Could not detect "email" column in CSV header.');
+        toast.warn('Could not detect "email" column in CSV header.');
         return;
       }
 
@@ -625,7 +627,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
         return [...filtered, ...parsed];
       });
       if (skipped > 0) {
-        alert(`CSV loaded ${parsed.length} valid recipient(s). Skipped ${skipped} invalid email(s).`);
+        toast.success(`CSV loaded ${parsed.length} valid recipient(s). Skipped ${skipped} invalid email(s).`);
       }
     };
     reader.readAsText(file);
@@ -634,13 +636,13 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const handleCreateProfile = async (e) => {
     e.preventDefault();
     if (!newProfile.name || !newProfile.email) {
-      alert('Fill in profile name and From email.');
+      toast.warn('Fill in profile name and From email.');
       return;
     }
     const hasPrimary = newProfile.smtpUser && newProfile.smtpPass;
     const hasExtra = Object.values(providerCredentials).some((c) => c.enabled && c.smtpPass);
     if (!hasPrimary && !hasExtra) {
-      alert('Add primary SMTP credentials (Gmail etc.) or enable at least one additional provider with its key.');
+      toast.warn('Add primary SMTP credentials (Gmail etc.) or enable at least one additional provider with its key.');
       return;
     }
     const payload = { ...newProfile, rotationEnabled: true, providerCredentials };
@@ -670,6 +672,13 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const activeCsvRecipients = useMemo(() => {
     return csvRecipients.filter(r => !excludedSources.includes(r.source) && !excludedEmails.includes(r.email));
   }, [csvRecipients, excludedSources, excludedEmails]);
+
+  const holySheetSourceTabs = useMemo(
+    () => Array.from(new Set(csvRecipients.map((r) => r.source))),
+    [csvRecipients]
+  );
+  const allHolySheetTabsExcluded =
+    holySheetSourceTabs.length > 0 && holySheetSourceTabs.every((s) => excludedSources.includes(s));
 
   const fetchHolySheetData = async () => {
     setLoadingHolySheet(true);
@@ -701,9 +710,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       const holySheetSources = Array.from(new Set(newRecs.map((r) => r.source).filter(Boolean)));
       setExcludedSources((prev) => [...new Set([...prev, ...holySheetSources])]);
       const skipNote = skipped > 0 ? ` Skipped ${skipped} invalid email(s).` : '';
-      alert(`Loaded ${newRecs.length} recipients from HolySheet (${holySheetSources.length} tabs — all deselected by default).${skipNote}`);
+      toast.success(`Loaded ${newRecs.length} recipients from HolySheet (${holySheetSources.length} tabs — all deselected by default). Select tabs to include.${skipNote}`);
     } catch (e) {
-      alert('Failed to load HolySheet: ' + (e.response?.data?.error || e.message));
+      toast.error('Failed to load HolySheet: ' + (e.response?.data?.error || e.message));
     }
     setLoadingHolySheet(false);
   };
@@ -729,7 +738,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
         const uploaded = await uploadAttachmentMutation.mutateAsync(file);
         setAttachments(prev => [...prev, uploaded]);
       } catch (err) {
-        alert(`Failed to upload ${file.name}: ${err.response?.data?.error || err.message}`);
+        toast.error(`Failed to upload ${file.name}: ${err.response?.data?.error || err.message}`);
       }
     }
     e.target.value = '';
@@ -737,11 +746,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
   const handleCreateCampaign = async () => {
     if (!title || !subject || !content || !isSenderConfigured()) {
-      alert('Please complete campaign title, subject, content, and configure a sender.');
+      toast.warn('Please complete campaign title, subject, content, and configure a sender.');
       return;
     }
     if (selectedLeadIds.length === 0 && activeCsvRecipients.length === 0) {
-      alert('Please select CRM leads or upload a recipient CSV.');
+      toast.warn('Please select CRM leads or upload a recipient CSV.');
       return;
     }
 
@@ -758,7 +767,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       if (!proceed) return;
     }
     if (mergedRecipients.length === 0) {
-      alert('No valid email recipients after filtering. Check CRM/CSV/HolySheet data.');
+      toast.warn('No valid email recipients after filtering. Check CRM/CSV/HolySheet data.');
       return;
     }
 
@@ -791,7 +800,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
     const payloadSize = estimateJsonBytes(payload);
     if (payloadSize > PAYLOAD_SAFE_BYTES) {
-      alert(`Campaign payload too large (${(payloadSize / 1024 / 1024).toFixed(1)}MB). Remove inline base64 images or reduce HTML size.`);
+      toast.error(`Campaign payload too large (${(payloadSize / 1024 / 1024).toFixed(1)}MB). Remove inline base64 images or reduce HTML size.`);
       return;
     }
     if ((processedContent.match(/data:image/gi) || []).length > 3) {
@@ -800,6 +809,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     }
 
     await createCampaignMutation.mutateAsync(payload);
+
+    toast.success('Draft saved — open the campaign list and click Dispatch Now to send.');
 
     try {
       await saveTemplateMutation.mutateAsync({
@@ -961,9 +972,10 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <Button
               variant="secondary"
               size="sm"
+              title="Scan the first SMTP profile inbox for bounce messages"
               onClick={() => {
                 if (profiles.length === 0) {
-                  alert('Please configure an SMTP Profile first');
+                  toast.warn('Please configure an SMTP Profile first');
                   return;
                 }
                 scanBouncesMutation.mutate(profiles[0]?._id);
@@ -981,13 +993,14 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <StatCard label="Total Campaigns" value={stats?.totalCampaigns || campaigns.length} icon={Mail} variant="info" />
           <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
-          <StatCard label="Bounced / Failed" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" />
+          <StatCard label="Delivery failures" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" info="Combined bounced, failed, and invalid delivery attempts across all campaigns." />
           <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
           <StatCard
             label="Unsubscribed"
             value={stats?.totalUnsubscribed || 0}
             icon={UserMinus}
             variant="warning"
+            subValue="View unsubscribe list ↗"
             onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
           />
         </div>
@@ -1058,11 +1071,14 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   onChange={e => setSenderMode(e.target.value)}
                   className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
                 >
-                  <option value="single">Single Profile (auto-rotates SMTP servers)</option>
-                  <option value="pool">Rotate SMTP Pool (multi-profile)</option>
+                  <option value="single">Single profile — one sender, rotates its SMTP providers</option>
+                  <option value="pool">SMTP pool — round-robin across multiple profiles</option>
                   <option value="system_resend">System Resend (API key)</option>
                   <option value="system_smtp">System SMTP (env vars)</option>
                 </select>
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  Single profile uses one From identity and rotates providers on that profile. Pool mode alternates between different profiles.
+                </p>
               </div>
               {senderMode === 'single' && (
                 <div className="space-y-2">
@@ -1182,6 +1198,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {allHolySheetTabsExcluded && (
+                      <div className="p-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+                        <strong>{csvRecipients.length} recipients loaded</strong> — all HolySheet tabs are deselected. Select tabs below to include them in this campaign.
+                      </div>
+                    )}
                     {/* Tab Selection Chips */}
                     <div className="flex flex-wrap gap-2">
                       {Array.from(new Set(csvRecipients.map(r => r.source))).map(src => {
@@ -1456,7 +1477,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     const name = window.prompt('Enter a name for this template:');
                     if (name) {
                       saveTemplateMutation.mutate({ name, ...getTemplateSavePayload(content) });
-                      alert('Template Saved!');
+                      toast.success('Template saved');
                     }
                   }}>
                     <Save size={12} /> Save
@@ -1548,7 +1569,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       </select>
                     )}
                     <span className="w-full sm:w-auto text-[9px] text-[var(--color-text-muted)]">
-                      Uncheck to remove blocks; CoreKnot markers in HTML.
+                      When checked, the app injects signature and unsubscribe blocks into your HTML.
                     </span>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1556,7 +1577,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       className="w-full h-[400px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
                       value={content}
                       onChange={e => handleRawHtmlChange(e.target.value)}
-                      placeholder="Paste or edit raw HTML. Signature and unsubscribe use CoreKnot comment markers when included."
+                      placeholder="Paste or edit raw HTML. When signature/unsubscribe are checked, the app injects those blocks automatically."
                     />
 
 
@@ -1622,11 +1643,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     variant="secondary"
                     onClick={async () => {
                       if (!testCampaignEmail) {
-                        alert('Enter test email');
+                        toast.warn('Enter test email');
                         return;
                       }
                       if (senderMode === 'single' && !senderProfileId) {
-                        alert('Select a sender profile, or switch to System Resend / System SMTP in Step 1.');
+                        toast.warn('Select a sender profile, or switch to System Resend / System SMTP in Step 1.');
                         return;
                       }
                       try {
@@ -1639,9 +1660,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                           senderMode,
                           includeSignature
                         });
-                        alert(`Test email sent to ${testCampaignEmail}`);
+                        toast.success(`Test email sent to ${testCampaignEmail}`);
                       } catch (e) {
-                        alert('Failed to send test: ' + (e.response?.data?.error || e.message));
+                        toast.error('Failed to send test: ' + (e.response?.data?.error || e.message));
                       }
                     }}
                   >
@@ -1725,7 +1746,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 }}
                 disabled={createCampaignMutation.isPending || (!title || !subject || !content || !isSenderConfigured() || (selectedLeadIds.length === 0 && activeCsvRecipients.length === 0))}
               >
-                <Play size={14} /> Save & Create Campaign
+                <Play size={14} /> Save as Draft
               </Button>
             )}
           </div>
@@ -1947,7 +1968,15 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                         size="sm"
                         variant="ghost"
                         className="text-rose-500 hover:bg-rose-500/10"
-                        onClick={() => deleteProfileMutation.mutate(p._id)}
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Delete SMTP profile?',
+                            message: `Remove "${p.name}"? Campaigns using this profile may fail to resend.`,
+                            confirmLabel: 'Delete',
+                            type: 'danger',
+                          });
+                          if (ok) deleteProfileMutation.mutate(p._id);
+                        }}
                         disabled={deleteProfileMutation.isPending}
                       >
                         <Trash2 size={14} />
@@ -2030,7 +2059,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       onClick={async () => {
                         const ok = await confirm({
                           title: 'Delete template?',
-                          message: 'Delete this template?',
+                          message: `Permanently remove "${t.name}"? Existing campaigns are not affected.`,
                           confirmLabel: 'Delete',
                           type: 'danger',
                         });
@@ -2056,7 +2085,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
       {/* Mode: CSV Import */}
       {mode === 'csv_import' && (
-        <CsvImporter onImportComplete={() => { alert('Import complete!'); queryClient.invalidateQueries({ queryKey: ['leads'] }); }} />
+        <CsvImporter onImportComplete={() => { toast.success('Import complete!'); queryClient.invalidateQueries({ queryKey: ['leads'] }); }} />
       )}
 
       {/* Mode: Cumulative Analytics */}
@@ -2074,8 +2103,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                     <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Sent</th>
                     <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Opens</th>
                     <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Total Clicks</th>
-                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Open Rate</th>
-                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">CTR</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Open rate (% of sent)</th>
+                    <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">CTR (% of sent)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-bg-border)]">
@@ -2101,8 +2130,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
           <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-              <Users size={14} /> Engaged Lead Distribution (By Location)
+              <Users size={14} /> Leads by CRM location (engaged emails)
             </h3>
+            <p className="text-[10px] text-[var(--color-text-muted)]">Uses CRM location on leads with sent, opened, or clicked mail — not open-tracking geo.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(cumulativeAnalytics?.dynamicBreakdown || []).map((item, idx) => (
                 <div

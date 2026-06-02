@@ -315,7 +315,10 @@ export const DataTable = ({
   currentPage: customCurrentPage,
   onPageChange,
   onPageSizeChange,
-  pageSize: customPageSize
+  pageSize: customPageSize,
+  emptyTitle = 'No results',
+  emptyDescription = 'Nothing matches your filters yet.',
+  isLoading = false,
 }) => {
   const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [localPageSize, setLocalPageSize] = useState(defaultPageSize);
@@ -338,6 +341,7 @@ export const DataTable = ({
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = serverSide ? Math.min(startIndex + data.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
   const paginatedData = paginated && !serverSide ? data.slice(startIndex, endIndex) : data;
+  const showEmpty = !isLoading && paginatedData.length === 0;
 
   const parentRef = useRef();
 
@@ -363,6 +367,17 @@ export const DataTable = ({
             </tr>
           </thead>
           <tbody>
+            {showEmpty ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
+                  {emptyDescription && (
+                    <p className="mt-2 text-xs text-[var(--color-text-secondary)] max-w-sm mx-auto">{emptyDescription}</p>
+                  )}
+                </td>
+              </tr>
+            ) : (
+              <>
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} />
             )}
@@ -391,12 +406,19 @@ export const DataTable = ({
             {rowVirtualizer.getVirtualItems().length > 0 && (
               <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} />
             )}
+              </>
+            )}
           </tbody>
         </table>
 
         {/* Mobile Responsive Card Stack */}
         <div className="grid grid-cols-1 gap-3 p-3 sm:hidden">
-          {paginatedData.map((row, i) => (
+          {showEmpty ? (
+            <div className="px-4 py-12 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
+              {emptyDescription && <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{emptyDescription}</p>}
+            </div>
+          ) : paginatedData.map((row, i) => (
             <div
               key={i}
               data-highlight-id={getRowId?.(row) || undefined}

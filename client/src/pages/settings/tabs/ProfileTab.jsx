@@ -28,6 +28,7 @@ export default function ProfileTab() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Cartoons');
@@ -66,12 +67,17 @@ export default function ProfileTab() {
   }, [user]);
 
   const handleUpdateProfile = async () => {
+    setPasswordError('');
     if (newPassword && !password) {
-      return alert('Enter your current password to set a new password.');
+      setPasswordError('Enter your current password to set a new password.');
+      return;
     }
     if (password && newPassword) {
       const error = validatePasswordStrength(newPassword);
-      if (error) return alert(error);
+      if (error) {
+        setPasswordError(error);
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -163,6 +169,9 @@ export default function ProfileTab() {
              <div className="p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                <PasswordRequirements password={newPassword} />
              </div>
+             {passwordError && (
+               <p className="text-xs text-rose-500 font-medium">{passwordError}</p>
+             )}
           </div>
         </div>
       </Card>

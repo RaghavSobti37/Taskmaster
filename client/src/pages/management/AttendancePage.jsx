@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input } from '../../components/ui';
 import {
   useAttendance,
   useUpsertAttendance,
@@ -128,6 +128,7 @@ const AttendancePage = () => {
   const [editInCell, setEditInCell] = useState(null);
   const [editOutCell, setEditOutCell] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const [showTeamOverview, setShowTeamOverview] = useState(() => (
@@ -295,11 +296,13 @@ const AttendancePage = () => {
           checkIn.mutate({ type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime }, { onSettled: () => setIsLocating(false) });
         },
         (error) => {
-          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) }); // Fallback
+          addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
+          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     } else {
+      addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
       checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
     }
   };
@@ -372,6 +375,14 @@ const AttendancePage = () => {
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/90 border border-emerald-600/60" /> Present</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400/80 border border-amber-500/50" /> Half Day</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-violet-bg)] border border-[var(--color-pastel-violet-text)]/40" /> Holiday</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-rose-bg)] border border-[var(--color-pastel-rose-text)]/40" /> Leave</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" /> No input</span>
           </div>
 
           {viewMode === VIEW_MODES.MONTH ? (
@@ -475,13 +486,21 @@ const AttendancePage = () => {
         )}
       </NexusModal>
 
-      <NexusModal isOpen={showResetConfirm} onClose={() => setShowResetConfirm(false)} title="Reset All Attendance" showFooter={false} size="md">
+      <NexusModal isOpen={showResetConfirm} onClose={() => { setShowResetConfirm(false); setResetConfirmText(''); }} title="Reset All Attendance" showFooter={false} size="md">
         <div className="space-y-4">
-          <p className="text-sm text-[var(--color-text-muted)]">This permanently deletes all records.</p>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            This permanently deletes <strong>all attendance records for all users</strong> across all dates. This cannot be undone.
+          </p>
+          <Input
+            label="Type RESET to confirm"
+            value={resetConfirmText}
+            onChange={(e) => setResetConfirmText(e.target.value)}
+            placeholder="RESET"
+          />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => {
-              resetAttendance.mutate(undefined, { onSuccess: () => setShowResetConfirm(false) });
+            <Button variant="ghost" onClick={() => { setShowResetConfirm(false); setResetConfirmText(''); }}>Cancel</Button>
+            <Button variant="danger" disabled={resetConfirmText !== 'RESET'} onClick={() => {
+              resetAttendance.mutate(undefined, { onSuccess: () => { setShowResetConfirm(false); setResetConfirmText(''); } });
             }}>Confirm Reset</Button>
           </div>
         </div>

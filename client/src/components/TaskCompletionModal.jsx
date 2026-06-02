@@ -4,15 +4,25 @@ import MentionTitle from './mentions/MentionTitle';
 
 const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview = false }) => {
   const [hours, setHours] = useState(1);
+  const [hoursError, setHoursError] = useState('');
 
   useEffect(() => {
-    if (isOpen) setHours(1);
+    if (isOpen) {
+      setHours(1);
+      setHoursError('');
+    }
   }, [isOpen]);
 
   if (!task) return null;
 
+  const parsedHours = Number(hours);
+  const isValidHours = Number.isFinite(parsedHours) && parsedHours >= 0.5;
+
   const handleMarkDone = () => {
-    const parsedHours = Number(hours);
+    if (!isValidHours) {
+      setHoursError('Enter at least 0.5 hours.');
+      return;
+    }
     onSubmit(task, parsedHours);
     onClose();
   };
@@ -36,10 +46,11 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
               min="0.5"
               step="0.5"
               value={hours}
-              onChange={(e) => setHours(e.target.value)}
+              onChange={(e) => { setHours(e.target.value); setHoursError(''); }}
               className="w-full text-lg font-bold text-[var(--color-action-primary)]"
               autoFocus
             />
+            {hoursError && <p className="text-xs text-rose-500 mt-1">{hoursError}</p>}
             <p className="text-xs text-[var(--color-text-muted)] mt-2">
               {submitForReview
                 ? 'This sends the task for approval. Time is logged to your daily logs.'
@@ -49,7 +60,7 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
         </ModalBody>
         <ModalFooter className="flex-shrink-0 flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleMarkDone} className="flex-1">
+          <Button onClick={handleMarkDone} className="flex-1" disabled={!isValidHours}>
             {actionLabel}
           </Button>
         </ModalFooter>

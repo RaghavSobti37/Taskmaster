@@ -58,7 +58,7 @@ const ReviewTaskRow = ({
           </span>
           <span className="text-amber-600/80">·</span>
           <span className="text-amber-700 dark:text-amber-400">
-            Reviewer: {displayPersonName(assigner, 'Assigner')}
+            Assigned by: {displayPersonName(assigner, 'Unknown')}
           </span>
         </div>
         <Button

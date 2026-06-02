@@ -21,15 +21,8 @@ import InvoiceTab from './tabs/InvoiceTab';
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { confirm } = useConfirm();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('Profile');
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab?.toLowerCase() === 'profile') {
-      setActiveTab('Profile');
-    }
-  }, [searchParams]);
 
   const tabs = [
     { id: 'Profile', icon: User, label: 'Profile' },
@@ -40,6 +33,18 @@ const SettingsPage = () => {
     { id: 'Leave', icon: CalendarDays, label: 'Apply for Leave' },
     { id: 'Invoice', icon: Receipt, label: 'Raise Invoice' },
   ];
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (!tab) return;
+    const match = tabs.find((t) => t.id.toLowerCase() === tab.toLowerCase());
+    if (match) setActiveTab(match.id);
+  }, [searchParams]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId.toLowerCase() });
+  };
 
   const handleSignOut = async () => {
     const ok = await confirm({
@@ -81,7 +86,7 @@ const SettingsPage = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${activeTab === tab.id ? 'bg-blue-500/10 text-blue-500' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]'}`}
             >
               <tab.icon size={16} className="shrink-0" />

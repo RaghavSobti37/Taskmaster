@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
 import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -29,6 +30,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 export default function LeadsPage() {
   const { user } = useAuth();
   const { confirm } = useConfirm();
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
@@ -191,7 +193,7 @@ export default function LeadsPage() {
 
 
 
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, done, error
 
   const handleSyncBookedCalls = async () => {
     setSyncStatus('syncing');
@@ -203,8 +205,9 @@ export default function LeadsPage() {
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'followups'] });
     } catch (err) {
-      setSyncStatus('done');
-      setTimeout(() => setSyncStatus('idle'), 2000);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+      toast.error(err.response?.data?.error || err.message || 'Sync failed');
     }
   };
 
@@ -255,7 +258,7 @@ export default function LeadsPage() {
             )}
             {row.nextFollowupDate && (
               <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full font-bold uppercase flex items-center gap-1">
-                <Clock size={10} /> {row?.nextFollowupDate}
+                <Clock size={10} /> {row?.nextFollowupDate}{row?.nextFollowupTime ? ` ${row.nextFollowupTime}` : ''}
               </span>
             )}
           </div>
@@ -306,7 +309,7 @@ export default function LeadsPage() {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="mint" size="sm" onClick={handleSyncBookedCalls} disabled={syncStatus === 'syncing'}>
-              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : 'Sync Booked Calls'}
+              <Zap size={14} /> {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'done' ? 'Done' : syncStatus === 'error' ? 'Sync failed' : 'Sync Booked Calls'}
             </Button>
 
             <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
@@ -416,7 +419,15 @@ export default function LeadsPage() {
             </div>
             <div className="w-56">
               <NexusDropdown
-                placeholder="Sort By"
+                label={`Sort: ${
+                  sortField === 'createdAt' && sortOrder === 'desc' ? 'Newest first'
+                  : sortField === 'createdAt' && sortOrder === 'asc' ? 'Oldest first'
+                  : sortField === 'leadQuality' ? 'Quality (high–low)'
+                  : sortField === 'nextFollowupDate' ? 'Follow-up (earliest)'
+                  : sortField === 'name' ? 'Name (A–Z)'
+                  : 'Custom'
+                }`}
+                placeholder="Sort by"
                 options={[
                   { value: 'createdAt-desc', label: 'Newest First' },
                   { value: 'createdAt-asc', label: 'Oldest First' },

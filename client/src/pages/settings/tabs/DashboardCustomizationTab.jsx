@@ -515,7 +515,7 @@ export default function DashboardCustomizationTab() {
                     >
                       <div className="flex items-start justify-between w-full mb-2">
                         <span className="font-bold text-sm md:text-base text-[var(--color-text-primary)] tracking-tight capitalize">
-                          {el.componentId.replace(/-/g, ' ')}
+                          {COMPONENT_REGISTRY[el.componentId]?.label || el.componentId.replace(/-/g, ' ')}
                         </span>
                         <div className="flex items-center gap-1">
                           <GripVertical size={16} className="text-[var(--color-text-muted)]" />
@@ -542,7 +542,7 @@ export default function DashboardCustomizationTab() {
                 >
                   <div className="flex items-start justify-between w-full mb-2">
                     <span className="font-bold text-sm md:text-base text-[var(--color-text-primary)] tracking-tight capitalize">
-                      {el.componentId.replace(/-/g, ' ')}
+                      {COMPONENT_REGISTRY[el.componentId]?.label || el.componentId.replace(/-/g, ' ')}
                     </span>
                     <div className="flex items-center gap-1">
                       <button onClick={(e) => toggleVisibility(el.componentId, e)}

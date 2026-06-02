@@ -5,6 +5,7 @@ import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, Shie
 import { PageContainer, PageHeader, Card, Button, Badge } from '../../components/ui';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
 
 const PREDEPLOY_CATEGORIES = new Set([
@@ -225,6 +226,7 @@ function LiveProbePanel({ currentRun }) {
 
 const QATestingPage = () => {
   const { success: toastSuccess, error: toastError } = useSystemToast();
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(QA_AGENTS[0]);
@@ -313,6 +315,9 @@ const QATestingPage = () => {
       queryClient.invalidateQueries(['qa-history']);
       queryClient.invalidateQueries(['qa-results']);
       queryClient.invalidateQueries({ queryKey: ['dataHub'] });
+      queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toastSuccess(data.message || 'QA test data purged', { module: MODULE.SYSTEM });
     },
     onError: (err) => {
@@ -782,7 +787,15 @@ const QATestingPage = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => cleanupMutation.mutate()}
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Purge QA test data?',
+                  message: 'Removes QA probe tasks (QA Proto, XSS probes, [QA BUG], etc.), probe user accounts, CRM/Data Hub records, and related logs. Production data outside QA patterns is not affected.',
+                  confirmLabel: 'Purge',
+                  type: 'danger',
+                });
+                if (ok) cleanupMutation.mutate();
+              }}
               disabled={cleanupMutation.isPending || isRunning}
               className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 gap-2"
             >

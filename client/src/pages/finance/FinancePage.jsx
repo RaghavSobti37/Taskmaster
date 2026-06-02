@@ -599,17 +599,20 @@ const FinancePage = () => {
         {/* Date Filters */}
         <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-3 py-1">
           <Calendar size={14} className="text-[var(--color-text-muted)]" />
+          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] whitespace-nowrap">From</label>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            aria-label="Document date from"
             className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
           />
-          <span className="text-[var(--color-text-muted)] text-[10px]">to</span>
+          <span className="text-[var(--color-text-muted)] text-[10px]">To</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            aria-label="Document date to"
             className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
           />
           {(startDate || endDate) && (
@@ -695,7 +698,7 @@ const FinancePage = () => {
                         </td>
                         <td colSpan={3} className="px-4 py-3" />
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
                               onClick={(e) => handleDeleteFolder(e, doc)}
@@ -771,7 +774,7 @@ const FinancePage = () => {
                           {formatDocDate(doc)}
                         </td>
                         <td className="px-4 py-2">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity justify-end">
                             <button
                               onClick={(e) => { e.stopPropagation(); setSelectedDoc(doc); }}
                               className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-[var(--color-text-secondary)] transition-colors"
@@ -792,7 +795,7 @@ const FinancePage = () => {
                                 e.stopPropagation();
                                 const ok = await confirm({
                                   title: 'Delete document?',
-                                  message: 'Delete document?',
+                                  message: `Delete "${doc.title || doc.fileName || 'this document'}"? This cannot be undone.`,
                                   confirmLabel: 'Delete',
                                   type: 'danger',
                                 });
@@ -980,7 +983,7 @@ const FinancePage = () => {
                       onClick={async () => {
                         const ok = await confirm({
                           title: 'Delete document?',
-                          message: 'Are you sure you want to delete this document?',
+                          message: `Delete "${selectedDoc.title || selectedDoc.fileName || 'this document'}"? This cannot be undone.`,
                           confirmLabel: 'Delete',
                           type: 'danger',
                         });

@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
-import { Card, TimeframeFilter } from '../ui';
+import { Card, TimeframeFilter, InfoButton } from '../ui';
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
 import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
+import { formatTimeframeLabel } from '../../utils/displayLabels';
 
 const formatBarMetric = (value, _name, item) => {
   const metric = item?.payload?.label || 'Count';
@@ -38,7 +39,7 @@ export default function GenericDashboardCard({ componentId }) {
         type: 'bar',
         chartData: [
           { label: 'Sent', value: mailStats.totalSent || 0 },
-          { label: 'Opens', value: mailStats.totalOpens || 0 },
+          { label: 'Opens', value: mailStats.totalOpened || 0 },
           { label: 'Clicks', value: mailStats.totalClicks || 0 }
         ],
         tooltipFormatter: formatBarMetric,
@@ -106,10 +107,13 @@ export default function GenericDashboardCard({ componentId }) {
       <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between w-full shrink-0">
         <h4 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2 uppercase tracking-wider mb-0">
           <span className="text-[16px]">{meta?.icon || '📊'}</span> {meta?.label || componentId}
+          {componentId === 'dept-stats' && <InfoButton text="Bars use different units: Tasks = completion %, Converted = lead count, Focus = hours logged." />}
         </h4>
-        <div className="flex items-center gap-2">
-          <TimeframeFilter value={timeframe} onChange={setTimeframe} />
-        </div>
+        {componentId !== 'campaign-metrics' && (
+          <div className="flex items-center gap-2">
+            <TimeframeFilter value={timeframe} onChange={setTimeframe} />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 p-0 flex flex-col items-center justify-center relative" style={{ minHeight: 200, height: 200 }}>
@@ -125,7 +129,7 @@ export default function GenericDashboardCard({ componentId }) {
               <div className="h-2 w-1/2 bg-[var(--color-text-muted)] rounded-full mx-auto animate-pulse" style={{ animationDelay: '300ms' }}></div>
             </div>
             <p className="text-xs text-[var(--color-text-secondary)] italic">
-              No data to display for the last {timeframe}
+              No data to display for the last {formatTimeframeLabel(timeframe)}
             </p>
           </div>
         ) : (

@@ -230,7 +230,7 @@ exports.purgeAllTestData = async (req, res, next) => {
     DataHubService.clearFolderCache();
     res.json({
       success: true,
-      message: `Purged ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records`,
+      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records`,
       deleted: swept.deleted,
     });
   } catch (error) {

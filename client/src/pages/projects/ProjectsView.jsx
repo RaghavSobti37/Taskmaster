@@ -80,7 +80,7 @@ const ProjectPreview = ({
     </div>
     <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
       <span>{project.totalTasks || 0} tasks</span>
-      <span style={{ color: accent }}>{project.progress || 0}%</span>
+      <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
     </div>
     <ProgressBar progress={project.progress || 0} className="h-1" />
   </div>
@@ -487,7 +487,7 @@ const ProjectsView = () => {
                             {group.projects.length} {group.projects.length === 1 ? 'project' : 'projects'}
                           </Badge>
                           {group.defaultMemberCount > 0 && (
-                            <Badge variant="todo" className="!py-0 !px-2 !text-[8px]">
+                            <Badge variant="todo" className="!py-0 !px-2 !text-[8px]" title="Default members auto-added to new projects in this workspace">
                               {group.defaultMemberCount} default{group.defaultMemberCount === 1 ? '' : 's'}
                             </Badge>
                           )}
@@ -644,7 +644,7 @@ const ProjectsView = () => {
                         <div className="space-y-1 mt-auto">
                           <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                             <span>Progress · <span className="normal-case">{project.totalTasks || 0} tasks</span></span>
-                            <span style={{ color: accent }}>{project.progress || 0}%</span>
+                            <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
                           </div>
                           <ProgressBar progress={project.progress || 0} className="h-1" />
                         </div>

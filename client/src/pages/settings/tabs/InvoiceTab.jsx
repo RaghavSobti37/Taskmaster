@@ -14,6 +14,7 @@ export default function InvoiceTab() {
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const invoiceFileRef = useRef(null);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleInvoiceFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -21,8 +22,11 @@ export default function InvoiceTab() {
   };
 
   const handleSubmitInvoice = async () => {
-    if (!invoiceTitle.trim()) return alert('Invoice title is required');
-    if (!invoiceFile) return alert('Please attach an invoice file');
+    const errors = {};
+    if (!invoiceTitle.trim()) errors.title = 'Invoice title is required';
+    if (!invoiceFile) errors.file = 'Please attach an invoice file';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) return;
 
     setInvoiceSubmitting(true);
     try {
@@ -73,7 +77,8 @@ export default function InvoiceTab() {
           </h3>
         </div>
         <div className="p-6 space-y-6">
-          <Input label="Title" value={invoiceTitle} onChange={(e) => setInvoiceTitle(e.target.value)} icon={FileText} />
+          <Input label="Title *" value={invoiceTitle} onChange={(e) => { setInvoiceTitle(e.target.value); setFieldErrors((p) => ({ ...p, title: '' })); }} icon={FileText} />
+          {fieldErrors.title && <p className="text-xs text-rose-500 -mt-4">{fieldErrors.title}</p>}
           <UsdInrAmountFields
             inrValue={invoiceAmount}
             usdValue={invoiceAmountUsd}
@@ -83,7 +88,7 @@ export default function InvoiceTab() {
           <Input label="Description" value={invoiceDescription} onChange={(e) => setInvoiceDescription(e.target.value)} />
           
           <div className="pt-2">
-            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-2 block">Invoice Document</label>
+            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] mb-2 block">Invoice Document *</label>
             <div className="flex items-center gap-4 p-4 border border-dashed border-[var(--color-bg-border)] rounded-xl bg-[var(--color-bg-workspace)]">
               <input
                 ref={invoiceFileRef}
@@ -96,6 +101,7 @@ export default function InvoiceTab() {
                 <span className="text-xs text-[var(--color-text-primary)] font-medium truncate max-w-[200px]">{invoiceFile.name}</span>
               )}
             </div>
+            {fieldErrors.file && <p className="text-xs text-rose-500 mt-1">{fieldErrors.file}</p>}
           </div>
           
           <div className="flex justify-end pt-4 border-t border-[var(--color-bg-border)]">

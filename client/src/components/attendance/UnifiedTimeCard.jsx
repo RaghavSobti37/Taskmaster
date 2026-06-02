@@ -48,20 +48,39 @@ const UnifiedTimeCard = ({
     if (onApproveOut) onApproveOut();
   };
 
-  const TimeDisplayBlock = ({ type, time, mode, approved, marked }) => (
-    <div className={`rounded-xl border px-4 py-3 ${approved ? 'bg-blue-500/10 border-blue-500/30' : marked ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]'}`}>
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{type}</p>
-          <span className="text-lg font-black tabular-nums">{time || '--:--'}</span>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {approved ? <Lock size={14} className="text-blue-500" /> : marked ? <Check size={16} className="text-emerald-500" /> : null}
-          {mode && <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">{mode}</span>}
+  const TimeDisplayBlock = ({ type, time, mode, approved, marked, emptyHint }) => {
+    const recorded = !!(time || marked || approved);
+    return (
+      <div
+        className={`rounded-xl border px-4 py-3 ${
+          approved
+            ? 'bg-blue-500/10 border-blue-500/30'
+            : marked
+              ? 'bg-emerald-500/10 border-emerald-500/30'
+              : 'bg-[var(--color-bg-secondary)]/60 border-dashed border-[var(--color-bg-border)]'
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">{type}</p>
+            {recorded ? (
+              <span className="text-lg font-black tabular-nums">{time || '--:--'}</span>
+            ) : (
+              <p className="text-[13px] font-semibold text-[var(--color-text-muted)] leading-snug normal-case tracking-normal">
+                {emptyHint}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {approved ? <Lock size={14} className="text-blue-500" /> : marked ? <Check size={16} className="text-emerald-500" /> : null}
+            {recorded && mode && (
+              <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">{mode}</span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const Wrapper = isSelfMode ? Card : 'div';
 
@@ -77,7 +96,7 @@ const UnifiedTimeCard = ({
             </span>
           )}
           {entry?.discrepancyMinutes >= 30 && (
-            <span className={`shrink-0 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
+            <span className={`shrink-0 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`} title="Difference between expected shift hours and recorded in/out times (≥30 min shown).">
               Discrepancy: {entry.discrepancyMinutes}m
             </span>
           )}
@@ -93,8 +112,22 @@ const UnifiedTimeCard = ({
       {isSelfMode ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <TimeDisplayBlock type="Time In" time={entry?.inTimeRecord?.manualTimestamp} mode={entry?.inTimeRecord?.workMode} marked={hasIn} approved={inAppr} />
-            <TimeDisplayBlock type="Time Out" time={entry?.outTimeRecord?.manualTimestamp} mode={entry?.outTimeRecord?.workMode} marked={hasOut} approved={outAppr} />
+            <TimeDisplayBlock
+              type="Time In"
+              time={entry?.inTimeRecord?.manualTimestamp}
+              mode={entry?.inTimeRecord?.workMode}
+              marked={hasIn}
+              approved={inAppr}
+              emptyHint="Enter your start time below"
+            />
+            <TimeDisplayBlock
+              type="Time Out"
+              time={entry?.outTimeRecord?.manualTimestamp}
+              mode={entry?.outTimeRecord?.workMode}
+              marked={hasOut}
+              approved={outAppr}
+              emptyHint={hasIn ? 'Enter your end time below' : 'Check in first'}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -23,6 +23,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
 
 const INLET_COLORS = {
   exly: 'info', leads: 'mint', tsc: 'neutral', booked_calls: 'warning',
@@ -65,6 +67,8 @@ export function DataHubContent() {
   const [emailStatusFilter, setEmailStatusFilter] = useState('all');
 
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
+  const toast = useToast();
   const { data: folderData } = useDataHubFolders();
   const reconcileMutation = useDataHubReconcile();
   const backupMutation = useDataHubProductionBackup();
@@ -119,17 +123,24 @@ export function DataHubContent() {
     try {
       await reconcileMutation.mutateAsync({ full: false });
     } catch (err) {
-      alert(err.response?.data?.error || 'Sync failed');
+      toast.error(err.response?.data?.error || 'Sync failed');
     }
   };
 
   const handleFullReconcile = async () => {
-    if (!window.confirm('Run a full Data Hub sync? This re-merges all inlets and may take a few minutes.')) return;
+    const ok = await confirm({
+      title: 'Full re-merge?',
+      message: 'Re-merges all Data Hub inlets from scratch. This may take a few minutes.',
+      confirmLabel: 'Run full re-merge',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       await reconcileMutation.mutateAsync({ full: true });
       handleRefresh();
+      toast.success('Full re-merge completed');
     } catch (err) {
-      alert(err.response?.data?.error || 'Full sync failed');
+      toast.error(err.response?.data?.error || 'Full sync failed');
     }
   };
 
@@ -192,7 +203,7 @@ export function DataHubContent() {
             </Badge>
           ))}
           {item.inletCount >= 2 && (
-            <Badge variant="warning">{item.inletCount}</Badge>
+            <Badge variant="warning" title="Merged from multiple sources">{item.inletCount} inlets</Badge>
           )}
         </div>
       ),
@@ -202,7 +213,7 @@ export function DataHubContent() {
       render: (item) => <span className="text-[10px] font-bold uppercase">{item.city || '—'}</span>,
     },
     {
-      header: 'Email',
+      header: 'Email status',
       render: (item) => (
         <Badge variant={item.emailStatus === 'Active' ? 'mint' : item.emailStatus === 'Unsubscribed' ? 'warning' : 'neutral'}>
           {item.emailStatus || 'Pending'}
@@ -292,10 +303,10 @@ export function DataHubContent() {
                 <DataHubTscImport onImported={handleRefresh} compact />
                 <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleReconcile} disabled={reconcileMutation.isPending} title="Pull new/changed records from all inlets">
                   <RefreshCw size={14} className={reconcileMutation.isPending ? 'animate-spin' : ''} />
-                  Sync New
+                  Incremental sync
                 </Button>
-                <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleFullReconcile} disabled={reconcileMutation.isPending} title="Full re-merge from all inlets">
-                  Full Sync
+                <Button variant="secondary" size="sm" className="!px-2.5 whitespace-nowrap" onClick={handleFullReconcile} disabled={reconcileMutation.isPending} title="Full re-merge from all inlets — slower, use when data looks wrong">
+                  Full re-merge
                 </Button>
                 <Button variant="ghost" size="sm" className="!px-2.5 whitespace-nowrap" onClick={() => setShowAnalytics(!showAnalytics)}>
                   <BarChart3 size={14} />

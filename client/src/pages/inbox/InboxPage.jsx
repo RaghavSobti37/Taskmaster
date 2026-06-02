@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useTaskmasterQueries';
 import { useNavigate } from 'react-router-dom';
 import { parseActionUrl, applyFlashHighlight } from '../../utils/navigationHighlight';
+import { formatInboxCategory } from '../../utils/displayLabels';
 
 const NotificationAvatar = ({ notification: n }) => {
   if (n.iconType === 'user' && n.actorId?.avatar) {
@@ -77,8 +78,19 @@ const InboxPage = () => {
         icon={Inbox}
         actions={
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <div className="flex flex-wrap gap-1.5 justify-end">
-              {allowedCategories.map((cat) => (
+            <div className="flex flex-wrap gap-1.5 justify-end items-center">
+              <button
+                type="button"
+                onClick={() => setFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors ${
+                  filter === 'all'
+                    ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
+                    : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
+                }`}
+              >
+                All
+              </button>
+              {allowedCategories.filter((cat) => cat !== 'all').map((cat) => (
                 <button
                   key={cat}
                   type="button"
@@ -89,7 +101,7 @@ const InboxPage = () => {
                       : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
                   }`}
                 >
-                  {cat}
+                  {formatInboxCategory(cat)}
                 </button>
               ))}
             </div>

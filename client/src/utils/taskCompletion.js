@@ -49,6 +49,14 @@ export function pendingReviewToast(taskTitle) {
   };
 }
 
+export function awaitingAssigneeToast(taskTitle) {
+  return {
+    title: 'Waiting on assignee',
+    message: `"${truncateForToast(taskTitle)}" must be completed by the assignee before you can approve it.`,
+    type: 'info',
+  };
+}
+
 /** Server writes daily logs for done and in-review (assignee + reviewer). */
 export function shouldClientCreateCompletionLog(status) {
   return false;
@@ -74,7 +82,7 @@ export function taskCompletionToast(status, taskTitle) {
   if (status === 'in-review') {
     return {
       title: 'Submitted for Review',
-      message: `"${title}" sent for approval — your hours are in daily logs; your reviewer gets a 15m review entry.`,
+      message: `"${title}" sent for approval — your work hours are in daily logs.`,
       type: 'success',
     };
   }
@@ -89,7 +97,7 @@ export function taskApprovalToast(taskTitle) {
   const title = truncateForToast(taskTitle);
   return {
     title: 'Task Approved',
-    message: `"${title}" marked complete.`,
+    message: `"${title}" marked complete. Your review time is logged as [review].`,
     type: 'success',
   };
 }

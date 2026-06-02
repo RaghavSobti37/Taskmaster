@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
-import { Activity, BarChart3, Radio, Search } from 'lucide-react';
-import { Badge, Button, Card, Input, PageSkeleton } from '../../components/ui';
+import { Activity, BarChart3, Radio } from 'lucide-react';
+import { Badge, Button, Card, PageSkeleton } from '../../components/ui';
 import { useSystemLogs, useTopPages } from '../../hooks/useSystemLogs';
-import { SEVERITY, SEVERITY_VALUES } from '../../lib/systemLogContract';
+import { SEVERITY } from '../../lib/systemLogContract';
 import SystemLogSandbox from '../../components/admin/SystemLogSandbox';
 
 const SEVERITY_VARIANT = {
@@ -27,7 +27,7 @@ const LogFeedItem = ({ log }) => {
     <div className="p-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl space-y-1.5">
       <div className="flex justify-between items-start gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-500 shrink-0">
+          <div className="p-1.5 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] shrink-0">
             <Activity size={12} />
           </div>
           <Badge variant={SEVERITY_VARIANT[log.severity] || 'default'}>{log.severity}</Badge>
@@ -75,10 +75,7 @@ const TopPagesCard = ({ pages = [], isLoading }) => (
   </Card>
 );
 
-const SystemLogsPanel = () => {
-  const [severityFilter, setSeverityFilter] = useState('');
-  const [search, setSearch] = useState('');
-
+const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
   const filters = useMemo(
     () => ({
       severity: severityFilter || undefined,
@@ -99,25 +96,6 @@ const SystemLogsPanel = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[180px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search logs…"
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-        <select
-          value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
-          className="text-sm rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-3 py-1.5 h-9"
-        >
-          <option value="">All severities</option>
-          {SEVERITY_VALUES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           <Radio className={`w-3.5 h-3.5 mr-1.5 ${isFetching ? 'animate-pulse' : ''}`} />
           Refresh

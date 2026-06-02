@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, DashboardSkeleton } from '../components/ui';
+import { PageContainer, PageHeader, DashboardSkeleton, PageLoadGuard } from '../components/ui';
+import { LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSystemToast } from '../lib/systemLogBridge';
 import { MODULE } from '../lib/systemLogContract';
@@ -35,8 +36,10 @@ import UnifiedTimeCard from '../components/attendance/UnifiedTimeCard';
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
 import { format } from 'date-fns';
-import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent } from '../lib/componentRegistry';
+import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
 import { isAdminUser } from '../utils/departmentPermissions';
+import { useIsMobile } from '../hooks/useBreakpoint';
+import { MobileCollapsibleSection } from '../components/ui';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -59,6 +62,8 @@ const Dashboard = () => {
   const {
     taskToComplete,
     setTaskToComplete,
+    taskToApprove,
+    setTaskToApprove,
     completionSubmitForReview,
     completingTaskId,
     approvingReviewId,
@@ -124,13 +129,39 @@ const Dashboard = () => {
     [elementsToRender]
   );
 
-  if (showPageSkeleton) {
+  const isMobile = useIsMobile();
+
+  const sortedElements = useMemo(() => {
+    if (isMobile) {
+      return [...elementsToRender].sort(
+        (a, b) => getMobileWidgetOrder(a.componentId) - getMobileWidgetOrder(b.componentId)
+      );
+    }
+    return [...elementsToRender].sort((a, b) => a.row - b.row || a.col - b.col);
+  }, [elementsToRender, isMobile]);
+
+  const primaryElements = useMemo(
+    () => (isMobile ? sortedElements.filter((el) => !isAnalyticsWidget(el.componentId)) : sortedElements),
+    [sortedElements, isMobile]
+  );
+
+  const analyticsElements = useMemo(
+    () => (isMobile ? sortedElements.filter((el) => isAnalyticsWidget(el.componentId)) : []),
+    [sortedElements, isMobile]
+  );
+
+  const renderWidget = (el) => {
+    const span = parseInt(el.size, 10) || 1;
     return (
-      <PageContainer>
-        <DashboardSkeleton />
-      </PageContainer>
+      <div
+        key={el.componentId}
+        className="flex flex-col min-h-0 dashboard-grid-item max-lg:min-h-0"
+        style={{ '--lg-col': el.col, '--lg-row': el.row, '--lg-span': span }}
+      >
+        {renderComponent(el.componentId)}
+      </div>
     );
-  }
+  };
 
   const renderComponent = (componentId) => {
     switch (componentId) {
@@ -151,7 +182,7 @@ const Dashboard = () => {
             projects={projects}
             workspaces={workspaces}
             loading={reviewLoading}
-            onApprove={handleApproveReview}
+            onApprove={(task) => setTaskToApprove(task)}
             approvingTaskId={approvingReviewId}
             onOpenProject={(projectId) => navigate(`/projects/${projectId}`)}
           />
@@ -214,26 +245,21 @@ const Dashboard = () => {
   };
 
   return (
-    <PageContainer className="!py-4">
+    <PageLoadGuard loading={showPageSkeleton} skeleton={DashboardSkeleton}>
+    <PageContainer className="!py-4 !space-y-4">
       <PinBoardProvider>
         <div
-          className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 grid-flow-row-dense auto-rows-max"
+          className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-0 gap-3 grid-flow-row-dense auto-rows-max"
           style={{ '--grid-rows': maxGridRow }}
         >
-          {elementsToRender
-            .sort((a, b) => a.row - b.row || a.col - b.col)
-            .map((el) => {
-              const span = parseInt(el.size, 10) || 1;
-              return (
-                <div
-                  key={el.componentId}
-                  className="flex flex-col min-h-0 dashboard-grid-item"
-                  style={{ '--lg-col': el.col, '--lg-row': el.row, '--lg-span': span }}
-                >
-                  {renderComponent(el.componentId)}
-                </div>
-              );
-            })}
+          {primaryElements.map(renderWidget)}
+          {isMobile && analyticsElements.length > 0 && (
+            <MobileCollapsibleSection title="Insights" className="col-span-1">
+              <div className="space-y-3">
+                {analyticsElements.map(renderWidget)}
+              </div>
+            </MobileCollapsibleSection>
+          )}
         </div>
       </PinBoardProvider>
 
@@ -244,7 +270,15 @@ const Dashboard = () => {
         onSubmit={handleCompleteSubmit}
         submitForReview={completionSubmitForReview}
       />
+      <TaskCompletionModal
+        task={taskToApprove}
+        isOpen={!!taskToApprove}
+        onClose={() => setTaskToApprove(null)}
+        onSubmit={handleApproveReview}
+        approveReview
+      />
     </PageContainer>
+    </PageLoadGuard>
   );
 };
 

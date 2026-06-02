@@ -640,6 +640,12 @@ class QATestingService {
       cleanupResults.deleted.xpAudits = swept.deleted.xpAudits;
       cleanupResults.phoneRepair = phoneRepair;
 
+      const GamificationService = require('./gamificationService');
+      const xpRecalc = await GamificationService.recalculateUsersFromAudit(
+        swept.affectedUserIds || []
+      );
+      cleanupResults.xpRecalc = xpRecalc;
+
       if (this.testRunId) {
         await QATestRun.findByIdAndUpdate(this.testRunId, { cleanupResults });
       }

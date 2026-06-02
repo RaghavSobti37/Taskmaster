@@ -4,7 +4,6 @@ import { subscribeToChannel, disconnectRealtime } from '../lib/realtime';
 import { pushCustomToast } from '../lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTaskDomainRealtimeSync } from '../hooks/queries/taskRealtime';
-import { useChatInboxRealtimeForUser } from '../hooks/useChatRealtime';
 import {
   clearAttendanceSessionLogin,
   recordAttendanceSessionLogin,
@@ -144,54 +143,74 @@ export const AuthProvider = ({ children }) => {
 
   const queryClient = useQueryClient();
   useTaskDomainRealtimeSync(!!user?._id);
-  useChatInboxRealtimeForUser(user?._id, !!user?._id);
 
   useEffect(() => {
-    if (user?._id) {
-      const unsubscribe = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
-        setUser((prev) => ({
-          ...prev,
-          exp: payload.newTotal,
-          level: payload.newLevel ?? prev.level,
-        }));
+    if (!user?._id) return undefined;
 
-        queryClient.invalidateQueries({ queryKey: ['gamification'] });
-        queryClient.invalidateQueries({ queryKey: ['missions'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    const unsubAwarded = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
+      setUser((prev) => ({
+        ...prev,
+        exp: payload.newTotal,
+        level: payload.newLevel ?? prev.level,
+      }));
 
-        const actionLabel = payload.actionLabel || payload.action?.replace(/_/g, ' ') || 'XP';
-        pushCustomToast(
-          () => (
-            <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
-              <div className="p-4 flex-1">
-                <div className="flex items-center">
-                  <div className="shrink-0 bg-blue-500/10 p-2 rounded-xl">
-                    <span className="text-xl">✨</span>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
-                      XP Gained!
-                    </p>
-                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
-                      +{payload.amount} XP • {actionLabel}
-                    </p>
-                    <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
+      queryClient.invalidateQueries({ queryKey: ['missions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+
+      const actionLabel = payload.actionLabel || payload.action?.replace(/_/g, ' ') || 'XP';
+      pushCustomToast(
+        () => (
+          <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
+            <div className="p-4 flex-1">
+              <div className="flex items-center">
+                <div className="shrink-0 bg-blue-500/10 p-2 rounded-xl">
+                  <span className="text-xl">✨</span>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
+                    XP Gained!
+                  </p>
+                  <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
+                    +{payload.amount} XP • {actionLabel}
+                  </p>
+                  <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out"
+                      style={{ width: '100%' }}
+                    />
                   </div>
                 </div>
               </div>
             </div>
-          ),
-          { id: `xp-${payload.action}`, duration: 4000 }
-        );
-      });
-      return () => unsubscribe();
-    }
-    return undefined;
+          </div>
+        ),
+        { id: `xp-${payload.action}`, duration: 4000 }
+      );
+    });
+
+    const unsubRecalc = subscribeToChannel(`user-${user._id}`, 'xp_recalculated', (payload) => {
+      if (payload.newExp != null) {
+        setUser((prev) => ({
+          ...prev,
+          exp: payload.newExp,
+          level: payload.newLevel ?? prev.level,
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
+      queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
+    });
+
+    const unsubGlobalRecalc = subscribeToChannel('gamification', 'gamification_recalculated', () => {
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
+      queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
+    });
+
+    return () => {
+      unsubAwarded();
+      unsubRecalc();
+      unsubGlobalRecalc();
+    };
   }, [user?._id, queryClient]);
 
   const login = useCallback((userData) => {

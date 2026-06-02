@@ -17,9 +17,12 @@ const {
   assignmentAssignerId,
   assignmentUserId: rulesAssignmentUserId,
   normalizeId: rulesNormalizeId,
+  isAssignerOnlyReviewer,
   REVIEW_DEFAULT_HOURS,
+  REVIEW_LOG_LABEL,
 } = require('../../shared/taskReviewRules');
 const { formatTimeSpent, MIN_COMPLETION_MINUTES } = require('../../shared/timeSpent');
+const { clampXpHours } = require('../../shared/gamificationRules');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
 const { buildMentionNotifications, resolveMentionedUserIds, isMentionOnlyUser } = require('../utils/mentionNotifications');
@@ -158,7 +161,7 @@ const findTaskDailyLog = async (userId, taskId, type, session) => Log.findOne({
 }).session(session);
 
 const createTaskDailyLog = async ({
-  userId, task, type, hours, message, session,
+  userId, task, type, hours, message, title, session,
 }) => {
   const projectName = await getProjectNameForTask(task, session);
   const projectId = task.projectId?._id || task.projectId || null;
@@ -167,7 +170,7 @@ const createTaskDailyLog = async ({
     action: 'DAILY_LOG',
     details: {
       type,
-      title: task.title,
+      title: title ?? task.title,
       message,
       project: projectName,
       projectId,
@@ -176,6 +179,16 @@ const createTaskDailyLog = async ({
     targetId: task._id,
     targetType: 'Task',
   }], { session });
+};
+
+const resolveReviewHoursFromUpdates = (updates = {}) => {
+  if (updates.reviewHours != null && Number.isFinite(Number(updates.reviewHours))) {
+    return Math.max(0, Number(updates.reviewHours));
+  }
+  if (updates.reviewMinutes != null && Number.isFinite(Number(updates.reviewMinutes))) {
+    return Math.max(0, Number(updates.reviewMinutes)) / 60;
+  }
+  return REVIEW_DEFAULT_HOURS;
 };
 
 const finalizeTaskApproval = async (task, session) => {
@@ -200,7 +213,7 @@ const removeReviewLogsForTask = async (taskId, assigneeIds, reviewerId, session)
 };
 
 const createReviewSubmitLogs = async ({
-  task, assigneeId, assigneeName, reviewerId, hoursSubmitted, session,
+  task, assigneeId, hoursSubmitted, session,
 }) => {
   const projectName = await getProjectNameForTask(task, session);
   const existingCompletion = await findTaskDailyLog(assigneeId, task._id, 'TASK_COMPLETION', session);
@@ -214,17 +227,45 @@ const createReviewSubmitLogs = async ({
       session,
     });
   }
+};
+
+const createReviewApprovalLog = async ({
+  task, reviewerId, reviewHours, session,
+}) => {
+  await Log.deleteMany({
+    userId: reviewerId,
+    targetId: task._id,
+    targetType: 'Task',
+    'details.type': 'TASK_COMPLETION',
+  }).session(session);
+
   const existingReview = await findTaskDailyLog(reviewerId, task._id, 'TASK_REVIEW', session);
-  if (!existingReview) {
-    await createTaskDailyLog({
-      userId: reviewerId,
-      task,
-      type: 'TASK_REVIEW',
-      hours: REVIEW_DEFAULT_HOURS,
-      message: `Review: ${assigneeName} submitted "${task.title}" for approval.`,
-      session,
-    });
+  const timeSpent = formatHoursForLog(reviewHours);
+  if (existingReview) {
+    await Log.updateOne(
+      { _id: existingReview._id },
+      {
+        $set: {
+          'details.type': 'TASK_REVIEW',
+          'details.title': REVIEW_LOG_LABEL,
+          'details.message': REVIEW_LOG_LABEL,
+          'details.timeSpent': timeSpent,
+        },
+      },
+      { session }
+    );
+    return;
   }
+
+  await createTaskDailyLog({
+    userId: reviewerId,
+    task,
+    type: 'TASK_REVIEW',
+    hours: reviewHours,
+    title: REVIEW_LOG_LABEL,
+    message: REVIEW_LOG_LABEL,
+    session,
+  });
 };
 
 const finalizeTaskCompletion = async (task, user, session) => {
@@ -387,7 +428,14 @@ exports.updateTask = async (taskId, updates, user, session) => {
     && !canUserApproveReview(user, assignments)
     && isMentionOnlyUser(user._id, assigneeIds, mentionedUserIds);
 
-  const { assignees, reviewAction, ...coreUpdates } = updates;
+  const {
+    assignees,
+    reviewAction,
+    reviewHours: _reviewHours,
+    reviewMinutes: _reviewMinutes,
+    ...coreUpdates
+  } = updates;
+  const reviewHoursForApproval = resolveReviewHoursFromUpdates(updates);
 
   const { sanitizeName } = require('../utils/sanitizer');
   if (coreUpdates.title !== undefined) coreUpdates.title = sanitizeName(coreUpdates.title);
@@ -461,6 +509,16 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
+  if (
+    coreUpdates.status === 'done'
+    && !reviewAction
+    && isAssignerOnlyReviewer(assignments, user._id)
+  ) {
+    throw new Error(
+      'This task must be completed by the assignee first. Approve it from the review queue when ready.'
+    );
+  }
+
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
     const needsReview = requiresReviewForUser(assignments, user._id) || mentionOnly;
     if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
@@ -483,6 +541,10 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const oldDueDate = existing.dueDate;
   applyPriorityDueDate(coreUpdates, existing);
+
+  if (coreUpdates.actualHours != null) {
+    coreUpdates.actualHours = clampXpHours(Number(coreUpdates.actualHours) || 0);
+  }
 
   const timelineToValidate = {};
   for (const field of TIMELINE_FIELDS) {
@@ -596,8 +658,6 @@ exports.updateTask = async (taskId, updates, user, session) => {
           await createReviewSubmitLogs({
             task,
             assigneeId,
-            assigneeName: user.name || 'Assignee',
-            reviewerId,
             hoursSubmitted,
             session,
           });
@@ -607,7 +667,17 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
     if (reviewAction === 'approve' && task.status === 'done') {
       await finalizeTaskApproval(task, session);
-      for (const a of assignments) {
+      await createReviewApprovalLog({
+        task,
+        reviewerId: user._id,
+        reviewHours: reviewHoursForApproval,
+        session,
+      });
+      const delegated = getDelegatedAssignments(assignments);
+      const completionTargets = delegated.length
+        ? delegated
+        : assignments;
+      for (const a of completionTargets) {
         const assigneeId = assignmentUserId(a.userId);
         if (assigneeId) await queueTaskCompletedGamification(assigneeId, task);
       }

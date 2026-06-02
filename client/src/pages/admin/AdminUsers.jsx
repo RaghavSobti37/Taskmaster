@@ -1,32 +1,40 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  ShieldCheck, Users, Search, Trash2, UserCheck, TrendingUp,
-  Database, Zap, CalendarDays, KeyRound, UserPlus
+  Users, TrendingUp,
+  Database, Zap, UserPlus, UserCheck, CalendarDays, KeyRound
 } from 'lucide-react';
 import {
   Badge,
-  PageContainer,
   Card,
-  StatCard,
   Button,
   DataTable,
-  Input,
   FullScreenWorkspace,
+  Input,
   PageSkeleton,
+  ListPageLayout,
+  SearchInput,
+  UserAvatar,
 } from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { formatLastActivity } from '../../utils/formatLastActivity';
 import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 import {
-  useUserDirectory, useCRMStats, useRepSummary, useMailStats,
+  useUserDirectory, useCRMStats, useMailStats, useDataHubFolders,
   useUpdateUser, useDeleteUser, useCreateUser,
   useDepartments
 } from '../../hooks/useTaskmasterQueries';
+import {
+  ADMIN_RIBBON_QUERY_OPTS,
+  ADMIN_DATA_HUB_FOLDER_OPTS,
+  getTeamConversionPercent,
+  getTotalDataRecords,
+} from '../../utils/adminRibbonMetrics';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import UserDeleteAction from '../../components/admin/UserDeleteAction';
 import CreateUserModal from '../../components/admin/CreateUserModal';
@@ -47,9 +55,9 @@ const AdminUsers = () => {
 
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: departments = [] } = useDepartments();
-  const { data: crmStats } = useCRMStats();
-  const { data: repSummary } = useRepSummary();
-  const { data: mailStats } = useMailStats();
+  const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -137,14 +145,21 @@ const AdminUsers = () => {
     );
   }, [users, searchTerm]);
 
+  const deptChart = useMemo(
+    () =>
+      distributionFromField(users, 'departmentId', {
+        labelFn: (d) => d?.name || 'Unassigned',
+      }),
+    [users]
+  );
+
   const userColumns = [
     {
       header: 'User',
+      sortKey: 'name',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold text-xs select-none">
-            {u.avatar ? <img src={u.avatar} className="w-full h-full rounded-full object-cover" alt="" /> : u.name?.substring(0, 2).toUpperCase()}
-          </div>
+          <UserAvatar user={u} size="md" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{u.name}</span>
@@ -159,96 +174,83 @@ const AdminUsers = () => {
     },
     {
       header: 'Last Activity',
+      sortKey: 'lastOnline',
+      sortFn: (u) => (u.lastOnline ? new Date(u.lastOnline) : null),
       render: (u) => (
         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
           {formatLastActivity(u.lastOnline)}
         </span>
       )
     },
-    {
-      header: 'Delete',
-      render: (u) => (
-        <UserDeleteAction
-          compact
-          blockReason={getDeleteBlockReason(u)}
-          isPending={deleteUserMutation.isPending}
-          onDelete={() => handleDeleteUser(u._id)}
-        />
-      ),
-    },
   ];
 
-  if (usersLoading) return <PageContainer><PageSkeleton /></PageContainer>;
+  if (usersLoading) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <StatCard
-          label="Total Users"
-          value={users.length}
-          icon={Users}
-          variant="info"
-          subValue="Active"
-          info="Total number of registered user accounts."
+    <ListPageLayout
+      containerClassName="!py-4"
+      overviewMobileMaxStats={2}
+      overview={{
+        stats: [
+          {
+            id: 'users',
+            label: 'Total Users',
+            value: users.length,
+            icon: Users,
+            variant: 'info',
+            info: 'Total number of registered user accounts.',
+          },
+          {
+            id: 'data',
+            label: 'Total Data',
+            value: getTotalDataRecords(folderData, crmStats),
+            icon: Database,
+            variant: 'mint',
+            info: 'Unified people count in Data Hub (all inlets). Falls back to CRM leads if hub is unavailable.',
+          },
+          {
+            id: 'conversion',
+            label: 'Conversion',
+            value: `${getTeamConversionPercent(crmStats)}%`,
+            icon: TrendingUp,
+            variant: 'apricot',
+            info: 'Share of CRM leads marked Converted (live stats, refreshed every few minutes).',
+          },
+          {
+            id: 'emails',
+            label: 'Emails Sent',
+            value: mailStats?.totalSent || 0,
+            icon: Zap,
+            variant: 'slate',
+            info: 'Total number of automated emails sent.',
+          },
+        ],
+       
+      }}
+      toolbar={
+        <SearchInput
+          placeholder="Search users by name or email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <StatCard
-          label="Total Data"
-          value={crmStats?.totalLeads || 0}
-          icon={Database}
-          variant="mint"
-          subValue="Records"
-          info="Count of all entries in the master data archive."
-        />
-        <StatCard
-          label="Conversion"
-          value={`${repSummary?.avgConversion || 0}%`}
-          icon={TrendingUp}
-          variant="apricot"
-          subValue="Team Avg"
-          info="The percentage of data entries successfully processed into closed business."
-        />
-        <StatCard
-          label="Emails Sent"
-          value={mailStats?.totalSent || 0}
-          icon={Zap}
-          variant="slate"
-          subValue="System"
-          info="Total number of automated emails sent."
-        />
-      </div>
-
+      }
+      toolbarActions={
+        <Button onClick={() => setShowCreateUser(true)} size="sm" className="gap-2 shrink-0">
+          <UserPlus size={14} />
+          Add user
+        </Button>
+      }
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8">
-          <Card className="flex flex-col h-full">
-            <div className="p-3 border-b border-[var(--color-bg-border)] flex flex-col sm:flex-row sm:items-center gap-3 bg-[var(--color-bg-secondary)]">
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shrink-0">
-                <ShieldCheck size={14} className="text-[var(--color-action-primary)]" />
-                Users
-              </h3>
-              <div className="flex-1 w-full min-w-0">
-                <Input
-                  icon={Search}
-                  placeholder="Search users by name or email..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="!py-1 !text-[11px] w-full"
-                />
-              </div>
-              <Button onClick={() => setShowCreateUser(true)} className="gap-2 shrink-0 !py-1.5 !text-[11px]">
-                <UserPlus size={14} />
-                Add user
-              </Button>
-            </div>
-
-            <div className="p-0">
-              <DataTable
-                columns={userColumns}
-                data={filteredUsers}
-                className="!border-none"
-                onRowClick={(u) => setSelectedUser(u)}
-              />
-            </div>
+          <Card className="flex flex-col h-full p-0 overflow-hidden">
+            <DataTable
+              columns={userColumns}
+              data={filteredUsers}
+              className="!border-none"
+              onRowClick={(u) => setSelectedUser(u)}
+              getRowId={(u) => u._id}
+            />
           </Card>
         </div>
 
@@ -370,7 +372,7 @@ const AdminUsers = () => {
         isPending={createUserMutation.isPending}
         onCreate={(data) => createUserMutation.mutateAsync(data)}
       />
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

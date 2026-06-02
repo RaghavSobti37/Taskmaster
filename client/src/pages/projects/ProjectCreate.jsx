@@ -127,7 +127,6 @@ const ProjectCreate = () => {
     <PageContainer maxWidth="1000px">
       <PageHeader
         title="Create New Project"
-        subtitle="Set up your project and add team members."
         icon={Briefcase}
       />
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search, ArrowUpDown } from 'lucide-react';
-import { Card, DataTable, Badge, Input, NexusDropdown } from '../ui';
+import { Card, DataTable, Badge, Input, NexusDropdown, UserLabel } from '../ui';
 import { parseTimeSpentToMinutes as parseLogMinutes } from '../../utils/timeSpent';
 
 const SORT_OPTIONS = [
@@ -66,7 +66,14 @@ export const DailyLogsTable = ({ entries = [], showMember = false }) => {
     if (showMember) {
       cols.push({
         header: 'Member',
-        render: (row) => <span className="font-bold text-[11px]">{row.userName || '—'}</span>,
+        render: (row) => (
+          <UserLabel
+            name={row.userName || '—'}
+            avatar={row.userAvatar}
+            size="xs"
+            nameClassName="font-bold text-[11px]"
+          />
+        ),
       });
     }
     cols.push(

@@ -5,6 +5,8 @@ import { useDashboardPreset } from '../../../hooks/useTaskmasterQueries';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
+import { DesktopRecommendedBanner } from '../../../components/ui';
+import { useIsMobile } from '../../../hooks/useBreakpoint';
 
 const GRID_COLS = 4;
 const GAP = 16;
@@ -109,6 +111,7 @@ const findFirstAvailableVacancy = (elements, sizeNum) => {
 
 export default function DashboardCustomizationTab() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const permissionPreset = user?.departmentId?.permissionPreset || 'standard';
   
   const [saving, setSaving] = useState(false);
@@ -470,8 +473,9 @@ export default function DashboardCustomizationTab() {
 
   return (
     <div className="flex h-full overflow-hidden relative">
-      <div className="flex-1 flex flex-col overflow-y-auto px-8 custom-scrollbar pt-6 pb-24">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex-1 flex flex-col overflow-y-auto px-4 md:px-8 custom-scrollbar pt-6 pb-24">
+        <DesktopRecommendedBanner className="mb-4" message="Drag-and-drop dashboard layout editing requires a desktop screen." />
+        <div className={`mb-4 flex items-center justify-between ${isMobile ? 'pointer-events-none opacity-50' : ''}`}>
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
             <LayoutDashboard size={18} className="text-blue-500" /> Grid Layout
           </h2>
@@ -507,7 +511,7 @@ export default function DashboardCustomizationTab() {
         >
           <div
             ref={gridRef}
-            className="grid grid-cols-4 gap-4 relative"
+            className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative ${isMobile ? 'pointer-events-none opacity-50' : ''}`}
             style={{
               gridAutoRows: `${CELL_HEIGHT}px`,
               gridTemplateRows: `repeat(${maxVisibleRow}, ${CELL_HEIGHT}px)`,
@@ -629,7 +633,7 @@ export default function DashboardCustomizationTab() {
                 return (
                   <div 
                     key={id} 
-                    className="bg-[var(--color-bg-workspace)] border-2 border-dashed border-[var(--color-bg-border)] rounded-xl p-4 flex items-center justify-between hover:border-blue-500 hover:bg-blue-500/5 transition-all cursor-pointer group" 
+                    className="bg-[var(--color-bg-workspace)] border-2 border-dashed border-[var(--color-bg-border)] rounded-xl p-4 flex items-center justify-between hover:border-[var(--color-action-primary)] hover:bg-[var(--color-action-primary)]/5 transition-all cursor-pointer group" 
                     onClick={() => addComponent(id)}
                   >
                     <div className="flex items-center gap-3">

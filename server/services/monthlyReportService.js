@@ -6,6 +6,12 @@ const Attendance = require('../models/Attendance');
 const CalendarEvent = require('../models/CalendarEvent');
 const Log = require('../models/Log');
 const { parseTimeSpentToHours } = require('../../shared/timeSpent');
+const {
+  applyTimeframeFilter,
+  resolveReportRangeOptions,
+  getWindowFromParams,
+} = require('../../shared/monthlyReportTimeframe');
+const { getDateKey } = require('../utils/attendanceDate');
 
 const parseMonth = (monthParam) => {
   if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
@@ -35,7 +41,7 @@ const formatLogEntry = (log, userName) => {
   return {
     userId: log.userId?.toString?.() || log.userId,
     userName: userName || '',
-    date: d.toISOString().split('T')[0],
+    date: getDateKey(d),
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
     title: log.details?.title || log.payload?.title || 'Untitled',
     project: log.details?.project || log.payload?.project || 'GENERAL',
@@ -52,7 +58,7 @@ const buildAttendanceSummary = (rows) => {
   const attendanceByDay = [];
 
   rows.forEach((row) => {
-    const dayKey = row.date.toISOString().split('T')[0];
+    const dayKey = getDateKey(row.date);
     let status = 'empty';
     if (row.onLeave) {
       status = 'leave';
@@ -121,7 +127,7 @@ const buildTaskSummary = (assignedTasks, startDate, endDate) => {
 const buildLogsSummary = (logs, userName) => {
   const logsByDayMap = new Map();
   const entries = logs.map((log) => {
-    const day = (log.createdAt || log.timestamp).toISOString().split('T')[0];
+    const day = getDateKey(log.createdAt || log.timestamp);
     const hours = parseTimeSpentToHours(log.details?.timeSpent || log.payload?.timeSpent);
     const existing = logsByDayMap.get(day) || { hours: 0, count: 0 };
     logsByDayMap.set(day, { hours: existing.hours + hours, count: existing.count + 1 });
@@ -266,10 +272,11 @@ const buildBulkMonthlyReports = async (userIds, monthParam) => {
   });
 };
 
-const buildUserMonthlyReport = async (userId, monthParam) => {
+const buildUserMonthlyReport = async (userId, monthParam, rangeQuery = {}) => {
   const reports = await buildBulkMonthlyReports([userId], monthParam);
   if (!reports.length) throw new Error('User not found');
-  return reports[0];
+  const rangeOpts = resolveReportRangeOptions(rangeQuery);
+  return applyTimeframeFilter(reports[0], rangeOpts);
 };
 
 const mergeByDay = (reports, keyPath) => {
@@ -382,7 +389,7 @@ const aggregateReports = (reports, { scope, department, monthParam } = {}) => {
   };
 };
 
-const buildDepartmentMonthlyReport = async (departmentId, monthParam) => {
+const buildDepartmentMonthlyReport = async (departmentId, monthParam, rangeQuery = {}) => {
   const Department = require('../models/Department');
   const dept = await Department.findById(departmentId).lean();
   if (!dept) throw new Error('Department not found');
@@ -390,24 +397,40 @@ const buildDepartmentMonthlyReport = async (departmentId, monthParam) => {
   const users = await User.find({ departmentId }).select('_id').lean();
   const userIds = users.map((u) => u._id);
   const reports = await buildBulkMonthlyReports(userIds, monthParam);
+  const rangeOpts = resolveReportRangeOptions(rangeQuery);
+  const filtered = reports.map((r) => applyTimeframeFilter(r, rangeOpts));
+  const windowMeta = getWindowFromParams(monthParam, rangeOpts);
 
-  return aggregateReports(reports, {
+  const aggregated = aggregateReports(filtered, {
     scope: 'department',
     monthParam,
     department: { _id: dept._id, name: dept.name, memberCount: users.length },
   });
+  return {
+    ...aggregated,
+    timeframe: windowMeta.timeframe,
+    window: filtered[0]?.window || { start: windowMeta.startKey, end: windowMeta.endKey, days: windowMeta.days },
+  };
 };
 
-const buildTeamMonthlyReport = async (monthParam) => {
+const buildTeamMonthlyReport = async (monthParam, rangeQuery = {}) => {
   const users = await User.find({}).select('_id').lean();
   const userIds = users.map((u) => u._id);
   const reports = await buildBulkMonthlyReports(userIds, monthParam);
+  const rangeOpts = resolveReportRangeOptions(rangeQuery);
+  const filtered = reports.map((r) => applyTimeframeFilter(r, rangeOpts));
+  const windowMeta = getWindowFromParams(monthParam, rangeOpts);
 
-  return aggregateReports(reports, {
+  const aggregated = aggregateReports(filtered, {
     scope: 'team',
     monthParam,
     department: { name: 'All Teams', memberCount: users.length },
   });
+  return {
+    ...aggregated,
+    timeframe: windowMeta.timeframe,
+    window: filtered[0]?.window || { start: windowMeta.startKey, end: windowMeta.endKey, days: windowMeta.days },
+  };
 };
 
 module.exports = {
@@ -417,4 +440,6 @@ module.exports = {
   aggregateReports,
   buildDepartmentMonthlyReport,
   buildTeamMonthlyReport,
+  applyTimeframeFilter,
+  resolveReportRangeOptions,
 };

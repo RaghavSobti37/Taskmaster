@@ -164,7 +164,7 @@ async function runDelegatedInReview(def, ctx) {
     action: 'DAILY_LOG',
     'details.type': 'TASK_COMPLETION',
   }).lean();
-  const reviewLog = await Log.findOne({
+  const reviewLogOnSubmit = await Log.findOne({
     userId: assigner._id,
     targetId: taskId,
     targetType: 'Task',
@@ -178,15 +178,14 @@ async function runDelegatedInReview(def, ctx) {
   }).lean();
 
   if (!assigneeLog) return { ...probeFail(def, 'Missing assignee TASK_COMPLETION daily log'), artifacts: ctx.artifacts };
-  if (!reviewLog) return { ...probeFail(def, 'Missing assigner TASK_REVIEW daily log'), artifacts: ctx.artifacts };
+  if (reviewLogOnSubmit) {
+    return { ...probeFail(def, 'Assigner TASK_REVIEW must not be created on submit'), artifacts: ctx.artifacts };
+  }
   if (assignerCompletion) {
     return { ...probeFail(def, 'Assigner must not get TASK_COMPLETION on submit'), artifacts: ctx.artifacts };
   }
-  if (!String(reviewLog.details?.timeSpent || '').includes('15m')) {
-    return { ...probeFail(def, `Review log expected 15m, got ${reviewLog.details?.timeSpent}`), artifacts: ctx.artifacts };
-  }
 
-  return { ...probePass(def, 'Delegated completion → in-review with split daily logs'), artifacts: ctx.artifacts };
+  return { ...probePass(def, 'Delegated completion → in-review with assignee-only daily log'), artifacts: ctx.artifacts };
 }
 
 async function runSelfComplete(def, ctx) {
@@ -286,7 +285,7 @@ async function runReviewApprove(def, ctx) {
     method: 'PUT',
     url: `/api/tasks/${taskId}`,
     user: assigner,
-    data: { reviewAction: 'approve' },
+    data: { reviewAction: 'approve', reviewHours: 0.25 },
   });
   const status = approveRes.data?.status || approveRes.data?.data?.status;
   if (status !== 'done') {
@@ -300,7 +299,21 @@ async function runReviewApprove(def, ctx) {
   if (assignerCompletionAfter > assignerCompletionBefore) {
     return { ...probeFail(def, 'Approve must not create assigner TASK_COMPLETION log'), artifacts: ctx.artifacts };
   }
-  return { ...probePass(def, 'Assigner approved review → done without extra completion log'), artifacts: ctx.artifacts };
+  const reviewLog = await Log.findOne({
+    userId: assigner._id,
+    targetId: taskId,
+    'details.type': 'TASK_REVIEW',
+  }).lean();
+  if (!reviewLog) {
+    return { ...probeFail(def, 'Missing assigner TASK_REVIEW log on approve'), artifacts: ctx.artifacts };
+  }
+  if (reviewLog.details?.title !== '[review]' || reviewLog.details?.message !== '[review]') {
+    return { ...probeFail(def, 'Review log must use [review] label only'), artifacts: ctx.artifacts };
+  }
+  if (!String(reviewLog.details?.timeSpent || '').includes('15m')) {
+    return { ...probeFail(def, `Review log expected 15m, got ${reviewLog.details?.timeSpent}`), artifacts: ctx.artifacts };
+  }
+  return { ...probePass(def, 'Assigner approved review → [review] log only'), artifacts: ctx.artifacts };
 }
 
 async function runFinanceOpsApprove(def, ctx) {

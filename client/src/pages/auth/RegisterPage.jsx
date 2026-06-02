@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
-import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import { useDepartments } from '../../hooks/useTaskmasterQueries';

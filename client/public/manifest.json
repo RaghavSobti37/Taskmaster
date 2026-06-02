@@ -3,7 +3,7 @@
   "name": "CoreKnot",
   "short_name": "CoreKnot",
   "description": "Enterprise Work Management",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#fcf8f2",
@@ -35,6 +35,17 @@
   ],
   "shortcuts": [
     {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Inbox",
       "short_name": "Inbox",
       "url": "/inbox",
@@ -49,6 +60,17 @@
       "name": "Todo",
       "short_name": "Todo",
       "url": "/todo",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "url": "/projects",
       "icons": [
         {
           "src": "/icons/icon-192.png",

@@ -24,6 +24,10 @@ const gamificationConfigSchema = new mongoose.Schema(
     baseXp: { type: Number, default: DEFAULT_XP.baseXp },
 
     updatedAt: { type: Date, default: Date.now },
+    /** Last global XP recalc (audit sync + user totals). */
+    lastRecalculatedAt: { type: Date },
+    /** Per-user weekly XP (stored amounts) captured immediately before last recalc. */
+    lastRecalcWeeklyPrior: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true }
 );

@@ -43,8 +43,7 @@ const DEFAULT_NAVBAR_GROUPS = [
       { path: '/dashboard', label: 'Dashboard', order: 1, visible: true },
       { path: '/calendar', label: 'Calendar', order: 2, visible: true },
       { path: '/todo', label: 'To-Do', order: 3, visible: true },
-      { path: '/inbox', label: 'Inbox', order: 4, visible: true },
-      { path: '/chat', label: 'Chat', order: 5, visible: true }
+      { path: '/inbox', label: 'Inbox', order: 4, visible: true }
     ]
   },
   {
@@ -110,7 +109,8 @@ const DEFAULT_NAVBAR_GROUPS = [
       { path: '/admin', label: 'Data Hub', order: 2, visible: true },
       { path: '/admin/exly-campaigns', label: 'Exly Data', order: 3, visible: true },
       { path: '/admin/scripts', label: 'Script Runner', order: 4, visible: true },
-      { path: '/admin/gamification', label: 'Gamification', order: 5, visible: true }
+      { path: '/admin/gamification', label: 'Gamification', order: 5, visible: true },
+      { path: '/admin/project-analytics', label: 'Project Analytics', order: 6, visible: true }
     ]
   }
 ];

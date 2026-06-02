@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, RefreshCw, BarChart3, Star, Database } from 'lucide-react';
+import { Search, RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
 import {
-  PageContainer, PageHeader, Card, DataTable, Button, Input,
-  Badge, NexusDropdown,
+  PageContainer, DataTable, Button, Input,
+  Badge, NexusDropdown, DataOverviewSection, PageToolbar,
 } from '../../components/ui';
+import { mapKpisToStats } from '../../utils/buildChartSeries';
 import DataHubFolderSidebar from '../../components/dataHub/DataHubFolderSidebar';
-import DataHubStatsBar from '../../components/dataHub/DataHubStatsBar';
 import DataHubPersonDetail from '../../components/dataHub/DataHubPersonDetail';
 import DataHubAnalyticsPanel from '../../components/dataHub/DataHubAnalyticsPanel';
 import DataHubTscImport from '../../components/dataHub/DataHubTscImport';
@@ -23,7 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 
 const INLET_COLORS = {
@@ -114,6 +114,46 @@ export function DataHubContent() {
   const lastSyncedAt = syncStatus?.lastSyncedAt || syncStatus?.lastStats?.syncedAt;
   const latestBackup = backupStatus?.snapshots?.[0];
   const backupDbLabel = backupStatus?.backupDatabase || 'taskmaster_backups';
+  const total = peopleData?.total ?? 0;
+
+  const overview = useMemo(() => {
+    const KPI_ICONS = {
+      total: Database, newWeek: TrendingUp, loyal: Star, unsubRate: UserX,
+      revenue: Database, bookings: Database, engaged: Database, active: Database,
+      connected: Database, conversion: TrendingUp, openRate: Database, clickRate: Database,
+    };
+    const kpis = analytics?.kpis;
+    let stats = kpis?.length
+      ? mapKpisToStats(kpis, KPI_ICONS)
+      : [
+          { id: 'total', label: activeFolder === 'all' ? 'Total People' : 'In Folder', value: total, icon: Database, variant: 'primary' },
+          { id: 'newWeek', label: 'New This Week', value: analytics?.newThisWeek ?? 0, icon: TrendingUp, variant: 'mint' },
+          { id: 'loyal', label: 'Loyal (2+ Inlets)', value: folderCounts.loyal ?? analytics?.loyalCount ?? 0, icon: Star, variant: 'warning' },
+        ];
+    if (!kpis?.length && (activeFolder === 'all' || activeFolder === 'unsubscribed')) {
+      const unsubCount = folderCounts.unsubscribed ?? 0;
+      const unsubRate = total > 0 && activeFolder === 'all' ? Math.round((unsubCount / total) * 100) : null;
+      stats = [
+        ...stats,
+        {
+          id: 'unsub',
+          label: activeFolder === 'unsubscribed' ? 'Unsubscribed' : 'Unsub Rate',
+          value: activeFolder === 'unsubscribed' ? unsubCount : `${unsubRate ?? 0}%`,
+          icon: UserX,
+          variant: 'rose',
+        },
+      ];
+    }
+    const folderChart = Object.entries(folderCounts)
+      .filter(([key, val]) => key !== 'all' && Number(val) > 0)
+      .map(([label, value]) => ({ label: label.replace(/_/g, ' '), value: Number(value) }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+    const charts = folderChart.length
+      ? [{ id: 'folders', title: 'Folder mix', type: folderChart.length <= 6 ? 'donut' : 'bar', data: folderChart }]
+      : [];
+    return { stats: stats.slice(0, 4), charts };
+  }, [analytics, activeFolder, folderCounts, total]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['dataHub'] });
@@ -245,43 +285,13 @@ export function DataHubContent() {
           }}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col">
-          <DataHubStatsBar
-            folder={activeFolder}
-            folderCounts={folderCounts}
-            analytics={analytics}
-            total={peopleData?.total ?? 0}
-          />
+        <div className="flex-1 min-w-0 flex flex-col space-y-3">
+          <DataOverviewSection stats={overview.stats} charts={overview.charts} />
 
-          <Card className="px-3 py-2 mb-4 overflow-hidden">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 w-full">
-              <div className="min-w-0">
-                <Input
-                  icon={Search}
-                  placeholder="Search name, email, phone…"
-                  value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                  className="!py-1.5 !min-h-[2.25rem]"
-                />
-              </div>
-              <div className="w-[128px] shrink-0">
-                <NexusDropdown
-                  className="!w-full !max-w-[128px]"
-                  variant="compact"
-                  placeholder="Status"
-                  value={emailStatusFilter}
-                  onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
-                  options={[
-                    { value: 'all', label: 'All statuses' },
-                    { value: 'Active', label: 'Active' },
-                    { value: 'Unsubscribed', label: 'Unsubscribed' },
-                    { value: 'Bounced', label: 'Bounced' },
-                    { value: 'Pending', label: 'Pending' },
-                  ]}
-                />
-              </div>
-              <div className="flex items-center gap-1 shrink-0 justify-end">
-                <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden lg:inline">
+          <PageToolbar
+            actions={(
+              <>
+                <span className="text-[9px] text-[var(--color-text-muted)] font-bold uppercase whitespace-nowrap hidden lg:inline mr-1">
                   {reconcileMutation.isPending
                     ? 'Syncing…'
                     : `Synced ${formatLastSynced(lastSyncedAt)}`}
@@ -315,9 +325,31 @@ export function DataHubContent() {
                 <Button variant="ghost" size="sm" className="!px-2" onClick={handleRefresh} title="Refresh">
                   <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
                 </Button>
-              </div>
-            </div>
-          </Card>
+              </>
+            )}
+          >
+            <Input
+              icon={Search}
+              placeholder="Search name, email, phone…"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="!py-1.5 !min-h-[2.25rem] !w-full min-w-[12rem] max-w-md"
+            />
+            <NexusDropdown
+              className="!w-[128px] shrink-0"
+              variant="compact"
+              placeholder="Status"
+              value={emailStatusFilter}
+              onChange={(v) => { setEmailStatusFilter(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Unsubscribed', label: 'Unsubscribed' },
+                { value: 'Bounced', label: 'Bounced' },
+                { value: 'Pending', label: 'Pending' },
+              ]}
+            />
+          </PageToolbar>
 
           <DataTable
             columns={columns}
@@ -353,10 +385,6 @@ export function DataHubContent() {
 export default function DataHubPage() {
   return (
     <PageContainer className="!py-4 !space-y-4">
-      <PageHeader
-        title="Data Hub"
-        subtitle="Single source for all people data — Exly, Leads, TSC, Booked Calls, Enquiries, Mail, and more."
-      />
       <DataHubContent />
     </PageContainer>
   );

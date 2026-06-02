@@ -11,7 +11,6 @@ import {
   CalendarClock,
   ListTodo,
   Inbox,
-  MessageSquare,
   FolderArchive,
   NotebookPen,
   Mail,
@@ -27,6 +26,7 @@ import {
   Users,
   Database,
   BarChart2,
+  BarChart3,
   Brackets,
   Trophy,
   Activity,
@@ -46,26 +46,7 @@ import { Menu, Settings } from 'lucide-react';
 import { useNavbarPreferences } from '../hooks/useTaskmasterQueries';
 
 import { useTheme } from '../contexts/ThemeContext';
-
-const useWindowSize = () => {
-  const [windowSize, setWindowSize] = useState({
-    width: undefined,
-    height: undefined,
-  });
-
-  useEffect(() => {
-    function handleResize() {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    }
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  return windowSize;
-};
+import { useIsMobile } from '../hooks/useBreakpoint';
 
 const LEGACY_PAGE_PATHS = {
   '/workspace/emails': '/emails',
@@ -92,7 +73,6 @@ const PAGE_CONFIG = {
   '/calendar': { icon: CalendarDays, label: 'Calendar', accessKey: 'calendar' },
   '/todo': { icon: ListTodo, label: 'Todo', accessKey: 'todo' },
   '/inbox': { icon: Inbox, label: 'Inbox', accessKey: 'inbox' },
-  '/chat': { icon: MessageSquare, label: 'Chat', accessKey: 'chat' },
   '/projects': { icon: Briefcase, label: 'Projects', accessKey: 'projects' },
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
@@ -114,6 +94,7 @@ const PAGE_CONFIG = {
   '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
   '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
   '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },
+  '/admin/project-analytics': { icon: BarChart3, label: 'Project Analytics', accessKey: 'admin_project_analytics' },
   '/admin/qa': { icon: Activity, label: 'QA Testing', accessKey: 'admin_data' },
 };
 
@@ -136,7 +117,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
         flex items-center rounded-lg transition-all duration-200 relative
         ${iconOnly ? 'justify-center px-2 py-2 gap-0' : 'gap-2.5 px-2.5 py-1.5'}
         ${active
-            ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-blue-500/15'
+            ? 'bg-[var(--color-action-primary)] text-white shadow-md shadow-[var(--color-action-primary)]/20'
             : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
       `;
       }}
@@ -223,7 +204,7 @@ const ThemeToggle = ({ theme, toggleTheme, collapsed, isMobile }) => {
     <button
       type="button"
       onClick={toggleTheme}
-      className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
+      className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all group overflow-hidden"
     >
       <div className="flex items-center gap-2">
         <AnimatePresence mode="wait">
@@ -253,7 +234,7 @@ const ThemeToggle = ({ theme, toggleTheme, collapsed, isMobile }) => {
           {theme === 'light' ? 'Light' : 'Dark'}
         </span>
       </div>
-      <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500/20' : ''}`}>
+      <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-[var(--color-action-primary)]/20' : ''}`}>
         <motion.div
           animate={{ x: theme === 'light' ? 2 : 18 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
@@ -271,7 +252,6 @@ const OutletSidebar = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
-  const { width } = useWindowSize();
   const { data: navbarPreferences } = useNavbarPreferences();
   const { data: statusCounts = {
     tasks: { overdue: 0, today: 0 },
@@ -280,7 +260,7 @@ const OutletSidebar = () => {
     notifications: { unread: 0 }
   } } = useStatusCounts(!!user);
 
-  const isMobile = width < 1024;
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     closeMobileSidebar();
@@ -355,12 +335,12 @@ const OutletSidebar = () => {
         <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
           {(() => {
             const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
-              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }, { path: '/chat' }] },
+              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }] },
               { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/emails' }] },
               { id: 'office', title: 'Office', visible: true, pages: [{ path: '/equipment' }, { path: '/contacts' }, { path: '/attendance' }, { path: '/subscriptions' }] },
               { id: 'crm', title: 'CRM', visible: true, pages: [{ path: '/leads' }, { path: '/followups' }, { path: '/bookings' }] },
               { id: 'management', title: 'Management', visible: true, pages: [{ path: '/finance' }, { path: '/announcements' }, { path: '/ops-logs' }, { path: '/artists' }] },
-              { id: 'admin', title: 'Admin', visible: true, pages: [{ path: '/admin/users' }, { path: '/admin' }, { path: '/admin/exly-campaigns' }, { path: '/admin/scripts' }, { path: '/admin/gamification' }, { path: '/admin/qa' }] }
+              { id: 'admin', title: 'Admin', visible: true, pages: [{ path: '/admin/users' }, { path: '/admin' }, { path: '/admin/exly-campaigns' }, { path: '/admin/scripts' }, { path: '/admin/gamification' }, { path: '/admin/project-analytics' }, { path: '/admin/qa' }] }
             ];
 
             // Force inject new pages if missing from user's custom preferences
@@ -369,6 +349,16 @@ const OutletSidebar = () => {
               const adminGroup = rawGroups.find(g => g.id === 'admin');
               if (adminGroup) {
                 adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/qa', visible: true }];
+              }
+            }
+
+            const hasProjectAnalytics = rawGroups.some((g) =>
+              (g.pages || []).some((p) => p.path === '/admin/project-analytics')
+            );
+            if (!hasProjectAnalytics) {
+              const adminGroup = rawGroups.find((g) => g.id === 'admin');
+              if (adminGroup) {
+                adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/project-analytics', visible: true }];
               }
             }
 
@@ -381,19 +371,6 @@ const OutletSidebar = () => {
                 officeGroup.pages = [
                   ...(officeGroup.pages || []),
                   { path: '/subscriptions', label: 'Subscriptions', visible: true },
-                ];
-              }
-            }
-
-            const hasChat = rawGroups.some((g) =>
-              (g.pages || []).some((p) => normalizeNavPagePath(p.path) === '/chat')
-            );
-            if (!hasChat) {
-              const platformGroup = rawGroups.find((g) => g.id === 'platform');
-              if (platformGroup) {
-                platformGroup.pages = [
-                  ...(platformGroup.pages || []),
-                  { path: '/chat', label: 'Chat', visible: true },
                 ];
               }
             }
@@ -417,7 +394,7 @@ const OutletSidebar = () => {
             .sort((a, b) => (a.order || 0) - (b.order || 0))
             .map(group => {
               const visiblePages = (group.pages || [])
-                .filter(page => (page.visible !== false) && PAGE_CONFIG[page.path] && hasPageAccess(user, PAGE_CONFIG[page.path].accessKey))
+                .filter(page => page.path !== '/chat' && (page.visible !== false) && PAGE_CONFIG[page.path] && hasPageAccess(user, PAGE_CONFIG[page.path].accessKey))
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
               if (visiblePages.length === 0) return null;
@@ -473,17 +450,17 @@ const OutletSidebar = () => {
             <div className="flex gap-1.5 w-full">
               <button
                 onClick={() => navigate('/settings')}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all group overflow-hidden"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all group overflow-hidden"
                 title="Settings"
               >
-                <Settings size={16} className="text-[var(--color-text-secondary)] group-hover:text-blue-500 transition-colors" />
+                <Settings size={16} className="text-[var(--color-text-secondary)] group-hover:text-[var(--color-action-primary)] transition-colors" />
                 <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
                   Settings
                 </span>
               </button>
               <button
                 onClick={toggleTheme}
-                className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-blue-500/50 transition-all flex items-center justify-center shrink-0"
+                className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all flex items-center justify-center shrink-0"
                 title="Toggle Theme"
               >
                 {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
@@ -496,14 +473,14 @@ const OutletSidebar = () => {
               <button
                 onClick={() => navigate('/settings')}
                 title="Settings"
-                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-blue-500/50 transition-colors"
+                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
               >
-                <Settings size={16} className="text-[var(--color-text-secondary)] hover:text-blue-500 transition-colors" />
+                <Settings size={16} className="text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] transition-colors" />
               </button>
               <button
                 onClick={toggleTheme}
                 title="Toggle Theme"
-                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-blue-500/50 transition-colors"
+                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
               >
                 {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
               </button>
@@ -515,7 +492,7 @@ const OutletSidebar = () => {
             className="w-full text-left group cursor-pointer"
             title={!showLabels ? user?.name : undefined}
           >
-            <div className={`bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)] group-hover:border-blue-500/50 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
+            <div className={`bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)] group-hover:border-[var(--color-action-primary)]/50 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
               <div className={`flex items-center ${showLabels ? 'gap-2.5' : 'justify-center'}`}>
                 <div className="relative shrink-0 group/avatar">
                   <div className={`rounded-lg bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative ${showLabels ? 'w-8 h-8' : 'w-7 h-7'}`}>
@@ -547,7 +524,7 @@ const OutletSidebar = () => {
                 </div>
                 {showLabels && (
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-tight truncate group-hover:text-blue-500 transition-colors">{user.name}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-tight truncate group-hover:text-[var(--color-action-primary)] transition-colors">{user.name}</p>
                     <p className="text-[8px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider truncate">{getDepartmentName(user)}</p>
                   </div>
                 )}

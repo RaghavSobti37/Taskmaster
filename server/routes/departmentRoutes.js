@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
 
 router.get('/team/monthly-report', admin, async (req, res) => {
   try {
-    const report = await buildTeamMonthlyReport(req.query.month);
+    const report = await buildTeamMonthlyReport(req.query.month, req.query);
     res.json(report);
   } catch (err) {
     logger.error('Department', 'team monthly report error', { error: err.message });
@@ -97,7 +97,7 @@ router.get('/task-types', async (req, res) => {
 
 router.get('/:id/monthly-report', admin, async (req, res) => {
   try {
-    const report = await buildDepartmentMonthlyReport(req.params.id, req.query.month);
+    const report = await buildDepartmentMonthlyReport(req.params.id, req.query.month, req.query);
     res.json(report);
   } catch (err) {
     logger.error('Department', 'department monthly report error', { error: err.message, departmentId: req.params.id });

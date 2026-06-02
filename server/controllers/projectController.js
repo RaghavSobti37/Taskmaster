@@ -812,6 +812,79 @@ exports.getProjectWorkload = async (req, res) => {
   }
 };
 
+/** Dev-only plain-text export: workspaces and projects (localhost). */
+exports.exportWorkspacesPlainText = async (req, res) => {
+  try {
+    let workspaces = await Workspace.find().lean();
+    workspaces = sortWorkspacesGlobal(workspaces);
+
+    const projects = await Project.find({ status: { $ne: 'archived' } })
+      .select('name workspace')
+      .sort({ name: 1 })
+      .lean();
+
+    const byWs = {};
+    for (const p of projects) {
+      const w = normalizeWorkspaceName(p.workspace || 'GENERAL');
+      if (!byWs[w]) byWs[w] = [];
+      byWs[w].push(p.name);
+    }
+
+    const lines = [];
+    const seen = new Set();
+
+    for (const ws of workspaces) {
+      const name = normalizeWorkspaceName(ws.name);
+      seen.add(name);
+      lines.push(name);
+      const list = byWs[name] || [];
+      if (!list.length) lines.push('  (no projects)');
+      else list.forEach((n) => lines.push(`  - ${n}`));
+      lines.push('');
+    }
+
+    for (const w of Object.keys(byWs).sort()) {
+      if (seen.has(w)) continue;
+      lines.push(w);
+      byWs[w].forEach((n) => lines.push(`  - ${n}`));
+      lines.push('');
+    }
+
+    res.type('text/plain; charset=utf-8').send(lines.join('\n').trim() + '\n');
+  } catch (error) {
+    logger.error('projectController', 'Export workspaces plain text', { error: error.message || error });
+    res.status(500).type('text/plain').send(`Error: ${error.message}\n`);
+  }
+};
+
+const {
+  buildProjectAnalytics,
+  buildProjectsAnalyticsSummary,
+} = require('../services/projectAnalyticsService');
+
+exports.getProjectsAnalyticsSummary = async (req, res) => {
+  try {
+    const data = await buildProjectsAnalyticsSummary(req.user, req.query);
+    res.json(data);
+  } catch (error) {
+    logger.error('projectController', 'getProjectsAnalyticsSummary', { error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getProjectAnalytics = async (req, res) => {
+  try {
+    const data = await buildProjectAnalytics(req.params.id, req.user, req.query);
+    res.json(data);
+  } catch (error) {
+    const status = error.status || 500;
+    if (status >= 500) {
+      logger.error('projectController', 'getProjectAnalytics', { error: error.message, projectId: req.params.id });
+    }
+    res.status(status).json({ error: error.message });
+  }
+};
+
 exports.getProjectHoursSummary = async (req, res) => {
   try {
     const Task = require('../models/Task');

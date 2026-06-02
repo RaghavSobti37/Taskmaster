@@ -62,8 +62,23 @@ const canUserApproveReview = (user, assignments) => {
 const isSelfWorkOnlyTask = (assignments) =>
   (assignments || []).length > 0 && getDelegatedAssignments(assignments).length === 0;
 
-/** Default daily-log hours credited to reviewer when assignee submits for review. */
+/** Default daily-log hours credited to reviewer on approval. */
 const REVIEW_DEFAULT_HOURS = 0.25;
+
+/** Daily log title/message for reviewer time (assigner-only credit). */
+const REVIEW_LOG_LABEL = '[review]';
+
+/** True when user assigned delegated work to others but is not the delegated assignee. */
+const isAssignerOnlyReviewer = (assignments, userId) => {
+  const uid = normalizeId(userId);
+  if (!uid) return false;
+  const delegated = getDelegatedAssignments(assignments);
+  if (!delegated.length) return false;
+  const isAssigner = delegated.some((a) => assignmentAssignerId(a) === uid);
+  if (!isAssigner) return false;
+  const isDelegatedAssignee = delegated.some((a) => assignmentUserId(a) === uid);
+  return !isDelegatedAssignee;
+};
 
 const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => {
   const creator = normalizeId(creatorId);
@@ -87,4 +102,6 @@ module.exports = {
   isSelfWorkOnlyTask,
   mergeAssigneeIdsWithCreator,
   REVIEW_DEFAULT_HOURS,
+  REVIEW_LOG_LABEL,
+  isAssignerOnlyReviewer,
 };

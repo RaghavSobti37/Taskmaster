@@ -21,7 +21,6 @@ export {
   TablePagination,
   DataTable,
   FullScreenWorkspace,
-  InputFormDrawer,
   ProgressBar,
   Switch,
   Accordion,
@@ -38,14 +37,23 @@ export { default as PageLoadGuard } from './PageLoadGuard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
 export { default as TimeframeFilter } from './TimeframeFilter';
-// ── Shadcn / Radix (install cva + radix-ui before enabling) ──
-// export { Button as ShadcnButton, buttonVariants } from './button';
-
 // ── Dropdowns (Phase 2: consolidate into Select) ──
 export { default as NexusDropdown } from './NexusDropdown';
 
-// ── Page chrome ──
+// ── Page chrome (UDIF 2.1) ──
 export { default as PageHeader } from './PageHeader';
+export { default as PageToolbar } from './PageToolbar';
+export { default as ListPageLayout } from './ListPageLayout';
+export { default as DataOverviewSection } from './DataOverviewSection';
+export { default as DataMiniChart } from './DataMiniChart';
+export { default as MobileFilterSheet } from './MobileFilterSheet';
+export { default as MobileFilterField } from './MobileFilterField';
+export { default as MobilePageHeader } from './MobilePageHeader';
+export { default as ListCard } from './ListCard';
+export { default as FilterChips, FilterChip } from './FilterChips';
+export { default as MobileCollapsibleSection } from './MobileCollapsibleSection';
+export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner';
+export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as DashboardSkeleton } from './DashboardSkeleton';
 export { default as PageSkeleton } from './PageSkeleton';
 
@@ -63,5 +71,6 @@ export {
   getModalPanelStyle,
   getModalPanelClassName,
 } from './ModalShell';
+/** @deprecated Use ModalShell — see docs/COMPONENT_STANDARDS.md */
 export { CenteredModal } from './CenteredModal';
 export { VisualExplainerModal } from './VisualExplainerModal';

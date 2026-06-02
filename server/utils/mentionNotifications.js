@@ -41,7 +41,6 @@ const buildMentionNotifications = async ({
   assigneeIds = [],
   task = null,
   asset = null,
-  chat = null,
 }) => {
   if (!text || !actor?._id) return [];
 
@@ -92,19 +91,6 @@ const buildMentionNotifications = async ({
         iconType: 'user',
       });
       continue;
-    }
-
-    if (chat) {
-      payloads.push({
-        recipientId,
-        title: 'Mentioned in Chat',
-        message: `${actor.name} mentioned you in "${chat.name || 'Chat'}"`,
-        category: 'system',
-        type: 'system',
-        actionUrl: `/chat?channel=${chat._id}`,
-        actorId: actor._id,
-        iconType: 'user',
-      });
     }
   }
 

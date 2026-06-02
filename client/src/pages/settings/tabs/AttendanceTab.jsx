@@ -18,7 +18,6 @@ export default function AttendanceTab() {
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Attendance</h1>
-        <p className="text-sm text-[var(--color-text-secondary)]">View your daily check-in logs.</p>
       </div>
 
       <Card className="overflow-hidden">

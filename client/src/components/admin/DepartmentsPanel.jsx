@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, Trash2, FileText, BarChart3, Pencil, CheckSquare, Square } from 'lucide-react';
-import { Card, Button, Input, Badge, CenteredModal, ModalFooter } from '../ui';
+import { Card, Button, Input, Badge, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui';
 import {
   useCreateDepartment,
   useUpdateDepartment,
@@ -13,7 +13,7 @@ import {
   resolveDepartmentPages,
 } from '../../utils/pagePermissions';
 import { DepartmentMonthlyReportPanel, TeamMonthlyReportPanel } from './AggregatedMonthlyReportPanel';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const PagePermissionsEditor = ({ selectedPages, onChange }) => {
@@ -307,13 +307,13 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
         </div>
       </Card>
 
-      <CenteredModal isOpen={!!editingDept} onClose={() => setEditingDept(null)} size="lg">
-        <div className="p-6 space-y-4">
-          <div>
-            <h3 className="text-sm font-black uppercase tracking-widest">Page Access</h3>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">{editingDept?.name}</p>
-          </div>
-
+      <ModalShell isOpen={!!editingDept} onClose={() => setEditingDept(null)} size="lg">
+        <ModalHeader
+          title="Page Access"
+          subtitle={editingDept?.name}
+          onClose={() => setEditingDept(null)}
+        />
+        <ModalBody className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Quick template:</span>
             {PERMISSION_PRESET_OPTIONS.map((o) => (
@@ -337,46 +337,51 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
           <div className="flex items-center justify-between pt-2 border-t border-[var(--color-bg-border)]">
             <span className="text-[10px] text-[var(--color-text-muted)]">{editPages.length} pages selected</span>
           </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={revertPermissionEdits}
+            disabled={!hasPermissionEdits || updateMutation.isPending}
+          >
+            Discard
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="success"
+            onClick={handleSavePermissions}
+            disabled={!hasPermissionEdits || updateMutation.isPending}
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </ModalFooter>
+      </ModalShell>
 
-          <ModalFooter>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={revertPermissionEdits}
-              disabled={!hasPermissionEdits || updateMutation.isPending}
-            >
-              Discard
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="success"
-              onClick={handleSavePermissions}
-              disabled={!hasPermissionEdits || updateMutation.isPending}
-            >
-              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </ModalFooter>
-        </div>
-      </CenteredModal>
-
-      <CenteredModal isOpen={!!reportDept} onClose={() => setReportDept(null)} size="full">
-        <div className="p-6 max-h-[90vh] overflow-y-auto">
+      <ModalShell isOpen={!!reportDept} onClose={() => setReportDept(null)} size="full">
+        <ModalHeader
+          title="Department report"
+          subtitle={reportDept?.name}
+          onClose={() => setReportDept(null)}
+        />
+        <ModalBody className="max-h-[80vh] overflow-y-auto">
           <DepartmentMonthlyReportPanel
             departmentId={reportDept?._id}
             departmentName={reportDept?.name}
             isOpen={!!reportDept}
             onClose={() => setReportDept(null)}
           />
-        </div>
-      </CenteredModal>
+        </ModalBody>
+      </ModalShell>
 
-      <CenteredModal isOpen={teamReportOpen} onClose={() => setTeamReportOpen(false)} size="full">
-        <div className="p-6 max-h-[90vh] overflow-y-auto">
+      <ModalShell isOpen={teamReportOpen} onClose={() => setTeamReportOpen(false)} size="full">
+        <ModalHeader title="Team report" onClose={() => setTeamReportOpen(false)} />
+        <ModalBody className="max-h-[80vh] overflow-y-auto">
           <TeamMonthlyReportPanel isOpen={teamReportOpen} />
-        </div>
-      </CenteredModal>
+        </ModalBody>
+      </ModalShell>
     </>
   );
 };

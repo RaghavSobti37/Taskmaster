@@ -30,6 +30,8 @@ const attendanceSchema = new mongoose.Schema({
   systemHours: { type: Number, default: 0 },
   loggedHours: { type: Number, default: 0 },
   discrepancyMinutes: { type: Number, default: 0 },
+  /** Set when full-day attendance XP is granted after both IN/OUT are admin-approved. */
+  xpGrantedAt: { type: Date },
 }, { timestamps: true });
 
 attendanceSchema.index({ userId: 1, date: 1 }, { unique: true });

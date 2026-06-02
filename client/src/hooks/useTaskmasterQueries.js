@@ -3,6 +3,8 @@ export {
   useWorkspaces,
   useWorkspace,
   useProject,
+  useProjectAnalytics,
+  useProjectsAnalyticsSummary,
   useTasks,
   useDashboardTasks,
   useReviewTasks,
@@ -22,6 +24,7 @@ export {
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
+import { normalizeRepSummaryPayload } from '../utils/adminRibbonMetrics';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 
@@ -40,8 +43,12 @@ const fetchUserDirectory = async () => {
 export const useLogs = (userId, limit = 200, enabled = true) => {
   const queryClient = useQueryClient();
   useEffect(() => {
-    return subscribeToChannel('logs', 'log_update', (newLog) => {
+    return subscribeToChannel('logs', 'log_update', () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      queryClient.invalidateQueries({
+        predicate: (q) => Array.isArray(q.queryKey) && q.queryKey[0] === 'projects' && q.queryKey[2] === 'analytics',
+      });
     });
   }, [queryClient]);
 
@@ -165,6 +172,8 @@ export const useCreateLog = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard'] });
@@ -178,6 +187,8 @@ export const useUpdateLog = () => {
     mutationFn: ({ id, data }) => axios.put(`/api/logs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     }
   });
 };
@@ -188,6 +199,8 @@ export const useDeleteLog = () => {
     mutationFn: (id) => axios.delete(`/api/logs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     }
   });
 };
@@ -249,6 +262,7 @@ export const useUpdateLead = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'repSummary'] });
     },
   });
 };
@@ -260,6 +274,7 @@ export const useCreateLead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['crm', 'repSummary'] });
     }
   });
 };
@@ -290,30 +305,39 @@ export const useCRMConfig = () => {
   });
 };
 
-export const useCRMStats = (enabled = true) => {
+export const useCRMStats = (enabled = true, options = {}) => {
   return useQuery({
     queryKey: ['crm', 'stats'],
     queryFn: async () => (await axios.get('/api/crm/stats')).data,
     enabled,
-    staleTime: 1000 * 60 * 2,
+    staleTime: options.staleTime ?? 1000 * 60 * 2,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
+    refetchOnMount: options.refetchOnMount,
   });
 };
 
-export const useRepSummary = (enabled = true) => {
+export const useRepSummary = (enabled = true, options = {}) => {
   return useQuery({
     queryKey: ['crm', 'repSummary'],
-    queryFn: async () => (await axios.get('/api/crm/rep-summary')).data,
+    queryFn: async () => {
+      const { data } = await axios.get('/api/crm/rep-summary');
+      return normalizeRepSummaryPayload(data);
+    },
     enabled,
-    staleTime: 1000 * 60 * 5,
+    staleTime: options.staleTime ?? 1000 * 60 * 5,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
+    refetchOnMount: options.refetchOnMount,
   });
 };
 
-export const useMailStats = (enabled = true) => {
+export const useMailStats = (enabled = true, options = {}) => {
   return useQuery({
     queryKey: ['mail', 'stats'],
     queryFn: async () => (await axios.get('/api/mail/stats')).data,
     enabled,
-    staleTime: 1000 * 60 * 5,
+    staleTime: options.staleTime ?? 1000 * 60 * 5,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,
+    refetchOnMount: options.refetchOnMount,
   });
 };
 
@@ -811,6 +835,7 @@ export const useApproveAttendance = () => {
     mutationFn: ({ id, approvalTarget, manualTime, workMode }) => axios.patch(`/api/attendance/${id}/approve`, { approvalTarget, manualTime, workMode }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
     },
   });
 };
@@ -887,10 +912,20 @@ export const useUpsertAttendance = () => {
   });
 };
 
+const normalizeLeaderboardResponse = (raw) => {
+  if (Array.isArray(raw)) return { entries: raw, meta: null };
+  return {
+    entries: raw?.entries || [],
+    meta: raw?.meta || null,
+  };
+};
+
 export const useLeaderboard = (enabled = true) => {
   return useQuery({
     queryKey: ['gamification', 'leaderboard'],
-    queryFn: async () => (await axios.get('/api/gamification/leaderboard')).data,
+    queryFn: async () => normalizeLeaderboardResponse(
+      (await axios.get('/api/gamification/leaderboard')).data
+    ),
     enabled,
     staleTime: 1000 * 60
   });
@@ -1008,18 +1043,24 @@ export const useDeleteDepartment = () => {
   });
 };
 
-export const useDepartmentMonthlyReport = (departmentId, month, enabled = true) => {
+export const useDepartmentMonthlyReport = (departmentId, month, rangeParams = {}, enabled = true) => {
+  const { timeframe = '30d', startDate, endDate } = rangeParams;
   return useQuery({
-    queryKey: ['departmentMonthlyReport', departmentId, month],
-    queryFn: async () => (await axios.get(`/api/departments/${departmentId}/monthly-report`, { params: { month } })).data,
+    queryKey: ['departmentMonthlyReport', departmentId, month, timeframe, startDate, endDate],
+    queryFn: async () => (await axios.get(`/api/departments/${departmentId}/monthly-report`, {
+      params: { month, timeframe, startDate, endDate },
+    })).data,
     enabled: enabled && !!departmentId && !!month,
   });
 };
 
-export const useTeamMonthlyReport = (month, enabled = true) => {
+export const useTeamMonthlyReport = (month, rangeParams = {}, enabled = true) => {
+  const { timeframe = '30d', startDate, endDate } = rangeParams;
   return useQuery({
-    queryKey: ['teamMonthlyReport', month],
-    queryFn: async () => (await axios.get('/api/departments/team/monthly-report', { params: { month } })).data,
+    queryKey: ['teamMonthlyReport', month, timeframe, startDate, endDate],
+    queryFn: async () => (await axios.get('/api/departments/team/monthly-report', {
+      params: { month, timeframe, startDate, endDate },
+    })).data,
     enabled: enabled && !!month,
   });
 };
@@ -1174,14 +1215,20 @@ export const useNavbarPreferences = () => {
 export const DATA_HUB_REFRESH_MS = 3 * 60 * 60 * 1000;
 
 export const useDataHubFolders = (options = {}) => {
+  const refetchInterval =
+    options.refetchInterval === false
+      ? false
+      : (options.refetchInterval ?? DATA_HUB_REFRESH_MS);
   return useQuery({
     queryKey: ['dataHub', 'folders'],
     queryFn: async () => {
       const { data } = await axios.get('/api/data-hub/folders');
       return data;
     },
-    staleTime: DATA_HUB_REFRESH_MS,
-    refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
+    staleTime: options.staleTime ?? DATA_HUB_REFRESH_MS,
+    refetchInterval,
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? false,
+    refetchOnMount: options.refetchOnMount,
   });
 };
 

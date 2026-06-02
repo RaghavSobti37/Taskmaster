@@ -10,7 +10,7 @@ import { Card } from '../ui';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Types' },

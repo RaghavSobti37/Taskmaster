@@ -129,11 +129,14 @@ router.post('/', protect, async (req, res) => {
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
     if (action === 'DAILY_LOG' && !['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) {
-      const hours = parseTimeSpentToHours(details?.timeSpent);
+      const { clampXpHours } = require('../../shared/gamificationRules');
+      const rawHours = parseTimeSpentToHours(details?.timeSpent);
+      const hours = clampXpHours(rawHours);
       GamificationService.awardActionXp(req.user._id, 'DAILY_LOG', {
         logId: log._id,
         hours,
         timeSpent: details?.timeSpent,
+        manualDailyLog: true,
       })
         .then(() => GamificationService.progressMission(req.user._id, 'DAILY_LOG', 1))
         .catch((err) => {

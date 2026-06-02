@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.8.0-126d5e?style=flat-square" alt="Version 1.8.0" />
+  <img src="https://img.shields.io/badge/version-1.9.0-126d5e?style=flat-square" alt="Version 1.9.0" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -79,7 +79,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ### 📊 Ultra-Density Productivity Engine
 
 * **Headerless Three-Column View:** Combines live leaderboard podiums, team announcements, a global pinboard, private sticky notes, and active schedules inside a zero-latency single screen.
-* **Dynamic Gamification:** Tracks user activity and awards Experience Points (XP) from structural configurations. Resets top-performers weekly on Monday 00:00 IST via native aggregation on `XPAuditLog` while preserving lifetime levels.
+* **Dynamic Gamification:** Tracks user activity and awards Experience Points (XP) from structural configurations. Time-based actions cap at 12 h per event; daily logs use 8 h base + 1.5× overtime. Attendance XP grants only after ops locks both check-in and check-out (`attendanceXp.js`). Leaderboard tap opens per-user XP breakdown. Weekly reset Monday 00:00 IST on `XPAuditLog`; recalc repairs invalid review-approval XP (`reviewExploitRepairService.js`).
 * **Global Navigation:** Keyboard-driven command palettes (`Cmd/Ctrl + K`) and persistent floating Fast Action Buttons (FAB) for instantaneous record generation.
 
 ### 💼 Automated Sales & CRM Pipelines
@@ -151,13 +151,13 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Widget:** `dept-stats` card in `GenericDashboardCard.jsx`; admin-only via `dashboardComponents.js`.
 
 
-### Booked Calls, Chat & Unsaved Changes (v1.7.57)
+### Booked Calls & Unsaved Changes (v1.7.57+)
 
 * **CRM-only bookings:** Removed `bookedCallsSyncService`, HolySheet/Sheet sync API (`/api/crm/sync-bookings`), Data Hub sheet import, and Google Sheets append on the book-call webhook. Website webhook is the single source of truth.
 * **Webhook auth:** `BOOK_CALL_WEBHOOK_SECRET` via `X-Webhook-Secret` (same pattern as artist enquiry); `rejectUnlessBookCallAuthorized` in `webhookAuth.js`.
 * **Rep assignment:** `bookedCallRepAssignment.js` — weighted 2:1:1 across Satyam (`sr06`), Aryaman (`sr09`), and Akash.
-* **Team chat:** Linked channels, DMs, file uploads (`chatRoutes.js`, `ChatChannel` / `ChatMessage` models, `client/src/pages/chat/`).
 * **Unsaved changes:** Global `UnsavedChangesProvider` + bottom bar on settings, CRM workspaces, admin panels, and `FullScreenWorkspace` flows (`useUnsavedChanges.js`). v1.8.0 adds field-level diff preview in the bar and inline Discard/Save in modals that opt out of the global bar.
+* **Chat removed (v1.9.0):** Team chat (channels, DMs, realtime) was removed from client and server to reduce surface area; mentions in tasks remain.
 
 **Deploy env (Taskmaster + TSC Website):**
 
@@ -188,6 +188,20 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **Music Content Calendar:** 35 public `musical_day` events (birthdays, observances, memorials) from `Music_Content_Calendar.pdf`. Seed via admin **Birthdays** button on Calendar, `POST /api/calendar/seed-music-content`, or `npm run seed:music-calendar:prod`.
 * **Cross-tenant public events:** Calendar API uses `bypassTenant` so org-wide public birthdays are visible to all users.
 * **Event types:** `meeting`, `instagram_post`, `youtube_post`, `shoot_day`, `event`, `musical_day` — musical days display as **Musical Day** in the calendar UI.
+
+### 📱 Mobile-First List UI (v1.9.0)
+
+* **Layout kit:** `ListPageLayout`, `PageToolbar`, `DataOverviewSection`, `DataMiniChart`, `MobileFilterSheet`, `MobilePageHeader`, `ListCard`, `FilterChips`, `DesktopRecommendedBanner`.
+* **Hooks:** `useBreakpoint`, `useColumnSort`, shared report range state for monthly and project analytics.
+* **Standards:** [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) — modal tree, `DataTable` sort, `UserAvatar`, confirms via `confirmContext` (no `window.alert`).
+* **Migrated pages:** Assets, Finance, CRM (Leads/Followups), Equipment, Contacts, Office assets, Artists, Admin users, Todo, Projects, Inbox, and more use the shared list pattern.
+
+### 📈 Project Analytics (v1.9.0)
+
+* **Per-project:** `/projects/:id/analytics` — task throughput, priority mix, focus hours, assignee breakdown for a rolling date range (`ProjectAnalyticsPage.jsx`, `projectAnalyticsService.js`).
+* **Admin rollup:** `/admin/project-analytics` — cross-project comparison for admins (`AdminProjectAnalyticsPage.jsx`).
+* **API:** `GET /api/projects/:id/analytics` and admin aggregate routes on `projectRoutes.js`.
+* **Shared range logic:** `shared/reportRange.js`, `client/src/utils/projectReportRange.js`.
 
 ### 🗄️ Data Hub (Unified CRM)
 
@@ -524,10 +538,24 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 | [`docs/AI_AGENT_PROJECT_CONTEXT.md`](docs/AI_AGENT_PROJECT_CONTEXT.md) | Complete AI agent reference (routes, models, rules) |
 | [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |
+| [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) | Client UI conventions — lists, modals, tables, avatars |
 
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.0 — Mobile UI, Project Analytics, Gamification & Chat Removal
+
+- **Mobile list system:** Shared layout components (`ListPageLayout`, `PageToolbar`, `MobileFilterSheet`, etc.) rolled across major CRUD pages; `useBreakpoint` for responsive behavior; PWA manifest and safe-area tweaks.
+- **Component standards:** `docs/COMPONENT_STANDARDS.md`; shadcn `button.jsx` removed — use `Button` from `primitives.jsx` only; deprecated `DashboardEditor`, `CustomizationTab`, `CenteredModal` patterns removed.
+- **Project analytics:** `projectAnalyticsService.js`, per-project and admin analytics pages, chart helpers (`buildChartSeries.js`, `DataMiniChart.jsx`).
+- **Monthly reports:** Refactored panels with `MonthlyReportBody`, `ReportRangeControls`, `shared/monthlyReportTimeframe.js` and `shared/reportRange.js`.
+- **Gamification:** Time-based XP caps, daily-log overtime tiers, attendance XP on approved lock (`attendanceXp.js`), leaderboard breakdown modal, admin recalc runs `reviewExploitRepairService.js`; expanded `gamificationService.test.js` and `attendanceXp.test.js`.
+- **Chat removed:** Deleted chat routes, models, controllers, and all `client/src/components/chat/*` + `ChatPage.jsx`; realtime config trimmed.
+- **Admin panel:** Ribbon metrics (`adminRibbonMetrics.js`), project analytics nav entry, gamification admin recalc hints (`LeaderboardRecalcHint.jsx`).
+- **Settings:** Sidebar customization uses `defaultNavbarGroups.js`; dashboard customization tab only (legacy customization tab removed).
+
+No DB migration. Redeploy API + static client.
 
 ### v1.8.0 — Invoice Approval, Auth Cookie v2 & Unsaved-Changes UX
 
@@ -537,7 +565,6 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 - **Logout hardening:** `authSession.js` force-logout flag survives redirect; `AuthContext` skips `/me` while logging out; 403 clears session like 401.
 - **Unsaved changes:** `formFieldChanges.js` + enhanced `UnsavedChangesBar` (field diff list, portal for elevated z-index, mobile safe-area offset). Modals (dashboard editor, project settings, departments, channel links) use inline Discard/Save instead of global bar (`enabled: false`).
 - **ConfirmContext split:** `confirmContext.js` + `ConfirmProvider.jsx` for React Fast Refresh compatibility.
-- **Mobile chat:** Bottom nav visible on `/chat`; main content gets `pb-24` padding on mobile.
 - **UploadThing:** Credentials sent only to CoreKnot API routes, not `ingest.uploadthing.com`. Vite dev proxy sets `cookieDomainRewrite: ''`.
 
 No DB migration. Redeploy API + static client (one deploy clears legacy auth cookies).

@@ -7,37 +7,37 @@
 
 export const COMPONENT_REGISTRY = {
   // ── Universal (all departments) ──
-  'leaderboard': { label: 'Leaderboard', access: ['all'], defaultSize: '1', icon: '🏆' },
-  'daily-missions': { label: 'Daily Missions', access: ['all'], defaultSize: '1', icon: '🎯' },
-  'announcements': { label: 'Announcements', access: ['all'], defaultSize: '1', icon: '📢' },
-  'pinboard': { label: 'Pin Board', access: ['all'], defaultSize: '1', icon: '📌' },
-  'schedule': { label: "Today's Calendar", access: ['all'], defaultSize: '1', icon: '📅' },
-  'review-queue': { label: 'Review Queue', access: ['all'], defaultSize: '2', icon: '✅' },
-  'todos-today': { label: 'Today Tasks', access: ['all'], defaultSize: '2', icon: '📋' },
-  'todos-overdue': { label: 'Overdue Tasks', access: ['all'], defaultSize: '2', icon: '⚠️' },
-  'projects-today': { label: 'Projects Today', access: ['all'], defaultSize: '4', icon: '📊' },
-  'notes': { label: 'Notes', access: ['all'], defaultSize: '2', icon: '📝' },
-  'composer': { label: 'Composer', access: ['all'], defaultSize: '2', icon: '✏️' },
-  'mark-attendance': { label: 'Clock In/Out', access: ['all'], defaultSize: '1', icon: '⏰' },
+  'leaderboard': { label: 'Leaderboard', access: ['all'], defaultSize: '1', icon: '🏆', mobileTier: 'social', mobileOrder: 14 },
+  'daily-missions': { label: 'Daily Missions', access: ['all'], defaultSize: '1', icon: '🎯', mobileTier: 'social', mobileOrder: 13 },
+  'announcements': { label: 'Announcements', access: ['all'], defaultSize: '1', icon: '📢', mobileTier: 'social', mobileOrder: 11 },
+  'pinboard': { label: 'Pin Board', access: ['all'], defaultSize: '1', icon: '📌', mobileTier: 'social', mobileOrder: 12 },
+  'schedule': { label: "Today's Calendar", access: ['all'], defaultSize: '1', icon: '📅', mobileTier: 'action', mobileOrder: 5 },
+  'review-queue': { label: 'Review Queue', access: ['all'], defaultSize: '2', icon: '✅', mobileTier: 'action', mobileOrder: 4 },
+  'todos-today': { label: 'Today Tasks', access: ['all'], defaultSize: '2', icon: '📋', mobileTier: 'action', mobileOrder: 2 },
+  'todos-overdue': { label: 'Overdue Tasks', access: ['all'], defaultSize: '2', icon: '⚠️', mobileTier: 'action', mobileOrder: 3 },
+  'projects-today': { label: 'Projects Today', access: ['all'], defaultSize: '4', icon: '📊', mobileTier: 'social', mobileOrder: 17 },
+  'notes': { label: 'Notes', access: ['all'], defaultSize: '2', icon: '📝', mobileTier: 'social', mobileOrder: 15 },
+  'composer': { label: 'Composer', access: ['all'], defaultSize: '2', icon: '✏️', mobileTier: 'social', mobileOrder: 16 },
+  'mark-attendance': { label: 'Clock In/Out', access: ['all'], defaultSize: '1', icon: '⏰', mobileTier: 'action', mobileOrder: 1 },
 
   // ── Operations / Admin ──
-  'leave-alerts': { label: 'Leave Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '🏖️' },
-  'invoice-alerts': { label: 'Invoice Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '💰' },
-  'attendance-overview': { label: 'Attendance Overview', access: ['operations', 'admin'], defaultSize: '2', icon: '👥' },
-  'team-activity': { label: 'Team Activity', access: ['admin', 'operations'], defaultSize: '2', icon: '📡' },
+  'leave-alerts': { label: 'Leave Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '🏖️', mobileTier: 'analytics', mobileOrder: 25 },
+  'invoice-alerts': { label: 'Invoice Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '💰', mobileTier: 'analytics', mobileOrder: 26 },
+  'attendance-overview': { label: 'Attendance Overview', access: ['operations', 'admin'], defaultSize: '2', icon: '👥', mobileTier: 'analytics', mobileOrder: 23 },
+  'team-activity': { label: 'Team Activity', access: ['admin', 'operations'], defaultSize: '2', icon: '📡', mobileTier: 'analytics', mobileOrder: 24 },
 
   // ── Sales ──
-  'booked-calls': { label: 'Booked Calls', access: ['sales'], defaultSize: '2', icon: '📞' },
-  'followups-today': { label: 'Follow Ups Today', access: ['sales'], defaultSize: '2', icon: '🔔' },
-  'pipeline-summary': { label: 'CRM Stats', access: ['sales', 'admin'], defaultSize: '2', icon: '🔀' },
-  'campaign-metrics': { label: 'Campaign Metrics', access: ['sales', 'admin'], defaultSize: '2', icon: '📈' },
+  'booked-calls': { label: 'Booked Calls', access: ['sales'], defaultSize: '2', icon: '📞', mobileTier: 'action', mobileOrder: 6 },
+  'followups-today': { label: 'Follow Ups Today', access: ['sales'], defaultSize: '2', icon: '🔔', mobileTier: 'action', mobileOrder: 7 },
+  'pipeline-summary': { label: 'CRM Stats', access: ['sales', 'admin'], defaultSize: '2', icon: '🔀', mobileTier: 'analytics', mobileOrder: 21 },
+  'campaign-metrics': { label: 'Campaign Metrics', access: ['sales', 'admin'], defaultSize: '2', icon: '📈', mobileTier: 'analytics', mobileOrder: 22 },
 
   // ── Admin Only ──
-  'dept-stats': { label: 'Department Stats', access: ['admin'], defaultSize: '2', icon: '🏢' },
-  'system-health': { label: 'System Health', access: ['admin'], defaultSize: '1', icon: '🖥️' },
+  'dept-stats': { label: 'Department Stats', access: ['admin'], defaultSize: '2', icon: '🏢', mobileTier: 'analytics', mobileOrder: 27 },
+  'system-health': { label: 'System Health', access: ['admin'], defaultSize: '1', icon: '🖥️', mobileTier: 'analytics', mobileOrder: 28 },
 
   // ── Artist Management ──
-  'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨' },
+  'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨', mobileTier: 'action', mobileOrder: 8 },
 };
 
 /**
@@ -60,6 +60,18 @@ export const canAccessComponent = (componentId, permissionPreset) => {
   if (!meta) return false;
   return meta.access.includes('all') || meta.access.includes(permissionPreset || 'standard');
 };
+
+/** Mobile widget sort: action first, then social, analytics last */
+export const getMobileWidgetOrder = (componentId) => {
+  const meta = COMPONENT_REGISTRY[componentId];
+  const tierRank = { action: 0, social: 1, analytics: 2 };
+  const tier = meta?.mobileTier || 'social';
+  const order = meta?.mobileOrder ?? 50;
+  return (tierRank[tier] ?? 1) * 100 + order;
+};
+
+export const isAnalyticsWidget = (componentId) =>
+  COMPONENT_REGISTRY[componentId]?.mobileTier === 'analytics';
 
 // ── Layout Templates ──
 // Each template has a name, description, target departments, and element layout.

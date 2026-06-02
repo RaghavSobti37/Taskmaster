@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Wrench, Plus, Search } from 'lucide-react';
+import { Wrench, Plus } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import { PageContainer, PageHeader, Card, Button, Input, NexusModal, ModalFooter, PageSkeleton, DataLoading } from '../../components/ui';
+import {
+  Card,
+  Button,
+  Input,
+  NexusModal,
+  ModalFooter,
+  PageSkeleton,
+  DataTable,
+  Badge,
+  SearchInput,
+  ListPageLayout,
+} from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const ASSET_CATEGORIES = ['Hardware', 'Furniture', 'Software', 'Misc'];
@@ -30,6 +42,13 @@ const EQUIPMENT_FIELD_LABELS = {
   purchaseDate: 'Purchase Date',
 };
 
+const equipmentStatusVariant = (status) => {
+  if (status === 'Available') return 'success';
+  if (status === 'In Use') return 'info';
+  if (status === 'Maintenance') return 'warning';
+  return 'danger';
+};
+
 const toAssetFormData = (asset) => ({
   name: asset.name || '',
   description: asset.description || '',
@@ -52,23 +71,24 @@ const EquipmentPage = () => {
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ['office-assets'],
-    queryFn: async () => (await axios.get('/api/office-assets')).data
+    queryFn: async () => (await axios.get('/api/office-assets')).data,
   });
 
   const saveAssetMutation = useMutation({
-    mutationFn: async (data) => editingAsset ? axios.put(`/api/office-assets/${editingAsset._id}`, data) : axios.post('/api/office-assets', data),
+    mutationFn: async (data) =>
+      editingAsset
+        ? axios.put(`/api/office-assets/${editingAsset._id}`, data)
+        : axios.post('/api/office-assets', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['office-assets'] });
       setIsAssetModalOpen(false);
       setEditingAsset(null);
       setAssetFormData(EMPTY_ASSET_FORM);
-    }
+    },
   });
 
   const hasEquipmentEdits =
-    isAssetModalOpen &&
-    !!editingAsset &&
-    !stableJsonEqual(assetFormData, assetFormBaseline);
+    isAssetModalOpen && !!editingAsset && !stableJsonEqual(assetFormData, assetFormBaseline);
 
   const { revert: revertEquipmentEdits } = useUnsavedChanges({
     baseline: assetFormBaseline,
@@ -82,42 +102,139 @@ const EquipmentPage = () => {
     excludeFields: ['updateNotes'],
   });
 
-  const filteredAssets = assets.filter((a) =>
-    a.name.toLowerCase().includes(search.toLowerCase()) || a.currentlyWith.toLowerCase().includes(search.toLowerCase())
+  const filteredAssets = useMemo(
+    () =>
+      assets.filter(
+        (a) =>
+          a.name.toLowerCase().includes(search.toLowerCase()) ||
+          a.currentlyWith.toLowerCase().includes(search.toLowerCase()) ||
+          (a.category || '').toLowerCase().includes(search.toLowerCase())
+      ),
+    [assets, search]
   );
 
-  if (isLoading && !assets.length) {
-    return <PageContainer className="!py-4"><PageSkeleton /></PageContainer>;
-  }
+  const openAssetEditor = (asset) => {
+    const loaded = toAssetFormData(asset);
+    setEditingAsset(asset);
+    setAssetFormData(loaded);
+    setAssetFormBaseline(cloneSnapshot(loaded));
+    setIsAssetModalOpen(true);
+  };
+
+  const statusChart = useMemo(
+    () => distributionFromField(assets, 'status'),
+    [assets]
+  );
+
+  const categoryChart = useMemo(
+    () => distributionFromField(assets, 'category'),
+    [assets]
+  );
+
+  const equipmentColumns = useMemo(
+    () => [
+      {
+        header: 'Equipment',
+        sortKey: 'name',
+        render: (row) => (
+          <div className="min-w-0">
+            <span className="font-bold text-xs tracking-tight block truncate">{row.name}</span>
+            {row.description ? (
+              <span className="text-[10px] text-[var(--color-text-muted)] block truncate">{row.description}</span>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        header: 'Category',
+        sortKey: 'category',
+        render: (row) => <Badge variant="info">{row.category}</Badge>,
+      },
+      {
+        header: 'Status',
+        sortKey: 'status',
+        render: (row) => <Badge variant={equipmentStatusVariant(row.status)}>{row.status}</Badge>,
+      },
+      {
+        header: 'Assigned To',
+        sortKey: 'currentlyWith',
+        render: (row) => (
+          <span className="text-[11px] font-bold text-[var(--color-text-primary)]">{row.currentlyWith}</span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const openAddModal = () => {
+    setEditingAsset(null);
+    setAssetFormData(EMPTY_ASSET_FORM);
+    setAssetFormBaseline(EMPTY_ASSET_FORM);
+    setIsAssetModalOpen(true);
+  };
+
+  if (isLoading && !assets.length) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Equipment" subtitle="Manage office equipment and assignment." icon={Wrench} actions={<Button size="sm" onClick={() => { setEditingAsset(null); setAssetFormData(EMPTY_ASSET_FORM); setAssetFormBaseline(EMPTY_ASSET_FORM); setIsAssetModalOpen(true); }}><Plus size={14} /> Add Asset</Button>} />
-      <Card className="p-4 space-y-4">
-        <Input placeholder="Search equipment..." value={search} onChange={(e) => setSearch(e.target.value)} icon={Search} />
-        <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
-          <table className="w-full text-xs">
-            <thead className="bg-[var(--color-bg-secondary)]">
-              <tr>
-                <th className="px-3 py-2 text-left">Name</th>
-                <th className="px-3 py-2 text-left">Category</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-left">Currently With</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && <tr><td colSpan={4}><DataLoading /></td></tr>}
-              {!isLoading && filteredAssets.map((asset) => (
-                <tr key={asset._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { const loaded = toAssetFormData(asset); setEditingAsset(asset); setAssetFormData(loaded); setAssetFormBaseline(cloneSnapshot(loaded)); setIsAssetModalOpen(true); }}>
-                  <td className="px-3 py-2 font-bold">{asset.name}</td>
-                  <td className="px-3 py-2">{asset.category}</td>
-                  <td className="px-3 py-2">{asset.status}</td>
-                  <td className="px-3 py-2">{asset.currentlyWith}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <ListPageLayout
+      containerClassName="!py-4"
+      overview={{
+        stats: [
+          {
+            id: 'total',
+            label: 'Equipment',
+            value: assets.length,
+            icon: Wrench,
+            variant: 'info',
+          },
+          {
+            id: 'available',
+            label: 'Available',
+            value: assets.filter((a) => a.status === 'Available').length,
+            icon: Wrench,
+            variant: 'mint',
+          },
+          {
+            id: 'inUse',
+            label: 'In Use',
+            value: assets.filter((a) => a.status === 'In Use').length,
+            icon: Wrench,
+            variant: 'apricot',
+          },
+        ],
+        charts: [
+          ...(statusChart.length
+            ? [{ id: 'status', title: 'By status', type: 'donut', data: statusChart }]
+            : []),
+          ...(categoryChart.length
+            ? [{ id: 'category', title: 'By category', type: 'bar', data: categoryChart }]
+            : []),
+        ],
+      }}
+      toolbar={
+        <SearchInput
+          placeholder="Search equipment..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="!w-44 shrink min-w-[9rem]"
+        />
+      }
+      toolbarActions={
+        <Button size="sm" onClick={openAddModal}>
+          <Plus size={14} /> Add Asset
+        </Button>
+      }
+    >
+      <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
+        <DataTable
+          columns={equipmentColumns}
+          data={filteredAssets}
+          onRowClick={openAssetEditor}
+          getRowId={(row) => row._id}
+          emptyTitle="No equipment found"
+          emptyDescription="Try a different search or add a new asset."
+          className="!border-none !rounded-none"
+        />
       </Card>
 
       <NexusModal
@@ -151,48 +268,78 @@ const EquipmentPage = () => {
           ) : null
         }
       >
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingAsset) saveAssetMutation.mutate(assetFormData); }}>
-          <Input label="Name" value={assetFormData.name} onChange={(e) => setAssetFormData({ ...assetFormData, name: e.target.value })} icon={Wrench} required />
-          <Input label="Description" value={assetFormData.description} onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })} />
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingAsset) saveAssetMutation.mutate(assetFormData);
+          }}
+        >
+          <Input
+            label="Name"
+            value={assetFormData.name}
+            onChange={(e) => setAssetFormData({ ...assetFormData, name: e.target.value })}
+            icon={Wrench}
+            required
+          />
+          <Input
+            label="Description"
+            value={assetFormData.description}
+            onChange={(e) => setAssetFormData({ ...assetFormData, description: e.target.value })}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1">Category</label>
+              <label className="block tm-section-label mb-2">Category</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={assetFormData.category}
                 onChange={(e) => setAssetFormData({ ...assetFormData, category: e.target.value })}
               >
                 {ASSET_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>{category}</option>
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1">Status</label>
+              <label className="block tm-section-label mb-2">Status</label>
               <select
-                className="w-full border rounded-lg p-2 bg-transparent"
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
                 value={assetFormData.status}
                 onChange={(e) => setAssetFormData({ ...assetFormData, status: e.target.value })}
               >
                 {ASSET_STATUSES.map((status) => (
-                  <option key={status} value={status}>{status}</option>
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs mb-1">Currently With</label>
-            <select className="w-full border rounded-lg p-2 bg-transparent" value={assetFormData.currentlyWith} onChange={(e) => setAssetFormData({ ...assetFormData, currentlyWith: e.target.value })}>
+            <label className="block tm-section-label mb-2">Currently With</label>
+            <select
+              className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm"
+              value={assetFormData.currentlyWith}
+              onChange={(e) => setAssetFormData({ ...assetFormData, currentlyWith: e.target.value })}
+            >
               <option value="Office">Office</option>
-              {users.map((u) => <option key={u._id} value={u.name}>{u.name}</option>)}
+              {users.map((u) => (
+                <option key={u._id} value={u.name}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </div>
           {!editingAsset && (
-            <Button type="submit" disabled={saveAssetMutation.isPending}>{saveAssetMutation.isPending ? 'Saving...' : 'Add Asset'}</Button>
+            <Button type="submit" disabled={saveAssetMutation.isPending}>
+              {saveAssetMutation.isPending ? 'Saving...' : 'Add Asset'}
+            </Button>
           )}
         </form>
       </NexusModal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

@@ -11,6 +11,7 @@ import {
   canMarkTaskComplete,
   normalizeCompletionHours,
   pendingReviewToast,
+  awaitingAssigneeToast,
 } from '../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../utils/taskReview';
 import { updateAllTaskQueries } from '../utils/taskCache';
@@ -20,20 +21,22 @@ export function useDashboardTaskActions({ user, projects, users }) {
   const queryClient = useQueryClient();
   const { addToast } = useSystemToast();
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [taskToApprove, setTaskToApprove] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const [approvingReviewId, setApprovingReviewId] = useState(null);
 
   const handleApproveReview = useCallback(
-    async (task) => {
+    async (task, reviewHours) => {
       const taskId = resolveTaskId(task);
       if (!taskId) return;
       suppressAutoToasts(5000);
       setApprovingReviewId(taskId);
+      setTaskToApprove(null);
       try {
         const taskRes = await axios.put(
           `/api/tasks/${taskId}`,
-          { reviewAction: 'approve' },
+          { reviewAction: 'approve', reviewHours },
           AXIOS_SKIP_TOAST
         );
         addToast({
@@ -107,7 +110,11 @@ export function useDashboardTaskActions({ user, projects, users }) {
     (task) => {
       const intent = resolveTaskFinishIntent(task, user, projects, users);
       if (intent === 'approve') {
-        handleApproveReview(task);
+        setTaskToApprove(task);
+        return;
+      }
+      if (intent === 'awaiting_assignee') {
+        addToast({ ...awaitingAssigneeToast(task.title), module: MODULE.PROJECTS });
         return;
       }
       if (intent === 'awaiting_review' || !canMarkTaskComplete(task)) {
@@ -125,6 +132,8 @@ export function useDashboardTaskActions({ user, projects, users }) {
   return {
     taskToComplete,
     setTaskToComplete,
+    taskToApprove,
+    setTaskToApprove,
     completionSubmitForReview,
     completingTaskId,
     approvingReviewId,

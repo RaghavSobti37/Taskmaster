@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
   Settings,
   Plus,
   ArrowLeft,
   Layout,
-  MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 import ProjectList from '../../components/project/ProjectList';
 import ProjectKanban from '../../components/project/ProjectKanban';
@@ -21,6 +21,7 @@ import {
   NexusDropdown, 
   TabSwitcher, 
   PageContainer,
+  PageHeader,
   Button,
   SearchInput,
   Card,
@@ -40,7 +41,14 @@ import { format, addDays } from 'date-fns';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { taskCompletionToast, taskApprovalToast, resolveTaskId, pendingReviewToast, normalizeCompletionHours } from '../../utils/taskCompletion';
+import {
+  taskCompletionToast,
+  taskApprovalToast,
+  resolveTaskId,
+  pendingReviewToast,
+  awaitingAssigneeToast,
+  normalizeCompletionHours,
+} from '../../utils/taskCompletion';
 import { resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
@@ -51,6 +59,7 @@ const ProjectDetail = () => {
   const queryClient = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: project, isLoading: projectLoading } = useProject(id);
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
@@ -58,6 +67,14 @@ const ProjectDetail = () => {
   const deleteTaskMutation = useDeleteTask();
 
   const [activeTab, setActiveTab] = useState('list');
+
+  useEffect(() => {
+    if (location.state?.tab === 'analytics') {
+      navigate(`/projects/${id}/analytics`, { replace: true, state: {} });
+    } else if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state?.tab, id, navigate]);
   const { data: scheduleData, isLoading: scheduleLoading } = useSchedule({
     start: format(new Date(), 'yyyy-MM-dd'),
     end: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
@@ -74,6 +91,7 @@ const ProjectDetail = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [taskToComplete, setTaskToComplete] = useState(null);
+  const [taskToApprove, setTaskToApprove] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const { addToast } = useSystemToast();
@@ -113,7 +131,11 @@ const ProjectDetail = () => {
 
       const intent = resolveTaskFinishIntent(task, user, project ? [project] : [], users);
       if (intent === 'approve') {
-        handleApproveReview(task);
+        setTaskToApprove(task);
+        return;
+      }
+      if (intent === 'awaiting_assignee') {
+        addToast({ ...awaitingAssigneeToast(task.title), module: MODULE.PROJECTS });
         return;
       }
       if (intent === 'awaiting_review') {
@@ -130,15 +152,16 @@ const ProjectDetail = () => {
     }
   };
 
-  const handleApproveReview = async (task) => {
+  const handleApproveReview = async (task, reviewHours) => {
     const taskId = resolveTaskId(task);
     if (!taskId) return;
     suppressAutoToasts(5000);
     setCompletingTaskId(taskId);
+    setTaskToApprove(null);
     try {
       const taskRes = await axios.put(
         `/api/tasks/${taskId}`,
-        { reviewAction: 'approve' },
+        { reviewAction: 'approve', reviewHours },
         AXIOS_SKIP_TOAST
       );
       addToast({
@@ -242,51 +265,50 @@ const ProjectDetail = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-4">
-      {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-4">
-        <div className="flex items-center gap-3 min-w-0 lg:max-w-[min(100%,28rem)]">
+      <PageHeader
+        icon={Layout}
+        title={project.name}
+        leadingActions={
           <Button variant="secondary" size="sm" onClick={() => navigate('/projects')} className="!p-2 shrink-0">
             <ArrowLeft size={14} />
           </Button>
-          <div
-            className="flex flex-col min-w-0 pl-2.5 border-l-[3px]"
-            style={{ borderLeftColor: getWorkspaceColor(project.workspace, workspaces) }}
-          >
-            <h1 className="text-lg font-bold tracking-tight uppercase truncate">{project.name}</h1>
-            <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider truncate">
-              Project ID: {project._id.substring(0, 8)} • {project.progress}% Complete
-            </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2 min-w-0">
+            {project.status === 'active' && (
+              <NexusDropdown
+                variant="compact"
+                options={[
+                  { value: 'archive', label: 'Archive Project' },
+                  { value: 'close', label: 'Close Project (Gain XP)' }
+                ]}
+                value=""
+                placeholder="Project"
+                onChange={(val) => {
+                  if (val === 'archive') handleUpdateProjectStatus('archived');
+                  if (val === 'close') setShowCloseWarning(true);
+                }}
+                className="w-full sm:w-[9.5rem]"
+              />
+            )}
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${id}/analytics`)}>
+              <BarChart3 size={14} /> Analytics
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
+              <Settings size={14} /> Settings
+            </Button>
+            <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
+              <Plus size={14} /> Add Task
+            </Button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 flex-1">
-          {project.status === 'active' && (
-            <NexusDropdown
-              variant="compact"
-              options={[
-                { value: 'archive', label: 'Archive Project' },
-                { value: 'close', label: 'Close Project (Gain XP)' }
-              ]}
-              value=""
-              placeholder="Actions"
-              onChange={(val) => {
-                if (val === 'archive') handleUpdateProjectStatus('archived');
-                if (val === 'close') setShowCloseWarning(true);
-              }}
-              className="w-full min-[480px]:w-[9.5rem]"
-            />
-          )}
-          <Button variant="secondary" size="sm" onClick={() => navigate(`/chat?highlightProject=${id}`)}>
-            <MessageSquare size={14} /> Chat
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
-            <Settings size={14} /> Settings
-          </Button>
-          <Button size="sm" onClick={() => setIsTaskModalOpen(true)}>
-            <Plus size={14} /> Add Task
-          </Button>
-        </div>
-      </div>
+        }
+      >
+        <div
+          className="h-1 w-16 rounded-full mt-1"
+          style={{ backgroundColor: getWorkspaceColor(project.workspace, workspaces) }}
+          aria-hidden
+        />
+      </PageHeader>
 
       <NexusModal
         isOpen={showCloseWarning}
@@ -334,6 +356,13 @@ const ProjectDetail = () => {
         onClose={() => setTaskToComplete(null)}
         onSubmit={handleCompleteTaskSubmit}
         submitForReview={completionSubmitForReview}
+      />
+      <TaskCompletionModal
+        task={taskToApprove}
+        isOpen={!!taskToApprove}
+        onClose={() => setTaskToApprove(null)}
+        onSubmit={handleApproveReview}
+        approveReview
       />
 
       {/* Workspace Controls */}

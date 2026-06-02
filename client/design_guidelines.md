@@ -1,4 +1,5 @@
 # Unified Design Implementation Framework (UDIF)
+## Version 2.1 - Data-first layout
 ## Version 2.0 - Immersive Scannable Precision
 ## MANDATE: INTERACTIVITY OVER CLUTTER
 
@@ -12,12 +13,14 @@ This document acts as the structural blueprint for all page development within t
     - Base Unit: `4px`
     - Standard Padding: `16px` (`p-4`)
     - Layout Gap: `24px` (`gap-6`)
-    - Component Radius: `12px` (`var(--radius-atomic)`)
+    - Component Radius: `12px` (`var(--radius-lg)`); small controls: `var(--radius-atomic)` (4px)
 
-*   **The 3-Tier Layout Architecture**: 
-    1.  **Tier 1: PageHeader**: Title, Subtitle, Context Icon, and Primary Action cluster.
-    2.  **Tier 2: Analytical Ribbon**: A horizontal flex-row of 4 `StatCard` components.
-    3.  **Tier 3: Workspace Surface**: The main data density layer.
+*   **The 3-Tier Layout Architecture (list / data pages)**: 
+    1.  **Tier 1: Data overview** — `DataOverviewSection`: up to 4 `StatCard` KPIs + 1–2 `DataMiniChart` panels (bar/donut). **No page title** when this tier is present (sidebar + KPI labels give context).
+    2.  **Tier 2: PageToolbar** — one compact row: optional icon+title (only if no overview), `SearchInput`, filters (`NexusDropdown`), primary actions on the right. No separate sort dropdown when columns are sortable.
+    3.  **Tier 3: Workspace** — `DataTable` or documented table exceptions.
+*   **Simple pages** (no KPIs): `ListPageLayout` with title in `PageToolbar` only. **No subtitles** anywhere on page chrome.
+*   **Legacy `PageHeader`**: settings/marketing only; never pass `subtitle` (deprecated).
 
 ---
 
@@ -48,7 +51,9 @@ This document acts as the structural blueprint for all page development within t
 
 ### Phase 4: Component Implementation
 
-*   **DataTable**: High-density rows (max 48px), `onRowClick` mandatory.
+*   **DataTable**: High-density rows (max 48px), `onRowClick` mandatory. Sortable columns: `sortKey` + click header cycles **asc → desc → default**. Server lists: `sortState` + `onSortChange`.
+*   **ListPageLayout**: Enforces overview → toolbar → children order. See `docs/COMPONENT_STANDARDS.md`.
+*   **User identity in UI**: Anywhere a CoreKnot **user** is shown (tables, logs, assignees, attendance rows, etc.), use `UserAvatar` or `UserLabel` from `components/ui` — profile image when `user.avatar` exists, otherwise initials. Do not show name-only rows for users.
 *   **FullScreenWorkspace**: Full-screen overlay, ESC to close, persistent top-bar.
 *   **InfoButton**: Subtle `i` trigger with hover-popover.
 

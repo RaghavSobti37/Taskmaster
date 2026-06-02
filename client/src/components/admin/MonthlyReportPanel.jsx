@@ -1,84 +1,65 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { format, subMonths } from 'date-fns';
 import { FileText, Download, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  PieChart, Pie, Cell,
-} from 'recharts';
-import { Card, Button, DataLoading } from '../ui';
-import DailyLogsTable from './DailyLogsTable';
-import DailyLogHoursChart from './reports/DailyLogHoursChart';
-import ReportProjectsTable from './reports/ReportProjectsTable';
-import ReportCalendarTable from './reports/ReportCalendarTable';
+import { Button, DataLoading } from '../ui';
+import { userReportToCsv } from '../../utils/monthlyReportCsv';
+import { reportRangeQueryKey } from '../../utils/monthlyReportRange';
+import { useMonthlyReportRangeState } from '../../hooks/useMonthlyReportRangeState';
+import ReportRangeControls from './reports/ReportRangeControls';
+import MonthlyReportBody from './reports/MonthlyReportBody';
 
-const PIE_COLORS = ['#10b981', '#f59e0b', '#6366f1', '#94a3b8'];
-
-const formatAttendanceTooltip = (value) => {
-  if (value === 1) return ['Present', 'Attendance'];
-  if (value === 0.5) return ['Half Day', 'Attendance'];
-  return ['Absent', 'Attendance'];
-};
-
-const formatTaskPieTooltip = (value, name) => [`${value} tasks`, name];
-
-const fetchMonthlyReport = async (userId, month) => {
-  const { data } = await axios.get(`/api/users/${userId}/monthly-report`, { params: { month } });
+const fetchMonthlyReport = async (params) => {
+  const { data } = await axios.get(`/api/users/${params.userId}/monthly-report`, {
+    params: {
+      month: params.month,
+      timeframe: params.timeframe,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    },
+  });
   return data;
 };
 
-const toCsv = (report) => {
-  const lines = [
-    `Monthly Report — ${report.user?.name} — ${report.month}`,
-    '',
-    'Attendance Summary',
-    `Present,${report.attendance.present}`,
-    `Half Day,${report.attendance.halfDay}`,
-    `Leave,${report.attendance.leave}`,
-    '',
-    'Tasks Summary',
-    `Total,${report.tasks.total}`,
-    `Completed,${report.tasks.completed}`,
-    `In Progress,${report.tasks.inProgress}`,
-    `Overdue,${report.tasks.overdue}`,
-    '',
-    'Projects',
-    'Name,Status,Workspace,Progress',
-    ...report.projects.items.map((p) => `"${p.name}",${p.status},${p.workspace || ''},${p.progress}`),
-    '',
-    'Daily Logs',
-    'Date,Time,Title,Project,Time Spent,Message',
-    ...(report.logs.entries || []).map((e) =>
-      `"${e.date}","${e.time}","${e.title}","${e.project}","${e.timeSpent}","${(e.message || '').replace(/"/g, '""')}"`
-    ),
-  ];
-  return lines.join('\n');
-};
-
 const MonthlyReportPanel = ({ userId, userName }) => {
-  const [month, setMonth] = useState(() => format(subMonths(new Date(), 1), 'yyyy-MM'));
   const printRef = useRef(null);
+  const {
+    month,
+    shiftMonth,
+    rangeMode,
+    setRangeMode,
+    timeframe,
+    setTimeframe,
+    customStart,
+    setCustomStart,
+    customEnd,
+    setCustomEnd,
+    queryParams,
+    queryEnabled,
+    rangeSubtitle,
+    exportRangeSuffix,
+  } = useMonthlyReportRangeState();
 
   const { data: report, isLoading, error } = useQuery({
-    queryKey: ['monthlyReport', userId, month],
-    queryFn: () => fetchMonthlyReport(userId, month),
-    enabled: !!userId,
+    queryKey: reportRangeQueryKey(
+      ['monthlyReport', userId],
+      month,
+      rangeMode,
+      timeframe,
+      customStart,
+      customEnd
+    ),
+    queryFn: () => fetchMonthlyReport({ userId, ...queryParams }),
+    enabled: !!userId && queryEnabled,
   });
-
-  const shiftMonth = (delta) => {
-    const [y, m] = month.split('-').map(Number);
-    const d = new Date(y, m - 1 + delta, 1);
-    setMonth(format(d, 'yyyy-MM'));
-  };
 
   const handleDownloadCsv = () => {
     if (!report) return;
-    const blob = new Blob([toCsv(report)], { type: 'text/csv' });
+    const blob = new Blob([userReportToCsv(report)], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report-${userName || userId}-${month}.csv`;
+    a.download = `report-${userName || userId}-${month}-${exportRangeSuffix}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -91,22 +72,31 @@ const MonthlyReportPanel = ({ userId, userName }) => {
     w.print();
   };
 
-  const taskPie = report
-    ? [
-        { name: 'Done', value: report.tasks.completed },
-        { name: 'In Progress', value: report.tasks.inProgress },
-        { name: 'Todo', value: report.tasks.todo },
-        { name: 'In Review', value: report.tasks.inReview },
-      ].filter((d) => d.value > 0)
-    : [];
+  const subtitle = rangeSubtitle(report);
 
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-          <FileText size={14} /> Monthly Report
-        </h3>
+        <div className="flex flex-col gap-1">
+          <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+            <FileText size={14} /> Monthly Report
+          </h3>
+          {subtitle && (
+            <p className="text-[10px] text-[var(--color-text-muted)]">{subtitle}</p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ReportRangeControls
+            month={month}
+            rangeMode={rangeMode}
+            onRangeModeChange={setRangeMode}
+            timeframe={timeframe}
+            onTimeframeChange={setTimeframe}
+            customStart={customStart}
+            customEnd={customEnd}
+            onCustomStartChange={setCustomStart}
+            onCustomEndChange={setCustomEnd}
+          />
           <Button variant="ghost" size="xs" onClick={() => shiftMonth(-1)}><ChevronLeft size={14} /></Button>
           <span className="text-sm font-bold min-w-[100px] text-center">{month}</span>
           <Button variant="ghost" size="xs" onClick={() => shiftMonth(1)}><ChevronRight size={14} /></Button>
@@ -129,53 +119,7 @@ const MonthlyReportPanel = ({ userId, userName }) => {
       )}
 
       {report && (
-        <div ref={printRef} className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <Card className="p-3"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Present</p><p className="text-2xl font-black">{report.attendance.present}</p></Card>
-            <Card className="p-3"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Half Days</p><p className="text-2xl font-black">{report.attendance.halfDay}</p></Card>
-            <Card className="p-3"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Tasks Done</p><p className="text-2xl font-black">{report.tasks.completed}</p></Card>
-            <Card className="p-3"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Log Hours</p><p className="text-2xl font-black">{report.logs.totalHours.toFixed(1)}</p></Card>
-            <Card className="p-3"><p className="text-[10px] uppercase font-bold text-[var(--color-text-muted)]">Daily Logs</p><p className="text-2xl font-black">{report.logs.totalEntries ?? report.logs.entries?.length ?? 0}</p></Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Attendance by Day</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={report.attendance.chart.slice(-14)}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="date" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} domain={[0, 1]} />
-                  <Tooltip formatter={formatAttendanceTooltip} />
-                  <Bar dataKey="value" name="Attendance" fill="#10b981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            <Card className="p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Task Status</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={taskPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
-                    {taskPie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={formatTaskPieTooltip} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-
-            <DailyLogHoursChart
-              byDay={report.logs.byDay}
-              totalEntries={report.logs.totalEntries ?? report.logs.entries?.length ?? 0}
-            />
-          </div>
-
-          <ReportProjectsTable items={report.projects.items} />
-
-          <ReportCalendarTable events={report.calendar.events} />
-
-          <DailyLogsTable entries={report.logs.entries || []} />
-        </div>
+        <MonthlyReportBody report={report} printRef={printRef} />
       )}
     </section>
   );

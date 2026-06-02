@@ -6,8 +6,8 @@ import { isAdminUser } from '../../utils/departmentPermissions';
 import { 
   History, Search, RefreshCw, Calendar, ArrowRight, User, FileText, Trash2
 } from 'lucide-react';
-import { Badge, Card, DataTable, Button, Input } from '../ui';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { Badge, Card, DataTable, Button, Input, UserLabel } from '../ui';
+import { useConfirm } from '../../contexts/confirmContext';
 import { format } from 'date-fns';
 
 const LeadAuditsContent = () => {
@@ -54,23 +54,13 @@ const LeadAuditsContent = () => {
     {
       header: 'User',
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold text-[9px]">
-            {row.userId?.avatar ? (
-              <img src={row.userId.avatar} className="w-full h-full rounded-full object-cover" alt="" />
-            ) : (
-              (row.userId?.name || 'SYS').substring(0, 2).toUpperCase()
-            )}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-[var(--color-text-primary)]">
-              {row.userId?.name || 'System / Batch'}
-            </p>
-            <p className="text-[8px] text-[var(--color-text-muted)] uppercase tracking-wider font-mono">
-              {row.userRole || 'SYSTEM'}
-            </p>
-          </div>
-        </div>
+        <UserLabel
+          user={row.userId}
+          name={row.userId?.name || 'System / Batch'}
+          size="xs"
+          subtitle={row.userRole || 'SYSTEM'}
+          nameClassName="text-[10px] font-bold text-[var(--color-text-primary)]"
+        />
       )
     },
     {

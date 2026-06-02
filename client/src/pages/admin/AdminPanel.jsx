@@ -9,26 +9,32 @@ import {
 } from 'lucide-react';
 import { 
   Badge, 
-  PageHeader, 
   TabSwitcher, 
-  PageContainer, 
   Card, 
-  StatCard,
   Button, 
   DataTable,
   ProgressBar,
   PageSkeleton,
   Input,
   FullScreenWorkspace,
-  InfoButton
+  InfoButton,
+  ListPageLayout,
+  SearchInput,
+  UserAvatar,
 } from '../../components/ui';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
 import { DataHubContent } from './DataHubPage';
 import { 
-  useUserDirectory, useTeams, useCRMStats, useRepSummary, useMailStats, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
+  useUserDirectory, useTeams, useCRMStats, useMailStats, useDataHubFolders, useUpdateUser, useDeleteUser, useCreateTeam, useDeleteTeam
 } from '../../hooks/useTaskmasterQueries';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import {
+  ADMIN_RIBBON_QUERY_OPTS,
+  ADMIN_DATA_HUB_FOLDER_OPTS,
+  getTeamConversionPercent,
+  getTotalDataRecords,
+} from '../../utils/adminRibbonMetrics';
+import { useConfirm } from '../../contexts/confirmContext';
 import { stableJsonEqual } from '../../hooks/useUnsavedChanges';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDeleteUserBlockReason } from '../../utils/rootAdminEmails';
@@ -52,9 +58,9 @@ const AdminPanel = () => {
   
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: teams = [] } = useTeams();
-  const { data: crmStats } = useCRMStats();
-  const { data: repSummary } = useRepSummary();
-  const { data: mailStats } = useMailStats();
+  const { data: crmStats } = useCRMStats(true, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: mailStats } = useMailStats(true, ADMIN_RIBBON_QUERY_OPTS);
+  const { data: folderData } = useDataHubFolders(ADMIN_DATA_HUB_FOLDER_OPTS);
 
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
@@ -128,9 +134,11 @@ const AdminPanel = () => {
   }, [newTeamName, createTeamMutation]);
 
   const pageMeta = {
-    users: { title: "Users & Teams", subtitle: "Manage system access credentials, security profiles, and operational teams." },
-    crm: { title: "Data Hub", subtitle: "Unified people data across Exly, Leads, TSC, Booked Calls, Enquiries, Mail, and more." },
+    users: { title: 'Users & Teams' },
+    crm: { title: 'Data Hub' },
   };
+
+  const showRibbon = activeTab === 'users' || activeTab === 'teams';
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -142,11 +150,10 @@ const AdminPanel = () => {
   const userColumns = [
     {
       header: 'User',
+      sortKey: 'name',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold text-xs select-none">
-            {u.avatar ? <img src={u.avatar} className="w-full h-full rounded-full object-cover" alt="" /> : u.name?.substring(0, 2).toUpperCase()}
-          </div>
+          <UserAvatar user={u} size="md" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs">{u.name}</span>
@@ -169,109 +176,90 @@ const AdminPanel = () => {
     },
     {
       header: 'Last Activity',
+      sortKey: 'lastOnline',
+      sortFn: (u) => (u.lastOnline ? new Date(u.lastOnline) : null),
       render: (u) => (
         <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
           {u.lastOnline ? format(new Date(u.lastOnline), 'MMM dd, yyyy h:mm a') : 'No record'}
         </span>
       )
     },
-    {
-      header: 'Delete',
-      render: (u) => (
-        <UserDeleteAction
-          compact
-          blockReason={getDeleteBlockReason(u)}
-          isPending={deleteUserMutation.isPending}
-          onDelete={() => handleDeleteUser(u._id)}
-        />
-      ),
-    },
   ];
 
-  const currentMeta = pageMeta[activeTab] || { title: "Admin Panel", subtitle: "Manage users, teams, and system data." };
+  const currentMeta = pageMeta[activeTab] || { title: 'Admin Panel' };
 
   if (usersLoading) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader 
-         title={currentMeta.title} 
-         subtitle={currentMeta.subtitle}
-         icon={ShieldCheck}
-         actions={
-           <div className="flex items-center gap-2">
-             <TabSwitcher 
-               activeTab={activeTab} 
-               onChange={handleTabChange} 
-               tabs={[
-                 { id: 'users', label: 'Users' }, 
-                 { id: 'crm', label: 'Data Hub' },
-               ]} 
-             />
-           </div>
-         }
-      />
-
-      {/* Analytical Ribbon - Only on users and teams subpage */}
-      {(activeTab === 'users' || activeTab === 'teams') && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <StatCard 
-            label="Total Users" 
-            value={users.length} 
-            icon={Users} 
-            variant="info" 
-            subValue="Active" 
-            info="Total number of registered user accounts."
+    <ListPageLayout
+      containerClassName="!py-4"
+      title={currentMeta.title}
+      icon={ShieldCheck}
+      overview={
+        showRibbon
+          ? {
+              stats: [
+                {
+                  id: 'users',
+                  label: 'Total Users',
+                  value: users.length,
+                  icon: Users,
+                  variant: 'info',
+                  info: 'Total number of registered user accounts.',
+                },
+                {
+                  id: 'data',
+                  label: 'Total Data',
+                  value: getTotalDataRecords(folderData, crmStats),
+                  icon: Database,
+                  variant: 'mint',
+                  info: 'Unified people count in Data Hub (all inlets). Falls back to CRM leads if hub is unavailable.',
+                },
+                {
+                  id: 'conversion',
+                  label: 'Conversion',
+                  value: `${getTeamConversionPercent(crmStats)}%`,
+                  icon: TrendingUp,
+                  variant: 'apricot',
+                  info: 'Share of CRM leads marked Converted (live stats, refreshed every few minutes).',
+                },
+                {
+                  id: 'emails',
+                  label: 'Emails Sent',
+                  value: mailStats?.totalSent || 0,
+                  icon: Zap,
+                  variant: 'slate',
+                  info: 'Total number of automated emails sent.',
+                },
+              ],
+              charts: [],
+            }
+          : undefined
+      }
+      toolbar={
+        showRibbon ? (
+          <SearchInput
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="!w-44 shrink min-w-[9rem]"
           />
-          <StatCard 
-            label="Total Data" 
-            value={crmStats?.totalLeads || 0} 
-            icon={Database} 
-            variant="mint" 
-            subValue="Records" 
-            info="Count of all entries in the master data archive."
-          />
-          <StatCard 
-            label="Conversion" 
-            value={`${repSummary?.avgConversion || 0}%`} 
-            icon={TrendingUp} 
-            variant="apricot" 
-            subValue="Team Avg" 
-            info="The percentage of data entries successfully processed into closed business."
-          />
-          <StatCard 
-            label="Emails Sent" 
-            value={mailStats?.totalSent || 0} 
-            icon={Zap} 
-            variant="slate" 
-            subValue="System" 
-            info="Total number of automated emails sent."
-          />
-        </div>
-      )}
-
-      {/* Main Surface */}
+        ) : null
+      }
+      toolbarActions={
+        <TabSwitcher
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          tabs={[
+            { id: 'users', label: 'Users' },
+            { id: 'crm', label: 'Data Hub' },
+          ]}
+        />
+      }
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className={activeTab === 'users' ? 'lg:col-span-8' : 'lg:col-span-12'}>
-          <Card className="flex flex-col h-full">
-            <div className="p-3 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
-               <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                 <ShieldCheck size={14} className="text-[var(--color-action-primary)]" />
-                 {activeTab.toUpperCase()}
-               </h3>
-               {(activeTab === 'users' || activeTab === 'teams') && (
-                 <div className="flex items-center gap-2 max-w-xs flex-1">
-                   <Input 
-                     icon={Search} 
-                     placeholder="Search..." 
-                     value={searchTerm} 
-                     onChange={e => setSearchTerm(e.target.value)}
-                     className="!py-1 !text-[11px]"
-                   />
-                 </div>
-               )}
-            </div>
-            
+          <Card className="flex flex-col h-full p-0 overflow-hidden">
             <div className="p-0">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -490,7 +478,7 @@ const AdminPanel = () => {
            </section>
         </div>
       </FullScreenWorkspace>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

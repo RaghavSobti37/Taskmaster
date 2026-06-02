@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
 import {
-  Badge, PageHeader, Card, PageContainer, DataTable, Button,
-  TabSwitcher, StatCard, PageSkeleton, FullScreenWorkspace, Input, NexusModal
+  Badge, Card, DataTable, Button,
+  TabSwitcher, PageSkeleton, FullScreenWorkspace, Input, NexusModal,
+  ListPageLayout, SearchInput,
 } from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
 import { formatNumber } from '../../config/integrations.config';
 
@@ -100,6 +102,13 @@ export default function ArtistsCollection() {
     return { totalArtists: artists.length, totalReach, totalSpotify, totalViews };
   }, [artists]);
 
+  const syncChartData = useMemo(
+    () => distributionFromField(artists, 'isSynced', {
+      labelFn: (v) => (v ? 'Synced' : 'Needs API key'),
+    }),
+    [artists],
+  );
+
   const columns = [
     {
       header: 'Artist',
@@ -111,7 +120,7 @@ export default function ArtistsCollection() {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <span className="font-bold text-xs tracking-tight text-[var(--color-text-primary)]">{row?.name}</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 font-bold uppercase tracking-tight border border-emerald-500/20">
+              <span className="text-[9px] px-1.5 py-0.2 rounded badge-mint font-bold uppercase tracking-tight">
                 Active
               </span>
             </div>
@@ -157,17 +166,18 @@ export default function ArtistsCollection() {
       )
     },
     {
-      header: 'Data Sync',
+      header: 'Sync',
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-[6rem]">
           <Badge variant={row.isSynced ? 'success' : 'warning'}>
             {row.isSynced ? 'SYNCED' : 'PENDING'}
           </Badge>
           <button
+            type="button"
             onClick={(e) => handleSyncArtist(e, row._id)}
             disabled={syncingId === row._id}
             title="Force Real-Time API Sync"
-            className={`p-1.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)] transition-all ${syncingId === row._id ? 'animate-spin text-blue-500' : 'text-[var(--color-text-muted)] hover:text-blue-500'}`}
+            className={`p-1.5 rounded-[var(--radius-atomic)] bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all ${syncingId === row._id ? 'animate-spin text-[var(--color-action-primary)] opacity-100' : 'text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)]'}`}
           >
             <RefreshCw size={12} />
           </button>
@@ -179,48 +189,46 @@ export default function ArtistsCollection() {
   if (isLoading) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        title="Artists"
-        icon={Mic2}
-        actions={
-          <div className="flex items-center gap-2">
-
-            <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-              <Plus size={14} /> Add Artist
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Artists" value={stats.totalArtists} icon={Users} variant="slate" />
-        <StatCard label="Collective Reach" value={formatNumberLocal(stats.totalReach)} icon={TrendingUp} variant="mint" info="Aggregated followers across connected platforms." />
-        <StatCard label="Spotify Followers" value={formatNumberLocal(stats.totalSpotify)} icon={FaSpotify} variant="info" />
-        <StatCard label="YouTube Views" value={formatNumberLocal(stats.totalViews)} icon={FaYoutube} variant="rose" />
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+    <>
+    <ListPageLayout
+      containerClassName="!py-4"
+      overview={{
+        stats: [
+          { id: 'total', label: 'Total Artists', value: stats.totalArtists, icon: Users, variant: 'slate' },
+          { id: 'reach', label: 'Collective Reach', value: formatNumberLocal(stats.totalReach), icon: TrendingUp, variant: 'mint', info: 'Aggregated followers across connected platforms.' },
+          { id: 'spotify', label: 'Spotify Followers', value: formatNumberLocal(stats.totalSpotify), icon: FaSpotify, variant: 'info' },
+          { id: 'youtube', label: 'YouTube Views', value: formatNumberLocal(stats.totalViews), icon: FaYoutube, variant: 'rose' },
+        ],
+        charts: syncChartData.length
+          ? [{ id: 'sync', title: 'Sync status', type: 'donut', data: syncChartData }]
+          : [],
+      }}
+      toolbar={(
+        <>
           <TabSwitcher
             activeTab={activeTab}
             onChange={setActiveTab}
             tabs={[
               { id: 'all', label: 'All Artists' },
               { id: 'synced', label: 'Synced' },
-              { id: 'pending', label: 'Needs API Key' }
+              { id: 'pending', label: 'Needs API Key' },
             ]}
           />
-          <div className="w-72">
-            <Input
-              placeholder="Search artist name or bio..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              icon={Search}
-            />
-          </div>
-        </div>
-
+          <SearchInput
+            placeholder="Search artist name or bio..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="!w-56 shrink-0"
+          />
+        </>
+      )}
+      toolbarActions={(
+        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+          <Plus size={14} /> Add Artist
+        </Button>
+      )}
+    >
+      <div className="space-y-4">
         <Card className="p-0 overflow-hidden">
           <DataTable
             columns={columns}
@@ -241,6 +249,7 @@ export default function ArtistsCollection() {
           </p>
         </div>
       </div>
+    </ListPageLayout>
 
       {/* Add New Artist Modal */}
       <NexusModal
@@ -304,7 +313,7 @@ export default function ArtistsCollection() {
           </div>
         </form>
       </NexusModal>
-    </PageContainer>
+    </>
   );
 }
 

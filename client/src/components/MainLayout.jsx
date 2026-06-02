@@ -16,23 +16,15 @@ import QuickAddMenu from './QuickAddMenu';
 import FlashHighlightListener from './ui/FlashHighlight';
 import PageAnalyticsTracker from './PageAnalyticsTracker';
 import BottomNavigation from './BottomNavigation';
+import { useIsDesktop } from '../hooks/useBreakpoint';
 
 
 const MainLayout = () => {
   const { isOpen, toggleMobileSidebar, isMobileOpen } = useSidebar();
-  const [isDesktop, setIsDesktop] = React.useState(
-    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-  );
-
-  React.useEffect(() => {
-    const onResize = () => setIsDesktop(window.innerWidth >= 1024);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const isDesktop = useIsDesktop();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isChatPage = location.pathname === '/chat';
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const profileMenuRef = React.useRef(null);
 
@@ -63,18 +55,17 @@ const MainLayout = () => {
 
       {/* Main Content Area */}
       <div
-        className="flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ease-in-out"
+        className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out"
         style={{
           marginLeft: isDesktop ? (isOpen ? 160 : 56) : 0,
         }}
       >
         <main
-          className={`flex-1 min-h-0 flex flex-col ${
-            isChatPage ? 'p-0 pb-24 lg:pb-0 overflow-hidden h-[100dvh] max-h-[100dvh]' : 'p-4 pb-24 lg:p-5'
-          }`}
+          data-page-root
+          className="flex-1 w-full min-w-0 p-4 pb-24 lg:p-5 lg:min-h-0 lg:flex lg:flex-col overflow-x-clip"
         >
-          <div className={`w-full min-h-0 ${isChatPage ? 'flex-1 flex flex-col' : ''}`}>
-            {!isChatPage && <ProfileCompletionAlerts />}
+          <div className="w-full lg:min-h-0">
+            <ProfileCompletionAlerts />
             <Outlet />
           </div>
         </main>

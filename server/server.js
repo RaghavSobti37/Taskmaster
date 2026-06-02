@@ -12,7 +12,6 @@ const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const userRoutes = require('./routes/userRoutes');
 const logRoutes = require('./routes/logRoutes');
-const chatRoutes = require('./routes/chatRoutes');
 const teamRoutes = require('./routes/teamRoutes');
 const crmRoutes = require('./routes/crmRoutes');
 const googleRoutes = require('./routes/googleRoutes');
@@ -204,17 +203,6 @@ mongoose.connect(dbUri, {
     const trackingWarn = getTrackingDbMismatchWarning();
     if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
 
-    setImmediate(async () => {
-      try {
-        const { repairChatChannelIndexes } = require('./utils/repairChatChannelIndexes');
-        await repairChatChannelIndexes();
-        const { migrateChatChannelsToLinked } = require('./utils/migrateChatChannelsToLinked');
-        await migrateChatChannelsToLinked();
-      } catch (err) {
-        console.warn('[ChatChannel] Index repair skipped:', err.message);
-      }
-    });
-
     // Auto-repair zero-dipped history snapshots in background (non-blocking)
     setImmediate(async () => {
       try {
@@ -278,7 +266,6 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/system-logs', require('./routes/systemLogRoutes'));
-app.use('/api/chat', chatRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/auth', require('./routes/authConnectRoutes'));

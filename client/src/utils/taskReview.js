@@ -122,6 +122,9 @@ export function resolveTaskFinishIntent(task, user, projects = [], users = []) {
   if (userMustSubmitForReview(task, user, users)) {
     return 'submit_review';
   }
+  if (canUserApproveReview(user, getTaskAssignments(task))) {
+    return 'awaiting_assignee';
+  }
   return 'complete';
 }
 

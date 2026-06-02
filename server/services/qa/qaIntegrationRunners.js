@@ -444,7 +444,9 @@ async function runXpLeaderboardReflect(def, ctx) {
   const afterRes = await request(def, { method: 'GET', url: '/api/gamification/leaderboard', user: adminUser });
   if (afterRes.status !== 200) return probeFail(def, `Leaderboard fetch failed (${afterRes.status})`);
 
-  const list = Array.isArray(afterRes.data) ? afterRes.data : afterRes.data?.leaderboard || [];
+  const list = Array.isArray(afterRes.data)
+    ? afterRes.data
+    : (afterRes.data?.entries || afterRes.data?.leaderboard || []);
   const row = list.find((e) => String(e._id || e.userId || e.id) === adminUser._id.toString());
   if (row && (row.weeklyXp != null || row.xp != null || row.exp != null)) {
     return probePass(def, `Leaderboard shows weeklyXp=${row.weeklyXp ?? row.xp ?? row.exp}`);

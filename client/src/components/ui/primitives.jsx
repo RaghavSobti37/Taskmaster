@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
   const variants = {
@@ -26,7 +27,7 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
     ghost: 'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]',
     danger: 'bg-[var(--color-pastel-rose-bg)] text-[var(--color-pastel-rose-text)] border border-[var(--color-pastel-rose-text)]/10 hover:bg-[var(--color-pastel-rose-text)]/10',
     mint: 'bg-[var(--color-pastel-mint-bg)] text-[var(--color-pastel-mint-text)] border border-[var(--color-pastel-mint-text)]/20 hover:bg-[var(--color-pastel-mint-text)]/10',
-    success: 'bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-700',
+    success: 'bg-[var(--color-pastel-mint-text)] text-white border border-[var(--color-pastel-mint-text)] hover:opacity-90',
   };
 
   const sizes = {
@@ -63,13 +64,17 @@ export const Card = ({ children, className = '', hover = false, variant = 'surfa
 };
 
 export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
-  <div className={`mx-auto px-4 py-4 space-y-4 pb-16 ${className}`} style={{ maxWidth }}>
+  <div
+    data-page-root
+    className={`mx-auto px-4 py-4 space-y-4 pb-16 min-w-0 max-w-full overflow-x-clip ${className}`}
+    style={{ maxWidth }}
+  >
     {children}
   </div>
 );
 
 export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
-  <div className={`inline-flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-auto ${className}`}>
+  <div className={`flex flex-wrap lg:flex-nowrap items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] max-w-full overflow-x-hidden ${className}`}>
     {tabs.map((tab) => (
       <button
         key={tab.id}
@@ -189,7 +194,7 @@ export const InfoButton = ({ text }) => {
     >
       <button 
         type="button"
-        className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 hover:bg-blue-500 hover:text-white transition-colors cursor-help focus:outline-none"
+        className="w-3.5 h-3.5 inline-flex items-center justify-center rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[10px] font-mono font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-action-primary)] hover:text-[var(--color-bg-primary)] transition-colors cursor-help focus:outline-none"
       >
         i
       </button>
@@ -329,7 +334,36 @@ export const DataTable = ({
   emptyTitle = 'No results',
   emptyDescription = 'Nothing matches your filters yet.',
   isLoading = false,
+  fitWidth = false,
+  sortState: controlledSortState,
+  onSortChange,
 }) => {
+  const [localSortState, setLocalSortState] = useState(null);
+  const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
+  const setSortState = onSortChange || setLocalSortState;
+
+  const sortedData = useMemo(() => {
+    if (serverSide || !sortState?.key || !sortState.direction) return data;
+    const col = columns.find((c) => (c.sortKey || c.key) === sortState.key);
+    const getVal = (row) => {
+      if (col?.sortFn) return col.sortFn(row);
+      if (col?.key) return row[col.key];
+      return row[sortState.key];
+    };
+    const dir = sortState.direction === 'asc' ? 1 : -1;
+    return [...data].sort((a, b) => compareSortValues(getVal(a), getVal(b)) * dir);
+  }, [data, sortState, serverSide, columns]);
+
+  const handleSortClick = useCallback(
+    (col) => {
+      const key = col.sortKey || col.key;
+      if (!key || col.sortable === false) return;
+      const nextDir = nextSortDirection(sortState, key, key);
+      setSortState(nextDir ? { key, direction: nextDir } : null);
+    },
+    [sortState, setSortState]
+  );
+
   const [localCurrentPage, setLocalCurrentPage] = useState(1);
   const [localPageSize, setLocalPageSize] = useState(defaultPageSize);
 
@@ -338,7 +372,8 @@ export const DataTable = ({
   const setCurrentPage = serverSide ? onPageChange : setLocalCurrentPage;
   const setPageSize = serverSide ? onPageSizeChange : setLocalPageSize;
 
-  const totalItems = serverSide ? (customTotalItems || 0) : data.length;
+  const tableData = sortedData;
+  const totalItems = serverSide ? (customTotalItems || 0) : tableData.length;
   const totalPages = serverSide ? (customTotalPages || 1) : (Math.ceil(totalItems / pageSize) || 1);
 
   // Reset page when data changes (only client-side)
@@ -346,11 +381,17 @@ export const DataTable = ({
     if (!serverSide) {
       setLocalCurrentPage(1);
     }
-  }, [data.length, serverSide]);
+  }, [tableData.length, serverSide]);
+
+  useEffect(() => {
+    if (!serverSide) {
+      setLocalCurrentPage(1);
+    }
+  }, [sortState?.key, sortState?.direction, serverSide]);
 
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = serverSide ? Math.min(startIndex + data.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
-  const paginatedData = paginated && !serverSide ? data.slice(startIndex, endIndex) : data;
+  const endIndex = serverSide ? Math.min(startIndex + tableData.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
+  const paginatedData = paginated && !serverSide ? tableData.slice(startIndex, endIndex) : tableData;
   const showEmpty = !isLoading && paginatedData.length === 0;
 
   const parentRef = useRef();
@@ -362,18 +403,59 @@ export const DataTable = ({
     overscan: 5,
   });
 
+  const mobileColumns = columns.filter((c) => !c.mobileHidden);
+  const primaryCol = columns.find((c) => c.mobilePrimary) || mobileColumns[0];
+  const detailColumns = mobileColumns.filter((c) => c !== primaryCol);
+  const actionColumns = columns.filter((c) => c.mobileAction);
+
   return (
     <div className={`w-full flex flex-col border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] ${className}`}>
-      <div ref={parentRef} className="w-full overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
-        <table className="w-full text-left border-collapse min-w-[540px] hidden sm:table">
+      <div
+        ref={parentRef}
+        className={`w-full max-lg:overflow-visible lg:overflow-y-auto lg:max-h-[600px] custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
+      >
+        <table
+          className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}
+        >
           <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
             <tr>
-              {columns.map((col, i) => (
-                <th key={i} className="px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap">
-                  {col.header}
-                  {col.info && <InfoButton text={col.info} />}
-                </th>
-              ))}
+              {columns.map((col, i) => {
+                const sortKey = col.sortKey || col.key;
+                const sortable = Boolean(sortKey && col.sortable !== false);
+                const active = Boolean(
+                  sortState?.key && sortKey && sortState.key === sortKey && sortState.direction
+                );
+                const SortIcon = active
+                  ? sortState.direction === 'asc'
+                    ? ArrowUp
+                    : ArrowDown
+                  : ArrowUpDown;
+                return (
+                  <th
+                    key={i}
+                    className={`px-4 py-2 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider whitespace-nowrap ${
+                      sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
+                    }`}
+                    onClick={sortable ? () => handleSortClick(col) : undefined}
+                    aria-sort={
+                      active
+                        ? (sortState.direction === 'asc' ? 'ascending' : 'descending')
+                        : 'none'
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.header}
+                      {col.info && <InfoButton text={col.info} />}
+                      {sortable && (
+                        <SortIcon
+                          size={12}
+                          className={active ? 'text-[var(--color-action-primary)]' : 'opacity-40'}
+                        />
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -402,11 +484,14 @@ export const DataTable = ({
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     onRowClick?.(row);
                   }}
-                  className="data-table-row cursor-pointer transition-none relative group hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
+                  className="data-table-row cursor-pointer transition-none relative group hover:bg-[var(--color-bg-secondary)]"
                   style={{ height: `${virtualRow.size}px` }}
                 >
                   {columns.map((col, j) => (
-                    <td key={j} className="px-4 py-2 text-sm text-[var(--color-text-primary)]">
+                    <td
+                      key={j}
+                      className={`px-4 py-2 text-sm text-[var(--color-text-primary)] ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                    >
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
                   ))}
@@ -421,8 +506,8 @@ export const DataTable = ({
           </tbody>
         </table>
 
-        {/* Mobile Responsive Card Stack */}
-        <div className="grid grid-cols-1 gap-3 p-3 sm:hidden">
+        {/* Mobile Responsive Card Stack (< lg) */}
+        <div className="grid grid-cols-1 gap-3 p-3 lg:hidden">
           {showEmpty ? (
             <div className="px-4 py-12 text-center">
               <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
@@ -436,16 +521,46 @@ export const DataTable = ({
                 if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 onRowClick?.(row);
               }}
-              className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-3 cursor-pointer shadow-sm active:scale-[0.99] transition-transform"
+              className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] cursor-pointer shadow-sm active:scale-[0.99] transition-transform min-w-0"
             >
-              {columns.map((col, j) => (
-                <div key={j} className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</span>
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                    {col.render ? col.render(row) : row[col.key]}
+              {primaryCol && (
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-[var(--color-text-primary)] min-w-0">
+                    {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
                   </div>
+                  {primaryCol.mobileSubtitle && (
+                    <div className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
+                      {typeof primaryCol.mobileSubtitle === 'function'
+                        ? primaryCol.mobileSubtitle(row)
+                        : row[primaryCol.mobileSubtitle]}
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
+              {detailColumns.length > 0 && (
+                <dl className="mt-3 space-y-2 border-t border-[var(--color-bg-border)] pt-3">
+                  {detailColumns.map((col, j) => (
+                    <div key={j} className="flex flex-col gap-0.5 min-w-0">
+                      <dt className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</dt>
+                      <dd className="text-sm text-[var(--color-text-primary)] min-w-0 break-words">
+                        {col.render ? col.render(row) : row[col.key]}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {actionColumns.length > 0 && (
+                <div
+                  className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-[var(--color-bg-border)]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {actionColumns.map((col, j) => (
+                    <div key={j} className="flex-1 min-w-[120px]">
+                      {col.render ? col.render(row) : row[col.key]}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -545,46 +660,6 @@ export const FullScreenWorkspace = ({
              </aside>
           </div>
         </div>
-      )}
-    </>
-  );
-};
-
-export const InputFormDrawer = ({ isOpen, onClose, title, children }) => {
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown, true);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
-
-  return (
-    <>
-      {isOpen && (
-        <>
-          <div
-            onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100] animate-in fade-in duration-200"
-          />
-          <div
-            className="fixed top-0 right-0 h-full w-full max-w-md bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl z-[101] overflow-y-auto animate-in slide-in-from-right duration-300"
-          >
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-4">
-                <h2 className="text-lg font-bold">{title}</h2>
-                <button onClick={onClose} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded-md transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              {children}
-            </div>
-          </div>
-        </>
       )}
     </>
   );

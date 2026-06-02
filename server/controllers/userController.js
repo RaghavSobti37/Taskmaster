@@ -388,7 +388,7 @@ exports.getSalesReps = async (req, res) => {
 
 exports.getMonthlyReport = async (req, res) => {
   try {
-    const report = await buildUserMonthlyReport(req.params.id, req.query.month);
+    const report = await buildUserMonthlyReport(req.params.id, req.query.month, req.query);
     res.json(report);
   } catch (err) {
     if (err.message === 'User not found') return res.status(404).json({ error: err.message });

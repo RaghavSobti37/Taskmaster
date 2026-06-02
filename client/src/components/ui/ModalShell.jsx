@@ -34,7 +34,7 @@ export const getModalPanelStyle = (sizeOrPx = 'lg') => {
   };
 };
 
-/** Lightweight overlay for legacy inline modals — prefer ModalShell / CenteredModal for new code */
+/** Composable modal shell — prefer NexusModal first; use ModalShell directly when layout is custom */
 export const ModalOverlay = ({
   children,
   className = '',

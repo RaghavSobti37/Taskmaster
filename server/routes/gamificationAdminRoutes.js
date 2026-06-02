@@ -27,7 +27,7 @@ const ALLOWED_CONFIG_FIELDS = [
 
 router.get('/rules', protect, admin, async (req, res) => {
   try {
-    const config = await GamificationService.getConfig();
+    const config = await GamificationService.getConfigPlain();
     res.json({
       config,
       rules: GamificationService.getRulesMetadata(),
@@ -49,37 +49,58 @@ router.get('/config', protect, admin, async (req, res) => {
 router.put('/config', protect, admin, async (req, res) => {
   try {
     const updates = req.body;
-    let config = await GamificationConfig.findOne();
+    let config = await GamificationConfig.findOne().sort({ updatedAt: -1 });
     if (!config) {
       config = new GamificationConfig();
     }
 
     const changedFields = [];
+    const appliedFields = [];
     ALLOWED_CONFIG_FIELDS.forEach((field) => {
       if (field in updates && typeof updates[field] === 'number' && updates[field] >= 0) {
+        appliedFields.push(field);
+        if (config[field] !== updates[field]) {
+          changedFields.push(field);
+        }
         config[field] = updates[field];
-        changedFields.push(field);
       }
     });
 
+    if (appliedFields.length === 0 && Object.keys(updates).length > 0) {
+      const keys = Object.keys(updates).join(', ');
+      return res.status(400).json({
+        error: `No valid config fields updated. Check field names and use non-negative numbers (received: ${keys}).`,
+      });
+    }
+
     await config.save();
 
-    const { totalUsers, updatedUsers, auditSync } = await GamificationService.recalculateAllUsersFromConfig();
+    const { totalUsers, updatedUsers, auditSync, duplicateRepair } =
+      await GamificationService.recalculateAllUsersFromConfig();
 
     const unchangedUsers = totalUsers - updatedUsers;
+    const effectiveRates = auditSync.configRates || {};
     let message;
     if (updatedUsers === 0 && auditSync.updatedLogs === 0) {
-      message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates.`;
+      if (changedFields.length > 0) {
+        message = `Saved ${changedFields.join(', ')}. All ${totalUsers} users already match totals at the new rates (audit logs unchanged).`;
+      } else {
+        message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates.`;
+      }
     } else {
       const parts = [];
       if (changedFields.length > 0) {
         parts.push(`updated ${changedFields.join(', ')}`);
       }
+      if (duplicateRepair?.removed > 0) {
+        parts.push(`removed ${duplicateRepair.removed} duplicate XP audit rows`);
+      }
       if (auditSync.updatedLogs > 0) {
         parts.push(`updated ${auditSync.updatedLogs} audit log entries`);
       }
+      parts.push(`refreshed XP/levels for all ${totalUsers} tenant users`);
       if (updatedUsers > 0) {
-        parts.push(`synced XP/levels for ${updatedUsers} of ${totalUsers} users`);
+        parts.push(`${updatedUsers} had total XP or level changes`);
       }
       message = parts.join('; ');
     }
@@ -91,8 +112,9 @@ router.put('/config', protect, admin, async (req, res) => {
       configRates: auditSync.configRates,
     });
 
+    const configPlain = await GamificationService.getConfigPlain();
     res.json({
-      config,
+      config: configPlain,
       recalc: {
         message,
         totalUsers,
@@ -100,6 +122,7 @@ router.put('/config', protect, admin, async (req, res) => {
         unchangedUsers,
         updatedAuditLogs: auditSync.updatedLogs,
         changedFields,
+        configRates: effectiveRates,
       },
     });
   } catch (err) {
@@ -126,20 +149,48 @@ router.get('/config/:field', protect, admin, async (req, res) => {
 router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
   try {
     const config = await GamificationService.getConfig();
-    const { totalUsers, updatedUsers, changes, auditSync, weeklyPreview } = await GamificationService.recalculateAllUsersFromConfig();
+    const {
+      totalUsers,
+      updatedUsers,
+      changes,
+      auditSync,
+      weeklyPreview,
+      reviewExploitRepair,
+      duplicateRepair,
+      recalculatedAt,
+    } = await GamificationService.recalculateAllUsersFromConfig();
 
     const unchanged = totalUsers - updatedUsers;
     let message;
-    if (updatedUsers === 0 && auditSync.updatedLogs === 0) {
-      message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates.`;
+    const effectiveRates = auditSync.configRates || {};
+    const frozen = auditSync.hoursStats?.frozenStoredAmount || 0;
+    if (
+      updatedUsers === 0
+      && auditSync.updatedLogs === 0
+      && !reviewExploitRepair?.xp?.removedXpLogs
+      && !(duplicateRepair?.removed > 0)
+    ) {
+      if (frozen > 0) {
+        message = `No XP totals changed. ${frozen} time-based audit row(s) have no hours and no linked task/log — stored amounts kept. Link taskId/logId or re-award to apply new rates.`;
+      } else {
+        message = `No changes needed — all ${totalUsers} users and audit logs already match current config rates (using saved rates).`;
+      }
     } else {
       const parts = [];
+      if (reviewExploitRepair?.xp?.removedXpLogs) {
+        parts.push(`removed ${reviewExploitRepair.xp.removedXpLogs} invalid review XP entries`);
+      }
+      if (duplicateRepair?.removed > 0) {
+        parts.push(`removed ${duplicateRepair.removed} duplicate XP audit rows`);
+      }
       if (auditSync.updatedLogs > 0) {
-        parts.push(`updated ${auditSync.updatedLogs} audit log entries`);
+        parts.push(`updated ${auditSync.updatedLogs} audit log amounts`);
       }
+      parts.push(`refreshed XP/levels for all ${totalUsers} tenant users`);
       if (updatedUsers > 0) {
-        parts.push(`synced XP/levels for ${updatedUsers} of ${totalUsers} users`);
+        parts.push(`${updatedUsers} had total XP or level changes`);
       }
+      parts.push('leaderboard and progress history refreshed for all clients');
       message = `Recalculated using current config (stepXp: ${config.stepXp}) — ${parts.join('; ')}.`;
     }
 
@@ -150,6 +201,10 @@ router.post('/recalculate-all-levels', protect, admin, async (req, res) => {
       updatedUsers,
       unchangedUsers: unchanged,
       updatedAuditLogs: auditSync.updatedLogs,
+      hoursStats: auditSync.hoursStats,
+      recalculatedAt,
+      reviewExploitRepair,
+      configRates: effectiveRates,
       stepXp: config.stepXp,
       weeklyPreview: weeklyPreview?.entries?.map(([userId, weeklyXp]) => ({ userId, weeklyXp })),
       changes: changes.map((c) => ({

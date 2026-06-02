@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ListTodo, FolderPlus, StickyNote, Calendar, Link2, Bug, LayoutGrid, Pin } from 'lucide-react';
@@ -20,8 +20,6 @@ const BUG_SEVERITY_OPTIONS = [
 
 const QuickAddMenu = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const hideOnChat = location.pathname === '/chat';
   const [open, setOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
@@ -121,11 +119,9 @@ const QuickAddMenu = () => {
     }
   };
 
-  if (hideOnChat) return null;
-
   return (
     <>
-      <div className="fixed bottom-24 lg:bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+      <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex flex-col items-end gap-2">
         <AnimatePresence>
           {open && (
             <motion.div

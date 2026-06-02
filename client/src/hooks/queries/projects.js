@@ -30,6 +30,7 @@ export const useProjects = () => {
     return subscribeToChannel('projects', 'project_change', () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
     });
   }, [queryClient]);
 
@@ -66,4 +67,35 @@ export const useProject = (id) => {
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
   });
+};
+
+export const useProjectAnalytics = (projectId, queryParams, queryEnabled = true) => {
+  const { timeframe, startDate, endDate } = queryParams || {};
+  return useQuery({
+    queryKey: ['projects', projectId, 'analytics', timeframe, startDate, endDate],
+    queryFn: async () =>
+      (await axios.get(`/api/projects/${projectId}/analytics`, { params: queryParams })).data,
+    enabled: !!projectId && queryEnabled,
+    staleTime: 1000 * 60,
+  });
+};
+
+export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) => {
+  const { timeframe, startDate, endDate } = queryParams || {};
+  return useQuery({
+    queryKey: ['projects', 'analytics-summary', timeframe, startDate, endDate],
+    queryFn: async () =>
+      (await axios.get('/api/projects/analytics-summary', { params: queryParams })).data,
+    enabled: queryEnabled,
+    staleTime: 1000 * 60,
+  });
+};
+
+export const invalidateProjectAnalytics = (queryClient, projectId) => {
+  queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
+  if (projectId) {
+    queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'analytics'] });
+  } else {
+    queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
+  }
 };

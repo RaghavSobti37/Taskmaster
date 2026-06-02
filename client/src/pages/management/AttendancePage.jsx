@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input, ModalFooter } from '../../components/ui';
+import { PageContainer, PageHeader, Card, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
 import {
   useAttendance,
   useUpsertAttendance,
@@ -196,6 +196,17 @@ const AttendancePage = () => {
   
   const upsertAttendance = useUpsertAttendance();
   const approveAttendance = useApproveAttendance();
+
+  const handleApproveSuccess = (data, closeModal) => {
+    if (data?.xpAward?.awarded) {
+      addToast({
+        type: 'success',
+        message: 'Day locked — full-day attendance XP awarded for this date.',
+        module: MODULE.SYSTEM,
+      });
+    }
+    closeModal?.();
+  };
   const approveLeave = useApproveLeaveRequest();
   const rejectLeave = useRejectLeaveRequest();
   const resetAttendance = useResetAttendance();
@@ -341,9 +352,9 @@ const AttendancePage = () => {
 
   return (
     <PageContainer className="!py-4 !space-y-6">
+      <DesktopRecommendedBanner message="Team attendance matrix is best viewed on desktop. Use Settings → Attendance for your personal log on mobile." />
       <PageHeader
         title="Attendance"
-        subtitle="Manage check-ins, leaves, and time tracking."
         icon={ClipboardCheck}
         actions={
           canEdit ? (
@@ -418,6 +429,7 @@ const AttendancePage = () => {
           </div>
 
           {viewMode === VIEW_MODES.MONTH ? (
+            <div className="hidden lg:block">
             <MonthlyAttendanceGrid
               month={monthView}
               onMonthChange={setMonthView}
@@ -426,8 +438,9 @@ const AttendancePage = () => {
               resolveStatus={resolveStatus}
               onEdit={openEditModal}
             />
+            </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
+            <div className="hidden lg:block overflow-x-auto rounded-xl border border-[var(--color-bg-border)]">
               <table className="min-w-full text-xs">
                 <thead className="bg-[var(--color-bg-primary)]">
                   <tr>
@@ -454,7 +467,9 @@ const AttendancePage = () => {
                   )}
                   {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
                     <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">
-                      <td className="px-4 py-3 font-bold whitespace-nowrap sticky left-0 bg-[var(--color-bg-secondary)] z-10">{userRow.name}</td>
+                      <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-[var(--color-bg-secondary)] z-10">
+                        <UserLabel user={userRow} size="xs" nameClassName="font-bold text-xs" />
+                      </td>
                       {dateColumns.map(({ date, key: dayKey }) => {
                         const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
                         const entry = rowMap.get(key);
@@ -512,7 +527,7 @@ const AttendancePage = () => {
             setEditForm={setEditInForm}
             onApproveIn={() => approveAttendance.mutate(
               { id: editInCell.entry._id, approvalTarget: 'IN', manualTime: editInForm.inTime, workMode: editInForm.inMode },
-              { onSuccess: () => setEditInCell(null) }
+              { onSuccess: (data) => handleApproveSuccess(data, () => setEditInCell(null)) }
             )}
             isLoading={approveAttendance.isPending}
           />
@@ -561,7 +576,7 @@ const AttendancePage = () => {
             setEditForm={setEditOutForm}
             onApproveOut={() => approveAttendance.mutate(
               { id: editOutCell.entry._id, approvalTarget: 'OUT', manualTime: editOutForm.outTime, workMode: editOutForm.outMode },
-              { onSuccess: () => setEditOutCell(null) }
+              { onSuccess: (data) => handleApproveSuccess(data, () => setEditOutCell(null)) }
             )}
             isLoading={approveAttendance.isPending}
           />

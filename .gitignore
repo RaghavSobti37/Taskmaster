@@ -27,3 +27,6 @@ server/backup_db.js
 TSC_BrandBook.pdf
 vendor/
 server/reports/
+server/scripts/ocr-benchmark/
+eng.traineddata
+docs/workspaces_projects.txt

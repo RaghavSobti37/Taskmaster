@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
-import { Card, Button, Badge, StatCard, PageSkeleton, PageContainer, PageHeader, TablePagination, EmptyState } from '../components/ui';
+import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar } from '../components/ui';
 import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
 import { formatTimestampWithTz } from '../utils/displayLabels';
@@ -275,49 +275,80 @@ export default function CampaignDetails() {
 
   return (
     <PageContainer className="!py-6 space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-[var(--color-bg-border)]">
-        <Button size="xs" variant="ghost" onClick={() => navigate(backToEmails)} className="flex items-center gap-2">
+      <div className="flex items-center justify-between pb-2 border-b border-[var(--color-bg-border)]">
+        <div className="flex items-center gap-3 min-w-0">
+        <Button size="xs" variant="ghost" onClick={() => navigate(backToEmails)} className="flex items-center gap-2 shrink-0">
           <ArrowLeft size={14} /> Back to Email Campaigns
         </Button>
-        <div className="flex items-center gap-2">
-          <Button size="xs" variant="secondary" onClick={() => refetch()} className="flex items-center gap-1">
-            <RefreshCw size={12} /> Refresh
-          </Button>
-          {isCampaignActive && (
-            <Button size="xs" variant="danger" onClick={() => setShowStopModal(true)} className="flex items-center gap-1" title="Halt pending sends — already-delivered emails are preserved">
-              <Octagon size={12} /> Stop Campaign
-            </Button>
-          )}
-          <Button size="xs" variant="primary" onClick={openResendModal} className="flex items-center gap-1" disabled={resendableCount === 0} title="Retry failed/bounced/pending recipients on this campaign">
-            <RefreshCw size={12} /> Resend Campaign
-          </Button>
-          <Badge variant={campaignStatusVariant(campaign.status)}>
-            {campaign.status}
-          </Badge>
+        <span className="text-sm font-black text-[var(--color-text-primary)] truncate">{campaign.title}</span>
         </div>
+        <p className="text-[10px] font-bold text-[var(--color-text-muted)] truncate max-w-[40%] hidden sm:block">
+          {currentSenderLabel} · {formatTimestampWithTz(campaign.createdAt, 'MMM dd, yyyy')}
+        </p>
       </div>
 
-      <PageHeader 
-        title={campaign.title} 
-        subtitle={`Campaign ID: ${campaign.campaignId || campaign._id} • Sender: ${currentSenderLabel} • Created: ${formatTimestampWithTz(campaign.createdAt, 'MMM dd, yyyy')}${campaign.stoppedAt ? ` • Stopped: ${formatTimestampWithTz(campaign.stoppedAt)}` : ''}`}
-        icon={Mail}
+      <DataOverviewSection
+        mobileCollapsed
+        mobileMaxStats={2}
+        stats={[
+          { id: 'recipients', label: 'Total Recipients', value: totalRecipients, icon: Users, variant: 'info' },
+          { id: 'delivered', label: 'Sent Successfully', value: deliveredCount, icon: CheckCircle2, variant: 'mint' },
+          { id: 'failed', label: 'Failed / Bounced', value: failedCount, icon: AlertCircle, variant: 'rose' },
+          { id: 'pending', label: 'Pending / Queued', value: pendingCount, icon: Clock, variant: 'slate' },
+          {
+            id: 'openRate',
+            label: 'Engagement rate',
+            value: `${openRate}%`,
+            subValue: `${openedCount} opened or clicked`,
+            icon: Clock,
+            variant: 'apricot',
+            info: 'Percentage of delivered emails where the recipient opened or clicked. Denominator is successfully sent emails, not total list size.',
+          },
+          {
+            id: 'clickRate',
+            label: 'Click rate',
+            value: `${clickRate}%`,
+            subValue: `${clickedCount} clicks`,
+            icon: Play,
+            variant: 'slate',
+            info: 'Percentage of delivered emails with at least one link click.',
+          },
+        ]}
+        charts={
+          locationData.length
+            ? [{
+                id: 'geo',
+                title: 'Engagement by city',
+                type: 'bar',
+                data: locationData.slice(0, 8).map((d) => ({
+                  label: d.city || 'Unknown',
+                  value: (d.opens || 0) + (d.clicks || 0),
+                })),
+              }]
+            : []
+        }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <StatCard label="Total Recipients" value={totalRecipients} icon={Users} variant="info" />
-        <StatCard label="Sent Successfully" value={deliveredCount} icon={CheckCircle2} variant="mint" />
-        <StatCard label="Failed / Bounced" value={failedCount} icon={AlertCircle} variant="rose" />
-        <StatCard label="Pending / Queued" value={pendingCount} icon={Clock} variant="slate" />
-        <StatCard
-          label="Engagement rate"
-          value={`${openRate}%`}
-          subValue={`${openedCount} opened or clicked`}
-          icon={Clock}
-          variant="apricot"
-          info="Percentage of delivered emails where the recipient opened or clicked. Denominator is successfully sent emails, not total list size."
-        />
-        <StatCard label="Click rate" value={`${clickRate}%`} subValue={`${clickedCount} clicks`} icon={Play} variant="slate" info="Percentage of delivered emails with at least one link click." />
-      </div>
+      <PageToolbar
+        actions={(
+          <>
+            <Button size="xs" variant="secondary" onClick={() => refetch()} className="flex items-center gap-1">
+              <RefreshCw size={12} /> Refresh
+            </Button>
+            {isCampaignActive && (
+              <Button size="xs" variant="danger" onClick={() => setShowStopModal(true)} className="flex items-center gap-1" title="Halt pending sends — already-delivered emails are preserved">
+                <Octagon size={12} /> Stop Campaign
+              </Button>
+            )}
+            <Button size="xs" variant="primary" onClick={openResendModal} className="flex items-center gap-1" disabled={resendableCount === 0} title="Retry failed/bounced/pending recipients on this campaign">
+              <RefreshCw size={12} /> Resend Campaign
+            </Button>
+            <Badge variant={campaignStatusVariant(campaign.status)}>
+              {campaign.status}
+            </Badge>
+          </>
+        )}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
@@ -399,10 +430,11 @@ export default function CampaignDetails() {
             </div>
           ) : (
             campaign.events.map((evt, idx) => (
-              <div key={idx} className="flex items-start gap-3 hover:bg-white/5 p-1 rounded transition-colors font-mono">
-                <span className="text-slate-500 text-[10px] shrink-0 pt-0.5">
+              <div key={idx} className="flex flex-col lg:flex-row lg:items-start gap-1 lg:gap-3 hover:bg-white/5 p-2 rounded transition-colors font-mono min-w-0">
+                <span className="text-slate-500 text-[10px] shrink-0">
                   {evt.timestamp ? formatTimestampWithTz(evt.timestamp) : '—'}
                 </span>
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
                   evt.eventType === 'Open' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
                   evt.eventType === 'Click' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
@@ -436,6 +468,7 @@ export default function CampaignDetails() {
                     <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
                   )}
                 </span>
+                </div>
               </div>
             ))
           )}
@@ -494,74 +527,68 @@ export default function CampaignDetails() {
           </label>
         </div>
 
-        <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-primary)] custom-scrollbar">
-          <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
-            <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
-              <tr>
-                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Recipient</th>
-                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Delivery Status</th>
-                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Timestamp</th>
-                <th className="px-4 py-3 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">Notes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-bg-border)]">
-              {recipientsLoading && paginatedRecipients.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic">
-                    Loading recipients…
-                  </td>
-                </tr>
-              ) : paginatedRecipients.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)] italic">
-                    No recipients match this filter.
-                  </td>
-                </tr>
-              ) : paginatedRecipients.map((r, idx) => {
+        <DataTable
+          className="font-mono"
+          columns={[
+            {
+              header: 'Recipient',
+              render: (r) => (
+                <span className={`font-semibold ${r.invalidEmail ? 'opacity-80' : ''}`}>
+                  <span className={r.invalidEmail ? 'text-rose-400 line-through decoration-rose-400/50' : ''}>{r.email}</span>
+                  {r.invalidEmail && <Badge variant="rose" className="ml-2 text-[9px]">Bad email</Badge>}
+                </span>
+              ),
+            },
+            {
+              header: 'Delivery Status',
+              render: (r) => {
                 const displayStatus = r.displayStatus || r.status || 'Pending';
                 return (
-                <tr key={r._id || idx} className={`hover:bg-[var(--color-bg-secondary)]/50 ${r.invalidEmail ? 'opacity-80' : ''}`}>
-                  <td className="px-4 py-3 font-semibold">
-                    <span className={r.invalidEmail ? 'text-rose-400 line-through decoration-rose-400/50' : ''}>{r.email}</span>
-                    {r.invalidEmail && (
-                      <Badge variant="rose" className="ml-2 text-[9px]">Bad email</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={displayStatus === 'Opened' ? 'mint' : displayStatus === 'Clicked' ? 'success' : displayStatus === 'Sent' ? 'info' : displayStatus === 'Bounced' || displayStatus === 'Failed' || displayStatus === 'Invalid' ? 'rose' : 'slate'}>
-                      {displayStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)]">
-                    {r.sentAt ? formatTimestampWithTz(r.sentAt, 'MMM dd, HH:mm:ss') : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] truncate max-w-xs">
-                    {r.invalidEmail ? (r.error || 'Invalid email address') : (r.error || r.messageId || 'Ready for tracking')}
-                  </td>
-                </tr>
-              );})}
-            </tbody>
-          </table>
-          {recipientPagination.total > 0 && (
-            <TablePagination
-              pageSize={recipientPageSize}
-              currentPage={recipientPagination.page}
-              totalPages={recipientPagination.pages}
-              totalItems={recipientPagination.total}
-              rowCount={paginatedRecipients.length}
-              onPageChange={setRecipientPage}
-              onPageSizeChange={(size) => {
-                setRecipientPageSize(size);
-                setRecipientPage(1);
-              }}
-            />
-          )}
-          {recipientsFetching && !recipientsLoading && (
-            <div className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-bg-border)]">
-              Refreshing…
-            </div>
-          )}
-        </div>
+                  <Badge variant={displayStatus === 'Opened' ? 'mint' : displayStatus === 'Clicked' ? 'success' : displayStatus === 'Sent' ? 'info' : displayStatus === 'Bounced' || displayStatus === 'Failed' || displayStatus === 'Invalid' ? 'rose' : 'slate'}>
+                    {displayStatus}
+                  </Badge>
+                );
+              },
+            },
+            {
+              header: 'Timestamp',
+              render: (r) => (
+                <span className="text-[11px] text-[var(--color-text-muted)]">
+                  {r.sentAt ? formatTimestampWithTz(r.sentAt, 'MMM dd, HH:mm:ss') : '—'}
+                </span>
+              ),
+            },
+            {
+              header: 'Notes',
+              render: (r) => (
+                <span className="text-[11px] text-[var(--color-text-muted)] truncate max-w-xs block">
+                  {r.invalidEmail ? (r.error || 'Invalid email address') : (r.error || r.messageId || 'Ready for tracking')}
+                </span>
+              ),
+            },
+          ]}
+          data={paginatedRecipients}
+          getRowId={(r) => r._id || r.email}
+          serverSide
+          paginated
+          totalItems={recipientPagination.total}
+          totalPages={recipientPagination.pages}
+          currentPage={recipientPagination.page}
+          onPageChange={setRecipientPage}
+          pageSize={recipientPageSize}
+          onPageSizeChange={(size) => {
+            setRecipientPageSize(size);
+            setRecipientPage(1);
+          }}
+          isLoading={recipientsLoading}
+          emptyTitle="No recipients"
+          emptyDescription="No recipients match this filter."
+        />
+        {recipientsFetching && !recipientsLoading && (
+          <p className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-bg-border)]">
+            Refreshing…
+          </p>
+        )}
       </Card>
 
       {showFilteredResendModal && (

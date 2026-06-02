@@ -164,11 +164,60 @@ async function purgeQaNotifications(taskIds, leadIds) {
   return result.deletedCount || 0;
 }
 
-async function purgeQaXpAudits(taskIds, leadIds) {
+function buildQaActivityLogFilter() {
+  return {
+    $or: [
+      { action: 'QA_TEST' },
+      { module: 'QA_TESTING' },
+      { origin: 'QA_AGENT_TEST' },
+      { action: 'QA_ASSERTION' },
+      { 'details.title': { $regex: /^QA /i } },
+      { 'details.testName': { $regex: /^QA /i } },
+    ],
+  };
+}
+
+function buildQaXpAuditFilter({ taskIds = [], leadIds = [], logIds = [] } = {}) {
   const clauses = [{ 'details.qaProbe': true }];
   if (taskIds.length) clauses.push({ 'details.taskId': { $in: taskIds } });
   if (leadIds.length) clauses.push({ 'details.leadId': { $in: leadIds } });
-  const result = await XPAuditLog.deleteMany({ $or: clauses });
+  if (logIds.length) clauses.push({ 'details.logId': { $in: logIds } });
+  return { $or: clauses };
+}
+
+async function collectQaLogIds() {
+  const logs = await Log.find(buildQaActivityLogFilter()).setOptions(BYPASS).select('_id').lean();
+  return logs.map((l) => l._id);
+}
+
+/** Remove XP audit rows and activity logs created by QA automation (incl. orphan qaProbe rows). */
+async function purgeQaGamificationData(options = {}) {
+  const [taskIds, leadIds, logIds] = await Promise.all([
+    options.taskIds ? Promise.resolve(options.taskIds) : collectQaTaskIds(),
+    options.leadIds ? Promise.resolve(options.leadIds) : collectQaLeadIds(),
+    options.logIds ? Promise.resolve(options.logIds) : collectQaLogIds(),
+  ]);
+  const xpFilter = buildQaXpAuditFilter({ taskIds, leadIds, logIds });
+
+  const xpRows = await XPAuditLog.find(xpFilter).select('userId').lean();
+  const affectedUserIds = [...new Set(xpRows.map((r) => r.userId).filter(Boolean))];
+
+  const [xpResult, logResult] = await Promise.all([
+    XPAuditLog.deleteMany(xpFilter),
+    Log.deleteMany(buildQaActivityLogFilter()).setOptions(BYPASS),
+  ]);
+
+  return {
+    deletedXpAudits: xpResult.deletedCount || 0,
+    deletedQaLogs: logResult.deletedCount || 0,
+    affectedUserIds,
+  };
+}
+
+async function purgeQaXpAudits(taskIds, leadIds) {
+  const result = await XPAuditLog.deleteMany(
+    buildQaXpAuditFilter({ taskIds, leadIds, logIds: await collectQaLogIds() })
+  );
   return result.deletedCount || 0;
 }
 
@@ -212,23 +261,14 @@ async function purgeQaTestData() {
   const taskIds = await collectQaTaskIds();
   const leadIds = await collectQaLeadIds();
 
-  const [crm, tasks, users, finance, projects, notifications, xpAudits, logs] = await Promise.all([
+  const [crm, tasks, users, finance, projects, notifications, gamification] = await Promise.all([
     purgeQaLeadsAndContacts(),
     purgeQaTasks(),
     purgeQaUsers(),
     purgeQaFinance(),
     purgeQaProjects(),
     purgeQaNotifications(taskIds, leadIds),
-    purgeQaXpAudits(taskIds, leadIds),
-    Log.deleteMany({
-      $or: [
-        { action: 'QA_TEST' },
-        { module: 'QA_TESTING' },
-        { origin: 'QA_AGENT_TEST' },
-        { 'details.title': { $regex: /^QA /i } },
-        { 'details.testName': { $regex: /^QA /i } },
-      ],
-    }).setOptions(BYPASS),
+    purgeQaGamificationData({ taskIds, leadIds }),
   ]);
 
   return {
@@ -236,15 +276,17 @@ async function purgeQaTestData() {
       contacts: crm.contacts,
       leads: crm.leads,
       audits: crm.audits,
-      logs: logs.deletedCount || 0,
+      logs: gamification.deletedQaLogs || 0,
       users: users.deletedCount || 0,
       tasks: tasks.deletedCount || 0,
       taskAssignments: tasks.assignments || 0,
       notifications: notifications + (crm.leadNotifications || 0) + (tasks.notifications || 0),
-      xpAudits: (xpAudits || 0) + (crm.leadXp || 0) + (tasks.xpAudits || 0),
+      xpAudits:
+        (gamification.deletedXpAudits || 0) + (crm.leadXp || 0) + (tasks.xpAudits || 0),
       finance,
       projects,
     },
+    affectedUserIds: gamification.affectedUserIds || [],
   };
 }
 
@@ -374,9 +416,12 @@ module.exports = {
   buildQaTestDataFilter,
   buildQaUserFilter,
   buildQaTaskFilter,
+  buildQaActivityLogFilter,
+  buildQaXpAuditFilter,
   buildDataHubExcludeFilter,
   purgeQaUsers,
   purgeQaTasks,
+  purgeQaGamificationData,
   purgeQaTestData,
   purgeQaIdentity,
   deleteTrackedArtifact,

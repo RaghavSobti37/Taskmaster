@@ -34,6 +34,7 @@ const pageConfigReplacement = `const PAGE_CONFIG = {
   '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
   '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
   '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },
+  '/admin/project-analytics': { icon: BarChart3, label: 'Project Analytics', accessKey: 'admin_project_analytics' },
 };
 
 const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {`;

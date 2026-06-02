@@ -6,7 +6,7 @@ import {
 import {
   PageHeader, PageContainer, Button, PageSkeleton, TabSwitcher, Input, FullScreenWorkspace,
 } from '../../components/ui';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useArtistDashboard } from '../../hooks/useArtistDashboard';
 import { useArtistAnalytics } from '../../hooks/useTaskmasterQueries';
 import { formatChartData } from '../../utils/analyticsDataUtils';
@@ -168,7 +168,6 @@ export default function ArtistDetail({ isPreview = false }) {
 
       <PageHeader
         title={artist.name}
-        subtitle={`Artist Workspace · ${connections.filter((c) => c.accountHandle).length} connections · ${artist.isSynced ? 'Synced' : 'Pending sync'}`}
         icon={Music}
         actions={
           <div className="flex flex-wrap items-center gap-2">

@@ -16,16 +16,18 @@ import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import {
-  PageContainer,
-  PageHeader,
   Button,
   SearchInput,
   EmptyState,
   IconButton,
-  CenteredModal,
+  NexusModal,
   TablePagination,
+  ListPageLayout,
+  UserLabel,
+  DesktopRecommendedBanner,
 } from '../../components/ui';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { distributionFromField } from '../../utils/buildChartSeries';
+import { useConfirm } from '../../contexts/confirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
@@ -553,24 +555,132 @@ const FinancePage = () => {
     bulkCreateMutation.mutate({ documents });
   };
 
-  return (
-    <PageContainer maxWidth="1400px" className="!py-4 !space-y-6">
-      <PageHeader
-        icon={FileText}
-        title="Finance Documents"
-        subtitle="Manage project invoices, contracts, and financial records"
-        actions={
-          <>
-            <Button variant="secondary" size="sm" onClick={openNewFolderModal}>
-              <FolderPlus size={16} /> New Folder
-            </Button>
-            <Button size="sm" onClick={() => setShowUpload(true)}>
-              <Upload size={16} /> Upload Documents
-            </Button>
-          </>
-        }
-      />
+  const financeOverview = useMemo(() => {
+    const categoryData = distributionFromField(docs, 'category');
+    const stats = [
+      { id: 'total', label: 'Documents', value: pagination.total, icon: FileText, variant: 'info' },
+    ];
+    if (pendingInvoices.length > 0) {
+      stats.push({
+        id: 'pending',
+        label: 'Pending approval',
+        value: pendingInvoices.length,
+        icon: Clock,
+        variant: 'warning',
+      });
+    }
+    return {
+      stats: stats.slice(0, 4),
+      charts: categoryData.length
+        ? [{ id: 'category', title: 'Category mix (page)', type: 'bar', data: categoryData }]
+        : [],
+    };
+  }, [docs, pagination.total, pendingInvoices.length]);
 
+  return (
+    <ListPageLayout
+      maxWidth="1400px"
+      containerClassName="!py-4"
+      overview={financeOverview}
+      toolbarActions={(
+        <>
+          <Button variant="secondary" size="sm" onClick={openNewFolderModal}>
+            <FolderPlus size={16} /> New Folder
+          </Button>
+          <Button size="sm" onClick={() => setShowUpload(true)}>
+            <Upload size={16} /> Upload Documents
+          </Button>
+        </>
+      )}
+      toolbar={(
+        <>
+      {/* Filters & Search */}
+      <div className="flex flex-wrap gap-3 items-center flex-1 min-w-0">
+        <SearchInput
+          placeholder="Search title, file name, vendor..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="min-w-[200px] flex-1 max-w-md"
+        />
+
+        {/* Workspace Select */}
+        <div className="relative shrink-0">
+          <select
+            value={selectedWorkspace}
+            onChange={(e) => {
+              setSelectedWorkspace(e.target.value);
+              setSelectedProject('');
+              goToProjectRoot();
+            }}
+            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
+          >
+            <option value="">All Workspaces</option>
+            {workspaces.map((w) => (
+              <option key={w._id || w.name} value={w.name}>{w.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+        </div>
+
+        {/* Project Select */}
+        <div className="relative shrink-0">
+          <select
+            value={selectedProject}
+            onChange={(e) => {
+              const projectId = e.target.value;
+              setSelectedProject(projectId);
+              const projectRecord = projects.find((p) => p._id === projectId);
+              if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
+              goToProjectRoot();
+            }}
+            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
+          >
+            <option value="">All Projects</option>
+            {filteredProjects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+        </div>
+
+        {/* Category Select */}
+        <div className="relative shrink-0">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
+          >
+            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+        </div>
+
+        {/* Date Filters */}
+        <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-3 py-1 shrink-0">
+          <Calendar size={14} className="text-[var(--color-text-muted)]" />
+          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] whitespace-nowrap">From</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            aria-label="Document date from"
+            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+          />
+          <span className="text-[var(--color-text-muted)] text-[10px]">To</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            aria-label="Document date to"
+            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+          />
+          {(startDate || endDate) && (
+            <IconButton icon={X} label="Clear dates" size="sm" onClick={() => { setStartDate(''); setEndDate(''); }} />
+          )}
+        </div>
+      </div>
+        </>
+      )}
+    >
+      <DesktopRecommendedBanner message="Finance document management works best on desktop. You can browse folders on mobile with limited preview." />
       {pendingInvoices.length > 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
           <div className="px-4 py-3 border-b border-amber-500/20 flex items-center gap-2">
@@ -579,7 +689,7 @@ const FinancePage = () => {
               Pending Invoice Approvals ({pendingInvoices.length})
             </h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-amber-500/10">
@@ -590,12 +700,12 @@ const FinancePage = () => {
                   <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted By</th>
                   <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Amount</th>
                   <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] text-right">Actions</th>
+                  <th className="px-4 py-2 w-0" aria-hidden />
                 </tr>
               </thead>
               <tbody>
                 {pendingInvoices.map((inv) => (
-                  <tr key={inv._id} className="border-b border-amber-500/10 last:border-0 hover:bg-amber-500/5">
+                  <tr key={inv._id} className="group border-b border-amber-500/10 last:border-0 hover:bg-amber-500/5">
                     <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{inv.title}</td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)] capitalize">
                       {inv.metadata?.submissionType === 'reimbursement' ? 'Reimbursement' : 'Invoice'}
@@ -612,7 +722,7 @@ const FinancePage = () => {
                       {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         {inv.fileUrl && (
                           <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="xs"><Eye size={14} /> View</Button>
@@ -641,96 +751,35 @@ const FinancePage = () => {
               </tbody>
             </table>
           </div>
+          <div className="lg:hidden divide-y divide-amber-500/10">
+            {pendingInvoices.map((inv) => (
+              <div key={inv._id} className="p-4 space-y-2">
+                <p className="text-sm font-bold text-[var(--color-text-primary)]">{inv.title}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {inv.project?.name ? formatProjectName(inv.project.name) : '—'}
+                  {inv.metadata?.amount ? ` · ₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : ''}
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {inv.fileUrl && (
+                    <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="xs"><Eye size={14} /> View</Button>
+                    </a>
+                  )}
+                  <Button variant="success" size="xs" disabled={approveInvoiceMutation.isPending} onClick={() => approveInvoiceMutation.mutate(inv._id)}>
+                    <Check size={14} /> Approve
+                  </Button>
+                  <Button variant="danger" size="xs" disabled={rejectInvoiceMutation.isPending} onClick={() => handleRejectInvoice(inv)}>
+                    <XCircle size={14} /> Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
           <p className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-amber-500/10">
             Approved invoices appear in the document list below. Pending submissions are hidden until approved.
           </p>
         </div>
       )}
-
-      {/* Filters & Search */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <SearchInput
-          placeholder="Search title, file name, vendor..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="min-w-[240px] flex-1"
-        />
-
-        {/* Workspace Select */}
-        <div className="relative">
-          <select
-            value={selectedWorkspace}
-            onChange={(e) => {
-              setSelectedWorkspace(e.target.value);
-              setSelectedProject('');
-              goToProjectRoot();
-            }}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
-          >
-            <option value="">All Workspaces</option>
-            {workspaces.map((w) => (
-              <option key={w._id || w.name} value={w.name}>{w.name}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Project Select */}
-        <div className="relative">
-          <select
-            value={selectedProject}
-            onChange={(e) => {
-              const projectId = e.target.value;
-              setSelectedProject(projectId);
-              const projectRecord = projects.find((p) => p._id === projectId);
-              if (projectRecord?.workspace) setSelectedWorkspace(projectRecord.workspace);
-              goToProjectRoot();
-            }}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
-          >
-            <option value="">All Projects</option>
-            {filteredProjects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Category Select */}
-        <div className="relative">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
-          >
-            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
-        </div>
-
-        {/* Date Filters */}
-        <div className="flex items-center gap-2 bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-xl px-3 py-1">
-          <Calendar size={14} className="text-[var(--color-text-muted)]" />
-          <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] whitespace-nowrap">From</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            aria-label="Document date from"
-            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-          />
-          <span className="text-[var(--color-text-muted)] text-[10px]">To</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            aria-label="Document date to"
-            className="bg-transparent text-xs text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-          />
-          {(startDate || endDate) && (
-            <IconButton icon={X} label="Clear dates" size="sm" onClick={() => { setStartDate(''); setEndDate(''); }} />
-          )}
-        </div>
-
-      </div>
 
       {/* Documents Table */}
       <div className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] rounded-2xl overflow-hidden shadow-sm">
@@ -747,7 +796,8 @@ const FinancePage = () => {
             onAction={currentFolderId ? goToProjectRoot : undefined}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[720px]">
               <thead>
                 <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]">
@@ -869,16 +919,12 @@ const FinancePage = () => {
                         </td>
                         <td className="px-4 py-2 text-xs text-[var(--color-text-muted)]">{formatBytes(doc.fileSize)}</td>
                         <td className="px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            {doc.uploadedBy?.avatar ? (
-                              <img src={doc.uploadedBy.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-[8px] font-bold text-blue-500">
-                                {doc.uploadedBy?.name?.[0]}
-                              </div>
-                            )}
-                            <span className="text-[10px] font-bold text-[var(--color-text-secondary)] truncate max-w-[120px]">{doc.uploadedBy?.name || '—'}</span>
-                          </div>
+                          <UserLabel
+                            user={doc.uploadedBy}
+                            name={doc.uploadedBy?.name || '—'}
+                            size="xs"
+                            nameClassName="text-[10px] font-bold text-[var(--color-text-secondary)] truncate max-w-[120px]"
+                          />
                         </td>
                         <td className="px-4 py-2 text-[10px] text-[var(--color-text-muted)]">
                           {formatDocDate(doc)}
@@ -924,6 +970,51 @@ const FinancePage = () => {
               </tbody>
             </table>
           </div>
+          <div className="lg:hidden divide-y divide-[var(--color-bg-border)]">
+            {docs.map((doc) => {
+              if (doc.isFolder) {
+                return (
+                  <button
+                    key={doc._id}
+                    type="button"
+                    onClick={() => {
+                      if (!selectedProject && doc.project?._id) setSelectedProject(doc.project._id);
+                      navigateToFolder(doc._id);
+                    }}
+                    className="w-full text-left p-4 flex items-center gap-3 min-h-[44px] hover:bg-[var(--color-bg-secondary)]"
+                  >
+                    <FolderOpen size={20} className="text-amber-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">{doc.folderName}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">{doc.documentCount ?? 0} documents</p>
+                    </div>
+                    <ChevronRight size={16} className="shrink-0 text-[var(--color-text-muted)]" />
+                  </button>
+                );
+              }
+              const FileIcon = getFileIcon(doc.fileType);
+              const cat = CAT_COLORS[doc.category] || CAT_COLORS.other;
+              return (
+                <button
+                  key={doc._id}
+                  type="button"
+                  onClick={() => setSelectedDoc(doc)}
+                  className="w-full text-left p-4 min-h-[44px] hover:bg-[var(--color-bg-secondary)]"
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <FileIcon size={18} className="shrink-0 mt-0.5 text-[var(--color-text-muted)]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">{doc.title}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
+                        {doc.project?.name || '—'} · {doc.category} · {formatBytes(doc.fileSize)}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          </>
         )}
 
         {!isLoading && pagination.total > 0 && (
@@ -959,50 +1050,53 @@ const FinancePage = () => {
         isSubmitting={bulkCreateMutation.isPending}
       />
 
-      <CenteredModal isOpen={showNewFolder} onClose={() => setShowNewFolder(false)} size="md" zIndex={1001}>
-        <div className="p-6 space-y-4">
-          <h3 className="text-sm font-bold">Create folder</h3>
-          <p className="text-[10px] text-[var(--color-text-muted)]">
-            Folders live at project root{newFolderProjectName ? ` — ${newFolderProjectName}` : ''}.
-          </p>
-          <WorkspaceProjectFields
-            projects={projects}
-            workspace={newFolderWorkspace}
-            projectId={newFolderProject}
-            onChange={({ workspace, projectId }) => {
-              setNewFolderWorkspace(workspace);
-              setNewFolderProject(projectId);
+      <NexusModal
+        isOpen={showNewFolder}
+        onClose={() => setShowNewFolder(false)}
+        title="Create folder"
+        size="md"
+        showFooter={false}
+      >
+        <p className="text-[10px] text-[var(--color-text-muted)] mb-4">
+          Folders live at project root{newFolderProjectName ? ` — ${newFolderProjectName}` : ''}.
+        </p>
+        <WorkspaceProjectFields
+          projects={projects}
+          workspace={newFolderWorkspace}
+          projectId={newFolderProject}
+          onChange={({ workspace, projectId }) => {
+            setNewFolderWorkspace(workspace);
+            setNewFolderProject(projectId);
+          }}
+          layout="stacked"
+        />
+        <div className="mt-4">
+          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Folder name *</label>
+          <input
+            type="text"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="e.g. April 2026"
+            className="w-full px-3 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newFolderName.trim() && newFolderProject) {
+                createFolderMutation.mutate({ folderName: newFolderName.trim(), project: newFolderProject });
+              }
             }}
-            layout="stacked"
           />
-          <div>
-            <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Folder name *</label>
-            <input
-              type="text"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="e.g. April 2026"
-              className="w-full px-3 py-2 border border-[var(--color-bg-border)] rounded-xl text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newFolderName.trim() && newFolderProject) {
-                  createFolderMutation.mutate({ folderName: newFolderName.trim(), project: newFolderProject });
-                }
-              }}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowNewFolder(false)} className="px-4 py-2 text-xs font-bold text-[var(--color-text-muted)]">Cancel</button>
-            <button
-              type="button"
-              disabled={!newFolderName.trim() || !newFolderProject || createFolderMutation.isPending}
-              onClick={() => createFolderMutation.mutate({ folderName: newFolderName.trim(), project: newFolderProject })}
-              className="px-4 py-2 bg-[var(--color-action-primary)] text-white text-xs font-bold rounded-xl disabled:opacity-50"
-            >
-              {createFolderMutation.isPending ? 'Creating…' : 'Create folder'}
-            </button>
-          </div>
         </div>
-      </CenteredModal>
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewFolder(false)}>Cancel</Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!newFolderName.trim() || !newFolderProject || createFolderMutation.isPending}
+            onClick={() => createFolderMutation.mutate({ folderName: newFolderName.trim(), project: newFolderProject })}
+          >
+            {createFolderMutation.isPending ? 'Creating…' : 'Create folder'}
+          </Button>
+        </div>
+      </NexusModal>
 
       {/* FullScreenWorkspace Immersive Preview Modal (70% Preview, 30% Metadata) */}
       <AnimatePresence>
@@ -1123,7 +1217,7 @@ const FinancePage = () => {
                         value={editForm.title}
                         onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
                         onBlur={() => updateMutation.mutate({ id: selectedDoc._id, payload: { title: editForm.title } })}
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                       />
                     </div>
 
@@ -1135,7 +1229,7 @@ const FinancePage = () => {
                         onBlur={() => updateMutation.mutate({ id: selectedDoc._id, payload: { description: editForm.description } })}
                         placeholder="Add brief details..."
                         rows={2}
-                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-blue-500/50 resize-none"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-action-primary)]/50 resize-none"
                       />
                     </div>
 
@@ -1160,7 +1254,7 @@ const FinancePage = () => {
                             setEditForm(prev => ({ ...prev, category: val }));
                             updateMutation.mutate({ id: selectedDoc._id, payload: { category: val } });
                           }}
-                          className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                          className="w-full px-2 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
                         >
                           {CATEGORIES.filter(c => c.value !== 'all').map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
@@ -1203,7 +1297,7 @@ const FinancePage = () => {
                               id: selectedDoc._id,
                               payload: { metadata: { ...selectedDoc.metadata, vendor: editForm.metadata.vendor } }
                             })}
-                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
+                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
                       </div>
@@ -1249,7 +1343,7 @@ const FinancePage = () => {
                               id: selectedDoc._id,
                               payload: { metadata: { ...selectedDoc.metadata, currency: editForm.metadata.currency } }
                             })}
-                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
+                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
                         <div>
@@ -1268,7 +1362,7 @@ const FinancePage = () => {
                               id: selectedDoc._id,
                               payload: { metadata: { ...selectedDoc.metadata, tax: parseFloat(editForm.metadata.tax) || 0 } }
                             })}
-                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50"
+                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
                         <div>
@@ -1287,7 +1381,7 @@ const FinancePage = () => {
                                 payload: { metadata: { ...selectedDoc.metadata, date: val ? new Date(val) : null } }
                               });
                             }}
-                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                            className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 cursor-pointer"
                           />
                         </div>
                       </div>
@@ -1354,7 +1448,7 @@ const FinancePage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

@@ -110,8 +110,7 @@ const initWorker = () => {
   cron.schedule('*/5 * * * *', updateStats);
   logger.info('statsWorker', 'Scheduled node-cron for CRM Stat Snapshots (every 5 mins)');
   
-  // Optional initial run
-  // setTimeout(updateStats, 5000); 
+  setTimeout(updateStats, 5000);
 };
 
 module.exports = { initWorker, updateStats, calculateStats };

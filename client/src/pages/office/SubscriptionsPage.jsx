@@ -1,22 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { CreditCard, Plus, Search, Trash2 } from 'lucide-react';
+import { CreditCard, Plus, Trash2 } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import {
-  PageContainer,
-  PageHeader,
   Card,
   Button,
   Input,
   NexusModal,
   ModalFooter,
+  PageLoadGuard,
   PageSkeleton,
-  DataLoading,
+  DataTable,
+  ListPageLayout,
+  SearchInput,
+  UserLabel,
 } from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const SUBSCRIPTION_TYPES = ['Software', 'SaaS', 'Hosting', 'Domain', 'Service', 'Other'];
@@ -171,79 +174,94 @@ const SubscriptionsPage = () => {
     isSaving: saveMutation.isPending,
   });
 
-  if (isLoading && !subscriptions.length) {
-    return (
-      <PageContainer className="!py-4">
-        <PageSkeleton />
-      </PageContainer>
-    );
-  }
+  const totalMonthlyInr = useMemo(
+    () => subscriptions.reduce((sum, sub) => sum + (Number(sub.amount) || 0), 0),
+    [subscriptions]
+  );
+
+  const typeChart = useMemo(
+    () => distributionFromField(subscriptions, 'type'),
+    [subscriptions]
+  );
+
+  const subscriptionColumns = [
+    { header: 'Name', sortKey: 'name', render: (sub) => <span className="font-bold">{sub.name}</span> },
+    {
+      header: 'Amount',
+      sortKey: 'amount',
+      sortFn: (sub) => Number(sub.amount) || 0,
+      render: (sub) => formatInr(sub.amount),
+    },
+    {
+      header: 'Due Date',
+      sortKey: 'dueDate',
+      sortFn: (sub) => (sub.dueDate ? new Date(sub.dueDate) : null),
+      render: (sub) => formatDate(sub.dueDate),
+    },
+    { header: 'Type', sortKey: 'type', render: (sub) => sub.type },
+    { header: 'Periodicity', sortKey: 'periodicity', render: (sub) => sub.periodicity },
+    {
+      header: 'Used By',
+      sortKey: 'usedBy',
+      sortFn: (sub) => sub.usedBy?.name || '',
+      render: (sub) => (
+        sub.usedBy
+          ? <UserLabel user={sub.usedBy} size="xs" nameClassName="font-bold text-xs" />
+          : <span className="text-[var(--color-text-muted)]">—</span>
+      ),
+    },
+  ];
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        icon={CreditCard}
-        title="Subscriptions"
-        subtitle="Track recurring software and service subscriptions."
-        actions={
-          <Button size="sm" onClick={openCreate}>
-            <Plus size={14} /> Add Subscription
-          </Button>
-        }
-      />
-
-      <Card className="p-4 space-y-4">
-        <Input
+    <PageLoadGuard loading={isLoading && !subscriptions.length} skeleton={PageSkeleton} className="!py-4">
+    <ListPageLayout
+      containerClassName="!py-4"
+      overview={{
+        stats: [
+          {
+            id: 'count',
+            label: 'Subscriptions',
+            value: subscriptions.length,
+            icon: CreditCard,
+            variant: 'info',
+          },
+          {
+            id: 'spend',
+            label: 'Listed Spend',
+            value: formatInr(totalMonthlyInr),
+            icon: CreditCard,
+            variant: 'mint',
+          },
+        ],
+        charts: typeChart.length
+          ? [{ id: 'types', title: 'By type', type: 'donut', data: typeChart }]
+          : [],
+      }}
+      toolbar={
+        <SearchInput
           placeholder="Search subscriptions..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          icon={Search}
+          className="!w-44 shrink min-w-[9rem]"
         />
-        <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
-          <table className="w-full text-xs">
-            <thead className="bg-[var(--color-bg-secondary)]">
-              <tr>
-                <th className="px-3 py-2 text-left">Name</th>
-                <th className="px-3 py-2 text-left">Amount</th>
-                <th className="px-3 py-2 text-left">Due Date</th>
-                <th className="px-3 py-2 text-left">Type</th>
-                <th className="px-3 py-2 text-left">Periodicity</th>
-                <th className="px-3 py-2 text-left">Used By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr>
-                  <td colSpan={6}>
-                    <DataLoading />
-                  </td>
-                </tr>
-              )}
-              {!isLoading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[var(--color-text-muted)]">
-                    No subscriptions yet. Add one to get started.
-                  </td>
-                </tr>
-              )}
-              {!isLoading &&
-                filtered.map((sub) => (
-                  <tr
-                    key={sub._id}
-                    className="border-t border-[var(--color-bg-border)] cursor-pointer hover:bg-[var(--color-bg-secondary)]/40"
-                    onClick={() => openEdit(sub)}
-                  >
-                    <td className="px-3 py-2 font-bold">{sub.name}</td>
-                    <td className="px-3 py-2">{formatInr(sub.amount)}</td>
-                    <td className="px-3 py-2">{formatDate(sub.dueDate)}</td>
-                    <td className="px-3 py-2">{sub.type}</td>
-                    <td className="px-3 py-2">{sub.periodicity}</td>
-                    <td className="px-3 py-2">{sub.usedBy?.name || '—'}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+      }
+      toolbarActions={
+        <Button size="sm" onClick={openCreate}>
+          <Plus size={14} /> Add Subscription
+        </Button>
+      }
+    >
+      <Card className="p-0 overflow-hidden">
+        <DataTable
+          columns={subscriptionColumns}
+          data={filtered}
+          onRowClick={openEdit}
+          getRowId={(sub) => sub._id}
+          isLoading={isLoading}
+          defaultPageSize={15}
+          emptyTitle="No subscriptions"
+          emptyDescription="Add one to get started."
+        />
       </Card>
 
       <NexusModal
@@ -397,7 +415,8 @@ const SubscriptionsPage = () => {
           </div>
         </form>
       </NexusModal>
-    </PageContainer>
+    </ListPageLayout>
+    </PageLoadGuard>
   );
 };
 

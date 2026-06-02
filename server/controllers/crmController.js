@@ -886,8 +886,13 @@ exports.getCRMStats = async (req, res) => {
       stats.metrics.convertedLeads !== undefined ||
       stats.metrics.converted !== undefined
     );
+    const SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
+    const snapshotAge = stats?.updatedAt
+      ? Date.now() - new Date(stats.updatedAt).getTime()
+      : Infinity;
+    const snapshotStale = snapshotAge > SNAPSHOT_MAX_AGE_MS;
 
-    if (!hasFreshMetrics) {
+    if (!hasFreshMetrics || snapshotStale) {
       const matchStage = isRep
         ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
         : {};
@@ -1058,7 +1063,11 @@ exports.getRepSummary = async (req, res) => {
       },
       { $sort: { count: -1 } }
     ]);
-    res.json(summary);
+    const totalCount = summary.reduce((s, r) => s + (r.count || 0), 0);
+    const totalConv = summary.reduce((s, r) => s + (r.conv || 0), 0);
+    const avgConversion =
+      totalCount > 0 ? Math.round((totalConv / totalCount) * 10) / 10 : 0;
+    res.json({ reps: summary, avgConversion });
   } catch (error) {
     logger.error('crmController', 'Rep summary ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch rep summary' });

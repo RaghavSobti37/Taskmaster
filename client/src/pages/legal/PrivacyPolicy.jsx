@@ -1,17 +1,17 @@
 import React from 'react';
 import { Shield, Lock, Eye, Database, Globe, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
-import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
+import { Link } from 'react-router-dom';
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] selection:bg-[var(--color-action-primary)] selection:text-[var(--color-bg-primary)]">
       {/* Header Bar */}
-      <header className="border-b border-[#1F2937] bg-[#111827]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
           <div>
-            <span className="font-bold text-base tracking-tight text-white block">Coreknot</span>
-            <span className="text-[10px] text-slate-400 font-mono">Privacy Specification v2.1</span>
+            <span className="font-bold text-base tracking-tight text-[var(--color-text-primary)] block">Coreknot</span>
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Privacy Specification v2.1</span>
           </div>
         </div>
         <Link to="/" className="px-4 py-2 rounded-xl bg-[#1F2937] hover:bg-[#374151] text-xs font-bold text-slate-200 transition flex items-center gap-2">

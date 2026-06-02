@@ -865,7 +865,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           <div className="text-[11px] font-bold">
             {row.stats?.total || 0} Target
           </div>
-          <div className="text-[11px] font-bold text-emerald-500">
+          <div className="text-[11px] font-bold text-[var(--color-pastel-mint-text)]">
             {row.stats?.sent || 0} Sent
           </div>
         </div>
@@ -874,50 +874,51 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     {
       header: 'Created',
       render: (row) => (
-        <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase">
-          {format(new Date(row.createdAt), 'MMM dd, yyyy')}
-        </span>
-      )
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {row.status === 'Draft' && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={(e) => { e.stopPropagation(); sendCampaignMutation.mutate(row._id); }}
-              disabled={sendCampaignMutation.isPending}
-            >
-              <Play size={12} /> Dispatch Now
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-rose-500 hover:bg-rose-500/10"
-            onClick={async (e) => {
-              e.stopPropagation();
-              const ok = await confirm({
-                title: 'Delete campaign?',
-                message: 'Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.',
-                confirmLabel: 'Delete',
-                type: 'danger',
-              });
-              if (!ok) return;
-              deleteCampaignMutation.mutate(row._id, {
-                onSuccess: () => {
-                  if (selectedCampaign?._id === row._id) setSelectedCampaign(null);
-                  window.location.reload();
-                }
-              });
-            }}
-            disabled={deleteCampaignMutation.isPending}
-            title="Delete Campaign & Data"
+        <div className="flex items-center justify-between gap-2 min-w-[10rem]">
+          <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase">
+            {format(new Date(row.createdAt), 'MMM dd, yyyy')}
+          </span>
+          <div
+            className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
-            <Trash2 size={14} />
-          </Button>
+            {row.status === 'Draft' && (
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={(e) => { e.stopPropagation(); sendCampaignMutation.mutate(row._id); }}
+                disabled={sendCampaignMutation.isPending}
+              >
+                <Play size={12} /> Send
+              </Button>
+            )}
+            <Button
+              size="xs"
+              variant="ghost"
+              className="text-[var(--color-pastel-rose-text)] hover:bg-[var(--color-pastel-rose-bg)]"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const ok = await confirm({
+                  title: 'Delete campaign?',
+                  message: 'Are you sure you want to delete this campaign? All associated metrics and tracking data will be permanently removed.',
+                  confirmLabel: 'Delete',
+                  type: 'danger',
+                });
+                if (!ok) return;
+                deleteCampaignMutation.mutate(row._id, {
+                  onSuccess: () => {
+                    if (selectedCampaign?._id === row._id) setSelectedCampaign(null);
+                    window.location.reload();
+                  }
+                });
+              }}
+              disabled={deleteCampaignMutation.isPending}
+              title="Delete Campaign & Data"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
         </div>
       )
     }
@@ -929,8 +930,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     <div className="space-y-6">
       {/* Top Header & Mode Switcher */}
       {!hideModeBar && (
-        <div className="flex items-center justify-between pb-4 border-b border-[var(--color-bg-border)]">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-4 border-b border-[var(--color-bg-border)]">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant={mode === 'campaigns' ? 'primary' : 'secondary'}
               size="sm"
@@ -968,7 +969,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             </Button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="secondary"
               size="sm"
@@ -990,17 +991,17 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
       {/* Analytics Summary */}
       {!hideModeBar && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard label="Total Campaigns" value={stats?.totalCampaigns || campaigns.length} icon={Mail} variant="info" />
-          <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" />
+          <StatCard label="Emails Dispatched" value={stats?.totalSent || 0} icon={Send} variant="mint" subValue={stats?.totalOpened ? `${stats.totalOpened} opens` : undefined} />
           <StatCard label="Delivery failures" value={stats?.totalBounced || 0} icon={AlertCircle} variant="rose" info="Combined bounced, failed, and invalid delivery attempts across all campaigns." />
-          <StatCard label="Opens Tracked" value={stats?.totalOpened || 0} icon={CheckCircle2} variant="slate" />
           <StatCard
             label="Unsubscribed"
             value={stats?.totalUnsubscribed || 0}
             icon={UserMinus}
             variant="warning"
-            subValue="list ↗"
+            subValue="view list ↗"
+            info="Opens tracked in campaign detail views."
             onClick={() => window.open('https://docs.google.com/spreadsheets/d/1BuHfbhY21cFoSHaanH8Q5Rg_80s3zHZY9snwzCroRe0/edit?usp=sharing', '_blank')}
           />
         </div>

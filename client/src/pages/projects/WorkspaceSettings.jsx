@@ -217,19 +217,19 @@ const WorkspaceSettings = () => {
 
   return (
     <PageContainer maxWidth="1000px">
-      <Button
-        variant="ghost"
-        size="xs"
-        onClick={() => navigate('/projects')}
-        className="mb-4 flex items-center gap-2"
-      >
-        <ArrowLeft size={14} /> Back to Projects
-      </Button>
-
       <PageHeader
         title={`${displayName} Workspace`}
-        subtitle="Default members are added to new projects and synced to existing projects in this workspace."
         icon={Settings}
+        leadingActions={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/projects')}
+            className="flex items-center gap-1.5 shrink-0"
+          >
+            <ArrowLeft size={14} /> Back to Projects
+          </Button>
+        }
         actions={
           <div
             className="w-3 h-3 rounded-full shrink-0 border border-[var(--color-bg-border)]"

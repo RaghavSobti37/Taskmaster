@@ -5,7 +5,7 @@ import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, Shie
 import { PageContainer, PageHeader, Card, Button, Badge } from '../../components/ui';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
@@ -67,17 +67,16 @@ const categoryIcons = {
 };
 
 const checkStatusStyles = {
-  pass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  fail: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
-  warn: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-  skip: 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
+  pass: 'badge-pastel badge-mint border border-[var(--color-pastel-mint-text)]/20',
+  fail: 'badge-pastel badge-rose border border-[var(--color-pastel-rose-text)]/20',
+  warn: 'badge-pastel badge-apricot border border-[var(--color-pastel-apricot-text)]/20',
+  skip: 'badge-pastel badge-slate border border-[var(--color-pastel-slate-text)]/20',
 };
 
-// Colors mapped to severity
 const severityColors = {
-  high: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
-  medium: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20',
-  low: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
+  high: 'badge-pastel badge-rose border border-[var(--color-pastel-rose-text)]/20',
+  medium: 'badge-pastel badge-apricot border border-[var(--color-pastel-apricot-text)]/20',
+  low: 'badge-pastel badge-slate border border-[var(--color-pastel-blue-text)]/20',
 };
 
 const QA_AGENTS = [
@@ -258,11 +257,12 @@ const QATestingPage = () => {
       }
       setActiveTestRunId(null);
       queryClient.invalidateQueries(['qa-history']);
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
       if (progressData?.testRunId) {
         queryClient.invalidateQueries(['qa-results', progressData.testRunId]);
       }
     }
-  }, [activeRun, activeTestRunId, progressData, queryClient]);
+  }, [activeRun, activeTestRunId, progressData, queryClient, toastSuccess]);
 
   const { data: latestResults } = useQuery({
     queryKey: ['qa-results', historyData?.testRuns?.[0]?._id],
@@ -325,7 +325,11 @@ const QATestingPage = () => {
       queryClient.invalidateQueries({ queryKey: ['userDirectory'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toastSuccess(data.message || 'QA test data purged', { module: MODULE.SYSTEM });
+      queryClient.invalidateQueries({ queryKey: ['gamification'] });
+      const xpNote = data.xpRecalc?.updatedUsers
+        ? ` XP re-synced for ${data.xpRecalc.updatedUsers} user(s).`
+        : '';
+      toastSuccess((data.message || 'QA test data purged') + xpNote, { module: MODULE.SYSTEM });
     },
     onError: (err) => {
       toastError(err.response?.data?.error || 'Failed to purge QA test data', { module: MODULE.SYSTEM });
@@ -767,7 +771,6 @@ const QATestingPage = () => {
     <PageContainer>
       <PageHeader
         title="Omni-Security & React Doctor Engine"
-        subtitle="Global App Scanning • SAST/SCA Analysis • Pentest Swarm • Automated PoC"
         icon={ShieldAlert}
         actions={
           <div className="flex flex-wrap items-center gap-2 justify-end">
@@ -797,7 +800,7 @@ const QATestingPage = () => {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Purge QA test data?',
-                  message: 'Removes QA probe tasks (QA Proto, XSS probes, [QA BUG], etc.), probe user accounts, CRM/Data Hub records, and related logs. Production data outside QA patterns is not affected.',
+                  message: 'Removes QA probe tasks (titles starting with QA, [QA BUG], etc.), probe users, CRM/Data Hub rows, QA activity logs, and XP audit entries from tests — then re-syncs affected users’ total XP. Production data outside QA patterns is not affected.',
                   confirmLabel: 'Purge',
                   type: 'danger',
                 });

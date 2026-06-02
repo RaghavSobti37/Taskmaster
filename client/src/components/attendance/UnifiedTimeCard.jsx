@@ -1,11 +1,14 @@
 import React from 'react';
 import { Card, Button, NexusDropdown } from '../ui';
-import { Lock, Check, LogIn, LogOut, RotateCcw } from 'lucide-react';
+import { Lock, Check, LogIn, LogOut, RotateCcw, Info } from 'lucide-react';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 
 const PASTEL_ROSE_CELL = 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/20';
 const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
+
+const DISCREPANCY_INFO =
+  'Difference between your check-in to check-out duration and total hours logged in Daily Logs for this day. Shown when the gap is 30 minutes or more. Keep both aligned for the attendance day bonus.';
 
 const UnifiedTimeCard = ({
   entry,
@@ -96,15 +99,25 @@ const UnifiedTimeCard = ({
             </span>
           )}
           {entry?.discrepancyMinutes >= 30 && (
-            <span className={`shrink-0 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`} title="Difference between expected shift hours and recorded in/out times (≥30 min shown).">
-              Discrepancy: {entry.discrepancyMinutes}m
+            <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
+              Discrepancy: {entry.discrepancyMinutes} Minutes
+              <button
+                type="button"
+                title={DISCREPANCY_INFO}
+                aria-label={DISCREPANCY_INFO}
+                className="inline-flex items-center opacity-80 hover:opacity-100 transition-opacity"
+              >
+                <Info size={13} strokeWidth={2.5} />
+              </button>
             </span>
           )}
         </div>
         {(inAppr || outAppr) && (
           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
             <Lock size={14} />
-            {inAppr && outAppr ? 'Fully Approved' : 'Partially Approved'}
+            {inAppr && outAppr
+              ? (entry?.xpGrantedAt ? 'Locked — XP awarded' : 'Fully locked (XP on lock)')
+              : 'Partially locked'}
           </span>
         )}
       </div>

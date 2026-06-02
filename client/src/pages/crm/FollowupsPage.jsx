@@ -5,16 +5,15 @@ import {
 } from 'lucide-react';
 import { 
   Badge, 
-  PageHeader, 
   Card, 
-  PageContainer, 
   DataTable, 
   Button, 
   Input, 
   TabSwitcher,
-  StatCard,
   PageSkeleton,
-  FullScreenWorkspace
+  FullScreenWorkspace,
+  ListPageLayout,
+  UserLabel,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
@@ -23,7 +22,7 @@ import { format, isPast, isToday, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
@@ -37,6 +36,8 @@ export default function FollowupsPage() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('today');
   const [followupPage, setFollowupPage] = useState(1);
+  const [sortField, setSortField] = useState('nextFollowupDate');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -46,8 +47,8 @@ export default function FollowupsPage() {
   const { data, isLoading, refetch } = useLiveLeads({
     page: followupPage,
     limit: FOLLOWUP_PAGE_SIZE,
-    sort: 'nextFollowupDate',
-    order: 'asc',
+    sort: sortField,
+    order: sortOrder,
     hasFollowup: 'true',
     followupTab: activeTab,
     assignedRepId: isAdminUser(user) ? undefined : user?._id
@@ -66,7 +67,24 @@ export default function FollowupsPage() {
 
   useEffect(() => {
     setFollowupPage(1);
-  }, [activeTab]);
+  }, [activeTab, sortField, sortOrder]);
+
+  const isDefaultSort = sortField === 'nextFollowupDate' && sortOrder === 'asc';
+  const tableSortState = useMemo(
+    () => (isDefaultSort ? null : { key: sortField, direction: sortOrder }),
+    [sortField, sortOrder, isDefaultSort]
+  );
+
+  const handleTableSortChange = (next) => {
+    if (!next) {
+      setSortField('nextFollowupDate');
+      setSortOrder('asc');
+    } else {
+      setSortField(next.key);
+      setSortOrder(next.direction);
+    }
+    setFollowupPage(1);
+  };
 
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
@@ -239,6 +257,7 @@ export default function FollowupsPage() {
     },
     {
       header: 'Customer Details',
+      sortKey: 'name',
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -255,6 +274,8 @@ export default function FollowupsPage() {
     },
     {
       header: 'Planned Time',
+      sortKey: 'nextFollowupDate',
+      sortFn: (row) => row.followupFullDate,
       render: (row) => (
         <div className="flex items-center gap-2">
           <div className={`p-1.5 rounded-lg ${isPast(row.followupFullDate) && !isToday(row.followupFullDate) ? 'bg-rose-500/10 text-rose-500' : 'bg-blue-500/10 text-blue-500'}`}>
@@ -273,6 +294,7 @@ export default function FollowupsPage() {
     },
     {
       header: 'Interest Level',
+      sortKey: 'leadStatus',
       render: (row) => (
         <Badge variant={row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'info'}>
           {row?.leadStatus}
@@ -282,12 +304,12 @@ export default function FollowupsPage() {
     {
       header: 'Assigned Agent',
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
-             {row.assignedRep?.avatar ? <img src={row.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={12} className="text-[var(--color-text-muted)]" />}
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-tight truncate">{row.assignedRep?.name || 'Unassigned'}</span>
-        </div>
+        <UserLabel
+          user={row.assignedRep}
+          name={row.assignedRep?.name || 'Unassigned'}
+          size="xs"
+          nameClassName="text-[10px] font-black uppercase tracking-tight truncate"
+        />
       )
     }
   ];
@@ -295,35 +317,79 @@ export default function FollowupsPage() {
   if (isLoading && leads.length === 0) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        title="Follow-up Schedule"
-        icon={PhoneCall}
-        actions={
-          <div className="flex items-center gap-2">
-            <TabSwitcher
-              activeTab={activeTab}
-              onChange={setActiveTab}
-              tabs={[
-                { id: 'today', label: `Today (${stats.today})` },
-                { id: 'overdue', label: `Overdue (${stats.overdue})` },
-                { id: 'upcoming', label: `Upcoming (${stats.upcoming})` }
-              ]}
-            />
-            <Button variant="secondary" size="sm" onClick={() => refetch()}>
-              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <StatCard onClick={() => setActiveTab('today')} label="Calls Today" value={stats.today} icon={PhoneCall} variant="info" info="Interactions planned for the current day." />
-        <StatCard onClick={() => setActiveTab('overdue')} label="Overdue Tasks" value={stats.overdue} icon={AlertCircle} variant="rose" info="Scheduled calls that were missed." />
-        <StatCard onClick={() => setActiveTab('upcoming')} label="Next Commitments" value={stats.upcoming} icon={Calendar} variant="mint" info="Future interactions scheduled in your pipeline." />
-        <StatCard label="Daily Goal" value="100%" icon={CheckCircle2} variant="slate" info="The percentage of today's calls you have finished." />
-      </div>
-
+    <ListPageLayout
+      containerClassName="!py-4"
+      overview={{
+        stats: [
+          {
+            id: 'today',
+            label: 'Calls Today',
+            value: stats.today,
+            icon: PhoneCall,
+            variant: 'info',
+            info: 'Interactions planned for the current day.',
+            onClick: () => setActiveTab('today'),
+            active: activeTab === 'today',
+          },
+          {
+            id: 'overdue',
+            label: 'Overdue Tasks',
+            value: stats.overdue,
+            icon: AlertCircle,
+            variant: 'rose',
+            info: 'Scheduled calls that were missed.',
+            onClick: () => setActiveTab('overdue'),
+            active: activeTab === 'overdue',
+          },
+          {
+            id: 'upcoming',
+            label: 'Next Commitments',
+            value: stats.upcoming,
+            icon: Calendar,
+            variant: 'mint',
+            info: 'Future interactions scheduled in your pipeline.',
+            onClick: () => setActiveTab('upcoming'),
+            active: activeTab === 'upcoming',
+          },
+          {
+            id: 'goal',
+            label: 'Daily Goal',
+            value: '100%',
+            icon: CheckCircle2,
+            variant: 'slate',
+            info: "The percentage of today's calls you have finished.",
+          },
+        ],
+        charts: [
+          {
+            id: 'queue',
+            title: 'Follow-up queue',
+            type: 'donut',
+            data: [
+              { label: 'Today', value: stats.today },
+              { label: 'Overdue', value: stats.overdue },
+              { label: 'Upcoming', value: stats.upcoming },
+            ],
+          },
+        ],
+      }}
+      toolbar={
+        <TabSwitcher
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { id: 'today', label: `Today (${stats.today})` },
+            { id: 'overdue', label: `Overdue (${stats.overdue})` },
+            { id: 'upcoming', label: `Upcoming (${stats.upcoming})` },
+          ]}
+        />
+      }
+      toolbarActions={
+        <Button variant="secondary" size="sm" onClick={() => refetch()}>
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Refresh
+        </Button>
+      }
+    >
       <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
         <DataTable
           columns={columns}
@@ -337,8 +403,10 @@ export default function FollowupsPage() {
           totalItems={data?.total || 0}
           pageSize={FOLLOWUP_PAGE_SIZE}
           onPageChange={setFollowupPage}
+          sortState={tableSortState}
+          onSortChange={handleTableSortChange}
+          isLoading={isLoading}
         />
-       
       </Card>
 
       <FullScreenWorkspace
@@ -493,7 +561,7 @@ export default function FollowupsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.leadStatus}
                   onChange={e => setEditLeadData({ ...editLeadData, leadStatus: e.target.value })}
                 >
@@ -503,7 +571,7 @@ export default function FollowupsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Call Outcome Status</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.callStatus}
                   onChange={e => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
                 >
@@ -513,7 +581,7 @@ export default function FollowupsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Quality Score</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.leadQuality}
                   onChange={e => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
                 >
@@ -523,7 +591,7 @@ export default function FollowupsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Conversion Plan / Status</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.planOption || ''}
                   onChange={e => setEditLeadData({ ...editLeadData, planOption: e.target.value, ...(e.target.value ? { leadStatus: 'Converted' } : {}) })}
                 >
@@ -547,7 +615,7 @@ export default function FollowupsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Date</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none cursor-pointer"
                   value={editLeadData.nextFollowupDate}
                   onClick={e => e.target.showPicker && e.target.showPicker()}
                   onFocus={e => e.target.showPicker && e.target.showPicker()}
@@ -559,7 +627,7 @@ export default function FollowupsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Time</label>
                 <input
                   type="time"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none cursor-pointer"
                   value={editLeadData.nextFollowupTime}
                   onClick={e => e.target.showPicker && e.target.showPicker()}
                   onFocus={e => e.target.showPicker && e.target.showPicker()}
@@ -667,7 +735,7 @@ export default function FollowupsPage() {
           </section>
         </div>
       </FullScreenWorkspace>
-    </PageContainer>
+    </ListPageLayout>
   );
 }
 

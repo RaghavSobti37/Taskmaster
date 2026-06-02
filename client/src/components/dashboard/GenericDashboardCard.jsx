@@ -11,7 +11,7 @@ const formatBarMetric = (value, _name, item) => {
   const metric = item?.payload?.label || 'Count';
   if (metric === 'Tasks') return [`${value}%`, 'Completion Rate'];
   if (metric === 'Converted') return [String(value), 'Converted'];
-  if (metric === 'Focus') return [`${value}h`, 'Focus Hours'];
+  if (metric === 'Focus') return [`${value}h`, 'Avg Focus / Day'];
   return [String(value), metric];
 };
 
@@ -72,7 +72,7 @@ export default function GenericDashboardCard({ componentId }) {
         chartData: [
           { label: 'Tasks', value: m.completionRate || 0 },
           { label: 'Converted', value: m.convertedLeads || 0 },
-          { label: 'Focus', value: m.focusHours || 0 },
+          { label: 'Focus', value: m.focusAvgHours ?? m.focusHours ?? 0 },
         ],
         tooltipFormatter: formatBarMetric,
       };
@@ -107,7 +107,7 @@ export default function GenericDashboardCard({ componentId }) {
       <div className="h-12 px-4 border-b border-[rgba(255,255,255,0.08)] bg-[var(--color-bg-secondary)] flex items-center justify-between w-full shrink-0">
         <h4 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2 uppercase tracking-wider mb-0">
           <span className="text-[16px]">{meta?.icon || '📊'}</span> {meta?.label || componentId}
-          {componentId === 'dept-stats' && <InfoButton text="Bars use different units: Tasks = completion %, Converted = lead count, Focus = hours logged." />}
+          {componentId === 'dept-stats' && <InfoButton text="Bars use different units: Tasks = completion %, Converted = lead count, Focus = avg focus hours per day in the selected window." />}
         </h4>
         {componentId !== 'campaign-metrics' && (
           <div className="flex items-center gap-2">

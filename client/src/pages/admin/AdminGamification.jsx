@@ -3,7 +3,7 @@ import { Card, Button, PageHeader, PageContainer, PageSkeleton, Badge } from '..
 import { Edit2, AlertCircle, CheckCircle, RefreshCw, Trophy, Shield, Users, Ban } from 'lucide-react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const AdminGamification = () => {
@@ -137,8 +137,18 @@ const AdminGamification = () => {
     <PageContainer className="space-y-5 max-w-4xl">
       <PageHeader
         title="Gamification Rules"
-        subtitle="Fair XP for every role — outcome over setup, weekly leaderboard"
         icon={Trophy}
+        actions={(
+          <Button
+            onClick={handleRecalculateAllLevels}
+            disabled={recalculating}
+            className="gap-2 shrink-0"
+            title="Rebuild audit log amounts, user totals, levels, and weekly leaderboard from current rates"
+          >
+            <RefreshCw size={16} className={recalculating ? 'animate-spin' : ''} />
+            {recalculating ? 'Recalculating…' : 'Recalculate all user XP'}
+          </Button>
+        )}
       />
 
       {message.text && (
@@ -157,24 +167,6 @@ const AdminGamification = () => {
           </span>
         </div>
       )}
-
-      <Card className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-[var(--color-bg-border)] flex items-center gap-2">
-          <Shield size={18} className="text-blue-500" />
-          <div>
-            <h3 className="text-base font-bold">Fairness principles</h3>
-            <p className="text-sm text-[var(--color-text-muted)]">Why the system is balanced across roles</p>
-          </div>
-        </div>
-        <ul className="px-5 py-4 space-y-2 text-sm text-[var(--color-text-primary)]">
-          {(rules?.fairnessPrinciples || []).map((line) => (
-            <li key={line} className="flex gap-2">
-              <span className="text-[var(--color-action-primary)] shrink-0">•</span>
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
 
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--color-bg-border)]">
@@ -242,6 +234,24 @@ const AdminGamification = () => {
             </tbody>
           </table>
         </div>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-bg-border)] flex items-center gap-2">
+          <Shield size={18} className="text-blue-500" />
+          <div>
+            <h3 className="text-base font-bold">Fairness principles</h3>
+            <p className="text-sm text-[var(--color-text-muted)]">Why the system is balanced across roles</p>
+          </div>
+        </div>
+        <ul className="px-5 py-4 space-y-2 text-sm text-[var(--color-text-primary)]">
+          {(rules?.fairnessPrinciples || []).map((line) => (
+            <li key={line} className="flex gap-2">
+              <span className="text-[var(--color-action-primary)] shrink-0">•</span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
       </Card>
 
       <Card className="overflow-hidden">
@@ -334,20 +344,9 @@ const AdminGamification = () => {
           ))}
         </div>
         <div className="px-5 py-3 bg-[var(--color-bg-secondary)]/40 text-xs text-[var(--color-text-muted)]">
-          Example: at {config?.stepXp ?? 100} XP/level — Level 2 at {config?.stepXp ?? 100} XP, Level 3 at {(config?.stepXp ?? 100) * 2} XP. Leaderboard ranks by <strong className="text-[var(--color-text-primary)]">this week&apos;s</strong> audit log sum.
+          Example: at {config?.stepXp ?? 100} XP/level — Level 2 at {config?.stepXp ?? 100} XP, Level 3 at {(config?.stepXp ?? 100) * 2} XP. Leaderboard ranks by <strong className="text-[var(--color-text-primary)]">this week&apos;s</strong> audit log sum. After rate changes, use <strong className="text-[var(--color-text-primary)]">Recalculate all user XP</strong> (top right) to sync totals and leaderboard.
         </div>
       </Card>
-
-      <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-        <h4 className="font-bold text-sm mb-3">Recalculate stored user XP</h4>
-        <p className="text-sm text-[var(--color-text-muted)] mb-3">
-          After changing XP rates, rebuild audit log amounts, each user&apos;s total XP, and levels from activity history using the new rates (including the weekly leaderboard).
-        </p>
-        <Button onClick={handleRecalculateAllLevels} disabled={recalculating} className="gap-2">
-          <RefreshCw size={16} className={recalculating ? 'animate-spin' : ''} />
-          {recalculating ? 'Recalculating…' : 'Recalculate all user XP'}
-        </Button>
-      </div>
     </PageContainer>
   );
 };

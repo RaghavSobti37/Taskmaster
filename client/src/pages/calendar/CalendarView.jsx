@@ -1,14 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare, CalendarDays } from 'lucide-react';
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
-  PageHeader, 
-  PageContainer, 
   Card, 
-  Button
+  Button,
+  ListPageLayout,
 } from '../../components/ui';
 import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -224,11 +223,12 @@ const CalendarView = () => {
   );
 
   return (
-    <PageContainer className="!py-4 !space-y-4 flex flex-col min-h-[calc(100vh-6rem)]">
-      <PageHeader
-        
-      />
-
+    <ListPageLayout
+      containerClassName="!py-4"
+      icon={CalendarDays}
+      title="Calendar"
+      className="flex flex-col min-h-[calc(100vh-6rem)]"
+    >
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
         <aside className="w-full lg:w-72 space-y-4 shrink-0">
            {renderMiniCalendar()}
@@ -380,7 +380,7 @@ const CalendarView = () => {
         initialData={editingEvent}
         defaultDate={selectedDay}
       />
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

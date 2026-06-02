@@ -31,7 +31,11 @@ const sumFocusHours = async (match) => {
     (sum, log) => sum + parseTimeSpentToHours(log.details?.timeSpent),
     0
   );
-  return [{ focusHours: Math.round(focusHours * 100) / 100 }];
+  const rounded = Math.round(focusHours * 100) / 100;
+  const logCount = logs.length;
+  const focusAvgHours =
+    logCount > 0 ? Math.round((rounded / logCount) * 10) / 10 : 0;
+  return [{ focusHours: rounded, logCount, focusAvgHours }];
 };
 
 const aggregateTaskStats = (periodMatch) => Task.aggregate([
@@ -98,7 +102,7 @@ exports.getDepartmentStats = async (req, res) => {
 
     const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
     const { start, end, days } = rangeForTimeframe(timeframe);
-    const cacheKey = `dashboard:dept-stats:v2:${timeframe}:${getDateKey()}`;
+    const cacheKey = `dashboard:dept-stats:v3:${timeframe}:${getDateKey()}`;
     const cached = await getCache(cacheKey);
     if (cached) return res.json(cached);
 
@@ -123,7 +127,8 @@ exports.getDepartmentStats = async (req, res) => {
     const completionRate = tasksActive > 0
       ? Math.round((tasksCompleted / tasksActive) * 100)
       : 0;
-    const focusHours = Math.round(logs.focusHours * 10) / 10;
+    const focusAvgHours =
+      days > 0 ? Math.round((logs.focusHours / days) * 10) / 10 : 0;
 
     const payload = {
       timeframe,
@@ -131,7 +136,8 @@ exports.getDepartmentStats = async (req, res) => {
       metrics: {
         completionRate,
         convertedLeads: conversionsInPeriod,
-        focusHours,
+        focusHours: logs.focusHours,
+        focusAvgHours,
         tasksCompleted,
         tasksActive,
         newLeads: newLeads.total,
@@ -150,7 +156,7 @@ exports.getDepartmentStats = async (req, res) => {
 exports.getDashboardSummary = async (req, res) => {
   try {
     const userId = req.user._id;
-    const cacheKey = `dashboard:summary:${userId}`;
+    const cacheKey = `dashboard:summary:v2:${userId}`;
     const cached = await getCache(cacheKey);
     if (cached) return res.json(cached);
 
@@ -232,6 +238,7 @@ exports.getDashboardSummary = async (req, res) => {
         criticalTasks: tasks.critical,
         overdueTasks: tasks.overdue,
         focusHours: logs.focusHours,
+        focusAvgHours: logs.focusAvgHours,
         totalLeads: leads.total,
         convertedLeads: leads.converted,
         conversionRate,

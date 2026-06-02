@@ -10,7 +10,6 @@ const NAV_PATH_ACCESS = {
   '/calendar': 'calendar',
   '/todo': 'todo',
   '/inbox': 'inbox',
-  '/chat': 'chat',
   '/projects': 'projects',
   '/assets': 'assets',
   '/schedule': 'schedule',
@@ -32,6 +31,7 @@ const NAV_PATH_ACCESS = {
   '/admin/exly-campaigns': 'admin_exly',
   '/admin/scripts': 'admin_scripts',
   '/admin/gamification': 'admin_gamification',
+  '/admin/project-analytics': 'admin_project_analytics',
   '/admin/qa': 'admin_data',
 };
 
@@ -39,7 +39,9 @@ const filterNavbarGroupsForUser = (groups, user) => (groups || [])
   .map((group) => ({
     ...group,
     pages: (group.pages || []).filter((page) => {
-      const key = NAV_PATH_ACCESS[normalizeNavPath(page.path)];
+      const path = normalizeNavPath(page.path);
+      if (REMOVED_NAV_PATHS.has(path)) return false;
+      const key = NAV_PATH_ACCESS[path];
       return !key || hasPageAccess(user, key);
     }),
   }))
@@ -55,10 +57,13 @@ const LEGACY_NAV_PATHS = {
 
 const normalizeNavPath = (path) => LEGACY_NAV_PATHS[path] || path;
 
+const REMOVED_NAV_PATHS = new Set(['/chat']);
+
 const dedupeNavPages = (pages) => {
   const seen = new Set();
   return (pages || []).filter((page) => {
     const path = normalizeNavPath(page.path);
+    if (REMOVED_NAV_PATHS.has(path)) return false;
     if (seen.has(path)) return false;
     seen.add(path);
     page.path = path;
@@ -311,33 +316,36 @@ exports.getNavbarPreferences = async (req, res, next) => {
 
     let preferences = await NavbarPreference.findOne({ userId });
 
-    if (!preferences || (!preferences.groups && !preferences.pageOrder)) {
-      // Create default preferences on first access
+    if (!preferences) {
       preferences = await NavbarPreference.create({
         userId,
         groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS
       });
-    } else if (preferences.pageOrder && (!preferences.groups || preferences.groups.length === 0)) {
-      // Migrate old pageOrder to groups by resetting to defaults
+    } else if (preferences.pageOrder && !preferences.groups?.length) {
       preferences = await NavbarPreference.findOneAndUpdate(
         { userId },
-        { 
+        {
           $set: { groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS },
-          $unset: { pageOrder: 1 } 
+          $unset: { pageOrder: 1 }
+        },
+        { new: true }
+      );
+    } else if (!preferences.groups?.length) {
+      preferences = await NavbarPreference.findOneAndUpdate(
+        { userId },
+        {
+          $set: { groups: NavbarPreference.DEFAULT_NAVBAR_GROUPS, updatedAt: new Date() }
         },
         { new: true }
       );
     }
 
-    if (preferences?.groups?.length) {
-      preferences = preferences.toObject ? preferences.toObject() : { ...preferences };
-      preferences.groups = filterNavbarGroupsForUser(
-        mergeNavbarWithDefaults(preferences.groups),
-        req.user
-      );
-    }
-
-    res.json(preferences);
+    const doc = preferences.toObject ? preferences.toObject() : { ...preferences };
+    doc.groups = filterNavbarGroupsForUser(
+      mergeNavbarWithDefaults(doc.groups || []),
+      req.user
+    );
+    res.json(doc);
   } catch (error) {
     logger.error('Navbar', 'Error fetching navbar preferences', { error: error.message });
     next(error);

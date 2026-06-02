@@ -4,28 +4,48 @@ import MentionTitle from './mentions/MentionTitle';
 import {
   hoursMinutesToDecimal,
   isValidCompletionMinutes,
+  isValidReviewMinutes,
   MIN_COMPLETION_MINUTES,
+  REVIEW_TIME_MINUTES,
 } from '../utils/timeSpent';
 
-const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview = false }) => {
+const TaskCompletionModal = ({
+  task,
+  isOpen,
+  onClose,
+  onSubmit,
+  submitForReview = false,
+  approveReview = false,
+}) => {
   const [hoursInput, setHoursInput] = useState('1');
   const [minutesInput, setMinutesInput] = useState('0');
   const [timeError, setTimeError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setHoursInput('1');
-      setMinutesInput('0');
+      if (approveReview) {
+        const reviewHours = Math.floor(REVIEW_TIME_MINUTES / 60);
+        const reviewMins = REVIEW_TIME_MINUTES % 60;
+        setHoursInput(String(reviewHours));
+        setMinutesInput(String(reviewMins));
+      } else {
+        setHoursInput('1');
+        setMinutesInput('0');
+      }
       setTimeError('');
     }
-  }, [isOpen]);
+  }, [isOpen, approveReview]);
 
   if (!task) return null;
 
-  const isValidTime = isValidCompletionMinutes(hoursInput, minutesInput);
-  const minLabel = MIN_COMPLETION_MINUTES >= 60
-    ? `${MIN_COMPLETION_MINUTES / 60} hour`
-    : `${MIN_COMPLETION_MINUTES} minutes`;
+  const isValidTime = approveReview
+    ? isValidReviewMinutes(hoursInput, minutesInput)
+    : isValidCompletionMinutes(hoursInput, minutesInput);
+  const minLabel = approveReview
+    ? '1 minute'
+    : (MIN_COMPLETION_MINUTES >= 60
+      ? `${MIN_COMPLETION_MINUTES / 60} hour`
+      : `${MIN_COMPLETION_MINUTES} minutes`);
 
   const handleMarkDone = () => {
     if (!isValidTime) {
@@ -36,8 +56,12 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
     onClose();
   };
 
-  const heading = submitForReview ? 'Submit for Review' : 'Complete Task';
-  const actionLabel = submitForReview ? 'Submit for Review' : 'Mark Done';
+  const heading = approveReview
+    ? 'Approve Task'
+    : (submitForReview ? 'Submit for Review' : 'Complete Task');
+  const actionLabel = approveReview
+    ? 'Approve'
+    : (submitForReview ? 'Submit for Review' : 'Mark Done');
 
   return (
     <ModalShell isOpen={isOpen && !!task} onClose={onClose} size="md" zIndex={9999}>
@@ -50,7 +74,7 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
 
           <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-action-primary)]/20">
             <label className="block text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-3">
-              Time Invested
+              {approveReview ? 'Review Time' : 'Time Invested'}
             </label>
             <div className="flex items-center gap-3">
               <div className="flex-1">
@@ -89,9 +113,11 @@ const TaskCompletionModal = ({ task, isOpen, onClose, onSubmit, submitForReview 
             </div>
             {timeError && <p className="text-xs text-rose-500 mt-2">{timeError}</p>}
             <p className="text-xs text-[var(--color-text-muted)] mt-3">
-              {submitForReview
-                ? 'Your time goes to your daily logs. The person who assigned this task gets 15 minutes (review) in theirs.'
-                : 'This time will be logged to your daily logs.'}
+              {approveReview
+                ? 'Logged as [review] in your daily logs only — not the assignee\'s work hours.'
+                : (submitForReview
+                  ? 'Your work time goes to your daily logs. Your reviewer logs [review] when they approve.'
+                  : 'This time will be logged to your daily logs.')}
             </p>
           </div>
         </ModalBody>

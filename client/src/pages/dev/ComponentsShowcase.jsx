@@ -18,6 +18,7 @@ import {
   ProgressBar,
   Accordion,
   DataTable,
+  ListPageLayout,
   Skeleton,
   NexusDropdown,
   NexusModal,
@@ -25,7 +26,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  CenteredModal,
   EmptyState,
   AddMembers,
   SearchInput,
@@ -88,11 +88,12 @@ const ComponentsShowcase = () => {
   const [showSkeletonPreview, setShowSkeletonPreview] = useState(false);
 
   const tableColumns = [
-    { header: 'Name', key: 'name' },
-    { header: 'Owner', key: 'owner' },
+    { header: 'Name', key: 'name', sortKey: 'name' },
+    { header: 'Owner', key: 'owner', sortKey: 'owner' },
     {
       header: 'Status',
       key: 'status',
+      sortKey: 'status',
       render: (row) => <Badge variant={row?.status}>{row?.status}</Badge>,
     },
   ];
@@ -102,7 +103,6 @@ const ComponentsShowcase = () => {
       <PageHeader
         icon={Settings}
         title="Component Library"
-        subtitle="Phase 1 preview — review variants before project-wide rollout"
         actions={
           <Button size="sm" variant="secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             Back to top
@@ -200,9 +200,9 @@ const ComponentsShowcase = () => {
             <IconButton icon={Trash2} label="Delete" variant="danger" />
             <IconButton icon={Bell} label="Notify" variant="primary" size="lg" />
           </VariantRow>
-          <VariantRow label="Shadcn Button (Phase 2 — deps not installed)">
+          <VariantRow label="Shadcn Button">
             <p className="text-xs text-[var(--color-text-muted)] italic">
-              button.jsx exists at components/ui/button.jsx — needs class-variance-authority + radix-ui
+              Removed — use <code className="text-[10px]">Button</code> from <code className="text-[10px]">primitives.jsx</code> only.
             </p>
           </VariantRow>
         </ShowcaseSection>
@@ -284,12 +284,12 @@ const ComponentsShowcase = () => {
         <ShowcaseSection
           id="modals"
           title="Modals"
-          description="NexusModal (confirm dialogs), ModalShell (composable), CenteredModal (custom content)."
+          description="NexusModal first; ModalShell when layout is custom. See docs/COMPONENT_STANDARDS.md."
         >
           <VariantRow label="Open examples">
             <Button size="sm" onClick={() => setConfirmOpen(true)}>NexusModal confirm</Button>
             <Button size="sm" variant="secondary" onClick={() => setShellOpen(true)}>ModalShell</Button>
-            <Button size="sm" variant="ghost" onClick={() => setCenterOpen(true)}>CenteredModal</Button>
+            <Button size="sm" variant="ghost" onClick={() => setCenterOpen(true)}>NexusModal custom</Button>
           </VariantRow>
 
           <NexusModal
@@ -316,22 +316,49 @@ const ComponentsShowcase = () => {
             </ModalFooter>
           </ModalShell>
 
-          <CenteredModal isOpen={centerOpen} onClose={() => setCenterOpen(false)} size="sm">
-            <div className="p-6 space-y-4">
-              <h3 className="font-bold">Centered Modal</h3>
-              <p className="text-sm text-[var(--color-text-secondary)]">Minimal wrapper for bespoke dialogs.</p>
-              <Button size="sm" onClick={() => setCenterOpen(false)}>Close</Button>
-            </div>
-          </CenteredModal>
+          <NexusModal isOpen={centerOpen} onClose={() => setCenterOpen(false)} title="Custom dialog" size="sm" showFooter={false}>
+            <p className="text-sm text-[var(--color-text-secondary)]">Use NexusModal with showFooter=false for forms.</p>
+            <Button size="sm" className="mt-4" onClick={() => setCenterOpen(false)}>Close</Button>
+          </NexusModal>
         </ShowcaseSection>
 
-        <ShowcaseSection id="tables" title="Data Table" description="Virtualized rows, mobile card stack, pagination.">
+        <ShowcaseSection id="tables" title="Data Table" description="Click column headers: asc → desc → default. Virtualized rows, mobile card stack, pagination.">
           <DataTable
             columns={tableColumns}
             data={SHOWCASE_TABLE_DATA}
             defaultPageSize={5}
             paginated={false}
           />
+        </ShowcaseSection>
+
+        <ShowcaseSection id="udif-layout" title="UDIF 2.1 list layout" description="Overview first, then toolbar, then table. No page title when overview is present.">
+          <ListPageLayout
+            overview={{
+              stats: [
+                { id: 'a', label: 'Total', value: 42, icon: Database, variant: 'mint' },
+                { id: 'b', label: 'Active', value: 12, icon: TrendingUp, variant: 'info' },
+              ],
+              charts: [
+                {
+                  id: 'status',
+                  title: 'By status',
+                  type: 'donut',
+                  data: [
+                    { label: 'Done', value: 8 },
+                    { label: 'Open', value: 4 },
+                  ],
+                },
+              ],
+            }}
+            toolbar={
+              <SearchInput placeholder="Filter…" value={search} onChange={(e) => setSearch(e.target.value)} className="!w-40" />
+            }
+            toolbarActions={
+              <Button size="sm"><Plus size={14} /> Add</Button>
+            }
+          >
+            <DataTable columns={tableColumns} data={SHOWCASE_TABLE_DATA} paginated={false} />
+          </ListPageLayout>
         </ShowcaseSection>
 
         <ShowcaseSection id="feedback" title="Feedback & States">
@@ -466,7 +493,7 @@ const ComponentsShowcase = () => {
           </div>
         </ShowcaseSection>
 
-        <ShowcaseSection id="layout" title="Layout & Page Chrome" description="PageContainer wraps pages. PageHeader is used at the top of each route (see this page).">
+        <ShowcaseSection id="layout" title="Layout & Page Chrome" description="Prefer ListPageLayout + PageToolbar on data routes. PageHeader for simple pages only; no subtitles.">
           <VariantRow label="Full page skeleton preview">
             <Button size="sm" variant="secondary" onClick={() => setShowSkeletonPreview((v) => !v)}>
               {showSkeletonPreview ? 'Hide' : 'Show'} PageSkeleton

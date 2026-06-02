@@ -21,9 +21,14 @@ import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
 import { 
   NexusModal, NexusDropdown,
-  PageContainer, Card, Button, Input, StatCard, Badge, 
-  PageSkeleton, ModalShell, ModalHeader, ModalBody, ModalFooter, SearchInput, TablePagination
+  Card, Button, Input, Badge, 
+  PageSkeleton, ModalShell, ModalHeader, ModalBody, ModalFooter, SearchInput, TablePagination,
+  ListPageLayout,
+  UserLabel,
+  ListCard,
+  MobileCollapsibleSection,
 } from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
 import MentionTextarea from '../../components/mentions/MentionTextarea';
@@ -210,6 +215,17 @@ const AssetsPage = () => {
     return counts;
   }, [assets]);
 
+  const typeChartData = useMemo(
+    () =>
+      distributionFromField(assets, 'type', {
+        labelFn: (_, row) => {
+          const detected = detectAssetType(row?.type, row?.link);
+          return detected === 'other' ? 'Other' : detected.charAt(0).toUpperCase() + detected.slice(1);
+        },
+      }),
+    [assets]
+  );
+
   const googleServiceUrl = (service, index, email) => {
     if (service.type === 'meet') return `https://meet.google.com/?authuser=${email}`;
     if (service.type === 'drive') return `https://drive.google.com/drive/u/${index}/`;
@@ -309,88 +325,180 @@ const AssetsPage = () => {
 
   if (loading && assets.length === 0) return <PageSkeleton />;
 
-  return (
-    <PageContainer className="!py-4 !space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div onClick={() => setTypeFilter('all')} className={`cursor-pointer transition-all ${typeFilter === 'all' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Total Files" value={assets.length} icon={Database} variant="info" />
-        </div>
-        <div onClick={() => setTypeFilter('drive')} className={`cursor-pointer transition-all ${typeFilter === 'drive' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Drive" value={assetTypeCounts.drive} icon={assetStatIcon('drive')} variant="mint" />
-        </div>
-        <div onClick={() => setTypeFilter('sheet')} className={`cursor-pointer transition-all ${typeFilter === 'sheet' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Sheets" value={assetTypeCounts.sheet} icon={assetStatIcon('sheet')} variant="apricot" />
-        </div>
-        <div onClick={() => setTypeFilter('docs')} className={`cursor-pointer transition-all ${typeFilter === 'docs' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Docs" value={assetTypeCounts.docs} icon={assetStatIcon('docs')} variant="slate" />
-        </div>
-        <div onClick={() => setTypeFilter('zoom')} className={`cursor-pointer transition-all ${typeFilter === 'zoom' ? 'ring-2 ring-[var(--color-action-primary)] shadow-lg' : ''}`}>
-          <StatCard label="Zoom" value={assetTypeCounts.zoom} icon={assetStatIcon('zoom')} variant="info" />
-        </div>
-      </div>
+  const openAddDrawer = () => {
+    setEditingAsset(null);
+    setNewAsset(EMPTY_ASSET_FORM);
+    setIsDrawerOpen(true);
+  };
 
+  return (
+    <ListPageLayout
+      containerClassName="!py-4"
+      overviewMobileMaxStats={3}
+      overview={{
+        stats: [
+          {
+            id: 'all',
+            label: 'Total Files',
+            value: assets.length,
+            icon: Database,
+            variant: 'info',
+            onClick: () => setTypeFilter('all'),
+            active: typeFilter === 'all',
+          },
+          {
+            id: 'drive',
+            label: 'Drive',
+            value: assetTypeCounts.drive,
+            icon: assetStatIcon('drive'),
+            variant: 'mint',
+            onClick: () => setTypeFilter('drive'),
+            active: typeFilter === 'drive',
+          },
+          {
+            id: 'sheet',
+            label: 'Sheets',
+            value: assetTypeCounts.sheet,
+            icon: assetStatIcon('sheet'),
+            variant: 'apricot',
+            onClick: () => setTypeFilter('sheet'),
+            active: typeFilter === 'sheet',
+          },
+          {
+            id: 'docs',
+            label: 'Docs',
+            value: assetTypeCounts.docs,
+            icon: assetStatIcon('docs'),
+            variant: 'slate',
+            onClick: () => setTypeFilter('docs'),
+            active: typeFilter === 'docs',
+          },
+        ],
+       
+      }}
+      toolbar={
+        <>
+          <SearchInput
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter assets..."
+            className="!w-36 shrink min-w-[7rem] max-w-[9rem]"
+          />
+          <NexusDropdown
+            options={workspaceFilterOptions}
+            value={workspaceFilter}
+            onChange={(value) => {
+              setWorkspaceFilter(value);
+              setProjectFilter('all');
+            }}
+            placeholder="Workspace"
+            className="!w-32 shrink-0"
+          />
+          <NexusDropdown
+            options={projectFilterOptions}
+            value={projectFilter}
+            onChange={setProjectFilter}
+            placeholder="Project"
+            className="!w-32 shrink-0"
+          />
+          <NexusDropdown
+            options={ASSET_TYPE_FILTER_OPTIONS}
+            value={typeFilter}
+            onChange={setTypeFilter}
+            placeholder="File type"
+            className="!w-28 shrink-0"
+          />
+          <NexusDropdown
+            options={[
+              { value: 'newest', label: 'Newest' },
+              { value: 'name', label: 'Name' },
+              { value: 'project', label: 'Project' },
+              { value: 'type', label: 'File Type' },
+            ]}
+            value={sortBy}
+            onChange={setSortBy}
+            placeholder="Sort"
+            className="!w-28 shrink-0"
+          />
+        </>
+      }
+      toolbarActions={
+        <Button size="sm" onClick={openAddDrawer}>
+          <Plus size={14} /> Add asset
+        </Button>
+      }
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-9 space-y-6 min-w-0">
-           <Card className="overflow-visible">
-              <div className="p-3 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">
-                    <span className="font-black text-[var(--color-text-primary)] tabular-nums">{filteredAssets.length}</span>
-                    {' '}{filteredAssets.length === 1 ? 'file' : 'files'}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:flex-1 lg:justify-end">
-                    <SearchInput
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Filter assets..."
-                      className="w-full sm:!w-44 lg:!w-48"
-                    />
-                    <NexusDropdown
-                      options={workspaceFilterOptions}
-                      value={workspaceFilter}
-                      onChange={(value) => {
-                        setWorkspaceFilter(value);
-                        setProjectFilter('all');
-                      }}
-                      placeholder="Workspace"
-                      className="flex-1 min-w-[120px] sm:flex-none sm:!w-40"
-                    />
-                    <NexusDropdown
-                      options={projectFilterOptions}
-                      value={projectFilter}
-                      onChange={setProjectFilter}
-                      placeholder="Project"
-                      className="flex-1 min-w-[120px] sm:flex-none sm:!w-40"
-                    />
-                    <NexusDropdown
-                      options={ASSET_TYPE_FILTER_OPTIONS}
-                      value={typeFilter}
-                      onChange={setTypeFilter}
-                      placeholder="File type"
-                      className="flex-1 min-w-[120px] sm:flex-none sm:!w-36"
-                    />
-                    <NexusDropdown
-                      options={[
-                        { value: 'newest', label: 'Newest' },
-                        { value: 'name', label: 'Name' },
-                        { value: 'project', label: 'Project' },
-                        { value: 'type', label: 'File Type' },
-                      ]}
-                      value={sortBy}
-                      onChange={setSortBy}
-                      placeholder="Sort"
-                      className="flex-1 min-w-[100px] sm:flex-none sm:!w-32"
-                    />
-                    <Button
-                      size="sm"
-                      className="w-full sm:w-auto shrink-0"
-                      onClick={() => { setEditingAsset(null); setNewAsset(EMPTY_ASSET_FORM); setIsDrawerOpen(true); }}
-                    >
-                      <Plus size={14} /> Add Link
-                    </Button>
-                  </div>
-                </div>
-              </div>
+           {/* Mobile card list */}
+           <div className="lg:hidden space-y-3">
+             {filteredAssets.length === 0 ? (
+               <Card className="py-16 text-center opacity-40">
+                 <Database size={40} className="mx-auto mb-3" />
+                 <p className="text-[10px] font-black uppercase tracking-widest">No files uploaded yet</p>
+               </Card>
+             ) : paginatedAssets.map((asset) => {
+               const hasLink = Boolean(asset.link?.trim());
+               return (
+                 <ListCard
+                   key={asset._id}
+                   onClick={() => { if (hasLink) openAssetLink(asset.link); }}
+                   primary={
+                     <div className="flex items-center gap-2 min-w-0">
+                       <AssetTypeIconBadge type={asset.type} link={asset.link} size={14} className="shrink-0" />
+                       <span className="text-sm font-bold truncate">{asset.name}</span>
+                     </div>
+                   }
+                   trailing={
+                     <span className="text-[10px] font-bold text-[var(--color-text-muted)] tabular-nums">
+                       {format(new Date(asset.createdAt), 'MMM d')}
+                     </span>
+                   }
+                   meta={renderProjectCell(asset.projectIds)}
+                   actions={
+                     <Button
+                       type="button"
+                       size="sm"
+                       variant="secondary"
+                       className="w-full min-h-[44px]"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         const loaded = {
+                           projectIds: (asset.projectIds || []).map((p) => p._id || p),
+                           name: asset.name,
+                           link: asset.link,
+                           type: asset.type || 'other',
+                           notes: asset.notes || '',
+                         };
+                         setEditingAsset(asset);
+                         setNewAsset(loaded);
+                         setAssetEditBaseline(cloneSnapshot(loaded));
+                         setIsDrawerOpen(true);
+                       }}
+                     >
+                       <Edit2 size={14} /> Edit
+                     </Button>
+                   }
+                 />
+               );
+             })}
+             {filteredAssets.length > 0 && (
+               <TablePagination
+                 pageSize={pageSize}
+                 currentPage={currentPage}
+                 totalPages={totalPages}
+                 totalItems={filteredAssets.length}
+                 rowCount={paginatedAssets.length}
+                 onPageChange={setCurrentPage}
+                 onPageSizeChange={(size) => {
+                   setPageSize(size);
+                   setCurrentPage(1);
+                 }}
+               />
+             )}
+           </div>
+
+           <Card className="overflow-visible p-0 hidden lg:block">
               <div className="min-w-0 pr-1 sm:pr-2">
                  <table className="w-full max-w-full text-left table-fixed">
                     <colgroup>
@@ -451,16 +559,11 @@ const AssetsPage = () => {
                               </td>
                               <td className="px-2 sm:px-3 py-2 max-w-0 whitespace-nowrap hidden sm:table-cell">
                                  {asset.createdBy ? (
-                                   <div className="flex items-center gap-1.5 min-w-0">
-                                      <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 overflow-hidden text-[8px] font-black uppercase text-blue-500">
-                                         {asset.createdBy.avatar ? (
-                                           <img src={asset.createdBy.avatar} alt="" className="w-full h-full object-cover" />
-                                         ) : (
-                                           asset.createdBy.name ? asset.createdBy.name.substring(0, 2) : '??'
-                                         )}
-                                      </div>
-                                      <span className="text-[10px] font-bold text-[var(--color-text-secondary)] truncate" title={asset.createdBy.name || 'Unknown'}>{asset.createdBy.name || 'Unknown'}</span>
-                                   </div>
+                                   <UserLabel
+                                     user={asset.createdBy}
+                                     size="xs"
+                                     nameClassName="text-[10px] font-bold text-[var(--color-text-secondary)] truncate"
+                                   />
                                  ) : (
                                    <span className="text-[9px] italic opacity-30">N/A</span>
                                  )}
@@ -514,9 +617,9 @@ const AssetsPage = () => {
            </Card>
         </div>
 
-        <aside className="lg:col-span-3 space-y-6">
-           {/* Google Workspace Connection Panel */}
-           <Card className="p-4 space-y-4">
+        <aside className="lg:col-span-3 space-y-6 min-w-0">
+           <MobileCollapsibleSection title="Connected accounts">
+           <Card className="p-4 space-y-4 border-0 shadow-none">
               <div className="flex items-center justify-between">
                  <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-500 flex items-center gap-2">
                     <Cloud size={14} /> Google Workspace
@@ -577,6 +680,7 @@ const AssetsPage = () => {
                 ))}
               </div>
            </Card>
+           </MobileCollapsibleSection>
 
            <Card className="p-4 bg-slate-50 dark:bg-slate-900 text-[var(--color-text-primary)] dark:text-white border-[var(--color-bg-border)] dark:border-white/5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 blur-3xl rounded-full" />
@@ -723,7 +827,7 @@ const AssetsPage = () => {
         confirmLabel="Delete"
         onConfirm={handleDeleteAsset}
       />
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

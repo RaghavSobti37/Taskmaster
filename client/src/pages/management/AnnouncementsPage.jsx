@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Megaphone } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Input, Button } from '../../components/ui';
+import { ListPageLayout, Card, Input, Button } from '../../components/ui';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 
 const AnnouncementsPage = () => {
   const { confirm } = useConfirm();
@@ -55,8 +55,11 @@ const AnnouncementsPage = () => {
   };
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Announcements" subtitle="Create global, selected-user, or project announcements." icon={Megaphone} />
+    <ListPageLayout
+      containerClassName="!py-4"
+      icon={Megaphone}
+      title="Announcements"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <Card className="lg:col-span-8 p-5 space-y-4">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -182,7 +185,7 @@ const AnnouncementsPage = () => {
           )}
         </Card>
       </div>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

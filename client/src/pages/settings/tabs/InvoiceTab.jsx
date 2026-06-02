@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Receipt, FileText, Upload, Clock, CheckCircle, XCircle, Info, X } from 'lucide-react';
-import { Card, Input, Button, NexusModal } from '../../../components/ui';
+import { Card, Input, Button, NexusModal, DataTable } from '../../../components/ui';
 import WorkspaceProjectFields from '../../../components/forms/WorkspaceProjectFields';
 import { useProjects } from '../../../hooks/queries/projects';
 import { useWorkspaces } from '../../../hooks/useTaskmasterQueries';
@@ -19,7 +19,7 @@ const STATUS_STYLES = {
 const DEFAULT_WORKSPACE_TARGET = 'TSC CORPORATE';
 
 const compactInputClass =
-  'w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50';
+  'w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50';
 
 const INITIAL_FORM = {
   title: '',
@@ -67,6 +67,48 @@ export default function InvoiceTab() {
     queryFn: async () => (await axios.get('/api/finance/my-invoices?submissionType=reimbursement')).data,
   });
   const myReimbursements = myReimbursementsRes?.data || [];
+
+  const reimbursementColumns = useMemo(
+    () => [
+      { header: 'Title', render: (item) => <span className="font-semibold">{item.title}</span> },
+      {
+        header: 'Project',
+        render: (item) => (item.project?.name ? formatProjectName(item.project.name) : '—'),
+      },
+      { header: 'Merchant', render: (item) => item.metadata?.vendor || '—' },
+      {
+        header: 'Amount',
+        render: (item) =>
+          item.metadata?.amount ? `₹${Number(item.metadata.amount).toLocaleString('en-IN')}` : '—',
+      },
+      {
+        header: 'Files',
+        render: (item) => item.metadata?.attachments?.length || (item.fileUrl ? 1 : 0),
+      },
+      {
+        header: 'Status',
+        render: (item) => {
+          const status = STATUS_STYLES[item.approvalStatus] || STATUS_STYLES.pending;
+          return (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${status.className}`}>
+              {item.approvalStatus === 'approved' && <CheckCircle size={12} />}
+              {item.approvalStatus === 'rejected' && <XCircle size={12} />}
+              {item.approvalStatus === 'pending' && <Clock size={12} />}
+              {status.label}
+            </span>
+          );
+        },
+      },
+      {
+        header: 'Submitted',
+        render: (item) =>
+          item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—',
+      },
+    ],
+    []
+  );
 
   const patchForm = (updates) => {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -167,9 +209,6 @@ export default function InvoiceTab() {
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Raise Reimbursement</h1>
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          Submit out-of-pocket expenses with receipt proof for ops review.
-        </p>
       </div>
 
       <Card className="overflow-hidden">
@@ -330,55 +369,15 @@ export default function InvoiceTab() {
               <Clock size={14} className="text-amber-500" /> Your Reimbursements
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-[var(--color-bg-border)]">
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Title</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Merchant</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Amount</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Files</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Status</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myReimbursements.map((item) => {
-                  const status = STATUS_STYLES[item.approvalStatus] || STATUS_STYLES.pending;
-                  const fileCount = item.metadata?.attachments?.length || (item.fileUrl ? 1 : 0);
-                  return (
-                    <tr key={item._id} className="border-b border-[var(--color-bg-border)] last:border-0">
-                      <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{item.title}</td>
-                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                        {item.project?.name ? formatProjectName(item.project.name) : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                        {item.metadata?.vendor || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                        {item.metadata?.amount ? `₹${Number(item.metadata.amount).toLocaleString('en-IN')}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{fileCount}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${status.className}`}>
-                          {item.approvalStatus === 'approved' && <CheckCircle size={12} />}
-                          {item.approvalStatus === 'rejected' && <XCircle size={12} />}
-                          {item.approvalStatus === 'pending' && <Clock size={12} />}
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                        {item.createdAt
-                          ? new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={reimbursementColumns}
+            data={myReimbursements}
+            getRowId={(item) => item._id}
+            paginated={myReimbursements.length > 10}
+            defaultPageSize={10}
+            emptyTitle="No reimbursements"
+            className="border-0 rounded-none"
+          />
           <p className="px-4 py-3 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-bg-border)]">
             Pending claims appear here until ops approves them on the Finance page.
           </p>

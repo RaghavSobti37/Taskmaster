@@ -6,6 +6,13 @@
 /** Actions where config value = XP earned per hour of time logged. */
 const TIME_BASED_XP_ACTIONS = new Set(['COMPLETE_TASK', 'DAILY_LOG', 'ATTENDANCE_ACTION']);
 
+/** Max hours credited toward XP for a single time-based award (anti-inflation). */
+const MAX_XP_HOURS_PER_EVENT = 12;
+
+/** Manual daily log: first N hours at base rate; hours above earn overtime rate (1.5× base by default). */
+const DAILY_LOG_OVERTIME_THRESHOLD_HOURS = 8;
+const DAILY_LOG_OVERTIME_RATE_MULTIPLIER = 1.5;
+
 /** XP per hour of time for time-based actions; flat XP for all others (overridden by GamificationConfig). */
 const DEFAULT_XP = {
   taskCompletion: 15,
@@ -29,7 +36,7 @@ const DEFAULT_XP = {
 /** Max times per action per user per calendar day (IST). null = unlimited. */
 const DEFAULT_DAILY_CAPS = {
   taskCompletion: null,
-  dailyLog: 3,
+  dailyLog: 5,
   taskCreation: 10,
   projectCreation: 3,
   attendanceLog: 1,
@@ -58,11 +65,34 @@ const isTimeBasedXpAction = (action) =>
 /** @param {number} hours decimal hours worked
  * @param {number} xpPerHour config rate
  * @returns {number} rounded XP (0 if no time or rate) */
-const computeTimeBasedXp = (hours, xpPerHour) => {
+const clampXpHours = (hours) => {
   const h = Number(hours) || 0;
+  if (h <= 0) return 0;
+  return Math.min(h, MAX_XP_HOURS_PER_EVENT);
+};
+
+const computeTimeBasedXp = (hours, xpPerHour) => {
+  const h = clampXpHours(hours);
   const rate = Number(xpPerHour) || 0;
   if (h <= 0 || rate <= 0) return 0;
   return Math.round(h * rate);
+};
+
+const resolveManualDailyLogOvertimeRate = (plain = {}) => {
+  if (plain.dailyLogOvertime != null) return Number(plain.dailyLogOvertime) || 0;
+  const base = Number(plain.dailyLog ?? DEFAULT_XP.dailyLog) || 0;
+  return Math.round(base * DAILY_LOG_OVERTIME_RATE_MULTIPLIER);
+};
+
+/** Manual daily log XP only — not used for task completion or attendance. */
+const computeManualDailyLogXp = (hours, xpPerHour, overtimeXpPerHour) => {
+  const h = clampXpHours(hours);
+  const rate = Number(xpPerHour) || 0;
+  const otRate = Number(overtimeXpPerHour) || rate;
+  if (h <= 0 || rate <= 0) return 0;
+  const standardH = Math.min(h, DAILY_LOG_OVERTIME_THRESHOLD_HOURS);
+  const overtimeH = Math.max(0, h - DAILY_LOG_OVERTIME_THRESHOLD_HOURS);
+  return computeTimeBasedXp(standardH, rate) + computeTimeBasedXp(overtimeH, otRate);
 };
 
 /** Maps internal action codes → GamificationConfig field names. */
@@ -98,7 +128,11 @@ const ACTION_LABELS = {
   LEAD_CAPTURE: 'Captured a lead',
   INVOICE_SUBMISSION: 'Submitted invoice',
   MISSION_COMPLETE: 'Daily mission bonus',
+  XP_RECALC_ADJUSTMENT: 'XP recalculated',
 };
+
+/** Shown in progress history after admin recalc; earns 0 XP. */
+const RECALC_HISTORY_ACTIONS = new Set(['XP_RECALC_ADJUSTMENT']);
 
 /** Daily missions — bonus XP on top of action XP. */
 const DAILY_MISSIONS = [
@@ -131,12 +165,12 @@ const FAIRNESS_PRINCIPLES = [
   'Daily caps on low-effort actions stop admins and managers from spamming the leaderboard.',
   'Task completion XP is once per task per person — no farming the same item.',
   'Auto daily logs from task completion do not grant log XP — task completion XP uses hours × XP/hour instead.',
-  'Manual daily logs, task completion, and full-day attendance XP = time (hours) × configured XP per hour.',
+  'Manual daily logs: up to 5 awards per day (task auto-logs excluded); first 8h × rate, hours above 8 at 1.5× rate (max 12h per log). Task completion = hours × rate. Full-day attendance XP = once per day after ops locks both check-in and check-out.',
   'Weekly leaderboard uses audit log totals — everyone starts fresh each week.',
 ];
 
 const ROLE_PATHS = [
-  { role: 'Individual contributor', actions: 'Complete tasks (hours × XP/h), manual daily logs (hours × XP/h, max 3/day)', weeklyPotential: 'Scales with time logged' },
+  { role: 'Individual contributor', actions: 'Complete tasks (hours × XP/h), manual daily logs (8h base + overtime, max 5/day)', weeklyPotential: 'Scales with time logged' },
   { role: 'Sales / CRM', actions: 'Capture leads (+15 flat, max 10/day), follow-up work logged as daily logs (hours × XP/h)', weeklyPotential: 'Scales with time logged' },
   { role: 'Creative / production', actions: 'Complete tasks (hours × XP/h), upload assets (+12 flat, max 5/day)', weeklyPotential: 'Scales with time logged' },
   { role: 'Ops / finance', actions: 'Full-day attendance (hours × XP/h), invoice submissions (+15), review approvals (+8)', weeklyPotential: 'Scales with time logged' },
@@ -146,11 +180,11 @@ const ROLE_PATHS = [
 /** Admin UI rule rows — configKey links to editable GamificationConfig field. */
 const XP_RULE_ROWS = [
   { configKey: 'taskCompletion', action: 'COMPLETE_TASK', label: 'Task completion', capKey: 'taskCompletion', who: 'Assignee when task reaches Done', note: 'XP per hour — actualHours on the task × rate (min 30m if unset)' },
-  { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'XP per hour — timeSpent on the log × rate; not awarded for auto task-completion logs' },
+  { configKey: 'dailyLog', action: 'DAILY_LOG', label: 'Manual daily log', capKey: 'dailyLog', who: 'Anyone logging time manually', note: 'First 8h × rate, hours above 8 at 1.5× rate; max 5 manual awards/day — task auto-logs do not count' },
   { configKey: 'taskCreation', action: 'CREATE_TASK', label: 'Task creation', capKey: 'taskCreation', who: 'Creator', note: 'Low — prevents manager spam' },
   { configKey: 'projectCreation', action: 'CREATE_PROJECT', label: 'Project creation', capKey: 'projectCreation', who: 'Creator', note: 'Low — prevents admin spam' },
-  { configKey: 'attendanceLog', action: 'ATTENDANCE_ACTION', label: 'Full-day attendance', capKey: 'attendanceLog', who: 'User who completes check-in + check-out', note: 'XP per hour — system shift hours × rate; once per day' },
-  { configKey: 'attendanceDayBonus', action: 'ATTENDANCE_DAY_BONUS', label: 'Attendance accuracy bonus', capKey: 'attendanceDayBonus', who: '8h+ shift with logs within 30 min', note: 'Stacked on full-day attendance' },
+  { configKey: 'attendanceLog', action: 'ATTENDANCE_ACTION', label: 'Full-day attendance', capKey: 'attendanceLog', who: 'User with check-in + check-out', note: 'XP per hour (system shift) — once per day, only after ops approves both IN and OUT' },
+  { configKey: 'attendanceDayBonus', action: 'ATTENDANCE_DAY_BONUS', label: 'Attendance accuracy bonus', capKey: 'attendanceDayBonus', who: '8h+ shift with logs within 30 min of attendance', note: 'Awarded with full-day XP when day is admin-locked' },
   { configKey: 'assetUpload', action: 'ASSET_UPLOAD', label: 'Asset upload', capKey: 'assetUpload', who: 'Uploader', note: 'Creative / production path' },
   { configKey: 'leadCapture', action: 'LEAD_CAPTURE', label: 'Lead capture', capKey: 'leadCapture', who: 'Rep creating a new lead manually', note: 'Sales path — not webhook imports' },
   { configKey: 'invoiceSubmission', action: 'INVOICE_SUBMISSION', label: 'Invoice submission', capKey: 'invoiceSubmission', who: 'Submitter', note: 'Finance / ops path' },
@@ -175,10 +209,16 @@ module.exports = {
   DEFAULT_XP,
   DEFAULT_DAILY_CAPS,
   TIME_BASED_XP_ACTIONS,
+  RECALC_HISTORY_ACTIONS,
   LEGACY_ACTION_ALIASES,
   normalizeGamificationAction,
   isTimeBasedXpAction,
   computeTimeBasedXp,
+  clampXpHours,
+  computeManualDailyLogXp,
+  resolveManualDailyLogOvertimeRate,
+  DAILY_LOG_OVERTIME_THRESHOLD_HOURS,
+  MAX_XP_HOURS_PER_EVENT,
   ACTION_CONFIG_KEY,
   ACTION_LABELS,
   DAILY_MISSIONS,

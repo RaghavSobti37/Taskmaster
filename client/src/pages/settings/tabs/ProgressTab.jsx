@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Target, Activity } from 'lucide-react';
+import { Target, Activity, RefreshCw } from 'lucide-react';
 import { Card, Badge, Button } from '../../../components/ui';
 import {
   useGamificationProgress,
@@ -39,16 +39,32 @@ export default function ProgressTab() {
 
   const logsList = historyData?.logs || [];
   const totalLogs = historyData?.total || 0;
+  const lastRecalculatedAt = progress?.lastRecalculatedAt || historyData?.lastRecalculatedAt;
+  const showRecalcNotice = Boolean(lastRecalculatedAt || progress?.hasAdjustedHistory);
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8 pb-24">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Progress & XP</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">Track your level, daily missions, and XP history.</p>
         </div>
         <Badge variant="warning" className="px-3 py-1.5 text-sm">Level {level}</Badge>
       </div>
+
+      {showRecalcNotice && (
+        <div className="flex items-start gap-3 rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+          <RefreshCw size={16} className="text-sky-500 shrink-0 mt-0.5" />
+          <p>
+            XP totals and weekly leaderboard were rebuilt from activity history using current rules.
+            {lastRecalculatedAt && (
+              <span className="block text-xs text-[var(--color-text-muted)] mt-1">
+                Last recalculated {formatTimestamp(lastRecalculatedAt)}
+              </span>
+            )}
+            {' '}Rows marked <span className="font-bold text-sky-500">Adjusted</span> show corrected amounts.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 md:col-span-2 flex flex-col justify-center">
@@ -159,10 +175,26 @@ export default function ProgressTab() {
                 {!historyLoading && logsList.map((log) => (
                   <tr key={log._id} className="hover:bg-[var(--color-bg-secondary)]/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-[var(--color-text-primary)]">
-                      {log.message || log.actionLabel}
+                      <span className="inline-flex items-center gap-2 flex-wrap">
+                        {log.message || log.actionLabel}
+                        {log.adjusted && (
+                          <Badge variant="info" className="text-[8px] py-0" title={
+                            log.previousAmount != null
+                              ? `Previously ${log.previousAmount} XP`
+                              : 'Amount updated during recalculation'
+                          }>
+                            Adjusted
+                          </Badge>
+                        )}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-amber-500 font-black tabular-nums">
-                      +{log.amount}
+                      {log.amount > 0 ? `+${log.amount}` : '0'}
+                      {log.adjusted && log.previousAmount != null && log.previousAmount !== log.amount && (
+                        <span className="block text-[10px] font-bold text-sky-500/90 line-through">
+                          was {log.previousAmount}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right text-[var(--color-text-muted)]">
                       {formatTimestamp(log.createdAt)}

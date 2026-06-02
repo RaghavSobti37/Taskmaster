@@ -109,7 +109,9 @@ const ScheduleGrid = ({
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]">
+    <>
+      {/* Desktop: horizontal grid table */}
+      <div className="hidden lg:block overflow-x-auto rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)]">
       <table className="w-full min-w-[640px] text-xs">
         {!hideTableHeader && (
           <ScheduleTableHeader dayColumns={dayColumns} slotHeaders={slotHeaders} memberPad={memberPad} />
@@ -137,7 +139,47 @@ const ScheduleGrid = ({
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+
+      {/* Mobile: vertical task list — page scrolls vertically, no horizontal table */}
+      <div className="lg:hidden space-y-4">
+        {dateKeys.map((dayKey) => {
+          const dayTasks = (data?.tasks || []).filter((t) => {
+            const key = t.scheduleDate?.slice?.(0, 10) || t.dueDate?.slice?.(0, 10);
+            return key === dayKey;
+          });
+          if (!dayTasks.length) return null;
+          return (
+            <div key={dayKey} className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] overflow-hidden">
+              <div className="px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                  {format(parseISO(dayKey), 'EEE, MMM d')}
+                </span>
+              </div>
+              <ul className="divide-y divide-[var(--color-bg-border)]">
+                {dayTasks.map((task) => (
+                  <li key={task._id}>
+                    <button
+                      type="button"
+                      onClick={() => onTaskClick?.(task)}
+                      className="w-full text-left px-3 py-3 min-h-[44px] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                    >
+                      <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">{task.title}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">
+                        {task.assignee?.name || task.userId?.name || 'Unassigned'}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+        {!(data?.tasks?.length) && (
+          <p className="text-sm text-[var(--color-text-muted)] text-center py-8 italic">No scheduled tasks</p>
+        )}
+      </div>
+    </>
   );
 };
 

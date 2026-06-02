@@ -63,6 +63,7 @@ const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
 const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView'));
 const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
+const ProjectAnalyticsPage = lazyWithRetry(() => import('./pages/projects/ProjectAnalyticsPage'));
 const ProjectCreate = lazyWithRetry(() => import('./pages/projects/ProjectCreate'));
 const WorkspaceSettings = lazyWithRetry(() => import('./pages/projects/WorkspaceSettings'));
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
@@ -105,8 +106,8 @@ const SubscriptionsPage = lazyWithRetry(() => import('./pages/office/Subscriptio
 const SchedulePage = lazyWithRetry(() => import('./pages/schedule/SchedulePage'));
 const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
-const ChatPage = lazyWithRetry(() => import('./pages/chat/ChatPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
+const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
 
 const LegacyWorkspaceRedirect = () => {
@@ -200,6 +201,7 @@ function App() {
                 <Route path="/projects/new" element={<ProjectCreate />} />
                 <Route path="/workspaces/:name" element={<WorkspaceSettings />} />
                 <Route path="/projects/workspaces/:name" element={<LegacyWorkspaceRedirect />} />
+                <Route path="/projects/:id/analytics" element={<ProjectAnalyticsPage />} />
                 <Route path="/projects/:id" element={<ProjectDetail />} />
               </Route>
               <Route element={<PageRoute page="calendar" />}>
@@ -220,9 +222,8 @@ function App() {
               <Route element={<PageRoute page="inbox" />}>
                 <Route path="/inbox" element={<InboxPage />} />
               </Route>
-              <Route element={<PageRoute page="chat" />}>
-                <Route path="/chat" element={<ChatPage />} />
-              </Route>
+              <Route path="/chat" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/chat/*" element={<Navigate to="/dashboard" replace />} />
               <Route element={<PageRoute page="todo" />}>
                 <Route path="/todo" element={<TodoPage />} />
               </Route>
@@ -277,6 +278,9 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_gamification" />}>
                 <Route path="/admin/gamification" element={<AdminGamification />} />
+              </Route>
+              <Route element={<PageRoute page="admin_project_analytics" />}>
+                <Route path="/admin/project-analytics" element={<AdminProjectAnalyticsPage />} />
               </Route>
               <Route element={<PageRoute page="campaigns" />}>
                 <Route path="/campaign/:campaignId" element={<CampaignDetails />} />

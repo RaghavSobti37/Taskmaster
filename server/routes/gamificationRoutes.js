@@ -9,6 +9,10 @@ const { getCurrentWeekRange } = require('../utils/attendanceDate');
 const { ACTION_LABELS } = require('../../shared/gamificationRules');
 
 const toSimpleMessage = (log) => {
+  if (log.action === 'XP_RECALC_ADJUSTMENT') {
+    return log.details?.message
+      || `XP recalculated (${log.details?.reason || 'adjustment'})`;
+  }
   const base = ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase();
   if (log.action === 'MISSION_COMPLETE' && log.details?.title) {
     return `${base}: ${log.details.title}`;
@@ -44,10 +48,20 @@ router.get('/missions', protect, async (req, res) => {
 router.get('/progress', protect, async (req, res) => {
   try {
     const user = req.user;
-    const config = await GamificationService.getConfigPlain();
-    const stepXp = config.stepXp || 100;
+    const config = await GamificationService.getConfig();
+    const plain = config?.toObject ? config.toObject() : config;
+    const stepXp = plain.stepXp || 100;
     const currentLevelExp = await GamificationService.getExpForLevel(user.level || 1);
     const nextLevelExp = await GamificationService.getExpForLevel((user.level || 1) + 1);
+
+    const XPAuditLog = require('../models/XPAuditLog');
+    const adjustedLogCount = await XPAuditLog.countDocuments({
+      userId: user._id,
+      $or: [
+        { recalculatedAt: { $exists: true, $ne: null } },
+        { action: 'XP_RECALC_ADJUSTMENT' },
+      ],
+    });
 
     res.json({
       level: user.level || 1,
@@ -55,6 +69,8 @@ router.get('/progress', protect, async (req, res) => {
       stepXp,
       currentLevelExp,
       nextLevelExp,
+      lastRecalculatedAt: plain.lastRecalculatedAt || null,
+      hasAdjustedHistory: adjustedLogCount > 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -79,18 +95,15 @@ router.get('/history', protect, async (req, res) => {
       XPAuditLog.countDocuments({ userId }),
     ]);
 
+    const GamificationConfig = require('../models/GamificationConfig');
+    const configDoc = await GamificationConfig.findOne().select('lastRecalculatedAt').lean();
+
     res.json({
-      logs: logs.map((log) => ({
-        _id: log._id,
-        amount: GamificationService.resolveLogAmount(config, log),
-        action: log.action,
-        actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
-        message: toSimpleMessage(log),
-        createdAt: log.createdAt,
-      })),
+      logs: logs.map((log) => GamificationService.formatXpLogForApi(log, config, toSimpleMessage)),
       total,
       page,
       limit,
+      lastRecalculatedAt: configDoc?.lastRecalculatedAt || null,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -100,13 +113,36 @@ router.get('/history', protect, async (req, res) => {
 router.get('/leaderboard', protect, async (req, res) => {
   try {
     const User = require('../models/User');
+    const XPAuditLog = require('../models/XPAuditLog');
+    const GamificationConfig = require('../models/GamificationConfig');
     const weekly = await GamificationService.getWeeklyLeaderboard();
+    const config = await GamificationService.getConfigPlain();
+    const configDoc = await GamificationConfig.findOne()
+      .select('lastRecalculatedAt lastRecalcWeeklyPrior')
+      .lean();
+    const lastRecalculatedAt = configDoc?.lastRecalculatedAt || null;
+    const weeklyPriorSnapshot = configDoc?.lastRecalcWeeklyPrior || null;
+
+    const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
+    const tenantUserIds = allUsers.map((u) => u._id);
+
+    const weekLogs = await XPAuditLog.find({
+      userId: { $in: tenantUserIds },
+      createdAt: { $gte: weekly.weekStart, $lte: weekly.weekEnd },
+    })
+      .select('userId action amount details previousAmount recalculatedAt recalcReason')
+      .lean();
+    const backfillMaps = await GamificationService.fetchHoursBackfillMaps(weekLogs);
+    const recalcMetaByUser = GamificationService.buildWeeklyRecalcMetaByUser(
+      weekLogs,
+      config,
+      backfillMaps,
+      lastRecalculatedAt
+    );
 
     const weeklyXpByUserId = new Map(
       weekly.entries.map(([userId, weeklyXp]) => [String(userId), weeklyXp])
     );
-
-    const allUsers = await User.find({}, 'name avatar exp level').sort({ name: 1 }).lean();
 
     const top = allUsers
       .map((user) => ({
@@ -117,15 +153,38 @@ router.get('/leaderboard', protect, async (req, res) => {
         if (b.weeklyXp !== a.weeklyXp) return b.weeklyXp - a.weeklyXp;
         return (a.name || '').localeCompare(b.name || '');
       })
-      .map((user, index) => ({
-        rank: index + 1,
-        weeklyXp: user.weeklyXp,
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar,
-        exp: user.exp,
-        level: user.level,
-      }));
+      .map((user, index) => {
+        const userKey = String(user._id);
+        const meta = recalcMetaByUser.get(userKey);
+        const snapshotPrior = weeklyPriorSnapshot?.[userKey];
+        const useSnapshot = lastRecalculatedAt && weeklyPriorSnapshot && snapshotPrior !== undefined;
+        const weeklyXpPrior = useSnapshot
+          ? snapshotPrior
+          : (meta?.weeklyXpPrior ?? undefined);
+        const weeklyXpDelta = useSnapshot
+          ? user.weeklyXp - snapshotPrior
+          : (meta?.weeklyXpDelta ?? 0);
+        const hasRecalcDelta = Boolean(
+          lastRecalculatedAt
+          && (useSnapshot
+            ? weeklyXpDelta !== 0
+            : meta && (weeklyXpDelta !== 0 || (meta.changes?.length ?? 0) > 0))
+        );
+        return {
+          rank: index + 1,
+          weeklyXp: user.weeklyXp,
+          _id: user._id,
+          name: user.name,
+          avatar: user.avatar,
+          exp: user.exp,
+          level: user.level,
+          weeklyXpPrior: hasRecalcDelta ? weeklyXpPrior : undefined,
+          weeklyXpDelta: hasRecalcDelta ? weeklyXpDelta : undefined,
+          recalcChanges: hasRecalcDelta
+            ? (meta?.changes?.slice(0, 8) || [])
+            : undefined,
+        };
+      });
 
     logger.debug('Gamification', 'Leaderboard fetch', {
       weekStart: weekly.weekStartKey,
@@ -142,7 +201,16 @@ router.get('/leaderboard', protect, async (req, res) => {
       cacheHit: false,
     });
 
-    res.json(top);
+    res.json({
+      entries: top,
+      meta: {
+        weekStartKey: weekly.weekStartKey,
+        weekEndKey: weekly.weekEndKey,
+        lastRecalculatedAt,
+        logCount: weekly.logCount,
+        configRates: weekly.configRates,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -167,30 +235,18 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    const backfillMaps = await GamificationService.fetchHoursBackfillMaps(logs);
     const user = await User.findById(userId, 'name avatar level xp').lean();
+    const dedupedLogs = GamificationService.dedupeXpAuditLogsForTotals(logs);
 
-    const groupedMap = new Map();
-    for (const log of logs) {
-      const resolvedAmount = GamificationService.resolveLogAmount(config, log);
-      const key = `${log.action}::${resolvedAmount}`;
-      if (!groupedMap.has(key)) {
-        groupedMap.set(key, {
-          action: log.action,
-          actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
-          amountPerAction: resolvedAmount,
-          count: 0,
-          totalXp: 0,
-          sampleMessage: toSimpleMessage(log),
-        });
-      }
-      const group = groupedMap.get(key);
-      group.count += 1;
-      group.totalXp += resolvedAmount;
-    }
+    const groupedBreakdown = GamificationService.buildWeeklyGroupedBreakdown(
+      logs,
+      config,
+      backfillMaps
+    );
 
-    const groupedBreakdown = Array.from(groupedMap.values()).sort((a, b) => b.totalXp - a.totalXp);
-    const totalXp = logs.reduce(
-      (sum, item) => sum + GamificationService.resolveLogAmount(config, item),
+    const totalXp = dedupedLogs.reduce(
+      (sum, item) => sum + GamificationService.resolveLogAmount(config, item, backfillMaps),
       0
     );
 
@@ -202,14 +258,9 @@ router.get('/leaderboard/:userId/breakdown', protect, async (req, res) => {
       weekEndKey,
       totalXp,
       groupedBreakdown,
-      recentLogs: logs.slice(0, 15).map((log) => ({
-        _id: log._id,
-        amount: GamificationService.resolveLogAmount(config, log),
-        action: log.action,
-        actionLabel: ACTION_LABELS[log.action] || log.action.replace(/_/g, ' ').toLowerCase(),
-        message: toSimpleMessage(log),
-        createdAt: log.createdAt,
-      })),
+      recentLogs: dedupedLogs.slice(0, 15).map((log) =>
+        GamificationService.formatXpLogForApi(log, config, toSimpleMessage)
+      ),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

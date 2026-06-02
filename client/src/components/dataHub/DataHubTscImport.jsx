@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Upload, ArrowRight, X } from 'lucide-react';
-import { Button, NexusModal, NexusDropdown, ModalShell, ModalHeader, ModalBody } from '../ui';
+import { Button, NexusModal, NexusDropdown } from '../ui';
 
 const TSC_FIELDS = [
   'name', 'email', 'phone', 'city', 'state', 'role', 'campaign',
@@ -64,10 +64,16 @@ export default function DataHubTscImport({ onImported, compact = false }) {
         {compact ? 'Import' : 'Import TSC Data'}
       </Button>
 
-      <NexusModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} size="lg">
-        <ModalShell>
-          <ModalHeader title="TSC / HolySheet Import" subtitle={`Step ${importStep} of 3`} onClose={() => setShowImportModal(false)} />
-          <ModalBody>
+      <NexusModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        title="TSC / HolySheet Import"
+        size="lg"
+        showFooter={false}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-4">
+          Step {importStep} of 3
+        </p>
             {importStep === 1 && (
               <div className="space-y-4">
                 <p className="text-sm text-[var(--color-text-muted)]">Upload CSV to import bulk marketing data into the TSC inlet.</p>
@@ -116,8 +122,6 @@ export default function DataHubTscImport({ onImported, compact = false }) {
                 </div>
               </div>
             )}
-          </ModalBody>
-        </ModalShell>
       </NexusModal>
     </>
   );

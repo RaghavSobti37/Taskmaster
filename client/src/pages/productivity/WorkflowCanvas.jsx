@@ -11,26 +11,26 @@ const initialNodes = [
     type: 'input',
     data: { label: 'Event: New Lead Captured' },
     position: { x: 250, y: 50 },
-    style: { background: '#111827', color: '#60A5FA', border: '1px solid #3B82F6', borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
+    style: { background: 'var(--color-bg-surface)', color: 'var(--color-pastel-blue-text)', border: '1px solid var(--color-pastel-blue-text)', borderRadius: 'var(--radius-md)', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
   },
   {
     id: '2',
     data: { label: 'Filter: High Intent / Campaign Lead' },
     position: { x: 250, y: 175 },
-    style: { background: '#111827', color: '#FBBF24', border: '1px solid #F59E0B', borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
+    style: { background: 'var(--color-bg-surface)', color: 'var(--color-pastel-apricot-text)', border: '1px solid var(--color-pastel-apricot-text)', borderRadius: 'var(--radius-md)', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
   },
   {
     id: '3',
     type: 'output',
     data: { label: 'Action: Send Email Campaign' },
     position: { x: 250, y: 300 },
-    style: { background: '#111827', color: '#34D399', border: '1px solid #10B981', borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
+    style: { background: 'var(--color-bg-surface)', color: 'var(--color-pastel-mint-text)', border: '1px solid var(--color-pastel-mint-text)', borderRadius: 'var(--radius-md)', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
   }
 ];
 
 const initialEdges = [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#60A5FA' } },
-  { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: '#34D399' } }
+  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: 'var(--color-pastel-blue-text)' } },
+  { id: 'e2-3', source: '2', target: '3', animated: true, style: { stroke: 'var(--color-pastel-mint-text)' } }
 ];
 
 const WorkflowCanvas = () => {
@@ -43,14 +43,14 @@ const WorkflowCanvas = () => {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
 
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#60A5FA' } }, eds)), [setEdges]);
+  const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: 'var(--color-pastel-blue-text)' } }, eds)), [setEdges]);
 
   const addNode = (type, label, color, border) => {
     const newNode = {
       id: `${Date.now()}`,
       data: { label },
       position: { x: Math.random() * 300 + 100, y: Math.random() * 300 + 100 },
-      style: { background: '#111827', color, border: `1px solid ${border}`, borderRadius: '8px', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
+      style: { background: 'var(--color-bg-surface)', color, border: `1px solid ${border}`, borderRadius: 'var(--radius-md)', padding: '12px', fontSize: '11px', fontWeight: 'bold' }
     };
     setNodes((nds) => nds.concat(newNode));
   };
@@ -84,7 +84,6 @@ const WorkflowCanvas = () => {
     <PageContainer className="!py-4 !space-y-4 !h-[90vh] flex flex-col">
       <PageHeader
         title="Workflow Builder"
-        subtitle="Build automated background workflows and email campaigns."
         actions={
           <div className="flex items-center gap-2">
             <Button size="xs" variant="primary" onClick={handleRunPipeline} disabled={running}>
@@ -96,20 +95,20 @@ const WorkflowCanvas = () => {
 
       <div className="flex items-center gap-2 bg-[var(--color-bg-secondary)] p-2 rounded-xl border border-[var(--color-bg-border)] shadow-md">
         <span className="text-[10px] font-black uppercase text-[var(--color-text-muted)] tracking-wider px-2 flex items-center gap-1.5">
-          <Layers size={14} className="text-blue-500" /> Toolbox:
+          <Layers size={14} className="text-[var(--color-action-primary)]" /> Toolbox:
         </span>
-        <Button size="xs" variant="ghost" className="text-blue-400 hover:bg-blue-500/10" onClick={() => addNode('input', 'Event: Webhook / Realtime Trigger', '#60A5FA', '#3B82F6')}>
+        <Button size="xs" variant="ghost" className="text-[var(--color-pastel-blue-text)] hover:bg-[var(--color-pastel-blue-bg)]" onClick={() => addNode('input', 'Event: Webhook / Realtime Trigger', 'var(--color-pastel-blue-text)', 'var(--color-pastel-blue-text)')}>
           <Zap size={12} className="mr-1" /> Add Trigger
         </Button>
-        <Button size="xs" variant="ghost" className="text-amber-400 hover:bg-amber-500/10" onClick={() => addNode('default', 'Condition: Attribute Match', '#FBBF24', '#F59E0B')}>
+        <Button size="xs" variant="ghost" className="text-[var(--color-pastel-apricot-text)] hover:bg-[var(--color-pastel-apricot-bg)]" onClick={() => addNode('default', 'Condition: Attribute Match', 'var(--color-pastel-apricot-text)', 'var(--color-pastel-apricot-text)')}>
           <Filter size={12} className="mr-1" /> Add Filter
         </Button>
-        <Button size="xs" variant="ghost" className="text-emerald-400 hover:bg-emerald-500/10" onClick={() => addNode('output', 'Action: Run Background Task', '#34D399', '#10B981')}>
+        <Button size="xs" variant="ghost" className="text-[var(--color-pastel-mint-text)] hover:bg-[var(--color-pastel-mint-bg)]" onClick={() => addNode('output', 'Action: Run Background Task', 'var(--color-pastel-mint-text)', 'var(--color-pastel-mint-text)')}>
           <Send size={12} className="mr-1" /> Add Action
         </Button>
       </div>
 
-      <div className="flex-1 w-full bg-[var(--color-bg-secondary)]/30 rounded-2xl border border-[var(--color-bg-border)] overflow-hidden relative shadow-inner">
+      <div className="flex-1 w-full bg-[var(--color-bg-secondary)]/30 rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] overflow-hidden relative shadow-inner">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -117,20 +116,20 @@ const WorkflowCanvas = () => {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           fitView
-          className="bg-slate-950/80"
+          className="bg-[var(--color-bg-primary)]"
         >
-          <Controls className="bg-slate-900 border border-white/10 fill-white text-white" />
-          <MiniMap nodeStrokeColor="#3B82F6" nodeColor="#1E293B" maskColor="rgba(15, 23, 42, 0.8)" className="bg-slate-900 border border-white/10" />
-          <Background variant="dots" gap={16} size={1} color="rgba(255,255,255,0.15)" />
+          <Controls className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]" />
+          <MiniMap nodeStrokeColor="var(--color-action-primary)" nodeColor="var(--color-bg-secondary)" maskColor="rgba(8, 61, 58, 0.08)" className="bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)]" />
+          <Background variant="dots" gap={16} size={1} color="var(--color-bg-border)" />
         </ReactFlow>
 
-        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-slate-900/90 border border-white/10 px-3 py-1.5 rounded-lg text-[10px] font-mono text-slate-400 backdrop-blur-sm">
+        <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-[var(--color-bg-surface)]/95 border border-[var(--color-bg-border)] px-3 py-1.5 rounded-[var(--radius-md)] text-[10px] font-mono text-[var(--color-text-muted)] backdrop-blur-sm">
           <Badge variant="slate" className="text-[9px]">Active Canvas</Badge>
           <span>Nodes: {nodes.length}</span>
           <span>•</span>
           <span>Edges: {edges.length}</span>
           <span>•</span>
-          <span className="text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Realtime Active</span>
+          <span className="text-[var(--color-pastel-mint-text)] flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[var(--color-action-primary)] animate-pulse" /> Realtime Active</span>
         </div>
       </div>
     </PageContainer>

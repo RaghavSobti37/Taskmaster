@@ -53,11 +53,11 @@ const StatCards = ({ metrics = {}, loading = false, onCardClick = () => {}, acti
       </div>
       <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${activeFilter === 'focus' ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
         <StatCard 
-          label="Focus Time Today" 
-          value={`${metrics.focusHours || 0}h`} 
+          label="Focus Avg Today" 
+          value={`${metrics.focusAvgHours ?? metrics.focusHours ?? 0}h`} 
           icon={TrendingUp} 
           variant="info" 
-          info="Total time logged on tasks within the last 24 hours." 
+          info="Average hours per daily log entry logged today." 
           className="border-0"
         />
       </div>

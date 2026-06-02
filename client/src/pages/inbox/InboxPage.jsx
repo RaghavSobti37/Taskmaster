@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Inbox, CheckCheck, Shield, ListTodo, User } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, Badge, PageSkeleton, DataLoading, EmptyState } from '../../components/ui';
+import { Inbox, CheckCheck, Shield, ListTodo } from 'lucide-react';
+import { Card, Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout } from '../../components/ui';
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -19,7 +19,7 @@ const NotificationAvatar = ({ notification: n }) => {
   }
   if (n.iconType === 'user' && n.actorId?.name) {
     return (
-      <div className="w-8 h-8 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0">
+      <div className="w-8 h-8 rounded-full bg-[var(--color-pastel-blue-bg)] text-[var(--color-pastel-blue-text)] flex items-center justify-center text-[10px] font-black shrink-0">
         {n.actorId.name.substring(0, 2).toUpperCase()}
       </div>
     );
@@ -62,56 +62,47 @@ const InboxPage = () => {
     }
   };
 
-  if (isLoading && !notifications.length) {
-    return (
-      <PageContainer className="!py-4">
-        <PageSkeleton />
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer className="!py-4 !space-y-3">
-      <PageHeader
-        title="Inbox"
-        subtitle="Notifications for your department."
-        icon={Inbox}
-        actions={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <div className="flex flex-wrap gap-1.5 justify-end items-center">
-              <button
-                type="button"
-                onClick={() => setFilter('all')}
-                className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors ${
-                  filter === 'all'
-                    ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
-                    : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
-                }`}
-              >
-                All
-              </button>
-              {allowedCategories.filter((cat) => cat !== 'all').map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setFilter(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors ${
-                    filter === cat
-                      ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
-                      : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
-                  }`}
-                >
-                  {formatInboxCategory(cat)}
-                </button>
-              ))}
-            </div>
-            <Button size="xs" variant="secondary" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
-              <CheckCheck size={14} className="mr-1" /> Mark all read
-            </Button>
-          </div>
-        }
-      />
-
+    <PageLoadGuard loading={isLoading && !notifications.length} skeleton={PageSkeleton} className="!py-4">
+    <ListPageLayout
+      containerClassName="!py-4"
+      icon={Inbox}
+      title="Inbox"
+      toolbar={
+        <div className="flex flex-nowrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
+              filter === 'all'
+                ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
+                : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
+            }`}
+          >
+            All
+          </button>
+          {allowedCategories.filter((cat) => cat !== 'all').map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setFilter(cat)}
+              className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
+                filter === cat
+                  ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
+                  : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
+              }`}
+            >
+              {formatInboxCategory(cat)}
+            </button>
+          ))}
+        </div>
+      }
+      toolbarActions={
+        <Button size="xs" variant="secondary" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
+          <CheckCheck size={14} className="mr-1" /> Mark all read
+        </Button>
+      }
+    >
       <Card className="divide-y divide-[var(--color-bg-border)]">
         {isLoading && <DataLoading />}
         {!isLoading && filtered.length === 0 && (
@@ -140,7 +131,8 @@ const InboxPage = () => {
           </button>
         ))}
       </Card>
-    </PageContainer>
+    </ListPageLayout>
+    </PageLoadGuard>
   );
 };
 

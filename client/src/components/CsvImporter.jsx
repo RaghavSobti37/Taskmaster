@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Papa from 'papaparse';
 import axios from 'axios';
 import { Upload, CheckCircle2, ArrowRight, RefreshCw, Database, Layers } from 'lucide-react';
-import { Card, Button, Badge } from './ui/primitives';
+import { Card, Button, Badge, DataTable } from './ui';
 
 export default function CsvImporter({ onImportComplete }) {
   const [csvData, setCsvData] = useState([]);
@@ -151,26 +151,18 @@ export default function CsvImporter({ onImportComplete }) {
               <span>Data Preview Matrix ({Math.min(5, csvData.length)} of {csvData.length})</span>
               <Badge variant="info">{headers.length} Columns</Badge>
             </div>
-            <div className="border border-[var(--color-bg-border)] rounded-xl overflow-x-auto bg-[var(--color-bg-secondary)] custom-scrollbar">
-              <table className="w-full text-left border-collapse text-xs font-mono whitespace-nowrap">
-                <thead className="bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-border)]">
-                  <tr>
-                    {headers.map(h => (
-                      <th key={h} className="px-3 py-2 font-bold text-[var(--color-text-muted)] text-[10px] uppercase">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-bg-border)]">
-                  {csvData.slice(0, 5).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-[var(--color-bg-primary)]/50">
-                      {headers.map(h => (
-                        <td key={h} className="px-3 py-2 text-[11px] truncate max-w-[150px]">{row[h] || '—'}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              className="font-mono"
+              columns={headers.map((h) => ({
+                header: h,
+                render: (row) => (
+                  <span className="text-[11px] truncate max-w-[150px] block">{row[h] || '—'}</span>
+                ),
+              }))}
+              data={csvData.slice(0, 5)}
+              paginated={false}
+              getRowId={(row) => headers.map((h) => row[h]).join('|')}
+            />
           </div>
         </div>
       )}

@@ -3,25 +3,25 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Plus, Briefcase, Search, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical
+  Plus, Briefcase, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical
 } from 'lucide-react';
 import {
   Badge,
   ProgressBar,
-  PageHeader,
-  PageContainer,
   Card,
   Button,
   Input,
   PageSkeleton,
   NexusDropdown,
-  NexusModal
+  NexusModal,
+  ListPageLayout,
+  SearchInput,
 } from '../../components/ui';
 import { useProjects, useWorkspaces, useReviewTasks } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { getWorkspaceColor as resolveWorkspaceColor, PRESET_WORKSPACE_COLORS } from '../../utils/workspaceColors';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
 import { countReviewTasksByProject } from '../../utils/taskReview';
@@ -83,6 +83,18 @@ const ProjectPreview = ({
       <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
     </div>
     <ProgressBar progress={project.progress || 0} className="h-1" />
+    <div className="flex justify-end mt-1">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate(project._id, 'analytics');
+        }}
+        className="text-blue-500 hover:underline font-bold text-[9px]"
+      >
+        Analytics
+      </button>
+    </div>
   </div>
 );
 
@@ -107,6 +119,14 @@ const ProjectsView = () => {
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
   const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
   const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
+
+  const navigateToProject = useCallback((projectId, tab) => {
+    if (tab === 'analytics') {
+      navigate(`/projects/${projectId}/analytics`);
+      return;
+    }
+    navigate(`/projects/${projectId}`, tab ? { state: { tab } } : undefined);
+  }, [navigate]);
 
   const reviewCountByProject = useMemo(() => countReviewTasksByProject(reviewTasks), [reviewTasks]);
   const totalReviewCount = reviewTasks.length;
@@ -281,74 +301,51 @@ const ProjectsView = () => {
   if (loading && projects.length === 0) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          title="Projects"
-          subtitle="Drag a workspace grip to reorder (saved for you). Drag a project grip to move it between workspaces."
-          icon={Briefcase}
-          className="!mb-0"
-        />
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center gap-1.5"
+    <ListPageLayout
+      containerClassName="!py-4"
+      icon={Briefcase}
+      title="Projects"
+      toolbar={
+        <>
+          <SearchInput
+            placeholder="Search name, tags, workspace…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div
+            data-mobile-inline
+            data-filter-label="View"
+            className="inline-flex shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5"
           >
-            <FolderPlus size={14} />
-            Add Workspace
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => navigate('/projects/new')}
-            className="flex items-center gap-1.5"
-          >
-            <Plus size={14} />
-            New Project
-          </Button>
-        </div>
-      </div>
-
-      <Card className="flex flex-col border-none shadow-none bg-transparent">
-        <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_9.5rem_10rem] lg:items-center lg:gap-2">
-          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
-            <Input
-              icon={Search}
-              placeholder="Search name, tags, workspace…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="inline-flex w-fit max-w-full shrink-0 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] p-0.5 gap-0.5 justify-self-start">
             <button
               type="button"
               onClick={() => setViewMode('workspace')}
               title="Workspaces"
-              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
+              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'workspace'
                 ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
             >
               <LayoutGrid size={12} className="shrink-0" />
-              <span className="hidden sm:inline">Workspaces</span>
+              <span className="whitespace-nowrap lg:hidden">Grid</span>
+              <span className="whitespace-nowrap hidden lg:inline">Workspaces</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('all')}
               title="All projects"
-              className={`flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
+              className={`inline-flex flex-row items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide whitespace-nowrap transition-colors ${viewMode === 'all'
                 ? 'bg-[var(--color-action-primary)] text-white shadow-sm'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                 }`}
             >
               <List size={12} className="shrink-0" />
-              <span className="hidden sm:inline">All</span>
+              <span className="whitespace-nowrap">All</span>
             </button>
           </div>
           <NexusDropdown
             variant="compact"
+            data-filter-label="Status"
             options={[
               { value: 'all', label: 'All Projects' },
               { value: 'active', label: 'Active Only' },
@@ -357,11 +354,11 @@ const ProjectsView = () => {
             ]}
             value={filterStatus}
             onChange={setFilterStatus}
-            placeholder="Status"
-            className="min-w-0 w-full lg:w-[9.5rem]"
+            placeholder="All projects"
           />
           <NexusDropdown
             variant="compact"
+            data-filter-label="Sort by"
             options={[
               { value: 'newest', label: 'Newest First' },
               { value: 'oldest', label: 'Oldest First' },
@@ -371,11 +368,34 @@ const ProjectsView = () => {
             ]}
             value={sortBy}
             onChange={setSortBy}
-            placeholder="Sort"
-            className="min-w-0 w-full lg:w-[10rem]"
+            placeholder="Newest first"
           />
-        </div>
-
+        </>
+      }
+      toolbarActions={
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center gap-1.5 shrink-0"
+          >
+            <FolderPlus size={14} />
+            Add Workspace
+          </Button>
+          <Button
+            size="sm"
+            data-mobile-primary
+            onClick={() => navigate('/projects/new')}
+            className="flex items-center gap-1.5 shrink-0"
+          >
+            <Plus size={14} />
+            New Project
+          </Button>
+        </>
+      }
+    >
+      <Card className="flex flex-col border-none shadow-none bg-transparent">
         {draggingProjectId && (
           <div className="mb-4 p-3 rounded-xl border-2 border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-action-primary)] mb-2">
@@ -534,7 +554,7 @@ const ProjectsView = () => {
                               accent={group.color}
                               reviewCount={reviewCountByProject[String(project._id)] || 0}
                               canMove={canMoveProject(project)}
-                              onNavigate={(id) => navigate(`/projects/${id}`)}
+                              onNavigate={navigateToProject}
                               onToggleStar={toggleStar}
                               onDragStart={setDraggingProjectId}
                               onDragEnd={() => setDraggingProjectId(null)}
@@ -579,7 +599,7 @@ const ProjectsView = () => {
                       className={`p-0 flex flex-col h-full group relative overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${draggingProjectId === project._id ? 'opacity-50 scale-95' : ''
                         } ${reviewCount > 0 ? 'ring-2 ring-amber-500/40 border-amber-500/50' : ''}`}
                       style={{ borderColor: project.starred ? accent : undefined }}
-                      onClick={() => navigate(`/projects/${project._id}`)}
+                      onClick={() => navigateToProject(project._id)}
                     >
                       <div className="h-1 w-full" style={{ backgroundColor: accent }} />
 
@@ -647,6 +667,18 @@ const ProjectsView = () => {
                             <span title={`Task completion: ${project.completedTasks ?? 0} of ${project.totalTasks || 0} tasks done`}>{project.progress || 0}%</span>
                           </div>
                           <ProgressBar progress={project.progress || 0} className="h-1" />
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigateToProject(project._id, 'analytics');
+                              }}
+                              className="text-blue-500 hover:underline font-bold text-[9px]"
+                            >
+                              Analytics
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </Card>
@@ -704,7 +736,7 @@ const ProjectsView = () => {
           </div>
         </form>
       </NexusModal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

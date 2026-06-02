@@ -9,7 +9,6 @@ const PAGE_GROUPS = [
       { key: 'calendar', label: 'Calendar', path: '/calendar' },
       { key: 'todo', label: 'Todo', path: '/todo' },
       { key: 'inbox', label: 'Inbox', path: '/inbox' },
-      { key: 'chat', label: 'Chat', path: '/chat' },
     ],
   },
   {
@@ -61,6 +60,7 @@ const PAGE_GROUPS = [
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
       { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },
+      { key: 'admin_project_analytics', label: 'Project Analytics', path: '/admin/project-analytics' },
       { key: 'campaigns', label: 'Campaign Details', path: '/campaign' },
     ],
   },
@@ -69,7 +69,7 @@ const PAGE_GROUPS = [
 const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 
 const BASE_PAGE_KEYS = [
-  'dashboard', 'calendar', 'todo', 'inbox', 'chat',
+  'dashboard', 'calendar', 'todo', 'inbox',
   'projects', 'assets', 'schedule', 'logs',
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];

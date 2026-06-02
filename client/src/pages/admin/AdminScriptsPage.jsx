@@ -57,7 +57,6 @@ const AdminScriptsPage = () => {
     <PageContainer className="space-y-5">
       <PageHeader
         title="Admin Script Runner"
-        subtitle="Run project scripts safely from admin UI."
         icon={Brackets}
         actions={
           <div className="flex items-center gap-2">

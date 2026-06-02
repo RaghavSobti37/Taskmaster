@@ -67,36 +67,7 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
         }
       }
 
-      if (channelName.startsWith('chat-')) {
-        try {
-          const { canJoinChatChannel } = require('../controllers/chatController');
-          const channelId = channelName.slice(5);
-          const allowed = await canJoinChatChannel(socket.userId, channelId);
-          if (!allowed) return;
-        } catch (err) {
-          logger.warn('Realtime', 'Chat join denied', { error: err.message });
-          return;
-        }
-      }
-
       socket.join(channelName);
-    });
-
-    socket.on('chat_typing', async (payload) => {
-      const channelId = payload?.channelId;
-      if (!channelId) return;
-      try {
-        const { canJoinChatChannel } = require('../controllers/chatController');
-        const allowed = await canJoinChatChannel(socket.userId, channelId);
-        if (!allowed) return;
-        io.to(`chat-${channelId}`).emit('chat_typing', {
-          userId: socket.userId,
-          name: payload?.name || '',
-          channelId,
-        });
-      } catch {
-        /* ignore */
-      }
     });
 
     socket.on('disconnect', () => {

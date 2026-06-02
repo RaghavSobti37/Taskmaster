@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { isAdminUser } from '../../utils/departmentPermissions';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useSearchParams } from 'react-router-dom';
 import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
@@ -314,11 +314,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             ? 'Lead Audits'
             : (targetUserName ? `${targetUserName}'s History` : 'My Daily Progress')
         }
-        subtitle={
-          activeView === 'lead-audits'
-            ? 'Track edits made to leads, including what changed, by whom, and when.'
-            : 'Track your work history and daily accomplishments.'
-        }
         icon={activeView === 'lead-audits' ? History : NotebookPen}
         actions={
           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -469,8 +464,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-3">
                                   <span className="text-xs font-black uppercase tracking-tight">{cleanLogTitle(log.details?.title)}</span>
-                                  {log.details?.type === 'TASK_REVIEW' && (
-                                    <Badge variant="warning" className="text-[8px] py-0">Review</Badge>
+                                  {(log.details?.type === 'TASK_REVIEW'
+                                    || log.details?.title === '[review]') && (
+                                    <Badge variant="warning" className="text-[8px] py-0">[review]</Badge>
                                   )}
                                   <Badge variant="slate" className="text-[8px] py-0">{log.details?.workspace || resolveWorkspaceFromProjectName(projects, log.details?.project)}</Badge>
                                   <Badge variant="info" className="text-[8px] py-0">{log.details?.project || 'GENERAL'}</Badge>

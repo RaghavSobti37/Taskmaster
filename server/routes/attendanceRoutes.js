@@ -7,7 +7,7 @@ const { isOpsUser, isAdminUser } = require('../utils/departmentPermissions');
 const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const User = require('../models/User');
-const GamificationService = require('../services/gamificationService');
+const { awardAttendanceXpOnDayLocked, isAttendanceDayLocked } = require('../utils/attendanceXp');
 const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 const {
   getDateKey,
@@ -23,7 +23,6 @@ const {
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
-const { queueGamificationEvent } = require('../services/backgroundQueue');
 
 const isOps = (user) => isOpsUser(user);
 
@@ -143,18 +142,6 @@ const computeAttendanceMetrics = async (attendanceDoc) => {
   return attendanceDoc;
 };
 
-const awardAttendanceXpIfEligible = async (attendanceDoc) => {
-  if (attendanceDoc.systemHours >= 8 && attendanceDoc.discrepancyMinutes < DISCREPANCY_THRESHOLD_MINUTES) {
-    const todayStr = getDateKey(attendanceDoc.date);
-    await GamificationService.awardActionXp(
-      attendanceDoc.userId,
-      'ATTENDANCE_DAY_BONUS',
-      { date: todayStr, at: attendanceDoc.outTimeRecord?.manualTimestamp },
-      { entityKey: 'date', entityId: todayStr },
-    );
-  }
-};
-
 router.use(protect);
 
 router.get('/', async (req, res) => {
@@ -265,13 +252,6 @@ router.post('/check', async (req, res) => {
 
     if (attendance.inTimeRecord?.manualTimestamp && attendance.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(attendance);
-      await awardAttendanceXpIfEligible(attendance);
-      const todayStr = getDateKey(attendance.date);
-      queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
-        userId: req.user._id,
-        date: todayStr,
-        hours: attendance.systemHours || 0,
-      });
     }
 
     const payload = attendance.toObject ? attendance.toObject() : attendance;
@@ -356,7 +336,13 @@ router.patch('/:id/approve', async (req, res) => {
 
     const updatedRow = await computeAttendanceMetrics(row);
     await updatedRow.save();
-    res.json(updatedRow);
+
+    let xpAward = null;
+    if (isAttendanceDayLocked(updatedRow)) {
+      xpAward = await awardAttendanceXpOnDayLocked(updatedRow);
+    }
+
+    res.json({ ...updatedRow.toObject(), xpAward });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -388,15 +374,14 @@ router.put('/upsert/by-user-date', async (req, res) => {
 
     if (row.inTimeRecord?.manualTimestamp && row.outTimeRecord?.manualTimestamp) {
       await computeAttendanceMetrics(row);
-      await awardAttendanceXpIfEligible(row);
-      queueGamificationEvent('ATTENDANCE_DAY_COMPLETE', {
-        userId: row.userId,
-        date: getDateKey(row.date),
-        hours: row.systemHours || 0,
-      });
     }
 
-    res.json(row);
+    let xpAward = null;
+    if (isAttendanceDayLocked(row)) {
+      xpAward = await awardAttendanceXpOnDayLocked(row);
+    }
+
+    res.json({ ...(row.toObject ? row.toObject() : row), xpAward });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

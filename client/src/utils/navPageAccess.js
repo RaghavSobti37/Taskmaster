@@ -4,7 +4,6 @@ export const NAV_PATH_ACCESS = {
   '/calendar': 'calendar',
   '/todo': 'todo',
   '/inbox': 'inbox',
-  '/chat': 'chat',
   '/projects': 'projects',
   '/assets': 'assets',
   '/schedule': 'schedule',
@@ -26,6 +25,7 @@ export const NAV_PATH_ACCESS = {
   '/admin/exly-campaigns': 'admin_exly',
   '/admin/scripts': 'admin_scripts',
   '/admin/gamification': 'admin_gamification',
+  '/admin/project-analytics': 'admin_project_analytics',
   '/admin/qa': 'admin_data',
 };
 
@@ -34,6 +34,7 @@ export function filterNavGroupsForUser(groups, user, hasPageAccess) {
     .map((group) => ({
       ...group,
       pages: (group.pages || []).filter((page) => {
+        if (page.path === '/chat') return false;
         const key = NAV_PATH_ACCESS[page.path];
         return !key || hasPageAccess(user, key);
       }),

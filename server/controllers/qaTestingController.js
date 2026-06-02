@@ -236,16 +236,17 @@ exports.listCategories = async (req, res) => {
 exports.purgeAllTestData = async (req, res, next) => {
   try {
     const { repairCorruptLeadPhones } = require('../services/leadPhoneRepair');
-    const [swept, phoneRepair] = await Promise.all([
-      purgeQaTestData(),
-      repairCorruptLeadPhones(),
-    ]);
+    const GamificationService = require('../services/gamificationService');
+    const swept = await purgeQaTestData();
+    const phoneRepair = await repairCorruptLeadPhones();
+    const xpRecalc = await GamificationService.recalculateUsersFromAudit(swept.affectedUserIds || []);
     DataHubService.clearFolderCache();
     res.json({
       success: true,
-      message: `Purged ${swept.deleted.tasks} tasks, ${swept.deleted.users} QA probe users, ${swept.deleted.contacts} contacts, ${swept.deleted.leads} leads, and related QA records. Repaired ${phoneRepair.repaired} corrupt phones, deleted ${phoneRepair.deleted} redundant duplicates.`,
+      message: `Purged ${swept.deleted.tasks} QA tasks, ${swept.deleted.xpAudits} XP audit rows, ${swept.deleted.users} probe users, and related CRM/logs. Re-synced XP for ${xpRecalc.updatedUsers} user(s). Repaired ${phoneRepair.repaired} corrupt phones.`,
       deleted: swept.deleted,
       phoneRepair,
+      xpRecalc,
     });
   } catch (error) {
     logger.error('QA', 'Error purging QA test data', { error: error.message });

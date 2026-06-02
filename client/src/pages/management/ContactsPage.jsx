@@ -1,31 +1,48 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus, Search, Contact } from 'lucide-react';
-import { PageContainer, PageHeader, Card, Button, Input, NexusModal, ModalFooter, PageSkeleton, DataLoading } from '../../components/ui';
+import { Plus, Contact } from 'lucide-react';
+import {
+  Card,
+  Button,
+  Input,
+  NexusModal,
+  ModalFooter,
+  PageSkeleton,
+  DataTable,
+  Badge,
+  SearchInput,
+  ListPageLayout,
+} from '../../components/ui';
+import { distributionFromField } from '../../utils/buildChartSeries';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+
+const EMPTY_CONTACT_FORM = { name: '', role: '', phone: '', email: '', notes: '' };
 
 const ContactsPage = () => {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
-  const [formData, setFormData] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
-  const [formBaseline, setFormBaseline] = useState({ name: '', role: '', phone: '', email: '', notes: '' });
+  const [formData, setFormData] = useState(EMPTY_CONTACT_FORM);
+  const [formBaseline, setFormBaseline] = useState(EMPTY_CONTACT_FORM);
   const queryClient = useQueryClient();
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts'],
-    queryFn: async () => (await axios.get('/api/contacts')).data
+    queryFn: async () => (await axios.get('/api/contacts')).data,
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => editingContact ? axios.put(`/api/contacts/${editingContact._id}`, data) : axios.post('/api/contacts', data),
+    mutationFn: async (data) =>
+      editingContact
+        ? axios.put(`/api/contacts/${editingContact._id}`, data)
+        : axios.post('/api/contacts', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       setIsModalOpen(false);
       setEditingContact(null);
-      setFormData({ name: '', role: '', phone: '', email: '', notes: '' });
-    }
+      setFormData(EMPTY_CONTACT_FORM);
+    },
   });
 
   const hasContactEdits =
@@ -41,42 +58,142 @@ const ContactsPage = () => {
     isSaving: saveMutation.isPending,
   });
 
-  const filtered = contacts.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) || c.role.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () =>
+      contacts.filter((c) => {
+        const q = search.toLowerCase();
+        return (
+          c.name.toLowerCase().includes(q) ||
+          (c.role || '').toLowerCase().includes(q) ||
+          (c.phone || '').toLowerCase().includes(q) ||
+          (c.email || '').toLowerCase().includes(q)
+        );
+      }),
+    [contacts, search]
   );
 
-  if (isLoading && !contacts.length) {
-    return <PageContainer className="!py-4"><PageSkeleton /></PageContainer>;
-  }
+  const openContactEditor = (contact) => {
+    const loaded = {
+      name: contact.name,
+      role: contact.role,
+      phone: contact.phone,
+      email: contact.email || '',
+      notes: contact.notes || '',
+    };
+    setEditingContact(contact);
+    setFormData(loaded);
+    setFormBaseline(cloneSnapshot(loaded));
+    setIsModalOpen(true);
+  };
+
+  const openAddModal = () => {
+    setEditingContact(null);
+    setFormData(EMPTY_CONTACT_FORM);
+    setFormBaseline(EMPTY_CONTACT_FORM);
+    setIsModalOpen(true);
+  };
+
+  const roleChart = useMemo(
+    () => distributionFromField(contacts, 'role'),
+    [contacts]
+  );
+
+  const contactColumns = useMemo(
+    () => [
+      {
+        header: 'Contact',
+        sortKey: 'name',
+        render: (row) => (
+          <span className="block min-w-0 truncate text-xs" title={[row.name, row.notes].filter(Boolean).join(' — ')}>
+            <span className="font-bold text-[var(--color-text-primary)]">{row.name}</span>
+            {row.notes ? (
+              <span className="text-[var(--color-text-muted)] font-medium"> · {row.notes}</span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        header: 'Role',
+        sortKey: 'role',
+        render: (row) => (
+          <Badge variant="info" className="max-w-full truncate" title={row.role}>
+            {row.role}
+          </Badge>
+        ),
+      },
+      {
+        header: 'Phone',
+        sortKey: 'phone',
+        render: (row) => (
+          <span className="text-[11px] font-bold text-[var(--color-text-primary)] truncate block" title={row.phone}>
+            {row.phone}
+          </span>
+        ),
+      },
+      {
+        header: 'Email',
+        sortKey: 'email',
+        render: (row) => (
+          <span className="text-[11px] text-[var(--color-text-muted)] truncate block" title={row.email || undefined}>
+            {row.email || '—'}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  if (isLoading && !contacts.length) return <PageSkeleton />;
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader title="Important Contacts" subtitle="Manage key contacts for operations." icon={Contact} actions={<Button size="sm" onClick={() => { setEditingContact(null); setFormData({ name: '', role: '', phone: '', email: '', notes: '' }); setFormBaseline({ name: '', role: '', phone: '', email: '', notes: '' }); setIsModalOpen(true); }}><Plus size={14} /> Add Contact</Button>} />
-      <Card className="p-4 space-y-4">
-        <Input placeholder="Search contacts..." value={search} onChange={(e) => setSearch(e.target.value)} icon={Search} />
-        <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-xl">
-          <table className="w-full text-xs">
-            <thead className="bg-[var(--color-bg-secondary)]">
-              <tr>
-                <th className="px-3 py-2 text-left">Name</th>
-                <th className="px-3 py-2 text-left">Role</th>
-                <th className="px-3 py-2 text-left">Phone</th>
-                <th className="px-3 py-2 text-left">Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && <tr><td colSpan={4}><DataLoading /></td></tr>}
-              {!isLoading && filtered.map((contact) => (
-                <tr key={contact._id} className="border-t border-[var(--color-bg-border)] cursor-pointer" onClick={() => { setEditingContact(contact); const loaded = { name: contact.name, role: contact.role, phone: contact.phone, email: contact.email || '', notes: contact.notes || '' }; setFormData(loaded); setFormBaseline(cloneSnapshot(loaded)); setIsModalOpen(true); }}>
-                  <td className="px-3 py-2 font-bold">{contact.name}</td>
-                  <td className="px-3 py-2">{contact.role}</td>
-                  <td className="px-3 py-2">{contact.phone}</td>
-                  <td className="px-3 py-2">{contact.email || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <ListPageLayout
+      containerClassName="!py-4"
+      overview={{
+        stats: [
+          {
+            id: 'total',
+            label: 'Contacts',
+            value: contacts.length,
+            icon: Contact,
+            variant: 'info',
+          },
+          {
+            id: 'withEmail',
+            label: 'With Email',
+            value: contacts.filter((c) => c.email).length,
+            icon: Contact,
+            variant: 'mint',
+          },
+        ],
+        charts: roleChart.length
+          ? [{ id: 'roles', title: 'By role', type: 'bar', data: roleChart }]
+          : [],
+      }}
+      toolbar={
+        <SearchInput
+          placeholder="Search contacts..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="!w-44 shrink min-w-[9rem]"
+        />
+      }
+      toolbarActions={
+        <Button size="sm" onClick={openAddModal}>
+          <Plus size={14} /> Add Contact
+        </Button>
+      }
+    >
+      <Card className="p-0 overflow-hidden border border-[var(--color-bg-border)]">
+        <DataTable
+          columns={contactColumns}
+          data={filtered}
+          onRowClick={openContactEditor}
+          getRowId={(row) => row._id}
+          fitWidth
+          emptyTitle="No contacts found"
+          emptyDescription="Try a different search or add a new contact."
+          className="!border-none !rounded-none"
+        />
       </Card>
 
       <NexusModal
@@ -110,18 +227,47 @@ const ContactsPage = () => {
           ) : null
         }
       >
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!editingContact) saveMutation.mutate(formData); }}>
-          <Input label="Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} icon={Contact} />
-          <Input label="Role" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} />
-          <Input label="Phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-          <Input label="Email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-          <Input label="Notes" value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!editingContact) saveMutation.mutate(formData);
+          }}
+        >
+          <Input
+            label="Name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            icon={Contact}
+          />
+          <Input
+            label="Role"
+            value={formData.role}
+            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+          />
+          <Input
+            label="Phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          />
+          <Input
+            label="Email"
+            value={formData.email || ''}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
+          <Input
+            label="Notes"
+            value={formData.notes || ''}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          />
           {!editingContact && (
-            <Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? 'Saving...' : 'Add Contact'}</Button>
+            <Button type="submit" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? 'Saving...' : 'Add Contact'}
+            </Button>
           )}
         </form>
       </NexusModal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

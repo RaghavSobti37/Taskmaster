@@ -45,7 +45,7 @@ const DailyLogHoursChart = ({ byDay = [], totalEntries = 0 }) => {
   const chartData = useMemo(
     () => byDay.map((d) => ({
       ...d,
-      count: d.count ?? 0,
+      count: d.count ?? d.logCount ?? 0,
       hours: Number(d.hours || 0),
       label: d.date?.slice(5) || d.date,
     })),

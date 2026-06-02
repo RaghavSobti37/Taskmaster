@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ListTodo } from 'lucide-react';
 import axios from 'axios';
-import { PageContainer, Card, Badge, SearchInput, PageSkeleton, DataLoading } from '../../components/ui';
+import { Card, Badge, SearchInput, PageSkeleton, PageLoadGuard, DataLoading, ListPageLayout, UserLabel, ListCard } from '../../components/ui';
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
@@ -10,6 +10,7 @@ import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPri
 import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { format, isBefore, startOfDay } from 'date-fns';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import TaskDetailModal from '../../components/TaskDetailModal';
@@ -18,7 +19,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { suppressAutoToasts, AXIOS_SKIP_TOAST } from '../../lib/notifications';
-import { taskCompletionToast, canMarkTaskComplete, pendingReviewToast, normalizeCompletionHours } from '../../utils/taskCompletion';
+import {
+  taskCompletionToast,
+  canMarkTaskComplete,
+  pendingReviewToast,
+  awaitingAssigneeToast,
+  normalizeCompletionHours,
+} from '../../utils/taskCompletion';
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
@@ -27,6 +34,24 @@ import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton
 import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
+
+function resolveDirectoryUser(person, users = []) {
+  if (!person) return null;
+  const id = typeof person === 'object' ? person._id || person.userId?._id || person.userId : person;
+  const fromDir = id ? users.find((u) => String(u._id) === String(id)) : null;
+  if (typeof person === 'object' && (person.name || person.avatar)) {
+    return fromDir ? { ...fromDir, ...person, name: person.name || fromDir.name, avatar: person.avatar || fromDir.avatar } : person;
+  }
+  return fromDir || null;
+}
+
+function isDueOverdue(task) {
+  const raw = task.dueDate || task.scheduleDate;
+  if (!raw) return false;
+  const d = startOfDay(new Date(raw));
+  if (Number.isNaN(d.getTime())) return false;
+  return isBefore(d, startOfDay(new Date()));
+}
 
 const TodoPage = () => {
   const { user } = useAuth();
@@ -91,6 +116,10 @@ const TodoPage = () => {
   const handleCompleteRequest = (task) => {
     const intent = resolveTaskFinishIntent(task, user, projects, users);
     if (intent === 'approve') return;
+    if (intent === 'awaiting_assignee') {
+      addToast({ ...awaitingAssigneeToast(task.title), module: MODULE.PROJECTS });
+      return;
+    }
     if (intent === 'awaiting_review' || !canMarkTaskComplete(task)) {
       if (task?.status === 'in-review') {
         addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
@@ -129,15 +158,79 @@ const TodoPage = () => {
     }
   };
 
+  const renderTaskCard = (task) => {
+    if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
+      return <div key={task?._id} className="p-4"><DataLoading /></div>;
+    }
+    const isDone = task.status === 'done';
+    const isInReview = task.status === 'in-review';
+    const assignerUser = resolveDirectoryUser(getTaskAssignedBy(task), users);
+    const projectName = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
+    const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
+    const dueRaw = task.dueDate || task.scheduleDate;
+    const overdue = isDueOverdue(task);
+
+    return (
+      <ListCard
+        key={task?._id}
+        highlightId={task?._id}
+        onClick={() => setSelectedTask(task)}
+        className={`${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
+        style={getTaskRowStyle(accent)}
+        leading={
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isDone && !isInReview) handleCompleteRequest(task);
+            }}
+            disabled={isInReview}
+            className={`min-w-[44px] min-h-[44px] flex items-center justify-center ${isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500 opacity-60' : 'text-[var(--color-text-muted)]'}`}
+            title={isInReview ? 'Awaiting reviewer approval' : isDone ? 'Completed' : 'Mark complete'}
+          >
+            {isDone ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+          </button>
+        }
+        primary={
+          <div className={`text-sm font-bold min-w-0 ${isDone ? 'line-through' : ''}`}>
+            <MentionTitle text={task?.title} className="tm-task-title" truncate />
+          </div>
+        }
+        trailing={
+          overdue && dueRaw ? (
+            <Badge variant="overdue">Overdue</Badge>
+          ) : (
+            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">{formatDueDate(dueRaw)}</span>
+          )
+        }
+        secondary={projectName ? <p className="text-xs truncate text-[var(--color-text-muted)]">{projectName}</p> : null}
+        meta={
+          <>
+            <Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge>
+            <Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge>
+            {task.type && (
+              <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">{taskCategoryLabel(task.type)}</span>
+            )}
+            {assignerUser && (
+              <UserLabel user={assignerUser} name={displayPersonName(assignerUser)} size="xs" nameClassName="text-xs truncate" />
+            )}
+          </>
+        }
+      />
+    );
+  };
+
   const renderRow = (task) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
       return <TaskTableRowSkeleton key={task?._id} colSpan={7} />;
     }
     const isDone = task.status === 'done';
     const isInReview = task.status === 'in-review';
-    const assigner = getTaskAssignedBy(task);
+    const assignerUser = resolveDirectoryUser(getTaskAssignedBy(task), users);
     const project = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
     const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
+    const dueRaw = task.dueDate || task.scheduleDate;
+    const overdue = isDueOverdue(task);
     return (
       <tr
         key={task?._id}
@@ -161,100 +254,136 @@ const TodoPage = () => {
           <div className={`text-sm font-bold min-w-0 ${isDone ? 'line-through' : ''}`}>
             <MentionTitle text={task?.title} className="tm-task-title" truncate />
           </div>
-          {assigner?.name && (
-            <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700/90 dark:text-amber-400 mt-0.5">
-              Assigned by {displayPersonName(assigner)}
-            </p>
+          {project && (
+            <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{project}</p>
           )}
         </td>
         <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
-        <td className="px-4 py-2 text-[10px] font-bold uppercase truncate max-w-[120px]">{project || '—'}</td>
+        <td className="px-4 py-2 min-w-[120px]">
+          {assignerUser ? (
+            <UserLabel
+              user={assignerUser}
+              name={displayPersonName(assignerUser)}
+              size="xs"
+              nameClassName="text-xs font-bold text-[var(--color-text-primary)] truncate"
+            />
+          ) : (
+            <span className="text-xs text-[var(--color-text-muted)]">—</span>
+          )}
+        </td>
         <td className="px-4 py-2"><Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge></td>
         <td className="px-4 py-2"><Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge></td>
-        <td className="px-4 py-2 text-xs">{formatDueDate(task.dueDate || task.scheduleDate)}</td>
+        <td className="px-4 py-2">
+          {overdue && dueRaw ? (
+            <div className="flex flex-col items-start gap-1">
+              <Badge variant="overdue">Overdue</Badge>
+              <span className="text-xs text-[var(--color-text-muted)]">{format(startOfDay(new Date(dueRaw)), 'MMM d')}</span>
+            </div>
+          ) : (
+            <span className="text-xs">{formatDueDate(dueRaw)}</span>
+          )}
+        </td>
       </tr>
     );
   };
 
-  if (isLoading && !tasks.length) {
-    return (
-      <PageContainer className="!py-4">
-        <PageSkeleton />
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer className="!py-4 !space-y-4">
+    <PageLoadGuard loading={isLoading && !tasks.length} skeleton={PageSkeleton} className="!py-4">
+    <ListPageLayout
+      containerClassName="!py-4"
+      icon={ListTodo}
+      title="Todo"
+      mobileFilterCount={
+        [statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter].filter((f) => f !== 'all').length
+      }
+      toolbar={
+        <>
+          <SearchInput
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} className="w-full" />
+          <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} className="w-full" />
+          <NexusDropdown label="Category" options={typeOptions} value={typeFilter} onChange={setTypeFilter} className="w-full" />
+          <NexusDropdown
+            label="Workspace"
+            options={workspaceFilterOptions}
+            value={workspaceFilter}
+            onChange={(value) => {
+              setWorkspaceFilter(value);
+              setProjectFilter('all');
+            }}
+            className="w-full"
+            searchable
+          />
+          <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} className="w-full" searchable />
+        </>
+      }
+    >
       <FlashHighlightListener />
 
-      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-end w-full">
-        <div className="flex-1 min-w-[200px] w-full">
-          <SearchInput placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <StatusSelect filterMode value={statusFilter} onChange={setStatusFilter} className="w-full sm:w-36" />
-        <PrioritySelect filterMode value={priorityFilter} onChange={setPriorityFilter} className="w-full sm:w-36" />
-        <NexusDropdown label="Category" options={typeOptions} value={typeFilter} onChange={setTypeFilter} className="w-full sm:w-40" />
-        <NexusDropdown
-          label="Workspace"
-          options={workspaceFilterOptions}
-          value={workspaceFilter}
-          onChange={(value) => {
-            setWorkspaceFilter(value);
-            setProjectFilter('all');
-          }}
-          className="w-full sm:w-44"
-          searchable
-        />
-        <NexusDropdown label="Project" options={projectFilterOptions} value={projectFilter} onChange={setProjectFilter} className="w-full sm:w-44" searchable />
+      {/* Mobile: card list */}
+      <div className="lg:hidden space-y-3">
+        {isLoading && <DataLoading />}
+        {!isLoading && filtered.length === 0 && (
+          <p className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</p>
+        )}
+        {activeTasks.map(renderTaskCard)}
+        {activeTasks.length > 0 && doneTasks.length > 0 && (
+          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1">
+            Completed ({doneTasks.length})
+          </p>
+        )}
+        {doneTasks.map(renderTaskCard)}
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-separate border-spacing-y-2">
-            <thead>
-              <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                <th className="px-4 py-3 w-10" />
-                <th className="px-4 py-3">Task</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Project</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Priority</th>
-                <th className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => setDueDateSort((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                    className="inline-flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
-                    title={`Sort due date ${dueDateSort === 'asc' ? 'ascending' : 'descending'}`}
-                  >
-                    Due
-                    {dueDateSort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                  </button>
-                </th>
+      {/* Desktop: table */}
+      <Card className="overflow-hidden hidden lg:block">
+        <table className="w-full text-left border-separate border-spacing-y-2">
+          <thead>
+            <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+              <th className="px-4 py-3 w-10" />
+              <th className="px-4 py-3">Task</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Assigned by</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Priority</th>
+              <th className="px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setDueDateSort((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                  className="inline-flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
+                  title={`Sort due date ${dueDateSort === 'asc' ? 'ascending' : 'descending'}`}
+                >
+                  Due
+                  {dueDateSort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr><td colSpan={7}><DataLoading /></td></tr>
+            )}
+            {!isLoading && filtered.length === 0 && (
+              <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
+            )}
+            {activeTasks.map(renderRow)}
+            {activeTasks.length > 0 && doneTasks.length > 0 && (
+              <tr className="bg-[var(--color-bg-secondary)]/50">
+                <td colSpan={7} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Completed ({doneTasks.length})</td>
               </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={7}><DataLoading /></td></tr>
-              )}
-              {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
-              )}
-              {activeTasks.map(renderRow)}
-              {activeTasks.length > 0 && doneTasks.length > 0 && (
-                <tr className="bg-[var(--color-bg-secondary)]/50">
-                  <td colSpan={7} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Completed ({doneTasks.length})</td>
-                </tr>
-              )}
-              {doneTasks.map(renderRow)}
-            </tbody>
-          </table>
-        </div>
+            )}
+            {doneTasks.map(renderRow)}
+          </tbody>
+        </table>
       </Card>
 
       <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
       <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />
-    </PageContainer>
+    </ListPageLayout>
+    </PageLoadGuard>
   );
 };
 

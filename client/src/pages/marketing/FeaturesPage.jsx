@@ -72,7 +72,6 @@ const FeaturesPage = () => {
     <PageContainer className="!py-4 !space-y-6">
       <PageHeader
         title="Features"
-        subtitle="Everything you need to manage your team, projects, and leads."
         icon={Rocket}
         actions={
            <Button size="sm" variant="ghost" className="!text-[10px]"><Sparkles size={14} /> SYSTEM V.4.0</Button>

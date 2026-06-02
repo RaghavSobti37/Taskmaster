@@ -5,21 +5,20 @@ import {
 } from 'lucide-react';
 import {
   Badge,
-  PageHeader,
   Card,
-  PageContainer,
   DataTable,
   Button,
-  StatCard,
   PageSkeleton,
+  ListPageLayout,
+  SearchInput,
+  UserLabel,
   FullScreenWorkspace,
-  Input,
   NexusDropdown,
-  Modal
+  Modal,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
-import { useConfirm } from '../../contexts/ConfirmContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
@@ -239,9 +238,29 @@ export default function LeadsPage() {
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
 
+  const isDefaultSort = sortField === 'createdAt' && sortOrder === 'desc';
+  const tableSortState = useMemo(
+    () => (isDefaultSort ? null : { key: sortField, direction: sortOrder }),
+    [sortField, sortOrder, isDefaultSort]
+  );
+
+  const handleTableSortChange = (next) => {
+    if (!next) {
+      setSortField('createdAt');
+      setSortOrder('desc');
+    } else {
+      setSortField(next.key);
+      setSortOrder(next.direction);
+    }
+    setPage(1);
+  };
+
   const columns = [
     {
       header: 'Customer Details',
+      sortKey: 'name',
+      mobilePrimary: true,
+      mobileSubtitle: (row) => [row?.email, row?.phone].filter(Boolean).join(' • '),
       render: (row) => (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 flex-wrap">
@@ -283,6 +302,7 @@ export default function LeadsPage() {
     },
     {
       header: 'Quality Score',
+      sortKey: 'leadQuality',
       info: 'How likely this person is to join based on their recent interactions.',
       render: (row) => (
         <Badge variant={Number(row.leadQuality) >= 4 || row.leadQuality === 'Future 4' ? 'mint' : Number(row.leadQuality) >= 2 ? 'info' : 'apricot'}>
@@ -292,6 +312,7 @@ export default function LeadsPage() {
     },
     {
       header: 'Interest Level',
+      sortKey: 'leadStatus',
       render: (row) => (
         <Badge variant={row.leadStatus === 'Converted' ? 'mint' : row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'slate'}>
           {row.leadStatus?.toUpperCase() || 'NEW'}
@@ -299,14 +320,26 @@ export default function LeadsPage() {
       )
     },
     {
-      header: 'Assigned Agent',
+      header: 'Created',
+      sortKey: 'createdAt',
+      mobileHidden: true,
+      sortFn: (row) => (row.createdAt ? new Date(row.createdAt) : null),
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
-            {row.assignedRep?.avatar ? <img src={row.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={12} className="text-[var(--color-text-muted)]" />}
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-tight truncate">{row.assignedRep?.name || 'Pending Assignment'}</span>
-        </div>
+        <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
+          {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'}
+        </span>
+      ),
+    },
+    {
+      header: 'Assigned Agent',
+      sortable: false,
+      render: (row) => (
+        <UserLabel
+          user={row.assignedRep}
+          name={row.assignedRep?.name || 'Pending Assignment'}
+          size="xs"
+          nameClassName="text-[10px] font-black uppercase tracking-tight truncate"
+        />
       )
     }
   ];
@@ -315,160 +348,131 @@ export default function LeadsPage() {
 
   const stats = statsData || { totalLeads: 0, convertedLeads: 0, warmLeads: 0, conversionRate: 0, activeReach: 0 };
   const isAdmin = isAdminUser(user);
+  const otherPipeline = Math.max(0, stats.totalLeads - stats.convertedLeads - stats.warmLeads);
 
   return (
-    <PageContainer className="!py-4 !space-y-6">
-      <PageHeader
-        title="Customer Leads"
-        icon={UserPlus}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-              <Plus size={14} /> Add Lead
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${!statFilter ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
-          <StatCard
-            label="Total Leads"
-            value={stats.totalLeads}
-            icon={Users}
-            variant="mint"
-            info="Total leads visible in your scope."
-            onClick={() => setStatFilter(null)}
-            className="border-0"
+    <ListPageLayout
+      containerClassName="!py-4"
+      overviewMobileMaxStats={2}
+      overview={{
+        stats: [
+          {
+            id: 'total',
+            label: 'Total Leads',
+            value: stats.totalLeads,
+            icon: Users,
+            variant: 'mint',
+            info: 'Total leads visible in your scope.',
+            onClick: () => setStatFilter(null),
+            active: !statFilter,
+          },
+          {
+            id: 'warm',
+            label: 'Warm Leads',
+            value: stats.warmLeads,
+            icon: TrendingUp,
+            variant: 'rose',
+            info: 'Leads with meaningful connection and not converted.',
+            onClick: () => setStatFilter(statFilter === 'warm' ? null : 'warm'),
+            active: statFilter === 'warm',
+          },
+          {
+            id: 'converted',
+            label: 'Converted',
+            value: stats.convertedLeads,
+            icon: CheckCircle2,
+            variant: 'apricot',
+            info: 'Leads converted into paying customers.',
+            onClick: () => setStatFilter(statFilter === 'converted' ? null : 'converted'),
+            active: statFilter === 'converted',
+          },
+          {
+            id: 'rate',
+            label: 'Success Rate',
+            value: `${Number(stats.conversionRate).toFixed(1)}%`,
+            icon: Target,
+            variant: 'info',
+            info: 'Converted leads divided by total leads.',
+          },
+        ],
+        charts: [
+          {
+            id: 'pipeline',
+            title: 'Pipeline mix',
+            type: 'donut',
+            data: [
+              { label: 'Converted', value: stats.convertedLeads },
+              { label: 'Warm', value: stats.warmLeads },
+              { label: 'Other', value: otherPipeline },
+            ],
+          },
+        ],
+      }}
+      toolbarActions={
+        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+          <Plus size={14} /> Add Lead
+        </Button>
+      }
+      toolbar={
+        <>
+          <SearchInput
+            placeholder="Search name or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="!w-44 shrink min-w-[9rem]"
           />
-        </div>
-
-        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${statFilter === 'warm' ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
-          <StatCard
-            label="Warm Leads"
-            value={stats.warmLeads}
-            icon={TrendingUp}
-            variant="rose"
-            info="Leads with meaningful connection and not converted."
-            onClick={() => setStatFilter(statFilter === 'warm' ? null : 'warm')}
-            className="border-0"
+          <NexusDropdown
+            placeholder="Interest Level"
+            options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
+            value={filters.leadStatus}
+            onChange={(v) => setFilters({ ...filters, leadStatus: v })}
+            className="!w-36 shrink-0"
           />
-        </div>
-
-        <div className={`rounded-[var(--radius-atomic)] border-2 transition-all ${statFilter === 'converted' ? 'border-[var(--color-action-primary)] shadow-lg shadow-[var(--color-action-primary)]/20' : 'border-[var(--color-bg-border)]'}`}>
-          <StatCard
-            label="Converted"
-            value={stats.convertedLeads}
-            icon={CheckCircle2}
-            variant="apricot"
-            info="Leads converted into paying customers."
-            onClick={() => setStatFilter(statFilter === 'converted' ? null : 'converted')}
-            className="border-0"
+          <NexusDropdown
+            placeholder="Source"
+            options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map((s) => ({ value: s, label: s }))]}
+            value={filters.source}
+            onChange={(v) => setFilters({ ...filters, source: v })}
+            className="!w-40 shrink-0"
           />
-        </div>
-
-        <div className="rounded-[var(--radius-atomic)] border-2 border-[var(--color-bg-border)] transition-all">
-          <StatCard
-            label="Success Rate"
-            value={`${Number(stats.conversionRate).toFixed(1)}%`}
-            icon={Target}
-            variant="info"
-            info="Converted leads divided by total leads."
-            className="border-0"
+          <NexusDropdown
+            placeholder="Quality"
+            options={[{ value: 'all', label: 'All Quality' }, ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` }))]}
+            value={filters.leadQuality}
+            onChange={(v) => setFilters({ ...filters, leadQuality: v })}
+            className="!w-32 shrink-0"
           />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-56">
-              <Input
-                placeholder="Search name or phone..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                icon={Search}
-              />
-            </div>
-            <div className="w-44">
-              <NexusDropdown
-                placeholder="Interest Level"
-                options={[
-                  { value: 'all', label: 'All Interest Levels' },
-                  ...leadStatusesList.map(s => ({ value: s, label: s }))
-                ]}
-                value={filters.leadStatus}
-                onChange={v => setFilters({ ...filters, leadStatus: v })}
-              />
-            </div>
-            <div className="w-56">
-              <NexusDropdown
-                placeholder="Source"
-                options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map(s => ({ value: s, label: s }))]}
-                value={filters.source}
-                onChange={v => setFilters({ ...filters, source: v })}
-              />
-            </div>
-            <div className="w-36">
-              <NexusDropdown
-                placeholder="Quality"
-                options={[
-                  { value: 'all', label: 'All Quality' },
-                  ...qualitiesList.map(q => ({ value: q, label: `Level ${q}` }))
-                ]}
-                value={filters.leadQuality}
-                onChange={v => setFilters({ ...filters, leadQuality: v })}
-              />
-            </div>
-            <div className="w-44">
-              <NexusDropdown
-                placeholder="Agent"
-                options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map(r => ({ value: r._id, label: r.name }))]}
-                value={filters.assignedRepId}
-                onChange={v => setFilters({ ...filters, assignedRepId: v })}
-              />
-            </div>
-            <div className="w-56">
-              <NexusDropdown
-               
-                placeholder="Sort by"
-                options={[
-                  { value: 'createdAt-desc', label: 'Newest First' },
-                  { value: 'createdAt-asc', label: 'Oldest First' },
-                  { value: 'leadQuality-desc', label: 'Quality Score (High-Low)' },
-                  { value: 'nextFollowupDate-asc', label: 'Followup Date (Earliest)' },
-                  { value: 'name-asc', label: 'Name (A-Z)' }
-                ]}
-                value={`${sortField}-${sortOrder}`}
-                onChange={v => {
-                  const [field, order] = v.split('-');
-                  setSortField(field);
-                  setSortOrder(order);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <Card className="p-0 overflow-hidden">
-          <DataTable
-            columns={columns}
-            data={leads}
-            onRowClick={(row) => setSelectedLead(row)}
-            paginated={true}
-            serverSide={true}
-            totalItems={totalLeads}
-            totalPages={totalPages}
-            currentPage={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setPage(1);
-            }}
+          <NexusDropdown
+            placeholder="Agent"
+            options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map((r) => ({ value: r._id, label: r.name }))]}
+            value={filters.assignedRepId}
+            onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
+            className="!w-36 shrink-0"
           />
-        </Card>
-      </div>
+        </>
+      }
+    >
+      <Card className="p-0 overflow-hidden">
+        <DataTable
+          columns={columns}
+          data={leads}
+          onRowClick={(row) => setSelectedLead(row)}
+          paginated
+          serverSide
+          totalItems={totalLeads}
+          totalPages={totalPages}
+          currentPage={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
+          sortState={tableSortState}
+          onSortChange={handleTableSortChange}
+          isLoading={isLoading}
+        />
+      </Card>
 
       <FullScreenWorkspace
         isOpen={!!selectedLead}
@@ -651,7 +655,7 @@ export default function LeadsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.leadStatus}
                   onChange={e => setEditLeadData({ ...editLeadData, leadStatus: e.target.value })}
                 >
@@ -661,7 +665,7 @@ export default function LeadsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Call Outcome Status</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.callStatus}
                   onChange={e => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
                 >
@@ -671,7 +675,7 @@ export default function LeadsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Quality Score</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.leadQuality}
                   onChange={e => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
                 >
@@ -681,7 +685,7 @@ export default function LeadsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Assigned Sales Rep</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.assignedRepId || ''}
                   onChange={e => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
                 >
@@ -694,7 +698,7 @@ export default function LeadsPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Conversion Plan / Status</label>
                 <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
                   value={editLeadData.planOption || ''}
                   onChange={e => setEditLeadData({ ...editLeadData, planOption: e.target.value, ...(e.target.value ? { leadStatus: 'Converted' } : {}) })}
                 >
@@ -718,7 +722,7 @@ export default function LeadsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Date</label>
                 <input
                   type="date"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none cursor-pointer"
                   value={editLeadData.nextFollowupDate}
                   onClick={e => e.target.showPicker && e.target.showPicker()}
                   onFocus={e => e.target.showPicker && e.target.showPicker()}
@@ -730,7 +734,7 @@ export default function LeadsPage() {
                 <label className="text-[10px] font-black uppercase tracking-wider text-blue-300">Follow-up Time</label>
                 <input
                   type="time"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-blue-500/30 rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none cursor-pointer"
                   value={editLeadData.nextFollowupTime}
                   onClick={e => e.target.showPicker && e.target.showPicker()}
                   onFocus={e => e.target.showPicker && e.target.showPicker()}
@@ -883,7 +887,7 @@ export default function LeadsPage() {
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">Interest Level</label>
             <select
-              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
               value={newLeadData.leadStatus}
               onChange={e => setNewLeadData({ ...newLeadData, leadStatus: e.target.value })}
             >
@@ -893,7 +897,7 @@ export default function LeadsPage() {
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">Lead Quality Score</label>
             <select
-              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-blue-500 outline-none"
+              className="w-full px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
               value={newLeadData.leadQuality}
               onChange={e => setNewLeadData({ ...newLeadData, leadQuality: e.target.value })}
             >
@@ -920,7 +924,7 @@ export default function LeadsPage() {
           </div>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 }
 

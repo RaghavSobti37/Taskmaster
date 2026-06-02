@@ -73,3 +73,10 @@ export function isValidCompletionMinutes(hours, minutes) {
   const m = Math.max(0, Math.min(59, parseInt(String(minutes ?? ''), 10) || 0));
   return h * 60 + m >= MIN_COMPLETION_MINUTES;
 }
+
+/** True when review time inputs are at least 1 minute. */
+export function isValidReviewMinutes(hours, minutes) {
+  const h = Math.max(0, parseInt(String(hours ?? ''), 10) || 0);
+  const m = Math.max(0, Math.min(59, parseInt(String(minutes ?? ''), 10) || 0));
+  return h * 60 + m >= 1;
+}

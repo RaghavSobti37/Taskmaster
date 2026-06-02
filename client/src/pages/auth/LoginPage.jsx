@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Link000 as Link } from '../../components/ui/skiper-ui/skiper40';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
@@ -74,22 +73,10 @@ const LoginPage = () => {
         className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-border shadow-xl"
       >
         <div className="text-center mb-6">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
+          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-[var(--color-action-primary)]/25 object-cover mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Coreknot</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
             A comprehensive work management, task tracking platform designed to organize team projects and CRM customer lists.
-          </p>
-        </div>
-
-        <div
-          role="status"
-          className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-100 text-sm rounded-xl font-medium flex gap-3"
-        >
-          <Info size={18} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <p className="leading-relaxed">
-            <span className="font-bold">Default passwords have changed.</span>{' '}
-            If you previously used a simple password (for example 1234), it no longer works.
-            Contact <span className="font-semibold">Raghav</span> for your updated login password.
           </p>
         </div>
 

@@ -1,15 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, LayoutTemplate } from 'lucide-react';
-import { Button } from '../../../components/ui';
+import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, RotateCcw } from 'lucide-react';
+import { Button, DesktopRecommendedBanner } from '../../../components/ui';
+import { useIsMobile } from '../../../hooks/useBreakpoint';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useConfirm } from '../../../contexts/confirmContext';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
+import { useNavbarPreferences } from '../../../hooks/useTaskmasterQueries';
 import { hasPageAccess } from '../../../utils/departmentPermissions';
 import { filterNavGroupsForUser } from '../../../utils/navPageAccess';
+import { DEFAULT_NAVBAR_GROUPS, sortNavbarGroups } from '../../../utils/defaultNavbarGroups';
+
+function normalizeNavbarGroups(rawGroups, user) {
+  const sorted = sortNavbarGroups(rawGroups?.length ? rawGroups : DEFAULT_NAVBAR_GROUPS);
+  return filterNavGroupsForUser(sorted, user, hasPageAccess);
+}
 
 export default function SidebarCustomizationTab() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const { confirm } = useConfirm();
+  const { data: navbarPreferences, isLoading, isError, refetch } = useNavbarPreferences();
   const [groups, setGroups] = useState([]);
   const [saving, setSaving] = useState(false);
   const [originalGroups, setOriginalGroups] = useState([]);
@@ -17,24 +29,16 @@ export default function SidebarCustomizationTab() {
   const [editingGroupId, setEditingGroupId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
 
-  useEffect(() => {
-    fetchPreferences();
-  }, []);
+  const applyGroups = useCallback((rawGroups) => {
+    const next = normalizeNavbarGroups(rawGroups, user);
+    setGroups(next);
+    setOriginalGroups(JSON.parse(JSON.stringify(next)));
+  }, [user]);
 
-  const fetchPreferences = async () => {
-    try {
-      const response = await axios.get('/api/customization/navbar');
-      let sortedGroups = (response.data.groups || []).sort((a, b) => a.order - b.order);
-      sortedGroups = sortedGroups.map(g => ({
-        ...g,
-        pages: (g.pages || []).sort((a, b) => a.order - b.order)
-      }));
-      setGroups(filterNavGroupsForUser(sortedGroups, user, hasPageAccess));
-      setOriginalGroups(JSON.parse(JSON.stringify(filterNavGroupsForUser(sortedGroups, user, hasPageAccess))));
-    } catch (error) {
-      console.error('Error fetching preferences:', error);
-    }
-  };
+  useEffect(() => {
+    if (!user) return;
+    applyGroups(navbarPreferences?.groups);
+  }, [navbarPreferences, user, applyGroups]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -54,13 +58,8 @@ export default function SidebarCustomizationTab() {
     setSaving(true);
     try {
       const response = await axios.post('/api/customization/navbar/reset');
-      let sortedGroups = (response.data.groups || []).sort((a, b) => a.order - b.order);
-      sortedGroups = sortedGroups.map(g => ({
-        ...g,
-        pages: (g.pages || []).sort((a, b) => a.order - b.order)
-      }));
-      setGroups(filterNavGroupsForUser(sortedGroups, user, hasPageAccess));
-      setOriginalGroups(JSON.parse(JSON.stringify(filterNavGroupsForUser(sortedGroups, user, hasPageAccess))));
+      applyGroups(response.data.groups);
+      await refetch();
       window.location.reload();
     } catch (error) {
       console.error('Error resetting preferences:', error);
@@ -83,9 +82,18 @@ export default function SidebarCustomizationTab() {
     setEditTitle('New Custom Group');
   };
 
-  const handleDeleteGroup = (groupId) => {
+  const handleDeleteGroup = async (groupId) => {
     const groupToDelete = groups.find(g => g.id === groupId);
-    if (!groupToDelete || groupToDelete.pages.length > 0) return alert("Please move all pages out of this group before deleting.");
+    if (!groupToDelete || groupToDelete.pages.length > 0) {
+      await confirm({
+        title: 'Cannot delete group',
+        message: 'Move all pages out of this group before deleting.',
+        type: 'warning',
+        confirmLabel: 'OK',
+        cancelLabel: 'Close',
+      });
+      return;
+    }
     setGroups(groups.filter(g => g.id !== groupId));
   };
 
@@ -121,13 +129,34 @@ export default function SidebarCustomizationTab() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden pb-24">
-      <div className="flex-1 overflow-y-auto px-8 custom-scrollbar">
-        <div className="flex gap-6">
+      <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 custom-scrollbar">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Sidebar Layout</h1>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleReset} disabled={saving} className="gap-2">
+            <RotateCcw size={14} /> Reset to defaults
+          </Button>
+        </div>
+
+        <DesktopRecommendedBanner className="mb-4" message="Sidebar drag-and-drop customization works best on desktop." />
+
+        {isLoading && (
+          <p className="text-sm text-[var(--color-text-muted)] py-12 text-center">Loading sidebar layout…</p>
+        )}
+
+        {isError && !isLoading && groups.length === 0 && (
+          <div className="text-center py-12 space-y-3">
+            <p className="text-sm text-[var(--color-text-muted)]">Could not load sidebar preferences.</p>
+            <Button size="sm" onClick={() => refetch()}>Retry</Button>
+          </div>
+        )}
+
+        {!isLoading && groups.length > 0 && (
+        <div className={`flex flex-col lg:flex-row gap-6 ${isMobile ? 'pointer-events-none opacity-50' : ''}`}>
           {/* LEFT — Page ordering within groups */}
           <div className="flex-1 min-w-0">
             <section>
-             
-
               <Reorder.Group axis="y" values={groups} onReorder={handleReorderGroups} className="space-y-4">
                 <AnimatePresence>
                   {groups.map((group) => (
@@ -207,7 +236,7 @@ export default function SidebarCustomizationTab() {
           </div>
 
           {/* RIGHT — Group management panel */}
-          <div className="w-72 shrink-0 sticky top-0">
+          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-0">
             <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
                 <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Tab Groups</h3>
@@ -249,6 +278,7 @@ export default function SidebarCustomizationTab() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
     </div>

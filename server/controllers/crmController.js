@@ -59,6 +59,48 @@ const pick = (src, keys) => {
   return r;
 };
 
+const phoneDigits = (phone) => String(phone || '').replace(/\D/g, '');
+
+/** Skip no-op contact normalizations that can trigger duplicate unique indexes on update. */
+const prepareLeadContactUpdates = (updates, currentLead, res) => {
+  if (updates.phone !== undefined) {
+    if (updates.phone === '' || updates.phone == null) {
+      delete updates.phone;
+    } else {
+      const normalized = normalizePhone(updates.phone);
+      if (phoneDigits(normalized) === phoneDigits(currentLead?.phone)) {
+        delete updates.phone;
+      } else {
+        updates.phone = normalized;
+        if (!isValidPhone(updates.phone)) {
+          res.status(400).json({ error: 'Invalid phone number' });
+          return false;
+        }
+      }
+    }
+  }
+
+  if (updates.email !== undefined) {
+    if (updates.email === '' || updates.email == null) {
+      delete updates.email;
+    } else {
+      const normalized = sanitizeEmail(updates.email);
+      const existing = sanitizeEmail(currentLead?.email || '');
+      if (normalized === existing) {
+        delete updates.email;
+      } else {
+        updates.email = normalized;
+        if (!isValidEmail(updates.email)) {
+          res.status(400).json({ error: 'Invalid email format' });
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+};
+
 /**
  * Least-Loaded strategy for automatic lead assignment.
  * Finds the sales rep with the fewest active (non-converted) leads.
@@ -301,19 +343,45 @@ exports.updateLead = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = pick(req.body, ALLOWED_LEAD_FIELDS);
-    
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'No valid tracking/audit properties provided for mutation' });
-    }
 
+    const currentLead = await Lead.findById(id);
+    if (!currentLead) return res.status(404).json({ error: 'Lead not found' });
+
+    if (!prepareLeadContactUpdates(updates, currentLead, res)) return;
     if (!normalizeLeadInput(updates, res)) return;
 
-    // Fetch the current lead to check if this is a first call
-    const currentLead = await Lead.findById(id);
-    const wasFirstCall = !currentLead?.callStatus && updates.callStatus && updates.callStatus !== 'Pending';
+    if (Object.keys(updates).length === 0) {
+      return res.json(currentLead);
+    }
+
+    if (updates.phone) {
+      const phoneDup = await Lead.findOne({
+        _id: { $ne: id },
+        tenantId: currentLead.tenantId,
+        phone: updates.phone,
+      }).select('_id');
+      if (phoneDup) {
+        return res.status(409).json({ error: 'A lead with this phone number already exists' });
+      }
+    }
+
+    if (updates.email) {
+      const emailDup = await Lead.findOne({
+        _id: { $ne: id },
+        tenantId: currentLead.tenantId,
+        email: updates.email,
+      }).select('_id');
+      if (emailDup) {
+        return res.status(409).json({ error: 'A lead with this email already exists' });
+      }
+    }
+
+    const wasFirstCall = (!currentLead.callStatus || currentLead.callStatus === 'Pending')
+      && updates.callStatus
+      && updates.callStatus !== 'Pending';
 
     const followupPatch = {};
-    if (currentLead && (updates.nextFollowupDate !== undefined || updates.nextFollowupTime !== undefined)) {
+    if (updates.nextFollowupDate !== undefined || updates.nextFollowupTime !== undefined) {
       const dateChanged = updates.nextFollowupDate !== undefined
         && updates.nextFollowupDate !== currentLead.nextFollowupDate;
       const timeChanged = updates.nextFollowupTime !== undefined
@@ -324,16 +392,15 @@ exports.updateLead = async (req, res) => {
       }
     }
 
-    // The audit plugin handles the delta calculation and logging automatically
     const lead = await Lead.findByIdAndUpdate(id, {
       ...updates,
       ...followupPatch,
-      lockedBy: req.user._id,
-      lockedAt: new Date()
+      lockedBy: req.user._id.toString(),
+      lockedAt: new Date(),
     }, {
       new: true,
-      userId: req.user._id, // Pass to audit plugin
-      userRole: getDepartmentSlug(req.user)
+      userId: req.user._id,
+      userRole: getDepartmentSlug(req.user),
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
@@ -396,8 +463,14 @@ exports.updateLead = async (req, res) => {
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'update' });
     res.json(lead);
   } catch (error) {
-    logger.error('crmController', 'Update lead ', { error: error.message || error });
-    res.status(400).json({ error: 'Failed to update lead' });
+    logger.error('crmController', 'Update lead ', { error: error.message || error, code: error.code });
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'A lead with this phone or email already exists' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(400).json({ error: error.message || 'Failed to update lead' });
   }
 };
 

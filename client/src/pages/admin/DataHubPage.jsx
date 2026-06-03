@@ -1,13 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Search, RefreshCw, BarChart3, Star, Database, TrendingUp, UserX } from 'lucide-react';
-import {
-  PageContainer, DataTable, Button, SearchInput,
-  Badge, NexusDropdown, DataOverviewSection, PageToolbar,
-} from '../../components/ui';
+import { PageContainer, DataTable, Button, Badge } from '../../components/ui/primitives';
+import SearchInput from '../../components/ui/SearchInput';
+import NexusDropdown from '../../components/ui/NexusDropdown';
+import DataOverviewSection from '../../components/ui/DataOverviewSection';
+import PageToolbar from '../../components/ui/PageToolbar';
 import { mapKpisToStats } from '../../utils/buildChartSeries';
 import DataHubFolderSidebar from '../../components/dataHub/DataHubFolderSidebar';
-import DataHubPersonDetail from '../../components/dataHub/DataHubPersonDetail';
-import DataHubAnalyticsPanel from '../../components/dataHub/DataHubAnalyticsPanel';
 import DataHubTscImport from '../../components/dataHub/DataHubTscImport';
 import {
   useDataHubFolders,
@@ -32,6 +31,9 @@ const INLET_COLORS = {
 };
 
 const AUTO_SYNC_MS = DATA_HUB_REFRESH_MS;
+
+const DataHubAnalyticsPanel = lazy(() => import('../../components/dataHub/DataHubAnalyticsPanel'));
+const DataHubPersonDetail = lazy(() => import('../../components/dataHub/DataHubPersonDetail'));
 
 function formatLastSynced(date) {
   if (!date) return 'Never';
@@ -107,7 +109,7 @@ export function DataHubContent() {
   }), [activeFolder, debouncedSearch, page, pageSize, emailStatusFilter, tscSubFilterParams]);
 
   const { data: peopleData, isLoading } = useDataHubPeople(peopleParams);
-  const { data: analytics } = useDataHubAnalytics(activeFolder);
+  const { data: analytics } = useDataHubAnalytics(activeFolder, { enabled: showAnalytics });
 
   const folders = folderData?.folders || [];
   const folderCounts = folderData?.counts || {};
@@ -365,18 +367,26 @@ export function DataHubContent() {
           />
         </div>
 
-        <DataHubAnalyticsPanel
-          analytics={analytics}
-          folder={activeFolder}
-          showPanel={showAnalytics}
-          onClose={() => setShowAnalytics(false)}
-        />
+        {showAnalytics && (
+          <Suspense fallback={null}>
+            <DataHubAnalyticsPanel
+              analytics={analytics}
+              folder={activeFolder}
+              showPanel={showAnalytics}
+              onClose={() => setShowAnalytics(false)}
+            />
+          </Suspense>
+        )}
       </div>
 
-      <DataHubPersonDetail
-        contactId={selectedPersonId}
-        onClose={() => setSelectedPersonId(null)}
-      />
+      {selectedPersonId && (
+        <Suspense fallback={null}>
+          <DataHubPersonDetail
+            contactId={selectedPersonId}
+            onClose={() => setSelectedPersonId(null)}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

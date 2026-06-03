@@ -1,6 +1,6 @@
 import React from 'react';
 import { ClipboardCheck, Check, ExternalLink } from 'lucide-react';
-import { DashboardWidgetShell, DataLoading, Button, CountBadge } from '../ui';
+import { DashboardWidgetShell, Button, CountBadge, Skeleton } from '../ui';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { resolveTaskId } from '../../utils/taskCompletion';
@@ -75,6 +75,23 @@ const ReviewTaskRow = ({
   );
 };
 
+const REVIEW_BODY_MIN = 'min-h-[156px]';
+
+const ReviewQueuePlaceholder = () => (
+  <div className={`divide-y divide-[var(--color-bg-border)] ${REVIEW_BODY_MIN}`}>
+    {[1, 2, 3].map((j) => (
+      <div key={j} className="flex gap-3 items-center py-2 px-4">
+        <Skeleton variant="circle" width="24px" height="24px" />
+        <div className="space-y-1 flex-1">
+          <Skeleton width="70%" height="12px" />
+          <Skeleton width="40%" height="8px" />
+        </div>
+        <Skeleton width="48px" height="12px" />
+      </div>
+    ))}
+  </div>
+);
+
 const ReviewQueueCard = ({
   tasks = [],
   projects = [],
@@ -87,14 +104,14 @@ const ReviewQueueCard = ({
   return (
     <DashboardWidgetShell
       className="h-full overflow-hidden"
-      bodyClassName={`p-0 flex flex-col flex-1 min-h-0 ${!loading && tasks.length === 0 ? 'items-center justify-center' : ''} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
+      bodyClassName={`p-0 flex flex-col flex-1 min-h-0 ${REVIEW_BODY_MIN} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
       title="Awaiting Your Review"
       icon={ClipboardCheck}
       actions={<CountBadge count={tasks.length} size="sm" variant={tasks.length > 0 ? 'warning' : 'info'} />}
     >
-      {loading && <DataLoading message="Loading reviews..." className="!py-3 px-3" />}
+      {loading && <ReviewQueuePlaceholder />}
       {!loading && tasks.length === 0 && (
-        <div className="flex items-center justify-center py-4 px-6">
+        <div className={`flex items-center justify-center ${REVIEW_BODY_MIN} px-6`}>
           <span className="text-emerald-500 font-bold text-xs">All Caught Up!</span>
         </div>
       )}

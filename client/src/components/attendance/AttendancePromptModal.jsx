@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { ClipboardCheck } from 'lucide-react';
-import { ModalShell, ModalHeader, ModalBody, ModalFooter, Button } from '../ui';
+import { Button } from '../ui';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';;
 import UnifiedTimeCard from './UnifiedTimeCard';
 import { useAuth } from '../../contexts/AuthContext';
 import {

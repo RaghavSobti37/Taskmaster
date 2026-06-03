@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Building2, Trash2, FileText, BarChart3, Pencil, CheckSquare, Square } from 'lucide-react';
-import { Button, Input, Badge, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui';
+import { Button, Input, Badge } from '../ui';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';;
 import {
   useCreateDepartment,
   useUpdateDepartment,

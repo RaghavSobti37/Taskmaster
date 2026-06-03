@@ -15,18 +15,8 @@ import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import {
-  Button,
-  SearchInput,
-  NexusDropdown,
-  EmptyState,
-  IconButton,
-  NexusModal,
-  TablePagination,
-  ListPageLayout,
-  UserLabel,
-  DesktopRecommendedBanner,
-} from '../../components/ui';
+import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
+import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';

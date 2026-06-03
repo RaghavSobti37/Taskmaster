@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Inbox, CheckCheck, Shield, ListTodo, Bell } from 'lucide-react';
-import { Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout, DataListRow, CountBadge } from '../../components/ui';
+import ListPageLayout from '../../components/ui/ListPageLayout';
+import PageLoadGuard from '../../components/ui/PageLoadGuard';
+import PageSkeleton from '../../components/ui/PageSkeleton';
+import EmptyState from '../../components/ui/EmptyState';
+import DataListRow from '../../components/ui/DataListRow';
+import CountBadge from '../../components/ui/CountBadge';
+import { DataLoading } from '../../components/ui/DataLoading';
+import { Button, Badge } from '../../components/ui/primitives';
 import {
   useNotifications,
   useMarkNotificationRead,

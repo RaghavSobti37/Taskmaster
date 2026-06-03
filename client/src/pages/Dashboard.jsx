@@ -1,10 +1,8 @@
-// #region agent log
-fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'E',location:'Dashboard.jsx:module',message:'Dashboard chunk loaded',data:{},timestamp:Date.now()})}).catch(()=>{});
-// #endregion
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, useState, useEffect, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, PageHeader, DashboardSkeleton, PageLoadGuard } from '../components/ui';
-import { LayoutDashboard } from 'lucide-react';
+import { PageContainer } from '../components/ui/primitives';
+import MobileCollapsibleSection from '../components/ui/MobileCollapsibleSection';
+import DashboardWidgetSkeleton from '../components/ui/DashboardWidgetSkeleton';
 import { useAuth } from '../contexts/AuthContext';
 import {
   useDashboardTasks,
@@ -16,34 +14,33 @@ import {
   useUserDirectory,
 } from '../hooks/useTaskmasterQueries';
 import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
-import {
-  AnnouncementsCard,
-  CalendarTodayCard,
-  TodosTodayCard,
-  TodosOverdueCard,
-  ReviewQueueCard,
-  ProjectsTodayCard,
-  NotesPanel,
-  PinBoardMessages,
-  PinBoardComposer,
-  LeaderboardPodium,
-  DailyMissionsCard,
-  PipelineSummaryCard,
-  GenericDashboardCard,
-  LastBackupCard,
-  AttendanceOverviewCard,
-  LeaveRequestsCard,
-  ReimbursementsCard,
-} from '../components/dashboard';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
-import TaskCompletionModal from '../components/TaskCompletionModal';
-import MarkAttendanceCard from '../components/dashboard/MarkAttendanceCard';
+const TaskCompletionModal = lazy(() => import('../components/TaskCompletionModal'));
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
-import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
+import { LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
+import { getLazyDashboardWidget } from '../lib/dashboardWidgetLoaders';
 import { isAdminUser } from '../utils/departmentPermissions';
 import { useIsMobile } from '../hooks/useBreakpoint';
-import { MobileCollapsibleSection } from '../components/ui';
+
+const renderLazyWidget = (componentId, props = {}) => {
+  const LazyComp = getLazyDashboardWidget(componentId);
+  if (!LazyComp) return null;
+  return (
+    <Suspense fallback={<DashboardWidgetSkeleton />}>
+      <LazyComp {...props} />
+    </Suspense>
+  );
+};
+
+const PRIORITY_WIDGET_IDS = new Set([
+  'mark-attendance',
+  'todos-today',
+  'schedule',
+  'announcements',
+  'review-queue',
+  'todos-overdue',
+]);
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -56,12 +53,13 @@ const Dashboard = () => {
   }, [user]);
 
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary(queriesEnabled);
+  const deferSecondaryQueries = queriesEnabled && !summaryLoading;
   const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id, queriesEnabled);
-  const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(queriesEnabled);
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
-  const { data: workspaces = [] } = useWorkspaces();
-  const { data: dashboardPreset, isLoading: presetLoading, isError: presetError, isFetching: presetFetching } = useDashboardPreset(queriesEnabled);
-  const { data: users = [] } = useUserDirectory();
+  const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(deferSecondaryQueries);
+  const { data: projects = [], isLoading: projectsLoading } = useProjects(deferSecondaryQueries);
+  const { data: workspaces = [] } = useWorkspaces(deferSecondaryQueries);
+  const { data: dashboardPreset } = useDashboardPreset(queriesEnabled);
+  const { data: users = [] } = useUserDirectory(deferSecondaryQueries);
 
   const {
     taskToComplete,
@@ -91,20 +89,8 @@ const Dashboard = () => {
   };
 
   const calendar = useMemo(() => summary?.calendar || [], [summary]);
-  const showPageSkeleton = presetLoading && !dashboardPreset;
 
   const defaultElements = LAYOUT_TEMPLATES.find((t) => t.id === 'coreknot')?.elements || [];
-
-  React.useEffect(() => {
-    const presetSource = dashboardPreset?.elements?.length ? 'api' : 'template';
-    const rawCount = (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).length;
-    const visibleCount = (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
-      (el) => el.visible !== false && canAccessComponent(el.componentId, permissionPreset)
-    ).length;
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'B',location:'Dashboard.jsx:state',message:'dashboard render state',data:{presetSource,presetLoading,presetFetching,presetError,showPageSkeleton,rawCount,visibleCount,hasUser:!!user?._id},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [dashboardPreset, presetLoading, presetFetching, presetError, showPageSkeleton, user?._id, permissionPreset, defaultElements]);
   const elementsToRender = useMemo(
     () =>
       (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
@@ -138,6 +124,27 @@ const Dashboard = () => {
     [sortedElements, isMobile]
   );
 
+  const [secondaryWidgetsReady, setSecondaryWidgetsReady] = useState(false);
+  const [heavyWidgetsReady, setHeavyWidgetsReady] = useState(false);
+  useEffect(() => {
+    const enableSecondary = () => setSecondaryWidgetsReady(true);
+    const enableHeavy = () => setHeavyWidgetsReady(true);
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const secondaryId = window.requestIdleCallback(enableSecondary, { timeout: 1500 });
+      const heavyId = window.requestIdleCallback(enableHeavy, { timeout: 3500 });
+      return () => {
+        window.cancelIdleCallback(secondaryId);
+        window.cancelIdleCallback(heavyId);
+      };
+    }
+    const secondaryTimer = window.setTimeout(enableSecondary, 300);
+    const heavyTimer = window.setTimeout(enableHeavy, 800);
+    return () => {
+      window.clearTimeout(secondaryTimer);
+      window.clearTimeout(heavyTimer);
+    };
+  }, []);
+
   const renderWidget = (el) => {
     const span = parseInt(el.size, 10) || 1;
     return (
@@ -152,71 +159,74 @@ const Dashboard = () => {
   };
 
   const renderComponent = (componentId) => {
+    if (!secondaryWidgetsReady && !PRIORITY_WIDGET_IDS.has(componentId) && !isAnalyticsWidget(componentId)) {
+      return <DashboardWidgetSkeleton />;
+    }
+    if (!heavyWidgetsReady && isAnalyticsWidget(componentId)) {
+      return <DashboardWidgetSkeleton />;
+    }
+
     switch (componentId) {
       case 'leaderboard':
-        return <LeaderboardPodium />;
+        return renderLazyWidget('leaderboard');
       case 'daily-missions':
-        return <DailyMissionsCard />;
+        return renderLazyWidget('daily-missions');
       case 'announcements':
-        return <AnnouncementsCard />;
+        return renderLazyWidget('announcements');
       case 'pinboard':
-        return <PinBoardMessages />;
+        return renderLazyWidget('pinboard');
       case 'schedule':
-        return <CalendarTodayCard calendar={calendar} loading={summaryLoading} />;
+        return renderLazyWidget('schedule', { calendar, loading: summaryLoading });
       case 'review-queue':
-        return (
-          <ReviewQueueCard
-            tasks={reviewTasks}
-            projects={projects}
-            workspaces={workspaces}
-            loading={reviewLoading}
-            onApprove={(task) => setTaskToApprove(task)}
-            approvingTaskId={approvingReviewId}
-            onOpenProject={(projectId) => navigate(`/projects/${projectId}`)}
-          />
-        );
+        return renderLazyWidget('review-queue', {
+          tasks: reviewTasks,
+          projects,
+          workspaces,
+          loading: reviewLoading,
+          onApprove: (task) => setTaskToApprove(task),
+          approvingTaskId: approvingReviewId,
+          onOpenProject: (projectId) => navigate(`/projects/${projectId}`),
+        });
       case 'todos-today':
-        return (
-          <TodosTodayCard
-            tasks={tasks}
-            projects={projects}
-            loading={tasksLoading}
-            onComplete={handleCompleteRequest}
-            completingTaskId={completingTaskId}
-          />
-        );
+        return renderLazyWidget('todos-today', {
+          tasks,
+          projects,
+          loading: tasksLoading,
+          onComplete: handleCompleteRequest,
+          completingTaskId,
+        });
       case 'todos-overdue':
-        return (
-          <TodosOverdueCard
-            tasks={tasks}
-            projects={projects}
-            loading={tasksLoading}
-            onComplete={handleCompleteRequest}
-            completingTaskId={completingTaskId}
-          />
-        );
+        return renderLazyWidget('todos-overdue', {
+          tasks,
+          projects,
+          loading: tasksLoading,
+          onComplete: handleCompleteRequest,
+          completingTaskId,
+        });
       case 'projects-today':
-        return <ProjectsTodayCard tasks={tasks} projects={projects} loading={tasksLoading || projectsLoading} />;
+        return renderLazyWidget('projects-today', {
+          tasks,
+          projects,
+          loading: tasksLoading || projectsLoading,
+        });
       case 'notes':
-        return <NotesPanel />;
+        return renderLazyWidget('notes');
       case 'composer':
-        return <PinBoardComposer />;
+        return renderLazyWidget('composer');
       case 'mark-attendance':
-        return (
-          <MarkAttendanceCard
-            entry={attendanceRows[0]}
-            onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}
-            onCheckOut={(t, workMode) => executeAttendanceCheck('out', t, workMode)}
-            onUndo={(type) => undoCheck.mutate({ type })}
-            isLoading={checkIn.isPending}
-          />
-        );
+        return renderLazyWidget('mark-attendance', {
+          entry: attendanceRows[0],
+          onCheckIn: (t, workMode) => executeAttendanceCheck('in', t, workMode),
+          onCheckOut: (t, workMode) => executeAttendanceCheck('out', t, workMode),
+          onUndo: (type) => undoCheck.mutate({ type }),
+          isLoading: checkIn.isPending,
+        });
       case 'pipeline-summary':
-        return <PipelineSummaryCard />;
+        return renderLazyWidget('pipeline-summary');
       case 'leave-alerts':
-        return <LeaveRequestsCard />;
+        return renderLazyWidget('leave-alerts');
       case 'invoice-alerts':
-        return <ReimbursementsCard />;
+        return renderLazyWidget('invoice-alerts');
       case 'booked-calls':
       case 'followups-today':
       case 'team-activity':
@@ -224,18 +234,17 @@ const Dashboard = () => {
       case 'campaign-metrics':
       case 'system-health':
       case 'artist-calendar':
-        return <GenericDashboardCard componentId={componentId} />;
+        return renderLazyWidget(componentId, { componentId });
       case 'attendance-overview':
-        return <AttendanceOverviewCard />;
+        return renderLazyWidget('attendance-overview');
       case 'last-backup':
-        return <LastBackupCard />;
+        return renderLazyWidget('last-backup');
       default:
         return null;
     }
   };
 
   return (
-    <PageLoadGuard loading={showPageSkeleton} skeleton={DashboardSkeleton}>
     <PageContainer className="!py-4 !space-y-4">
       <PinBoardProvider>
         <div
@@ -253,22 +262,23 @@ const Dashboard = () => {
         </div>
       </PinBoardProvider>
 
-      <TaskCompletionModal
-        task={taskToComplete}
-        isOpen={!!taskToComplete}
-        onClose={() => setTaskToComplete(null)}
-        onSubmit={handleCompleteSubmit}
-        submitForReview={completionSubmitForReview}
-      />
-      <TaskCompletionModal
-        task={taskToApprove}
-        isOpen={!!taskToApprove}
-        onClose={() => setTaskToApprove(null)}
-        onSubmit={handleApproveReview}
-        approveReview
-      />
+      <Suspense fallback={null}>
+        <TaskCompletionModal
+          task={taskToComplete}
+          isOpen={!!taskToComplete}
+          onClose={() => setTaskToComplete(null)}
+          onSubmit={handleCompleteSubmit}
+          submitForReview={completionSubmitForReview}
+        />
+        <TaskCompletionModal
+          task={taskToApprove}
+          isOpen={!!taskToApprove}
+          onClose={() => setTaskToApprove(null)}
+          onSubmit={handleApproveReview}
+          approveReview
+        />
+      </Suspense>
     </PageContainer>
-    </PageLoadGuard>
   );
 };
 

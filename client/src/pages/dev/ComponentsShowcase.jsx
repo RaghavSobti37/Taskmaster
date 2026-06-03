@@ -4,42 +4,9 @@ import {
 } from 'lucide-react';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
 import { SEVERITY, MODULE } from '../../lib/systemLogContract';
-import {
-  PageContainer,
-  PageHeader,
-  Button,
-  Card,
-  Input,
-  FormFieldGrid,
-  Badge,
-  StatCard,
-  TabSwitcher,
-  Switch,
-  ProgressBar,
-  Accordion,
-  DataTable,
-  ListPageLayout,
-  Skeleton,
-  NexusDropdown,
-  NexusModal,
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  EmptyState,
-  AddMembers,
-  SearchInput,
-  IconButton,
-  SectionCard,
-  Spinner,
-  LoadingState,
-  PageSkeleton,
-  DashboardWidgetShell,
-  DataListRow,
-  ChartSurface,
-  DeltaBadge,
-  DataOverviewSection,
-} from '../../components/ui';
+import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataOverviewSection } from '../../components/ui';
+import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
+import { ChartSurface } from '../../components/ui/charts';;
 
 const SHOWCASE_MOCK_USERS = [
   { _id: 'u1', name: 'Alex Rivera', email: 'alex@coreknot.com', role: 'admin' },

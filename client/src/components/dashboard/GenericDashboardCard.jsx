@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
-import { DashboardWidgetShell, ChartSurface, CHART_MUTED, TimeframeFilter, InfoButton } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton } from '../ui';
+import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
 import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';

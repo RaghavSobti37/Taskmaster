@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.9-126d5e?style=flat-square" alt="Version 1.9.9" />
+  <img src="https://img.shields.io/badge/version-1.9.10-126d5e?style=flat-square" alt="Version 1.9.10" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -75,6 +75,18 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ---
 
 ## 🚀 Key Features
+
+### ⚡ Frontend Performance & Lighthouse Auditing (v1.9.10)
+
+* **Route-level Lighthouse runner:** `client/scripts/lighthouse-audit.mjs` audits 45 app routes (public + authenticated), writes HTML/JSON reports to `client/lighthouse-reports/` (gitignored). Scripts: `npm run lighthouse`, `lighthouse:public`, `lighthouse:prod`.
+* **Prod benchmark workflow:** `npm run build && npm run preview` then `LH_BASE_URL=http://localhost:4173 npm run lighthouse -- --prod` — dev `:5173` scores are not representative (unminified ESM, HMR).
+* **Auth for protected routes:** set `LH_EMAIL` / `LH_PASSWORD` (or `LH_COOKIE`); script fails fast if login fails. Dev login rate limit raised to 100 attempts per 15 min (production stays 10).
+* **Boot path:** Removed global auth skeleton gate in `App.jsx`; `AppBootFallback` + lazy `MainLayout`; deferred PWA service worker registration and gamification socket via `requestIdleCallback`.
+* **UI barrel split:** Heavy chart/modal exports moved to `components/ui/charts.jsx` and `modals.jsx`; list pages use direct imports to avoid pulling Recharts on every route.
+* **Dashboard:** Per-widget code splitting (`dashboardWidgetLoaders.js`), two-phase widget mount (priority → idle secondary → analytics/recharts), no preset skeleton block, stable widget min-heights for CLS, deferred `AttendancePromptModal` and `TaskCompletionModal`.
+* **Shell:** `OutletSidebar` uses CSS transitions instead of Framer Motion; sidebar status queries deferred on idle; extracted `useStatusCounts` / `useNavbarPreferences`.
+* **Data overview charts:** `DataOverviewSection` renders stats first; charts load after `IntersectionObserver` + idle callback.
+* **Vite:** Manual chunks for `framer-motion`, `socket.io`, `@xyflow/react`, `mermaid`; Geist variable font via `@fontsource-variable/geist`.
 
 ### 🔐 Google OAuth & Meta App Verification (v1.9.9)
 
@@ -471,6 +483,29 @@ npm run dev
 * Your local frontend workspace compiles dynamically at `http://localhost:5173`.
 * Internal network communication maps directly through an automated Vite proxy straight down into the api layer listening at `http://localhost:5000`.
 
+#### 5. Optional — Lighthouse performance audit (client)
+
+Audit all routes against the running dev stack (requires API + credentials for protected pages):
+
+```bash
+cd client
+$env:LH_BASE_URL="http://localhost:5173"
+$env:LH_API_URL="http://localhost:5000"
+$env:LH_EMAIL="your@email"
+$env:LH_PASSWORD="your-password"
+npm run lighthouse
+```
+
+For production-like scores:
+
+```bash
+npm run build && npm run preview
+$env:LH_BASE_URL="http://localhost:4173"
+npm run lighthouse -- --prod
+```
+
+Reports: `client/lighthouse-reports/index.html` (local only, gitignored).
+
 ---
 
 ## 🔒 Environment Configuration
@@ -623,6 +658,17 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.10 — Frontend Performance & Lighthouse Tooling
+
+- **Audit scripts:** `client/scripts/lighthouse-audit.mjs`, `lighthouse-routes.mjs`, `split-ui-imports.mjs`; npm scripts `lighthouse`, `lighthouse:public`, `lighthouse:prod`; `.gitignore` → `client/lighthouse-reports/`.
+- **Boot/shell:** `AppBootFallback.jsx`, lazy `MainLayout`, deferred SW + gamification socket; `MarketingPageBackground.jsx` on auth/landing pages; CSS sidebar (no Framer Motion in `OutletSidebar.jsx`).
+- **Barrel split:** `charts.jsx`, `modals.jsx`; direct imports on list pages (todo, inbox, schedule, equipment, contacts, DataHub).
+- **Dashboard:** `dashboardWidgetLoaders.js`, `DashboardWidgetSkeleton.jsx`, phased widget mount, CLS-stable review queue + pin board, deferred attendance prompt modal.
+- **Queries:** `useProjects` / `useWorkspaces` accept `enabled`; dashboard secondary queries staggered after summary.
+- **Auth dev UX:** `authRoutes.js` login limiter `max: 100` in non-production.
+
+No server migration required. Redeploy client static host after merge; optional Render API redeploy for auth rate-limit tweak only.
 
 ### v1.9.9 — Google OAuth Session Fix & Meta Verification Tooling
 

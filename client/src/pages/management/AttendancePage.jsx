@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DataOverviewSection } from '../../components/ui';
+import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection } from '../../components/ui';
+import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import {
   useAttendance,
   useUpsertAttendance,

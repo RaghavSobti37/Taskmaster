@@ -3,7 +3,8 @@ import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, Send, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { NexusModal, Button, Input } from './ui';
+import { Button, Input } from './ui';
+import { NexusModal } from './ui/modals';;
 import { useSystemToast } from '../lib/systemLogBridge';
 import { MODULE } from '../lib/systemLogContract';
 

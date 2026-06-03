@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import { useDepartments } from '../../hooks/useTaskmasterQueries';
+import MarketingPageBackground from '../../components/MarketingPageBackground';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -41,19 +41,8 @@ const RegisterPage = () => {
 
   return (
     <div className="tm-marketing-page min-h-screen bg-background text-foreground relative overflow-hidden grid place-items-center p-6">
-      {/* Paper texture & Ink spill background */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
-      />
-      {/* Pattern from PDF for subtle texture */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
-      />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl"
-      >
+      <MarketingPageBackground />
+      <div className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
         <div className="text-center mb-8">
           <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
@@ -160,7 +149,7 @@ const RegisterPage = () => {
             Sign In
           </Link>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

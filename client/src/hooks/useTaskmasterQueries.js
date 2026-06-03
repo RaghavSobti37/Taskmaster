@@ -29,6 +29,8 @@ import { normalizeRepSummaryPayload } from '../utils/adminRibbonMetrics';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
 import { invalidateStatusCounts } from '../lib/queryInvalidation';
+export { useStatusCounts } from './useStatusCounts';
+export { useNavbarPreferences } from './useNavbarPreferences';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -62,10 +64,11 @@ export const useLogs = (userId, limit = 200, enabled = true) => {
   });
 };
 
-export const useUserDirectory = () => {
+export const useUserDirectory = (enabled = true) => {
   return useQuery({
     queryKey: ['userDirectory'],
     queryFn: fetchUserDirectory,
+    enabled,
     staleTime: 1000 * 60 * 30,
     gcTime: 1000 * 60 * 60,
   });
@@ -1126,16 +1129,6 @@ export const useNotifications = (enabled = true) => {
   });
 };
 
-export const useStatusCounts = (enabled = true) => {
-  return useQuery({
-    queryKey: ['statusCounts'],
-    queryFn: async () => (await axios.get('/api/notifications/status-counts')).data,
-    enabled,
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 30
-  });
-};
-
 export const useUserNotes = (enabled = true) => {
   return useQuery({
     queryKey: ['notes'],
@@ -1232,16 +1225,6 @@ export const useUpdateUserDepartment = () => {
   });
 };
 
-export const useNavbarPreferences = () => {
-  return useQuery({
-    queryKey: ['navbarPreferences'],
-    queryFn: async () => {
-      const { data } = await axios.get('/api/customization/navbar');
-      return data;
-    },
-    staleTime: 5 * 60 * 1000
-  });
-};
 
 export const DATA_HUB_REFRESH_MS = 3 * 60 * 60 * 1000;
 
@@ -1294,6 +1277,7 @@ export const useDataHubAnalytics = (folder = 'all', options = {}) => {
       const { data } = await axios.get('/api/data-hub/analytics', { params: { folder } });
       return data;
     },
+    enabled: options.enabled !== false,
     staleTime: DATA_HUB_REFRESH_MS,
     refetchInterval: options.refetchInterval ?? DATA_HUB_REFRESH_MS,
   });

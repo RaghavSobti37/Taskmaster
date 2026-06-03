@@ -5,17 +5,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Briefcase, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical, ClipboardCheck, Layers,
 } from 'lucide-react';
-import {
-  Badge,
-  ProgressBar,
-  Button,
-  Input,
-  PageSkeleton,
-  NexusDropdown,
-  NexusModal,
-  ListPageLayout,
-  SearchInput,
-} from '../../components/ui';
+import { Badge, ProgressBar, Button, Input, PageSkeleton, NexusDropdown, ListPageLayout, SearchInput } from '../../components/ui';
+import { NexusModal } from '../../components/ui/modals';;
 import { useProjects, useWorkspaces, useReviewTasks } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';

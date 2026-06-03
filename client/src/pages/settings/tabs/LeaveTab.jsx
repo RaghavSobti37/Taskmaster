@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarDays } from 'lucide-react';
-import { Input, Button, Badge, NexusModal } from '../../../components/ui';
+import { Input, Button, Badge } from '../../../components/ui';
+import { NexusModal } from '../../../components/ui/modals';;
 import { useAuth } from '../../../contexts/AuthContext';
 import { useApplyLeave, useLeaveRequests } from '../../../hooks/useTaskmasterQueries';
 

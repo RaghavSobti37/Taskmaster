@@ -6,18 +6,8 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import MemberSelect from '../../components/forms/MemberSelect';
-import {
-  Button,
-  Input,
-  NexusModal,
-  ModalFooter,
-  PageLoadGuard,
-  PageSkeleton,
-  DataTable,
-  ListPageLayout,
-  SearchInput,
-  UserLabel,
-} from '../../components/ui';
+import { Button, Input, PageLoadGuard, PageSkeleton, DataTable, ListPageLayout, SearchInput, UserLabel } from '../../components/ui';
+import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';

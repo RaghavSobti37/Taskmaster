@@ -3,20 +3,8 @@ import {
   Search, Plus, Trash2, CheckCircle2,
   Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History, UserPlus
 } from 'lucide-react';
-import {
-  Badge,
-  Card,
-  DataTable,
-  Button,
-  Input,
-  PageSkeleton,
-  ListPageLayout,
-  SearchInput,
-  UserLabel,
-  FullScreenWorkspace,
-  NexusDropdown,
-  Modal,
-} from '../../components/ui';
+import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown } from '../../components/ui';
+import { Modal } from '../../components/ui/modals';;
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';

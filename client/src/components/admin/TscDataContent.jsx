@@ -8,11 +8,8 @@ import {
   MoreVertical, FileText, ExternalLink, ShieldCheck, Zap, PieChart, TrendingUp, BarChart3, Clock, 
   Target, Globe, Calendar, Link2, X, Activity, UserCheck
 } from 'lucide-react';
-import { 
-  Badge, NexusModal, PageHeader, NexusDropdown, DataTable, 
-  Button, Input, StatCard, ProgressBar, FullScreenWorkspace, InfoButton,
-  ModalShell, ModalHeader, ModalBody
-} from '../ui';
+import { Badge, PageHeader, NexusDropdown, DataTable, Button, Input, StatCard, ProgressBar, FullScreenWorkspace, InfoButton } from '../ui';
+import { NexusModal, ModalShell, ModalHeader, ModalBody } from '../ui/modals';;
 import { format } from 'date-fns';
 
 const TscDataContent = () => {

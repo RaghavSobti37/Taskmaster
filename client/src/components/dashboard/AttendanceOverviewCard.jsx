@@ -10,7 +10,8 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { DashboardWidgetShell, ChartSurface, CHART_MUTED, TimeframeFilter, InfoButton } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton } from '../ui';
+import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { useAttendanceOverview } from '../../hooks/queries/dashboard';
 import { formatTimeframeLabel } from '../../utils/displayLabels';
 

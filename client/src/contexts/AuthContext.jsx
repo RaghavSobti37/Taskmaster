@@ -99,16 +99,10 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
       setSessionReady(true);
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:fetchUser:ok',message:'fetchUser ok',data:{userId:String(newData?._id||''),epoch,clearOn401},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return newData;
     } catch (err) {
       if (epoch !== authEpochRef.current) return null;
       const status = err.response?.status;
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:fetchUser:err',message:'fetchUser failed',data:{status:status||0,clearOn401,willClearUser:clearOn401&&(status===401||status===403),epoch},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (clearOn401 && (status === 401 || status === 403)) {
         setUser(null);
         setSessionReady(false);
@@ -167,12 +161,18 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, [sessionReady, queryClient]);
 
-  useTaskDomainRealtimeSync(!!user?._id);
+  useTaskDomainRealtimeSync(sessionReady && !!user?._id);
 
   useEffect(() => {
-    if (!user?._id) return undefined;
+    if (!user?._id || !sessionReady) return undefined;
 
-    const unsubAwarded = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
+    let cancelled = false;
+    let cleanups = [];
+
+    const setupRealtime = () => {
+      if (cancelled) return;
+
+      const unsubAwarded = subscribeToChannel(`user-${user._id}`, 'xp_awarded', (payload) => {
       setUser((prev) => ({
         ...prev,
         exp: payload.newTotal,
@@ -231,21 +231,31 @@ export const AuthProvider = ({ children }) => {
       queryClient.refetchQueries({ queryKey: ['gamification', 'leaderboard'] });
     });
 
-    return () => {
-      unsubAwarded();
-      unsubRecalc();
-      unsubGlobalRecalc();
+      cleanups = [unsubAwarded, unsubRecalc, unsubGlobalRecalc];
     };
-  }, [user?._id, queryClient]);
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(setupRealtime, { timeout: 5000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(idleId);
+        cleanups.forEach((unsub) => unsub?.());
+      };
+    }
+
+    const timer = setTimeout(setupRealtime, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      cleanups.forEach((unsub) => unsub?.());
+    };
+  }, [user?._id, sessionReady, queryClient]);
 
   const login = useCallback(async (userData) => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
     setSessionReady(false);
     queryClient.clear();
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:login',message:'login called',data:{hasUser:!!userData,userId:String(userData?._id||''),epoch:authEpochRef.current},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     recordAttendanceSessionLogin();
     setUser(userData);
     setLoading(false);

@@ -14,18 +14,8 @@ import ProjectTeam from '../../components/project/ProjectTeam';
 import ProjectAssets from '../../components/project/ProjectAssets';
 import ProjectFinance from '../../components/project/ProjectFinance';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  Badge, 
-  ProgressBar, 
-  PageSkeleton, 
-  NexusDropdown, 
-  TabSwitcher, 
-  PageContainer,
-  PageHeader,
-  Button,
-  SearchInput,
-  NexusModal
-} from '../../components/ui';
+import { Badge, ProgressBar, PageSkeleton, NexusDropdown, TabSwitcher, PageContainer, PageHeader, Button, SearchInput } from '../../components/ui';
+import { NexusModal } from '../../components/ui/modals';;
 import { motion, AnimatePresence } from 'framer-motion';
 import TaskCreateModal from '../../components/TaskCreateModal';
 import ProjectSettingsModal from '../../components/ProjectSettingsModal';

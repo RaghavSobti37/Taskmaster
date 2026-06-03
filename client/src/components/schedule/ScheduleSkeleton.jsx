@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skeleton } from '../ui';
+import { Skeleton } from '../ui/primitives';
 
 const ScheduleSkeleton = ({
   compact = false,

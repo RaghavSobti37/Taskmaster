@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useStatusCounts } from '../hooks/useTaskmasterQueries';
+import { useStatusCounts } from '../hooks/useStatusCounts';
 import {
   LayoutDashboard,
   Briefcase,
@@ -35,16 +35,13 @@ import {
   X,
   Moon,
   Sun,
+  Settings,
 } from 'lucide-react';
-
-import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
-import { hasPageAccess, groupHasVisiblePages, getDepartmentName } from '../utils/departmentPermissions';
-import { Menu, Settings } from 'lucide-react';
-import { useNavbarPreferences } from '../hooks/useTaskmasterQueries';
-
+import { hasPageAccess, getDepartmentName } from '../utils/departmentPermissions';
+import { useNavbarPreferences } from '../hooks/useNavbarPreferences';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
@@ -128,24 +125,12 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
     >
       <div className="relative flex items-center justify-center shrink-0">
         <Icon size={18} className="shrink-0" />
-        <AnimatePresence>
-          {count > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10"
-            />
-          )}
-          {count === 0 && todayCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-[var(--color-bg-surface)] z-10"
-            />
-          )}
-        </AnimatePresence>
+        {count > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10" />
+        )}
+        {count === 0 && todayCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-[var(--color-bg-surface)] z-10" />
+        )}
       </div>
       {(!collapsed || isMobile) && (
         <>
@@ -185,78 +170,16 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
           <ChevronDown size={12} className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
-      <AnimatePresence>
-        {isOpen && (!collapsed || isMobile) && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden flex flex-col gap-0.5">
-            {children}
-          </motion.div>
-        )}
-        {iconOnly && (
-          <div className="flex flex-col gap-0.5">
-            {children}
-          </div>
-        )}
-      </AnimatePresence>
+      {isOpen && (!collapsed || isMobile) ? (
+        <div className="overflow-hidden flex flex-col gap-0.5">
+          {children}
+        </div>
+      ) : iconOnly ? (
+        <div className="flex flex-col gap-0.5">
+          {children}
+        </div>
+      ) : null}
     </div>
-  );
-};
-
-const ThemeToggle = ({ theme, toggleTheme, collapsed, isMobile }) => {
-  const iconOnly = collapsed && !isMobile;
-  if (iconOnly) {
-    return (
-      <button
-        type="button"
-        onClick={toggleTheme}
-        title={theme === 'light' ? 'Light mode' : 'Dark mode'}
-        className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/40 transition-colors"
-      >
-        {theme === 'light' ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-blue-400" />}
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all group overflow-hidden"
-    >
-      <div className="flex items-center gap-2">
-        <AnimatePresence mode="wait">
-          {theme === 'light' ? (
-            <motion.div
-              key="sun"
-              initial={{ y: 20, opacity: 0, rotate: -90 }}
-              animate={{ y: 0, opacity: 1, rotate: 0 }}
-              exit={{ y: -20, opacity: 0, rotate: 90 }}
-              transition={{ type: 'spring', damping: 15 }}
-            >
-              <Sun size={16} className="text-amber-500" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="moon"
-              initial={{ y: 20, opacity: 0, rotate: -90 }}
-              animate={{ y: 0, opacity: 1, rotate: 0 }}
-              exit={{ y: -20, opacity: 0, rotate: 90 }}
-              transition={{ type: 'spring', damping: 15 }}
-            >
-              <Moon size={16} className="text-blue-400" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-          {theme === 'light' ? 'Light' : 'Dark'}
-        </span>
-      </div>
-      <div className={`w-7 h-3.5 bg-[var(--color-bg-border)] rounded-full relative transition-colors ${theme === 'dark' ? 'bg-[var(--color-action-primary)]/20' : ''}`}>
-        <motion.div
-          animate={{ x: theme === 'light' ? 2 : 18 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="absolute top-0.5 left-0 w-2 h-2 bg-[var(--color-text-secondary)] rounded-full shadow-sm"
-        />
-      </div>
-    </button>
   );
 };
 
@@ -267,14 +190,27 @@ const OutletSidebar = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: navbarPreferences } = useNavbarPreferences();
+  const [shellQueriesReady, setShellQueriesReady] = useState(false);
+
+  useEffect(() => {
+    const enable = () => setShellQueriesReady(true);
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(enable, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = setTimeout(enable, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const shellQueriesEnabled = shellQueriesReady && !!user;
+  const { data: navbarPreferences } = useNavbarPreferences(shellQueriesEnabled);
   const { data: statusCounts = {
     tasks: { overdue: 0, today: 0, inReview: 0 },
     followups: { overdue: 0, today: 0 },
     calendar: { today: 0 },
     notifications: { unread: 0, byCategory: {} },
     review: { pending: 0 },
-  } } = useStatusCounts(!!user);
+  } } = useStatusCounts(shellQueriesEnabled);
 
   const isMobile = useIsMobile();
 
@@ -282,38 +218,25 @@ const OutletSidebar = () => {
     closeMobileSidebar();
   }, [location]);
 
-  const sidebarVariants = {
-    open: { x: 0, width: 160 },
-    collapsed: { x: 0, width: 56 },
-    mobileOpen: { x: 0, width: 260 },
-    mobileClosed: { x: -280, width: 260 },
-  };
-
   const showLabels = isMobile ? isMobileOpen : isOpen;
+  const asideClassName = isMobile
+    ? `w-[260px] ${isMobileOpen ? 'translate-x-0' : '-translate-x-[280px]'}`
+    : isOpen
+      ? 'w-[160px]'
+      : 'w-14';
 
   return (
     <>
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeMobileSidebar}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {isMobileOpen && (
+        <div
+          role="presentation"
+          onClick={closeMobileSidebar}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-200"
+        />
+      )}
 
-      <motion.aside
-        initial={false}
-        animate={
-          isMobile
-            ? (isMobileOpen ? 'mobileOpen' : 'mobileClosed')
-            : (isOpen ? 'open' : 'collapsed')
-        }
-        variants={sidebarVariants}
-        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col transition-[width,transform] duration-300 ease-in-out`}
+      <aside
+        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col transition-[width,transform] duration-300 ease-in-out ${asideClassName}`}
       >
         <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
           <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
@@ -551,7 +474,7 @@ const OutletSidebar = () => {
             </div>
           </div>
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 };

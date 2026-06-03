@@ -15,9 +15,6 @@ const GoogleSuccessPage = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const authKey = location.search || location.key || 'empty';
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'D',location:'GoogleSuccessPage.jsx:effect',message:'oauth success effect',data:{authKey,alreadyProcessed:processedKeyRef.current===authKey,search:location.search?.slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (processedKeyRef.current === authKey) return;
     const ticket = params.get('ticket');
     const userStr = params.get('user');

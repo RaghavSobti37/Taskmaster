@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Copy, Check, RefreshCw } from 'lucide-react';
-import { ModalShell, ModalHeader, ModalBody, ModalFooter, Button, Input } from '../ui';
+import { Button, Input } from '../ui';
+import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/modals';;
 import { formatUserCredentialsForCopy } from '../../utils/passwordValidation';
 
 const EMPTY_FORM = {

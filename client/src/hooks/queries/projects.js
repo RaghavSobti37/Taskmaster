@@ -24,9 +24,10 @@ const fetchProjectById = async (id) => {
   return normalizeProject(data);
 };
 
-export const useProjects = () => {
+export const useProjects = (enabled = true) => {
   const queryClient = useQueryClient();
   useEffect(() => {
+    if (!enabled) return undefined;
     return subscribeToChannel('projects', 'project_change', () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
@@ -39,15 +40,17 @@ export const useProjects = () => {
     queryFn: fetchProjects,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    enabled,
   });
 };
 
-export const useWorkspaces = () => {
+export const useWorkspaces = (enabled = true) => {
   return useQuery({
     queryKey: ['workspaces'],
     queryFn: fetchWorkspaces,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    enabled,
   });
 };
 

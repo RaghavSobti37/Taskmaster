@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, ModalShell, ModalBody, ModalFooter } from './ui';
+import { Input, Button } from './ui';
+import { ModalShell, ModalBody, ModalFooter } from './ui/modals';;
 import MentionTitle from './mentions/MentionTitle';
 import {
   hoursMinutesToDecimal,

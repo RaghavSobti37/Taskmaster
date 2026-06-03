@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Briefcase,
@@ -14,6 +13,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import MarketingPageBackground from '../components/MarketingPageBackground';
 
 export default function LandingPage() {
   const { user } = useAuth();
@@ -48,14 +48,7 @@ export default function LandingPage() {
 
   return (
     <div className="tm-marketing-page min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-hidden">
-      {/* Paper texture & Ink spill background */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none bg-[url('/ink_spill_bg.png')] bg-cover bg-center opacity-70 mix-blend-multiply dark:mix-blend-screen dark:opacity-30"
-      />
-      {/* Pattern from PDF for subtle texture */}
-      <div
-        className="absolute inset-0 z-0 pointer-events-none bg-[url('/patterns/pattern_0.png')] bg-repeat opacity-5 mix-blend-overlay"
-      />
+      <MarketingPageBackground />
 
       {/* Header Bar */}
       <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
@@ -81,12 +74,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex-1 flex flex-col justify-center relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-3xl mx-auto space-y-8"
-        >
+        <div className="w-full max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold">
             <Sparkles size={12} /> Introducing Coreknot Workspace
           </div>
@@ -111,7 +99,7 @@ export default function LandingPage() {
               Create Free Account
             </Link>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Purpose / Feature Grid */}

@@ -2,12 +2,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
+import '@fontsource-variable/geist/wght.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,7 +20,6 @@ const queryClient = new QueryClient({
   },
 })
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_bW9jay1jbGVyay1wdWJsaXNoYWJsZS1rZXkuY2xlcmsuYWNjb3VudHMuZGV2JA';
 
 import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmProvider } from './contexts/ConfirmProvider';
@@ -31,28 +30,35 @@ import { applyPwaDesktopDocumentFlag } from './utils/displayMode';
 
 applyPwaDesktopDocumentFlag();
 warnIfDevPointsAtProduction();
-registerSW({ immediate: true });
+
+const registerDeferredServiceWorker = () => {
+  registerSW({ immediate: true });
+};
+
+if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+  window.requestIdleCallback(registerDeferredServiceWorker, { timeout: 4000 });
+} else {
+  window.setTimeout(registerDeferredServiceWorker, 2000);
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "PLACEHOLDER_CLIENT_ID"}>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <ThemeProvider>
-              <SidebarProvider>
-                <ToastProvider>
-                  <ConfirmProvider>
-                    <UnsavedChangesProvider>
-                      <App />
-                    </UnsavedChangesProvider>
-                  </ConfirmProvider>
-                </ToastProvider>
-              </SidebarProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          <ThemeProvider>
+            <SidebarProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <UnsavedChangesProvider>
+                    <App />
+                  </UnsavedChangesProvider>
+                </ConfirmProvider>
+              </ToastProvider>
+            </SidebarProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,
 )

@@ -1,9 +1,13 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Pin } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow } from '../ui';
+import DashboardWidgetShell from '../ui/DashboardWidgetShell';
+import DataListRow from '../ui/DataListRow';
+import { Skeleton } from '../ui/primitives';
 import { usePinBoard } from '../../hooks/useTaskmasterQueries';
 import { usePinBoardDraft } from './PinBoardContext';
+
+const PIN_BODY_MIN = 'min-h-[156px]';
 
 const PinBoardMessages = () => {
   const { data: pins = [], isLoading } = usePinBoard();
@@ -11,16 +15,31 @@ const PinBoardMessages = () => {
 
   return (
     <DashboardWidgetShell
-      bodyClassName="p-0 max-h-[280px] overflow-y-auto"
+      bodyClassName={`p-0 min-h-[200px] max-h-[280px] overflow-y-auto ${PIN_BODY_MIN}`}
       title="Pin Board"
       icon={Pin}
     >
-      <p className="text-[9px] text-[var(--color-text-muted)] px-4 pt-2 pb-1">Team pins — click to edit on the right</p>
-      {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-4 py-2">Loading...</p>}
-      {!isLoading && pins.length === 0 && (
-        <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-6">No pins yet</p>
+      <p className="text-[9px] text-[var(--color-text-muted)] px-4 pt-2 pb-1 shrink-0">Team pins — click to edit on the right</p>
+      {isLoading && (
+        <div className={`divide-y divide-[var(--color-bg-border)] ${PIN_BODY_MIN}`}>
+          {[1, 2, 3].map((j) => (
+            <div key={j} className="flex gap-3 items-center py-2 px-4">
+              <Skeleton variant="circle" width="20px" height="20px" />
+              <div className="space-y-1 flex-1">
+                <Skeleton width="60%" height="10px" />
+                <Skeleton width="90%" height="10px" />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-      {pins.map((pin) => {
+      {!isLoading && pins.length === 0 && (
+        <p className={`text-[10px] text-[var(--color-text-muted)] italic text-center ${PIN_BODY_MIN} flex items-center justify-center`}>
+          No pins yet
+        </p>
+      )}
+      {!isLoading &&
+        pins.map((pin) => {
         const author = pin.updatedBy?.name || pin.createdBy?.name || 'Team';
         const avatar = pin.updatedBy?.avatar || pin.createdBy?.avatar;
         const dateLabel = format(new Date(pin.updatedAt || pin.createdAt), 'MMM d, yyyy');

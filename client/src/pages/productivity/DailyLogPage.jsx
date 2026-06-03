@@ -8,10 +8,8 @@ import {
   Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, History, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Badge, NexusModal, NexusDropdown, PageHeader, 
-  PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading
-} from '../../components/ui';
+import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading } from '../../components/ui';
+import { NexusModal } from '../../components/ui/modals';;
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';

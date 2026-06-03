@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Mail, Circle, UserMinus, Users } from 'lucide-react';
-import { Badge, NexusModal, AddMembers, EmptyState, NexusDropdown } from '../ui';
+import { Badge, AddMembers, EmptyState, NexusDropdown } from '../ui';
+import { NexusModal } from '../ui/modals';;
 import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';

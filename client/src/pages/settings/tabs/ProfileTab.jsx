@@ -21,7 +21,8 @@ import {
   Ghost,
   Heart,
 } from 'lucide-react';
-import { Input, Button, Badge, NexusDropdown, ModalShell, NexusModal } from '../../../components/ui';
+import { Input, Button, Badge, NexusDropdown } from '../../../components/ui';
+import { ModalShell, NexusModal } from '../../../components/ui/modals';;
 import { useAuth } from '../../../contexts/AuthContext';
 import { useDepartments } from '../../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../../utils/departmentPermissions';

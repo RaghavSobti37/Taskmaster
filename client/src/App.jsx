@@ -1,9 +1,8 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
-import { useAuth } from './contexts/AuthContext';
+import AppBootFallback from './components/AppBootFallback';
 import {
   slugId,
   parseErrorPayload,
@@ -12,7 +11,6 @@ import {
 } from './lib/notifications';
 import { emitSystemEvent, getClientTraceId, startClientTrace } from './lib/systemLogBridge';
 import { inferModuleFromRoute, SEVERITY } from './lib/systemLogContract';
-import { DashboardSkeleton } from './components/ui';
 import axios from 'axios';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
 import { normalizeTasks, normalizeSchedulePayload } from './utils/normalizeTask';
@@ -111,6 +109,7 @@ const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
+const MainLayout = lazyWithRetry(() => import('./components/MainLayout'));
 
 const LegacyWorkspaceRedirect = () => {
   const { name } = useParams();
@@ -118,8 +117,6 @@ const LegacyWorkspaceRedirect = () => {
 };
 
 function App() {
-  const { loading } = useAuth();
-
   React.useEffect(() => {
     const reqInterceptor = axios.interceptors.request.use((config) => {
       if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
@@ -177,10 +174,8 @@ function App() {
     };
   }, []);
 
-  if (loading) return <DashboardSkeleton />;
-
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <Suspense fallback={<AppBootFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />

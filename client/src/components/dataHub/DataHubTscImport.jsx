@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Upload, ArrowRight, X } from 'lucide-react';
-import { Button, NexusModal, NexusDropdown } from '../ui';
+import { Button, NexusDropdown } from '../ui';
+import { NexusModal } from '../ui/modals';;
 
 const TSC_FIELDS = [
   'name', 'email', 'phone', 'city', 'state', 'role', 'campaign',

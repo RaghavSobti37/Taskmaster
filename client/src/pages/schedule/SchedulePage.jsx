@@ -1,13 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getTodayDateKey } from '../../utils/dateValidation';
 import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
-import { EmptyState, ListPageLayout } from '../../components/ui';
+import ListPageLayout from '../../components/ui/ListPageLayout';
+import EmptyState from '../../components/ui/EmptyState';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
 import ScheduleDayViewControl from '../../components/schedule/ScheduleDayViewControl';
-import { useSchedule, useWorkspaces, useProjects, useStatusCounts } from '../../hooks/useTaskmasterQueries';
-import TaskDetailModal from '../../components/TaskDetailModal';
+import { useSchedule, useWorkspaces, useProjects } from '../../hooks/useTaskmasterQueries';
+import { useStatusCounts } from '../../hooks/useStatusCounts';
+
+const TaskDetailModal = lazy(() => import('../../components/TaskDetailModal'));
 import { CalendarDays, Users, Layers } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -105,12 +108,16 @@ const SchedulePage = () => {
         />
       )}
 
-      <TaskDetailModal
-        isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
-        task={selectedTask}
-        onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['schedule'] })}
-      />
+      {selectedTask && (
+        <Suspense fallback={null}>
+          <TaskDetailModal
+            isOpen={!!selectedTask}
+            onClose={() => setSelectedTask(null)}
+            task={selectedTask}
+            onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['schedule'] })}
+          />
+        </Suspense>
+      )}
     </ListPageLayout>
   );
 };

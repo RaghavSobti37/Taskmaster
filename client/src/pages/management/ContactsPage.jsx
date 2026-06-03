@@ -2,17 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Contact } from 'lucide-react';
-import {
-  Button,
-  Input,
-  NexusModal,
-  ModalFooter,
-  PageSkeleton,
-  DataTable,
-  Badge,
-  SearchInput,
-  ListPageLayout,
-} from '../../components/ui';
+import ListPageLayout from '../../components/ui/ListPageLayout';
+import PageSkeleton from '../../components/ui/PageSkeleton';
+import SearchInput from '../../components/ui/SearchInput';
+import { Button, Input, DataTable, Badge } from '../../components/ui/primitives';
+import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 
 const EMPTY_CONTACT_FORM = { name: '', role: '', phone: '', email: '', notes: '' };

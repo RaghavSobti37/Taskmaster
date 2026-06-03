@@ -19,15 +19,8 @@ import { WorkspaceDot } from '../../components/forms/WorkspaceSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { 
-  NexusModal, NexusDropdown,
-  Button, Input, Badge, 
-  PageSkeleton, ModalShell, ModalHeader, ModalBody, ModalFooter, SearchInput, TablePagination,
-  ListPageLayout,
-  UserLabel,
-  ListCard,
-  MobileCollapsibleSection,
-} from '../../components/ui';
+import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection } from '../../components/ui';
+import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';

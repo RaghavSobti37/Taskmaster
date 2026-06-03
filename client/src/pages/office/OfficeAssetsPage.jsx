@@ -3,19 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Building2, Plus, Contact, Phone, Mail, Database, Shield, RefreshCw } from 'lucide-react';
 import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
-import {
-  Button,
-  Input,
-  Badge,
-  NexusModal,
-  ModalFooter,
-  TabSwitcher,
-  SearchInput,
-  DataTable,
-  PageLoadGuard,
-  PageSkeleton,
-  ListPageLayout,
-} from '../../components/ui';
+import { Button, Input, Badge, TabSwitcher, SearchInput, DataTable, PageLoadGuard, PageSkeleton, ListPageLayout } from '../../components/ui';
+import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';

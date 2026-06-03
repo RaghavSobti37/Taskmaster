@@ -5,11 +5,8 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, Globe, Database, Trash2, Edit2, Link as LinkIcon, Mic2
 } from 'lucide-react';
 import { FaSpotify, FaYoutube, FaInstagram } from 'react-icons/fa';
-import {
-  Badge, DataTable, Button,
-  TabSwitcher, PageSkeleton, Input, NexusModal,
-  ListPageLayout, SearchInput,
-} from '../../components/ui';
+import { Badge, DataTable, Button, TabSwitcher, PageSkeleton, Input, ListPageLayout, SearchInput } from '../../components/ui';
+import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useArtists, useCreateArtist, useSyncArtistStats } from '../../hooks/useTaskmasterQueries';
 import { formatNumber } from '../../config/integrations.config';

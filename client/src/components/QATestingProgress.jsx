@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { NexusModal, Button } from './ui';
+import { Button } from './ui';
+import { NexusModal } from './ui/modals';;
 
 const QATestingProgress = ({ projectId, testRunId, isOpen, onClose }) => {
   const [testData, setTestData] = useState(null);

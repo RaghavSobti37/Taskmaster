@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { Search, ListTodo, AlertCircle, Clock, ClipboardCheck, Layers } from 'lucide-react';
 import axios from 'axios';
-import { Badge, SearchInput, PageSkeleton, PageLoadGuard, DataLoading, ListPageLayout, UserLabel, ListCard } from '../../components/ui';
+import ListPageLayout from '../../components/ui/ListPageLayout';
+import PageLoadGuard from '../../components/ui/PageLoadGuard';
+import PageSkeleton from '../../components/ui/PageSkeleton';
+import SearchInput from '../../components/ui/SearchInput';
+import ListCard from '../../components/ui/ListCard';
+import { UserLabel } from '../../components/ui/UserAvatar';
+import { Badge } from '../../components/ui/primitives';
+import { DataLoading } from '../../components/ui/DataLoading';
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
@@ -13,8 +20,8 @@ import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../ho
 import { format, isBefore, startOfDay } from 'date-fns';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
-import TaskDetailModal from '../../components/TaskDetailModal';
-import TaskCompletionModal from '../../components/TaskCompletionModal';
+const TaskDetailModal = lazy(() => import('../../components/TaskDetailModal'));
+const TaskCompletionModal = lazy(() => import('../../components/TaskCompletionModal'));
 import { useQueryClient } from '@tanstack/react-query';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
@@ -436,8 +443,12 @@ const TodoPage = () => {
         </table>
       </div>
 
-      <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
-      <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />
+      {(selectedTask || taskToComplete) && (
+        <Suspense fallback={null}>
+          <TaskDetailModal isOpen={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })} />
+          <TaskCompletionModal task={taskToComplete} isOpen={!!taskToComplete} onClose={() => setTaskToComplete(null)} onSubmit={handleCompleteSubmit} submitForReview={completionSubmitForReview} />
+        </Suspense>
+      )}
     </ListPageLayout>
     </PageLoadGuard>
   );

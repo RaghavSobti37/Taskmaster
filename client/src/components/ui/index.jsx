@@ -45,10 +45,8 @@ export { default as PageHeader } from './PageHeader';
 export { default as PageToolbar } from './PageToolbar';
 export { default as ListPageLayout } from './ListPageLayout';
 export { default as DataOverviewSection } from './DataOverviewSection';
-export { default as DataMiniChart } from './DataMiniChart';
 export { default as DashboardWidgetShell } from './DashboardWidgetShell';
 export { default as DataListRow } from './DataListRow';
-export { default as ChartSurface, CHART_MUTED } from './ChartSurface';
 export { default as DeltaBadge } from './DeltaBadge';
 export { default as MobileFilterSheet } from './MobileFilterSheet';
 export { default as MobileFilterField } from './MobileFilterField';
@@ -62,20 +60,4 @@ export { UserAvatar, UserLabel } from './UserAvatar';
 export { default as DashboardSkeleton } from './DashboardSkeleton';
 export { default as PageSkeleton } from './PageSkeleton';
 
-// ── Modals ──
-export { NexusModal, NexusModal as Modal, MODAL_SIZES } from './NexusModal';
-export {
-  ModalShell,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalOverlay,
-  MODAL_WIDTH_PX,
-  MODAL_PANEL_CLASS,
-  MODAL_OVERLAY_CLASS,
-  getModalPanelStyle,
-  getModalPanelClassName,
-} from './ModalShell';
-/** @deprecated Use ModalShell — see docs/COMPONENT_STANDARDS.md */
-export { CenteredModal } from './CenteredModal';
-export { VisualExplainerModal } from './VisualExplainerModal';
+// Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

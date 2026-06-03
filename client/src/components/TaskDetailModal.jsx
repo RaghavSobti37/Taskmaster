@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
-import { NexusModal, ModalShell, ModalFooter, Button, Spinner } from './ui';
+import { Button, Spinner } from './ui';
+import { NexusModal, ModalShell, ModalFooter } from './ui/modals';;
 import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';

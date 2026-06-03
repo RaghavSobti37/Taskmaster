@@ -12,6 +12,7 @@ const callback = (provider) => (req, res) => {
 };
 
 // ─── Public endpoints ─────────────────────────────────────────────────────────
+// Legacy Meta webhook — prefer /api/webhooks/instagram (signature verification). Kept for backward compatibility.
 router.get('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.post('/webhook/meta', artistAnalyticsController.metaMentionsWebhook);
 router.get('/config/integrations', artistController.getIntegrationsConfig);

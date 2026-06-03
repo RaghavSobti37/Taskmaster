@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { protect } = require('../middleware/authMiddleware');
+const { resolveApiBaseUrl } = require('../utils/oauthEnv');
+
+const googleAccountsCallbackUri = (req) =>
+  `${resolveApiBaseUrl(req)}/api/google/accounts/callback`;
 
 router.use(protect);
 
@@ -39,7 +43,7 @@ router.post('/link-oauth', async (req, res) => {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      `${process.env.SERVER_URL || 'http://localhost:5000'}/api/google/accounts/callback`
+      googleAccountsCallbackUri(req)
     );
 
     // Store linking context in session/state
@@ -90,7 +94,7 @@ router.post('/callback', async (req, res) => {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      `${process.env.SERVER_URL || 'http://localhost:5000'}/api/google/accounts/callback`
+      googleAccountsCallbackUri(req)
     );
 
     const { tokens } = await oauth2Client.getToken(code);

@@ -327,6 +327,7 @@ app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
+app.use('/api/integrations', require('./routes/integrationsRoutes'));
 app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));

@@ -1,10 +1,19 @@
 const { google } = require('googleapis');
+const { resolveApiBaseUrl, resolveOAuthRedirectUri } = require('./oauthEnv');
 
-const createOAuth2Client = () => {
+const CALLBACK_PATH = '/api/auth/google/callback';
+
+const resolveGoogleRedirectUri = (req) => resolveOAuthRedirectUri(req, {
+  envVar: 'GOOGLE_REDIRECT_URI',
+  path: CALLBACK_PATH,
+});
+
+const createOAuth2Client = (redirectUri) => {
+  const resolved = redirectUri || resolveGoogleRedirectUri();
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
+    resolved,
   );
 };
 
@@ -21,8 +30,10 @@ const getSearchConsole = (auth) => {
 };
 
 module.exports = {
+  CALLBACK_PATH,
+  resolveGoogleRedirectUri,
   createOAuth2Client,
   getCalendar,
   getDrive,
-  getSearchConsole
+  getSearchConsole,
 };

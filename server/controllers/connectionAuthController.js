@@ -5,7 +5,7 @@ const { upsertConnection } = require('../services/connectionService');
 const { byId } = require('../config/integrations.config');
 const logger = require('../utils/logger');
 
-const CLIENT_URL = () => (process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+const { resolveClientUrl, resolveOAuthRedirectUri } = require('../utils/oauthEnv');
 
 function signOAuthState(artistId, provider) {
   return jwt.sign({ artistId, provider, purpose: 'oauth_connect' }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -15,20 +15,19 @@ function verifyOAuthState(state) {
   return jwt.verify(state, process.env.JWT_SECRET);
 }
 
-function getApiBase(req) {
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.headers['x-forwarded-host'] || req.get('host');
-  return `${protocol}://${host}`;
-}
-
 function spotifyRedirectUri(req) {
-  if (process.env.SPOTIFY_OAUTH_REDIRECT_URI) return process.env.SPOTIFY_OAUTH_REDIRECT_URI;
-  return `${getApiBase(req)}/api/artists/auth/callback/spotify`;
+  return resolveOAuthRedirectUri(req, {
+    envVar: 'SPOTIFY_OAUTH_REDIRECT_URI',
+    path: '/api/artists/auth/callback/spotify',
+  });
 }
 
 function youtubeRedirectUri(req) {
-  if (process.env.YOUTUBE_OAUTH_REDIRECT_URI) return process.env.YOUTUBE_OAUTH_REDIRECT_URI;
-  return `${getApiBase(req)}/api/artists/auth/callback/youtube`;
+  return resolveOAuthRedirectUri(req, {
+    envVar: 'YOUTUBE_OAUTH_REDIRECT_URI',
+    prodEnvVar: 'YOUTUBE_REDIRECT_URI_PROD',
+    path: '/api/artists/auth/callback/youtube',
+  });
 }
 
 const SPOTIFY_SCOPES = [
@@ -85,8 +84,11 @@ exports.initiateConnect = async (req, res) => {
       });
       authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
     } else if (provider === 'instagram' || provider === 'meta') {
-      const appId = (process.env.META_APP_ID || '733417183164639').replace(/['"]/g, '').trim();
-      const redirectUri = `${CLIENT_URL()}/oauth/meta/callback`;
+      const appId = (process.env.META_APP_ID || '').replace(/['"]/g, '').trim();
+      if (!appId) {
+        return res.status(503).json({ message: 'META_APP_ID not configured' });
+      }
+      const redirectUri = `${resolveClientUrl()}/oauth/meta/callback`;
       const scope = [
         'pages_show_list',
         'pages_read_engagement',
@@ -110,7 +112,7 @@ exports.initiateConnect = async (req, res) => {
 exports.handleCallback = async (req, res) => {
   const { provider } = req.params;
   const { code, state, error } = req.query;
-  const front = CLIENT_URL();
+  const front = resolveClientUrl();
 
   if (error) {
     return res.redirect(`${front}/artists?connect_error=${encodeURIComponent(error)}`);

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.8-126d5e?style=flat-square" alt="Version 1.9.8" />
+  <img src="https://img.shields.io/badge/version-1.9.9-126d5e?style=flat-square" alt="Version 1.9.9" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -75,6 +75,15 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ---
 
 ## 🚀 Key Features
+
+### 🔐 Google OAuth & Meta App Verification (v1.9.9)
+
+* **Cross-origin Google login fix:** OAuth callback issues a short-lived ticket; `GoogleSuccessPage` calls `POST /api/auth/oauth-establish` so the session cookie is set in the browser’s frontend context (fixes 401 loops after Google sign-in on Vercel + Render).
+* **Redirect URI resolution:** `server/utils/oauthEnv.js` derives callback URLs from request host / `APP_BASE_URL` — register `http://localhost:5000/api/auth/google/callback` and your Render API host in Google Cloud Console.
+* **Diagnostics:** `GET /api/auth/google/redirect-uri` returns the exact redirect URI the server will send to Google.
+* **Meta compliance:** `POST /api/webhooks/meta-data-deletion` (signed_request), `MetaDeletionRequest` model, status lookup on `/userdata?code=…`; admin readiness probe `GET /api/integrations/oauth-readiness`.
+* **Docs:** [`docs/GOOGLE_META_APP_VERIFICATION.md`](docs/GOOGLE_META_APP_VERIFICATION.md) — env audit, console URLs, manual test matrix before App Review.
+* **Templates:** `server/.env.production.example` — production OAuth/integration env checklist (no secrets).
 
 ### 🔑 Self-Service Password Reset (v1.9.8)
 
@@ -487,6 +496,11 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `EMAIL_ADDRESS` | Password reset | Gmail (or SMTP service) sender for system transactional mail — forgot-password links. |
 | `EMAIL_PASSWORD` | Password reset | App password or SMTP credential paired with `EMAIL_ADDRESS`. |
 | `EMAIL_SERVICE` | Optional | Nodemailer service name (default: `gmail`). |
+| `GOOGLE_CLIENT_ID` | Google OAuth | Staff Google Sign-In client ID (also `VITE_GOOGLE_CLIENT_ID` on client). |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth | OAuth client secret — must match Google Cloud Console (not a placeholder). |
+| `GOOGLE_REDIRECT_URI` | Google OAuth | Callback URL; dev: `http://localhost:5000/api/auth/google/callback`. |
+| `APP_BASE_URL` / `SERVER_URL` | Production | Canonical public API origin for OAuth redirect resolution. |
+| `META_APP_ID` / `META_APP_SECRET` | Meta integrations | Artist Instagram connect + webhook signature verification. |
 | `BOOK_CALL_WEBHOOK_SECRET` | Production | HMAC secret for book-call webhook signature verification. |
 | `EXLY_WEBHOOK_SECRET` | Production | HMAC secret for Exly webhook signature verification. |
 | `ARTIST_ENQUIRY_WEBHOOK_SECRET` | Production | Required in production for artist-enquiry webhook. |
@@ -604,10 +618,21 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 | [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |
 | [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) | Client UI conventions — lists, modals, tables, avatars |
+| [`docs/GOOGLE_META_APP_VERIFICATION.md`](docs/GOOGLE_META_APP_VERIFICATION.md) | Google OAuth + Meta App Review — env vars, redirect URIs, test matrix |
 
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.9 — Google OAuth Session Fix & Meta Verification Tooling
+
+- **OAuth ticket exchange:** `googleAuthCallback` redirects with `?ticket=`; `POST /api/auth/oauth-establish` sets `coreknot_token_v2` via credentialed XHR (fixes cross-origin cookie partition issues).
+- **Redirect URI:** `oauthEnv.js` + `googleAuth.js` resolve callback from request host / `APP_BASE_URL`; `GET /api/auth/google/redirect-uri` for console registration.
+- **Meta data deletion:** `metaDataDeletionController.js`, `MetaDeletionRequest.js`, `metaSignedRequest.js`, webhook route; `UserDataDeletion.jsx` status lookup.
+- **Integrations QA:** `integrationsVerifyController.js`, `GET /api/integrations/oauth-readiness` (admin).
+- **Docs:** `docs/GOOGLE_META_APP_VERIFICATION.md`, `server/.env.production.example`.
+
+Set real `GOOGLE_CLIENT_SECRET` on Render and in local `server/.env`. Register redirect URIs in Google Cloud Console. No DB migration beyond optional `MetaDeletionRequest` collection.
 
 ### v1.9.8 — Self-Service Password Reset
 

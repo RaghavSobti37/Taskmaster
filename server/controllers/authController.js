@@ -5,21 +5,32 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
 const { setAuthCookie, clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
+const { createOAuth2Client, resolveGoogleRedirectUri } = require('../utils/googleAuth');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { normalizePersonName } = require('../utils/sanitizer');
 const { attachProfileCompletion } = require('../utils/profileCompleteness');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 const { sendSystemEmail } = require('../utils/sendSystemEmail');
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-);
+const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
 
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
   expiresIn: process.env.JWT_EXPIRES_IN || '7d',
 });
+
+const generateOAuthTicket = (id) => jwt.sign(
+  { id, purpose: 'oauth_establish' },
+  process.env.JWT_SECRET,
+  { expiresIn: '120s' },
+);
+
+const verifyOAuthTicket = (ticket) => {
+  const decoded = jwt.verify(ticket, process.env.JWT_SECRET);
+  if (decoded.purpose !== 'oauth_establish' || !decoded.id) {
+    throw new Error('Invalid OAuth ticket');
+  }
+  return decoded.id;
+};
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
@@ -279,6 +290,8 @@ exports.googleAuthRedirect = (req, res) => {
     return res.status(401).json({ error: 'Unauthorized API access' });
   }
   const { state } = req.query;
+  const redirectUri = resolveGoogleRedirectUri(req);
+  const client = createOAuth2Client(redirectUri);
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
@@ -288,7 +301,7 @@ exports.googleAuthRedirect = (req, res) => {
     'https://www.googleapis.com/auth/webmasters.readonly',
   ];
 
-  const url = oauth2Client.generateAuthUrl({
+  const url = client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
     scope: scopes,
@@ -301,8 +314,8 @@ exports.googleAuthRedirect = (req, res) => {
 exports.googleAuthCallback = async (req, res) => {
   try {
     const { code, state } = req.query;
-    const { createOAuth2Client } = require('../utils/googleAuth');
-    const callbackClient = createOAuth2Client();
+    const redirectUri = resolveGoogleRedirectUri(req);
+    const callbackClient = createOAuth2Client(redirectUri);
     const { tokens } = await callbackClient.getToken(code);
     callbackClient.setCredentials(tokens);
 
@@ -356,18 +369,35 @@ exports.googleAuthCallback = async (req, res) => {
       await user.save();
     }
 
-    const token = generateToken(user._id);
-    setAuthCookie(res, token);
+    const ticket = generateOAuthTicket(user._id);
 
-    const freshUser = await User.findById(user._id)
-      .select('-password')
-      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-    const userJson = JSON.stringify(formatAuthUser(freshUser));
-
-    res.redirect(`${FRONTEND_URL}/auth/google/success?user=${encodeURIComponent(userJson)}`);
+    res.redirect(`${FRONTEND_URL}/auth/google/success?ticket=${encodeURIComponent(ticket)}`);
   } catch (error) {
     logger.error('authController', 'Google Auth ', { error: error.message || error });
     res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
+  }
+};
+
+exports.oauthEstablishSession = async (req, res) => {
+  try {
+    const { ticket } = req.body;
+    if (typeof ticket !== 'string' || !ticket.trim()) {
+      return res.status(400).json({ error: 'Missing OAuth ticket' });
+    }
+
+    const userId = verifyOAuthTicket(ticket.trim());
+    const populated = await User.findById(userId)
+      .select('-password')
+      .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
+
+    if (!populated) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+
+    setAuthCookie(res, generateToken(populated._id));
+    return res.json(formatAuthUser(populated));
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });
   }
 };
 

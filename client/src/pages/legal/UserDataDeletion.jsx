@@ -1,15 +1,29 @@
-import React, { useState } from 'react';
-import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, Mail, ExternalLink, Shield } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, Mail, ExternalLink, Shield, Loader2 } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 export default function UserDataDeletion() {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [platform, setPlatform] = useState('all');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [metaDeletionStatus, setMetaDeletionStatus] = useState(null);
+  const [metaStatusLoading, setMetaStatusLoading] = useState(false);
+
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get('code');
+    if (!code) return;
+
+    setMetaStatusLoading(true);
+    axios.get(`/api/webhooks/meta-data-deletion/${encodeURIComponent(code)}`)
+      .then((res) => setMetaDeletionStatus(res.data))
+      .catch(() => setMetaDeletionStatus({ status: 'not_found' }))
+      .finally(() => setMetaStatusLoading(false));
+  }, [location.search]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,6 +76,30 @@ export default function UserDataDeletion() {
             In compliance with GDPR and Meta Developer Platform terms, you can instantly revoke OAuth access and request the permanent erasure of your account, API keys, and logged analytics.
           </p>
         </div>
+
+        {metaStatusLoading && (
+          <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F2937] flex items-center justify-center gap-2 text-xs text-slate-400">
+            <Loader2 size={16} className="animate-spin" /> Checking Meta deletion status…
+          </div>
+        )}
+
+        {metaDeletionStatus && !metaStatusLoading && (
+          <div className={`p-6 rounded-2xl border text-xs space-y-2 ${
+            metaDeletionStatus.status === 'completed'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : metaDeletionStatus.status === 'pending'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+          }`}>
+            <strong className="block text-sm text-white">Meta Data Deletion Request</strong>
+            {metaDeletionStatus.status === 'completed' && (
+              <p>Confirmation <span className="font-mono">{metaDeletionStatus.confirmation_code}</span> — removed {metaDeletionStatus.connections_removed} connection(s) across {metaDeletionStatus.artists_affected} artist profile(s).</p>
+            )}
+            {metaDeletionStatus.status === 'pending' && <p>Deletion in progress. Refresh this page in a moment.</p>}
+            {metaDeletionStatus.status === 'failed' && <p>Deletion failed: {metaDeletionStatus.error || 'Unknown error'}</p>}
+            {metaDeletionStatus.status === 'not_found' && <p>No deletion record found for this confirmation code.</p>}
+          </div>
+        )}
 
         {submitted ? (
           <div className="p-8 rounded-3xl bg-[#111827] border border-emerald-500/30 text-center space-y-6 shadow-2xl">

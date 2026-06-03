@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { register, login, logout, getMe, changeRequiredPassword, googleLogin, googleAuthRedirect, googleAuthCallback, forgotPassword, resetPassword } = require('../controllers/authController');
+const { register, login, logout, getMe, changeRequiredPassword, googleLogin, googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const authLoginLimiter = rateLimit({
@@ -48,6 +48,11 @@ router.post('/forgot-password', authForgotPasswordLimiter, forgotPassword);
 router.post('/reset-password', authForgotPasswordLimiter, resetPassword);
 router.post('/logout', logout);
 router.post('/google-login', googleLogin);
+router.post('/oauth-establish', authLoginLimiter, oauthEstablishSession);
+router.get('/google/redirect-uri', (req, res) => {
+  const { resolveGoogleRedirectUri } = require('../utils/googleAuth');
+  res.json({ redirectUri: resolveGoogleRedirectUri(req) });
+});
 router.get('/google', googleAuthRedirect);
 router.get('/google/callback', googleAuthCallback);
 router.get('/me', protect, getMe);

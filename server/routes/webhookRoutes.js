@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { handleBookedCall, handleArtistEnquiry } = require('../controllers/webhookController');
+const metaDataDeletion = require('../controllers/metaDataDeletionController');
 
 router.post('/book-call', handleBookedCall);
 router.post('/artist-enquiry', handleArtistEnquiry);
+
+// Meta Platform — data deletion callback (App Dashboard → Data Deletion Request URL)
+router.post('/meta-data-deletion', metaDataDeletion.handleDataDeletionCallback);
+router.get('/meta-data-deletion/:code', metaDataDeletion.getDeletionStatus);
 
 // GET route to handle Meta Webhook Verification handshake
 router.get('/instagram', (req, res) => {

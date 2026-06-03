@@ -570,7 +570,17 @@ exports.metaOAuthCallback = async (req, res) => {
 
     const longToken = longTokenRes.data.access_token || shortToken;
 
-    logger.info('OAuth', '⚡ [OAuth] Fetching connected Facebook Pages for user...');
+    logger.info('OAuth', '⚡ [OAuth] Fetching Meta user id and connected Facebook Pages...');
+
+    let metaUserId = null;
+    try {
+      const meRes = await axios.get('https://graph.facebook.com/v20.0/me', {
+        params: { fields: 'id,name', access_token: longToken },
+      });
+      metaUserId = meRes.data?.id || null;
+    } catch (meErr) {
+      logger.warn('OAuth', 'Meta /me fetch failed', { detail: meErr.message });
+    }
 
     // 3. Fetch connected Facebook pages
     const accountsRes = await axios.get(`https://graph.facebook.com/v20.0/me/accounts`, {
@@ -641,6 +651,8 @@ exports.metaOAuthCallback = async (req, res) => {
         igAccountId: activeIgAccountId,
         fbPageId: activeFbPageId,
         igUsername: firstWithIg?.igUsername,
+        metaUserId,
+        facebookUserId: metaUserId,
         availableAccounts,
       },
     });
@@ -654,7 +666,7 @@ exports.metaOAuthCallback = async (req, res) => {
         accountLabel: fbAcc?.fbPageName || 'Facebook Page',
         accessToken: longToken,
         expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-        metadata: { fbPageId: activeFbPageId, fbPageName: fbAcc?.fbPageName },
+        metadata: { fbPageId: activeFbPageId, fbPageName: fbAcc?.fbPageName, metaUserId, facebookUserId: metaUserId },
       });
     }
 
@@ -667,6 +679,7 @@ exports.metaOAuthCallback = async (req, res) => {
             accessToken: longToken,
             igAccountId: activeIgAccountId,
             fbPageId: activeFbPageId,
+            metaUserId,
             tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
             availableAccounts,
           },

@@ -28,10 +28,12 @@ describe('timeSpent', () => {
     expect(hoursMinutesToDecimal('', '30')).toBe(0.5);
   });
 
-  test('isValidCompletionMinutes enforces minimum', () => {
-    expect(isValidCompletionMinutes(0, 30)).toBe(true);
-    expect(isValidCompletionMinutes(0, 29)).toBe(false);
+  test('isValidCompletionMinutes rejects zero-only input', () => {
+    expect(isValidCompletionMinutes(0, 0)).toBe(false);
+    expect(isValidCompletionMinutes(0, 15)).toBe(true);
+    expect(isValidCompletionMinutes(0, 1)).toBe(true);
     expect(isValidCompletionMinutes(1, 0)).toBe(true);
+    expect(isValidCompletionMinutes(2, 30)).toBe(true);
   });
 
   test('parseTimeSpentToHours round-trips with formatTimeSpent', () => {

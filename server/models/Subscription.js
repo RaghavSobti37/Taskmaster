@@ -20,7 +20,7 @@ const subscriptionSchema = new mongoose.Schema({
     default: 'Credit Card',
     enum: ['Credit Card', 'Debit Card', 'UPI', 'Bank Transfer', 'Cash', 'Other'],
   },
-  usedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  usedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   notes: { type: String },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   reminderSentForDueDate: { type: Date },

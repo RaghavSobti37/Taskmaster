@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallba
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Spinner } from './Spinner';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
@@ -511,7 +512,16 @@ export const DataTable = ({
             </tr>
           </thead>
           <tbody>
-            {showEmpty ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Spinner size="md" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Loading...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : showEmpty ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12 text-center">
                   <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{emptyTitle}</p>
@@ -563,7 +573,12 @@ export const DataTable = ({
 
         {/* Mobile Responsive Card Stack (< lg) */}
         <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
-          {showEmpty ? (
+          {isLoading ? (
+            <div className="px-4 py-12 text-center flex flex-col items-center gap-2">
+              <Spinner size="md" />
+              <p className="tm-widget-label">Loading...</p>
+            </div>
+          ) : showEmpty ? (
             <div className="px-4 py-12 text-center">
               <p className="tm-widget-label">{emptyTitle}</p>
               {emptyDescription && <p className="mt-2 tm-data-meta">{emptyDescription}</p>}

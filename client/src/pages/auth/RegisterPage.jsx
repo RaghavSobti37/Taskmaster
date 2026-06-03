@@ -16,7 +16,7 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { data: departments = [] } = useDepartments(true);
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments(true);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -118,9 +118,10 @@ const RegisterPage = () => {
             <select
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
-              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none"
+              disabled={departmentsLoading}
+              className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none disabled:opacity-60"
             >
-              <option value="">Select department</option>
+              <option value="">{departmentsLoading ? 'Loading departments...' : 'Select department'}</option>
               {departments.map((d) => (
                 <option key={d._id} value={d._id}>{d.name}</option>
               ))}

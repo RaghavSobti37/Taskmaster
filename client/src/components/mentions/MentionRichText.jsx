@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { buildDisplaySegments } from '../../utils/mentionTokens';
+import MentionUserChip from './MentionUserChip';
 
 const externalUrl = (link) => {
   const trimmed = String(link || '').trim();
@@ -30,13 +31,12 @@ const MentionRichText = ({ text, users = [], assets = [], className = '', inline
         }
         if (seg.type === 'user') {
           return (
-            <span
+            <MentionUserChip
               key={index}
-              className="tm-mention-chip"
-              title={seg.displayName}
-            >
-              @{seg.label}
-            </span>
+              label={seg.label}
+              user={seg.user}
+              displayName={seg.displayName}
+            />
           );
         }
         if (seg.type === 'asset') {

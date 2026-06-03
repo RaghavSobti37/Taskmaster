@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { X, CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
-import { NexusModal, ModalShell, ModalFooter, Button } from './ui';
+import { NexusModal, ModalShell, ModalFooter, Button, Spinner } from './ui';
 import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +32,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     dueDateManual: true,
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const isSaving = updateTaskMutation.isPending;
 
   const canReview = canReviewTask(task, user);
   const creatorId = task?.createdBy?._id || task?.createdBy;
@@ -104,9 +106,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     suppressAutoToasts(5000);
     updateTaskMutation.mutate(
       { id: taskId, data: payload },
-      { onSuccess: (data) => notifyUpdate(data) }
+      {
+        onSuccess: (data) => {
+          notifyUpdate(data);
+          onClose();
+        },
+      }
     );
-    onClose();
   };
 
   const handleSubmit = (e, reviewAction) => {
@@ -115,12 +121,17 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   };
 
   const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
       await axios.delete(`/api/tasks/${task._id}`, AXIOS_SKIP_TOAST);
       if (onTaskDeleted) onTaskDeleted(task._id);
+      setShowDeleteConfirm(false);
       onClose();
     } catch (err) {
       console.error('Delete task error:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -136,7 +147,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         message="Are you sure you want to permanently delete this task?"
         type="danger"
         isConfirm
-        confirmLabel="Delete"
+        confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
         onConfirm={handleDelete}
       />
       <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
@@ -177,10 +188,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
 
             {isInReview && canReview && (
               <div className="flex gap-3 py-3 border-t border-amber-500/30">
-                <Button type="button" variant="primary" size="sm" onClick={(e) => handleSubmit(e, 'approve')}>
-                  <Check size={14} className="mr-1" /> Approve & Close
+                <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
+                  <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
                 </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={(e) => handleSubmit(e, 'rollback')}>
+                <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
                   <RotateCcw size={14} className="mr-1" /> Rollback
                 </Button>
               </div>
@@ -200,16 +211,17 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               <span />
             )}
             <div className="flex gap-3 ml-auto">
-              <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)]">
+              <button type="button" onClick={onClose} disabled={isSaving || isDeleting} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)] disabled:opacity-50">
                 Close
               </button>
               {!isDone && (
                 <button
                   type="submit"
-                  disabled={!title}
+                  disabled={!title || isSaving}
                   className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50"
                 >
-                  <CheckCircle2 size={18} /> Save
+                  {isSaving ? <Spinner size="sm" className="text-white" /> : <CheckCircle2 size={18} />}
+                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
               )}
             </div>

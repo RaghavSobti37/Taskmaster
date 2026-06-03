@@ -78,7 +78,7 @@ export default function ProfileTab() {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(AVATAR_CATEGORY_IDS[0]);
 
-  const { data: departments = [] } = useDepartments();
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
   const [departmentId, setDepartmentId] = useState('');
 
   const departmentOptions = useMemo(() => {
@@ -279,7 +279,8 @@ export default function ProfileTab() {
             options={departmentOptions}
             value={departmentId}
             onChange={setDepartmentId}
-            placeholder="Select department"
+            placeholder={departmentsLoading ? 'Loading departments...' : 'Select department'}
+            disabled={departmentsLoading}
           />
         </div>
 

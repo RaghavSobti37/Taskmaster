@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { CreditCard, Plus, Trash2 } from 'lucide-react';
-import { useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd, roundMoney } from '../../utils/usdInr';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
+import MemberSelect from '../../components/forms/MemberSelect';
 import {
   Button,
   Input,
@@ -34,7 +34,7 @@ const EMPTY_FORM = {
   type: 'Software',
   periodicity: 'Monthly',
   paymentMode: 'Credit Card',
-  usedBy: '',
+  usedBy: [],
   notes: '',
 };
 
@@ -49,6 +49,16 @@ const formatInr = (amount) =>
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+const normalizeUsedByUsers = (usedBy) => {
+  if (!usedBy) return [];
+  return Array.isArray(usedBy) ? usedBy : [usedBy];
+};
+
+const usedByIdsFromSub = (sub) =>
+  normalizeUsedByUsers(sub?.usedBy)
+    .map((entry) => (typeof entry === 'object' ? entry?._id : entry))
+    .filter(Boolean);
+
 const toFormData = (sub, rate) => {
   const amount = sub.amount != null ? roundMoney(sub.amount) : '';
   const hasRate = Number.isFinite(rate) && rate > 0;
@@ -60,7 +70,7 @@ const toFormData = (sub, rate) => {
     type: SUBSCRIPTION_TYPES.includes(sub.type) ? sub.type : 'Software',
     periodicity: PERIODICITY_OPTIONS.includes(sub.periodicity) ? sub.periodicity : 'Monthly',
     paymentMode: PAYMENT_MODES.includes(sub.paymentMode) ? sub.paymentMode : 'Credit Card',
-    usedBy: sub.usedBy?._id || sub.usedBy || '',
+    usedBy: usedByIdsFromSub(sub),
     notes: sub.notes || '',
   };
 };
@@ -72,7 +82,7 @@ const toPayload = (form) => ({
   type: form.type,
   periodicity: form.periodicity,
   paymentMode: form.paymentMode,
-  usedBy: form.usedBy || undefined,
+  usedBy: (form.usedBy || []).filter(Boolean),
   notes: form.notes || undefined,
 });
 
@@ -85,7 +95,6 @@ const SubscriptionsPage = () => {
   const [formBaseline, setFormBaseline] = useState(EMPTY_FORM);
   const rateAppliedRef = useRef(false);
   const queryClient = useQueryClient();
-  const { data: users = [] } = useUserDirectory();
 
   const { data: rateData } = useUsdInrRate({ enabled: isModalOpen });
   const usdInrRate = rateData?.rate;
@@ -135,10 +144,13 @@ const SubscriptionsPage = () => {
   });
 
   const filtered = subscriptions.filter((sub) => {
+    const usedByNames = normalizeUsedByUsers(sub.usedBy)
+      .map((user) => user?.name)
+      .filter(Boolean);
     const haystack = [
       sub.name,
       sub.type,
-      sub.usedBy?.name,
+      ...usedByNames,
       sub.paymentMode,
     ]
       .filter(Boolean)
@@ -204,12 +216,28 @@ const SubscriptionsPage = () => {
     {
       header: 'Used By',
       sortKey: 'usedBy',
-      sortFn: (sub) => sub.usedBy?.name || '',
-      render: (sub) => (
-        sub.usedBy
-          ? <UserLabel user={sub.usedBy} size="xs" nameClassName="font-bold text-xs" />
-          : <span className="text-[var(--color-text-muted)]">—</span>
-      ),
+      sortFn: (sub) =>
+        normalizeUsedByUsers(sub.usedBy)
+          .map((user) => user?.name || '')
+          .join(', '),
+      render: (sub) => {
+        const users = normalizeUsedByUsers(sub.usedBy).filter((user) => user?.name || user?._id);
+        if (!users.length) {
+          return <span className="text-[var(--color-text-muted)]">—</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-2">
+            {users.map((user) => (
+              <UserLabel
+                key={user._id || user.name}
+                user={user}
+                size="xs"
+                nameClassName="font-bold text-xs"
+              />
+            ))}
+          </div>
+        );
+      },
     },
   ];
 
@@ -371,21 +399,13 @@ const SubscriptionsPage = () => {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs mb-1">Used By</label>
-            <select
-              className="w-full border rounded-lg p-2 bg-transparent"
-              value={formData.usedBy}
-              onChange={(e) => setFormData({ ...formData, usedBy: e.target.value })}
-            >
-              <option value="">Unassigned</option>
-              {users.map((user) => (
-                <option key={user._id} value={user._id}>
-                  {user.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MemberSelect
+            label="Used By"
+            value={formData.usedBy}
+            onChange={(usedBy) => setFormData({ ...formData, usedBy })}
+            placeholder="Select team members..."
+            multi
+          />
           <Input
             label="Notes"
             multiline

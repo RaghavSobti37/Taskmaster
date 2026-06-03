@@ -352,6 +352,7 @@ export function DataHubContent() {
           <DataTable
             columns={columns}
             data={peopleData?.data || []}
+            isLoading={isLoading}
             onRowClick={(item) => setSelectedPersonId(item._id)}
             paginated
             serverSide

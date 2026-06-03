@@ -1,10 +1,11 @@
 /** Client ESM mirror of shared/mentionTokens.js — keep in sync */
 
 const STOP_WORDS = new Set(['with', 'and', 'or', 'on', 'for', 'to', 'in', 'at', 'from']);
-const ASSET_STOP_WORDS = new Set([
+const USER_STOP_WORDS = new Set([
   ...STOP_WORDS,
   'ko', 'karo', 'please', 'review', 'de', 'kar', 'do', 'the', 'a', 'an', 'is', 'are',
 ]);
+const ASSET_STOP_WORDS = new Set([...USER_STOP_WORDS]);
 
 const normalizeLabel = (value) => String(value || '').trim().toLowerCase();
 
@@ -37,7 +38,7 @@ const parseUserMention = (text, start) => {
 
   if (text[index] === ' ') {
     const second = readWord(text, index + 1);
-    if (second && !STOP_WORDS.has(second.word.toLowerCase())) {
+    if (second && !USER_STOP_WORDS.has(second.word.toLowerCase())) {
       words.push(second.word);
       index = second.end;
     }
@@ -160,20 +161,43 @@ export const resolveAssetByLabel = (label, assets = []) => {
   return null;
 };
 
+const expandUserDisplaySegment = (seg, users) => {
+  const user = resolveUserByLabel(seg.label, users);
+  const base = {
+    ...seg,
+    userId: user?._id || null,
+    displayName: user?.name || seg.label,
+    user: user || null,
+  };
+
+  if (!user) return [base];
+
+  const firstWord = seg.label.split(/\s+/)[0];
+  if (!firstWord || firstWord === seg.label) return [base];
+
+  const userFromFirst = resolveUserByLabel(firstWord, users);
+  if (userFromFirst?._id?.toString() !== user._id?.toString()) return [base];
+
+  const trailing = seg.label.slice(firstWord.length);
+  if (!trailing) return [base];
+
+  return [
+    { ...base, label: firstWord, raw: `@${firstWord}` },
+    { type: 'text', value: trailing },
+  ];
+};
+
 export const buildDisplaySegments = (text, users = [], assets = []) =>
-  tokenizeMentionText(text).map((seg) => {
-    if (seg.type === 'user') {
-      const user = resolveUserByLabel(seg.label, users);
-      return { ...seg, userId: user?._id || null, displayName: user?.name || seg.label };
-    }
+  tokenizeMentionText(text).flatMap((seg) => {
+    if (seg.type === 'user') return expandUserDisplaySegment(seg, users);
     if (seg.type === 'asset') {
       const asset = resolveAssetByLabel(seg.label, assets);
-      return {
+      return [{
         ...seg,
         assetId: asset?._id || null,
         link: asset?.link || '',
         displayName: asset?.name || seg.label,
-      };
+      }];
     }
-    return seg;
+    return [seg];
   });

@@ -62,7 +62,7 @@ export default function InvoiceTab() {
     }
   }, [workspaces]);
 
-  const { data: myReimbursementsRes } = useQuery({
+  const { data: myReimbursementsRes, isLoading: reimbursementsLoading } = useQuery({
     queryKey: ['my-reimbursements'],
     queryFn: async () => (await axios.get('/api/finance/my-invoices?submissionType=reimbursement')).data,
   });
@@ -364,7 +364,7 @@ export default function InvoiceTab() {
         </div>
       </section>
 
-      {myReimbursements.length > 0 && (
+      {(reimbursementsLoading || myReimbursements.length > 0) && (
         <section className="pt-2">
           <div className="pb-4 border-b border-[var(--color-bg-border)]">
             <h3 className="tm-widget-label flex items-center gap-2">
@@ -374,6 +374,7 @@ export default function InvoiceTab() {
           <DataTable
             columns={reimbursementColumns}
             data={myReimbursements}
+            isLoading={reimbursementsLoading}
             getRowId={(item) => item._id}
             paginated={myReimbursements.length > 10}
             defaultPageSize={10}

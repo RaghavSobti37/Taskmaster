@@ -25,6 +25,7 @@ const WorkspaceSettings = () => {
   const [error, setError] = useState(null);
   const [forbidden, setForbidden] = useState(false);
   const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [members, setMembers] = useState([]);
   const [projects, setProjects] = useState([]);
   const [workspaceColor, setWorkspaceColor] = useState(DEFAULT_WORKSPACE_COLOR);
@@ -83,11 +84,14 @@ const WorkspaceSettings = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setUsersLoading(true);
       try {
         const res = await axios.get('/api/users/team');
         setUsers(res.data.team || []);
       } catch (err) {
         console.error('Error fetching users:', err);
+      } finally {
+        setUsersLoading(false);
       }
     };
     fetchUsers();
@@ -290,10 +294,10 @@ const WorkspaceSettings = () => {
           options={users.map((u) => ({ value: u._id, label: u.name }))}
           value=""
           onChange={addMember}
-          placeholder="Search team members..."
+          placeholder={usersLoading ? 'Loading team members...' : 'Search team members...'}
           renderOption={formatOptionLabel}
           searchable
-          disabled={!canManageMembers || forbidden}
+          disabled={!canManageMembers || forbidden || usersLoading}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

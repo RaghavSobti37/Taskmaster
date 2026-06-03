@@ -1,10 +1,33 @@
 const Subscription = require('../models/Subscription');
+const mongoose = require('mongoose');
 const { getUsdInrRate } = require('../services/usdInrRateService');
 
 const populateFields = (query) =>
   query
     .populate('usedBy', 'name email avatar')
     .populate('updatedBy', 'name email avatar');
+
+const normalizeUsedByPayload = (usedBy) => {
+  if (usedBy == null || usedBy === '') return [];
+  const ids = Array.isArray(usedBy) ? usedBy : [usedBy];
+  return ids.filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+};
+
+const normalizeUsedByOnDoc = (subscription) => {
+  if (!subscription) return subscription;
+  if (subscription.usedBy != null && !Array.isArray(subscription.usedBy)) {
+    subscription.usedBy = [subscription.usedBy];
+  }
+  return subscription;
+};
+
+const prepareBody = (body) => {
+  const next = { ...body };
+  if (Object.prototype.hasOwnProperty.call(body, 'usedBy')) {
+    next.usedBy = normalizeUsedByPayload(body.usedBy);
+  }
+  return next;
+};
 
 exports.getUsdInrRate = async (req, res) => {
   try {
@@ -20,7 +43,7 @@ exports.listSubscriptions = async (req, res) => {
     const subscriptions = await populateFields(
       Subscription.find().sort('dueDate')
     );
-    res.json(subscriptions);
+    res.json(subscriptions.map(normalizeUsedByOnDoc));
   } catch (error) {
     res.status(500).json({ error: 'Server error fetching subscriptions' });
   }
@@ -29,12 +52,12 @@ exports.listSubscriptions = async (req, res) => {
 exports.createSubscription = async (req, res) => {
   try {
     const subscription = new Subscription({
-      ...req.body,
+      ...prepareBody(req.body),
       updatedBy: req.user._id,
     });
     const saved = await subscription.save();
     const populated = await populateFields(Subscription.findById(saved._id));
-    res.status(201).json(populated);
+    res.status(201).json(normalizeUsedByOnDoc(populated));
   } catch (error) {
     res.status(400).json({ error: 'Failed to create subscription' });
   }
@@ -46,7 +69,7 @@ exports.updateSubscription = async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Subscription not found' });
 
     const updates = {
-      ...req.body,
+      ...prepareBody(req.body),
       updatedBy: req.user._id,
     };
 
@@ -60,7 +83,7 @@ exports.updateSubscription = async (req, res) => {
     const updated = await populateFields(
       Subscription.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true })
     );
-    res.json(updated);
+    res.json(normalizeUsedByOnDoc(updated));
   } catch (error) {
     res.status(400).json({ error: 'Failed to update subscription' });
   }

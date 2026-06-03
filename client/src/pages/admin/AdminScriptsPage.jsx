@@ -14,7 +14,7 @@ const AdminScriptsPage = () => {
   const [runningId, setRunningId] = useState(null);
   const [results, setResults] = useState({});
 
-  const { data: scripts = [], isLoading, refetch } = useQuery({
+  const { data: scripts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['admin-scripts'],
     queryFn: async () => (await axios.get('/api/admin/scripts')).data?.data || [],
   });
@@ -66,8 +66,8 @@ const AdminScriptsPage = () => {
               onChange={(e) => setSearch(e.target.value)}
               className="w-64"
             />
-            <Button size="sm" variant="secondary" onClick={() => refetch()}>
-              Refresh
+            <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? 'Refreshing...' : 'Refresh'}
             </Button>
           </div>
         }

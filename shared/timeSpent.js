@@ -65,11 +65,11 @@ function formatHoursMinutes(hours) {
   return formatTimeSpent(hours);
 }
 
-/** True when separate h/m inputs meet minimum completion time. */
+/** True when separate h/m inputs have any time (not both zero). */
 function isValidCompletionMinutes(hours, minutes) {
   const h = Math.max(0, parseInt(String(hours ?? ''), 10) || 0);
   const m = Math.max(0, Math.min(59, parseInt(String(minutes ?? ''), 10) || 0));
-  return h * 60 + m >= MIN_COMPLETION_MINUTES;
+  return h > 0 || m > 0;
 }
 
 /** True when review time inputs are at least 1 minute. */

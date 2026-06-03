@@ -10,7 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Badge, NexusModal, NexusDropdown, PageHeader, 
-  PageContainer, Button, Input, StatCard, TabSwitcher
+  PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
@@ -405,7 +405,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
              </div>
              
              <div className="p-6 space-y-4">
-                {dailyLogs.length === 0 ? (
+                {loading ? (
+                  <DataLoading message="Loading activity logs..." className="py-16" />
+                ) : dailyLogs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
                      <Activity size={48} className="mb-4" />
                      <p className="text-xs font-black uppercase tracking-widest">No activity recorded for this date</p>

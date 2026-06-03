@@ -164,6 +164,7 @@ const LeadAuditsContent = () => {
         <DataTable 
           columns={columns} 
           data={filteredLogs} 
+          isLoading={isLoading}
           className="!border-none"
           serverSide={true}
           totalItems={total}

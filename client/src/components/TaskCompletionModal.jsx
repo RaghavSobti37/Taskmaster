@@ -5,8 +5,8 @@ import {
   hoursMinutesToDecimal,
   isValidCompletionMinutes,
   isValidReviewMinutes,
-  MIN_COMPLETION_MINUTES,
   REVIEW_TIME_MINUTES,
+  MIN_COMPLETION_MINUTES,
 } from '../utils/timeSpent';
 
 const TaskCompletionModal = ({
@@ -17,8 +17,8 @@ const TaskCompletionModal = ({
   submitForReview = false,
   approveReview = false,
 }) => {
-  const [hoursInput, setHoursInput] = useState('1');
-  const [minutesInput, setMinutesInput] = useState('0');
+  const [hoursInput, setHoursInput] = useState('0');
+  const [minutesInput, setMinutesInput] = useState(String(MIN_COMPLETION_MINUTES));
   const [timeError, setTimeError] = useState('');
 
   useEffect(() => {
@@ -29,8 +29,8 @@ const TaskCompletionModal = ({
         setHoursInput(String(reviewHours));
         setMinutesInput(String(reviewMins));
       } else {
-        setHoursInput('1');
-        setMinutesInput('0');
+        setHoursInput('0');
+        setMinutesInput(String(MIN_COMPLETION_MINUTES));
       }
       setTimeError('');
     }
@@ -41,15 +41,14 @@ const TaskCompletionModal = ({
   const isValidTime = approveReview
     ? isValidReviewMinutes(hoursInput, minutesInput)
     : isValidCompletionMinutes(hoursInput, minutesInput);
-  const minLabel = approveReview
-    ? '1 minute'
-    : (MIN_COMPLETION_MINUTES >= 60
-      ? `${MIN_COMPLETION_MINUTES / 60} hour`
-      : `${MIN_COMPLETION_MINUTES} minutes`);
 
   const handleMarkDone = () => {
     if (!isValidTime) {
-      setTimeError(`Enter at least ${minLabel}.`);
+      setTimeError(
+        approveReview
+          ? 'Enter at least 1 minute.'
+          : 'Hours and minutes cannot both be zero.'
+      );
       return;
     }
     onSubmit(task, hoursMinutesToDecimal(hoursInput, minutesInput));
@@ -123,7 +122,7 @@ const TaskCompletionModal = ({
         </ModalBody>
         <ModalFooter className="flex-shrink-0 flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleMarkDone} className="flex-1" disabled={!isValidTime}>
+          <Button onClick={handleMarkDone} className="flex-1">
             {actionLabel}
           </Button>
         </ModalFooter>

@@ -5,10 +5,12 @@ import { Mail, Send, Play, Pause } from 'lucide-react';
 import { useMailStats, useMailCampaigns } from '../../hooks/useTaskmasterQueries';
 
 const EmailsPage = () => {
-  const { data: stats } = useMailStats();
-  const { data: campaigns = [] } = useMailCampaigns();
+  const { data: stats, isLoading: statsLoading } = useMailStats();
+  const { data: campaigns = [], isLoading: campaignsLoading } = useMailCampaigns();
+  const overviewLoading = statsLoading || campaignsLoading;
   const sending = campaigns.filter((c) => c.status === 'Sending').length;
   const completed = campaigns.filter((c) => c.status === 'Completed').length;
+  const statValue = (v) => (overviewLoading ? '—' : v);
 
   return (
     <ListPageLayout
@@ -18,7 +20,8 @@ const EmailsPage = () => {
           {
             id: 'sent',
             label: 'Emails Sent',
-            value: stats?.totalSent ?? 0,
+            value: statValue(stats?.totalSent ?? 0),
+            className: overviewLoading ? 'animate-pulse' : undefined,
             icon: Send,
             variant: 'mint',
             info: 'Total emails dispatched across all campaigns.',
@@ -26,7 +29,8 @@ const EmailsPage = () => {
           {
             id: 'sending',
             label: 'Sending Now',
-            value: sending,
+            value: statValue(sending),
+            className: overviewLoading ? 'animate-pulse' : undefined,
             icon: Play,
             variant: 'apricot',
             info: 'Campaigns currently in sending state.',
@@ -34,7 +38,8 @@ const EmailsPage = () => {
           {
             id: 'done',
             label: 'Completed',
-            value: completed,
+            value: statValue(completed),
+            className: overviewLoading ? 'animate-pulse' : undefined,
             icon: Mail,
             variant: 'info',
             info: 'Campaigns that finished sending.',
@@ -42,7 +47,8 @@ const EmailsPage = () => {
           {
             id: 'opens',
             label: 'Total Opens',
-            value: stats?.totalOpened ?? 0,
+            value: statValue(stats?.totalOpened ?? 0),
+            className: overviewLoading ? 'animate-pulse' : undefined,
             icon: Pause,
             variant: 'slate',
             info: 'Aggregate open events recorded (UI summary only).',

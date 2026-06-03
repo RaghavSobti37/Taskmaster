@@ -7,6 +7,7 @@ import {
   Badge, 
   Button,
   ListPageLayout,
+  Spinner,
 } from '../../components/ui';
 import { useCalendarEvents, useStatusCounts } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,6 +22,7 @@ const CalendarView = () => {
   const { data: statusCounts } = useStatusCounts(!!user);
   const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
+  const [holidaysLoading, setHolidaysLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [showHolidays, setShowHolidays] = useState(true);
@@ -29,7 +31,8 @@ const CalendarView = () => {
   const [showTasks, setShowTasks] = useState(true);
   const [selectedDay, setSelectedDay] = useState(new Date());
 
-  const loading = eventsLoading && calendarEvents.length === 0;
+  const syncSpinning = eventsLoading && calendarEvents.length === 0;
+  const gridLoading = eventsLoading;
 
   const handleSeedMusicCalendar = async () => {
     if (!window.confirm(`Import Music Content Calendar birthdays for ${currentMonth.getFullYear()}?`)) return;
@@ -47,6 +50,7 @@ const CalendarView = () => {
 
   useEffect(() => {
     const fetchHolidays = async () => {
+      setHolidaysLoading(true);
       try {
         const currentYear = currentMonth.getFullYear();
         const res = await axios.get(`/api/google/holidays?year=${currentYear}`);
@@ -61,6 +65,9 @@ const CalendarView = () => {
         })));
       } catch (err) {
         console.error('Error fetching holidays:', err);
+        setHolidays([]);
+      } finally {
+        setHolidaysLoading(false);
       }
     };
     fetchHolidays();
@@ -361,7 +368,7 @@ const CalendarView = () => {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Calendar</Button>
+             <Button variant="secondary" size="sm" onClick={() => refetchAllEvents()} disabled={eventsLoading}><RefreshCw size={14} className={syncSpinning ? 'animate-spin' : ''} /> Sync Calendar</Button>
              {isAdminUser(user) && (
                <Button variant="secondary" size="sm" onClick={handleSeedMusicCalendar} disabled={seedingMusicCalendar} title="Import Music Content Calendar birthdays">
                  <Star size={14} className={seedingMusicCalendar ? 'animate-pulse' : ''} /> Birthdays
@@ -380,7 +387,12 @@ const CalendarView = () => {
                  ))}
               </div>
 
-              <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr overflow-hidden">
+              <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr overflow-hidden relative">
+                 {gridLoading && (
+                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75 backdrop-blur-[1px]">
+                     <Spinner size="lg" label="Loading calendar" />
+                   </div>
+                 )}
                  {eachDayOfInterval({
                     start: startOfWeek(startOfMonth(currentMonth)),
                     end: endOfWeek(endOfMonth(currentMonth))

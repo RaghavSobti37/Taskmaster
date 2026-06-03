@@ -5,7 +5,7 @@ import { useDashboardPreset } from '../../../hooks/useTaskmasterQueries';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
-import { DesktopRecommendedBanner } from '../../../components/ui';
+import { DesktopRecommendedBanner, LoadingState } from '../../../components/ui';
 import { useIsMobile } from '../../../hooks/useBreakpoint';
 
 const GRID_COLS = 4;
@@ -116,7 +116,7 @@ export default function DashboardCustomizationTab() {
   
   const [saving, setSaving] = useState(false);
   const [originalElements, setOriginalElements] = useState([]);
-  const { data: dashboardPreset } = useDashboardPreset();
+  const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
   const [dashboardElements, setDashboardElements] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('custom');
   
@@ -130,6 +130,7 @@ export default function DashboardCustomizationTab() {
   const dropTargetRef = useRef(null);
 
   useEffect(() => {
+    if (presetLoading) return;
     let init;
     if (dashboardPreset?.elements?.length) {
       init = dashboardPreset.elements.map((el, i) => ({
@@ -147,7 +148,7 @@ export default function DashboardCustomizationTab() {
     
     setDashboardElements(init);
     setOriginalElements(JSON.parse(JSON.stringify(init)));
-  }, [dashboardPreset, permissionPreset]);
+  }, [dashboardPreset, permissionPreset, presetLoading]);
 
   const applyTemplate = (templateId) => {
     if (templateId === 'custom') return;
@@ -505,6 +506,9 @@ export default function DashboardCustomizationTab() {
           </div>
         </div>
 
+        {presetLoading && dashboardElements.length === 0 ? (
+          <LoadingState message="Loading dashboard layout..." className="min-h-[400px] border border-[var(--color-bg-border)] rounded-3xl" />
+        ) : (
         <div
           className="border-[4px] border-[var(--color-text-primary)] bg-[var(--color-bg-workspace)] rounded-3xl p-6"
           style={{ minHeight: workspaceMinHeight }}
@@ -611,6 +615,7 @@ export default function DashboardCustomizationTab() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       {/* Side Drawer Library */}

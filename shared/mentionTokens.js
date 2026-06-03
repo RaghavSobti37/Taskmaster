@@ -2,10 +2,11 @@
 /** @typedef {{ _id: string, name?: string, link?: string }} MentionAsset */
 
 const STOP_WORDS = new Set(['with', 'and', 'or', 'on', 'for', 'to', 'in', 'at', 'from']);
-const ASSET_STOP_WORDS = new Set([
+const USER_STOP_WORDS = new Set([
   ...STOP_WORDS,
   'ko', 'karo', 'please', 'review', 'de', 'kar', 'do', 'the', 'a', 'an', 'is', 'are',
 ]);
+const ASSET_STOP_WORDS = new Set([...USER_STOP_WORDS]);
 
 const normalizeLabel = (value) => String(value || '').trim().toLowerCase();
 
@@ -38,7 +39,7 @@ const parseUserMention = (text, start) => {
 
   if (text[index] === ' ') {
     const second = readWord(text, index + 1);
-    if (second && !STOP_WORDS.has(second.word.toLowerCase())) {
+    if (second && !USER_STOP_WORDS.has(second.word.toLowerCase())) {
       words.push(second.word);
       index = second.end;
     }

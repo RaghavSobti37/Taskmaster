@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bug, Play, XCircle, RefreshCw, Trash2, CheckCircle, AlertTriangle, ShieldAlert, Monitor, Smartphone, Server, Database, Timer, Layout, Check, Shield, Copy, Lock, Globe, Gauge, FileWarning, ScrollText, RotateCcw, GitBranch } from 'lucide-react';
-import { PageContainer, PageHeader, Button, Badge } from '../../components/ui';
+import { PageContainer, PageHeader, Button, Badge, LoadingState } from '../../components/ui';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -820,7 +820,9 @@ const QATestingPage = () => {
 
         {/* Control Panel / Test Runner */}
         <section className="p-6 overflow-hidden relative min-h-[300px] flex flex-col justify-center border border-[var(--color-bg-border)]">
-          {isRunning ? (
+          {(historyLoading || projectsLoading) && !historyData ? (
+            <LoadingState message="Loading QA workspace..." />
+          ) : isRunning ? (
             <div className="bg-white dark:bg-gray-900 p-8 rounded-[var(--radius-atomic)] border border-blue-200 dark:border-blue-800/50 w-full max-w-4xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <div>

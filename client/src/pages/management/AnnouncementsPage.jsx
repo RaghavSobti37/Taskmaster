@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Megaphone, Mail, Radio } from 'lucide-react';
-import { ListPageLayout, Input, Button } from '../../components/ui';
+import { ListPageLayout, Input, Button, DataLoading } from '../../components/ui';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
 import { useConfirm } from '../../contexts/confirmContext';
 
 const AnnouncementsPage = () => {
   const { confirm } = useConfirm();
-  const { data: announcements = [] } = useAnnouncements(true, 4000, true);
-  const { data: targets } = useAnnouncementTargets(true);
+  const { data: announcements = [], isLoading: announcementsLoading } = useAnnouncements(true, 4000, true);
+  const { data: targets, isLoading: targetsLoading } = useAnnouncementTargets(true);
   const createAnnouncement = useCreateAnnouncement();
   const deleteAnnouncement = useDeleteAnnouncement();
 
@@ -113,6 +113,10 @@ const AnnouncementsPage = () => {
 
           {audienceType === 'selected' && (
             <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2">
+              {targetsLoading ? (
+                <DataLoading message="Loading users..." className="py-6" />
+              ) : (
+              <>
               <div className="flex gap-2">
                 <Button size="xs" variant="ghost" onClick={() => setSelectedUsers(users.map((u) => u._id))}>Select all</Button>
                 <Button size="xs" variant="ghost" onClick={() => setSelectedUsers([])}>Deselect all</Button>
@@ -123,6 +127,8 @@ const AnnouncementsPage = () => {
                   {u.name} ({u.email})
                 </label>
               ))}
+              </>
+              )}
             </div>
           )}
 
@@ -159,7 +165,9 @@ const AnnouncementsPage = () => {
 
         <section className="lg:col-span-4 p-4 flex flex-col gap-3 self-start w-full">
           <h3 className="tm-section-label text-[var(--color-text-primary)]">Recent Announcements</h3>
-          {announcements.length === 0 ? (
+          {announcementsLoading ? (
+            <DataLoading message="Loading announcements..." className="py-8" />
+          ) : announcements.length === 0 ? (
             <p className="tm-caption py-4 text-center">No announcements yet.</p>
           ) : (
             <div className="space-y-2 max-h-[min(70vh,32rem)] overflow-y-auto pr-0.5">

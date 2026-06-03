@@ -51,13 +51,44 @@ const buildReminderHtml = (subscription, usedByName) => `
   </div>
 `;
 
-const resolveRecipient = async (subscription, fallbackEmail) => {
-  if (subscription.usedBy?.email) return subscription.usedBy.email.trim();
-  if (subscription.usedBy && mongoose.Types.ObjectId.isValid(subscription.usedBy)) {
-    const user = await User.findById(subscription.usedBy).select('email name').setOptions({ bypassTenant: true });
-    if (user?.email) return user.email.trim();
+const resolveRecipients = async (subscription, fallbackEmail) => {
+  const entries = Array.isArray(subscription.usedBy)
+    ? subscription.usedBy
+    : subscription.usedBy
+      ? [subscription.usedBy]
+      : [];
+
+  const emails = [];
+  for (const entry of entries) {
+    if (entry?.email) {
+      emails.push(entry.email.trim());
+      continue;
+    }
+    if (entry && mongoose.Types.ObjectId.isValid(entry)) {
+      const user = await User.findById(entry).select('email name').setOptions({ bypassTenant: true });
+      if (user?.email) emails.push(user.email.trim());
+    }
   }
-  return fallbackEmail;
+
+  const unique = [...new Set(emails.filter(Boolean))];
+  if (unique.length) return unique;
+  return fallbackEmail ? [fallbackEmail] : [];
+};
+
+const formatUsedByNames = (usedBy) => {
+  const entries = Array.isArray(usedBy) ? usedBy : usedBy ? [usedBy] : [];
+  return entries
+    .map((entry) => entry?.name || entry?.email)
+    .filter(Boolean)
+    .join(', ');
+};
+
+const normalizeUsedByOnDoc = (subscription) => {
+  if (!subscription) return subscription;
+  if (subscription.usedBy != null && !Array.isArray(subscription.usedBy)) {
+    subscription.usedBy = [subscription.usedBy];
+  }
+  return subscription;
 };
 
 const runSubscriptionReminders = async () => {
@@ -87,22 +118,25 @@ const runSubscriptionReminders = async () => {
   let skipped = 0;
 
   for (const subscription of dueSoon) {
-    const to = await resolveRecipient(subscription, fallbackEmail);
-    if (!to) {
+    normalizeUsedByOnDoc(subscription);
+    const recipients = await resolveRecipients(subscription, fallbackEmail);
+    if (!recipients.length) {
       skipped += 1;
       continue;
     }
 
-    const usedByName = subscription.usedBy?.name || subscription.usedBy?.email;
+    const usedByName = formatUsedByNames(subscription.usedBy);
     const subject = `[CoreKnot] Subscription due ${formatDate(subscription.dueDate)} — ${subscription.name}`;
     const html = buildReminderHtml(subscription, usedByName);
 
     try {
-      await dispatchEmailPayload({ to, subject, html, from: getFromEmail() });
+      for (const to of recipients) {
+        await dispatchEmailPayload({ to, subject, html, from: getFromEmail() });
+      }
       subscription.reminderSentForDueDate = subscription.dueDate;
       await subscription.save();
       sent += 1;
-      logger.info('SubscriptionReminders', `Reminder sent for ${subscription.name}`, { to, dueDate: subscription.dueDate });
+      logger.info('SubscriptionReminders', `Reminder sent for ${subscription.name}`, { to: recipients, dueDate: subscription.dueDate });
     } catch (error) {
       skipped += 1;
       logger.error('SubscriptionReminders', `Failed to send reminder for ${subscription.name}`, { error: error.message });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
+import { DataLoading } from '../../../components/ui';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAttendance } from '../../../hooks/useTaskmasterQueries';
 
@@ -11,7 +12,7 @@ const getAttendanceRowClass = (row) => {
 
 export default function AttendanceTab() {
   const { user } = useAuth();
-  const { data: myAttendance = [] } = useAttendance({ mine: true }, !!user);
+  const { data: myAttendance = [], isLoading } = useAttendance({ mine: true }, !!user);
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6 pb-24">
@@ -35,14 +36,20 @@ export default function AttendanceTab() {
               </tr>
             </thead>
             <tbody>
-              {myAttendance.map((row) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={3}>
+                    <DataLoading message="Loading attendance..." className="py-8" />
+                  </td>
+                </tr>
+              ) : myAttendance.map((row) => (
                 <tr key={row?._id} className={`border-b border-[var(--color-bg-border)] last:border-0 ${getAttendanceRowClass(row)}`}>
                   <td className="px-4 py-3 tabular-nums">{row.date ? new Date(row.date).toISOString().slice(0, 10) : '-'}</td>
                   <td className="px-4 py-3 tabular-nums">{row.timeIn || '-'}</td>
                   <td className="px-4 py-3 tabular-nums">{row.timeOut || '-'}</td>
                 </tr>
               ))}
-              {myAttendance.length === 0 && (
+              {!isLoading && myAttendance.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-4 py-8 text-center tm-data-meta">No attendance records yet.</td>
                 </tr>

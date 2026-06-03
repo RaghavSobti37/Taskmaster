@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.2-126d5e?style=flat-square" alt="Version 1.9.2" />
+  <img src="https://img.shields.io/badge/version-1.9.3-126d5e?style=flat-square" alt="Version 1.9.3" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -83,6 +83,13 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Todo cards:** Subtle priority gradients on today/overdue widgets; rule-divider layout replaces drop shadows per `index.css` shadow policy.
 * **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
 * **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
+
+### ⏳ Async Loading UX (v1.9.3)
+
+* **`DataTable` loading rows:** Passing `isLoading` now renders a centered spinner (desktop table + mobile card stack) instead of a blank body.
+* **Page coverage:** Calendar grid overlay, Emails overview placeholders, Announcements feed/targets, Daily Log list, QA Testing bootstrap, Data Hub people table, Lead Audits, Invoice reimbursements, Settings (attendance, dashboard preset, profile department), Register/Workspace member pickers, Admin Scripts refresh state.
+* **Task modals:** `TaskDetailModal` keeps the modal open until save/delete mutations finish; buttons show pending labels and disable double-submit.
+* **Shared primitives:** Reuse `DataLoading`, `LoadingState`, and `Spinner` from `client/src/components/ui/` for consistent empty vs loading vs ready states.
 
 ### 📲 Responsive Shell & Attention Signals (v1.9.2)
 
@@ -155,7 +162,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Tracking:** SaaS, hosting, domain, and recurring vendor subscriptions with INR amounts, due dates, periodicity, and payment mode.
 * **Page:** `/office/subscriptions` — CRUD table with search, modal forms, and assignee linking.
 * **API:** `/api/subscriptions` — list, create, update; delete restricted to ops/admin.
-* **Reminders:** Render cron (`CoreKnot-subscription-reminders`) runs daily via `runSubscriptionReminders.js` to notify assignees before due dates.
+* **Reminders:** Render cron (`CoreKnot-subscription-reminders`) runs daily via `runSubscriptionReminders.js` to email **all** linked assignees (`usedBy` supports multiple users) before due dates.
+* **Multi-assignee:** Subscription `usedBy` is an array; reminder service resolves every populated user email with deduplication.
 
 ### 🔔 Inbox & Web Push Notifications
 
@@ -562,6 +570,16 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.3 — Loading States, Mentions & Subscription Reminders
+
+- **Frontend loading audit:** `DataTable` spinner when `isLoading`; Calendar, Emails, Announcements, Daily Log, QA Testing, Data Hub, Lead Audits, Invoice tab, Settings tabs, Workspace Settings, Register, Admin Scripts wired to show fetch/mutation pending UI.
+- **TaskDetailModal:** Save/delete pending states; modal closes only after successful mutation.
+- **Mentions:** `MentionUserChip.jsx`, richer `mentionTokens.js` / `MentionRichText.jsx` for `@user` chips in task copy.
+- **Time spent:** Shared `timeSpent.js` tweaks + `server/tests/timeSpent.test.js` alignment.
+- **Subscriptions:** `usedBy` multi-user array on model/controller; `subscriptionReminderService.js` emails all assignees with formatted names in HTML.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.9.2 — Nav Badges, PWA Desktop, Schedule Horizon & Task Filter
 

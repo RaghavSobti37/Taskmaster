@@ -737,6 +737,23 @@ a.tm-hashtag-chip:hover {
   margin: 0;
 }
 
+/* iOS Safari / iPhone PWA: % height collapses when grid rows are auto-sized */
+@media (max-width: 1023px) {
+  .dashboard-widget-grid {
+    overflow: visible;
+    align-content: start;
+  }
+
+  .dashboard-widget-grid .dashboard-grid-item {
+    min-height: auto;
+  }
+
+  .dashboard-widget-grid .dashboard-grid-item > * {
+    height: auto;
+    min-height: 0;
+  }
+}
+
 .dashboard-widget,
 .dashboard-widget-grid .dashboard-grid-item > .dashboard-widget {
   background: var(--color-bg-surface);

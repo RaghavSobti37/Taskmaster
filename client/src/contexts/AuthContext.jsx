@@ -61,6 +61,8 @@ export const AuthProvider = ({ children }) => {
     userRef.current = user;
   }, [user]);
 
+  const queryClient = useQueryClient();
+
   const logout = useCallback(async () => {
     loggingOutRef.current = true;
     authEpochRef.current += 1;
@@ -72,9 +74,10 @@ export const AuthProvider = ({ children }) => {
     }
     clearAttendanceSessionLogin();
     disconnectRealtime();
+    queryClient.removeQueries({ queryKey: ['dashboardPreset'] });
     setUser(null);
     setLoading(false);
-  }, []);
+  }, [queryClient]);
 
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
@@ -91,10 +94,16 @@ export const AuthProvider = ({ children }) => {
         recordAttendanceSessionLogin();
       }
       setLoading(false);
+      // #region agent log
+      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:fetchUser:ok',message:'fetchUser ok',data:{userId:String(newData?._id||''),epoch,clearOn401},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       return newData;
     } catch (err) {
       if (epoch !== authEpochRef.current) return null;
       const status = err.response?.status;
+      // #region agent log
+      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:fetchUser:err',message:'fetchUser failed',data:{status:status||0,clearOn401,willClearUser:clearOn401&&(status===401||status===403),epoch},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (clearOn401 && (status === 401 || status === 403)) {
         setUser(null);
       }
@@ -141,7 +150,6 @@ export const AuthProvider = ({ children }) => {
     return undefined;
   }, [user?._id, fetchUser]);
 
-  const queryClient = useQueryClient();
   useTaskDomainRealtimeSync(!!user?._id);
 
   useEffect(() => {
@@ -216,11 +224,15 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((userData) => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:login',message:'login called',data:{hasUser:!!userData,userId:String(userData?._id||''),epoch:authEpochRef.current},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    queryClient.removeQueries({ queryKey: ['dashboardPreset'] });
     recordAttendanceSessionLogin();
     setUser(userData);
     setLoading(false);
     syncSessionAfterLogin();
-  }, [syncSessionAfterLogin]);
+  }, [syncSessionAfterLogin, queryClient]);
 
   const value = useMemo(() => ({
     user,

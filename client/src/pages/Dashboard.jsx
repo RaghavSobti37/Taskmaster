@@ -1,3 +1,6 @@
+// #region agent log
+fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'E',location:'Dashboard.jsx:module',message:'Dashboard chunk loaded',data:{},timestamp:Date.now()})}).catch(()=>{});
+// #endregion
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader, DashboardSkeleton, PageLoadGuard } from '../components/ui';
@@ -56,7 +59,7 @@ const Dashboard = () => {
   const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(!!user?._id);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
-  const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
+  const { data: dashboardPreset, isLoading: presetLoading, isError: presetError, isFetching: presetFetching } = useDashboardPreset(!!user?._id);
   const { data: users = [] } = useUserDirectory();
 
   const {
@@ -90,10 +93,21 @@ const Dashboard = () => {
   const showPageSkeleton = presetLoading && !dashboardPreset;
 
   const defaultElements = LAYOUT_TEMPLATES.find((t) => t.id === 'coreknot')?.elements || [];
+
+  React.useEffect(() => {
+    const presetSource = dashboardPreset?.elements?.length ? 'api' : 'template';
+    const rawCount = (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).length;
+    const visibleCount = (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
+      (el) => el.visible !== false && canAccessComponent(el.componentId, permissionPreset)
+    ).length;
+    // #region agent log
+    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'B',location:'Dashboard.jsx:state',message:'dashboard render state',data:{presetSource,presetLoading,presetFetching,presetError,showPageSkeleton,rawCount,visibleCount,hasUser:!!user?._id},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [dashboardPreset, presetLoading, presetFetching, presetError, showPageSkeleton, user?._id, permissionPreset, defaultElements]);
   const elementsToRender = useMemo(
     () =>
       (dashboardPreset?.elements?.length ? dashboardPreset.elements : defaultElements).filter(
-        (el) => el.visible && canAccessComponent(el.componentId, permissionPreset)
+        (el) => el.visible !== false && canAccessComponent(el.componentId, permissionPreset)
       ),
     [dashboardPreset?.elements, defaultElements, permissionPreset]
   );

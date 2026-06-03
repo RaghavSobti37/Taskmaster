@@ -6,6 +6,10 @@ import { DashboardSkeleton } from './ui';
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
 
+  // #region agent log
+  fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'ProtectedRoute.jsx',message:'protected route gate',data:{loading,hasUser:!!user,path:typeof window!=='undefined'?window.location.pathname:''},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+
   if (loading) return <DashboardSkeleton />;
 
   return user ? <Outlet /> : <Navigate to="/login" replace />;

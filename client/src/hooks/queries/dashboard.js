@@ -18,7 +18,7 @@ export const useDepartmentStats = (timeframe = '7d', enabled = true) => {
   });
 };
 
-export const useDashboardPreset = () => {
+export const useDashboardPreset = (enabled = true) => {
   return useQuery({
     queryKey: ['dashboardPreset'],
     queryFn: async () => {
@@ -26,6 +26,7 @@ export const useDashboardPreset = () => {
       return data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 };
 

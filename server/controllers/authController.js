@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Department = require('../models/Department');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
 const { setAuthCookie, clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
@@ -8,6 +9,7 @@ const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { normalizePersonName } = require('../utils/sanitizer');
 const { attachProfileCompletion } = require('../utils/profileCompleteness');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
+const { sendSystemEmail } = require('../utils/sendSystemEmail');
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -22,6 +24,25 @@ const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const ALLOWED_DOMAIN = (process.env.ALLOWED_DOMAIN || '').trim().toLowerCase();
+const PASSWORD_RESET_CC = ADMIN_EMAIL || 'REDACTED_ADMIN@example.com';
+const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000;
+
+const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const buildPasswordResetEmailHtml = ({ name, resetUrl }) => `
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 560px; margin: 0 auto;">
+    <h2 style="color: #0d9488; margin-bottom: 8px;">Reset your Coreknot password</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>We received a request to reset your Coreknot account password. Click the button below to choose a new password.</p>
+    <p style="text-align: center; margin: 28px 0;">
+      <a href="${resetUrl}" style="background: #0d9488; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; display: inline-block;">
+        Reset password
+      </a>
+    </p>
+    <p style="font-size: 13px; color: #666;">This link expires in 1 hour. If you did not request a reset, you can ignore this email.</p>
+    <p style="font-size: 12px; color: #999; word-break: break-all;">${resetUrl}</p>
+  </div>
+`;
 
 const formatAuthUser = (populated) => attachProfileCompletion(
   populated.toObject ? populated.toObject() : populated
@@ -347,5 +368,99 @@ exports.googleAuthCallback = async (req, res) => {
   } catch (error) {
     logger.error('authController', 'Google Auth ', { error: error.message || error });
     res.redirect(`${FRONTEND_URL}/login?error=auth_failed`);
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const genericMessage = 'If an account exists with that email, password reset instructions have been sent.';
+
+    const user = await User.findOne({ email: emailLower })
+      .select('+passwordResetToken +passwordResetExpires')
+      .setOptions({ bypassTenant: true });
+
+    if (!user) {
+      return res.json({ message: genericMessage });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = hashResetToken(resetToken);
+    user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS);
+    await user.save();
+
+    const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    try {
+      await sendSystemEmail({
+        to: user.email,
+        cc: PASSWORD_RESET_CC,
+        subject: 'Reset your Coreknot password',
+        html: buildPasswordResetEmailHtml({ name: user.name, resetUrl }),
+        text: `Reset your Coreknot password: ${resetUrl}`,
+      });
+    } catch (mailErr) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+      logger.error('authController', 'forgotPassword email failed', { error: mailErr.message, email: emailLower });
+      return res.status(500).json({ error: 'Could not send reset email. Please try again later.' });
+    }
+
+    return res.json({ message: genericMessage });
+  } catch (error) {
+    logger.error('authController', 'forgotPassword failed', { error: error.message || error });
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (typeof token !== 'string' || !token.trim()) {
+      return res.status(400).json({ error: 'Invalid or expired reset link' });
+    }
+    if (typeof newPassword !== 'string' || typeof confirmPassword !== 'string') {
+      return res.status(400).json({ error: 'Invalid input format' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
+    const passwordError = validatePasswordStrength(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const hashedToken = hashResetToken(token.trim());
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() },
+    })
+      .select('+password +passwordResetToken +passwordResetExpires')
+      .setOptions({ bypassTenant: true });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
+    await user.save();
+
+    return res.json({ message: 'Password updated successfully. You can now sign in with your new password.' });
+  } catch (error) {
+    logger.error('authController', 'resetPassword failed', { error: error.message || error });
+    return res.status(500).json({ error: error.message });
   }
 };

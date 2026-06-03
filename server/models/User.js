@@ -32,6 +32,8 @@ const userSchema = new mongoose.Schema({
   repId: { type: String, unique: true, sparse: true }, // For CRM mapping (e.g., sr01, sr02)
   mustChangePassword: { type: Boolean, default: false },
   passwordChangedAt: { type: Date },
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpires: { type: Date, select: false },
   pushSubscriptions: [{
     endpoint: { type: String, required: true },
     keys: {

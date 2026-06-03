@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { register, login, logout, getMe, changeRequiredPassword, googleLogin, googleAuthRedirect, googleAuthCallback } = require('../controllers/authController');
+const { register, login, logout, getMe, changeRequiredPassword, googleLogin, googleAuthRedirect, googleAuthCallback, forgotPassword, resetPassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 const authLoginLimiter = rateLimit({
@@ -27,8 +27,25 @@ const authSignupLimiter = rateLimit({
   message: { error: 'Too many signup attempts. Try again later.' },
 });
 
+const authForgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reset requests. Try again in an hour.' },
+  keyGenerator: (req) => {
+    const email = req.body?.email;
+    if (typeof email === 'string' && email.trim()) {
+      return `forgot:${email.trim().toLowerCase()}`;
+    }
+    return `forgot-ip:${req.ip || req.socket?.remoteAddress || 'unknown'}`;
+  },
+});
+
 router.post('/register', authSignupLimiter, register);
 router.post('/login', authLoginLimiter, login);
+router.post('/forgot-password', authForgotPasswordLimiter, forgotPassword);
+router.post('/reset-password', authForgotPasswordLimiter, resetPassword);
 router.post('/logout', logout);
 router.post('/google-login', googleLogin);
 router.get('/google', googleAuthRedirect);

@@ -10,19 +10,22 @@ if (ENV_CONFIG.mailProvider === 'sendgrid' && ENV_CONFIG.sendgridApiKey) {
   sgMail.setApiKey(ENV_CONFIG.sendgridApiKey);
 }
 
-const dispatchEmailPayload = async ({ to, subject, html, from }) => {
+const dispatchEmailPayload = async ({ to, subject, html, from, cc }) => {
   const senderEmail = from || process.env.SYSTEM_VERIFIED_FROM_EMAIL || 'onboarding@resend.dev';
+  const ccList = cc ? (Array.isArray(cc) ? cc : [cc]).filter(Boolean) : [];
 
   if (resend) {
     // Primary modern production pipeline via Resend
     // Resend SDK returns { data, error } — does not throw on API errors.
     try {
-      const { data, error } = await resend.emails.send({
+      const payload = {
         from: senderEmail,
         to: [to],
         subject: subject,
         html: html,
-      });
+      };
+      if (ccList.length) payload.cc = ccList;
+      const { data, error } = await resend.emails.send(payload);
       if (error) {
         console.error(`❌ [Resend Error] Failed to dispatch email to ${to}:`, error.message);
         throw new Error(error.message || 'Resend send failed');
@@ -40,6 +43,7 @@ const dispatchEmailPayload = async ({ to, subject, html, from }) => {
       from: senderEmail,
       subject,
       html,
+      ...(ccList.length ? { cc: ccList } : {}),
     });
     console.log(`📡 [SendGrid] Email dispatched successfully to: ${to}`);
   } else {
@@ -59,6 +63,7 @@ const dispatchEmailPayload = async ({ to, subject, html, from }) => {
         to,
         subject,
         html,
+        ...(ccList.length ? { cc: ccList.join(', ') } : {}),
       });
       console.log(`🧪 [Sandbox Dev] Email simulated. Preview URL: ${nodemailer.getTestMessageUrl(info) || 'N/A'}`);
     } catch (err) {

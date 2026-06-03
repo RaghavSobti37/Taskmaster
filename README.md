@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.7-126d5e?style=flat-square" alt="Version 1.9.7" />
+  <img src="https://img.shields.io/badge/version-1.9.8-126d5e?style=flat-square" alt="Version 1.9.8" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -75,6 +75,14 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ---
 
 ## 🚀 Key Features
+
+### 🔑 Self-Service Password Reset (v1.9.8)
+
+* **Login entry point:** “Forgot password?” on `/login` opens `/forgot-password` — same CoreKnot marketing shell as sign-in.
+* **Email flow:** User submits account email; if it exists, the API sends a 1-hour reset link via **Gmail SMTP** (`EMAIL_ADDRESS` / `EMAIL_PASSWORD` / `EMAIL_SERVICE`) and CCs `ADMIN_EMAIL` for audit visibility.
+* **Reset page:** `/reset-password?token=…` — new password + confirm, live strength checklist, then redirect to login.
+* **API:** `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` — hashed reset tokens on `User`, rate-limited (5/hour per email), generic responses to avoid email enumeration.
+* **Utility:** `server/utils/sendSystemEmail.js` — transactional system mail separate from campaign Resend pipeline (avoids unverified `SYSTEM_VERIFIED_FROM_EMAIL` domain failures in dev).
 
 ### 📅 Manual Office / WFH Attendance (v1.9.7)
 
@@ -300,6 +308,7 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **CRM lead updates (v1.7.53):** Saving a lead no longer fails when phone/email normalize to the same value (e.g. `9876543210` → `+919876543210`). Duplicate phone/email returns **409** with a clear message instead of generic **400 Failed to update lead**.
 * **Webhook signatures:** HMAC-SHA256 via `X-Webhook-Signature: sha256=…` for book-call, Exly, and artist-enquiry ingress (`server/utils/webhookAuth.js`). Set `BOOK_CALL_WEBHOOK_SECRET`, `EXLY_WEBHOOK_SECRET`, `ARTIST_ENQUIRY_WEBHOOK_SECRET` on Render.
 * **Registration lockdown:** Production signup restricted to `ALLOWED_DOMAIN` and departments with `signupAllowed`. Password strength enforced server-side.
+* **Password reset (v1.9.8):** Forgot-password and token-based reset endpoints; reset emails via Gmail (`sendSystemEmail.js`), not the campaign Resend sender; tokens stored hashed with 1-hour expiry.
 * **Route guards:** Artist analytics, subscriptions CRUD, API proxy, and Meta webhooks require auth or valid signatures.
 * **CORS:** `*.vercel.app` blocked in production unless `CORS_ALLOW_VERCEL_PREVIEWS=true`.
 * **Default passwords:** Org seed password `1Million#` via `DEFAULT_SEED_PASSWORD` / `shared/defaultPassword.js`. Weak-password reset script sets `mustChangePassword: true`.
@@ -475,6 +484,9 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | `MONGODB_DB_PROD` | Optional | Production database name override for sync scripts (default: `taskmaster_production`). |
 | `ALLOW_PROD_DB_IN_DEV` | Development Only | Permits connecting to a production-like database name from local dev (default: blocked). |
 | `DEFAULT_SEED_PASSWORD` | Recommended | Org default seed password for Clerk auto-create and weak-password reset (default: `1Million#`). |
+| `EMAIL_ADDRESS` | Password reset | Gmail (or SMTP service) sender for system transactional mail — forgot-password links. |
+| `EMAIL_PASSWORD` | Password reset | App password or SMTP credential paired with `EMAIL_ADDRESS`. |
+| `EMAIL_SERVICE` | Optional | Nodemailer service name (default: `gmail`). |
 | `BOOK_CALL_WEBHOOK_SECRET` | Production | HMAC secret for book-call webhook signature verification. |
 | `EXLY_WEBHOOK_SECRET` | Production | HMAC secret for Exly webhook signature verification. |
 | `ARTIST_ENQUIRY_WEBHOOK_SECRET` | Production | Required in production for artist-enquiry webhook. |
@@ -507,7 +519,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 
 ```
 /api
-├── /auth         → User onboarding, token provisioning, and federated Google sign-in
+├── /auth         → User onboarding, login/logout, forgot/reset password, federated Google sign-in
 ├── /tasks        → Standard task mutations, dynamic tracking states, and role assignments
 ├── /projects     → Structural workspace definitions, access states, and board layouts
 ├── /crm          → Legacy contacts + Admin Data Hub UI entry
@@ -596,6 +608,16 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.8 — Self-Service Password Reset
+
+- **Client:** `ForgotPasswordPage.jsx`, `ResetPasswordPage.jsx`; “Forgot password?” link on `LoginPage.jsx`; routes `/forgot-password`, `/reset-password` in `App.jsx`.
+- **API:** `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` in `authController.js` + `authRoutes.js` (rate limit 5/hour per email).
+- **User model:** `passwordResetToken` (hashed, select:false), `passwordResetExpires`.
+- **Email:** `server/utils/sendSystemEmail.js` uses `EMAIL_ADDRESS` / `EMAIL_PASSWORD` / `EMAIL_SERVICE`; CC `ADMIN_EMAIL`; reset link `${FRONTEND_URL}/reset-password?token=…`.
+- **mailDriver.js:** optional `cc` on Resend/SendGrid/nodemailer paths (campaign mail only; reset bypasses Resend).
+
+Ensure Render/production has `EMAIL_ADDRESS`, `EMAIL_PASSWORD`, `FRONTEND_URL`, and `ADMIN_EMAIL` set. No DB migration beyond new optional User fields (Mongoose auto-adds on save).
 
 ### v1.9.7 — Manual Office / WFH Attendance Toggle
 

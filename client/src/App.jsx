@@ -61,6 +61,8 @@ const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const QATestingPage = lazyWithRetry(() => import('./pages/admin/QATestingPage'));
 const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazyWithRetry(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazyWithRetry(() => import('./pages/auth/ResetPasswordPage'));
 const ProjectsView = lazyWithRetry(() => import('./pages/projects/ProjectsView'));
 const ProjectDetail = lazyWithRetry(() => import('./pages/projects/ProjectDetail'));
 const ProjectAnalyticsPage = lazyWithRetry(() => import('./pages/projects/ProjectAnalyticsPage'));
@@ -183,6 +185,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/relegends" element={<OTPVerificationPage />} />
           <Route path="/auth/google/success" element={<GoogleSuccessPage />} />
           <Route path="/oauth/meta/callback" element={<MetaOAuthCallback />} />

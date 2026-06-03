@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Receipt, FileText, Upload, Clock, CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { Input, Button, NexusModal, DataTable } from '../../../components/ui';
 import WorkspaceProjectFields from '../../../components/forms/WorkspaceProjectFields';
 import { useProjects } from '../../../hooks/queries/projects';
-import { useWorkspaces } from '../../../hooks/useTaskmasterQueries';
+import { useWorkspaces, useMyReimbursements } from '../../../hooks/useTaskmasterQueries';
 import { uploadFiles } from '../../../utils/uploadthing';
 import { formatProjectName } from '../../../utils/projectUtils';
 import { normalizeWorkspaceKey } from '../../../utils/workspaceColors';
@@ -62,11 +62,7 @@ export default function InvoiceTab() {
     }
   }, [workspaces]);
 
-  const { data: myReimbursementsRes, isLoading: reimbursementsLoading } = useQuery({
-    queryKey: ['my-reimbursements'],
-    queryFn: async () => (await axios.get('/api/finance/my-invoices?submissionType=reimbursement')).data,
-  });
-  const myReimbursements = myReimbursementsRes?.data || [];
+  const { data: myReimbursements = [], isLoading: reimbursementsLoading } = useMyReimbursements();
 
   const reimbursementColumns = useMemo(
     () => [

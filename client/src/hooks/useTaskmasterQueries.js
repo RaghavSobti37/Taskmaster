@@ -867,6 +867,19 @@ export const useLeaveRequests = (params = {}, enabled = true) => {
   });
 };
 
+/** Reimbursement claims submitted from Settings → Reimbursement (same source as InvoiceTab). */
+export const useMyReimbursements = (enabled = true) => {
+  return useQuery({
+    queryKey: ['my-reimbursements'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/finance/my-invoices?submissionType=reimbursement');
+      return data?.data || [];
+    },
+    enabled,
+    staleTime: 1000 * 60,
+  });
+};
+
 export const useApproveLeaveRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1297,7 +1310,7 @@ export const useDataHubReconcile = () => {
   });
 };
 
-export const useDataHubBackups = () => {
+export const useDataHubBackups = (options = {}) => {
   return useQuery({
     queryKey: ['dataHub', 'backups'],
     queryFn: async () => {
@@ -1305,19 +1318,51 @@ export const useDataHubBackups = () => {
       return data;
     },
     staleTime: 60 * 1000,
+    ...options,
   });
+};
+
+export const useDataHubBackupProgress = (enabled = false, poll = false) => {
+  return useQuery({
+    queryKey: ['dataHub', 'backup-progress'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/data-hub/backup/progress');
+      return data;
+    },
+    refetchInterval: enabled && poll ? 500 : false,
+    staleTime: 0,
+    enabled,
+  });
+};
+
+const pollBackupUntilDone = async () => {
+  for (;;) {
+    const { data } = await axios.get('/api/data-hub/backup/progress');
+    if (data.status === 'completed') {
+      return { ...data.result, emailSent: true };
+    }
+    if (data.status === 'failed') {
+      const err = new Error(data.error || data.result?.error || 'Backup failed');
+      err.response = { data: { error: err.message, ...data.result } };
+      throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 };
 
 export const useDataHubProductionBackup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ notify = true } = {}) =>
-      axios.post('/api/data-hub/backup', null, {
+    mutationFn: async ({ notify = true } = {}) => {
+      await axios.post('/api/data-hub/backup', null, {
         params: notify ? {} : { notify: 'false' },
-        timeout: 300000,
-      }),
+        timeout: 15000,
+      });
+      return pollBackupUntilDone();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataHub', 'backups'] });
+      queryClient.invalidateQueries({ queryKey: ['dataHub', 'backup-progress'] });
     },
   });
 };

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { VALID_DASHBOARD_COMPONENT_IDS } = require('../utils/dashboardComponents');
 
 const dashboardPresetSchema = new mongoose.Schema({
   userId: {
@@ -15,14 +16,7 @@ const dashboardPresetSchema = new mongoose.Schema({
   elements: [{
     componentId: {
       type: String,
-      enum: [
-        'leaderboard', 'announcements', 'pinboard', 'schedule',
-        'review-queue', 'todos-today', 'todos-overdue', 'projects-today', 
-        'notes', 'composer', 'stats', 'mark-attendance', 'leave-alerts',
-        'invoice-alerts', 'attendance-overview', 'team-activity',
-        'booked-calls', 'followups-today', 'pipeline-summary',
-        'campaign-metrics', 'dept-stats', 'system-health', 'artist-calendar'
-      ]
+      enum: VALID_DASHBOARD_COMPONENT_IDS,
     },
     size: {
       type: String,

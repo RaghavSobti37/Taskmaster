@@ -2,7 +2,11 @@ const DashboardPreset = require('../models/DashboardPreset');
 const NavbarPreference = require('../models/NavbarPreference');
 const { DEPARTMENT_PRESETS } = require('../models/DashboardPreset');
 const logger = require('../utils/logger');
-const { filterDashboardElements, canAccessComponent } = require('../utils/dashboardComponents');
+const {
+  filterDashboardElements,
+  canAccessComponent,
+  VALID_DASHBOARD_COMPONENT_IDS,
+} = require('../utils/dashboardComponents');
 const { hasPageAccess } = require('../utils/pagePermissions');
 
 const NAV_PATH_ACCESS = {
@@ -150,14 +154,15 @@ exports.getDashboardPreset = async (req, res, next) => {
   }
 };
 
-/** Save/update dashboard preset */
+/** Save/update dashboard preset and optional named layout library entry */
 exports.saveDashboardPreset = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { name, elements, department } = req.body;
+    const { name, layoutName, elements, department } = req.body;
+    const savedLayoutName = (layoutName || name || '').trim();
 
-    if (!name?.trim()) {
-      return res.status(400).json({ error: 'Preset name is required' });
+    if (!savedLayoutName) {
+      return res.status(400).json({ error: 'Layout name is required' });
     }
 
     if (!elements || !Array.isArray(elements) || elements.length === 0) {
@@ -165,17 +170,8 @@ exports.saveDashboardPreset = async (req, res, next) => {
     }
 
     // Validate elements
-    const validComponentIds = [
-      'leaderboard', 'announcements', 'pinboard', 'schedule',
-      'review-queue', 'todos-today', 'todos-overdue', 'projects-today', 
-      'notes', 'composer', 'stats', 'mark-attendance', 'leave-alerts',
-      'invoice-alerts', 'attendance-overview', 'team-activity',
-      'booked-calls', 'followups-today', 'pipeline-summary',
-      'campaign-metrics', 'dept-stats', 'system-health', 'artist-calendar'
-    ];
-
     for (const element of elements) {
-      if (!validComponentIds.includes(element.componentId)) {
+      if (!VALID_DASHBOARD_COMPONENT_IDS.includes(element.componentId)) {
         return res.status(400).json({ error: `Invalid component: ${element.componentId}` });
       }
       if (!canAccessComponent(element.componentId, req.user)) {
@@ -186,23 +182,88 @@ exports.saveDashboardPreset = async (req, res, next) => {
       }
     }
 
-    // Sort elements by order
     const sortedElements = elements.sort((a, b) => a.order - b.order);
+    const layoutEntry = {
+      name: savedLayoutName,
+      department: department || 'custom',
+      elements: sortedElements,
+      updatedAt: new Date(),
+    };
+
+    let existing = await DashboardPreset.findOne({ userId });
+    const presets = [...(existing?.presets || [])];
+    const idx = presets.findIndex(
+      (p) => p.name && p.name.toLowerCase() === savedLayoutName.toLowerCase()
+    );
+    if (idx >= 0) {
+      presets[idx] = layoutEntry;
+    } else {
+      presets.push(layoutEntry);
+    }
 
     const preset = await DashboardPreset.findOneAndUpdate(
       { userId },
       {
-        name: name.trim(),
+        name: savedLayoutName,
         elements: sortedElements,
         department: department || 'custom',
-        updatedAt: new Date()
+        presets,
+        updatedAt: new Date(),
       },
       { new: true, upsert: true }
     );
 
-    res.json(preset);
+    const presetObj = preset.toObject ? preset.toObject() : preset;
+    res.json({
+      ...presetObj,
+      elements: filterDashboardElements(presetObj.elements, req.user),
+    });
   } catch (error) {
     logger.error('Dashboard', 'Error saving dashboard preset', { error: error.message });
+    next(error);
+  }
+};
+
+/** Load a named layout from the user's saved presets library */
+exports.loadSavedLayout = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const layoutName = decodeURIComponent(req.params.layoutName || '').trim();
+
+    if (!layoutName) {
+      return res.status(400).json({ error: 'Layout name is required' });
+    }
+
+    const existing = await DashboardPreset.findOne({ userId });
+    if (!existing) {
+      return res.status(404).json({ error: `Layout not found: ${layoutName}` });
+    }
+
+    const saved = (existing.presets || []).find(
+      (p) => p.name && p.name.toLowerCase() === layoutName.toLowerCase()
+    );
+    if (!saved?.elements?.length) {
+      return res.status(404).json({ error: `Layout not found: ${layoutName}` });
+    }
+
+    const preset = await DashboardPreset.findOneAndUpdate(
+      { userId },
+      {
+        name: saved.name,
+        elements: saved.elements,
+        department: saved.department || 'custom',
+        updatedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    const presetObj = preset.toObject ? preset.toObject() : preset;
+    res.json({
+      ...presetObj,
+      elements: filterDashboardElements(presetObj.elements, req.user),
+    });
+  } catch (error) {
+    logger.error('Dashboard', 'Error loading saved layout', { error: error.message });
     next(error);
   }
 };

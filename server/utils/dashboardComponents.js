@@ -23,8 +23,17 @@ const COMPONENT_ACCESS = {
   'campaign-metrics': ['sales', 'admin'],
   'dept-stats': ['admin'],
   'system-health': ['admin'],
+  'last-backup': ['admin'],
   'artist-calendar': ['artist-management'],
 };
+
+/** Legacy widget ids still stored in old presets */
+const LEGACY_COMPONENT_IDS = ['stats'];
+
+const VALID_DASHBOARD_COMPONENT_IDS = [
+  ...Object.keys(COMPONENT_ACCESS),
+  ...LEGACY_COMPONENT_IDS,
+];
 
 function getPermissionPreset(user) {
   if (isAdminUser(user)) return 'admin';
@@ -49,4 +58,5 @@ module.exports = {
   canAccessComponent,
   filterDashboardElements,
   getPermissionPreset,
+  VALID_DASHBOARD_COMPONENT_IDS,
 };

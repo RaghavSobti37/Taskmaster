@@ -29,6 +29,9 @@ import {
   DailyMissionsCard,
   PipelineSummaryCard,
   GenericDashboardCard,
+  LastBackupCard,
+  LeaveRequestsCard,
+  ReimbursementsCard,
 } from '../components/dashboard';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 import TaskCompletionModal from '../components/TaskCompletionModal';
@@ -225,7 +228,9 @@ const Dashboard = () => {
       case 'pipeline-summary':
         return <PipelineSummaryCard />;
       case 'leave-alerts':
+        return <LeaveRequestsCard />;
       case 'invoice-alerts':
+        return <ReimbursementsCard />;
       case 'booked-calls':
       case 'followups-today':
       case 'team-activity':
@@ -235,6 +240,8 @@ const Dashboard = () => {
       case 'system-health':
       case 'artist-calendar':
         return <GenericDashboardCard componentId={componentId} />;
+      case 'last-backup':
+        return <LastBackupCard />;
       default:
         return null;
     }

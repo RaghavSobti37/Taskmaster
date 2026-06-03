@@ -19,4 +19,7 @@ export { default as ReviewQueueCard } from './ReviewQueueCard';
 export { default as TodosOverdueCard } from './TodosOverdueCard';
 export { default as PipelineSummaryCard } from './PipelineSummaryCard';
 export { default as GenericDashboardCard } from './GenericDashboardCard';
+export { default as LeaveRequestsCard } from './LeaveRequestsCard';
+export { default as ReimbursementsCard } from './ReimbursementsCard';
+export { default as LastBackupCard } from './LastBackupCard';
 export { PinBoardProvider } from './PinBoardContext';

@@ -1,5 +1,5 @@
 const DataHubService = require('../services/DataHubService');
-const { runDailyBackup, listAvailableBackups, getBackupDbName } = require('../services/databaseBackupService');
+const { runDailyBackup, listAvailableBackups, getBackupDbName, getBackupProgress } = require('../services/databaseBackupService');
 const { notifyBackupResult } = require('../services/backupNotificationService');
 const logger = require('../utils/logger');
 
@@ -109,13 +109,29 @@ exports.listBackups = async (req, res) => {
   }
 };
 
+exports.getBackupProgress = async (req, res) => {
+  try {
+    res.json(getBackupProgress());
+  } catch (error) {
+    logger.error('dataHubController', 'getBackupProgress', { error: error.message });
+    res.status(500).json({ error: error.message || 'Failed to read backup progress' });
+  }
+};
+
 exports.runProductionBackup = async (req, res) => {
-  if (backupInProgress) {
+  const progress = getBackupProgress();
+  if (backupInProgress || progress.status === 'running') {
     return res.status(409).json({ error: 'A backup is already running. Wait for it to finish.' });
   }
 
   const notify = req.query.notify !== 'false';
   backupInProgress = true;
+
+  res.status(202).json({
+    started: true,
+    message: 'Production backup started',
+    progress: getBackupProgress(),
+  });
 
   try {
     const result = await runDailyBackup();
@@ -127,31 +143,10 @@ exports.runProductionBackup = async (req, res) => {
         logger.error('dataHubController', 'runProductionBackup notify', {
           error: emailError.message,
         });
-        if (result.success) {
-          return res.status(200).json({
-            ...result,
-            emailSent: false,
-            warning: `Backup saved but notification email failed: ${emailError.message}`,
-          });
-        }
       }
     }
-
-    if (!result.success) {
-      return res.status(500).json({
-        error: result.error || 'Backup failed',
-        ...result,
-      });
-    }
-
-    res.json({
-      message: 'Production database backup completed',
-      emailSent: notify,
-      ...result,
-    });
   } catch (error) {
     logger.error('dataHubController', 'runProductionBackup', { error: error.message });
-    res.status(500).json({ error: error.message || 'Backup failed' });
   } finally {
     backupInProgress = false;
   }

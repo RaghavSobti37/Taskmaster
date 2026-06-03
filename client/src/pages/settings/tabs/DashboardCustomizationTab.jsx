@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, GripVertical, Plus, EyeOff, Scaling, PanelRight, X } from 'lucide-react';
-import { useDashboardPreset } from '../../../hooks/useTaskmasterQueries';
+import {
+  useDashboardPreset,
+  savedLayoutOptionValue,
+  parseSavedLayoutOptionValue,
+} from '../../../hooks/queries/dashboard';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useAuth } from '../../../contexts/AuthContext';
 import { COMPONENT_REGISTRY, LAYOUT_TEMPLATES, getAccessibleComponents, getAccessibleTemplates } from '../../../lib/componentRegistry';
@@ -15,22 +20,49 @@ const CELL_HEIGHT = 160;
 const clampCol = (col, size) => Math.max(1, Math.min(col, GRID_COLS - (parseInt(size) || 1) + 1));
 const clampRow = (row) => Math.max(1, row);
 
-const resolveCollisions = (elements, ghostId = null, ghostTarget = null) => {
-  const visibleEls = elements.filter(e => e.visible);
-  const hiddenEls = elements.filter(e => !e.visible);
-  
-  const reqPos = visibleEls.map(el => {
-    if (ghostId === el.componentId && ghostTarget) {
-      return { ...el, row: ghostTarget.row, col: clampCol(ghostTarget.col, el.size), isGhost: true };
+/** Element occupying a grid cell (row + column within span). */
+const findElementAtGridCell = (elements, row, col, excludeId = null) => {
+  const visible = elements.filter((e) => e.visible && e.componentId !== excludeId);
+  return (
+    visible.find((el) => {
+      const size = parseInt(el.size, 10) || 1;
+      const startCol = clampCol(el.col, el.size);
+      const startRow = el.row || 1;
+      return row === startRow && col >= startCol && col < startCol + size;
+    }) || null
+  );
+};
+
+/** Drag/drop: swap with widget under cursor, or move into empty cell — never repack others. */
+const applyDragLayout = (elements, dragId, target, origin) => {
+  const dragged = elements.find((e) => e.componentId === dragId);
+  if (!dragged || !target || !origin) return elements;
+
+  const targetCol = clampCol(target.col, dragged.size);
+  const targetRow = clampRow(target.row);
+  const origCol = clampCol(origin.col, dragged.size);
+  const origRow = clampRow(origin.row);
+  const hit = findElementAtGridCell(elements, targetRow, targetCol, dragId);
+
+  return elements.map((el) => {
+    if (el.componentId === dragId) {
+      return { ...el, row: targetRow, col: targetCol };
+    }
+    if (hit && el.componentId === hit.componentId) {
+      return { ...el, row: origRow, col: origCol };
     }
     return el;
   });
+};
 
-  reqPos.sort((a, b) => {
-    if (a.isGhost) return -1;
-    if (b.isGhost) return 1;
-    return (a.row - b.row) || (a.col - b.col);
-  });
+/** Pack all visible widgets (templates, load, add) — not used during drag. */
+const resolveCollisions = (elements) => {
+  const visibleEls = elements.filter((e) => e.visible);
+  const hiddenEls = elements.filter((e) => !e.visible);
+
+  const reqPos = [...visibleEls].sort(
+    (a, b) => (a.row - b.row) || (a.col - b.col)
+  );
 
   const grid = [];
   const isOccupied = (r, c, size) => {
@@ -46,18 +78,10 @@ const resolveCollisions = (elements, ghostId = null, ghostTarget = null) => {
 
   const placed = [];
   for (const el of reqPos) {
-    const sizeNum = parseInt(el.size) || 1;
+    const sizeNum = parseInt(el.size, 10) || 1;
     let placedRow = 1;
     let placedCol = 1;
     let found = false;
-
-    if (el.isGhost) {
-      placedRow = el.row;
-      placedCol = el.col;
-      markOccupied(placedRow, placedCol, sizeNum);
-      placed.push({ ...el, row: placedRow, col: placedCol });
-      continue;
-    }
 
     for (let r = 1; r < 100; r++) {
       for (let c = 1; c <= GRID_COLS - sizeNum + 1; c++) {
@@ -70,16 +94,12 @@ const resolveCollisions = (elements, ghostId = null, ghostTarget = null) => {
       }
       if (found) break;
     }
-    
+
     markOccupied(placedRow, placedCol, sizeNum);
     placed.push({ ...el, row: placedRow, col: placedCol });
   }
 
-  return [...placed.map(p => {
-    const copy = { ...p };
-    delete copy.isGhost;
-    return copy;
-  }), ...hiddenEls];
+  return [...placed, ...hiddenEls];
 };
 
 const findFirstAvailableVacancy = (elements, sizeNum) => {
@@ -114,12 +134,22 @@ export default function DashboardCustomizationTab() {
   const isMobile = useIsMobile();
   const permissionPreset = user?.departmentId?.permissionPreset || 'standard';
   
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [originalElements, setOriginalElements] = useState([]);
   const { data: dashboardPreset, isLoading: presetLoading } = useDashboardPreset();
   const [dashboardElements, setDashboardElements] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('custom');
-  
+  const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [layoutNameInput, setLayoutNameInput] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const templateInitRef = useRef(false);
+
+  const savedLayouts = useMemo(
+    () => (dashboardPreset?.presets || []).filter((p) => p?.name && Array.isArray(p.elements)),
+    [dashboardPreset?.presets]
+  );
+
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [dragId, setDragId] = useState(null);
@@ -148,10 +178,54 @@ export default function DashboardCustomizationTab() {
     
     setDashboardElements(init);
     setOriginalElements(JSON.parse(JSON.stringify(init)));
+
+    if (!templateInitRef.current) {
+      const presets = dashboardPreset?.presets || [];
+      const match = presets.find((p) => p.name === dashboardPreset?.name);
+      if (match) {
+        setSelectedTemplate(savedLayoutOptionValue(match.name));
+      }
+      templateInitRef.current = true;
+    }
   }, [dashboardPreset, permissionPreset, presetLoading]);
 
   const applyTemplate = (templateId) => {
-    if (templateId === 'custom') return;
+    if (templateId === 'custom') {
+      setSelectedTemplate('custom');
+      return;
+    }
+
+    const savedName = parseSavedLayoutOptionValue(templateId);
+    if (savedName) {
+      const saved = savedLayouts.find(
+        (p) => p.name.toLowerCase() === savedName.toLowerCase()
+      );
+      if (!saved?.elements?.length) return;
+
+      const accessibleCompIds = getAccessibleComponents(permissionPreset);
+      let elements = saved.elements
+        .filter((el) => accessibleCompIds.includes(el.componentId))
+        .map((el) => ({
+          ...el,
+          col: el.col ?? 1,
+          row: el.row ?? 1,
+          visible: el.visible !== false,
+        }));
+
+      const savedCompIds = elements.map((e) => e.componentId);
+      dashboardElements.forEach((existing) => {
+        if (!savedCompIds.includes(existing.componentId)) {
+          elements.push({ ...existing, visible: false, col: 1, row: 99 });
+        }
+      });
+
+      const packed = resolveCollisions(elements);
+      setDashboardElements(packed);
+      setOriginalElements(JSON.parse(JSON.stringify(packed)));
+      setSelectedTemplate(templateId);
+      return;
+    }
+
     const template = LAYOUT_TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
     
@@ -270,7 +344,8 @@ export default function DashboardCustomizationTab() {
       const d = dragRef.current;
       const t = dropTargetRef.current;
       if (d && t) {
-        setDashboardElements(prev => resolveCollisions(prev, d.id, t));
+        const origin = { col: d.origCol, row: d.origRow };
+        setDashboardElements((prev) => applyDragLayout(prev, d.id, t, origin));
         setSelectedTemplate('custom');
       }
       dragRef.current = null;
@@ -314,20 +389,58 @@ export default function DashboardCustomizationTab() {
     document.addEventListener('pointerup', onUp);
   };
 
-  const handleSave = async () => {
+  const persistLayout = async (layoutName) => {
+    const trimmed = layoutName?.trim();
+    if (!trimmed) {
+      setSaveError('Enter a layout name');
+      return;
+    }
+
     setSaving(true);
+    setSaveError('');
     try {
       const elementsToSave = dashboardElements.map((el, idx) => ({
-        componentId: el.componentId, size: el.size, col: el.col, row: el.row, order: idx + 1, visible: el.visible,
+        componentId: el.componentId,
+        size: el.size,
+        col: el.col,
+        row: el.row,
+        order: idx + 1,
+        visible: el.visible,
       }));
-      await axios.post('/api/customization/dashboard/preset', { name: 'Custom', elements: elementsToSave });
+      await axios.post('/api/customization/dashboard/preset', {
+        layoutName: trimmed,
+        name: trimmed,
+        department: 'custom',
+        elements: elementsToSave,
+      });
       setOriginalElements(JSON.parse(JSON.stringify(dashboardElements)));
-      window.location.reload();
+      setSelectedTemplate(savedLayoutOptionValue(trimmed));
+      setNameModalOpen(false);
+      setLayoutNameInput('');
+      await queryClient.invalidateQueries({ queryKey: ['dashboardPreset'] });
     } catch (error) {
+      const msg = error.response?.data?.error || error.message || 'Failed to save layout';
+      setSaveError(msg);
       console.error('Error saving preferences:', error);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    const existingName = parseSavedLayoutOptionValue(selectedTemplate);
+    if (existingName) {
+      await persistLayout(existingName);
+      return;
+    }
+    setLayoutNameInput('');
+    setSaveError('');
+    setNameModalOpen(true);
+  };
+
+  const handleNameModalSubmit = (e) => {
+    e?.preventDefault();
+    persistLayout(layoutNameInput);
   };
 
   const handleRevert = () => {
@@ -411,10 +524,22 @@ export default function DashboardCustomizationTab() {
         <div className="w-full flex items-center justify-center h-full"><div className="h-10 w-32 bg-emerald-500 rounded-full flex items-center justify-center"><span className="text-white text-xs font-bold">Clock In</span></div></div>
       );
       case 'leave-alerts': return (
-        <div className="space-y-2 w-full"><div className="h-6 bg-amber-500/10 border border-amber-500/20 rounded flex items-center px-2"><div className="h-2 w-1/3 bg-amber-500/60 rounded"></div></div></div>
+        <div className="space-y-1.5 w-full">
+          <div className="h-5 bg-amber-500/10 border border-amber-500/20 rounded px-2 flex items-center justify-between">
+            <div className="h-2 w-1/2 bg-amber-500/50 rounded" />
+            <div className="h-2 w-8 bg-amber-500/30 rounded" />
+          </div>
+          <div className="h-4 bg-[var(--color-bg-secondary)] rounded px-2 flex items-center"><div className="h-1.5 w-2/3 bg-[var(--color-text-muted)]/30 rounded" /></div>
+        </div>
       );
       case 'invoice-alerts': return (
-        <div className="space-y-2 w-full"><div className="h-6 bg-blue-500/10 border border-blue-500/20 rounded flex items-center px-2"><div className="h-2 w-1/3 bg-blue-500/60 rounded"></div></div></div>
+        <div className="space-y-1.5 w-full">
+          <div className="h-5 bg-blue-500/10 border border-blue-500/20 rounded px-2 flex items-center justify-between">
+            <div className="h-2 w-1/2 bg-blue-500/50 rounded" />
+            <div className="h-2 w-10 bg-blue-500/30 rounded" />
+          </div>
+          <div className="h-4 bg-[var(--color-bg-secondary)] rounded px-2 flex items-center"><div className="h-1.5 w-1/2 bg-[var(--color-text-muted)]/30 rounded" /></div>
+        </div>
       );
       case 'booked-calls': return (
         <div className="space-y-2 w-full"><div className="flex gap-2 items-center"><div className="w-6 h-6 rounded-full bg-emerald-500/20"></div><div className="h-2 w-1/2 bg-[var(--color-text-primary)] opacity-40 rounded"></div></div></div>
@@ -440,6 +565,9 @@ export default function DashboardCustomizationTab() {
       case 'system-health': return (
         <div className="w-full flex flex-col items-center justify-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div><div className="h-2 w-16 bg-[var(--color-text-muted)] opacity-40 rounded"></div></div>
       );
+      case 'last-backup': return (
+        <div className="w-full space-y-2"><div className="h-3 w-2/3 bg-emerald-500/40 rounded"></div><div className="h-2 w-full bg-[var(--color-text-muted)] opacity-30 rounded"></div><div className="flex gap-1"><div className="h-4 w-12 bg-[var(--color-bg-secondary)] rounded"></div><div className="h-4 w-14 bg-[var(--color-bg-secondary)] rounded"></div></div></div>
+      );
       case 'artist-calendar': return (
         <div className="space-y-1.5 w-full"><div className="h-6 bg-purple-500/20 rounded flex items-center px-2"><div className="h-2 w-1/2 bg-purple-500/60 rounded"></div></div><div className="h-6 bg-pink-500/20 rounded flex items-center px-2"><div className="h-2 w-1/3 bg-pink-500/60 rounded"></div></div></div>
       );
@@ -456,8 +584,9 @@ export default function DashboardCustomizationTab() {
   });
 
   const displayElements = useMemo(() => {
-    if (dragId && dropTarget) {
-      return resolveCollisions(dashboardElements, dragId, dropTarget);
+    if (dragId && dropTarget && dragRef.current) {
+      const origin = { col: dragRef.current.origCol, row: dragRef.current.origRow };
+      return applyDragLayout(dashboardElements, dragId, dropTarget, origin);
     }
     return dashboardElements;
   }, [dashboardElements, dragId, dropTarget]);
@@ -487,9 +616,18 @@ export default function DashboardCustomizationTab() {
               <select 
                 value={selectedTemplate}
                 onChange={(e) => applyTemplate(e.target.value)}
-                className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md px-2 py-1 text-xs outline-none text-[var(--color-text-primary)] max-w-[150px]"
+                className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-md px-2 py-1 text-xs outline-none text-[var(--color-text-primary)] max-w-[180px]"
               >
-                <option value="custom" disabled={selectedTemplate !== 'custom'}>Custom Layout</option>
+                <option value="custom">Custom layout (save to name)</option>
+                {savedLayouts.length > 0 && (
+                  <optgroup label="My layouts">
+                    {savedLayouts.map((p) => (
+                      <option key={p.name} value={savedLayoutOptionValue(p.name)}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
                 <optgroup label="Templates">
                   {accessibleTemplates.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -617,6 +755,52 @@ export default function DashboardCustomizationTab() {
         </div>
         )}
       </div>
+
+      {nameModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
+          <form
+            onSubmit={handleNameModalSubmit}
+            className="w-full max-w-sm rounded-2xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-5 shadow-2xl"
+          >
+            <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-1">Name your layout</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mb-4">
+              Saved layouts appear under <strong>My layouts</strong> in the template dropdown.
+            </p>
+            <input
+              type="text"
+              value={layoutNameInput}
+              onChange={(e) => setLayoutNameInput(e.target.value)}
+              placeholder="e.g. Sales morning"
+              maxLength={64}
+              autoFocus
+              className="w-full rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-action-primary)]"
+            />
+            {saveError && (
+              <p className="mt-2 text-xs text-rose-500">{saveError}</p>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNameModalOpen(false);
+                  setSaveError('');
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]"
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !layoutNameInput.trim()}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--color-action-primary)] text-white disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Save layout'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Side Drawer Library */}
       <div className={`fixed top-0 right-0 h-full w-80 bg-[var(--color-bg-primary)] border-l border-[var(--color-bg-border)] shadow-2xl transform transition-transform duration-300 z-[100] flex flex-col ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>

@@ -23,6 +23,12 @@ router.get('/dashboard/preset', customizationController.getDashboardPreset);
 router.post('/dashboard/preset', customizationController.saveDashboardPreset);
 
 /**
+ * @POST /api/customization/dashboard/preset/layout/:layoutName
+ * Activate a named layout from the user's saved library
+ */
+router.post('/dashboard/preset/layout/:layoutName', customizationController.loadSavedLayout);
+
+/**
  * @GET /api/customization/dashboard/presets/department
  * Get list of available department presets
  */

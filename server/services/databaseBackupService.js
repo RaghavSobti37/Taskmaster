@@ -16,6 +16,61 @@ const LOCAL_DB_NAMES = new Set([
   'taskmaster_local',
 ]);
 
+const backupProgressState = {
+  status: 'idle',
+  snapshotDate: null,
+  totalCollections: 0,
+  completedCollections: 0,
+  currentCollection: null,
+  percent: 0,
+  startedAt: null,
+  finishedAt: null,
+  error: null,
+  result: null,
+};
+
+const getBackupProgress = () => ({ ...backupProgressState });
+
+const resetBackupProgress = (snapshotDate) => {
+  Object.assign(backupProgressState, {
+    status: 'running',
+    snapshotDate,
+    totalCollections: 0,
+    completedCollections: 0,
+    currentCollection: 'Connecting…',
+    percent: 0,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    error: null,
+    result: null,
+  });
+};
+
+const patchBackupProgress = (patch) => {
+  Object.assign(backupProgressState, patch);
+  const { totalCollections, completedCollections } = backupProgressState;
+  if (totalCollections > 0) {
+    backupProgressState.percent = Math.min(
+      99,
+      Math.round((completedCollections / totalCollections) * 100)
+    );
+  }
+};
+
+const finishBackupProgress = (result) => {
+  Object.assign(backupProgressState, {
+    status: result.success ? 'completed' : 'failed',
+    percent: result.success ? 100 : backupProgressState.percent,
+    finishedAt: new Date().toISOString(),
+    error: result.error || null,
+    result,
+    currentCollection: null,
+    completedCollections: result.success
+      ? backupProgressState.totalCollections || result.collectionCount
+      : backupProgressState.completedCollections,
+  });
+};
+
 const extractDbNameFromUri = (uri) => {
   const withoutQuery = uri.split('?')[0];
   const segments = withoutQuery.split('/');
@@ -29,7 +84,10 @@ const isLocalMongoTarget = (uri) => {
 };
 
 const getSourceUri = () => {
-  const uri = (process.env.MONGODB_URI_PROD || '').trim();
+  const prodUri = (process.env.MONGODB_URI_PROD || '').trim();
+  const isProdRuntime = process.env.NODE_ENV === 'production';
+  const fallbackUri = isProdRuntime ? (process.env.MONGODB_URI || '').trim() : '';
+  const uri = prodUri || fallbackUri;
   if (!uri) {
     throw new Error(
       'MONGODB_URI_PROD is required for backups. Local MONGODB_URI is never used.'
@@ -181,6 +239,8 @@ const runDailyBackup = async () => {
   const backupDbName = getBackupDbName();
   let connection;
 
+  resetBackupProgress(snapshotDate);
+
   try {
     const sourceUri = getSourceUri();
     connection = await mongoose.createConnection(sourceUri, {
@@ -205,13 +265,21 @@ const runDailyBackup = async () => {
     await removeExistingSnapshot(backupDb, snapshotDate);
 
     const collectionNames = await listSourceCollections(sourceDb);
+    patchBackupProgress({
+      totalCollections: collectionNames.length,
+      currentCollection: 'Starting export…',
+      percent: 1,
+    });
     const exportedCollections = [];
     let totalBytes = 0;
 
-    for (const collectionName of collectionNames) {
+    for (let i = 0; i < collectionNames.length; i += 1) {
+      const collectionName = collectionNames[i];
+      patchBackupProgress({ currentCollection: collectionName });
       const result = await exportCollection(sourceDb, backupDb, snapshotDate, collectionName);
       exportedCollections.push(result);
       totalBytes += result.compressedBytes;
+      patchBackupProgress({ completedCollections: i + 1 });
       logger.info('DatabaseBackup', `Backed up ${collectionName}`, result);
       await sleep(COLLECTION_PAUSE_MS);
     }
@@ -232,7 +300,7 @@ const runDailyBackup = async () => {
 
     const durationMs = Date.now() - startedAt;
 
-    return {
+    const successResult = {
       success: true,
       date: snapshotDate,
       collections: exportedCollections,
@@ -248,11 +316,13 @@ const runDailyBackup = async () => {
       retentionDays,
       cleanup,
     };
+    finishBackupProgress(successResult);
+    return successResult;
   } catch (error) {
     const durationMs = Date.now() - startedAt;
     logger.error('DatabaseBackup', 'Daily backup failed', { error: error.message, snapshotDate });
 
-    return {
+    const failureResult = {
       success: false,
       date: snapshotDate,
       collections: [],
@@ -263,6 +333,8 @@ const runDailyBackup = async () => {
       retentionDays,
       error: error.message,
     };
+    finishBackupProgress(failureResult);
+    return failureResult;
   } finally {
     if (connection) {
       await connection.close();
@@ -358,4 +430,5 @@ module.exports = {
   getRetentionDays,
   getSourceUri,
   isLocalMongoTarget,
+  getBackupProgress,
 };

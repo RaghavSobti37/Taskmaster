@@ -28,3 +28,14 @@ export const useDashboardPreset = () => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+export const savedLayoutOptionValue = (name) => `saved:${encodeURIComponent(name)}`;
+
+export const parseSavedLayoutOptionValue = (value) => {
+  if (!value?.startsWith('saved:')) return null;
+  try {
+    return decodeURIComponent(value.slice(6)).trim();
+  } catch {
+    return null;
+  }
+};

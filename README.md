@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.3-126d5e?style=flat-square" alt="Version 1.9.3" />
+  <img src="https://img.shields.io/badge/version-1.9.4-126d5e?style=flat-square" alt="Version 1.9.4" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -83,6 +83,16 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Todo cards:** Subtle priority gradients on today/overdue widgets; rule-divider layout replaces drop shadows per `index.css` shadow policy.
 * **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
 * **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
+
+### 📊 Dashboard Widgets & Layout Library (v1.9.4)
+
+* **Leave Requests card:** Ops sees pending leave awaiting approval; everyone else sees their own submissions — links to Attendance or Settings → Leave.
+* **Reimbursements card:** Personal reimbursement claims from Settings → Reimbursement with status, amount, and project; shared `useMyReimbursements` hook powers dashboard + Invoice tab.
+* **Last Backup card (admin):** Latest successful production snapshot (timestamp, collection count, compressed size) with **Run** trigger and live progress bar via `GET /api/data-hub/backup/progress`.
+* **Async backup API:** `POST /api/data-hub/backup` returns **202** immediately; client polls progress until complete (fixes Render timeout on long dumps).
+* **Named layouts:** Settings → Dashboard customization saves named layouts into a personal library (`DashboardPreset.presets[]`); **My layouts** dropdown reloads saved grids; drag-and-drop swaps widgets instead of auto-repacking neighbors.
+* **Component registry:** `last-backup` admin widget; centralized `VALID_DASHBOARD_COMPONENT_IDS` in `dashboardComponents.js`.
+* **Render cron:** Daily backup job documents required env vars (`MONGODB_URI_PROD`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `BACKUP_FROM_EMAIL`).
 
 ### ⏳ Async Loading UX (v1.9.3)
 
@@ -570,6 +580,16 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.4 — Dashboard Widgets, Named Layouts & Backup Progress
+
+- **Dashboard cards:** `LeaveRequestsCard`, `ReimbursementsCard`, `LastBackupCard` replace generic `leave-alerts` / `invoice-alerts` placeholders; wired in `Dashboard.jsx` + `componentRegistry.js`.
+- **Layout library:** `DashboardCustomizationTab` — name-on-save modal, **My layouts** optgroup, swap-on-drag grid (`applyDragLayout`); `POST /api/customization/dashboard/preset` upserts `presets[]`; `POST /api/customization/dashboard/preset/layout/:layoutName` activates a saved layout.
+- **Backup progress:** In-memory progress state in `databaseBackupService.js`; `GET /api/data-hub/backup/progress`; production backup uses **202 + poll** from Data Hub and dashboard widget.
+- **Hooks:** `useMyReimbursements`, `useDataHubBackupProgress`, `savedLayoutOptionValue` / `parseSavedLayoutOptionValue`.
+- **render.yaml:** Backup cron env group documents `MONGODB_URI_PROD`, Resend, and admin notification addresses.
+
+No DB migration. Redeploy API + static client. Ensure backup cron service has `MONGODB_URI_PROD` set on Render.
 
 ### v1.9.3 — Loading States, Mentions & Subscription Reminders
 

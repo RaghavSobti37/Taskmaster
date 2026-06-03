@@ -21,8 +21,8 @@ export const COMPONENT_REGISTRY = {
   'mark-attendance': { label: 'Clock In/Out', access: ['all'], defaultSize: '1', icon: '⏰', mobileTier: 'action', mobileOrder: 1 },
 
   // ── Operations / Admin ──
-  'leave-alerts': { label: 'Leave Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '🏖️', mobileTier: 'analytics', mobileOrder: 25 },
-  'invoice-alerts': { label: 'Invoice Alerts', access: ['operations', 'admin'], defaultSize: '1', icon: '💰', mobileTier: 'analytics', mobileOrder: 26 },
+  'leave-alerts': { label: 'Leave Requests', access: ['operations', 'admin'], defaultSize: '1', icon: '🏖️', mobileTier: 'analytics', mobileOrder: 25 },
+  'invoice-alerts': { label: 'Reimbursements', access: ['operations', 'admin'], defaultSize: '1', icon: '💰', mobileTier: 'analytics', mobileOrder: 26 },
   'attendance-overview': { label: 'Attendance Overview', access: ['operations', 'admin'], defaultSize: '2', icon: '👥', mobileTier: 'analytics', mobileOrder: 23 },
   'team-activity': { label: 'Team Activity', access: ['admin', 'operations'], defaultSize: '2', icon: '📡', mobileTier: 'analytics', mobileOrder: 24 },
 
@@ -35,6 +35,7 @@ export const COMPONENT_REGISTRY = {
   // ── Admin Only ──
   'dept-stats': { label: 'Department Stats', access: ['admin'], defaultSize: '2', icon: '🏢', mobileTier: 'analytics', mobileOrder: 27 },
   'system-health': { label: 'System Health', access: ['admin'], defaultSize: '1', icon: '🖥️', mobileTier: 'analytics', mobileOrder: 28 },
+  'last-backup': { label: 'Last Backup', access: ['admin'], defaultSize: '1', icon: '💾', mobileTier: 'analytics', mobileOrder: 29 },
 
   // ── Artist Management ──
   'artist-calendar': { label: 'Booking Calendar', access: ['artist-management'], defaultSize: '2', icon: '🎨', mobileTier: 'action', mobileOrder: 8 },
@@ -161,7 +162,7 @@ export const LAYOUT_TEMPLATES = [
     elements: [
       { componentId: 'dept-stats', size: '2', col: 1, row: 1 },
       { componentId: 'system-health', size: '1', col: 3, row: 1 },
-      { componentId: 'mark-attendance', size: '1', col: 4, row: 1 },
+      { componentId: 'last-backup', size: '1', col: 4, row: 1 },
       { componentId: 'team-activity', size: '4', col: 1, row: 2 },
       { componentId: 'attendance-overview', size: '2', col: 1, row: 3 },
       { componentId: 'leave-alerts', size: '1', col: 3, row: 3 },
@@ -252,7 +253,8 @@ export const LAYOUT_TEMPLATES = [
       { componentId: 'pipeline-summary', size: '2', col: 3, row: 1 },
       { componentId: 'campaign-metrics', size: '2', col: 1, row: 2 },
       { componentId: 'leaderboard', size: '1', col: 3, row: 2 },
-      { componentId: 'system-health', size: '1', col: 4, row: 2 },
+      { componentId: 'system-health', size: '1', col: 3, row: 2 },
+      { componentId: 'last-backup', size: '1', col: 4, row: 2 },
       { componentId: 'team-activity', size: '4', col: 1, row: 3 },
     ],
   },

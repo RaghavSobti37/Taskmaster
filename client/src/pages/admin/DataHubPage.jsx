@@ -197,7 +197,7 @@ export function DataHubContent() {
     if (!ok) return;
 
     try {
-      const { data } = await backupMutation.mutateAsync({ notify: true });
+      const data = await backupMutation.mutateAsync({ notify: true });
       const warning = data.warning ? ` ${data.warning}` : '';
       emitSystemEvent({
         severity: 'SUCCESS',

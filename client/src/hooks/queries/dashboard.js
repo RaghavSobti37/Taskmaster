@@ -31,6 +31,18 @@ export const useDashboardPreset = () => {
 
 export const savedLayoutOptionValue = (name) => `saved:${encodeURIComponent(name)}`;
 
+export const useAttendanceOverview = (timeframe = '7d', enabled = true) => {
+  return useQuery({
+    queryKey: ['dashboard', 'attendance-overview', timeframe],
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/dashboard/attendance-overview?timeframe=${timeframe}`);
+      return data;
+    },
+    enabled,
+    staleTime: 60 * 1000,
+  });
+};
+
 export const parseSavedLayoutOptionValue = (value) => {
   if (!value?.startsWith('saved:')) return null;
   try {

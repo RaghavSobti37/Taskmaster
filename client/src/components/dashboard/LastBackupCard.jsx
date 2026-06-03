@@ -52,10 +52,13 @@ export default function LastBackupCard() {
     }
   }, [progress?.status, progress?.error, progress?.result, refetch]);
 
-  const latest = useMemo(() => {
-    const snapshots = data?.snapshots || [];
-    return snapshots.find((s) => s.status === 'completed') || null;
+  const recentBackups = useMemo(() => {
+    return (data?.snapshots || [])
+      .filter((s) => s.status === 'completed')
+      .slice(0, 2);
   }, [data]);
+
+  const latest = recentBackups[0] || null;
 
   const completedAtLabel = latest?.createdAt
     ? formatTimestampWithTz(latest.createdAt, 'MMM dd, yyyy · HH:mm:ss')
@@ -80,7 +83,7 @@ export default function LastBackupCard() {
     <DashboardWidgetShell
       title="Last Backup"
       icon={Database}
-      bodyClassName="p-4 flex flex-col justify-center min-h-[120px]"
+      bodyClassName="p-4 flex flex-col min-h-[120px]"
       actions={
         isAdmin ? (
           <Button
@@ -126,10 +129,10 @@ export default function LastBackupCard() {
           <p className="text-xs font-medium">Could not load backup status</p>
         </div>
       )}
-      {!isLoading && !isError && !latest && !isRunning && (
+      {!isLoading && !isError && recentBackups.length === 0 && !isRunning && (
         <p className="text-xs text-[var(--color-text-muted)] italic">No successful backup on record</p>
       )}
-      {!isLoading && !isError && latest && (
+      {!isLoading && !isError && recentBackups.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-start gap-2">
             <CheckCircle2 size={20} className="text-emerald-500 shrink-0 mt-0.5" />
@@ -152,6 +155,40 @@ export default function LastBackupCard() {
             <Badge variant="neutral" className="text-[9px]">
               {formatBytes(latest.totalBytes)} compressed
             </Badge>
+          </div>
+
+          <div className="border-t border-[var(--color-bg-border)] pt-3 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Recent snapshots (last 2)
+            </p>
+            <ul className="space-y-1.5">
+              {recentBackups.map((snap, index) => {
+                const when = snap.createdAt
+                  ? formatTimestampWithTz(snap.createdAt, 'MMM dd · HH:mm')
+                  : snap.date;
+                return (
+                  <li
+                    key={snap.date}
+                    className={`flex items-center justify-between gap-2 text-[10px] rounded px-2 py-1.5 ${
+                      index === 0
+                        ? 'bg-emerald-500/10 border border-emerald-500/20'
+                        : 'bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)]'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-bold text-[var(--color-text-primary)] tabular-nums truncate">
+                        {when}
+                      </p>
+                      <p className="text-[var(--color-text-muted)] truncate">{snap.date}</p>
+                    </div>
+                    <div className="text-right shrink-0 text-[var(--color-text-secondary)]">
+                      <p>{snap.collectionCount} cols</p>
+                      <p>{formatBytes(snap.totalBytes)}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       )}

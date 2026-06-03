@@ -18,6 +18,7 @@ export {
   useDashboardSummary,
   useDepartmentStats,
   useDashboardPreset,
+  useAttendanceOverview,
   useTaskDomainRealtimeSync,
 } from './queries';
 

@@ -24,7 +24,7 @@ export const COMPONENT_REGISTRY = {
   'leave-alerts': { label: 'Leave Requests', access: ['operations', 'admin'], defaultSize: '1', icon: '🏖️', mobileTier: 'analytics', mobileOrder: 25 },
   'invoice-alerts': { label: 'Reimbursements', access: ['operations', 'admin'], defaultSize: '1', icon: '💰', mobileTier: 'analytics', mobileOrder: 26 },
   'attendance-overview': { label: 'Attendance Overview', access: ['operations', 'admin'], defaultSize: '2', icon: '👥', mobileTier: 'analytics', mobileOrder: 23 },
-  'team-activity': { label: 'Team Activity', access: ['admin', 'operations'], defaultSize: '2', icon: '📡', mobileTier: 'analytics', mobileOrder: 24 },
+  'team-activity': { label: 'Task Activity', access: ['admin', 'operations'], defaultSize: '2', icon: '📡', mobileTier: 'analytics', mobileOrder: 24 },
 
   // ── Sales ──
   'booked-calls': { label: 'Booked Calls', access: ['sales'], defaultSize: '2', icon: '📞', mobileTier: 'action', mobileOrder: 6 },

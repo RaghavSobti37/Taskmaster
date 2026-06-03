@@ -173,6 +173,7 @@ const validateAttendanceTimes = ({ dateKey, timeIn, timeOut, onLeave, isHalfDay 
 
 module.exports = {
   APP_TIMEZONE,
+  getTzOffset,
   getDateKey,
   startOfDayFromKey,
   endOfDayFromKey,

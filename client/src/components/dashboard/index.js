@@ -22,4 +22,5 @@ export { default as GenericDashboardCard } from './GenericDashboardCard';
 export { default as LeaveRequestsCard } from './LeaveRequestsCard';
 export { default as ReimbursementsCard } from './ReimbursementsCard';
 export { default as LastBackupCard } from './LastBackupCard';
+export { default as AttendanceOverviewCard } from './AttendanceOverviewCard';
 export { PinBoardProvider } from './PinBoardContext';

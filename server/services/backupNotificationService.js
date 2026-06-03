@@ -50,7 +50,7 @@ const buildSuccessHtml = (result) => {
         <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Collections</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.collectionCount}</td></tr>
         <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Compressed backup size</strong></td><td style="padding:6px 0;color:#f8fafc;">${formatBytes(result.totalBytes)}</td></tr>
         <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Duration</strong></td><td style="padding:6px 0;color:#f8fafc;">${Math.round((result.durationMs || 0) / 1000)}s</td></tr>
-        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Retention</strong></td><td style="padding:6px 0;color:#f8fafc;">${result.retentionDays} days</td></tr>
+        <tr><td style="padding:6px 0;color:#94a3b8;"><strong>Retention</strong></td><td style="padding:6px 0;color:#f8fafc;">Last ${result.retentionCount ?? result.retentionDays ?? 2} snapshots</td></tr>
       </table>
       ${
         collectionRows
@@ -61,7 +61,7 @@ const buildSuccessHtml = (result) => {
              </table>`
           : ''
       }
-      <p style="color:#64748b;font-size:13px;margin:16px 0 0;">Older snapshots are auto-deleted after ${result.retentionDays} days.</p>
+      <p style="color:#64748b;font-size:13px;margin:16px 0 0;">Older snapshots are auto-deleted after ${result.retentionCount ?? result.retentionDays ?? 2} backups are kept.</p>
     </div>
   `;
 };

@@ -30,6 +30,7 @@ import {
   PipelineSummaryCard,
   GenericDashboardCard,
   LastBackupCard,
+  AttendanceOverviewCard,
   LeaveRequestsCard,
   ReimbursementsCard,
 } from '../components/dashboard';
@@ -235,11 +236,12 @@ const Dashboard = () => {
       case 'followups-today':
       case 'team-activity':
       case 'dept-stats':
-      case 'attendance-overview':
       case 'campaign-metrics':
       case 'system-health':
       case 'artist-calendar':
         return <GenericDashboardCard componentId={componentId} />;
+      case 'attendance-overview':
+        return <AttendanceOverviewCard />;
       case 'last-backup':
         return <LastBackupCard />;
       default:

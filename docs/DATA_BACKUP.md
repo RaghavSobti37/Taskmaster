@@ -56,7 +56,8 @@ Set these on the **Render cron service** (and locally in `server/.env` for manua
 |----------|----------|---------|-------------|
 | `MONGODB_URI_PROD` | **Yes** | — | Production MongoDB only. **Never** falls back to local `MONGODB_URI`. Local DB names (`CoreKnot`, `taskmaster_local`, `testing`) and `localhost` URIs are rejected. |
 | `MONGODB_BACKUP_DB` | No | `taskmaster_backups` | Backup database name on same cluster |
-| `BACKUP_RETENTION_DAYS` | No | `7` | Days to keep daily snapshots |
+| `BACKUP_RETENTION_COUNT` | No | `2` | Number of completed snapshots to keep (older ones pruned after each run) |
+| `BACKUP_RETENTION_DAYS` | — | — | **Deprecated** — use `BACKUP_RETENTION_COUNT` |
 | `BACKUP_ENABLED` | No | `true` | Set `false` to skip backup runs |
 | `BACKUP_NOTIFY_EMAIL` | No | — | Override notification recipient |
 | `BACKUP_FROM_EMAIL` | No | `noreply@theshakticollective.in` | **Must be a Resend-verified domain.** Do not use unverified addresses like `sandbox@CoreKnot.io`. |

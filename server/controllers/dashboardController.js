@@ -7,7 +7,9 @@ const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
-const { isAdminUser } = require('../utils/departmentPermissions');
+const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
+const Attendance = require('../models/Attendance');
+const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const { getCache, setCache } = require('../services/cacheService');
 const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 
@@ -23,7 +25,53 @@ const rangeForTimeframe = (timeframe) => {
   return { start, end, days };
 };
 
-const { todayStart, todayEnd, getDateKey, startOfDayFromKey } = require('../utils/attendanceDate');
+const { todayStart, todayEnd, getDateKey, startOfDayFromKey, getTzOffset } = require('../utils/attendanceDate');
+
+const applyAttendanceBuckets = (sets, row) => {
+  const uid = String(row.userId);
+  const hasCheck = Boolean(
+    row.inTimeRecord?.manualTimestamp || row.outTimeRecord?.manualTimestamp
+  );
+
+  if (row.onLeave && !hasCheck) {
+    sets.leave.add(uid);
+    return;
+  }
+  if (row.isHalfDay) {
+    sets.halfDay.add(uid);
+    if (hasCheck) sets.marked.add(uid);
+    return;
+  }
+  if (hasCheck) {
+    sets.marked.add(uid);
+    sets.present.add(uid);
+  }
+};
+
+const enumerateDateKeysBetween = (start, end) => {
+  const keys = [];
+  const cursor = new Date(start);
+  const endMs = end.getTime();
+  while (cursor.getTime() <= endMs) {
+    const key = getDateKey(cursor);
+    if (key) keys.push(key);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
+};
+
+const formatChartDayLabel = (dateKey) => {
+  try {
+    const d = new Date(`${dateKey}T12:00:00${getTzOffset()}`);
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: process.env.APP_TIMEZONE || 'Asia/Kolkata',
+      month: 'short',
+      day: '2-digit',
+    }).format(d);
+  } catch {
+    return dateKey?.slice(5) || dateKey;
+  }
+};
 
 const sumFocusHours = async (match) => {
   const logs = await Log.find(match).select('details.timeSpent').lean();
@@ -255,5 +303,81 @@ exports.getDashboardSummary = async (req, res) => {
   } catch (error) {
     logger.error('dashboardController', 'Dashboard Summary ', { error: error.message || error });
     res.status(500).json({ error: 'System error during operational aggregation.' });
+  }
+};
+
+/** Daily team attendance counts for dashboard widget (ops/admin). */
+exports.getAttendanceOverview = async (req, res) => {
+  try {
+    if (!isAdminUser(req.user) && !isOpsUser(req.user)) {
+      return res.status(403).json({ error: 'Operations or admin access required' });
+    }
+
+    const timeframe = TIMEFRAME_DAYS[req.query.timeframe] ? req.query.timeframe : '7d';
+    const { start, end } = rangeForTimeframe(timeframe);
+    const cacheKey = `dashboard:attendance-overview:v1:${timeframe}:${getDateKey()}`;
+    const cached = await getCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    const dateKeys = enumerateDateKeysBetween(start, end);
+    const buckets = new Map(
+      dateKeys.map((key) => [
+        key,
+        {
+          date: key,
+          label: formatChartDayLabel(key),
+          marked: 0,
+          present: 0,
+          halfDay: 0,
+          leave: 0,
+        },
+      ])
+    );
+
+    const userSets = new Map(
+      dateKeys.map((key) => [key, { marked: new Set(), present: new Set(), halfDay: new Set(), leave: new Set() }])
+    );
+
+    const rows = await Attendance.find({
+      date: { $gte: start, $lte: end },
+    })
+      .select('userId date onLeave isHalfDay inTimeRecord outTimeRecord username')
+      .lean();
+
+    for (const row of rows) {
+      if (isAttendanceExcluded({ name: row.username, email: '' })) continue;
+      const dayKey = getDateKey(row.date);
+      if (!dayKey || !userSets.has(dayKey)) continue;
+
+      applyAttendanceBuckets(userSets.get(dayKey), row);
+    }
+
+    for (const [dayKey, sets] of userSets.entries()) {
+      const bucket = buckets.get(dayKey);
+      if (!bucket) continue;
+      bucket.marked = sets.marked.size;
+      bucket.present = sets.present.size;
+      bucket.halfDay = sets.halfDay.size;
+      bucket.leave = sets.leave.size;
+    }
+
+    const series = dateKeys.map((key) => buckets.get(key));
+    const last = series[series.length - 1] || {};
+    const payload = {
+      timeframe,
+      series,
+      totals: {
+        marked: last.marked || 0,
+        present: last.present || 0,
+        halfDay: last.halfDay || 0,
+        leave: last.leave || 0,
+      },
+    };
+
+    await setCache(cacheKey, payload, 60);
+    res.json(payload);
+  } catch (error) {
+    logger.error('dashboardController', 'getAttendanceOverview', { error: error.message });
+    res.status(500).json({ error: 'Failed to load attendance overview' });
   }
 };

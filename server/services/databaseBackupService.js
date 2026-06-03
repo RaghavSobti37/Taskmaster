@@ -104,10 +104,13 @@ const getSourceUri = () => {
 
 const getBackupDbName = () => (process.env.MONGODB_BACKUP_DB || 'taskmaster_backups').trim();
 
-const getRetentionDays = () => {
-  const parsed = parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 7;
+const getRetentionCount = () => {
+  const parsed = parseInt(process.env.BACKUP_RETENTION_COUNT || '2', 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : 2;
 };
+
+/** @deprecated Use getRetentionCount — kept for scripts/docs that reference days. */
+const getRetentionDays = () => getRetentionCount();
 
 const getISTDateString = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', {
@@ -141,24 +144,27 @@ const deleteSnapshotFiles = async (backupDb, snapshotDate) => {
   return files.length;
 };
 
-const cleanupExpiredBackups = async (backupDb, retentionDays) => {
-  const cutoffDate = subtractDaysFromDateString(getISTDateString(), retentionDays);
+const pruneOldSnapshots = async (backupDb, maxSnapshots) => {
   const snapshotsCol = backupDb.collection(SNAPSHOTS_COLLECTION);
-  const expired = await snapshotsCol.find({ date: { $lt: cutoffDate } }).toArray();
+  const snapshots = await snapshotsCol
+    .find({ status: 'completed' })
+    .sort({ date: -1, createdAt: -1 })
+    .toArray();
 
-  if (!expired.length) {
-    logger.info('DatabaseBackup', 'No expired snapshots to purge', { cutoffDate, retentionDays });
-    return { deletedSnapshots: 0, deletedFiles: 0 };
+  const toDelete = snapshots.slice(maxSnapshots);
+  if (!toDelete.length) {
+    logger.info('DatabaseBackup', 'No excess snapshots to prune', { maxSnapshots, kept: snapshots.length });
+    return { deletedSnapshots: 0, deletedFiles: 0, kept: snapshots.length };
   }
 
   let deletedFiles = 0;
-  for (const snapshot of expired) {
+  for (const snapshot of toDelete) {
     deletedFiles += await deleteSnapshotFiles(backupDb, snapshot.date);
     await snapshotsCol.deleteOne({ _id: snapshot._id });
-    logger.info('DatabaseBackup', `Purged snapshot ${snapshot.date}`, { deletedFilesForSnapshot: deletedFiles });
+    logger.info('DatabaseBackup', `Pruned snapshot ${snapshot.date}`, { maxSnapshots });
   }
 
-  return { deletedSnapshots: expired.length, deletedFiles };
+  return { deletedSnapshots: toDelete.length, deletedFiles, kept: maxSnapshots };
 };
 
 const removeExistingSnapshot = async (backupDb, snapshotDate) => {
@@ -235,7 +241,7 @@ const getProductionDatabaseStats = async (sourceDb) => {
 const runDailyBackup = async () => {
   const startedAt = Date.now();
   const snapshotDate = getISTDateString();
-  const retentionDays = getRetentionDays();
+  const retentionCount = getRetentionCount();
   const backupDbName = getBackupDbName();
   let connection;
 
@@ -257,11 +263,10 @@ const runDailyBackup = async () => {
       snapshotDate,
       backupDbName,
       sourceDb: sourceDb.databaseName,
-      retentionDays,
+      retentionCount,
       sourceDataSizeBytes: sourceDbStats.dataSizeBytes,
     });
 
-    const cleanup = await cleanupExpiredBackups(backupDb, retentionDays);
     await removeExistingSnapshot(backupDb, snapshotDate);
 
     const collectionNames = await listSourceCollections(sourceDb);
@@ -284,8 +289,6 @@ const runDailyBackup = async () => {
       await sleep(COLLECTION_PAUSE_MS);
     }
 
-    const expiresAt = new Date(`${subtractDaysFromDateString(snapshotDate, -retentionDays)}T00:00:00.000Z`);
-
     await backupDb.collection(SNAPSHOTS_COLLECTION).insertOne({
       date: snapshotDate,
       createdAt: new Date(),
@@ -293,10 +296,11 @@ const runDailyBackup = async () => {
       collections: exportedCollections,
       totalBytes,
       sourceDbStats,
-      expiresAt,
       sourceDatabase: sourceDb.databaseName,
       backupDatabase: backupDbName,
     });
+
+    const cleanup = await pruneOldSnapshots(backupDb, retentionCount);
 
     const durationMs = Date.now() - startedAt;
 
@@ -313,7 +317,7 @@ const runDailyBackup = async () => {
       sourceIndexSizeBytes: sourceDbStats.indexSizeBytes,
       sourceStorageSizeBytes: sourceDbStats.storageSizeBytes,
       sourceTotalSizeBytes: sourceDbStats.totalSizeBytes,
-      retentionDays,
+      retentionCount,
       cleanup,
     };
     finishBackupProgress(successResult);
@@ -330,7 +334,7 @@ const runDailyBackup = async () => {
       totalBytes: 0,
       durationMs,
       backupDatabase: backupDbName,
-      retentionDays,
+      retentionCount,
       error: error.message,
     };
     finishBackupProgress(failureResult);
@@ -427,6 +431,7 @@ module.exports = {
   getProductionDatabaseStats,
   getISTDateString,
   getBackupDbName,
+  getRetentionCount,
   getRetentionDays,
   getSourceUri,
   isLocalMongoTarget,

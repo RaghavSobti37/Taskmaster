@@ -46,10 +46,10 @@ export default function GenericDashboardCard({ componentId }) {
     }
 
     if (componentId === 'team-activity' && activityData?.length) {
-      const recent = activityData.slice(0, days).reverse();
+      const recent = activityData.slice(-days);
       return {
         type: 'area',
-        seriesName: 'Activity',
+        seriesName: 'Tasks',
         chartData: recent.map(d => {
           const rawDate = d.date || d._id || d.label;
           let label = String(rawDate).slice(5) || 'Unknown';
@@ -58,9 +58,11 @@ export default function GenericDashboardCard({ componentId }) {
           } catch (e) {
             // fallback gracefully
           }
-          return { label, value: d.count || d.value || 0 };
-        }),
-        tooltipFormatter: (value) => [String(value), 'Activity'],
+          return { label, value: d.count || d.value || 0, sortKey: String(rawDate) };
+        })
+          .sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''))
+          .map(({ label, value }) => ({ label, value })),
+        tooltipFormatter: (value) => [String(value), 'Tasks'],
       };
     }
 

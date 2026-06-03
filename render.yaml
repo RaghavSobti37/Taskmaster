@@ -10,8 +10,8 @@ services:
         value: production
       - key: BACKUP_ENABLED
         value: "true"
-      - key: BACKUP_RETENTION_DAYS
-        value: "7"
+      - key: BACKUP_RETENTION_COUNT
+        value: "2"
       - key: MONGODB_BACKUP_DB
         value: taskmaster_backups
       # Required — copy same value from CoreKnot API web service (Dashboard → Environment)

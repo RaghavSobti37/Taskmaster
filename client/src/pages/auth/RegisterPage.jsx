@@ -30,7 +30,7 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
-      login(res.data);
+      await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');

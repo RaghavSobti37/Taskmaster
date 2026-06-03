@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const useDashboardSummary = () => {
+export const useDashboardSummary = (enabled = true) => {
   return useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: async () => (await axios.get('/api/dashboard/summary')).data,
     staleTime: 1000 * 60 * 2,
+    enabled,
   });
 };
 

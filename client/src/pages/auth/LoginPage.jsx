@@ -44,7 +44,7 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const res = await axios.post('/api/auth/login', { email, password }, AXIOS_SKIP_TOAST);
-      login(res.data);
+      await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const message =

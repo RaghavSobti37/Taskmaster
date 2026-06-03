@@ -182,7 +182,7 @@ export default function ProfileTab() {
         payload.newPassword = newPassword;
       }
       const res = await axios.put('/api/users/profile', payload);
-      login(res.data);
+      await login(res.data);
       setPassword('');
       setNewPassword('');
       setModalConfig({

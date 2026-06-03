@@ -55,10 +55,11 @@ export const useTasks = (userId, { includeOldCompleted = false } = {}) => {
   });
 };
 
-export const useDashboardTasks = (userId) => {
+export const useDashboardTasks = (userId, enabled = true) => {
   return useQuery({
     queryKey: ['tasks', 'dashboard'],
     queryFn: fetchDashboardTasks,
+    enabled: enabled && !!userId,
     placeholderData: keepPreviousData,
     select: (tasks) => filterTasksForUser(tasks, userId),
   });

@@ -29,3 +29,26 @@ export function invalidateReviewTasks(queryClient) {
   queryClient.invalidateQueries({ queryKey: ['schedule'] });
   invalidateStatusCounts(queryClient);
 }
+
+/** Refetch dashboard + inbox data after auth cookie is confirmed (e.g. iOS PWA re-login). */
+export function refetchUserScopedQueries(queryClient) {
+  invalidateTaskDomain(queryClient);
+  invalidateReviewTasks(queryClient);
+  const keys = [
+    ['dashboardPreset'],
+    ['gamification'],
+    ['announcements'],
+    ['pinboard'],
+    ['notes'],
+    ['notifications'],
+    ['statusCounts'],
+    ['projects'],
+    ['workspaces'],
+    ['attendance'],
+    ['leaveRequests'],
+    ['my-reimbursements'],
+  ];
+  keys.forEach((queryKey) => {
+    queryClient.invalidateQueries({ queryKey });
+  });
+}

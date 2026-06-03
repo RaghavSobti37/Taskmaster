@@ -49,7 +49,7 @@ const ForcePasswordChangeModal = () => {
         newPassword,
         confirmPassword,
       });
-      login(data);
+      await login(data);
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {

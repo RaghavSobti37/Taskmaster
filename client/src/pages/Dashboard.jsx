@@ -47,19 +47,20 @@ import { MobileCollapsibleSection } from '../components/ui';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, sessionReady } = useAuth();
+  const queriesEnabled = !!user?._id && sessionReady;
   const permissionPreset = useMemo(() => {
     if (isAdminUser(user)) return 'admin';
     const dept = user?.departmentId;
     return dept?.permissionPreset || dept?.slug || 'standard';
   }, [user]);
 
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
-  const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id);
-  const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(!!user?._id);
+  const { data: summary, isLoading: summaryLoading } = useDashboardSummary(queriesEnabled);
+  const { data: tasks = [], isLoading: tasksLoading } = useDashboardTasks(user?._id, queriesEnabled);
+  const { data: reviewTasks = [], isLoading: reviewLoading } = useReviewTasks(queriesEnabled);
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
-  const { data: dashboardPreset, isLoading: presetLoading, isError: presetError, isFetching: presetFetching } = useDashboardPreset(!!user?._id);
+  const { data: dashboardPreset, isLoading: presetLoading, isError: presetError, isFetching: presetFetching } = useDashboardPreset(queriesEnabled);
   const { data: users = [] } = useUserDirectory();
 
   const {

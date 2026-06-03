@@ -30,7 +30,7 @@ const GoogleSuccessPage = () => {
     }
 
     const finishLogin = async (user) => {
-      login(user);
+      await login(user);
       navigate('/dashboard', { replace: true });
     };
 

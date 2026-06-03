@@ -10,11 +10,13 @@ import {
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
+import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 
 const defaultAuthContext = {
   user: null,
   loading: true,
-  login: () => {},
+  sessionReady: false,
+  login: async () => {},
   logout: () => {},
   refreshUser: () => {},
 };
@@ -53,6 +55,7 @@ function userSessionChanged(prev, next) {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
   const userRef = useRef(user);
   const authEpochRef = useRef(0);
   const loggingOutRef = useRef(false);
@@ -74,7 +77,8 @@ export const AuthProvider = ({ children }) => {
     }
     clearAttendanceSessionLogin();
     disconnectRealtime();
-    queryClient.removeQueries({ queryKey: ['dashboardPreset'] });
+    queryClient.clear();
+    setSessionReady(false);
     setUser(null);
     setLoading(false);
   }, [queryClient]);
@@ -94,6 +98,7 @@ export const AuthProvider = ({ children }) => {
         recordAttendanceSessionLogin();
       }
       setLoading(false);
+      setSessionReady(true);
       // #region agent log
       fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:fetchUser:ok',message:'fetchUser ok',data:{userId:String(newData?._id||''),epoch,clearOn401},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
@@ -106,6 +111,7 @@ export const AuthProvider = ({ children }) => {
       // #endregion
       if (clearOn401 && (status === 401 || status === 403)) {
         setUser(null);
+        setSessionReady(false);
       }
       setLoading(false);
       return null;
@@ -133,6 +139,8 @@ export const AuthProvider = ({ children }) => {
         try {
           await axios.post('/api/auth/logout');
         } catch { /* ignore */ }
+        queryClient.clear();
+        setSessionReady(false);
         setUser(null);
         setLoading(false);
       })();
@@ -140,7 +148,7 @@ export const AuthProvider = ({ children }) => {
     }
     loggingOutRef.current = false;
     fetchUser();
-  }, [fetchUser]);
+  }, [fetchUser, queryClient]);
 
   useEffect(() => {
     if (user?._id) {
@@ -149,6 +157,15 @@ export const AuthProvider = ({ children }) => {
     }
     return undefined;
   }, [user?._id, fetchUser]);
+
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (!event.persisted || !userRef.current?._id || !sessionReady) return;
+      refetchUserScopedQueries(queryClient);
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [sessionReady, queryClient]);
 
   useTaskDomainRealtimeSync(!!user?._id);
 
@@ -221,26 +238,30 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user?._id, queryClient]);
 
-  const login = useCallback((userData) => {
+  const login = useCallback(async (userData) => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
+    setSessionReady(false);
+    queryClient.clear();
     // #region agent log
     fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1b191b'},body:JSON.stringify({sessionId:'1b191b',hypothesisId:'A',location:'AuthContext.jsx:login',message:'login called',data:{hasUser:!!userData,userId:String(userData?._id||''),epoch:authEpochRef.current},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
-    queryClient.removeQueries({ queryKey: ['dashboardPreset'] });
     recordAttendanceSessionLogin();
     setUser(userData);
     setLoading(false);
-    syncSessionAfterLogin();
+    await syncSessionAfterLogin();
+    setSessionReady(true);
+    refetchUserScopedQueries(queryClient);
   }, [syncSessionAfterLogin, queryClient]);
 
   const value = useMemo(() => ({
     user,
     loading,
+    sessionReady,
     login,
     logout,
     refreshUser: fetchUser,
-  }), [user, loading, login, logout, fetchUser]);
+  }), [user, loading, sessionReady, login, logout, fetchUser]);
 
   return (
     <AuthContext.Provider value={value}>

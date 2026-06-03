@@ -182,17 +182,21 @@ exports.createTask = async (req, res, next) => {
 
 exports.getTasks = async (req, res, next) => {
   try {
-    const { projectId, scope } = req.query;
+    const { projectId, scope, includeOldCompleted } = req.query;
+    const includeAllCompleted =
+      includeOldCompleted === '1'
+      || includeOldCompleted === 'true'
+      || includeOldCompleted === 'all';
 
     if (scope === 'review') {
       const reviewTasks = await TaskService.getReviewQueue(req.user);
       return res.json(reviewTasks);
     }
 
-    const filter = {};
+    let queryFilter = {};
 
     if (projectId) {
-      filter.projectId = projectId;
+      queryFilter.projectId = projectId;
       if (!isAdminUser(req.user)) {
         const Project = require('../models/Project');
         const project = await Project.findById(projectId).lean();
@@ -208,7 +212,7 @@ exports.getTasks = async (req, res, next) => {
         const assignments = await TaskAssignment.find({ userId: req.user._id }).lean();
         const taskIds = assignments.map(a => a.taskId);
 
-        filter.$or = [
+        queryFilter.$or = [
           { createdBy: req.user._id },
           { _id: { $in: taskIds } }
         ];
@@ -220,8 +224,8 @@ exports.getTasks = async (req, res, next) => {
       today.setHours(0, 0, 0, 0);
       const futureLimit = new Date(today.getTime() + 35 * 24 * 60 * 60 * 1000); // 35 days ahead
 
-      filter.status = { $nin: ['done', 'in-review'] };
-      filter.$expr = {
+      queryFilter.status = { $nin: ['done', 'in-review'] };
+      queryFilter.$expr = {
         $let: {
           vars: { taskDay: { $ifNull: ['$scheduleDate', '$dueDate'] } },
           in: {
@@ -232,9 +236,12 @@ exports.getTasks = async (req, res, next) => {
           },
         },
       };
+    } else {
+      const { mergeTaskListFilter } = require('../utils/taskListFilter');
+      queryFilter = mergeTaskListFilter(queryFilter, { includeOldCompleted: includeAllCompleted });
     }
 
-    const tasksDto = await TaskService.getTasks(filter);
+    const tasksDto = await TaskService.getTasks(queryFilter);
     res.json(tasksDto);
   } catch (error) {
     next(error);

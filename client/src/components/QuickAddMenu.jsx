@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ListTodo, FolderPlus, StickyNote, Calendar, Link2, Bug, LayoutGrid, Pin } from 'lucide-react';
+import { Plus, ListTodo, StickyNote, Calendar, Link2, Bug, Pin } from 'lucide-react';
 import { NexusModal, Button, Input } from './ui';
 import TaskCreateModal from './TaskCreateModal';
 import CalendarEntryModal from './CalendarEntryModal';
@@ -41,8 +41,6 @@ const QuickAddMenu = () => {
 
   const actions = [
     { id: 'task', label: 'Task', icon: ListTodo, onClick: () => { setOpen(false); setTaskOpen(true); } },
-    { id: 'project', label: 'Project', icon: FolderPlus, onClick: () => { setOpen(false); navigate('/projects/new'); } },
-    { id: 'workspace', label: 'Workspace', icon: LayoutGrid, onClick: () => { setOpen(false); navigate('/projects', { state: { openCreateWorkspace: true } }); } },
     { id: 'note', label: 'Note', icon: StickyNote, onClick: () => { setOpen(false); setNoteOpen(true); } },
     { id: 'pin', label: 'Pin', icon: Pin, onClick: () => { setOpen(false); setPinOpen(true); } },
     { id: 'event', label: 'Event', icon: Calendar, onClick: () => { setOpen(false); setEventOpen(true); } },

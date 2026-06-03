@@ -27,6 +27,9 @@ export const NexusModal = ({
   isOpen,
   onClose,
   title,
+  subtitle,
+  subtitleFirst = false,
+  prominentTitle = false,
   message,
   type = 'info',
   onConfirm,
@@ -71,6 +74,9 @@ export const NexusModal = ({
     <ModalShell isOpen={isOpen} onClose={onClose} size={resolvedSize}>
       <ModalHeader
         title={title}
+        subtitle={subtitle}
+        subtitleFirst={subtitleFirst}
+        prominentTitle={prominentTitle}
         onClose={onClose}
         icon={Icon}
         iconStyle={{ background: config.bg, color: config.color }}

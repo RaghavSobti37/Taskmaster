@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Plus, Briefcase, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical
+  Plus, Briefcase, Star, LayoutGrid, List, FolderPlus, Trash2, Settings, GripVertical, ClipboardCheck, Layers,
 } from 'lucide-react';
 import {
   Badge,
@@ -299,11 +299,47 @@ const ProjectsView = () => {
 
   if (loading && projects.length === 0) return <PageSkeleton />;
 
+  const activeProjectCount = filteredProjects.filter((p) => p.status === 'active').length;
+
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      icon={Briefcase}
-      title="Projects"
+      overview={{
+        stats: [
+          {
+            id: 'total',
+            label: 'Projects',
+            value: filteredProjects.length,
+            icon: Briefcase,
+            variant: 'info',
+            info: 'Projects matching your search and status filters.',
+          },
+          {
+            id: 'active',
+            label: 'Active',
+            value: activeProjectCount,
+            icon: Layers,
+            variant: 'mint',
+            info: 'Projects currently marked active.',
+          },
+          {
+            id: 'review',
+            label: 'Awaiting Review',
+            value: totalReviewCount,
+            icon: ClipboardCheck,
+            variant: 'apricot',
+            info: 'Tasks you must approve across all projects.',
+          },
+          {
+            id: 'workspaces',
+            label: 'Workspaces',
+            value: workspaceGroups.length,
+            icon: LayoutGrid,
+            variant: 'slate',
+            info: 'Workspace groups in grid view.',
+          },
+        ],
+      }}
       toolbar={
         <>
           <SearchInput

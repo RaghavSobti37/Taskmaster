@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ListTodo } from 'lucide-react';
+import { Search, ListTodo, AlertCircle, Clock, ClipboardCheck, Layers } from 'lucide-react';
 import axios from 'axios';
 import { Badge, SearchInput, PageSkeleton, PageLoadGuard, DataLoading, ListPageLayout, UserLabel, ListCard } from '../../components/ui';
 import StatusSelect from '../../components/forms/StatusSelect';
@@ -34,6 +34,7 @@ import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton
 import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
+import { computeTaskIndicators } from '../../utils/taskIndicators';
 
 function resolveDirectoryUser(person, users = []) {
   if (!person) return null;
@@ -57,13 +58,13 @@ const TodoPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { addToast } = useSystemToast();
-  const { data: tasks = [], isLoading } = useTasks(user?._id);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const includeOldCompleted = statusFilter === 'done' || search.trim().length > 0;
+  const { data: tasks = [], isLoading } = useTasks(user?._id, { includeOldCompleted });
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: users = [] } = useUserDirectory();
-
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [workspaceFilter, setWorkspaceFilter] = useState('all');
@@ -73,6 +74,9 @@ const TodoPage = () => {
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
   const [dueDateSort, setDueDateSort] = useState('asc');
+  const [statFilter, setStatFilter] = useState(null);
+
+  const taskIndicators = useMemo(() => computeTaskIndicators(tasks), [tasks]);
 
   const typeOptions = useMemo(
     () => [{ value: 'all', label: 'All categories' }, ...TASK_CATEGORY_OPTIONS],
@@ -101,9 +105,20 @@ const TodoPage = () => {
       const matchesType = typeFilter === 'all' || normalizeTaskCategory(t.type) === typeFilter;
       const pid = t.projectId?._id || t.projectId;
       const matchesProject = projectFilter === 'all' || pid?.toString() === projectFilter;
-      return matchesSearch && matchesStatus && matchesPriority && matchesType && matchesProject;
+      let matchesStat = true;
+      if (statFilter === 'overdue') matchesStat = isDueOverdue(t) && t.status !== 'done';
+      else if (statFilter === 'today') {
+        const raw = t.dueDate || t.scheduleDate;
+        if (!raw || t.status === 'done') matchesStat = false;
+        else {
+          const d = startOfDay(new Date(raw));
+          matchesStat = !Number.isNaN(d.getTime()) && d.getTime() === startOfDay(new Date()).getTime();
+        }
+      } else if (statFilter === 'in-review') matchesStat = t.status === 'in-review';
+      else if (statFilter === 'open') matchesStat = t.status !== 'done';
+      return matchesSearch && matchesStatus && matchesPriority && matchesType && matchesProject && matchesStat;
     });
-  }, [tasks, search, statusFilter, priorityFilter, typeFilter, projectFilter]);
+  }, [tasks, search, statusFilter, priorityFilter, typeFilter, projectFilter, statFilter]);
 
   const sortedFiltered = useMemo(
     () => sortTasksByDueDate(filtered, dueDateSort),
@@ -291,8 +306,50 @@ const TodoPage = () => {
     <PageLoadGuard loading={isLoading && !tasks.length} skeleton={PageSkeleton} className="!py-4">
     <ListPageLayout
       containerClassName="!py-4"
-      icon={ListTodo}
-      title="Todo"
+      overview={{
+        stats: [
+          {
+            id: 'open',
+            label: 'Open Tasks',
+            value: taskIndicators.open,
+            icon: Layers,
+            variant: 'info',
+            info: 'Tasks assigned to you that are not marked done.',
+            onClick: () => setStatFilter(statFilter === 'open' ? null : 'open'),
+            active: statFilter === 'open',
+          },
+          {
+            id: 'overdue',
+            label: 'Overdue',
+            value: taskIndicators.overdue,
+            icon: AlertCircle,
+            variant: 'rose',
+            info: 'Open tasks past their due date.',
+            onClick: () => setStatFilter(statFilter === 'overdue' ? null : 'overdue'),
+            active: statFilter === 'overdue',
+          },
+          {
+            id: 'today',
+            label: 'Due Today',
+            value: taskIndicators.today,
+            icon: Clock,
+            variant: 'apricot',
+            info: 'Open tasks due today.',
+            onClick: () => setStatFilter(statFilter === 'today' ? null : 'today'),
+            active: statFilter === 'today',
+          },
+          {
+            id: 'review',
+            label: 'In Review',
+            value: taskIndicators.inReview,
+            icon: ClipboardCheck,
+            variant: 'mint',
+            info: 'Tasks you submitted that are waiting for reviewer approval.',
+            onClick: () => setStatFilter(statFilter === 'in-review' ? null : 'in-review'),
+            active: statFilter === 'in-review',
+          },
+        ],
+      }}
       mobileFilterCount={
         [statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter].filter((f) => f !== 'all').length
       }

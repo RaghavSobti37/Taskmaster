@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
-import { DashboardWidgetShell, Badge, DataLoading } from '../ui';
+import { DashboardWidgetShell, DataLoading, CountBadge } from '../ui';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterOverdueTasks, sortTasksByPriority } from '../../utils/dashboardTasks';
@@ -36,7 +36,7 @@ const TodosOverdueCard = ({ tasks = [], projects = [], loading, onComplete, onOp
         </button>
       }
       icon={AlertCircle}
-      actions={<Badge variant="overdue">{overdueTasks.length}</Badge>}
+      actions={<CountBadge count={overdueTasks.length} size="sm" variant="overdue" pulse={overdueTasks.length > 0} />}
     >
       <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
         {loading && <DataLoading message="Loading overdue tasks..." className="!py-3" />}

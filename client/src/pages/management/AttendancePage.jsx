@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
+import { PageContainer, Button, NexusModal, NexusDropdown, Input, ModalFooter, UserLabel, DataOverviewSection } from '../../components/ui';
 import {
   useAttendance,
   useUpsertAttendance,
@@ -32,6 +32,7 @@ import {
 } from '../../utils/attendanceUtils';
 import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendanceGrid';
 import SelfMonthlyAttendanceCalendar from '../../components/attendance/SelfMonthlyAttendanceCalendar';
+import TeamAttendanceMobileList from '../../components/attendance/TeamAttendanceMobileList';
 import UnifiedTimeCard from '../../components/attendance/UnifiedTimeCard';
 
 const VIEW_MODES = {
@@ -269,7 +270,7 @@ const AttendancePage = () => {
   };
 
   const saveInCell = () => {
-    if (!editInCell) return;
+    if (!editInCell || editInLocked) return;
     const { userRow, date, entry } = editInCell;
     const payload = {
       userId: userRow._id,
@@ -289,7 +290,7 @@ const AttendancePage = () => {
   };
 
   const saveOutCell = () => {
-    if (!editOutCell) return;
+    if (!editOutCell || editOutLocked) return;
     const { userRow, date, entry } = editOutCell;
     const payload = {
       userId: userRow._id,
@@ -310,6 +311,8 @@ const AttendancePage = () => {
 
   const hasInEdits = !!editInCell && !!editInBaseline && !stableJsonEqual(editInForm, editInBaseline);
   const hasOutEdits = !!editOutCell && !!editOutBaseline && !stableJsonEqual(editOutForm, editOutBaseline);
+  const editInLocked = !!editInCell?.entry?.inTimeRecord?.isApproved;
+  const editOutLocked = !!editOutCell?.entry?.outTimeRecord?.isApproved;
 
   const { revert: revertInEdits } = useUnsavedChanges({
     baseline: editInBaseline,
@@ -350,32 +353,64 @@ const AttendancePage = () => {
     }
   };
 
+  const attendanceOverview = useMemo(() => {
+    const todayEntries = rows.filter((r) => format(new Date(r.date), 'yyyy-MM-dd') === todayKey);
+    const presentToday = todayEntries.filter((r) => {
+      const st = resolveStatus(r, new Date(r.date));
+      return st === 'present' || st === 'halfDay';
+    }).length;
+    return {
+      pendingLeave: leaveRequests.length,
+      teamSize: filteredUsers.length,
+      presentToday: canEdit ? presentToday : (selfTodayRows[0] ? 1 : 0),
+    };
+  }, [rows, todayKey, leaveRequests.length, filteredUsers.length, canEdit, selfTodayRows]);
+
   return (
     <PageContainer className="!py-4 !space-y-6">
-      <DesktopRecommendedBanner message="Team attendance matrix is best viewed on desktop. Use Settings → Attendance for your personal log on mobile." />
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 min-h-[44px] pb-3 mb-4 border-b border-[var(--color-bg-border)]">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10">
+      <DataOverviewSection
+        stats={[
+          {
+            id: 'leave',
+            label: 'Pending Leave',
+            value: attendanceOverview.pendingLeave,
+            icon: Palmtree,
+            variant: 'apricot',
+            info: canEdit ? 'Leave requests waiting for manager approval.' : 'Only visible to ops managers.',
+          },
+          {
+            id: 'team',
+            label: 'Team Size',
+            value: attendanceOverview.teamSize,
+            icon: Users,
+            variant: 'info',
+            info: 'People included in the attendance matrix (excludes excluded accounts).',
+          },
+          {
+            id: 'present',
+            label: canEdit ? 'Present Today' : 'Checked In',
+            value: attendanceOverview.presentToday,
+            icon: Check,
+            variant: 'mint',
+            info: canEdit ? 'Team members marked present or half-day for today.' : 'Whether you have checked in today.',
+          },
+        ].filter((s) => canEdit || s.id !== 'team')}
+      />
+      <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-h-[44px] pb-3 mb-4 border-b border-[var(--color-bg-border)]">
+        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-x-3 lg:gap-y-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
               <ClipboardCheck size={18} strokeWidth={2.5} />
             </div>
-            <h1 className="tm-page-title uppercase whitespace-nowrap">Attendance</h1>
+            <h1 className="tm-page-title uppercase min-w-0">Attendance</h1>
           </div>
-          {!showTeamOverview && (
-            <>
-              <span className="hidden sm:block w-px h-5 bg-[var(--color-bg-border)] shrink-0" aria-hidden />
-              <div className="flex items-baseline gap-2 min-w-0">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] shrink-0">Today</span>
-                <span className="text-sm font-black truncate">{format(today, 'EEEE, MMMM d')}</span>
-              </div>
-            </>
-          )}
         </div>
         {canEdit ? (
           <Button
             size="sm"
             variant={showTeamOverview ? 'primary' : 'secondary'}
-            className="shrink-0"
+            className="w-full lg:w-auto shrink-0"
+            aria-label={showTeamOverview ? 'Hide team attendance overview' : 'View team attendance overview'}
             onClick={() => {
               if (showTeamOverview) {
                 setShowTeamOverview(false);
@@ -386,17 +421,20 @@ const AttendancePage = () => {
               }
             }}
           >
-            <Users size={16} />
-            {showTeamOverview ? 'Hide Team Overview' : 'View Team Attendance Overview'}
+            <Users size={16} aria-hidden />
+            <span className="lg:hidden">{showTeamOverview ? 'Hide overview' : 'Team overview'}</span>
+            <span className="hidden lg:inline">{showTeamOverview ? 'Hide Team Overview' : 'View Team Attendance Overview'}</span>
           </Button>
         ) : null}
       </header>
 
       {/* Unified Time Card for Current User */}
       {!showTeamOverview && (
-        <UnifiedTimeCard 
+        <UnifiedTimeCard
           entry={selfTodayRows[0]}
-          hideTitleRow
+          subTitle={user?.name}
+          title={format(today, 'EEE, MMM d, yyyy')}
+          alwaysShowMarkInAccess
           isSelfMode={true}
           onCheckIn={(t) => executeGeolocationCheck('in', t)}
           onCheckOut={(t) => executeGeolocationCheck('out', t)}
@@ -446,58 +484,82 @@ const AttendancePage = () => {
           </div>
 
           {viewMode === VIEW_MODES.MONTH ? (
-            <div className="hidden lg:block">
-            <MonthlyAttendanceGrid
-              month={monthView}
-              onMonthChange={setMonthView}
-              rowMap={rowMap}
-              users={filteredUsers}
-              resolveStatus={resolveStatus}
-              onEdit={openEditModal}
-            />
-            </div>
+            <>
+              <div className="hidden lg:block">
+                <MonthlyAttendanceGrid
+                  month={monthView}
+                  onMonthChange={setMonthView}
+                  rowMap={rowMap}
+                  users={filteredUsers}
+                  resolveStatus={resolveStatus}
+                  onEdit={openEditModal}
+                />
+              </div>
+              <div className="lg:hidden -mx-1 overflow-x-auto">
+                <MonthlyAttendanceGrid
+                  month={monthView}
+                  onMonthChange={setMonthView}
+                  rowMap={rowMap}
+                  users={filteredUsers}
+                  resolveStatus={resolveStatus}
+                  onEdit={openEditModal}
+                />
+              </div>
+            </>
           ) : (
-            <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)]">
-              <table className="min-w-full text-xs">
-                <thead className="bg-[var(--color-bg-primary)]">
-                  <tr>
-                    <th className="px-4 py-3 text-left sticky left-0 bg-[var(--color-bg-primary)] z-10 border-b border-[var(--color-bg-border)]" rowSpan={2}>User</th>
-                    {dateColumns.map((day) => (
-                      <th key={day.key} className={`px-3 py-3 text-center border-b border-[var(--color-bg-border)] ${viewMode === VIEW_MODES.WEEK ? 'min-w-[120px]' : 'min-w-[200px]'}`} colSpan={2}>
-                        <div>{day.label}</div>
-                        <div className="text-[10px] text-[var(--color-text-muted)]">{format(day.date, 'EEE, MMM d')}</div>
-                      </th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {dateColumns.map((day) => (
-                      <React.Fragment key={`${day.key}-sub`}>
-                        <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">In</th>
-                        <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">Out</th>
-                      </React.Fragment>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-[var(--color-bg-secondary)]">
-                  {(isLoading || usersLoading) && (
-                    <tr><td className="px-4 py-4 text-center italic" colSpan={1 + (dateColumns.length * 2)}>Loading...</td></tr>
-                  )}
-                  {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
-                    <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-[var(--color-bg-secondary)] z-10">
-                        <UserLabel user={userRow} size="xs" nameClassName="font-bold text-xs" />
-                      </td>
-                      {dateColumns.map(({ date, key: dayKey }) => {
-                        const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
-                        const entry = rowMap.get(key);
-                        const status = resolveStatus(entry, date);
-                        return <AttendanceDayCells key={`${dayKey}-${key}`} userRow={userRow} date={date} entry={entry} status={status} onEdit={openEditModal} statusDot={statusDot} />;
-                      })}
+            <>
+              <TeamAttendanceMobileList
+                users={filteredUsers}
+                dateColumns={dateColumns}
+                rowMap={rowMap}
+                resolveStatus={resolveStatus}
+                onEdit={openEditModal}
+                statusDot={statusDot}
+                isLoading={isLoading}
+                usersLoading={usersLoading}
+              />
+              <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)]">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-[var(--color-bg-primary)]">
+                    <tr>
+                      <th className="px-4 py-3 text-left sticky left-0 bg-[var(--color-bg-primary)] z-10 border-b border-[var(--color-bg-border)]" rowSpan={2}>User</th>
+                      {dateColumns.map((day) => (
+                        <th key={day.key} className={`px-3 py-3 text-center border-b border-[var(--color-bg-border)] ${viewMode === VIEW_MODES.WEEK ? 'min-w-[120px]' : 'min-w-[200px]'}`} colSpan={2}>
+                          <div>{day.label}</div>
+                          <div className="text-[10px] text-[var(--color-text-muted)]">{format(day.date, 'EEE, MMM d')}</div>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    <tr>
+                      {dateColumns.map((day) => (
+                        <React.Fragment key={`${day.key}-sub`}>
+                          <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">In</th>
+                          <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">Out</th>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-[var(--color-bg-secondary)]">
+                    {(isLoading || usersLoading) && (
+                      <tr><td className="px-4 py-4 text-center italic" colSpan={1 + (dateColumns.length * 2)}>Loading...</td></tr>
+                    )}
+                    {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
+                      <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-[var(--color-bg-secondary)] z-10">
+                          <UserLabel user={userRow} size="xs" nameClassName="font-bold text-xs" />
+                        </td>
+                        {dateColumns.map(({ date, key: dayKey }) => {
+                          const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
+                          const entry = rowMap.get(key);
+                          const status = resolveStatus(entry, date);
+                          return <AttendanceDayCells key={`${dayKey}-${key}`} userRow={userRow} date={date} entry={entry} status={status} onEdit={openEditModal} statusDot={statusDot} />;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       )}
@@ -505,11 +567,14 @@ const AttendancePage = () => {
       <NexusModal
         isOpen={!!editInCell}
         onClose={() => setEditInCell(null)}
-        title="Morning Check-In — User Timecard"
+        title={editInCell ? format(editInCell.date, 'EEE, MMM d, yyyy') : ''}
+        subtitle={editInCell?.userRow?.name}
+        subtitleFirst
+        prominentTitle
         showFooter={false}
         size="md"
         footer={
-          editInCell ? (
+          editInCell && !editInLocked ? (
             <ModalFooter>
               <Button
                 type="button"
@@ -536,10 +601,10 @@ const AttendancePage = () => {
         {editInCell && (
           <UnifiedTimeCard
             entry={editInCell.entry}
-            title={format(editInCell.date, 'EEE, MMM d, yyyy')}
-            subTitle={editInCell.userRow.name}
+            hideTitleRow
             isSelfMode={false}
             editScope="in"
+            readOnly={editInLocked}
             editForm={editInForm}
             setEditForm={setEditInForm}
             onApproveIn={() => approveAttendance.mutate(
@@ -554,11 +619,14 @@ const AttendancePage = () => {
       <NexusModal
         isOpen={!!editOutCell}
         onClose={() => setEditOutCell(null)}
-        title="Evening Check-Out — User Timecard"
+        title={editOutCell ? format(editOutCell.date, 'EEE, MMM d, yyyy') : ''}
+        subtitle={editOutCell?.userRow?.name}
+        subtitleFirst
+        prominentTitle
         showFooter={false}
         size="md"
         footer={
-          editOutCell ? (
+          editOutCell && !editOutLocked ? (
             <ModalFooter>
               <Button
                 type="button"
@@ -585,10 +653,10 @@ const AttendancePage = () => {
         {editOutCell && (
           <UnifiedTimeCard
             entry={editOutCell.entry}
-            title={format(editOutCell.date, 'EEE, MMM d, yyyy')}
-            subTitle={editOutCell.userRow.name}
+            hideTitleRow
             isSelfMode={false}
             editScope="out"
+            readOnly={editOutLocked}
             editForm={editOutForm}
             setEditForm={setEditOutForm}
             onApproveOut={() => approveAttendance.mutate(

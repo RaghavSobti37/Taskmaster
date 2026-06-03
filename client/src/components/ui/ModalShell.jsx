@@ -126,7 +126,16 @@ export const ModalShell = ({
   );
 };
 
-export const ModalHeader = ({ title, subtitle, onClose, icon: Icon, iconStyle, showClose = true }) => (
+export const ModalHeader = ({
+  title,
+  subtitle,
+  onClose,
+  icon: Icon,
+  iconStyle,
+  showClose = true,
+  subtitleFirst = false,
+  prominentTitle = false,
+}) => (
   <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] shrink-0">
     <div className="flex items-center gap-2 min-w-0">
       {Icon && (
@@ -134,10 +143,21 @@ export const ModalHeader = ({ title, subtitle, onClose, icon: Icon, iconStyle, s
           <Icon size={16} />
         </div>
       )}
-      <div className="min-w-0">
-        <h2 className="text-sm font-bold uppercase tracking-wider truncate">{title}</h2>
-        {subtitle && (
-          <p className="text-[11px] text-[var(--color-text-muted)] font-normal normal-case tracking-normal mt-0.5">{subtitle}</p>
+      <div className="min-w-0 flex flex-col gap-0.5">
+        {subtitle && subtitleFirst && (
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">{subtitle}</p>
+        )}
+        <h2
+          className={
+            prominentTitle
+              ? 'text-xl font-black leading-tight normal-case tracking-normal truncate'
+              : 'text-sm font-bold uppercase tracking-wider truncate'
+          }
+        >
+          {title}
+        </h2>
+        {subtitle && !subtitleFirst && (
+          <p className="text-[11px] text-[var(--color-text-muted)] font-normal normal-case tracking-normal mt-0.5 truncate">{subtitle}</p>
         )}
       </div>
     </div>

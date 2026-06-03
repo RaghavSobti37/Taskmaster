@@ -25,6 +25,7 @@ const NexusDropdown = ({
   renderOption = null,
   usePortal = true,
   menuMinWidth = 280,
+  matchTriggerWidth = false,
 }) => {
   const multiSelect = isMulti || multi;
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +46,7 @@ const NexusDropdown = ({
     const availableSpace = Math.max(120, (openUp ? spaceAbove : spaceBelow) - 4);
     const searchHeight = searchable ? SEARCH_BLOCK_HEIGHT : 0;
     const listMaxHeight = Math.max(80, Math.min(MENU_LIST_MAX, availableSpace - searchHeight));
-    const menuWidth = Math.max(rect.width, menuMinWidth);
+    const menuWidth = matchTriggerWidth ? rect.width : Math.max(rect.width, menuMinWidth);
 
     let left = rect.left;
     if (left + menuWidth > window.innerWidth - 8) {
@@ -68,7 +69,7 @@ const NexusDropdown = ({
         ? { bottom: window.innerHeight - rect.top + 4 }
         : { top: rect.bottom + 4 }),
     };
-  }, [menuMinWidth, searchable]);
+  }, [menuMinWidth, matchTriggerWidth, searchable]);
 
   const updateMenuPosition = useCallback(() => {
     const style = computeMenuPosition();

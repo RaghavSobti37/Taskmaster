@@ -55,7 +55,7 @@ const AnnouncementsCard = () => {
             }
             secondary={
               <>
-                <p className="text-[10px] text-[var(--color-text-secondary)] line-clamp-2">{item.message}</p>
+                <p className="text-[10px] text-[var(--color-text-secondary)] whitespace-pre-wrap break-words">{item.message}</p>
                 {item.ctaText && item.ctaLink && (
                   <a href={item.ctaLink} target="_blank" rel="noopener noreferrer" className="inline-block mt-1.5">
                     <Button size="xs" variant="secondary">{item.ctaText}</Button>

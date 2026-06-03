@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Inbox, CheckCheck, Shield, ListTodo } from 'lucide-react';
-import { Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout, DataListRow } from '../../components/ui';
+import { Inbox, CheckCheck, Shield, ListTodo, Bell } from 'lucide-react';
+import { Button, Badge, PageSkeleton, PageLoadGuard, DataLoading, EmptyState, ListPageLayout, DataListRow, CountBadge } from '../../components/ui';
 import {
   useNotifications,
   useMarkNotificationRead,
-  useMarkAllNotificationsRead
+  useMarkAllNotificationsRead,
+  useStatusCounts,
 } from '../../hooks/useTaskmasterQueries';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { parseActionUrl, applyFlashHighlight } from '../../utils/navigationHighlight';
 import { formatInboxCategory } from '../../utils/displayLabels';
 
@@ -41,13 +43,36 @@ const NotificationAvatar = ({ notification: n }) => {
 
 const InboxPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const { data, isLoading } = useNotifications();
+  const { data: statusCounts } = useStatusCounts(!!user);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
   const notifications = data?.notifications || (Array.isArray(data) ? data : []);
   const allowedCategories = data?.allowedCategories || ['all', 'task', 'review', 'crm', 'attendance', 'announcement', 'department', 'system'];
+
+  const unreadByCategory = useMemo(() => {
+    const fromApi = statusCounts?.notifications?.byCategory || {};
+    const fromList = notifications.reduce((acc, n) => {
+      if (!n.read && n.category) {
+        acc[n.category] = (acc[n.category] || 0) + 1;
+      }
+      return acc;
+    }, {});
+    return { ...fromList, ...fromApi };
+  }, [notifications, statusCounts]);
+
+  const unreadTotal = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const categoryUnread = (cat) => {
+    if (cat === 'all') return unreadTotal;
+    return unreadByCategory[cat] || 0;
+  };
 
   const filtered = filter === 'all'
     ? notifications
@@ -62,37 +87,80 @@ const InboxPage = () => {
     }
   };
 
+  const filterChipClass = (active) =>
+    `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
+      active
+        ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
+        : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
+    }`;
+
   return (
     <PageLoadGuard loading={isLoading && !notifications.length} skeleton={PageSkeleton} className="!py-4">
     <ListPageLayout
       containerClassName="!py-4"
-      icon={Inbox}
-      title="Inbox"
+      overview={{
+        stats: [
+          {
+            id: 'unread',
+            label: 'Unread',
+            value: statusCounts?.notifications?.unread ?? unreadTotal,
+            icon: Bell,
+            variant: 'rose',
+            info: 'Notifications you have not opened yet.',
+            onClick: () => setFilter('all'),
+            active: filter === 'all',
+          },
+          {
+            id: 'task',
+            label: 'Task Alerts',
+            value: categoryUnread('task'),
+            icon: ListTodo,
+            variant: 'info',
+            info: 'Unread task assignments and updates.',
+            onClick: () => setFilter(filter === 'task' ? 'all' : 'task'),
+            active: filter === 'task',
+          },
+          {
+            id: 'review',
+            label: 'Reviews',
+            value: categoryUnread('review'),
+            icon: CheckCheck,
+            variant: 'mint',
+            info: 'Unread review and approval notifications.',
+            onClick: () => setFilter(filter === 'review' ? 'all' : 'review'),
+            active: filter === 'review',
+          },
+          {
+            id: 'crm',
+            label: 'CRM',
+            value: categoryUnread('crm'),
+            icon: Inbox,
+            variant: 'apricot',
+            info: 'Unread lead and follow-up notifications.',
+            onClick: () => setFilter(filter === 'crm' ? 'all' : 'crm'),
+            active: filter === 'crm',
+          },
+        ],
+      }}
       toolbar={
-        <div className="flex flex-nowrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setFilter('all')}
-            className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
-              filter === 'all'
-                ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
-                : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
-            }`}
-          >
+        <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+          <button type="button" onClick={() => setFilter('all')} className={filterChipClass(filter === 'all')}>
             All
+            {categoryUnread('all') > 0 && (
+              <CountBadge count={categoryUnread('all')} size="sm" variant="teal" className="!border-transparent" />
+            )}
           </button>
           {allowedCategories.filter((cat) => cat !== 'all').map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setFilter(cat)}
-              className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-colors shrink-0 ${
-                filter === cat
-                  ? 'bg-[var(--color-brand-teal)] text-white border-[var(--color-brand-teal)]'
-                  : 'border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-brand-teal)]/40'
-              }`}
+              className={filterChipClass(filter === cat)}
             >
               {formatInboxCategory(cat)}
+              {categoryUnread(cat) > 0 && (
+                <CountBadge count={categoryUnread(cat)} size="sm" variant={filter === cat ? 'teal' : 'rose'} className="!border-transparent" />
+              )}
             </button>
           ))}
         </div>

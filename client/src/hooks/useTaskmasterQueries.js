@@ -27,6 +27,7 @@ import axios from 'axios';
 import { normalizeRepSummaryPayload } from '../utils/adminRibbonMetrics';
 import { subscribeToChannel } from '../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../utils/projectUtils';
+import { invalidateStatusCounts } from '../lib/queryInvalidation';
 
 // API Fetchers
 const fetchLogs = async (userId, limit = 200) => {
@@ -96,6 +97,7 @@ export const useCalendarEvents = () => {
         createdBy: ev.createdBy,
         type: ev.type || 'event',
         eventType: ev.eventType || 'event',
+        meetingLink: ev.meetingLink || '',
         workspace: ev.workspace,
         status: ev.status,
         priority: ev.priority,
@@ -124,6 +126,7 @@ export const useCreateCalendarEvent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };
@@ -135,6 +138,7 @@ export const useUpdateCalendarEvent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };
@@ -146,6 +150,7 @@ export const useDeleteCalendarEvent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };
@@ -263,6 +268,7 @@ export const useUpdateLead = () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'repSummary'] });
+      invalidateStatusCounts(queryClient);
     },
   });
 };
@@ -275,6 +281,7 @@ export const useCreateLead = () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'repSummary'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };
@@ -1177,7 +1184,7 @@ export const useMarkNotificationRead = () => {
     mutationFn: (id) => axios.patch(`/api/notifications/${id}/read`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };
@@ -1188,7 +1195,7 @@ export const useMarkAllNotificationsRead = () => {
     mutationFn: () => axios.patch('/api/notifications/read-all'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['statusCounts'] });
+      invalidateStatusCounts(queryClient);
     }
   });
 };

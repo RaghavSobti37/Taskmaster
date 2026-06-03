@@ -5,6 +5,92 @@ export { getHolidayLabel, isOfficeHoliday };
 
 const APP_TIMEZONE = 'Asia/Kolkata';
 
+/** Self-service check-in recorded (manual or system stamp). */
+export const hasRecordedCheckIn = (entry) =>
+  !!(entry?.inTimeRecord?.manualTimestamp || entry?.inTimeRecord?.systemTimestamp);
+
+/** Self-service check-out recorded (manual or system stamp). */
+export const hasRecordedCheckOut = (entry) =>
+  !!(entry?.outTimeRecord?.manualTimestamp || entry?.outTimeRecord?.systemTimestamp);
+
+/** HH:mm for time card display from an in/out record. */
+export const formatAttendanceRecordTime = (record) => {
+  if (!record) return '';
+  const manual = typeof record.manualTimestamp === 'string' ? record.manualTimestamp.trim() : '';
+  if (manual) return manual;
+  if (record.systemTimestamp) {
+    return new Date(record.systemTimestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
+  return '';
+};
+
+/** After this hour (IST), self-mark UI defaults to Mark Out with optional Mark In reveal. */
+export const ATTENDANCE_MARKOUT_CUTOFF_HOUR = 13;
+
+export const getISTHourMinute = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+  const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+  return { hour, minute };
+};
+
+export const isAtOrAfterMarkOutCutoff = (date = new Date()) => {
+  const { hour } = getISTHourMinute(date);
+  return hour >= ATTENDANCE_MARKOUT_CUTOFF_HOUR;
+};
+
+/**
+ * Self-service Mark In/Out panel visibility (compact + full time card).
+ * Before 13:00 IST: In only until checked in, then Out only.
+ * After 13:00 IST: Out primary; In via optional expand when not yet checked in.
+ * Attendance page (`alwaysShowMarkInAccess`): In panel always visible (incl. after check-in); both panels when not checked in after 13:00 (no buried toggle).
+ */
+export const getSelfMarkPanelVisibility = ({
+  hasIn,
+  hasOut,
+  showInExpanded = false,
+  alwaysShowMarkInAccess = false,
+  now = new Date(),
+} = {}) => {
+  const afterCutoff = isAtOrAfterMarkOutCutoff(now);
+
+  if (hasIn && hasOut) {
+    return { showInPanel: true, showOutPanel: true, showMarkInToggle: false };
+  }
+
+  if (hasIn && !hasOut) {
+    if (alwaysShowMarkInAccess) {
+      return { showInPanel: true, showOutPanel: true, showMarkInToggle: false };
+    }
+    return { showInPanel: false, showOutPanel: true, showMarkInToggle: false };
+  }
+
+  if (!hasIn) {
+    if (afterCutoff) {
+      if (alwaysShowMarkInAccess) {
+        return { showInPanel: true, showOutPanel: true, showMarkInToggle: false };
+      }
+      return {
+        showInPanel: showInExpanded,
+        showOutPanel: !showInExpanded,
+        showMarkInToggle: !showInExpanded,
+      };
+    }
+    return { showInPanel: true, showOutPanel: false, showMarkInToggle: false };
+  }
+
+  return { showInPanel: true, showOutPanel: true, showMarkInToggle: false };
+};
+
 const WEEKDAY_OFFSET_FROM_MONDAY = {
   Mon: 0,
   Tue: 1,

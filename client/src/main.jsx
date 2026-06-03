@@ -27,7 +27,9 @@ import { ConfirmProvider } from './contexts/ConfirmProvider';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
+import { applyPwaDesktopDocumentFlag } from './utils/displayMode';
 
+applyPwaDesktopDocumentFlag();
 warnIfDevPointsAtProduction();
 registerSW({ immediate: true });
 

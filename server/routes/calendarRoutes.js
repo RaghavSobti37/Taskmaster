@@ -12,6 +12,13 @@ const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
 const { validateCalendarEventRange } = require('../utils/dateValidation');
 
+function normalizeMeetingLink(link) {
+  if (!link || typeof link !== 'string') return '';
+  const trimmed = link.trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+}
+
 router.use(protect);
 
 async function getUserProjectIds(userId) {
@@ -140,6 +147,7 @@ router.post('/', async (req, res) => {
       endTime,
       visibility,
       eventType,
+      meetingLink,
       workspace,
       projectId,
     } = req.body;
@@ -166,12 +174,14 @@ router.post('/', async (req, res) => {
     }
     const { start: eventDateTime, end: eventEndDateTime } = rangeCheck;
 
+    const resolvedType = eventType || 'event';
     const event = await CalendarEvent.create({
       title,
       description: description || '',
       date: eventDateTime,
       endDate: eventEndDateTime,
-      eventType: eventType || 'event',
+      eventType: resolvedType,
+      meetingLink: resolvedType === 'meeting' ? normalizeMeetingLink(meetingLink) : '',
       visibility: visibility || 'public',
       workspace: visibility === 'project' ? workspace || 'General' : '',
       projectId: visibility === 'project' ? projectId : null,
@@ -244,7 +254,7 @@ router.put('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to edit this event' });
     }
 
-    const { title, description, date, time, startDate, startTime, endDate: endDateInput, endTime, visibility, eventType, workspace, projectId } = req.body;
+    const { title, description, date, time, startDate, startTime, endDate: endDateInput, endTime, visibility, eventType, meetingLink, workspace, projectId } = req.body;
     const dateOnly = startDate || date;
     const timeOnly = startTime || time;
 
@@ -264,6 +274,12 @@ router.put('/:id', async (req, res) => {
     if (title) event.title = title;
     if (description !== undefined) event.description = description;
     if (eventType) event.eventType = eventType;
+    const resolvedType = eventType || event.eventType;
+    if (meetingLink !== undefined || (eventType && resolvedType !== 'meeting')) {
+      event.meetingLink = resolvedType === 'meeting'
+        ? normalizeMeetingLink(meetingLink)
+        : '';
+    }
     if (visibility) {
       event.visibility = visibility;
       if (visibility === 'project') {

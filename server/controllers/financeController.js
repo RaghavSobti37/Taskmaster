@@ -250,6 +250,28 @@ const getDocuments = async (req, res) => {
 
     const total = await FinanceDocument.countDocuments(filter);
 
+    const categoryMixRows = await FinanceDocument.aggregate([
+      { $match: filter },
+      { $match: { isFolder: { $ne: true } } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ['$metadata.submissionType', 'reimbursement'] },
+              'reimbursements',
+              { $ifNull: ['$category', 'other'] },
+            ],
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
+    const categoryMix = categoryMixRows.map((row) => ({
+      key: row._id,
+      count: row.count,
+    }));
+
     let docs = await FinanceDocument.find(filter)
       .populate('uploadedBy', 'name email avatar')
       .populate('project', 'name')
@@ -283,6 +305,7 @@ const getDocuments = async (req, res) => {
       success: true,
       data: docs,
       currentFolder,
+      categoryMix,
       pagination: {
         total,
         page: pageVal,

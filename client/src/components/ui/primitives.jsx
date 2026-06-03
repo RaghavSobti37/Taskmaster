@@ -82,13 +82,26 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
         key={tab.id}
         type="button"
         onClick={() => onChange(tab.id)}
-        className={`px-2.5 h-7 text-[10px] font-bold uppercase tracking-wider transition-colors rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
+        className={`inline-flex items-center gap-1.5 px-2.5 h-7 text-[10px] font-bold uppercase tracking-wider transition-colors rounded-[var(--radius-atomic)] whitespace-nowrap shrink-0 ${
           activeTab === tab.id
             ? 'bg-[var(--color-bg-primary)] text-[var(--color-action-primary)] border border-[var(--color-bg-border)]'
             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
         }`}
       >
-        {tab.label}
+        <span>{tab.label}</span>
+        {tab.badge > 0 && (
+          <span
+            className={`flex h-4 min-w-4 px-1 items-center justify-center rounded-full text-[8px] font-bold tabular-nums ${
+              tab.badgeVariant === 'warning'
+                ? 'bg-amber-500 text-[var(--color-bg-primary)]'
+                : tab.badgeVariant === 'overdue'
+                  ? 'bg-rose-500 text-white'
+                  : 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)]'
+            }`}
+          >
+            {tab.badge > 99 ? '99+' : tab.badge}
+          </span>
+        )}
       </button>
     ))}
   </div>

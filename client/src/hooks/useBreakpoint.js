@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { isPwaDesktop } from '../utils/displayMode';
 
 export const MOBILE_MAX = 1023;
 export const DESKTOP_MIN = 1024;
@@ -26,11 +27,13 @@ export function useWindowSize() {
 
 export function useIsMobile() {
   const { width } = useWindowSize();
+  if (isPwaDesktop()) return false;
   return width <= MOBILE_MAX;
 }
 
 export function useIsDesktop() {
   const { width } = useWindowSize();
+  if (isPwaDesktop()) return true;
   return width >= DESKTOP_MIN;
 }
 

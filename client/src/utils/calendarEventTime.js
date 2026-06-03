@@ -63,6 +63,12 @@ export function formatEventRangeLabel(startRaw, endRaw) {
 }
 
 /** True if `day` (Date) falls within event start/end (inclusive, date-only). */
+export function normalizeMeetingLink(link) {
+  const trimmed = (link || '').trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+}
+
 export function eventOccursOnDay(event, day) {
   if (!day) return false;
   const start = extractDateAndTime(event?.date || event?.dueDate);

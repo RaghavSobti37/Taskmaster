@@ -33,6 +33,23 @@ export default function DataOverviewSection({
 
   return (
     <section className={`space-y-3 mb-8 ${className}`} aria-label="Data overview">
+      {showCharts && (
+        <div
+          className={`grid gap-3 ${
+            charts.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
+          }`}
+        >
+          {charts.map((c) => (
+            <DataMiniChart
+              key={c.id || c.title}
+              title={c.title}
+              type={c.type || 'bar'}
+              data={c.data}
+              height={c.height}
+            />
+          ))}
+        </div>
+      )}
       {hasStats && (
         <div className={`grid gap-3 ${isMobile && insightsOpen ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
           {visibleStats.map((s) => {
@@ -71,23 +88,6 @@ export default function DataOverviewSection({
             </>
           )}
         </button>
-      )}
-      {showCharts && (
-        <div
-          className={`grid gap-3 ${
-            charts.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
-          }`}
-        >
-          {charts.map((c) => (
-            <DataMiniChart
-              key={c.id || c.title}
-              title={c.title}
-              type={c.type || 'bar'}
-              data={c.data}
-              height={c.height}
-            />
-          ))}
-        </div>
       )}
     </section>
   );

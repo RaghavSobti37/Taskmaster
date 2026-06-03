@@ -45,6 +45,36 @@ const CATEGORIES = [
   { value: 'other', label: 'Other' },
 ];
 
+const CATEGORY_MIX_LABELS = {
+  reimbursements: 'Reimbursements',
+  ...Object.fromEntries(CATEGORIES.filter((c) => c.value !== 'all').map((c) => [c.value, c.label])),
+};
+
+const FINANCE_MIX_ORDER = [
+  'invoice',
+  'reimbursements',
+  'receipt',
+  'contract',
+  'proposal',
+  'budget',
+  'report',
+  'tax',
+  'other',
+];
+
+const categoryMixToChartData = (mix) => {
+  if (!Array.isArray(mix) || !mix.length) return [];
+  const byKey = Object.fromEntries(mix.map(({ key, count }) => [key, count]));
+  const keys = [
+    ...FINANCE_MIX_ORDER.filter((k) => byKey[k] > 0),
+    ...mix.map((m) => m.key).filter((k) => !FINANCE_MIX_ORDER.includes(k) && byKey[k] > 0),
+  ];
+  return keys.map((key) => ({
+    label: CATEGORY_MIX_LABELS[key] || key.replace(/^\w/, (c) => c.toUpperCase()),
+    value: byKey[key],
+  }));
+};
+
 const CAT_COLORS = {
   invoice: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
   receipt: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
@@ -557,7 +587,20 @@ const FinancePage = () => {
   };
 
   const financeOverview = useMemo(() => {
-    const categoryData = distributionFromField(docs, 'category');
+    let categoryData = categoryMixToChartData(docsRes?.categoryMix);
+    if (!categoryData.length) {
+      categoryData = distributionFromField(
+        docs.filter((d) => !d.isFolder),
+        'category',
+        {
+          labelFn: (raw, row) => (
+            row?.metadata?.submissionType === 'reimbursement'
+              ? 'Reimbursements'
+              : (CATEGORY_MIX_LABELS[raw] || CATEGORY_MIX_LABELS.other)
+          ),
+        },
+      );
+    }
     const stats = [
       { id: 'total', label: 'Documents', value: pagination.total, icon: FileText, variant: 'info' },
     ];
@@ -573,10 +616,10 @@ const FinancePage = () => {
     return {
       stats: stats.slice(0, 4),
       charts: categoryData.length
-        ? [{ id: 'category', title: 'Category mix (page)', type: 'bar', data: categoryData }]
+        ? [{ id: 'category', title: 'Category mix', type: 'bar', data: categoryData, height: 128 }]
         : [],
     };
-  }, [docs, pagination.total, pendingInvoices.length]);
+  }, [docs, docsRes?.categoryMix, pagination.total, pendingInvoices.length]);
 
   return (
     <ListPageLayout

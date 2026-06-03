@@ -5,19 +5,40 @@ import { useSidebar } from '../contexts/SidebarContext';
 import { useStatusCounts } from '../hooks/useTaskmasterQueries';
 import { useAuth } from '../contexts/AuthContext';
 import { UserAvatar } from './ui/UserAvatar';
+import CountBadge from './ui/CountBadge';
+import { getNavCountsForPath } from '../utils/navStatusCounts';
 
 const BottomNavigation = () => {
   const { toggleMobileSidebar } = useSidebar();
   const { user } = useAuth();
-  const { data: statusCounts = { notifications: { unread: 0 }, tasks: { overdue: 0 } } } = useStatusCounts(!!user);
-
-  const taskBadge = (statusCounts.tasks?.overdue || 0) + (statusCounts.tasks?.today || 0);
+  const { data: statusCounts = {} } = useStatusCounts(!!user);
+  const todoCounts = getNavCountsForPath('/todo', statusCounts);
+  const inboxCounts = getNavCountsForPath('/inbox', statusCounts);
+  const projectsCounts = getNavCountsForPath('/projects', statusCounts);
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-    { to: '/todo', icon: ListTodo, label: 'Tasks', badge: taskBadge },
-    { to: '/projects', icon: Briefcase, label: 'Projects' },
-    { to: '/inbox', icon: Inbox, label: 'Inbox', badge: statusCounts.notifications?.unread },
+    {
+      to: '/todo',
+      icon: ListTodo,
+      label: 'Tasks',
+      badge: todoCounts.badgeCount ?? todoCounts.count + todoCounts.todayCount,
+      badgeVariant: todoCounts.badgeVariant ?? (todoCounts.count > 0 ? 'rose' : 'amber'),
+    },
+    {
+      to: '/projects',
+      icon: Briefcase,
+      label: 'Projects',
+      badge: projectsCounts.count,
+      badgeVariant: 'warning',
+    },
+    {
+      to: '/inbox',
+      icon: Inbox,
+      label: 'Inbox',
+      badge: inboxCounts.count,
+      badgeVariant: 'rose',
+    },
   ];
 
   return (
@@ -38,8 +59,14 @@ const BottomNavigation = () => {
                 <div className="relative">
                   <item.icon size={22} className={isActive ? 'stroke-2' : 'stroke-[1.5]'} />
                   {item.badge > 0 && (
-                    <span className="absolute -top-1 -right-2 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white border-2 border-[var(--color-bg-primary)]">
-                      {item.badge > 99 ? '99+' : item.badge}
+                    <span className="absolute -top-1 -right-2">
+                      <CountBadge
+                        count={item.badge}
+                        size="sm"
+                        variant={item.badgeVariant || 'rose'}
+                        pulse={item.badgeVariant === 'rose'}
+                        className="!border-[var(--color-bg-primary)]"
+                      />
                     </span>
                   )}
                 </div>

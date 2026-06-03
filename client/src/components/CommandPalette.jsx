@@ -11,9 +11,15 @@ import {
   Settings,
   Plus,
   NotebookPen,
+  ListTodo,
+  Inbox,
   Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useStatusCounts } from '../hooks/useTaskmasterQueries';
+import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
+import CountBadge from './ui/CountBadge';
 
 const CommandPalette = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,12 +27,32 @@ const CommandPalette = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const { user } = useAuth();
+  const { data: statusCounts = {} } = useStatusCounts(!!user);
+
+  const badgeFor = (path) => {
+    const { count, todayCount } = getNavCountsForPath(path, statusCounts);
+    return totalNavBadge(count, todayCount);
+  };
 
   const actions = [
-    { id: 'dash', icon: LayoutDashboard, label: 'Go to Dashboard', shortcut: 'G D', path: '/' },
-    { id: 'proj', icon: Briefcase, label: 'View Projects', shortcut: 'G P', path: '/projects' },
-    { id: 'leads', icon: UserPlus, label: 'Manage CRM Leads', shortcut: 'G L', path: '/leads' },
-    { id: 'cal', icon: CalendarDays, label: 'Open Calendar', shortcut: 'G C', path: '/calendar' },
+    { id: 'dash', icon: LayoutDashboard, label: 'Go to Dashboard', shortcut: 'G D', path: '/dashboard' },
+    {
+      id: 'todo',
+      icon: ListTodo,
+      label: 'Open Todo',
+      shortcut: 'G T',
+      path: '/todo',
+      badge: (() => {
+        const t = getNavCountsForPath('/todo', statusCounts);
+        return t.badgeCount ?? badgeFor('/todo');
+      })(),
+      badgeVariant: getNavCountsForPath('/todo', statusCounts).badgeVariant ?? 'amber',
+    },
+    { id: 'proj', icon: Briefcase, label: 'View Projects', shortcut: 'G P', path: '/projects', badge: badgeFor('/projects'), badgeVariant: 'warning' },
+    { id: 'inbox', icon: Inbox, label: 'Open Inbox', shortcut: 'G I', path: '/inbox', badge: badgeFor('/inbox'), badgeVariant: 'rose' },
+    { id: 'leads', icon: UserPlus, label: 'Manage CRM Leads', shortcut: 'G L', path: '/leads', badge: badgeFor('/leads'), badgeVariant: getNavCountsForPath('/leads', statusCounts).count > 0 ? 'rose' : 'amber' },
+    { id: 'cal', icon: CalendarDays, label: 'Open Calendar', shortcut: 'G C', path: '/calendar', badge: badgeFor('/calendar'), badgeVariant: 'amber' },
     { id: 'set', icon: Settings, label: 'Account Settings', shortcut: 'G S', path: '/settings' },
     { id: 'new-proj', icon: Plus, label: 'Create New Project', shortcut: 'N P', path: '/projects/new', color: 'text-blue-500' },
     { id: 'quick-log', icon: NotebookPen, label: 'Record Daily Log', shortcut: 'N L', path: '/logs', color: 'text-amber-500' },
@@ -136,6 +162,14 @@ const CommandPalette = () => {
                     </div>
                     
                     <div className="flex items-center gap-4">
+                      {action.badge > 0 && (
+                        <CountBadge
+                          count={action.badge}
+                          size="md"
+                          variant={action.badgeVariant || 'rose'}
+                          className={idx === activeIndex ? '!border-white/30' : ''}
+                        />
+                      )}
                       {action.shortcut && (
                         <div className={`flex gap-1 ${idx === activeIndex ? 'opacity-100' : 'opacity-40'}`}>
                           {action.shortcut.split(' ').map((key, i) => (

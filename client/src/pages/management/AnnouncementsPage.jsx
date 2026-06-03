@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Megaphone } from 'lucide-react';
+import { Megaphone, Mail, Radio } from 'lucide-react';
 import { ListPageLayout, Input, Button } from '../../components/ui';
 import WorkspaceProjectFields from '../../components/forms/WorkspaceProjectFields';
 import { useAnnouncementTargets, useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../../hooks/useTaskmasterQueries';
@@ -27,6 +27,18 @@ const AnnouncementsPage = () => {
   const projects = targets?.projects || [];
 
   const canSubmit = useMemo(() => title.trim() && message.trim(), [title, message]);
+
+  const announcementStats = useMemo(() => {
+    const emailPending = announcements.filter(
+      (a) => a.emailDispatch && ['queued', 'sending', 'pending'].includes(String(a.emailDispatch.status || '').toLowerCase())
+    ).length;
+    const withEmail = announcements.filter((a) => a.emailDispatch).length;
+    return {
+      total: announcements.length,
+      withEmail,
+      emailPending,
+    };
+  }, [announcements]);
 
   const toggleUser = (id) => {
     setSelectedUsers((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -57,8 +69,34 @@ const AnnouncementsPage = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      icon={Megaphone}
-      title="Announcements"
+      overview={{
+        stats: [
+          {
+            id: 'total',
+            label: 'Published',
+            value: announcementStats.total,
+            icon: Megaphone,
+            variant: 'mint',
+            info: 'Announcements visible in the feed.',
+          },
+          {
+            id: 'email',
+            label: 'With Email',
+            value: announcementStats.withEmail,
+            icon: Mail,
+            variant: 'info',
+            info: 'Broadcasts that also sent email to the audience.',
+          },
+          {
+            id: 'pending',
+            label: 'Email In Flight',
+            value: announcementStats.emailPending,
+            icon: Radio,
+            variant: 'apricot',
+            info: 'Announcements whose email dispatch is still queued or sending.',
+          },
+        ],
+      }}
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section className="lg:col-span-8 p-5 space-y-4 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)] lg:pr-6">
@@ -129,7 +167,7 @@ const AnnouncementsPage = () => {
                 <div key={item._id} className="border-b border-[var(--color-bg-border)] pb-3 last:border-0 space-y-2">
                   <div>
                     <p className="tm-task-title">{item.title}</p>
-                    <p className="tm-caption mt-1 line-clamp-3">{item.message}</p>
+                    <p className="tm-caption mt-1 whitespace-pre-wrap break-words">{item.message}</p>
                     <p className="tm-caption mt-1">
                       Audience: {item.audienceType}
                       {item.projectId?.name ? ` (${item.projectId.name})` : ''}

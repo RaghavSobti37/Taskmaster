@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo, ArrowDown, ArrowUp } from 'lucide-react';
-import { DashboardWidgetShell, Badge, DataLoading, Button, TimeframeFilter } from '../ui';
+import { DashboardWidgetShell, DataLoading, Button, TimeframeFilter, CountBadge } from '../ui';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterTasksByTimeframe, sortTasksByDate } from '../../utils/dashboardTasks';
@@ -55,7 +55,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
         <>
           <TimeframeFilter value={timeframe} onChange={setTimeframe} />
           <SortToggle direction={todaySort} onToggle={() => setTodaySort((d) => (d === 'asc' ? 'desc' : 'asc'))} label="date" />
-          <Badge variant="info">{todayTasks.length}</Badge>
+          <CountBadge count={todayTasks.length} size="sm" variant="info" />
         </>
       }
     >

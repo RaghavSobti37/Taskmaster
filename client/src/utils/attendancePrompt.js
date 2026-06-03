@@ -1,22 +1,12 @@
-import { formatDateKeyIST, isAttendanceHoliday } from './attendanceUtils';
+import {
+  formatDateKeyIST,
+  getISTHourMinute,
+  isAttendanceHoliday,
+} from './attendanceUtils';
 
 export const ATTENDANCE_PROMPT_HOUR_IST = 9;
 export const ATTENDANCE_SESSION_LOGIN_KEY = 'tm-att-session-login-ts';
 export const ATTENDANCE_PROMPTED_PREFIX = 'tm-attendance-prompted';
-
-const APP_TIMEZONE = 'Asia/Kolkata';
-
-export const getISTHourMinute = (date = new Date()) => {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: APP_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
-  const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
-  const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
-  return { hour, minute };
-};
 
 export const isAtOrAfterAttendancePromptHour = (date = new Date()) => {
   const { hour } = getISTHourMinute(date);

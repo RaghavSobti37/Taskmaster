@@ -402,7 +402,7 @@ exports.createTask = async (taskData, user, session) => {
 
 exports.getTasks = async (filter) => {
   const tasks = await Task.find(filter)
-    .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours createdBy color')
+    .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours completedAt updatedAt createdBy color')
     .populate('projectId', 'name workspace')
     .populate('createdBy', 'name avatar')
     .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] })

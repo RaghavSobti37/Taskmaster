@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { isStandaloneDisplay } from '../utils/displayMode';
 
 const DISMISS_KEY = 'coreknot_pwa_install_dismissed';
 
@@ -25,7 +26,7 @@ export function usePwaInstall() {
 
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (isStandaloneDisplay()) {
       setInstalled(true);
     }
 

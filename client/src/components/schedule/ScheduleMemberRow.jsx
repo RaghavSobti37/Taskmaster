@@ -1,4 +1,6 @@
 import React from 'react';
+import { Badge } from '../ui';
+import { UserLabel } from '../ui/UserAvatar';
 import ScheduleMemberTaskGrid from './ScheduleMemberTaskGrid';
 
 const ScheduleMemberRow = ({
@@ -13,11 +15,14 @@ const ScheduleMemberRow = ({
   workspaces,
   projects,
   onTaskClick,
+  isCurrentUser = false,
+  isClusterMember = false,
 }) => {
   const uid = member._id?.toString();
   const lanes = placement?.lanes || [];
   const tooltip = placement?.tooltip || '';
   const taskCount = placement?.taskCount || 0;
+  const avatarSizeKey = compact ? 'xs' : 'sm';
 
   return (
     <tr
@@ -25,20 +30,28 @@ const ScheduleMemberRow = ({
       className="border-b border-[var(--color-bg-border)]/60 hover:bg-[var(--color-bg-secondary)]/30"
     >
       <td className={`${memberPad} ${cellAlign}`}>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <div
-            className={`${avatarSize} rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-bold shrink-0 overflow-hidden select-none`}
-          >
-            {member.avatar ? (
-              <img src={member.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              member.name?.substring(0, 2).toUpperCase()
-            )}
-          </div>
-          <div className="font-semibold text-[11px] truncate">{member.name}</div>
+        <div className="flex items-center gap-1 min-w-0">
+          <UserLabel
+            user={member}
+            size={avatarSizeKey}
+            nameClassName="font-semibold text-[11px] truncate"
+            className="min-w-0 flex-1"
+          />
+          {isCurrentUser && (
+            <Badge
+              variant="todo"
+              className="!text-[8px] !py-0 !px-1.5 shrink-0 !bg-[var(--color-brand-teal)]/15 !text-[var(--color-brand-teal)]"
+            >
+              You
+            </Badge>
+          )}
         </div>
       </td>
-      <td colSpan={slotCount} className={`p-0 ${cellAlign} overflow-hidden`} title={taskCount > 0 ? tooltip : undefined}>
+      <td
+        colSpan={slotCount}
+        className={`p-0 ${cellAlign} overflow-hidden ${isClusterMember ? 'border-l border-[var(--color-bg-border)]/30' : ''}`}
+        title={taskCount > 0 ? tooltip : undefined}
+      >
         <ScheduleMemberTaskGrid
           lanes={lanes}
           slotCount={slotCount}

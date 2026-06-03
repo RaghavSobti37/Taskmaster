@@ -314,6 +314,7 @@ export default function LeadsPage() {
     {
       header: 'Interest Level',
       sortKey: 'leadStatus',
+      info: 'Pipeline stage from Fresh through Converted — filters how sales prioritizes outreach.',
       render: (row) => (
         <Badge variant={row.leadStatus === 'Converted' ? 'mint' : row.leadStatus === 'Hot' ? 'danger' : row.leadStatus === 'Warm' ? 'warning' : 'slate'}>
           {row.leadStatus?.toUpperCase() || 'NEW'}
@@ -396,18 +397,7 @@ export default function LeadsPage() {
             info: 'Converted leads divided by total leads.',
           },
         ],
-        charts: [
-          {
-            id: 'pipeline',
-            title: 'Pipeline mix',
-            type: 'donut',
-            data: [
-              { label: 'Converted', value: stats.convertedLeads },
-              { label: 'Warm', value: stats.warmLeads },
-              { label: 'Other', value: otherPipeline },
-            ],
-          },
-        ],
+       
       }}
       toolbarActions={
         <Button size="sm" onClick={() => setIsAddModalOpen(true)}>

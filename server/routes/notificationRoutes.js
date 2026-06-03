@@ -12,6 +12,7 @@ const { getAllowedCategoriesForUser } = require('../utils/notificationCategories
 const { isAdminUser } = require('../utils/departmentPermissions');
 const { getVapidPublicKey } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
+const TaskService = require('../services/TaskService');
 const logger = require('../utils/logger');
 
 router.get('/status-counts', protect, async (req, res) => {
@@ -91,11 +92,34 @@ router.get('/status-counts', protect, async (req, res) => {
     }
     const unreadNotificationsCount = await Notification.countDocuments(unreadFilter);
 
+    const unreadByCategoryAgg = await Notification.aggregate([
+      { $match: unreadFilter },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]);
+    const unreadByCategory = unreadByCategoryAgg.reduce((acc, row) => {
+      if (row._id) acc[row._id] = row.count;
+      return acc;
+    }, {});
+
+    const inReviewTasksCount = await Task.countDocuments({
+      ...taskScope,
+      status: 'in-review',
+    });
+
+    let reviewPendingCount = 0;
+    try {
+      const reviewQueue = await TaskService.getReviewQueue(req.user);
+      reviewPendingCount = reviewQueue.length;
+    } catch (reviewErr) {
+      logger.warn('status-counts review queue', reviewErr?.message);
+    }
+
     res.json({
-      tasks: { overdue: overdueTasksCount, today: todayTasksCount },
+      tasks: { overdue: overdueTasksCount, today: todayTasksCount, inReview: inReviewTasksCount },
       followups: { overdue: overdueFollowupsCount, today: todayFollowupsCount },
       calendar: { today: todayCalendarCount },
-      notifications: { unread: unreadNotificationsCount }
+      notifications: { unread: unreadNotificationsCount, byCategory: unreadByCategory },
+      review: { pending: reviewPendingCount },
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch status counts' });

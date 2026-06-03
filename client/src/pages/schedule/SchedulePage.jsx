@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getTodayDateKey } from '../../utils/dateValidation';
 import { addDaysToDateKey } from '../../utils/scheduleTaskDates';
 import { EmptyState, ListPageLayout } from '../../components/ui';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
-import { useSchedule, useWorkspaces, useProjects } from '../../hooks/useTaskmasterQueries';
+import ScheduleDayViewControl from '../../components/schedule/ScheduleDayViewControl';
+import { useSchedule, useWorkspaces, useProjects, useStatusCounts } from '../../hooks/useTaskmasterQueries';
 import TaskDetailModal from '../../components/TaskDetailModal';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Users, Layers } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const MAX_SCHEDULE_DAYS = 5;
 
 const SchedulePage = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [dayCount, setDayCount] = useState(2);
   const [selectedTask, setSelectedTask] = useState(null);
   const today = getTodayDateKey();
@@ -20,6 +23,18 @@ const SchedulePage = () => {
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
   const { data: scheduleData, isPending, isError, error } = useSchedule({ start: today, end: scheduleEnd });
+  const { data: statusCounts } = useStatusCounts(!!user);
+
+  const scheduleStats = useMemo(() => {
+    const tasks = scheduleData?.tasks || [];
+    const departments = scheduleData?.departments || [];
+    const people = departments.reduce((sum, d) => sum + (d.members?.length || 0), 0);
+    return {
+      scheduledTasks: tasks.length,
+      departments: departments.length,
+      people,
+    };
+  }, [scheduleData]);
 
   const dayLabel = dayCount === 1 ? '1 day' : `${dayCount} days`;
   const showInitialSkeleton = isPending && !scheduleData;
@@ -27,29 +42,49 @@ const SchedulePage = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      icon={CalendarDays}
-      title="Schedule"
-      toolbarActions={
-        <div className="flex items-center gap-2.5 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-3 py-2">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] whitespace-nowrap">
-            View
-          </span>
-          <input
-            type="range"
-            min={1}
-            max={MAX_SCHEDULE_DAYS}
-            step={1}
-            value={dayCount}
-            onChange={(e) => setDayCount(Number(e.target.value))}
-            aria-label="Days to show in schedule"
-            className="schedule-day-slider w-24 sm:w-28 accent-[var(--color-action-primary)] cursor-pointer"
-          />
-          <span className="text-[10px] font-bold text-[var(--color-text-primary)] tabular-nums min-w-[3rem] text-right">
-            {dayLabel}
-          </span>
-        </div>
-      }
+      overview={{
+        stats: [
+          {
+            id: 'tasks',
+            label: 'Scheduled Tasks',
+            value: scheduleStats.scheduledTasks,
+            icon: Layers,
+            variant: 'mint',
+            info: `Tasks with schedule slots in the next ${dayLabel}.`,
+          },
+          {
+            id: 'depts',
+            label: 'Departments',
+            value: scheduleStats.departments,
+            icon: Users,
+            variant: 'info',
+            info: 'Team groupings shown on the schedule grid.',
+          },
+          {
+            id: 'people',
+            label: 'People',
+            value: scheduleStats.people,
+            icon: Users,
+            variant: 'slate',
+            info: 'Members with rows on the schedule.',
+          },
+          {
+            id: 'due-today',
+            label: 'Your Due Today',
+            value: statusCounts?.tasks?.today ?? 0,
+            icon: CalendarDays,
+            variant: 'apricot',
+            info: 'Your assigned tasks due today (from todo scope).',
+          },
+        ],
+      }}
     >
+      <ScheduleDayViewControl
+        dayCount={dayCount}
+        onDayCountChange={setDayCount}
+        rangeStartKey={today}
+        maxDays={MAX_SCHEDULE_DAYS}
+      />
       {isError ? (
         <EmptyState title="Could not load schedule" description={error?.message || 'Try refreshing the page.'} variant="subtle" />
       ) : showInitialSkeleton ? (

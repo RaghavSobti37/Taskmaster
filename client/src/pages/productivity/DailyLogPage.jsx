@@ -81,7 +81,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, 200);
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
-  const { data: tasks = [] } = useTasks(targetUserId);
+  const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
   const { data: userDirectory = [] } = useUserDirectory();
   const { data: activityGrid = [] } = useActivityGrid();
 

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.1-126d5e?style=flat-square" alt="Version 1.9.1" />
+  <img src="https://img.shields.io/badge/version-1.9.2-126d5e?style=flat-square" alt="Version 1.9.2" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -83,6 +83,17 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Todo cards:** Subtle priority gradients on today/overdue widgets; rule-divider layout replaces drop shadows per `index.css` shadow policy.
 * **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
 * **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
+
+### 📲 Responsive Shell & Attention Signals (v1.9.2)
+
+* **Nav badges:** Shared `CountBadge` pill with rose/amber/teal variants; `navStatusCounts.js` maps sidebar paths to overdue, today, in-review, and unread counts from the status-counts API. Bottom nav and `OutletSidebar` show attention totals per route.
+* **PWA desktop mode:** `displayMode.js` detects installed desktop PWAs (`html[data-pwa-desktop]`) so layout hooks (`useBreakpoint`, safe-area CSS) treat shortcut-window installs like desktop, not phone.
+* **Schedule horizon:** `ScheduleDayViewControl` — slider + day checkpoints for 1–5 day views; `scheduleLayout.js` refactored for multi-day member grids and pill placement.
+* **Attendance mobile:** `UnifiedTimeCard` overhaul with team roster context; `TeamAttendanceMobileList` for ops mobile grid; expanded `attendanceUtils.js` helpers.
+* **Leaderboard density:** Extracted `LeaderboardRow` + `LeaderboardRankBadge` for podium/list reuse and recalc delta hints.
+* **Inbox filters:** Category chips with per-category unread `CountBadge`; overview header uses `DataOverviewSection` pattern.
+* **Task list hygiene:** Server `taskListFilter.js` hides completed tasks older than 2 days (`COMPLETED_VISIBLE_DAYS`); client `taskIndicators.js` drives Todo overview KPIs; `taskListFilter.test.js` covers cutoff logic.
+* **Calendar polish:** `CalendarView` layout refresh; `calendarEventTime.js` helpers; notification routes expose richer status-count payloads for nav badges.
 
 ### 📊 Ultra-Density Productivity Engine
 
@@ -551,6 +562,21 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.2 — Nav Badges, PWA Desktop, Schedule Horizon & Task Filter
+
+- **Attention signals:** `CountBadge.jsx`, `navStatusCounts.js` — rose overdue, amber today/in-review, teal info; wired through `OutletSidebar`, `BottomNavigation`, and `CommandPalette`.
+- **PWA desktop:** `displayMode.js` + `applyPwaDesktopDocumentFlag()` in `main.jsx`; CSS safe-area and breakpoint hooks respect `data-pwa-desktop`.
+- **Schedule:** `ScheduleDayViewControl.jsx` (1–5 day horizon); `ScheduleGrid` / `scheduleLayout.js` multi-day layout; `SchedulePage` integrates day-count state.
+- **Attendance:** `UnifiedTimeCard.jsx` rewrite; `TeamAttendanceMobileList.jsx`; `AttendancePage` mobile ops list; `attendanceUtils.js` shared formatters.
+- **Leaderboard:** `LeaderboardRow.jsx`, `LeaderboardRankBadge.jsx` extracted from `LeaderboardCard` / `LeaderboardPodium`.
+- **Inbox:** Category filter chips with unread counts; `DataOverviewSection` overview header.
+- **Tasks:** `server/utils/taskListFilter.js` — completed tasks visible for 2 calendar days only; applied in `taskController.js` / `TaskService.js`; client `taskIndicators.js` for Todo KPIs.
+- **Finance:** `financeController.js` pending-invoice count surfaced for nav/status APIs.
+- **Calendar:** `CalendarView` refresh; `calendarEventTime.js`; minor `CalendarEvent` schema + route tweaks.
+- **Avatars (optional):** `server/scripts/assignBigSmileAvatars.js` — one-time DiceBear Big Smile migration by gender (`--dry-run` / `--apply`).
+
+No DB migration. Redeploy API + static client. Run avatar script only if migrating existing user photos.
 
 ### v1.9.1 — Subtractive Slate UI & Email Design Alignment
 

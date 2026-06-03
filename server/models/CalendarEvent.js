@@ -11,6 +11,7 @@ const calendarEventSchema = new mongoose.Schema({
     enum: ['meeting', 'instagram_post', 'youtube_post', 'shoot_day', 'event', 'musical_day'],
     default: 'event',
   },
+  meetingLink: { type: String, default: '' },
   visibility: { type: String, enum: ['public', 'private', 'project'], default: 'public' },
   workspace: { type: String, default: '' },
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },

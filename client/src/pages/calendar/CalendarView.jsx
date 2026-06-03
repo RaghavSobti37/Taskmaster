@@ -1,23 +1,24 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Globe, Lock, RefreshCw, Star, CheckSquare, CalendarDays, Video } from 'lucide-react';
 import CalendarEntryModal from '../../components/CalendarEntryModal';
 import { 
   Badge, 
   Button,
   ListPageLayout,
 } from '../../components/ui';
-import { useCalendarEvents } from '../../hooks/useTaskmasterQueries';
+import { useCalendarEvents, useStatusCounts } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { getCalendarEventTypeLabel } from '../../constants/calendarOptions';
-import { formatEventRangeLabel, eventOccursOnDay } from '../../utils/calendarEventTime';
+import { formatEventRangeLabel, eventOccursOnDay, normalizeMeetingLink } from '../../utils/calendarEventTime';
 
 const CalendarView = () => {
   const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { data: calendarEvents = [], isLoading: eventsLoading, refetch: refetchAllEvents } = useCalendarEvents();
+  const { data: statusCounts } = useStatusCounts(!!user);
   const [seedingMusicCalendar, setSeedingMusicCalendar] = useState(false);
   const [holidays, setHolidays] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,6 +84,22 @@ const CalendarView = () => {
     if (showHolidays) combined.push(...holidays);
     return combined;
   }, [calendarEvents, holidays, showHolidays, showInternal, showPublic, showTasks]);
+
+  const calendarOverview = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const inMonth = allEvents.filter((e) => {
+      const d = parseLocalDate(e.dueDate || e.date);
+      return d && d >= monthStart && d <= monthEnd;
+    });
+    const onSelected = allEvents.filter((e) => eventOccursOnDay(e, selectedDay));
+    return {
+      today: statusCounts?.calendar?.today ?? 0,
+      selectedDay: onSelected.length,
+      thisMonth: inMonth.length,
+      totalLoaded: allEvents.length,
+    };
+  }, [allEvents, currentMonth, selectedDay, statusCounts]);
 
   const getEventsForDay = (day) => allEvents.filter((e) => eventOccursOnDay(e, day));
 
@@ -194,6 +211,9 @@ const CalendarView = () => {
           {selectedDayEvents.map((event, idx) => {
             const isEditable = event.type !== 'holiday' && event.type !== 'task';
             const typeLabel = getCalendarEventTypeLabel(event);
+            const joinUrl = event.eventType === 'meeting' && event.meetingLink
+              ? normalizeMeetingLink(event.meetingLink)
+              : '';
             return (
               <div
                 key={`${event._id}_${idx}`}
@@ -205,14 +225,28 @@ const CalendarView = () => {
                 }}
               >
                 <div className="flex items-baseline justify-between gap-2 min-w-0">
-                  <span className="text-[11px] font-bold truncate normal-case leading-tight">{event.title}</span>
-                  <span className="text-[10px] font-semibold shrink-0 tabular-nums opacity-90">
+                  <span className="tm-data-primary text-[11px] font-bold truncate normal-case leading-tight">{event.title}</span>
+                  <span className="text-[10px] font-semibold shrink-0 tabular-nums text-sky-400">
                     {formatEventRangeLabel(event.dueDate || event.date, event.endDate)}
                   </span>
                 </div>
-                <p className="text-[9px] text-[var(--color-text-muted)] normal-case leading-tight mt-0.5 truncate">
-                  {typeLabel}
-                </p>
+                <div className="flex items-center justify-between gap-2 mt-0.5 min-w-0">
+                  <p className="text-[9px] text-[var(--color-text-muted)] normal-case leading-tight truncate">
+                    {typeLabel}
+                  </p>
+                  {joinUrl && (
+                    <a
+                      href={joinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide tabular-nums bg-amber-500 text-[var(--color-bg-primary)] hover:bg-amber-400 transition-colors"
+                    >
+                      <Video size={10} />
+                      Join
+                    </a>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -224,8 +258,42 @@ const CalendarView = () => {
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      icon={CalendarDays}
-      title="Calendar"
+      overview={{
+        stats: [
+          {
+            id: 'today',
+            label: 'Today',
+            value: calendarOverview.today,
+            icon: CalendarDays,
+            variant: 'mint',
+            info: 'Events and tasks on your calendar for today.',
+          },
+          {
+            id: 'selected',
+            label: 'Selected Day',
+            value: calendarOverview.selectedDay,
+            icon: Star,
+            variant: 'info',
+            info: 'Items on the day you picked in the mini calendar.',
+          },
+          {
+            id: 'month',
+            label: 'This Month',
+            value: calendarOverview.thisMonth,
+            icon: CalendarDays,
+            variant: 'apricot',
+            info: 'All visible items in the current month view.',
+          },
+          {
+            id: 'loaded',
+            label: 'In View',
+            value: calendarOverview.totalLoaded,
+            icon: Globe,
+            variant: 'slate',
+            info: 'Events currently loaded with your filter settings.',
+          },
+        ],
+      }}
       className="flex flex-col min-h-[calc(100vh-6rem)]"
     >
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">

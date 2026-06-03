@@ -1,6 +1,6 @@
 import React from 'react';
 import { Target } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow, Badge } from '../ui';
+import { DashboardWidgetShell, DataListRow, Badge, CountBadge } from '../ui';
 import { useGamificationMissions } from '../../hooks/useTaskmasterQueries';
 
 const DailyMissionsCard = () => {

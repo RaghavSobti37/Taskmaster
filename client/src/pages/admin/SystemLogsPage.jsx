@@ -1,18 +1,55 @@
-import React, { useState } from 'react';
-import { ScrollText, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ScrollText, Search, AlertTriangle, AlertCircle, Activity } from 'lucide-react';
 import { ListPageLayout, Input } from '../../components/ui';
 import { SystemLogsContent } from './SystemLogsPanel';
-import { SEVERITY_VALUES } from '../../lib/systemLogContract';
+import { SEVERITY_VALUES, SEVERITY } from '../../lib/systemLogContract';
+import { useSystemLogs } from '../../hooks/useSystemLogs';
 
 const SystemLogsPage = () => {
   const [severityFilter, setSeverityFilter] = useState('');
   const [search, setSearch] = useState('');
+  const { data: logData } = useSystemLogs({ limit: 200, excludePageViews: true });
+
+  const logStats = useMemo(() => {
+    const logs = logData?.logs || [];
+    return {
+      total: logs.length,
+      errors: logs.filter((l) => l.severity === SEVERITY.ERROR).length,
+      warns: logs.filter((l) => l.severity === SEVERITY.WARN).length,
+    };
+  }, [logData]);
 
   return (
     <ListPageLayout
       containerClassName="!py-4"
-      icon={ScrollText}
-      title="System Logs"
+      overview={{
+        stats: [
+          {
+            id: 'loaded',
+            label: 'Recent Logs',
+            value: logStats.total,
+            icon: Activity,
+            variant: 'info',
+            info: 'Entries loaded in the current feed (latest 200, excluding page views).',
+          },
+          {
+            id: 'errors',
+            label: 'Errors',
+            value: logStats.errors,
+            icon: AlertCircle,
+            variant: 'rose',
+            info: 'ERROR severity entries in the loaded window.',
+          },
+          {
+            id: 'warns',
+            label: 'Warnings',
+            value: logStats.warns,
+            icon: AlertTriangle,
+            variant: 'apricot',
+            info: 'WARN severity entries in the loaded window.',
+          },
+        ],
+      }}
       toolbar={
         <>
           <div className="relative flex-1 min-w-[180px] max-w-sm">

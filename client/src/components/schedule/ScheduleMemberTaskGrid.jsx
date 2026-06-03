@@ -1,17 +1,27 @@
 import React from 'react';
 import ScheduleTaskPill from './ScheduleTaskPill';
 
-const ScheduleMemberTaskGrid = ({ lanes, slotCount, cellPad, compact, workspaces, projects, onTaskClick }) => {
-  const laneGap = compact ? 'gap-0.5' : 'gap-1';
+const ScheduleMemberTaskGrid = ({
+  lanes,
+  slotCount,
+  cellPad,
+  compact,
+  workspaces,
+  projects,
+  onTaskClick,
+  fillHeight = false,
+}) => {
+  const laneGap = compact ? 'gap-1' : 'gap-1.5';
   const laneCount = Math.max(lanes.length, 1);
+  const laneMinH = compact ? '1.35rem' : '1.5rem';
 
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 min-h-0 ${fillHeight ? 'h-full flex flex-col' : ''}`}>
       <div
-        className={`relative grid w-full ${laneGap}`}
+        className={`relative grid w-full ${laneGap} ${fillHeight ? 'flex-1 min-h-0 content-start' : ''}`}
         style={{
           gridTemplateColumns: `repeat(${slotCount}, minmax(90px, 1fr))`,
-          gridTemplateRows: `repeat(${laneCount}, auto)`,
+          gridTemplateRows: `repeat(${laneCount}, minmax(${laneMinH}, auto))`,
           minHeight: lanes.length === 0 ? '1.25rem' : undefined,
         }}
       >
@@ -24,9 +34,9 @@ const ScheduleMemberTaskGrid = ({ lanes, slotCount, cellPad, compact, workspaces
           />
         ))}
         {lanes.flatMap((lane, laneIdx) =>
-          lane.map(({ task, startCol, span }) => (
+          lane.map(({ task, startCol, span, coAssignees }) => (
             <div
-              key={task._id}
+              key={`${task._id}-${laneIdx}-${startCol}`}
               className={`${cellPad} min-w-0 overflow-hidden`}
               style={{
                 gridColumn: `${startCol + 1} / span ${span}`,
@@ -39,6 +49,7 @@ const ScheduleMemberTaskGrid = ({ lanes, slotCount, cellPad, compact, workspaces
                 projects={projects}
                 compact={compact}
                 onTaskClick={onTaskClick}
+                coAssignees={coAssignees || []}
               />
             </div>
           ))

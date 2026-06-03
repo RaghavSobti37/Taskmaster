@@ -36,15 +36,20 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const actionUrl = event.notification.data?.actionUrl || '/inbox';
+  const absoluteUrl = new URL(actionUrl, self.location.origin).href;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          client.navigate(actionUrl);
+          if (typeof client.navigate === 'function') {
+            client.navigate(absoluteUrl);
+          } else if ('url' in client && client.url !== absoluteUrl) {
+            return clients.openWindow(absoluteUrl);
+          }
           return client.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow(actionUrl);
+      if (clients.openWindow) return clients.openWindow(absoluteUrl);
     })
   );
 });

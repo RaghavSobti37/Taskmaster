@@ -55,6 +55,7 @@ export { default as MobileFilterField } from './MobileFilterField';
 export { default as MobilePageHeader } from './MobilePageHeader';
 export { default as ListCard } from './ListCard';
 export { default as FilterChips, FilterChip } from './FilterChips';
+export { default as CountBadge } from './CountBadge';
 export { default as MobileCollapsibleSection } from './MobileCollapsibleSection';
 export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner';
 export { UserAvatar, UserLabel } from './UserAvatar';

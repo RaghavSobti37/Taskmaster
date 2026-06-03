@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderKanban, ArrowDown, ArrowUp } from 'lucide-react';
-import { DashboardWidgetShell, Badge, Button } from '../ui';
+import { DashboardWidgetShell, Button, CountBadge } from '../ui';
 import { formatProjectName } from '../../utils/projectUtils';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getTaskWorkspace, getWorkspaceColor, getWorkspaceAccentStyle } from '../../utils/workspaceColors';
@@ -61,7 +61,7 @@ const ProjectGroupList = ({ groups, projects, workspaces, navigate, emptyMessage
               {pTasks.slice(0, 2).map((t) => t.title).join(' · ')}
             </p>
           </div>
-          <Badge variant="info" className="shrink-0">{count}</Badge>
+          <CountBadge count={count} size="sm" variant="info" className="shrink-0" />
         </div>
       </button>
     );
@@ -90,7 +90,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
       bodyClassName="p-0"
       title="Projects — Today & Overdue"
       icon={FolderKanban}
-      actions={<Badge variant="info">{overdueGroups.length + todayGroups.length}</Badge>}
+      actions={<CountBadge count={overdueGroups.length + todayGroups.length} size="sm" variant="info" />}
     >
       <div className="border-b border-[var(--color-bg-border)]">
         <div className="px-4 py-3 flex items-center justify-between">
@@ -106,7 +106,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
               {overdueSort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
               <span className="text-[9px] font-bold uppercase">{overdueSort === 'asc' ? 'Asc' : 'Desc'}</span>
             </Button>
-            <Badge variant={overdueGroups.length > 0 ? 'overdue' : 'info'}>{overdueGroups.length}</Badge>
+            <CountBadge count={overdueGroups.length} size="sm" variant={overdueGroups.length > 0 ? 'overdue' : 'info'} />
           </div>
         </div>
         <div className="px-0">
@@ -137,7 +137,7 @@ const ProjectsTodayCard = ({ tasks = [], projects = [], loading }) => {
               {todaySort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
               <span className="text-[9px] font-bold uppercase">{todaySort === 'asc' ? 'Asc' : 'Desc'}</span>
             </Button>
-            <Badge variant="info">{todayGroups.length}</Badge>
+            <CountBadge count={todayGroups.length} size="sm" variant="info" />
           </div>
         </div>
         <div className="px-0">

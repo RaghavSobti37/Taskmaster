@@ -3,12 +3,15 @@ import { format, eachDayOfInterval, parseISO } from 'date-fns';
 import { getTodayDateKey } from '../../utils/dateValidation';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  assignTaskLanes,
+  assignEntryLanes,
   buildTasksByUser,
-  partitionDepartmentsForUser,
+  buildClusterLayout,
+  coAssigneesFromTask,
+  flattenDepartmentMembers,
+  memberByIdFromMembers,
+  orderScheduleClusters,
 } from '../../utils/scheduleLayout';
 import ScheduleTableHeader from './ScheduleTableHeader';
-import ScheduleOwnSection, { ScheduleDepartmentHeader } from './ScheduleOwnSection';
 import ScheduleMemberRow from './ScheduleMemberRow';
 
 const AM_LABEL = 'AM · before 2pm';
@@ -39,40 +42,61 @@ const ScheduleGrid = ({
 
   const tasksByUser = useMemo(() => buildTasksByUser(data?.tasks), [data?.tasks]);
 
-  const { ownMember, ownDepartment, otherDepartments } = useMemo(
-    () => partitionDepartmentsForUser(data?.departments, currentUserId),
-    [data?.departments, currentUserId]
+  const scheduleMemberById = useMemo(
+    () => memberByIdFromMembers(flattenDepartmentMembers(data?.departments)),
+    [data?.departments]
   );
 
-  const ownMemberLanes = useMemo(() => {
-    if (!ownMember || dateKeys.length === 0) return null;
-    const uid = ownMember._id?.toString();
-    if (!uid) return null;
-    const userTasks = tasksByUser.get(uid) || [];
-    return {
-      lanes: assignTaskLanes(userTasks, dateKeys),
-      tooltip: userTasks.map((t) => t.title).join(' · '),
-      taskCount: userTasks.length,
-    };
-  }, [ownMember, dateKeys, tasksByUser]);
+  const memberClusters = useMemo(
+    () => orderScheduleClusters(data?.departments, data?.tasks, dateKeys, currentUserId),
+    [data?.departments, data?.tasks, dateKeys, currentUserId]
+  );
 
-  const otherMemberLanes = useMemo(() => {
-    if (!otherDepartments.length || dateKeys.length === 0) return new Map();
-    const lanesByUser = new Map();
-    for (const group of otherDepartments) {
-      for (const member of group.users || []) {
-        const uid = member._id?.toString();
-        if (!uid) continue;
-        const userTasks = tasksByUser.get(uid) || [];
-        lanesByUser.set(uid, {
-          lanes: assignTaskLanes(userTasks, dateKeys),
-          tooltip: userTasks.map((t) => t.title).join(' · '),
-          taskCount: userTasks.length,
-        });
+  const clusterLayouts = useMemo(() => {
+    const layouts = new Map();
+    for (const cluster of memberClusters) {
+      if (cluster.length > 1) {
+        layouts.set(
+          cluster.map((m) => m._id.toString()).join(','),
+          buildClusterLayout(cluster, data?.tasks, dateKeys, scheduleMemberById)
+        );
       }
     }
-    return lanesByUser;
-  }, [otherDepartments, dateKeys, tasksByUser]);
+    return layouts;
+  }, [memberClusters, data?.tasks, dateKeys, scheduleMemberById]);
+
+  const memberPlacements = useMemo(() => {
+    if (dateKeys.length === 0) return new Map();
+    const placements = new Map();
+    for (const cluster of memberClusters) {
+      const clusterKey = cluster.map((m) => m._id.toString()).join(',');
+      const layout = clusterLayouts.get(clusterKey);
+      for (const member of cluster) {
+        const uid = member._id.toString();
+        if (layout) {
+          placements.set(uid, {
+            placement: layout.soloPlacements.get(uid),
+            clusterKey,
+          });
+        } else {
+          const userTasks = tasksByUser.get(uid) || [];
+          const entries = userTasks.map((task) => ({
+            task,
+            coAssignees: coAssigneesFromTask(task, uid, scheduleMemberById),
+          }));
+          placements.set(uid, {
+            placement: {
+              lanes: assignEntryLanes(entries, dateKeys),
+              tooltip: userTasks.map((t) => t.title).join(' · '),
+              taskCount: userTasks.length,
+            },
+            clusterKey,
+          });
+        }
+      }
+    }
+    return placements;
+  }, [memberClusters, clusterLayouts, dateKeys, tasksByUser, scheduleMemberById]);
 
   if (!data) return null;
   const slotCount = dateKeys.length * 2;
@@ -110,38 +134,35 @@ const ScheduleGrid = ({
 
   return (
     <>
-      {/* Desktop: horizontal grid table */}
       <div className="hidden lg:block overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)]">
-      <table className="w-full min-w-[640px] text-xs">
-        {!hideTableHeader && (
-          <ScheduleTableHeader dayColumns={dayColumns} slotHeaders={slotHeaders} memberPad={memberPad} />
-        )}
-        <tbody>
-          <ScheduleOwnSection
-            ownMember={ownMember}
-            ownDepartment={ownDepartment}
-            ownMemberLanes={ownMemberLanes}
-            colSpan={colSpan}
-            {...rowProps}
-          />
-          {otherDepartments.map((group) => (
-            <React.Fragment key={group.department?._id || group.department?.slug}>
-              <ScheduleDepartmentHeader group={group} colSpan={colSpan} />
-              {group.users?.map((member) => (
-                <ScheduleMemberRow
-                  key={member._id?.toString()}
-                  member={member}
-                  placement={otherMemberLanes.get(member._id?.toString())}
-                  {...rowProps}
-                />
-              ))}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+        <table className="w-full min-w-[640px] text-xs">
+          {!hideTableHeader && (
+            <ScheduleTableHeader dayColumns={dayColumns} slotHeaders={slotHeaders} memberPad={memberPad} />
+          )}
+          <tbody>
+            {memberClusters.map((cluster) => {
+              const isMulti = cluster.length > 1;
+
+              return cluster.map((member) => {
+                const uid = member._id.toString();
+                const entry = memberPlacements.get(uid);
+
+                return (
+                  <ScheduleMemberRow
+                    key={uid}
+                    member={member}
+                    placement={entry?.placement}
+                    isCurrentUser={uid === currentUserId}
+                    isClusterMember={isMulti}
+                    {...rowProps}
+                  />
+                );
+              });
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Mobile: vertical task list — page scrolls vertically, no horizontal table */}
       <div className="lg:hidden space-y-4">
         {dateKeys.map((dayKey) => {
           const dayTasks = (data?.tasks || []).filter((t) => {
@@ -149,28 +170,45 @@ const ScheduleGrid = ({
             return key === dayKey;
           });
           if (!dayTasks.length) return null;
+          const seen = new Set();
+          const uniqueTasks = dayTasks.filter((t) => {
+            const id = t._id?.toString();
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
           return (
-            <div key={dayKey} className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] overflow-hidden">
+            <div
+              key={dayKey}
+              className="border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] bg-[var(--color-bg-surface)] overflow-hidden"
+            >
               <div className="px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                   {format(parseISO(dayKey), 'EEE, MMM d')}
                 </span>
               </div>
               <ul className="divide-y divide-[var(--color-bg-border)]">
-                {dayTasks.map((task) => (
-                  <li key={task._id}>
-                    <button
-                      type="button"
-                      onClick={() => onTaskClick?.(task)}
-                      className="w-full text-left px-3 py-3 min-h-[44px] hover:bg-[var(--color-bg-secondary)] transition-colors"
-                    >
-                      <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">{task.title}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">
-                        {task.assignee?.name || task.userId?.name || 'Unassigned'}
-                      </p>
-                    </button>
-                  </li>
-                ))}
+                {uniqueTasks.map((task) => {
+                  const assigneeNames = (task.assignments || [])
+                    .map((a) => a.userId?.name)
+                    .filter(Boolean);
+                  const assigneeLabel =
+                    assigneeNames.length > 1
+                      ? assigneeNames.join(', ')
+                      : assigneeNames[0] || task.assignee?.name || 'Unassigned';
+                  return (
+                    <li key={task._id}>
+                      <button
+                        type="button"
+                        onClick={() => onTaskClick?.(task)}
+                        className="w-full text-left px-3 py-3 min-h-[44px] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                      >
+                        <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">{task.title}</p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">{assigneeLabel}</p>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );

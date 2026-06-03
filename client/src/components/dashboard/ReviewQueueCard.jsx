@@ -1,6 +1,6 @@
 import React from 'react';
 import { ClipboardCheck, Check, ExternalLink } from 'lucide-react';
-import { DashboardWidgetShell, Badge, DataLoading, Button } from '../ui';
+import { DashboardWidgetShell, DataLoading, Button, CountBadge } from '../ui';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
 import { getTaskAssignee, getTaskAssignedBy, displayPersonName } from '../../utils/taskReview';
 import { resolveTaskId } from '../../utils/taskCompletion';
@@ -90,7 +90,7 @@ const ReviewQueueCard = ({
       bodyClassName={`p-0 flex flex-col flex-1 min-h-0 ${!loading && tasks.length === 0 ? 'items-center justify-center' : ''} ${tasks.length > 4 ? 'max-h-[min(36vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
       title="Awaiting Your Review"
       icon={ClipboardCheck}
-      actions={<Badge variant={tasks.length > 0 ? 'warning' : 'info'}>{tasks.length}</Badge>}
+      actions={<CountBadge count={tasks.length} size="sm" variant={tasks.length > 0 ? 'warning' : 'info'} />}
     >
       {loading && <DataLoading message="Loading reviews..." className="!py-3 px-3" />}
       {!loading && tasks.length === 0 && (

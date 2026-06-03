@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock, Briefcase } from 'lucide-react';
+import { X, CheckCircle2, Calendar as CalIcon, Globe, Lock, Briefcase, Link2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
 import NexusDropdown from './ui/NexusDropdown';
@@ -8,7 +8,7 @@ import WorkspaceSelect from './forms/WorkspaceSelect';
 import ProjectSelect from './forms/ProjectSelect';
 import { CALENDAR_EVENT_TYPES } from '../constants/calendarOptions';
 import { useProjects } from '../hooks/useTaskmasterQueries';
-import { extractEventRange } from '../utils/calendarEventTime';
+import { extractEventRange, normalizeMeetingLink } from '../utils/calendarEventTime';
 import { getTodayDateKey, validateCalendarEventRange } from '../utils/dateValidation';
 import { useSystemToast } from '../lib/systemLogBridge';
 
@@ -28,6 +28,7 @@ const CalendarEntryModal = ({
   const [endTime, setEndTime] = useState('10:00');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState('event');
+  const [meetingLink, setMeetingLink] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [workspace, setWorkspace] = useState('General');
   const [projectId, setProjectId] = useState('');
@@ -45,6 +46,7 @@ const CalendarEntryModal = ({
       setEndTime(range.endTime);
       setDescription(initialData.description || '');
       setEventType(initialData.eventType || 'event');
+      setMeetingLink(initialData.meetingLink || '');
       setVisibility(initialData.visibility || 'private');
       setWorkspace(initialData.workspace || 'General');
       setProjectId(initialData.projectId?._id || initialData.projectId || '');
@@ -59,11 +61,16 @@ const CalendarEntryModal = ({
       setEndTime('10:00');
       setDescription('');
       setEventType('event');
+      setMeetingLink('');
       setVisibility('public');
       setWorkspace('General');
       setProjectId('');
     }
   }, [initialData, isOpen, defaultDate, todayKey]);
+
+  useEffect(() => {
+    if (eventType !== 'meeting') setMeetingLink('');
+  }, [eventType]);
 
   const handleStartDateChange = (value) => {
     const next = value < todayKey ? todayKey : value;
@@ -100,6 +107,12 @@ const CalendarEntryModal = ({
       return;
     }
 
+    const trimmedLink = meetingLink.trim();
+    if (eventType === 'meeting' && trimmedLink && trimmedLink.length < 4) {
+      addToast({ type: 'error', message: 'Please enter a valid meeting link.' });
+      return;
+    }
+
     setLoading(true);
     const payload = {
       title,
@@ -109,6 +122,7 @@ const CalendarEntryModal = ({
       endTime,
       description,
       eventType,
+      meetingLink: eventType === 'meeting' ? normalizeMeetingLink(trimmedLink) : '',
       visibility,
       workspace: visibility === 'project' ? workspace : undefined,
       projectId: visibility === 'project' ? projectId : undefined,
@@ -172,6 +186,25 @@ const CalendarEntryModal = ({
               placeholder="Select type..."
             />
           </div>
+
+          {eventType === 'meeting' && (
+            <div className="space-y-2 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40 p-4">
+              <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1.5">
+                <Link2 size={12} className="shrink-0" />
+                Meeting Link (optional)
+              </label>
+              <input
+                type="url"
+                value={meetingLink}
+                onChange={(e) => setMeetingLink(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/30 outline-none font-bold text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+                placeholder="https://meet.google.com/..."
+              />
+              <p className="text-[10px] text-sky-400 font-medium">
+                Paste a Google Meet, Zoom, or Teams URL — shown as a Join button on the calendar.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             <p className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest ml-1"></p>

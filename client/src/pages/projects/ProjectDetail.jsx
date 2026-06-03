@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -32,7 +32,7 @@ import ProjectSettingsModal from '../../components/ProjectSettingsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import TaskDetailModal from '../../components/TaskDetailModal';
 import TaskCompletionModal from '../../components/TaskCompletionModal';
-import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { useProject, useProjectTasks, useUpdateTask, useDeleteTask, useSchedule, useProjectHoursSummary, useWorkspaces, useUserDirectory, useReviewTasks } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
 import ScheduleGrid from '../../components/schedule/ScheduleGrid';
 import ScheduleSkeleton from '../../components/schedule/ScheduleSkeleton';
@@ -52,6 +52,8 @@ import { resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
 import { isOpsUser } from '../../utils/departmentPermissions';
+import { computeTaskIndicators } from '../../utils/taskIndicators';
+import { countReviewTasksByProject } from '../../utils/taskReview';
 
 const ProjectDetail = () => {
   const { user } = useAuth();
@@ -61,7 +63,16 @@ const ProjectDetail = () => {
   const location = useLocation();
   const { data: project, isLoading: projectLoading } = useProject(id);
   const { data: workspaces = [] } = useWorkspaces();
-  const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const includeOldCompleted = filterStatus === 'done' || searchTerm.trim().length > 0;
+  const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id, { includeOldCompleted });
+  const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
+  const projectReviewCount = useMemo(
+    () => countReviewTasksByProject(reviewTasks)[String(id)] || 0,
+    [reviewTasks, id]
+  );
+  const taskIndicators = useMemo(() => computeTaskIndicators(tasks), [tasks]);
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
 
@@ -86,8 +97,6 @@ const ProjectDetail = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [taskToApprove, setTaskToApprove] = useState(null);
@@ -245,17 +254,24 @@ const ProjectDetail = () => {
     }
   };
 
-  const tabs = [
-    { id: 'list', label: 'Task List' },
-    { id: 'kanban', label: 'Kanban Board' },
-    { id: 'schedule', label: 'Schedule' },
-    { id: 'team', label: 'Team Members' },
-    { id: 'assets', label: 'Project Files' },
-  ];
+  const scheduleTaskCount = scheduleData?.tasks?.length ?? 0;
 
-  if (isOpsUser(user)) {
-    tabs.push({ id: 'finance', label: 'Finance' });
-  }
+  const tabs = useMemo(() => {
+    const base = [
+      { id: 'list', label: 'Task List', badge: taskIndicators.open, badgeVariant: taskIndicators.overdue > 0 ? 'overdue' : undefined },
+      { id: 'kanban', label: 'Kanban Board', badge: taskIndicators.open },
+      { id: 'schedule', label: 'Schedule', badge: scheduleTaskCount },
+      { id: 'team', label: 'Team Members', badge: project?.members?.length ?? 0 },
+      { id: 'assets', label: 'Project Files' },
+    ];
+    if (projectReviewCount > 0) {
+      base[0] = { ...base[0], badge: projectReviewCount, badgeVariant: 'warning' };
+    }
+    if (isOpsUser(user)) {
+      base.push({ id: 'finance', label: 'Finance' });
+    }
+    return base;
+  }, [taskIndicators, scheduleTaskCount, project?.members?.length, projectReviewCount, user]);
 
   const showTaskFilters = activeTab === 'list' || activeTab === 'kanban';
 

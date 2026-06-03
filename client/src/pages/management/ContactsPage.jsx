@@ -149,6 +149,7 @@ const ContactsPage = () => {
             value: contacts.length,
             icon: Contact,
             variant: 'info',
+            info: 'All contacts in your directory.',
           },
           {
             id: 'withEmail',
@@ -156,6 +157,7 @@ const ContactsPage = () => {
             value: contacts.filter((c) => c.email).length,
             icon: Contact,
             variant: 'mint',
+            info: 'Contacts that have an email address on file.',
           },
         ],
       }}

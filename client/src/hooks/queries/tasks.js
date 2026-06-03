@@ -14,8 +14,9 @@ import { normalizeTasks } from '../../utils/normalizeTask';
 import { invalidateTaskDomain } from '../../lib/queryInvalidation';
 import { useAuth } from '../../contexts/AuthContext';
 
-const fetchTasks = async () => {
-  const { data } = await axios.get('/api/tasks');
+const fetchTasks = async ({ includeOldCompleted = false } = {}) => {
+  const params = includeOldCompleted ? { includeOldCompleted: '1' } : undefined;
+  const { data } = await axios.get('/api/tasks', { params });
   return data;
 };
 
@@ -45,10 +46,10 @@ export const filterTasksForUser = (tasks, userId) => {
   });
 };
 
-export const useTasks = (userId) => {
+export const useTasks = (userId, { includeOldCompleted = false } = {}) => {
   return useQuery({
-    queryKey: ['tasks'],
-    queryFn: fetchTasks,
+    queryKey: includeOldCompleted ? ['tasks', 'all-completed'] : ['tasks'],
+    queryFn: () => fetchTasks({ includeOldCompleted }),
     placeholderData: keepPreviousData,
     select: (tasks) => filterTasksForUser(tasks, userId),
   });
@@ -76,10 +77,16 @@ export const useReviewTasks = (enabled = true) => {
   });
 };
 
-export const useProjectTasks = (projectId) => {
+export const useProjectTasks = (projectId, { includeOldCompleted = false } = {}) => {
   return useQuery({
-    queryKey: ['tasks', { projectId }],
-    queryFn: async () => (await axios.get(`/api/tasks?projectId=${projectId}`)).data,
+    queryKey: includeOldCompleted
+      ? ['tasks', { projectId, includeOldCompleted: true }]
+      : ['tasks', { projectId }],
+    queryFn: async () => {
+      const params = { projectId };
+      if (includeOldCompleted) params.includeOldCompleted = '1';
+      return (await axios.get('/api/tasks', { params })).data;
+    },
     select: (data) => normalizeTasks(data),
     enabled: !!projectId,
     staleTime: 1000 * 60 * 2,

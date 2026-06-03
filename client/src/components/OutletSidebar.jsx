@@ -47,6 +47,8 @@ import { useNavbarPreferences } from '../hooks/useTaskmasterQueries';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
+import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
+import CountBadge from './ui/CountBadge';
 
 const LEGACY_PAGE_PATHS = {
   '/workspace/emails': '/emails',
@@ -98,7 +100,9 @@ const PAGE_CONFIG = {
   '/admin/qa': { icon: Activity, label: 'QA Testing', accessKey: 'admin_data' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile, onClick, end }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, end }) => {
+  const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
+  const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
   const isActive = end
     ? location.pathname === to.split('?')[0] && location.search === (to.includes('?') ? '?' + to.split('?')[1] : '')
@@ -144,9 +148,20 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, collapsed, isMobile
         </AnimatePresence>
       </div>
       {(!collapsed || isMobile) && (
-        <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
-          {label}
-        </span>
+        <>
+          <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
+            {label}
+          </span>
+          {displayBadge > 0 && (
+            <CountBadge
+              count={displayBadge}
+              size="md"
+              variant={pillVariant}
+              pulse={pillVariant === 'rose'}
+              className="!border-[var(--color-bg-surface)]"
+            />
+          )}
+        </>
       )}
     </NavLink>
   );
@@ -163,11 +178,11 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
         >
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
             {Icon && <Icon size={12} />}
-            <span>{title}</span>
+            <span className="truncate">{title}</span>
           </div>
-          <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={12} className={`transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
       <AnimatePresence>
@@ -254,10 +269,11 @@ const OutletSidebar = () => {
   const navigate = useNavigate();
   const { data: navbarPreferences } = useNavbarPreferences();
   const { data: statusCounts = {
-    tasks: { overdue: 0, today: 0 },
+    tasks: { overdue: 0, today: 0, inReview: 0 },
     followups: { overdue: 0, today: 0 },
     calendar: { today: 0 },
-    notifications: { unread: 0 }
+    notifications: { unread: 0, byCategory: {} },
+    review: { pending: 0 },
   } } = useStatusCounts(!!user);
 
   const isMobile = useIsMobile();
@@ -400,9 +416,15 @@ const OutletSidebar = () => {
               if (visiblePages.length === 0) return null;
 
               return (
-                <NavGroup key={group.id} title={group.title} collapsed={!showLabels} isMobile={isMobile}>
+                <NavGroup
+                  key={group.id}
+                  title={group.title}
+                  collapsed={!showLabels}
+                  isMobile={isMobile}
+                >
                   {visiblePages.map(page => {
                     const config = PAGE_CONFIG[page.path];
+                    const navCounts = getNavCountsForPath(page.path, statusCounts);
                     return (
                       <NavItem
                         key={page.path}
@@ -412,13 +434,10 @@ const OutletSidebar = () => {
                         collapsed={!showLabels}
                         isMobile={isMobile}
                         end={config.end}
-                        count={
-                          page.path === '/inbox' ? statusCounts.notifications?.unread :
-                            page.path === '/followups' ? statusCounts.followups?.overdue : 0
-                        }
-                        todayCount={
-                          page.path === '/calendar' ? statusCounts.calendar?.today : 0
-                        }
+                        count={navCounts.count}
+                        todayCount={navCounts.todayCount}
+                        badgeCount={navCounts.badgeCount}
+                        badgeVariant={navCounts.badgeVariant}
                         onMouseEnter={() => {
                           if (page.path === '/dashboard') {
                             queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data });

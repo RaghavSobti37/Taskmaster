@@ -214,17 +214,23 @@ const ProjectsView = () => {
       }
     });
 
-    return orderedNames.map((name) => {
-      const ws = workspaces.find((w) => w.name.toUpperCase() === name);
-      return {
-        name,
-        color: getWorkspaceColor(name),
-        projects: groups[name] || [],
-        defaultMemberCount: ws?.defaultMembers?.length || 0,
-        order: ws?.order ?? 999,
-      };
-    });
-  }, [filteredProjects, workspaces, getWorkspaceColor]);
+    return orderedNames
+      .map((name) => {
+        const ws = workspaces.find((w) => w.name.toUpperCase() === name);
+        return {
+          name,
+          color: getWorkspaceColor(name),
+          projects: groups[name] || [],
+          defaultMemberCount: ws?.defaultMembers?.length || 0,
+          order: ws?.order ?? 999,
+        };
+      })
+      .filter((group) => {
+        if (isAdmin) return true;
+        if (group.projects.length > 0) return true;
+        return workspaces.some((w) => w.name.toUpperCase() === group.name);
+      });
+  }, [filteredProjects, workspaces, getWorkspaceColor, isAdmin]);
 
   const moveProjectToWorkspace = useCallback(async (projectId, workspaceName) => {
     if (!projectId || !workspaceName) return;

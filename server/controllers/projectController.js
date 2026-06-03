@@ -6,6 +6,12 @@ const logger = require('../utils/logger');
 const { formatProjectName } = require('../utils/formatProjectName');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const {
+  getAccessibleProjectsFilter,
+  userCanAccessWorkspace,
+  filterWorkspacesForUser,
+  memberIdStr: accessMemberIdStr,
+} = require('../utils/projectAccess');
 const { normalizeStoredProjectRole } = require('../../shared/projectRoles');
 const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 
@@ -107,6 +113,88 @@ function mergeMemberEntry(members, memberRoles, userId, role) {
   const idx = memberRoles.findIndex((r) => memberIdStr(r.user) === uid);
   if (idx >= 0) memberRoles[idx].role = normalizedRole;
   else memberRoles.push({ user: userId, role: normalizedRole });
+}
+
+function buildAllMembersFromProjects(projects, workspace) {
+  const byUser = new Map();
+  const defaultMemberIds = new Set(
+    (workspace.defaultMembers || []).map((d) => accessMemberIdStr(d.user))
+  );
+  const defaultRoleByUser = new Map(
+    (workspace.defaultMembers || []).map((d) => [
+      accessMemberIdStr(d.user),
+      normalizeStoredProjectRole(d.role),
+    ])
+  );
+
+  const addProjectToEntry = (entry, projectId, projectName, role) => {
+    const pid = projectId.toString();
+    if (!entry.projects.some((p) => p._id.toString() === pid)) {
+      entry.projects.push({ _id: projectId, name: projectName, role });
+    }
+  };
+
+  const ensureEntry = (userDoc) => {
+    const uid = accessMemberIdStr(userDoc?._id || userDoc);
+    if (!uid) return null;
+    let entry = byUser.get(uid);
+    if (!entry) {
+      entry = {
+        userId: uid,
+        name: userDoc?.name || 'Unknown',
+        email: userDoc?.email || '',
+        avatar: userDoc?.avatar,
+        departmentId: userDoc?.departmentId,
+        projects: [],
+        isDefaultMember: defaultMemberIds.has(uid),
+        defaultRole: defaultRoleByUser.get(uid) || null,
+      };
+      byUser.set(uid, entry);
+    }
+    return entry;
+  };
+
+  for (const project of projects) {
+    const projectId = project._id;
+    const projectName = project.name;
+
+    if (project.owner) {
+      const owner = typeof project.owner === 'object' ? project.owner : { _id: project.owner };
+      const entry = ensureEntry(owner);
+      if (entry) addProjectToEntry(entry, projectId, projectName, 'owner');
+    }
+
+    for (const m of project.members || []) {
+      const member = typeof m === 'object' ? m : { _id: m };
+      const uid = accessMemberIdStr(member);
+      if (uid === accessMemberIdStr(project.owner)) continue;
+      const roleEntry = (project.memberRoles || []).find(
+        (r) => accessMemberIdStr(r.user) === uid
+      );
+      const role = roleEntry ? normalizeStoredProjectRole(roleEntry.role) : 'member';
+      const entry = ensureEntry(member);
+      if (entry) addProjectToEntry(entry, projectId, projectName, role);
+    }
+  }
+
+  for (const d of workspace.defaultMembers || []) {
+    const u = d.user;
+    const uid = accessMemberIdStr(u?._id || u);
+    if (!uid || byUser.has(uid)) continue;
+    const userDoc = typeof u === 'object' ? u : null;
+    byUser.set(uid, {
+      userId: uid,
+      name: userDoc?.name || 'Unknown',
+      email: userDoc?.email || '',
+      avatar: userDoc?.avatar,
+      departmentId: userDoc?.departmentId,
+      projects: [],
+      isDefaultMember: true,
+      defaultRole: normalizeStoredProjectRole(d.role),
+    });
+  }
+
+  return [...byUser.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 async function syncWorkspaceDefaultsToProjects(workspaceName, defaultMembers, previousDefaults = []) {
@@ -453,7 +541,8 @@ exports.removeMember = async (req, res) => {
 };
 exports.getWorkspaces = async (req, res) => {
   try {
-    const workspaces = await getSortedWorkspacesForUser(req.user._id);
+    let workspaces = await getSortedWorkspacesForUser(req.user._id);
+    workspaces = await filterWorkspacesForUser(req.user, workspaces);
     res.json(workspaces);
   } catch (error) {
     logger.error('projectController', 'Get Workspaces ', { error: error.message || error });
@@ -514,7 +603,8 @@ exports.reorderWorkspaces = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    const workspaces = await getSortedWorkspacesForUser(req.user._id);
+    let workspaces = await getSortedWorkspacesForUser(req.user._id);
+    workspaces = await filterWorkspacesForUser(req.user, workspaces);
     res.json(workspaces);
   } catch (error) {
     logger.error('projectController', 'Reorder Workspaces', { error: error.message || error });
@@ -533,12 +623,31 @@ exports.getWorkspaceByName = async (req, res) => {
 
     if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
 
-    const projects = await Project.find({ workspace: name })
-      .select('name status progress totalTasks starred createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
+    if (!(await userCanAccessWorkspace(req.user, workspace))) {
+      return res.status(403).json({ error: 'Not authorized to view this workspace' });
+    }
 
-    res.json({ ...workspace, projects });
+    const isAdmin = isAdminUser(req.user);
+    const projectFilter = isAdmin
+      ? { workspace: name }
+      : { workspace: name, ...getAccessibleProjectsFilter(req.user) };
+
+    const [projectsForList, projectsForMembers] = await Promise.all([
+      Project.find(projectFilter)
+        .select('name status progress totalTasks starred createdAt')
+        .sort({ createdAt: -1 })
+        .lean(),
+      Project.find(projectFilter)
+        .populate('owner', 'name email avatar departmentId')
+        .populate('members', 'name email avatar departmentId')
+        .populate('memberRoles.user', 'name email avatar')
+        .select('name owner members memberRoles')
+        .lean(),
+    ]);
+
+    const allMembers = buildAllMembersFromProjects(projectsForMembers, workspace);
+
+    res.json({ ...workspace, projects: projectsForList, allMembers });
   } catch (error) {
     logger.error('projectController', 'Get Workspace', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch workspace' });
@@ -552,6 +661,10 @@ exports.updateWorkspace = async (req, res) => {
 
     const workspace = await Workspace.findOne({ name });
     if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+
+    if (!(await userCanAccessWorkspace(req.user, workspace))) {
+      return res.status(403).json({ error: 'Not authorized to view this workspace' });
+    }
 
     const isAdmin = isAdminUser(req.user);
     const isCreator = workspace.createdBy?.toString() === req.user._id.toString();

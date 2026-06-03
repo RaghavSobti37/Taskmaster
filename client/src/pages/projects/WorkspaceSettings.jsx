@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Settings, UserPlus, X, Briefcase } from 'lucide-react';
+import { ArrowLeft, Settings, UserPlus, X, Briefcase, Users } from 'lucide-react';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import RoleOptionBoxes from '../../components/ui/RoleOptionBoxes';
 import WorkspaceColorPicker from '../../components/ui/WorkspaceColorPicker';
@@ -31,6 +31,7 @@ const WorkspaceSettings = () => {
   const [workspaceColor, setWorkspaceColor] = useState(DEFAULT_WORKSPACE_COLOR);
   const [initialColor, setInitialColor] = useState(DEFAULT_WORKSPACE_COLOR);
   const [initialMembers, setInitialMembers] = useState([]);
+  const [allMembers, setAllMembers] = useState([]);
   const [createdById, setCreatedById] = useState(null);
 
   const apiPath = `/api/projects/workspaces/${encodeURIComponent(workspaceName)}`;
@@ -63,12 +64,15 @@ const WorkspaceSettings = () => {
       setMembers(defaults);
       setInitialMembers(cloneSnapshot(defaults));
       setProjects(data.projects || []);
+      setAllMembers(data.allMembers || []);
       const loadedColor = normalizeHexColor(data.color) || DEFAULT_WORKSPACE_COLOR;
       setWorkspaceColor(loadedColor);
       setInitialColor(loadedColor);
       setCreatedById(data.createdBy?._id || data.createdBy || null);
     } catch (err) {
-      if (err.response?.status === 404) {
+      if (err.response?.status === 403) {
+        setError('You do not have access to this workspace');
+      } else if (err.response?.status === 404) {
         setError('Workspace not found');
       } else {
         setError(err.response?.data?.error || 'Failed to load workspace');
@@ -345,6 +349,72 @@ const WorkspaceSettings = () => {
             <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
               <UserPlus size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
               <p className="text-[10px] font-black uppercase tracking-widest">No Default Members</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="py-8 space-y-6 mb-6 border-b border-[var(--color-bg-border)]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users size={16} className="text-[var(--color-text-muted)]" />
+            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">
+              Workspace Members
+            </label>
+          </div>
+          <Badge variant="info">{allMembers.length}</Badge>
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] -mt-2">
+          Everyone on projects you can access in this workspace (owners and teammates).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {allMembers.map((m) => (
+            <div
+              key={m.userId}
+              className="p-3 bg-[var(--color-bg-workspace)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] text-blue-500 uppercase overflow-hidden shrink-0">
+                  {m.avatar ? (
+                    <img src={m.avatar} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    (m.name || '?').substring(0, 2)
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-black text-xs uppercase tracking-tight text-[var(--color-text-primary)] truncate">
+                      {m.name}
+                    </p>
+                    {m.isDefaultMember && m.projects?.length === 0 && (
+                      <Badge variant="todo" className="!py-0 !px-1.5 !text-[7px]">
+                        Default
+                      </Badge>
+                    )}
+                  </div>
+                  {m.email && (
+                    <p className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-[0.15em] truncate">
+                      {m.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {m.projects?.length > 0 ? (
+                <p className="mt-2 text-[9px] font-bold text-[var(--color-text-muted)] leading-relaxed">
+                  {m.projects.map((p) => `${p.name} (${p.role})`).join(' · ')}
+                </p>
+              ) : m.isDefaultMember ? (
+                <p className="mt-2 text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">
+                  Default member — not on a project yet
+                </p>
+              ) : null}
+            </div>
+          ))}
+          {allMembers.length === 0 && (
+            <div className="col-span-full py-12 text-center border-2 border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] opacity-30">
+              <Users size={32} className="mx-auto text-[var(--color-text-muted)] mb-3" />
+              <p className="text-[10px] font-black uppercase tracking-widest">No Members Yet</p>
             </div>
           )}
         </div>

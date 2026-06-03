@@ -8,26 +8,12 @@ const { parseTimeSpentToHours } = require('../../shared/timeSpent');
 const { resolveRollingRange, inRollingWindow } = require('../../shared/reportRange');
 const { getDateKey, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { canAccessProject, getAccessibleProjectsFilter } = require('../utils/projectAccess');
 
 const TASK_LOG_TYPES = new Set(['TASK_COMPLETION', 'TASK_REVIEW']);
 const roundHours = (n) => Math.round(n * 100) / 100;
 
 const emptyPriorityCounts = () => ({ critical: 0, high: 0, medium: 0, low: 0 });
-
-const canAccessProject = (user, project) => {
-  if (!user || !project) return false;
-  if (isAdminUser(user)) return true;
-  const uid = user._id.toString();
-  if (project.owner?.toString?.() === uid || project.owner?.toString() === uid) return true;
-  return (project.members || []).some((m) => m.toString() === uid);
-};
-
-const getAccessibleProjectsFilter = (user) => {
-  if (isAdminUser(user)) return {};
-  return {
-    $or: [{ owner: user._id }, { members: user._id }],
-  };
-};
 
 const buildProjectLogFilter = (project, rangeStart, rangeEnd) => ({
   action: 'DAILY_LOG',

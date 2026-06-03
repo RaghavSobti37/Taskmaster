@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.5-126d5e?style=flat-square" alt="Version 1.9.5" />
+  <img src="https://img.shields.io/badge/version-1.9.6-126d5e?style=flat-square" alt="Version 1.9.6" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -173,6 +173,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **UI:** `WorkspaceSettings.jsx` with department-aware role suggestions, member management for workspace creators and admins, and workspace accent colors.
 * **Admin workspace colors:** Platform admins can set workspace accent color on Workspace Settings via `WorkspaceColorPicker` (preset swatches plus `#RRGGBB` / `#RGB` hex input). Colors normalize client-side in `workspaceColors.js` and server-side in `projectController.js`; non-admins cannot PATCH `color`.
 * **Create workspace:** New workspace modal on Projects uses the same picker and shared `PRESET_WORKSPACE_COLORS`.
+* **Workspace access control (v1.9.6):** Users only see workspaces they can access—platform admin, workspace creator, default member, or member/owner of at least one project in that workspace. `GET /api/projects/workspaces` and workspace detail return 403 when unauthorized.
+* **Workspace member roster (v1.9.6):** Workspace Settings shows a read-only **Workspace Members** list aggregated from all projects the signed-in user can access in that workspace (owners, teammates, roles per project), plus default-only members tagged **Default**. Logic lives in `server/utils/projectAccess.js` and `buildAllMembersFromProjects` in `projectController.js`.
 
 ### 💳 Office Subscriptions
 
@@ -587,6 +589,15 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.6 — Workspace Member Roster & Access Filtering
+
+- **Access rules:** `server/utils/projectAccess.js` — `userCanAccessWorkspace`, `filterWorkspacesForUser`, shared `getAccessibleProjectsFilter` / `canAccessProject` (also used by `projectAnalyticsService.js`).
+- **API:** `GET /api/projects/workspaces` filters to accessible workspaces; `GET/PATCH /api/projects/workspaces/:name` returns 403 when unauthorized; non-admins only see projects they own or belong to.
+- **Roster:** `GET /api/projects/workspaces/:name` adds `allMembers` — deduplicated users with per-project roles; default members without projects appear with a Default tag.
+- **UI:** `WorkspaceSettings.jsx` — read-only Workspace Members section; 403 message on direct URL access. `ProjectsView.jsx` hides inaccessible empty workspace columns for non-admins.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.9.5 — Attendance Overview Widget & Count-Based Backup Retention
 

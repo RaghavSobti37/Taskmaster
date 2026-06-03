@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.6-126d5e?style=flat-square" alt="Version 1.9.6" />
+  <img src="https://img.shields.io/badge/version-1.9.7-126d5e?style=flat-square" alt="Version 1.9.7" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -75,6 +75,14 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 ---
 
 ## 🚀 Key Features
+
+### 📅 Manual Office / WFH Attendance (v1.9.7)
+
+* **User-controlled work mode:** Self check-in/out uses a single **Office ↔ WFH** toggle (`WorkModeToggle.jsx`) above Time In/Out — default **Office**, tap to swap; no GPS on mark.
+* **IP hint only:** `GET /api/attendance/work-mode-hint` suggests the initial toggle from office egress IP (`OFFICE_PUBLIC_IP` / `OFFICE_IP_WHITELIST`); user choice is always sent on save.
+* **Server:** `POST /api/attendance/check` accepts `workMode` (`office` | `wfh`), stores `verificationMethod: MANUAL`; removed GPS/IP auto-assignment waterfall and `_attendanceDiagnostic`.
+* **Surfaces:** Dashboard `MarkAttendanceCard`, `/attendance`, and morning attendance prompt modal — all pass `workMode` without geolocation.
+* **Ops modals:** System Logged shows time only; work mode uses the same toggle; tighter modal body spacing (`bodyClassName` on `NexusModal`).
 
 ### 🎨 Subtractive Slate UI (v1.9.1)
 
@@ -273,9 +281,8 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **Independent mark-in / mark-out:** Self-service and admin flows treat check-in and check-out as separate inputs; server no longer blocks checkout without check-in.
 * **Split admin modals:** Team matrix opens dedicated Morning Check-In and Evening Check-Out modals (not one combined panel).
 * **Visual states:** Approved (locked) cells use blue tint; pending present cells stay emerald.
-* **Office auto-detect (waterfall):** Check-in defaults to WFH until proven otherwise — **Tier 1** GPS within **1 km** of Nashik office (`19.9975, 73.7898`); **Tier 2** client IP matches `OFFICE_PUBLIC_IP` and/or `OFFICE_IP_WHITELIST` (comma-separated IPv4/IPv6 + localhost for dev). Render must list current office egress IPs (e.g. `49.36.41.118`).
-* **Diagnostics:** `POST /api/attendance/check` logs `[ATTENDANCE DIAGNOSTIC]` tiers and returns `_attendanceDiagnostic` in the JSON response. Ops audit: `node server/scripts/auditAttendanceProd.js`.
-* **Default work mode:** Admin Mode Override dropdown defaults to **Office** (self check-in still auto-detects via GPS/IP).
+* **Work mode (v1.9.7):** Employees pick **Office** or **WFH** via a shared toggle before marking; server persists `workMode` with `verificationMethod: MANUAL`. Optional IP hint (`GET /api/attendance/work-mode-hint`) pre-selects the toggle from `OFFICE_PUBLIC_IP` / `OFFICE_IP_WHITELIST` — no GPS on save.
+* **Legacy audit:** Historical rows may still show `GPS` / `NETWORK`; `node server/scripts/auditAttendanceProd.js` remains for prod read-only audits.
 
 ### 🔐 Admin Access Hardening
 
@@ -589,6 +596,17 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.7 — Manual Office / WFH Attendance Toggle
+
+- **WorkModeToggle.jsx:** Single swappable control with tap-to-switch affordance; compact variant for ops modals.
+- **UnifiedTimeCard.jsx:** Shared toggle in self-mode; `useWorkModeHint`; removed geolocation-driven mode display; ops System Logged time-only; reduced modal gap via `hideTitleRow` spacing.
+- **API:** `GET /api/attendance/work-mode-hint`; `POST /api/attendance/check` body `{ type, manualTime, workMode }`; removed GPS tier, diagnostic logs, `_attendanceDiagnostic`.
+- **Clients:** `Dashboard.jsx`, `AttendancePage.jsx`, `AttendancePromptModal.jsx` — `executeAttendanceCheck(type, time, workMode)` without `navigator.geolocation`.
+- **Hooks:** `useWorkModeHint` in `useTaskmasterQueries.js`.
+- **NexusModal:** optional `bodyClassName` for tighter attendance edit modals.
+
+No DB migration. Redeploy API + static client.
 
 ### v1.9.6 — Workspace Member Roster & Access Filtering
 

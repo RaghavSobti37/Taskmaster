@@ -4,8 +4,6 @@ import { ClipboardCheck } from 'lucide-react';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter, Button } from '../ui';
 import UnifiedTimeCard from './UnifiedTimeCard';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSystemToast } from '../../lib/systemLogBridge';
-import { MODULE } from '../../lib/systemLogContract';
 import {
   useAttendance,
   useAttendanceCheck,
@@ -21,7 +19,6 @@ import {
 
 const AttendancePromptModal = () => {
   const { user } = useAuth();
-  const { addToast } = useSystemToast();
   const todayKey = formatDateKeyIST();
   const { data: attendanceRows = [], isLoading: attendanceLoading } = useAttendance(
     { start: todayKey, end: todayKey, mine: 'true' },
@@ -30,7 +27,6 @@ const AttendancePromptModal = () => {
   const entry = attendanceRows[0];
   const checkIn = useAttendanceCheck();
   const undoCheck = useUndoAttendanceCheck();
-  const [isLocating, setIsLocating] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -53,47 +49,17 @@ const AttendancePromptModal = () => {
     setDismissed(true);
   };
 
-  const executeGeolocationCheck = (type, manualTime) => {
-    setIsLocating(true);
+  const executeAttendanceCheck = (type, manualTime, workMode) => {
     const onSettled = () => {
-      setIsLocating(false);
       if (type === 'in' && user?._id) {
         markAttendancePromptedToday(user._id);
         setDismissed(true);
       }
     };
-
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          checkIn.mutate(
-            {
-              type,
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              manualTime,
-            },
-            { onSettled }
-          );
-        },
-        () => {
-          addToast({
-            type: 'warn',
-            message: 'Location unavailable — check-in saved without GPS.',
-            module: MODULE.ATTENDANCE,
-          });
-          checkIn.mutate({ type, manualTime }, { onSettled });
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-      );
-    } else {
-      addToast({
-        type: 'warn',
-        message: 'Location unavailable — check-in saved without GPS.',
-        module: MODULE.ATTENDANCE,
-      });
-      checkIn.mutate({ type, manualTime }, { onSettled });
-    }
+    checkIn.mutate(
+      { type, manualTime, workMode: workMode === 'wfh' ? 'wfh' : 'office' },
+      { onSettled }
+    );
   };
 
   if (!showModal) return null;
@@ -115,10 +81,10 @@ const AttendancePromptModal = () => {
           title={format(today, 'EEEE, MMMM d')}
           subTitle="Today"
           isSelfMode
-          onCheckIn={(t) => executeGeolocationCheck('in', t)}
-          onCheckOut={(t) => executeGeolocationCheck('out', t)}
+          onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}
+          onCheckOut={(t, workMode) => executeAttendanceCheck('out', t, workMode)}
           onUndo={(type) => undoCheck.mutate({ type })}
-          isLoading={isLocating || checkIn.isPending}
+          isLoading={checkIn.isPending}
         />
       </ModalBody>
       <ModalFooter className="!justify-between">

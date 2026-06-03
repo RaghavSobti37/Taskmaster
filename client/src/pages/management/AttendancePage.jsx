@@ -143,7 +143,6 @@ const AttendancePage = () => {
       navigate('/attendance', { replace: true });
     }
   }, [canEdit, location.pathname, navigate]);
-  const [isLocating, setIsLocating] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.DAILY);
   const [monthView, setMonthView] = useState(() => startOfMonth(new Date()));
   const [editInForm, setEditInForm] = useState({ inTime: '', inMode: 'office' });
@@ -334,23 +333,8 @@ const AttendancePage = () => {
     isSaving: upsertAttendance.isPending,
   });
 
-  const executeGeolocationCheck = (type, manualTime) => {
-    setIsLocating(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          checkIn.mutate({ type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime }, { onSettled: () => setIsLocating(false) });
-        },
-        (error) => {
-          addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
-          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-      );
-    } else {
-      addToast({ type: 'warn', message: 'Location unavailable — check-in saved without GPS.', module: MODULE.ATTENDANCE });
-      checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
-    }
+  const executeAttendanceCheck = (type, manualTime, workMode) => {
+    checkIn.mutate({ type, manualTime, workMode: workMode === 'wfh' ? 'wfh' : 'office' });
   };
 
   const attendanceOverview = useMemo(() => {
@@ -436,10 +420,10 @@ const AttendancePage = () => {
           title={format(today, 'EEE, MMM d, yyyy')}
           alwaysShowMarkInAccess
           isSelfMode={true}
-          onCheckIn={(t) => executeGeolocationCheck('in', t)}
-          onCheckOut={(t) => executeGeolocationCheck('out', t)}
+          onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}
+          onCheckOut={(t, workMode) => executeAttendanceCheck('out', t, workMode)}
           onUndo={(type) => undoCheck.mutate({ type })}
-          isLoading={isLocating || checkIn.isPending}
+          isLoading={checkIn.isPending}
         />
       )}
 
@@ -573,6 +557,7 @@ const AttendancePage = () => {
         prominentTitle
         showFooter={false}
         size="md"
+        bodyClassName="!pt-4 !pb-4 !space-y-0"
         footer={
           editInCell && !editInLocked ? (
             <ModalFooter>
@@ -625,6 +610,7 @@ const AttendancePage = () => {
         prominentTitle
         showFooter={false}
         size="md"
+        bodyClassName="!pt-4 !pb-4 !space-y-0"
         footer={
           editOutCell && !editOutLocked ? (
             <ModalFooter>

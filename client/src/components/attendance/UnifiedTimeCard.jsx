@@ -1,8 +1,10 @@
 import React from 'react';
-import { Button, Badge, NexusDropdown } from '../ui';
+import { Button, Badge } from '../ui';
 import { Lock, Check, LogIn, LogOut, RotateCcw, Info } from 'lucide-react';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
+import { useWorkModeHint } from '../../hooks/useTaskmasterQueries';
+import WorkModeToggle from './WorkModeToggle';
 import {
   getSelfMarkPanelVisibility,
   isAtOrAfterMarkOutCutoff,
@@ -70,10 +72,18 @@ const UnifiedTimeCard = ({
   isLoading,
   readOnly = false,
 }) => {
-  const [localForm, setLocalForm] = React.useState({ inTime: '', outTime: '', inMode: 'office', outMode: 'office' });
+  const [localForm, setLocalForm] = React.useState({
+    inTime: '',
+    outTime: '',
+    workMode: 'office',
+    inMode: 'office',
+    outMode: 'office',
+  });
   const [showMarkInExpanded, setShowMarkInExpanded] = React.useState(false);
+  const workModeHintTouchedRef = React.useRef(false);
   const form = editForm || localForm;
   const setForm = setEditForm || setLocalForm;
+  const { data: workModeHint, isLoading: workModeHintLoading } = useWorkModeHint(!!isSelfMode);
 
   const inAppr = !!entry?.inTimeRecord?.isApproved;
   const outAppr = !!entry?.outTimeRecord?.isApproved;
@@ -93,12 +103,24 @@ const UnifiedTimeCard = ({
       outTime: outDisplayTime || (hasOut ? '' : f.outTime),
       inMode: entry?.inTimeRecord?.workMode || f.inMode || 'office',
       outMode: entry?.outTimeRecord?.workMode || f.outMode || 'office',
+      workMode: entry?.outTimeRecord?.workMode || entry?.inTimeRecord?.workMode || f.workMode || 'office',
     }));
   }, [entry, editForm, inDisplayTime, outDisplayTime, hasIn, hasOut]);
 
   React.useEffect(() => {
+    if (!isSelfMode || editForm || workModeHintTouchedRef.current) return;
+    const suggested = workModeHint?.suggestedMode;
+    if (suggested === 'office' || suggested === 'wfh') {
+      setLocalForm((f) => ({ ...f, workMode: suggested }));
+    }
+  }, [isSelfMode, editForm, workModeHint]);
+
+  React.useEffect(() => {
     if (hasIn) setShowMarkInExpanded(false);
   }, [hasIn]);
+
+  const workModeToggleDisabled = isLoading || (inAppr && outAppr);
+  const activeWorkMode = isSelfMode ? (form?.workMode || 'office') : 'office';
 
   const markInDisabled = hasIn || inFieldLocked || isLoading || !form?.inTime;
   const markOutDisabled = hasOut || outFieldLocked || isLoading || !form?.outTime;
@@ -155,6 +177,7 @@ const UnifiedTimeCard = ({
     undoAriaLabel,
     canUndo,
     onUndo,
+    showRecordedMode = true,
   }) => {
     const recorded = !!(time || marked || approved);
     const stateClass = approved
@@ -224,7 +247,7 @@ const UnifiedTimeCard = ({
             </div>
           )}
         </div>
-        {recorded && mode && (
+        {recorded && mode && showRecordedMode !== false && (
           <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] mt-1 text-right truncate">{mode}</p>
         )}
       </div>
@@ -237,7 +260,9 @@ const UnifiedTimeCard = ({
       ? hideTitleRow
         ? 'space-y-6'
         : 'space-y-6 border-t border-[var(--color-bg-border)] pt-4'
-      : 'space-y-6';
+      : hideTitleRow
+        ? 'space-y-0'
+        : 'space-y-6';
 
   const panelGridClass = compact
     ? panelVisibility.showInPanel && panelVisibility.showOutPanel
@@ -260,29 +285,25 @@ const UnifiedTimeCard = ({
   const showIdentity = !hideTitleRow && (title || subTitle);
   const showOvertime = entry?.overtimeMinutes > 0;
   const showDiscrepancy = entry?.discrepancyMinutes >= 30;
-  const showLocked = inAppr || outAppr;
   const showBadges = showOvertime || showDiscrepancy;
-  const showMetaSection = showIdentity || showBadges || showLocked;
+  const showMetaSection = showIdentity || showBadges;
 
   return (
     <div className={wrapperClass}>
       {showMetaSection && (
         <div className="space-y-2">
-          {(showIdentity || showLocked) && (
+          {showIdentity && (
             <div className="relative flex items-start gap-3 min-w-0">
-              {showIdentity && (
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  {subTitle && (
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                      {subTitle}
-                    </p>
-                  )}
-                  {title && (
-                    <p className="text-2xl font-black leading-tight">{title}</p>
-                  )}
-                </div>
-              )}
-              
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                {subTitle && (
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                    {subTitle}
+                  </p>
+                )}
+                {title && (
+                  <p className="text-2xl font-black leading-tight">{title}</p>
+                )}
+              </div>
             </div>
           )}
           {showBadges && (
@@ -312,6 +333,16 @@ const UnifiedTimeCard = ({
 
       {isSelfMode ? (
         <>
+          <WorkModeToggle
+            compact={compact}
+            value={activeWorkMode}
+            loading={workModeHintLoading}
+            disabled={workModeToggleDisabled}
+            onChange={(v) => {
+              workModeHintTouchedRef.current = true;
+              setForm && setForm((f) => ({ ...f, workMode: v }));
+            }}
+          />
           <div className={panelGridClass}>
             {panelVisibility.showInPanel && (
             <section className="flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] border-l-[3px] border-l-emerald-500/80 overflow-hidden min-w-0">
@@ -329,6 +360,7 @@ const UnifiedTimeCard = ({
                   <SelfMarkTimeControl
                     time={inDisplayTime}
                     mode={entry?.inTimeRecord?.workMode}
+                    showRecordedMode={false}
                     marked={hasIn}
                     approved={inAppr}
                     emptyHint={inEmptyHint}
@@ -349,7 +381,7 @@ const UnifiedTimeCard = ({
                     aria-label={hasIn ? 'Check-in already recorded' : 'Mark in'}
                     onClick={() => {
                       if (markInDisabled) return;
-                      onCheckIn && onCheckIn(form?.inTime);
+                      onCheckIn && onCheckIn(form?.inTime, activeWorkMode);
                     }}
                   >
                     {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : hasIn ? <Check size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} /> : <LogIn size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />}
@@ -385,6 +417,7 @@ const UnifiedTimeCard = ({
                   <SelfMarkTimeControl
                     time={outDisplayTime}
                     mode={entry?.outTimeRecord?.workMode}
+                    showRecordedMode={false}
                     marked={hasOut}
                     approved={outAppr}
                     emptyHint={outEmptyHint}
@@ -409,7 +442,7 @@ const UnifiedTimeCard = ({
                     aria-label={hasOut ? 'Check-out already recorded' : 'Mark out'}
                     onClick={() => {
                       if (markOutDisabled) return;
-                      onCheckOut && onCheckOut(form?.outTime);
+                      onCheckOut && onCheckOut(form?.outTime, activeWorkMode);
                     }}
                   >
                     {isLoading ? <span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-2" /> : hasOut ? <Check size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} /> : <LogOut size={compact ? 14 : 16} className={compact ? 'mr-1.5' : 'mr-2'} />}
@@ -440,7 +473,7 @@ const UnifiedTimeCard = ({
           )}
         </>
       ) : (
-        <div className="space-y-6">
+        <div className={hideTitleRow ? 'space-y-0' : 'space-y-6'}>
           {(!editScope || editScope === 'in') && (
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
@@ -456,7 +489,6 @@ const UnifiedTimeCard = ({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
                   <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                     <span className="text-sm font-bold block">{entry?.inTimeRecord?.systemTimestamp ? new Date(entry.inTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.inTimeRecord?.workMode || 'NONE'} - {entry?.inTimeRecord?.verificationMethod || 'NONE'}</span>
                   </div>
                 </div>
                 <div>
@@ -469,12 +501,11 @@ const UnifiedTimeCard = ({
                   />
                 </div>
                 <div className={`min-w-0 overflow-hidden ${inFieldLocked ? 'opacity-60' : ''}`}>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Work mode</label>
                   <div className="mt-1 min-w-0">
-                    <NexusDropdown
-                      matchTriggerWidth
+                    <WorkModeToggle
+                      compact
                       disabled={inFieldLocked}
-                      options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
                       value={form?.inMode || 'office'}
                       onChange={(v) => !inFieldLocked && setForm && setForm((f) => ({ ...f, inMode: v }))}
                     />
@@ -511,7 +542,6 @@ const UnifiedTimeCard = ({
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">System Logged</label>
                   <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">
                     <span className="text-sm font-bold block">{entry?.outTimeRecord?.systemTimestamp ? new Date(entry.outTimeRecord.systemTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{entry?.outTimeRecord?.workMode || 'NONE'} - {entry?.outTimeRecord?.verificationMethod || 'NONE'}</span>
                   </div>
                 </div>
                 <div>
@@ -524,12 +554,11 @@ const UnifiedTimeCard = ({
                   />
                 </div>
                 <div className={`min-w-0 overflow-hidden ${outFieldLocked ? 'opacity-60' : ''}`}>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Mode Override</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Work mode</label>
                   <div className="mt-1 min-w-0">
-                    <NexusDropdown
-                      matchTriggerWidth
+                    <WorkModeToggle
+                      compact
                       disabled={outFieldLocked}
-                      options={[{ value: 'wfh', label: 'WFH' }, { value: 'office', label: 'Office' }]}
                       value={form?.outMode || 'office'}
                       onChange={(v) => !outFieldLocked && setForm && setForm((f) => ({ ...f, outMode: v }))}
                     />

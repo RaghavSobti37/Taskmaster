@@ -40,6 +40,7 @@ export const NexusModal = ({
   footer,
   size = 'lg',
   width,
+  bodyClassName = '',
   children,
 }) => {
   const resolvedSize = (width && LEGACY_WIDTH_MAP[width]) || (width && MODAL_WIDTH_PX[width] ? width : null) || size;
@@ -81,7 +82,7 @@ export const NexusModal = ({
         icon={Icon}
         iconStyle={{ background: config.bg, color: config.color }}
       />
-      <ModalBody>
+      <ModalBody className={bodyClassName}>
         {message && (
           <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{message}</p>
         )}

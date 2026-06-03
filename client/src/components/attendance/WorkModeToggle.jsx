@@ -1,0 +1,68 @@
+import React from 'react';
+import { ArrowLeftRight, Building2, Home } from 'lucide-react';
+
+const MODE_LABELS = {
+  office: 'Office',
+  wfh: 'WFH',
+};
+
+const WorkModeToggle = ({
+  value = 'office',
+  onChange,
+  disabled = false,
+  loading = false,
+  compact = false,
+  className = '',
+}) => {
+  const isOffice = value === 'office';
+  const label = MODE_LABELS[value] || MODE_LABELS.office;
+
+  const handleClick = () => {
+    if (disabled || loading || !onChange) return;
+    onChange(isOffice ? 'wfh' : 'office');
+  };
+
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={!isOffice}
+        aria-label={`Work mode: ${label}. Tap to switch between Office and WFH.`}
+        disabled={disabled || loading}
+        onClick={handleClick}
+        className={[
+          'group inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-atomic)] border-2 px-3 transition-all',
+          compact ? 'py-2 text-xs' : 'py-2.5 text-sm',
+          disabled || loading
+            ? 'cursor-not-allowed opacity-50 border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]'
+            : 'cursor-pointer hover:brightness-[1.02] active:scale-[0.99]',
+          isOffice
+            ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+            : 'border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-400',
+        ].join(' ')}
+      >
+        {isOffice ? (
+          <Building2 size={compact ? 14 : 16} className="shrink-0" aria-hidden />
+        ) : (
+          <Home size={compact ? 14 : 16} className="shrink-0" aria-hidden />
+        )}
+        <span className="font-bold tracking-wide">{loading ? 'Detecting…' : label}</span>
+        {!loading && !disabled && (
+          <ArrowLeftRight
+            size={compact ? 13 : 14}
+            className="shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
+            aria-hidden
+          />
+        )}
+      </button>
+      {!disabled && !loading && (
+        <p className="text-[10px] font-medium text-center text-[var(--color-text-muted)]">
+          Tap to switch · Office ↔ WFH
+        </p>
+      )}
+    </div>
+  );
+};
+
+export default WorkModeToggle;

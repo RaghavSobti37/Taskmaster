@@ -29,23 +29,6 @@ const isOps = (user) => isOpsUser(user);
 const STANDARD_SHIFT_MINUTES = 8 * 60;
 const DISCREPANCY_THRESHOLD_MINUTES = 30;
 
-const NASHIK_OFFICE_LAT = 19.9975;
-const NASHIK_OFFICE_LNG = 73.7898;
-const OFFICE_RADIUS_METERS = 1000;
-const OFFICE_RADIUS_KM = OFFICE_RADIUS_METERS / 1000;
-
-const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
 const resolveClientIp = (req) => {
   let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   if (ip && typeof ip === 'string') {
@@ -168,33 +151,29 @@ router.get('/', async (req, res) => {
   }
 });
 
+function suggestWorkModeFromRequest(req) {
+  const clientIp = resolveClientIp(req);
+  const officeIpTargets = getOfficeIpTargets();
+  if (officeIpTargets.length > 0 && verifyNetworkMatch(clientIp, officeIpTargets.join(','))) {
+    return 'office';
+  }
+  return 'wfh';
+}
+
+router.get('/work-mode-hint', async (req, res) => {
+  try {
+    res.json({ suggestedMode: suggestWorkModeFromRequest(req) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/check', async (req, res) => {
   try {
     const now = new Date();
     const today = todayStart();
     const type = req.body?.type === 'out' ? 'out' : 'in';
-
-    // Diagnostic Logs
-    console.log(`[ATTENDANCE DIAGNOSTIC] RUNNING WATERFALL FOR USER: ${req.user._id}`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIMESTAMP: ${now.toISOString()}`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Incoming Lat: ${req.body.lat}, Lng: ${req.body.lng}`);
-
-    if (req.body.lat && req.body.lng) {
-      const computedDistance = getDistanceFromLatLonInKm(parseFloat(req.body.lat), parseFloat(req.body.lng), NASHIK_OFFICE_LAT, NASHIK_OFFICE_LNG) * 1000;
-      console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Distance to Nashik Office Center: ${computedDistance} meters`);
-      console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - Inside ${OFFICE_RADIUS_METERS}m Radius? ${computedDistance <= OFFICE_RADIUS_METERS}`);
-    } else {
-      console.log(`[ATTENDANCE DIAGNOSTIC] TIER 1 - GPS Coordinates missing or denied by browser payload.`);
-    }
-
     const clientIp = resolveClientIp(req);
-    const officeIpTargets = getOfficeIpTargets();
-    const officeIpList = officeIpTargets.join(',') || '(none configured)';
-    const networkMatchPreview = officeIpTargets.length > 0
-      && verifyNetworkMatch(clientIp, officeIpList);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Raw Detected Client IP: "${clientIp}"`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Office IP targets (${officeIpTargets.length}): ${officeIpList}`);
-    console.log(`[ATTENDANCE DIAGNOSTIC] TIER 2 - Network Match? ${networkMatchPreview}`);
 
     const existing = await Attendance.findOne({ userId: req.user._id, date: today });
 
@@ -207,31 +186,8 @@ router.post('/check', async (req, res) => {
     }
 
     const timeValue = req.body?.manualTime || formatHHMM(now);
-
-    // Multi-Tier Verification Logic
-    let workMode = 'wfh';
-    let verificationMethod = 'NONE';
-    const { lat, lng } = req.body;
-
-    // Tier 1: GPS
-    if (lat && lng) {
-      const dist = getDistanceFromLatLonInKm(parseFloat(lat), parseFloat(lng), NASHIK_OFFICE_LAT, NASHIK_OFFICE_LNG);
-      if (dist <= OFFICE_RADIUS_KM) {
-        workMode = 'office';
-        verificationMethod = 'GPS';
-      }
-    }
-
-    // Tier 2: Office Network / Fixed IP Check (v4 + v6 whitelist)
-    if (workMode !== 'office' && officeIpTargets.length > 0) {
-      const isOfficeNetwork = verifyNetworkMatch(clientIp, officeIpTargets.join(','));
-      if (isOfficeNetwork) {
-        workMode = 'office';
-        verificationMethod = 'NETWORK';
-      }
-    } // Tier 3: WFH fallback is already set above
-
-    console.log(`[ATTENDANCE DIAGNOSTIC] RESULT - workMode=${workMode} verificationMethod=${verificationMethod}`);
+    const workMode = req.body?.workMode === 'wfh' ? 'wfh' : 'office';
+    const verificationMethod = 'MANUAL';
 
     const updateBlock = type === 'in'
       ? { 'inTimeRecord': { systemTimestamp: now, manualTimestamp: timeValue, workMode, checkInIp: clientIp, verificationMethod, isApproved: false } }
@@ -255,16 +211,7 @@ router.post('/check', async (req, res) => {
     }
 
     const payload = attendance.toObject ? attendance.toObject() : attendance;
-    res.json({
-      ...payload,
-      _attendanceDiagnostic: {
-        workMode,
-        verificationMethod,
-        clientIp,
-        officeIpTargetCount: officeIpTargets.length,
-        tier1Gps: lat && lng ? 'attempted' : 'missing',
-      },
-    });
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

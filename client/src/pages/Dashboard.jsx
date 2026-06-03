@@ -1,10 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, PageHeader, DashboardSkeleton, PageLoadGuard } from '../components/ui';
 import { LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useSystemToast } from '../lib/systemLogBridge';
-import { MODULE } from '../lib/systemLogContract';
 import {
   useDashboardTasks,
   useReviewTasks,
@@ -47,7 +45,6 @@ import { MobileCollapsibleSection } from '../components/ui';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToast } = useSystemToast();
   const permissionPreset = useMemo(() => {
     if (isAdminUser(user)) return 'admin';
     const dept = user?.departmentId;
@@ -84,36 +81,9 @@ const Dashboard = () => {
   const { data: attendanceRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
   const checkIn = useAttendanceCheck();
   const undoCheck = useUndoAttendanceCheck();
-  const [isLocating, setIsLocating] = useState(false);
 
-  const executeGeolocationCheck = (type, manualTime) => {
-    setIsLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          checkIn.mutate(
-            { type, lat: position.coords.latitude, lng: position.coords.longitude, manualTime },
-            { onSettled: () => setIsLocating(false) }
-          );
-        },
-        () => {
-          addToast({
-            type: 'warn',
-            message: 'Location unavailable — check-in saved without GPS.',
-            module: MODULE.ATTENDANCE,
-          });
-          checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-      );
-    } else {
-      addToast({
-        type: 'warn',
-        message: 'Location unavailable — check-in saved without GPS.',
-        module: MODULE.ATTENDANCE,
-      });
-      checkIn.mutate({ type, manualTime }, { onSettled: () => setIsLocating(false) });
-    }
+  const executeAttendanceCheck = (type, manualTime, workMode) => {
+    checkIn.mutate({ type, manualTime, workMode: workMode === 'wfh' ? 'wfh' : 'office' });
   };
 
   const calendar = useMemo(() => summary?.calendar || [], [summary]);
@@ -220,10 +190,10 @@ const Dashboard = () => {
         return (
           <MarkAttendanceCard
             entry={attendanceRows[0]}
-            onCheckIn={(t) => executeGeolocationCheck('in', t)}
-            onCheckOut={(t) => executeGeolocationCheck('out', t)}
+            onCheckIn={(t, workMode) => executeAttendanceCheck('in', t, workMode)}
+            onCheckOut={(t, workMode) => executeAttendanceCheck('out', t, workMode)}
             onUndo={(type) => undoCheck.mutate({ type })}
-            isLoading={isLocating || checkIn.isPending}
+            isLoading={checkIn.isPending}
           />
         );
       case 'pipeline-summary':

@@ -28,7 +28,9 @@ const TaskFormFields = ({
   showWorkspace = true,
   showStatus = false,
   showAssignees = true,
+  showPriority = true,
   showSchedule = true,
+  showDueDateInForm = true,
   disabled = false,
   timelineDisabled = false,
   lockProject = false,
@@ -41,6 +43,8 @@ const TaskFormFields = ({
   lockedAssigneeIds = [],
   mentionSessionKey,
   inlineEdit = false,
+  afterTitle = null,
+  collapseCategoryWhenSelected = false,
 }) => {
   const inputClass = inlineEdit ? ghostInputClass : fieldInputClass;
   const set = (field, val) => onChange({ ...values, [field]: val });
@@ -100,25 +104,6 @@ const TaskFormFields = ({
 
   return (
     <div className="space-y-4 w-full min-w-0">
-      {showWorkspace && (
-        <WorkspaceSelect
-          value={values.workspace || 'General'}
-          onChange={handleWorkspaceChange}
-          disabled={disabled}
-        />
-      )}
-
-      {showProject && !lockProject && (
-        <ProjectSelect
-          label="Projects"
-          projects={projects}
-          value={values.projectId || ''}
-          onChange={handleProjectChange}
-          workspaceFilter={values.workspace || null}
-          disabled={disabled}
-        />
-      )}
-
       {showTitle && onTitleChange && (
         <div className="w-full min-w-0">
           <label className={fieldLabelClass}>Task Title</label>
@@ -133,16 +118,40 @@ const TaskFormFields = ({
         </div>
       )}
 
+      {afterTitle}
+
+      {(showWorkspace || (showProject && !lockProject)) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
+          {showWorkspace && (
+            <WorkspaceSelect
+              value={values.workspace || 'General'}
+              onChange={handleWorkspaceChange}
+              disabled={disabled}
+            />
+          )}
+          {showProject && !lockProject && (
+            <ProjectSelect
+              label="Projects"
+              projects={projects}
+              value={values.projectId || ''}
+              onChange={handleProjectChange}
+              workspaceFilter={values.workspace || null}
+              disabled={disabled}
+            />
+          )}
+        </div>
+      )}
+
       {showDescription && onDescriptionChange && (
         <div className="w-full min-w-0">
-          <label className={fieldLabelClass}>Description</label>
+          <label className={fieldLabelClass}>Message</label>
           <MentionTextarea
             value={description}
             onChange={onDescriptionChange}
             disabled={disabled}
             editSessionKey={mentionSessionKey}
             className={`${inputClass} min-h-[88px] resize-y`}
-            placeholder="follow up with @Raghav the G.O.A.T. with #Brand Deck — @ mentions notify, # links open asset URL"
+            placeholder="Type an update, then Save — it posts to History on the task and clears for your next message. @name notifies teammates."
           />
         </div>
       )}
@@ -164,7 +173,7 @@ const TaskFormFields = ({
         </div>
       )}
 
-      {!showAssignees && (
+      {!showAssignees && showPriority && (
         <PrioritySelect
           value={values.priority}
           onChange={handlePriorityChange}
@@ -176,47 +185,58 @@ const TaskFormFields = ({
         <StatusSelect value={values.status} onChange={(status) => set('status', status)} disabled={disabled} />
       )}
 
-      <TaskCategorySelect
-        label="Category"
-        value={categoryValue}
-        onChange={(type) => set('type', type)}
-        disabled={disabled}
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
+        <TaskCategorySelect
+          label="Category"
+          value={categoryValue}
+          onChange={(type) => set('type', type)}
+          disabled={disabled}
+          collapseWhenSelected={collapseCategoryWhenSelected}
+        />
+        {showSchedule && (
+          <NexusDropdown
+            label="Slot"
+            options={SLOT_OPTIONS}
+            value={values.scheduleSlot || 'FULL'}
+            onChange={(scheduleSlot) => set('scheduleSlot', scheduleSlot)}
+            disabled={disabled || timelineDisabled}
+          />
+        )}
+      </div>
 
       {showSchedule && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0">
-            <NexusDropdown
-              label="Slot"
-              options={SLOT_OPTIONS}
-              value={values.scheduleSlot || 'FULL'}
-              onChange={(scheduleSlot) => set('scheduleSlot', scheduleSlot)}
-              disabled={disabled || timelineDisabled}
-            />
-            <div className="w-full min-w-0">
-              <label className={fieldLabelClass}>Start Date</label>
-              <input
-                type="date"
-                min={todayKey}
-                value={values.scheduleDate || ''}
-                disabled={disabled || timelineDisabled}
-                onChange={(e) => handleScheduleDateChange(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
+        <div
+          className={
+            showDueDateInForm
+              ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 w-full [&>*]:min-w-0'
+              : 'w-full min-w-0'
+          }
+        >
           <div className="w-full min-w-0">
-            <label className={fieldLabelClass}>Due Date</label>
+            <label className={fieldLabelClass}>Start Date</label>
             <input
               type="date"
-              min={values.scheduleDate && values.scheduleDate >= todayKey ? values.scheduleDate : todayKey}
-              value={values.dueDate || ''}
+              min={todayKey}
+              value={values.scheduleDate || ''}
               disabled={disabled || timelineDisabled}
-              onChange={(e) => handleDueDateChange(e.target.value)}
+              onChange={(e) => handleScheduleDateChange(e.target.value)}
               className={inputClass}
             />
           </div>
-        </>
+          {showDueDateInForm && (
+            <div className="w-full min-w-0">
+              <label className={fieldLabelClass}>End Date</label>
+              <input
+                type="date"
+                min={values.scheduleDate && values.scheduleDate >= todayKey ? values.scheduleDate : todayKey}
+                value={values.dueDate || ''}
+                disabled={disabled || timelineDisabled}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

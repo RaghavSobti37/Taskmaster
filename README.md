@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.10-126d5e?style=flat-square" alt="Version 1.9.10" />
+  <img src="https://img.shields.io/badge/version-1.9.11-126d5e?style=flat-square" alt="Version 1.9.11" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -115,6 +115,23 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 ---
 
 ## 🚀 Key Features
+
+### 💬 Task Activity Timeline & Mentions (v1.9.11)
+
+* **Per-task conversation:** `TaskDetailModal` splits into header, compose, history, and activity timeline — `@mentions` in messages with unread badges (`TaskMentionBadge.jsx`) and server-side receipt tracking (`TaskMentionReceipt.js`).
+* **Activity API:** `GET/POST /api/tasks/:id/activity` records `created`, `assignment`, `message`, `status_change`, and `field_change` events (`TaskActivity` model, `TaskActivityService.js`); background purge worker trims old rows.
+* **Modal stability:** `buildTaskAssigneeRows` guards null tasks; header uses `displayTask ?? task` so reopening a task after a cold mount no longer crashes on `assignments`.
+* **Assignee chips:** `taskAssigneeRows.js` + `TaskDetailModalHeader.jsx` show avatar, department, and assigner context in the team row.
+
+### 📅 Attendance Prompt UX (v1.9.11)
+
+* **Full-width time card:** Single-panel `UnifiedTimeCard` no longer uses `max-w-md` — Time In/Out aligns with the Office/WFH toggle width in the morning prompt modal.
+* **Time input fix:** `SelfMarkTimeControl` moved to module scope so typing multi-digit minutes in Chrome/Edge no longer remounts the native `type="time"` field each keystroke.
+* **Dismiss control:** “Remind me later” is a full-width secondary button instead of ghost text.
+
+### 🏆 Leaderboard Recalc UI (v1.9.11)
+
+* **React keys:** Recalc change lists in `LeaderboardRecalcHint` and `LeaderboardBreakdownModal` include index + delta so duplicate XP rows (e.g. multiple `COMPLETE_TASK` adjustments) no longer warn in the console.
 
 ### ⚡ Frontend Performance & Lighthouse Auditing (v1.9.10)
 
@@ -698,6 +715,16 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 ---
 
 ## 🚀 Production Migration Sequence
+
+### v1.9.11 — Task Activity, Attendance Prompt & Modal Fixes
+
+- **Task activity:** `TaskActivity.js`, `TaskMentionReceipt.js`, `TaskActivityService.js`, `taskActivityPurgeWorker.js`; routes `GET/POST /api/tasks/:id/activity`; client `TaskHistoryPanel`, `TaskActivityTimeline`, `TaskMessageComposeSection`, mention badges.
+- **Task modal:** `TaskDetailModalHeader.jsx` + `taskAssigneeRows.js`; `resolvedTask = displayTask ?? task` prevents null `assignments` crash on reopen.
+- **Attendance:** `UnifiedTimeCard` full-width single panel; `SelfMarkTimeControl` module-level; `AttendancePromptModal` secondary dismiss button.
+- **Leaderboard:** unique React keys in recalc hover/breakdown lists.
+- **QA/Lighthouse:** extended probes, `qaLighthouseRunner.js`, `lighthouse-insights.mjs`, suite v19 hooks in pre-deploy checklist.
+
+Deploy API + client together so activity routes and modal components stay in sync. MongoDB creates `taskactivities` / `taskmentionreceipts` collections on first write; no manual migration script.
 
 ### v1.9.10 — Frontend Performance & Lighthouse Tooling
 

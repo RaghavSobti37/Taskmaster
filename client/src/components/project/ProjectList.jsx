@@ -8,6 +8,7 @@ import { useProjects, useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor, getTaskRowStyle, getCompletedTaskRowStyle } from '../../utils/workspaceColors';
 import { isPendingTask } from '../../utils/pendingTask';
 import MentionTitle from '../mentions/MentionTitle';
+import TaskMentionBadge from '../tasks/TaskMentionBadge';
 import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
 
 const STATUS_OPTIONS = [
@@ -90,8 +91,9 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
         </td>
         <td className="px-4 py-2 max-w-0 w-full">
           <div className="cursor-pointer min-w-0" onClick={() => onDetail(task)}>
-            <div className={`text-sm font-bold transition-all min-w-0 ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
+            <div className={`text-sm font-bold transition-all min-w-0 flex items-center gap-2 ${isDone ? 'line-through decoration-2 decoration-[var(--color-pastel-slate-text)]/50 text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'}`}>
               <MentionTitle text={task.title} className="tm-task-title" truncate />
+              <TaskMentionBadge task={task} />
             </div>
             {isDone && task.completedAt && (
               <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-xs normal-case font-medium tracking-normal italic">

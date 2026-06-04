@@ -39,10 +39,34 @@ const DYNAMIC_CATEGORY_LABELS = {
   desktop: 'Desktop',
 };
 
+const LIGHTHOUSE_CATEGORY = 'lighthouse';
+const LIGHTHOUSE_CATEGORY_LABEL = 'Lighthouse (perf & a11y)';
+
 const ALL_QA_CATEGORY_KEYS = [
   ...Object.keys(PRE_DEPLOY_LABELS),
   ...Object.keys(DYNAMIC_CATEGORY_LABELS),
+  LIGHTHOUSE_CATEGORY,
 ];
+
+const LIGHTHOUSE_WEIGHT_STYLES = {
+  heavy: {
+    card: 'border-red-500/60 bg-red-500/10 dark:bg-red-950/30',
+    badge: 'bg-red-600 text-white border-red-700',
+    label: 'Heavy',
+  },
+  medium: {
+    card: 'border-amber-500/60 bg-amber-500/10 dark:bg-amber-950/25',
+    badge: 'bg-amber-500 text-amber-950 border-amber-600',
+    label: 'Medium',
+  },
+  light: {
+    card: 'border-emerald-500/60 bg-emerald-500/10 dark:bg-emerald-950/25',
+    badge: 'bg-emerald-600 text-white border-emerald-700',
+    label: 'Light',
+  },
+};
+
+const LIGHTHOUSE_WEIGHT_ORDER = { heavy: 0, medium: 1, light: 2 };
 
 // Icons mapped to test categories
 const categoryIcons = {
@@ -64,6 +88,7 @@ const categoryIcons = {
   rollback: RotateCcw,
   'business-logic': GitBranch,
   'security-hardening': ShieldAlert,
+  lighthouse: Gauge,
 };
 
 const checkStatusStyles = {
@@ -104,6 +129,7 @@ const KIND_LABELS = {
   'http-live': 'Live HTTP',
   integration: 'Integration (API + DB)',
   'page-scan': 'Page pentest',
+  lighthouse: 'Lighthouse audit',
   discovery: 'Discovery',
   unknown: 'Test',
 };
@@ -119,6 +145,8 @@ const kindBadgeClass = (kind) => {
       return 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25';
     case 'page-scan':
       return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/25';
+    case 'lighthouse':
+      return 'bg-teal-500/15 text-teal-800 dark:text-teal-200 border-teal-500/25';
     default:
       return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20';
   }
@@ -157,6 +185,12 @@ function LiveProbePanel({ currentRun }) {
       {live.kind === 'static' && (
         <p className="text-xs text-violet-700 dark:text-violet-300 bg-violet-500/5 border border-violet-500/20 rounded-lg px-3 py-2">
           No API call for this step — agent reads repo files (e.g. <code className="font-mono">render.yaml</code>, middleware). Safe to sit here a few seconds.
+        </p>
+      )}
+
+      {live.kind === 'lighthouse' && (
+        <p className="text-xs text-teal-800 dark:text-teal-200 bg-teal-500/5 border border-teal-500/25 rounded-lg px-3 py-2">
+          Chrome Lighthouse — one route at a time. Full grid appears under Lighthouse when batch completes (~2–5 min for all routes).
         </p>
       )}
 
@@ -540,9 +574,137 @@ const QATestingPage = () => {
             })}
           </div>
         </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Lighthouse</p>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              disabled={isRunning}
+              onClick={() => toggleCategory(LIGHTHOUSE_CATEGORY)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                selectedCategories.has(LIGHTHOUSE_CATEGORY)
+                  ? 'bg-teal-500/15 text-teal-800 dark:text-teal-200 border-teal-500/35'
+                  : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-bg-border)] opacity-60'
+              }`}
+            >
+              {LIGHTHOUSE_CATEGORY_LABEL}
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+            Audits every route · red = heaviest load · yellow = medium · green = lightest
+          </p>
+        </div>
       </div>
     </div>
   );
+
+  const resolveLighthouseReport = () => {
+    if (latestResults?.lighthouseReport?.pages?.length) return latestResults.lighthouseReport;
+    if (progressData?.lighthouseReport?.pages?.length) return progressData.lighthouseReport;
+    const fromCases = (latestResults?.testCases || progressData?.testCases || [])
+      .filter((t) => t.category === LIGHTHOUSE_CATEGORY && t.result?.lighthouse)
+      .map((t) => t.result.lighthouse);
+    if (!fromCases.length) return null;
+    return {
+      pages: fromCases,
+      summary: {
+        heavy: fromCases.filter((p) => p.weight === 'heavy').length,
+        medium: fromCases.filter((p) => p.weight === 'medium').length,
+        light: fromCases.filter((p) => p.weight === 'light').length,
+      },
+      baseUrl: latestResults?.lighthouseReport?.baseUrl,
+      generatedAt: latestResults?.lighthouseReport?.generatedAt,
+    };
+  };
+
+  const renderLighthousePanel = () => {
+    const report = resolveLighthouseReport();
+    if (!report?.pages?.length) return null;
+
+    const pages = [...report.pages].sort(
+      (a, b) =>
+        (LIGHTHOUSE_WEIGHT_ORDER[a.weight] ?? 9) - (LIGHTHOUSE_WEIGHT_ORDER[b.weight] ?? 9) ||
+        (b.performance ?? 0) - (a.performance ?? 0)
+    );
+    const summary = report.summary || {
+      heavy: pages.filter((p) => p.weight === 'heavy').length,
+      medium: pages.filter((p) => p.weight === 'medium').length,
+      light: pages.filter((p) => p.weight === 'light').length,
+    };
+
+    return (
+      <div className="mt-8 space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+            <Gauge className="text-teal-600 dark:text-teal-400" /> Lighthouse — all pages
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs font-bold">
+            <span className="px-2.5 py-1 rounded-full border border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300">
+              {summary.heavy} heavy
+            </span>
+            <span className="px-2.5 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200">
+              {summary.medium} medium
+            </span>
+            <span className="px-2.5 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+              {summary.light} light
+            </span>
+          </div>
+        </div>
+
+        {report.baseUrl && (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Base URL: <code className="font-mono">{report.baseUrl}</code>
+            {report.generatedAt ? ` · ${new Date(report.generatedAt).toLocaleString()}` : ''}
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {pages.map((page) => {
+            const w = LIGHTHOUSE_WEIGHT_STYLES[page.weight] || LIGHTHOUSE_WEIGHT_STYLES.medium;
+            return (
+              <div
+                key={page.path}
+                className={`p-4 rounded-xl border-2 ${w.card} transition-shadow hover:shadow-md`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm text-[var(--color-text-primary)] truncate">{page.name}</div>
+                    <code className="text-[10px] text-[var(--color-text-muted)]">{page.path}</code>
+                  </div>
+                  <span className={`shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${w.badge}`}>
+                    {w.label}
+                  </span>
+                </div>
+                {page.error ? (
+                  <p className="text-xs text-red-600 dark:text-red-400">{page.error}</p>
+                ) : (
+                  <>
+                    <div className="flex gap-3 text-sm font-semibold mb-2">
+                      <span title="Performance">Perf {page.performance ?? '—'}</span>
+                      <span title="Accessibility">A11y {page.accessibility ?? '—'}</span>
+                    </div>
+                    {(page.lcpDisplay || page.fcpDisplay) && (
+                      <p className="text-[10px] text-[var(--color-text-muted)] mb-1">
+                        {page.fcpDisplay ? `FCP ${page.fcpDisplay}` : ''}
+                        {page.lcpDisplay ? ` · LCP ${page.lcpDisplay}` : ''}
+                        {page.unusedKiB ? ` · ~${page.unusedKiB} KiB unused JS` : ''}
+                      </p>
+                    )}
+                    {page.topIssue?.title && (
+                      <p className="text-[10px] text-[var(--color-text-secondary)] line-clamp-2" title={page.topIssue.title}>
+                        {page.topIssue.title}
+                        {page.topIssue.displayValue ? ` (${page.topIssue.displayValue})` : ''}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderPreDeploymentChecklist = () => {
     const summary = latestResults?.checklistSummary;
@@ -654,7 +816,10 @@ const QATestingPage = () => {
     if (!latestResults || !latestResults.testCases) return null;
 
     const bugs = latestResults.testCases.filter(
-      t => t.status === 'failed' && !PREDEPLOY_CATEGORIES.has(t.category)
+      (t) =>
+        t.status === 'failed' &&
+        !PREDEPLOY_CATEGORIES.has(t.category) &&
+        t.category !== LIGHTHOUSE_CATEGORY
     );
     const checklistFailCount = latestResults.checklistSummary?.fail || 0;
 
@@ -937,6 +1102,7 @@ const QATestingPage = () => {
         {latestResults && !isRunning && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {renderPreDeploymentChecklist()}
+            {renderLighthousePanel()}
             {renderBugList()}
           </div>
         )}

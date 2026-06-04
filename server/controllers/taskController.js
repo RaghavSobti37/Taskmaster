@@ -241,7 +241,7 @@ exports.getTasks = async (req, res, next) => {
       queryFilter = mergeTaskListFilter(queryFilter, { includeOldCompleted: includeAllCompleted });
     }
 
-    const tasksDto = await TaskService.getTasks(queryFilter);
+    const tasksDto = await TaskService.getTasks(queryFilter, { userId: req.user._id });
     res.json(tasksDto);
   } catch (error) {
     next(error);
@@ -295,6 +295,87 @@ exports.updateTask = async (req, res, next) => {
     ) {
       const status = error.message.includes('not found') ? 404 : 403;
       return res.status(status).json({ error: error.message });
+    }
+    next(error);
+  } finally {
+    session.endSession();
+  }
+};
+
+exports.getTask = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid task ID format' });
+    }
+    const TaskActivityService = require('../services/TaskActivityService');
+    const taskDto = await TaskActivityService.getTaskById(req.params.id, req.user);
+    res.json(taskDto);
+  } catch (error) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message?.includes('authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
+exports.getTaskActivity = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid task ID format' });
+    }
+    const TaskActivityService = require('../services/TaskActivityService');
+    const markRead = ['1', 'true', 'yes'].includes(String(req.query.markRead || '').toLowerCase());
+    const items = await TaskActivityService.listActivity(req.params.id, req.user, { markRead });
+    res.json(items);
+  } catch (error) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message?.includes('authorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
+exports.postTaskActivity = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid task ID format' });
+    }
+    const body = String(req.body?.body || '').trim();
+    if (!body) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+
+    let activity;
+    let mentionPayloads = [];
+
+    await withTransactionRetry(session, async () => {
+      const TaskActivityService = require('../services/TaskActivityService');
+      const result = await TaskActivityService.postMessage(req.params.id, req.user, body, session);
+      activity = result.activity;
+      mentionPayloads = result.mentionPayloads || [];
+    });
+
+    dispatchTaskNotifications(mentionPayloads);
+    broadcastRealtimeEvent('tasks', 'task_activity', { taskId: req.params.id });
+    res.status(201).json(activity);
+  } catch (error) {
+    if (
+      error.message?.includes('not found')
+      || error.message?.includes('empty')
+      || error.message?.includes('completed')
+    ) {
+      const status = error.message.includes('not found') ? 404 : 400;
+      return res.status(status).json({ error: error.message });
+    }
+    if (error.message?.includes('authorized')) {
+      return res.status(403).json({ error: error.message });
     }
     next(error);
   } finally {

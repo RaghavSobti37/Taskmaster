@@ -11,6 +11,8 @@ export const MODAL_WIDTH_PX = {
   xl: 896,
   '2xl': 1024,
   full: 1200,
+  /** Task detail — near full-screen width */
+  task: 1400,
 };
 
 export const MODAL_PANEL_CLASS = 'tm-modal-panel';
@@ -111,7 +113,7 @@ export const ModalShell = ({
                 ...panelStyle,
                 width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
               }}
-              className={`${MODAL_PANEL_CLASS} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden ${panelClassName}`}
+              className={`${MODAL_PANEL_CLASS} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden w-full ${panelClassName}`}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"

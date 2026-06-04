@@ -25,9 +25,9 @@ export const LeaderboardRecalcHover = ({ member, className = '' }) => {
         </p>
         {preview.length > 0 && (
           <ul className="mt-1.5 space-y-0.5 max-h-40 overflow-y-auto">
-            {preview.map((row) => (
+            {preview.map((row, index) => (
               <li
-                key={`${row.action}-${row.previousAmount}-${row.amount}`}
+                key={`${row.action}-${row.previousAmount}-${row.amount}-${row.delta}-${index}`}
                 className="text-[9px] text-[var(--color-text-muted)] leading-snug"
               >
                 <span className="text-[var(--color-text-primary)]">{row.actionLabel}</span>

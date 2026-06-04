@@ -143,52 +143,9 @@ async function runAuthorizationChecks() {
 }
 
 async function runPasswordResetChecks() {
-  const checks = [];
-  const serverJs = await readText('server.js');
-  const authRoutes = await readText('routes/authRoutes.js');
-  const hasResetRoute =
-    /reset|forgot/i.test(authRoutes || '') ||
-    /reset|forgot/i.test(serverJs || '');
-
-  checks.push(
-    makeCheck(
-      'pwd-reset-routes',
-      'password-reset',
-      'Password reset API routes exist',
-      hasResetRoute ? 'pass' : 'skip',
-      hasResetRoute
-        ? 'Reset/forgot routes detected in auth surface'
-        : 'No password reset flow in authRoutes — N/A if OAuth-only',
-      'routes/authRoutes.js',
-      'low'
-    )
-  );
-
-  checks.push(
-    makeCheck(
-      'pwd-reset-token-ttl',
-      'password-reset',
-      'Reset token TTL configured',
-      'skip',
-      'No reset token implementation found — verify manually if email reset is added',
-      'N/A',
-      'low'
-    )
-  );
-
-  checks.push(
-    makeCheck(
-      'pwd-reset-single-use',
-      'password-reset',
-      'Reset tokens single-use with invalidation',
-      'skip',
-      'Advisory: implement token hash + usedAt + expiry when reset ships',
-      'N/A',
-      'medium'
-    )
-  );
-
-  return checks;
+  const { runSuite4V19Checks } = require('./qa/qaSuite4V19');
+  const suite4 = await runSuite4V19Checks();
+  return suite4.filter((c) => c.category === 'password-reset');
 }
 
 async function runInputValidationChecks() {
@@ -1265,6 +1222,21 @@ async function buildPreDeploymentTestCases(onProgress) {
   if (onProgress) await onProgress('Pre-deploy: evaluating Suite 3 static checks…');
   const suite3 = await runSuite3StaticChecks();
   for (const check of suite3) {
+    staticCases.push({
+      name: `[Pre-Deploy] ${check.title}`,
+      category: check.category,
+      severity: check.severity,
+      checklistId: check.id,
+      qaMeta: preDeployMeta(check),
+      test: async () => checklistToTestResult(check),
+    });
+  }
+
+  if (onProgress) await onProgress('Pre-deploy: evaluating Suite 4 (v1.9.x) checks…');
+  const { runSuite4V19Checks } = require('./qa/qaSuite4V19');
+  const suite4 = await runSuite4V19Checks();
+  for (const check of suite4) {
+    if (check.category === 'password-reset') continue;
     staticCases.push({
       name: `[Pre-Deploy] ${check.title}`,
       category: check.category,

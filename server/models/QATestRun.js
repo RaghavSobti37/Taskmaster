@@ -108,6 +108,7 @@ const qaTestRunSchema = new mongoose.Schema({
         'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
         'error-handling', 'database-indexes', 'logging-monitoring', 'rollback', 'business-logic',
         'security-hardening',
+        'lighthouse',
       ],
       default: 'backend'
     },
@@ -159,6 +160,29 @@ const qaTestRunSchema = new mongoose.Schema({
     errors: [String],
   },
   selectedCategories: [String],
+  lighthouseReport: {
+    generatedAt: Date,
+    baseUrl: String,
+    pageCount: Number,
+    summary: {
+      heavy: Number,
+      medium: Number,
+      light: Number,
+    },
+    pages: [{
+      path: String,
+      name: String,
+      weight: { type: String, enum: ['heavy', 'medium', 'light'] },
+      performance: Number,
+      accessibility: Number,
+      unusedKiB: Number,
+      lcpMs: Number,
+      fcpDisplay: String,
+      lcpDisplay: String,
+      topIssue: mongoose.Schema.Types.Mixed,
+      error: String,
+    }],
+  },
   errorDetails: {
     phase: String,
     message: String,

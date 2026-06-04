@@ -40,6 +40,7 @@ import { sortTasksByDueDate } from '../../utils/dashboardTasks';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
 import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
+import TaskMentionBadge from '../../components/tasks/TaskMentionBadge';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
 import { computeTaskIndicators } from '../../utils/taskIndicators';
 
@@ -214,8 +215,9 @@ const TodoPage = () => {
           </button>
         }
         primary={
-          <div className={`text-sm font-bold min-w-0 ${isDone ? 'line-through' : ''}`}>
+          <div className={`text-sm font-bold min-w-0 flex items-center gap-2 ${isDone ? 'line-through' : ''}`}>
             <MentionTitle text={task?.title} className="tm-task-title" truncate />
+            <TaskMentionBadge task={task} />
           </div>
         }
         trailing={
@@ -273,8 +275,9 @@ const TodoPage = () => {
           </button>
         </td>
         <td className="px-4 py-2 max-w-0 w-full">
-          <div className={`text-sm font-bold min-w-0 ${isDone ? 'line-through' : ''}`}>
+          <div className={`text-sm font-bold min-w-0 flex items-center gap-2 ${isDone ? 'line-through' : ''}`}>
             <MentionTitle text={task?.title} className="tm-task-title" truncate />
+            <TaskMentionBadge task={task} />
           </div>
           {project && (
             <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{project}</p>

@@ -159,6 +159,52 @@ export const useDeleteTask = () => {
   });
 };
 
+export const useTask = (taskId, { enabled = true } = {}) => {
+  return useQuery({
+    queryKey: ['task', taskId],
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/tasks/${taskId}`);
+      return data;
+    },
+    enabled: enabled && !!taskId,
+  });
+};
+
+export const useTaskActivity = (taskId, { enabled = true, markRead = true } = {}) => {
+  return useQuery({
+    queryKey: ['taskActivity', taskId],
+    queryFn: async () => {
+      const params = markRead ? { markRead: '1' } : undefined;
+      const { data } = await axios.get(`/api/tasks/${taskId}/activity`, { params });
+      return data;
+    },
+    enabled: enabled && !!taskId,
+    staleTime: 0,
+  });
+};
+
+export const usePostTaskMessage = (taskId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body) => {
+      const { data } = await axios.post(`/api/tasks/${taskId}/activity`, { body });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskActivity', taskId] });
+      invalidateTaskDomain(queryClient);
+    },
+    onError: (err) => {
+      globalToast.addToast({
+        title: 'Message failed',
+        message: err.response?.data?.error || 'Could not send message',
+        type: 'error',
+        module: 'PROJECTS',
+      });
+    },
+  });
+};
+
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -189,10 +235,12 @@ export const useUpdateTask = () => {
         module: 'PROJECTS',
       });
     },
-    onSettled: (_data, error) => {
+    onSettled: (_data, error, variables) => {
       if (!error) {
         invalidateTaskDomain(queryClient);
         queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+        const taskId = variables?.id;
+        if (taskId) queryClient.invalidateQueries({ queryKey: ['taskActivity', taskId] });
       }
     },
   });

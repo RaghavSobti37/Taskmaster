@@ -53,6 +53,96 @@ const AttendanceTimeInput = ({ value, onChange, disabled, className, 'aria-label
   );
 };
 
+const SelfMarkTimeControl = ({
+  compact = false,
+  time,
+  mode,
+  marked,
+  approved,
+  emptyHint,
+  value,
+  onChange,
+  inputAriaLabel,
+  undoAriaLabel,
+  canUndo,
+  onUndo,
+  showRecordedMode = true,
+}) => {
+  const recorded = !!(time || marked || approved);
+  const stateClass = approved
+    ? 'border-blue-500/30 bg-blue-500/5'
+    : marked
+      ? 'border-emerald-500/30 bg-emerald-500/5'
+      : 'border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40';
+  const boxPad = compact ? 'p-2' : 'p-3';
+  const timeClass = compact
+    ? 'text-2xl font-semibold tabular-nums tracking-tight leading-none text-[var(--color-text-primary)]'
+    : 'text-4xl font-semibold tabular-nums tracking-tight leading-none text-[var(--color-text-primary)]';
+  const hintClass = compact
+    ? 'text-[10px] font-medium text-[var(--color-text-muted)] leading-snug normal-case tracking-normal'
+    : 'text-[11px] font-semibold text-[var(--color-text-muted)] leading-snug normal-case tracking-normal';
+
+  const fieldRowClass = compact ? 'min-h-10' : 'min-h-12';
+  const innerInputClass = compact
+    ? `w-full min-w-0 min-h-10 h-10 px-0 text-center text-2xl font-semibold tabular-nums tracking-tight bg-transparent border-0 outline-none focus:ring-0 text-[var(--color-text-primary)] [color-scheme:dark] ${approved ? LOCKED_FIELD_CLASS : ''}`
+    : `w-full min-w-0 min-h-12 h-12 px-0 text-center text-3xl font-semibold tabular-nums tracking-tight bg-transparent border-0 outline-none focus:ring-0 text-[var(--color-text-primary)] [color-scheme:dark] ${approved ? LOCKED_FIELD_CLASS : ''}`;
+  const showStatusIcon = approved || (marked && !canUndo);
+  const hasActions = canUndo || showStatusIcon;
+
+  return (
+    <div className={`rounded-[var(--radius-atomic)] border ${boxPad} ${stateClass}`}>
+      {!recorded && <p className={`${hintClass} mb-1.5`}>{emptyHint}</p>}
+      <div
+        className={`grid items-center min-w-0 ${hasActions ? 'grid-cols-[1fr_auto_1fr]' : 'grid-cols-1'} ${fieldRowClass}`}
+      >
+        {hasActions && <div aria-hidden className="min-w-0" />}
+        <div className="flex min-w-0 justify-center">
+          {recorded ? (
+            <span className={`${timeClass} truncate text-center`}>
+              {time || '--:--'}
+            </span>
+          ) : (
+            <AttendanceTimeInput
+              aria-label={inputAriaLabel}
+              disabled={approved}
+              value={value}
+              onChange={onChange}
+              className={innerInputClass}
+            />
+          )}
+        </div>
+        {hasActions && (
+          <div className="flex shrink-0 items-center justify-end gap-1">
+            {canUndo && (
+              <button
+                type="button"
+                onClick={onUndo}
+                aria-label={undoAriaLabel}
+                title={undoAriaLabel}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-action-primary)]"
+              >
+                <RotateCcw size={compact ? 13 : 14} />
+              </button>
+            )}
+            {showStatusIcon && (
+              <span className="inline-flex h-7 w-7 items-center justify-center" aria-hidden>
+                {approved ? (
+                  <Lock size={compact ? 12 : 14} className="text-blue-500" />
+                ) : (
+                  <Check size={compact ? 14 : 16} className="text-emerald-500" />
+                )}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      {recorded && mode && showRecordedMode !== false && (
+        <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] mt-1 text-right truncate">{mode}</p>
+      )}
+    </div>
+  );
+};
+
 const UnifiedTimeCard = ({
   entry,
   title,
@@ -165,95 +255,6 @@ const UnifiedTimeCard = ({
     if (onApproveOut) onApproveOut();
   };
 
-  const SelfMarkTimeControl = ({
-    time,
-    mode,
-    marked,
-    approved,
-    emptyHint,
-    value,
-    onChange,
-    inputAriaLabel,
-    undoAriaLabel,
-    canUndo,
-    onUndo,
-    showRecordedMode = true,
-  }) => {
-    const recorded = !!(time || marked || approved);
-    const stateClass = approved
-      ? 'border-blue-500/30 bg-blue-500/5'
-      : marked
-        ? 'border-emerald-500/30 bg-emerald-500/5'
-        : 'border-dashed border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40';
-    const boxPad = compact ? 'p-2' : 'p-3';
-    const timeClass = compact
-      ? 'text-2xl font-semibold tabular-nums tracking-tight leading-none text-[var(--color-text-primary)]'
-      : 'text-4xl font-semibold tabular-nums tracking-tight leading-none text-[var(--color-text-primary)]';
-    const hintClass = compact
-      ? 'text-[10px] font-medium text-[var(--color-text-muted)] leading-snug normal-case tracking-normal'
-      : 'text-[11px] font-semibold text-[var(--color-text-muted)] leading-snug normal-case tracking-normal';
-
-    const fieldRowClass = compact ? 'min-h-10' : 'min-h-12';
-    const innerInputClass = compact
-      ? `w-full min-w-0 min-h-10 h-10 px-0 text-center text-2xl font-semibold tabular-nums tracking-tight bg-transparent border-0 outline-none focus:ring-0 text-[var(--color-text-primary)] [color-scheme:dark] ${approved ? LOCKED_FIELD_CLASS : ''}`
-      : `w-full min-w-0 min-h-12 h-12 px-0 text-center text-3xl font-semibold tabular-nums tracking-tight bg-transparent border-0 outline-none focus:ring-0 text-[var(--color-text-primary)] [color-scheme:dark] ${approved ? LOCKED_FIELD_CLASS : ''}`;
-    const showStatusIcon = approved || (marked && !canUndo);
-    const hasActions = canUndo || showStatusIcon;
-
-    return (
-      <div className={`rounded-[var(--radius-atomic)] border ${boxPad} ${stateClass}`}>
-        {!recorded && <p className={`${hintClass} mb-1.5`}>{emptyHint}</p>}
-        <div
-          className={`grid items-center min-w-0 ${hasActions ? 'grid-cols-[1fr_auto_1fr]' : 'grid-cols-1'} ${fieldRowClass}`}
-        >
-          {hasActions && <div aria-hidden className="min-w-0" />}
-          <div className="flex min-w-0 justify-center">
-            {recorded ? (
-              <span className={`${timeClass} truncate text-center`}>
-                {time || '--:--'}
-              </span>
-            ) : (
-              <AttendanceTimeInput
-                aria-label={inputAriaLabel}
-                disabled={approved}
-                value={value}
-                onChange={onChange}
-                className={innerInputClass}
-              />
-            )}
-          </div>
-          {hasActions && (
-            <div className="flex shrink-0 items-center justify-end gap-1">
-              {canUndo && (
-                <button
-                  type="button"
-                  onClick={onUndo}
-                  aria-label={undoAriaLabel}
-                  title={undoAriaLabel}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-action-primary)]"
-                >
-                  <RotateCcw size={compact ? 13 : 14} />
-                </button>
-              )}
-              {showStatusIcon && (
-                <span className="inline-flex h-7 w-7 items-center justify-center" aria-hidden>
-                  {approved ? (
-                    <Lock size={compact ? 12 : 14} className="text-blue-500" />
-                  ) : (
-                    <Check size={compact ? 14 : 16} className="text-emerald-500" />
-                  )}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        {recorded && mode && showRecordedMode !== false && (
-          <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] mt-1 text-right truncate">{mode}</p>
-        )}
-      </div>
-    );
-  };
-
   const wrapperClass = compact
     ? 'space-y-2'
     : isSelfMode
@@ -270,7 +271,7 @@ const UnifiedTimeCard = ({
       : 'grid grid-cols-1 gap-2 min-w-0'
     : panelVisibility.showInPanel && panelVisibility.showOutPanel
       ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
-      : 'grid grid-cols-1 gap-4 max-w-md';
+      : 'grid grid-cols-1 gap-4 w-full min-w-0';
   const panelBodyClass = compact ? 'p-2.5 space-y-2.5 flex flex-col flex-1 min-w-0' : 'p-4 space-y-4 flex flex-col flex-1';
   const panelHeaderClass = compact ? 'px-2.5 py-1.5' : 'px-3 py-2';
   const markActionClass = compact ? 'space-y-1.5' : 'space-y-2';
@@ -358,6 +359,7 @@ const UnifiedTimeCard = ({
               <div className={panelBodyClass}>
                 <div className={markActionClass}>
                   <SelfMarkTimeControl
+                    compact={compact}
                     time={inDisplayTime}
                     mode={entry?.inTimeRecord?.workMode}
                     showRecordedMode={false}
@@ -415,6 +417,7 @@ const UnifiedTimeCard = ({
               <div className={panelBodyClass}>
                 <div className={markActionClass}>
                   <SelfMarkTimeControl
+                    compact={compact}
                     time={outDisplayTime}
                     mode={entry?.outTimeRecord?.workMode}
                     showRecordedMode={false}

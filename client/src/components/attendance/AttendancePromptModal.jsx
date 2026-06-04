@@ -67,16 +67,7 @@ const AttendancePromptModal = () => {
 
   return (
     <ModalShell isOpen size="lg" zIndex={1990} closeOnBackdrop={false} closeOnEscape={false}>
-      <ModalHeader
-        title="Mark today's attendance"
-        subtitle="Check in before you continue"
-        icon={ClipboardCheck}
-        showClose={false}
-      />
       <ModalBody className="!pt-4">
-        <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-          Welcome{user?.name ? `, ${user.name.split(' ')[0]}` : ''}. Record your check-in for today.
-        </p>
         <UnifiedTimeCard
           entry={entry}
           title={format(today, 'EEEE, MMMM d')}
@@ -88,8 +79,8 @@ const AttendancePromptModal = () => {
           isLoading={checkIn.isPending}
         />
       </ModalBody>
-      <ModalFooter className="!justify-between">
-        <Button type="button" variant="ghost" onClick={handleDismiss}>
+      <ModalFooter className="!justify-stretch">
+        <Button type="button" variant="secondary" size="md" className="w-full" onClick={handleDismiss}>
           Remind me later
         </Button>
       </ModalFooter>

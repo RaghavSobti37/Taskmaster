@@ -32,6 +32,24 @@ const { isQaSyncGamification } = require('../utils/qaProbeContext');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
 
+const TASK_ASSIGNEE_POPULATE = {
+  path: 'assignees',
+  populate: [
+    {
+      path: 'userId',
+      select: 'name avatar departmentId',
+      populate: { path: 'departmentId', select: 'name slug' },
+    },
+    {
+      path: 'assignedBy',
+      select: 'name avatar departmentId',
+      populate: { path: 'departmentId', select: 'name slug' },
+    },
+  ],
+};
+
+exports.TASK_ASSIGNEE_POPULATE = TASK_ASSIGNEE_POPULATE;
+
 const queueTaskCompletedGamification = async (userId, task) => {
   if (!userId || !task?._id) return;
   const job = queueGamificationEvent('TASK_COMPLETED', {
@@ -130,6 +148,8 @@ const mapTaskDTO = (taskDoc) => {
   }
   return task;
 };
+
+exports.mapTaskDTO = mapTaskDTO;
 
 const buildAssignmentsForUser = (taskId, assigneeIds, actingUserId, creatorId) => {
   const creator = rulesNormalizeId(creatorId || actingUserId);
@@ -361,13 +381,6 @@ exports.createTask = async (taskData, user, session) => {
     }
   }
 
-  const mentionNotifsDesc = await buildMentionNotifications({
-    text: coreData.description,
-    previousText: '',
-    actor: user,
-    assigneeIds,
-    task,
-  });
   const mentionNotifsTitle = await buildMentionNotifications({
     text: coreData.title,
     previousText: '',
@@ -376,7 +389,7 @@ exports.createTask = async (taskData, user, session) => {
     task,
   });
   const mentionSeen = new Set();
-  for (const payload of [...mentionNotifsDesc, ...mentionNotifsTitle]) {
+  for (const payload of mentionNotifsTitle) {
     if (mentionSeen.has(payload.recipientId)) continue;
     mentionSeen.add(payload.recipientId);
     pendingNotifications.push(payload);
@@ -389,6 +402,37 @@ exports.createTask = async (taskData, user, session) => {
   await logActivity(user._id, 'CREATE_TASK', task._id, 'Task', { title: task.title }, session);
   queueGamificationEvent('TASK_CREATED', { userId: user._id, task });
 
+  const TaskActivityService = require('./TaskActivityService');
+  await TaskActivityService.seedCreatedAndAssignments(
+    task,
+    assignments.map((a) => ({
+      userId: a.userId,
+      assignedBy: a.assignedBy,
+    })),
+    user,
+    session
+  );
+
+  if (coreData.description) {
+    const mentionNotifsThread = await buildMentionNotifications({
+      text: coreData.description,
+      previousText: '',
+      actor: user,
+      assigneeIds,
+      task,
+      source: 'thread',
+    });
+    const mentionedUserIds = await TaskActivityService.resolveMentionedUserIdsFromText(
+      coreData.description
+    );
+    await TaskActivityService.bumpMentionReceipts(task._id, mentionedUserIds, user._id, session);
+    for (const payload of mentionNotifsThread) {
+      if (mentionSeen.has(payload.recipientId)) continue;
+      mentionSeen.add(payload.recipientId);
+      pendingNotifications.push(payload);
+    }
+  }
+
   const taskObj = task.toObject({ virtuals: true });
   taskObj.createdBy = { _id: user._id, name: user.name, avatar: user.avatar };
   taskObj.assignees = assignments.map((a) => ({
@@ -400,15 +444,24 @@ exports.createTask = async (taskData, user, session) => {
   return { taskDto: mapTaskDTO(taskObj), pendingNotifications };
 };
 
-exports.getTasks = async (filter) => {
+exports.getTasks = async (filter, { userId = null } = {}) => {
   const tasks = await Task.find(filter)
     .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours completedAt updatedAt createdBy color')
     .populate('projectId', 'name workspace')
     .populate('createdBy', 'name avatar')
-    .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] })
+    .populate(TASK_ASSIGNEE_POPULATE)
     .lean({ virtuals: true });
 
-  return tasks.map(mapTaskDTO);
+  const mapped = tasks.map(mapTaskDTO);
+  if (!userId || !mapped.length) return mapped;
+
+  const taskIds = mapped.map((t) => t._id);
+  const TaskActivityService = require('./TaskActivityService');
+  const unreadMap = await TaskActivityService.getUnreadMentionCountsByTask(userId, taskIds);
+  return mapped.map((t) => ({
+    ...t,
+    unreadMentions: unreadMap[t._id.toString()] || 0,
+  }));
 };
 
 exports.updateTask = async (taskId, updates, user, session) => {
@@ -564,6 +617,29 @@ exports.updateTask = async (taskId, updates, user, session) => {
     && new Date(coreUpdates.dueDate).getTime() !== new Date(oldDueDate || 0).getTime()
   );
 
+  if (coreUpdates.description !== undefined) {
+    const TaskActivityService = require('./TaskActivityService');
+    const msgBody = String(coreUpdates.description || '').trim();
+    const prevBody = String(existing.description || '').trim();
+    if (msgBody && msgBody !== prevBody && existing.status !== 'done') {
+      const taskCtx = existing.toObject ? existing.toObject() : { ...existing };
+      const { mentionPayloads } = await TaskActivityService.appendTaskMessage({
+        task: {
+          ...taskCtx,
+          _id: existing._id,
+          title: coreUpdates.title ?? existing.title,
+          projectId: coreUpdates.projectId ?? existing.projectId,
+        },
+        user,
+        body: msgBody,
+        previousBody: prevBody,
+        session,
+      });
+      pendingNotifications.push(...mentionPayloads);
+    }
+    coreUpdates.description = '';
+  }
+
   const task = await Task.findByIdAndUpdate(taskId, coreUpdates, { new: true, runValidators: true, session });
 
   if (task && projectMoveRollup) {
@@ -607,13 +683,24 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
     if (!assigneesUnchanged) {
       assigneesChanged = true;
+      const oldAssignmentsSnapshot = [...assignments];
       await TaskAssignment.deleteMany({ taskId: task._id }, { session });
+      let insertedAssignments = [];
       if (newAssignees.length > 0) {
-        await TaskAssignment.insertMany(
-          buildAssignmentsForUser(task._id, newAssignees, user._id, creatorId),
-          { session }
-        );
+        insertedAssignments = buildAssignmentsForUser(task._id, newAssignees, user._id, creatorId);
+        await TaskAssignment.insertMany(insertedAssignments, { session });
       }
+      const TaskActivityService = require('./TaskActivityService');
+      await TaskActivityService.recordAssignmentChanges(
+        task._id,
+        oldAssignmentsSnapshot,
+        insertedAssignments.map((a) => ({
+          userId: a.userId,
+          assignedBy: a.assignedBy,
+        })),
+        user,
+        session
+      );
     }
   }
 
@@ -736,24 +823,26 @@ exports.updateTask = async (taskId, updates, user, session) => {
       }
     }
 
-    if (coreUpdates.description !== undefined
-      && String(task.description || '') !== String(existing.description || '')) {
-      let currentAssignments = assignments;
-      if (assigneesChanged) {
-        currentAssignments = await TaskAssignment.find({ taskId: task._id }).session(session).lean();
-      }
-      const currentAssigneeIds = currentAssignments
-        .map((a) => assignmentUserId(a.userId))
-        .filter(Boolean);
-      const mentionNotifsDesc = await buildMentionNotifications({
-        text: task.description,
-        previousText: existing.description,
-        actor: user,
-        assigneeIds: currentAssigneeIds,
-        task,
-      });
-      pendingNotifications.push(...mentionNotifsDesc);
+    const TaskActivityService = require('./TaskActivityService');
+    const prevStatus = String(existing.status || '').toLowerCase();
+    const nextStatus = String(task.status || '').toLowerCase();
+    if (nextStatus && prevStatus !== nextStatus) {
+      await TaskActivityService.recordStatusChange(
+        task._id,
+        user,
+        prevStatus,
+        nextStatus,
+        session
+      );
     }
+
+    await TaskActivityService.recordFieldChangesFromTask(
+      existing,
+      task,
+      user,
+      coreUpdates,
+      session
+    );
 
     if (coreUpdates.title !== undefined
       && String(task.title || '') !== String(existing.title || '')) {
@@ -781,7 +870,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const populatedTask = await Task.findById(task._id).session(session)
     .populate('createdBy', 'name avatar')
-    .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+    .populate(TASK_ASSIGNEE_POPULATE);
 
   if (!populatedTask) {
     throw new Error('Task not found');
@@ -811,6 +900,8 @@ exports.deleteTask = async (taskId, user, session) => {
       await Project.findByIdAndUpdate(task.projectId, { $inc: dec }, { session });
     }
     await logActivity(user._id, 'DELETE_TASK', task._id, 'Task', { title: task.title }, session);
+    const TaskActivityService = require('./TaskActivityService');
+    await TaskActivityService.purgeActivityForTasks([task._id]);
   }
 };
 
@@ -818,7 +909,7 @@ const populateTaskQuery = () => Task.find()
   .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours createdBy color')
   .populate('projectId', 'name workspace')
   .populate('createdBy', 'name avatar')
-  .populate({ path: 'assignees', populate: [{ path: 'userId', select: 'name avatar' }, { path: 'assignedBy', select: 'name avatar' }] });
+  .populate(TASK_ASSIGNEE_POPULATE);
 
 exports.getReviewQueue = async (user) => {
   const filter = getReviewQueueAssignmentFilter(user._id);

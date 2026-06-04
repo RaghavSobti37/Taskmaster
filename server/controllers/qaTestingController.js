@@ -70,7 +70,7 @@ exports.getTestProgress = async (req, res, next) => {
     }
 
     const testRun = await QATestRun.findOne(query).select(
-      'status progress activityLog testCases pagesTestedCount bugsIdentified startedAt errorDetails'
+      'status progress activityLog testCases pagesTestedCount bugsIdentified startedAt errorDetails lighthouseReport'
     );
 
     if (!testRun) {
@@ -150,6 +150,7 @@ exports.getTestResults = async (req, res, next) => {
         skip: checklistCases.filter((t) => t.checkStatus === 'skip' || t.status === 'skip').length,
         byCategory,
       },
+      lighthouseReport: testRun.lighthouseReport || null,
       testCases: testRun.testCases,
       bugsCreated: testRun.bugsCreated || [],
       cleanupResults: testRun.cleanupResults,
@@ -225,10 +226,12 @@ exports.listCategories = async (req, res) => {
     'security-hardening',
   ];
   const dynamic = ['backend', 'permission', 'bottleneck', 'data', 'frontend', 'mobile', 'desktop'];
+  const lighthouse = ['lighthouse'];
   res.json({
     preDeploy,
     dynamic,
-    all: [...preDeploy, ...dynamic],
+    lighthouse,
+    all: [...preDeploy, ...dynamic, ...lighthouse],
   });
 };
 

@@ -41,6 +41,7 @@ const buildMentionNotifications = async ({
   assigneeIds = [],
   task = null,
   asset = null,
+  source = 'fields',
 }) => {
   if (!text || !actor?._id) return [];
 
@@ -49,6 +50,7 @@ const buildMentionNotifications = async ({
 
   const users = await User.find({}).select('name email').lean();
   const assigneeSet = new Set(assigneeIds.map((id) => id?.toString()).filter(Boolean));
+  const skipAssignees = source !== 'thread';
   const actorId = actor._id.toString();
   const notified = new Set();
   const payloads = [];
@@ -59,15 +61,18 @@ const buildMentionNotifications = async ({
 
     const recipientId = mentioned._id.toString();
     if (recipientId === actorId) continue;
-    if (task && assigneeSet.has(recipientId)) continue;
+    if (task && skipAssignees && assigneeSet.has(recipientId)) continue;
     if (notified.has(recipientId)) continue;
     notified.add(recipientId);
 
     if (task) {
+      const isThread = source === 'thread';
       payloads.push({
         recipientId,
-        title: 'Mentioned in Task',
-        message: `${actor.name} mentioned you in "${task.title}"`,
+        title: isThread ? 'Mentioned in task conversation' : 'Mentioned in Task',
+        message: isThread
+          ? `${actor.name} mentioned you in a message on "${task.title}"`
+          : `${actor.name} mentioned you in "${task.title}"`,
         category: 'task',
         type: 'system',
         relatedTaskId: task._id,

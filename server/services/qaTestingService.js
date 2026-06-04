@@ -32,6 +32,8 @@ const PREDEPLOY_CATEGORIES = new Set([
   'security-hardening',
 ]);
 
+const LIGHTHOUSE_CATEGORY = 'lighthouse';
+
 function filterTestCasesByCategories(testCases, categories) {
   if (!categories?.length) return testCases;
   const allowed = new Set(categories.map((c) => String(c).toLowerCase()));
@@ -266,7 +268,44 @@ class QATestingService {
               // Dynamic Business & Transactional Assertions
               let dynamicId = '123';
               
-              if (routeLower.includes('crm') || routeLower.includes('lead') || routeLower.includes('exly')) {
+              if (routeLower.includes('forgotpassword') || routeLower.includes('resetpassword')) {
+                endpoint = '/api/auth/forgot-password';
+                httpMethod = 'POST';
+                payloadMatrix = { email: 'qa-probe@example.com' };
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
+                reportQaActivity({ method: 'POST', url: probeUrl, requestBody: JSON.stringify(payloadMatrix) });
+                try {
+                  const res = await axios.post(probeUrl, payloadMatrix, { headers: authHeaders, validateStatus: () => true });
+                  reportQaActivity({ httpStatus: res.status, message: `POST ${endpoint} → ${res.status}` });
+                  if (res.status === 500) {
+                    errors.push({
+                      error: `Password reset surface returned 500 on ${endpoint}.`,
+                      category: 'data',
+                      severity: 'high',
+                      endpointValidation: probeUrl,
+                    });
+                  }
+                } catch (err) {}
+              }
+              else if (routeLower.includes('projectanalytics') || routeLower.includes('adminprojectanalytics')) {
+                endpoint = '/api/projects';
+                httpMethod = 'GET';
+                const probeUrl = `${QA_API_BASE()}${endpoint}`;
+                reportQaActivity({ method: 'GET', url: probeUrl });
+                try {
+                  const res = await axios.get(probeUrl, { headers: authHeaders, validateStatus: () => true });
+                  reportQaActivity({ httpStatus: res.status, message: `GET ${endpoint} → ${res.status}` });
+                  if (res.status === 500) {
+                    errors.push({
+                      error: `Project analytics page depends on ${endpoint} but got 500.`,
+                      category: 'data',
+                      severity: 'medium',
+                      endpointValidation: probeUrl,
+                    });
+                  }
+                } catch (err) {}
+              }
+              else if (routeLower.includes('crm') || routeLower.includes('lead') || routeLower.includes('exly')) {
                 const lead = await Lead.findOne();
                 if(lead) dynamicId = lead._id;
                 endpoint = `/api/crm/leads/${dynamicId}`;
@@ -381,6 +420,15 @@ class QATestingService {
       logger.error('QA', 'Failed to read directory', { error: err.message });
     }
 
+    const wantsLighthouse =
+      !this.config.categories?.length ||
+      this.config.categories.map((c) => String(c).toLowerCase()).includes(LIGHTHOUSE_CATEGORY);
+    if (wantsLighthouse) {
+      const { buildLighthouseBatchTestCase } = require('./qa/qaLighthouseRunner');
+      testCases.push(buildLighthouseBatchTestCase(this));
+      await reportDiscovery('Queued Lighthouse category (all app routes)');
+    }
+
     return testCases;
   }
 
@@ -438,6 +486,67 @@ class QATestingService {
       const startTime = Date.now();
       const result = await testCase.test();
       const duration = Date.now() - startTime;
+
+      if (result.lighthouseReport && result.lighthousePages?.length) {
+        const { pageToTestCasePayload } = require('./qa/qaLighthouseRunner');
+        await QATestRun.updateOne(
+          { _id: this.testRunId },
+          { $set: { lighthouseReport: result.lighthouseReport } }
+        );
+        for (const page of result.lighthousePages) {
+          const payload = pageToTestCasePayload(page);
+          await QATestRun.updateOne(
+            { _id: this.testRunId },
+            {
+              $push: {
+                testCases: {
+                  name: payload.name,
+                  status: payload.status,
+                  duration: Math.round(duration / result.lighthousePages.length),
+                  result: payload.result,
+                  severity: payload.severity,
+                  category: payload.category,
+                  error: payload.error,
+                  description: payload.description,
+                  checklistId: payload.checklistId,
+                  checkStatus: payload.checkStatus,
+                },
+              },
+            }
+          );
+        }
+        await QATestRun.updateOne(
+          { _id: this.testRunId },
+          {
+            $push: {
+              testCases: {
+                name: testCase.name,
+                status: 'passed',
+                duration,
+                result: { summary: result.lighthouseReport.summary },
+                severity: testCase.severity || 'medium',
+                category: LIGHTHOUSE_CATEGORY,
+                description: result.message,
+                checkStatus: 'pass',
+                checklistId: 'lh-batch-summary',
+              },
+            },
+          }
+        );
+        await this.appendActivityLog({
+          at: new Date(),
+          phase: 'done',
+          testName: testCase.name,
+          kind: 'lighthouse',
+          outcome: 'passed',
+          durationMs: duration,
+          message: result.message,
+        });
+        logger.info('QA', `Lighthouse batch: ${result.lighthousePages.length} pages`, { duration });
+        setQaActivityHook(null);
+        return;
+      }
+
       const checkStatus = result.checkStatus || (result.passed ? 'pass' : 'fail');
       const status =
         checkStatus === 'fail'

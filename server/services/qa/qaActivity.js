@@ -54,6 +54,14 @@ function inferQaMeta(testCase) {
       target: QA_API_BASE_HINT(),
     };
   }
+  if (name.startsWith('[Lighthouse]') || testCase.category === 'lighthouse') {
+    return {
+      kind: 'lighthouse',
+      action: 'Lighthouse performance & accessibility audit',
+      target: testCase.qaMeta?.target || name,
+      checklistId: testCase.checklistId,
+    };
+  }
   if (name.startsWith('[Integration]')) {
     return {
       kind: 'integration',
@@ -86,6 +94,18 @@ function QA_API_BASE_HINT() {
 
 function inferPageScanEndpoint(routeName) {
   const lower = routeName.toLowerCase();
+  if (lower.includes('forgotpassword') || lower.includes('resetpassword')) {
+    return { method: 'POST', url: '/api/auth/forgot-password', payloadHint: '{ email }' };
+  }
+  if (lower.includes('userdata') || lower.includes('metaoauth')) {
+    return { method: 'GET', url: '/api/webhooks/meta-data-deletion/:code', payloadHint: 'status lookup' };
+  }
+  if (lower.includes('googlesuccess') || lower.includes('oauth')) {
+    return { method: 'POST', url: '/api/auth/oauth-establish', payloadHint: '{ ticket }' };
+  }
+  if (lower.includes('projectanalytics') || lower.includes('adminprojectanalytics')) {
+    return { method: 'GET', url: '/api/projects', payloadHint: 'list (read-only probe)' };
+  }
   if (lower.includes('crm') || lower.includes('lead') || lower.includes('exly')) {
     return { method: 'PUT', url: '/api/crm/leads/:id', payloadHint: '{ status: "won" }' };
   }

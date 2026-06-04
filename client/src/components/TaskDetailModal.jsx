@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import axios from 'axios';
-import { X, CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
 import { Button, Spinner } from './ui';
 import { NexusModal, ModalShell, ModalFooter } from './ui/modals';;
-import { useProjects, useUpdateTask } from '../hooks/useTaskmasterQueries';
-import { normalizeTaskCategory, taskCategoryLabel } from '../constants/taskOptions';
+import { useProjects, useUpdateTask, useUserDirectory } from '../hooks/useTaskmasterQueries';
+import { normalizeTaskCategory } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
 import { canReviewTask } from '../utils/taskReview';
 import { resolveTaskId } from '../utils/taskCompletion';
@@ -12,16 +12,23 @@ import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
 import { validateTaskTimelineFields, toDateKey } from '../utils/dateValidation';
 import { useSystemToast } from '../lib/systemLogBridge';
+import TaskHistoryPanel from './tasks/TaskHistoryPanel';
+import TaskMessageComposeSection from './tasks/TaskMessageComposeSection';
+import TaskDetailModalHeader from './tasks/TaskDetailModalHeader';
+import { progressForTaskStatus } from '../utils/taskStatusButtons';
 
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate }) => {
   const { user } = useAuth();
   const { data: projects = [] } = useProjects();
+  const { data: directoryUsers = [] } = useUserDirectory(isOpen);
   const updateTaskMutation = useUpdateTask();
+  const [displayTask, setDisplayTask] = useState(task);
   const { addToast } = useSystemToast();
   const [title, setTitle] = useState(task?.title || '');
   const [desc, setDesc] = useState(task?.description || '');
   const [formValues, setFormValues] = useState({
     status: task?.status || 'todo',
+    progress: task?.progress ?? 0,
     priority: task?.priority || 'medium',
     type: task?.type || '',
     workspace: task?.workspace || task?.projectId?.workspace || 'General',
@@ -42,10 +49,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
 
   React.useEffect(() => {
     if (task) {
+      setDisplayTask(task);
       setTitle(task.title || '');
-      setDesc(task.description || '');
+      setDesc('');
       setFormValues({
         status: task.status || 'todo',
+        progress: task.progress ?? progressForTaskStatus(task.status || 'todo'),
         priority: task.priority || 'medium',
         type: normalizeTaskCategory(task.type),
         workspace: task.workspace || task.projectId?.workspace || 'General',
@@ -59,7 +68,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     }
   }, [task]);
 
+  const projectName = useMemo(() => {
+    const id = formValues.projectId;
+    if (!id) return task?.projectId?.name || 'No project';
+    const match = projects.find((p) => String(p._id) === String(id));
+    return match?.name || task?.projectId?.name || 'Unknown project';
+  }, [formValues.projectId, projects, task?.projectId?.name]);
+
   if (!task) return null;
+
+  const resolvedTask = displayTask ?? task;
 
   const notifyUpdate = (data) => {
     if (onTaskUpdated) onTaskUpdated(data);
@@ -74,6 +92,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       title,
       description: desc,
       status: reviewAction ? undefined : formValues.status,
+      progress: reviewAction ? undefined : formValues.progress,
       priority: formValues.priority,
       type: normalizeTaskCategory(formValues.type),
       projectId: formValues.projectId || null,
@@ -109,6 +128,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       { id: taskId, data: payload },
       {
         onSuccess: (data) => {
+          setDesc('');
           notifyUpdate(data);
           onClose();
         },
@@ -151,55 +171,85 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
         onConfirm={handleDelete}
       />
-      <ModalShell isOpen={isOpen} onClose={onClose} size="lg" zIndex={100}>
-        <header className="px-5 py-3 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-workspace)] shrink-0">
-          <div>
-            <h3 className="font-black text-xs uppercase tracking-[0.2em]">Edit Task</h3>
-            {task.type && (
-              <p className="text-[9px] text-[var(--color-text-muted)]">
-                {taskCategoryLabel(task.type)} · {task.scheduleSlot || 'FULL'}
-              </p>
-            )}
-          </div>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-[var(--color-bg-border)] rounded-lg">
-            <X size={16} />
-          </button>
-        </header>
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        size="task"
+        zIndex={100}
+        panelClassName="!max-h-[min(92vh,960px)] !w-[min(calc(100vw-2rem),1400px)]"
+      >
+        <TaskDetailModalHeader
+          onClose={onClose}
+          workspace={formValues.workspace || task.workspace || 'General'}
+          projectName={projectName}
+          priority={formValues.priority}
+          task={resolvedTask}
+          assigneeIds={formValues.assignees}
+          onAssigneesChange={(assignees) => setFormValues((v) => ({ ...v, assignees }))}
+          directoryUsers={directoryUsers}
+          lockedAssigneeIds={creatorId ? [creatorId] : []}
+          teamEditable={!isDone}
+          dueDate={formValues.dueDate}
+          scheduleDate={formValues.scheduleDate}
+          taskStatus={formValues.status}
+          onDueDateChange={(dueDate) => setFormValues((v) => ({ ...v, dueDate, dueDateManual: true }))}
+          dueDateDisabled={isDone || !canEditTimeline}
+        />
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="tm-modal-scroll p-5 md:p-6 space-y-4">
-            <TaskFormFields
-              values={formValues}
-              onChange={setFormValues}
-              projects={projects}
-              showProject
-              showStatus
-              disabled={isDone}
-              timelineDisabled={!canEditTimeline}
-              showTitle
-              showDescription
-              title={title}
-              onTitleChange={setTitle}
-              description={desc}
-              onDescriptionChange={setDesc}
-              lockedAssigneeIds={creatorId ? [creatorId] : []}
-              mentionSessionKey={isOpen ? task._id : undefined}
-              inlineEdit
-            />
+          <div className="flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row">
+            <div className="flex-1 min-w-0 min-h-0 overflow-y-auto tm-modal-scroll p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
+              <TaskFormFields
+                values={formValues}
+                onChange={setFormValues}
+                projects={projects}
+                showProject
+                showAssignees={false}
+                showPriority={false}
+                showStatus={false}
+                disabled={isDone}
+                timelineDisabled={!canEditTimeline}
+                showTitle
+                showDescription={false}
+                title={title}
+                onTitleChange={setTitle}
+                lockedAssigneeIds={creatorId ? [creatorId] : []}
+                mentionSessionKey={isOpen ? task._id : undefined}
+                inlineEdit
+                collapseCategoryWhenSelected
+                showDueDateInForm={false}
+                afterTitle={
+                  <TaskMessageComposeSection
+                    message={desc}
+                    onMessageChange={setDesc}
+                    disabled={isDone}
+                    mentionSessionKey={isOpen ? task._id : undefined}
+                    inlineEdit
+                    status={formValues.status}
+                    onStatusChange={(status, progress) => setFormValues((v) => ({ ...v, status, progress }))}
+                    statusDisabled={isDone}
+                  />
+                }
+              />
 
-            {isInReview && canReview && (
-              <div className="flex gap-3 py-3 border-t border-amber-500/30">
-                <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
-                  <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
-                </Button>
-                <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
-                  <RotateCcw size={14} className="mr-1" /> Rollback
-                </Button>
-              </div>
-            )}
+              {isInReview && canReview && (
+                <div className="flex flex-wrap gap-3 py-3 border-t border-amber-500/30">
+                  <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
+                    <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
+                  </Button>
+                  <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
+                    <RotateCcw size={14} className="mr-1" /> Rollback
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="w-full lg:w-[min(400px,36vw)] shrink-0 min-h-[280px] lg:min-h-0 lg:max-h-none flex flex-col">
+              <TaskHistoryPanel task={displayTask || task} enabled={isOpen} />
+            </div>
           </div>
 
-          <ModalFooter className="justify-between">
+          <ModalFooter className="justify-between px-6 py-4">
             {!isDone ? (
               <button
                 type="button"

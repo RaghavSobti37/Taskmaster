@@ -29,6 +29,11 @@ import { fileURLToPath } from 'url';
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import { resolveRoutes, PUBLIC_ROUTES } from './lighthouse-routes.mjs';
+import {
+  extractPageInsights,
+  buildPerformanceMarkdown,
+  buildDetailsHtml,
+} from './lighthouse-insights.mjs';
 
 const PUBLIC_ROUTE_PATHS = new Set(PUBLIC_ROUTES.map((r) => r.path));
 
@@ -189,7 +194,7 @@ function buildSummaryHtml(rows, meta) {
     Base URL: <strong>${meta.baseUrl}</strong><br>
     Generated: ${meta.generatedAt}<br>
     Routes audited: ${rows.length} · Auth: ${meta.auth}<br>
-    Per-page HTML reports in <code>pages/</code>
+    Per-page HTML in <code>pages/</code> · <a href="./performance-details.html">Slowdown breakdown</a> · <a href="./PERFORMANCE_REPORT.md">Markdown report</a>
   </p>
   <table>
     <thead>
@@ -327,7 +332,16 @@ async function main() {
           await fs.writeFile(jsonPath, JSON.stringify(lhr, null, 2), 'utf8');
         }
 
-        rows.push({ path: routePath, name, scores, redirected, error: null });
+        const insights = extractPageInsights(lhr);
+        rows.push({
+          path: routePath,
+          name,
+          slug,
+          scores,
+          redirected,
+          error: null,
+          insights,
+        });
         console.log(
           `  perf ${scores.performance} · a11y ${scores.accessibility} · bp ${scores['best-practices']} · seo ${scores.seo}${redirected ? ' (redirected)' : ''}`
         );
@@ -366,7 +380,26 @@ async function main() {
   });
   await fs.writeFile(path.join(OUTPUT_DIR, 'index.html'), html, 'utf8');
 
+  const reportMeta = {
+    baseUrl: BASE_URL,
+    generatedAt: summary.generatedAt,
+    auth: authLabel,
+  };
+  const md = buildPerformanceMarkdown(rows, reportMeta);
+  await fs.writeFile(path.join(OUTPUT_DIR, 'PERFORMANCE_REPORT.md'), md, 'utf8');
+  await fs.writeFile(
+    path.join(OUTPUT_DIR, 'performance-details.json'),
+    JSON.stringify({ ...summary, routes: rows }, null, 2),
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(OUTPUT_DIR, 'performance-details.html'),
+    buildDetailsHtml(rows, reportMeta),
+    'utf8'
+  );
+
   console.log(`\nDone. Open ${path.join(OUTPUT_DIR, 'index.html')}`);
+  console.log(`Detail report: ${path.join(OUTPUT_DIR, 'PERFORMANCE_REPORT.md')}`);
 }
 
 main().catch((err) => {

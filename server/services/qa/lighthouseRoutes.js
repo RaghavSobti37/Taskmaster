@@ -1,9 +1,8 @@
 /**
- * Static app routes for Lighthouse audits (from App.jsx).
- * Dynamic segments (:id, :name, :campaignId) omitted — add via LH_ROUTES_EXTRA.
+ * App routes for QA Lighthouse audits (keep in sync with client/scripts/lighthouse-routes.mjs).
  */
 
-export const PUBLIC_ROUTES = [
+const PUBLIC_ROUTES = [
   { path: '/', name: 'Landing' },
   { path: '/login', name: 'Login' },
   { path: '/register', name: 'Register' },
@@ -17,8 +16,7 @@ export const PUBLIC_ROUTES = [
   { path: '/unsubscribe', name: 'Unsubscribe' },
 ];
 
-/** Requires authenticated session (cookie). Redirects to /login without auth. */
-export const PROTECTED_ROUTES = [
+const PROTECTED_ROUTES = [
   { path: '/dashboard', name: 'Dashboard' },
   { path: '/projects', name: 'Projects' },
   { path: '/projects/new', name: 'New project' },
@@ -57,20 +55,20 @@ export const PROTECTED_ROUTES = [
   { path: '/ops-logs', name: 'System logs' },
 ];
 
-export function resolveRoutes({ publicOnly, protectedOnly, extraPaths = [] }) {
-  let routes = [];
-  if (!protectedOnly) routes = routes.concat(PUBLIC_ROUTES);
-  if (!publicOnly) routes = routes.concat(PROTECTED_ROUTES);
-
-  for (const raw of extraPaths) {
-    const path = raw.startsWith('/') ? raw : `/${raw}`;
-    routes.push({ path, name: path });
-  }
-
+function getAllLighthouseRoutes() {
   const seen = new Set();
-  return routes.filter((r) => {
+  return [...PUBLIC_ROUTES, ...PROTECTED_ROUTES].filter((r) => {
     if (seen.has(r.path)) return false;
     seen.add(r.path);
     return true;
   });
 }
+
+const PUBLIC_PATHS = new Set(PUBLIC_ROUTES.map((r) => r.path));
+
+module.exports = {
+  PUBLIC_ROUTES,
+  PROTECTED_ROUTES,
+  PUBLIC_PATHS,
+  getAllLighthouseRoutes,
+};

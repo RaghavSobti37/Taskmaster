@@ -430,6 +430,9 @@ function onServerListening() {
   const { initWorker } = require('./workers/statsWorker');
   initWorker();
 
+  const { init: initTaskActivityPurge } = require('./workers/taskActivityPurgeWorker');
+  initTaskActivityPurge();
+
   const { initWebhookWorker } = require('./workers/webhookWorker');
   initWebhookWorker();
 

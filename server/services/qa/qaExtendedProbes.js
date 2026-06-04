@@ -514,6 +514,78 @@ const PROBE_DEFS = [
     },
   },
   {
+    id: 'edge-forgot-password-generic',
+    title: 'Forgot-password does not leak whether email exists',
+    category: 'password-reset',
+    sev: 'high',
+    suite: 's7',
+    async run() {
+      const unknown = `qa-no-user-${Date.now()}@example.com`;
+      const res = await request(this, {
+        method: 'POST',
+        url: '/api/auth/forgot-password',
+        headers: {},
+        data: { email: unknown },
+      });
+      const ok = res.status === 200 && /sent|check/i.test(JSON.stringify(res.data || {}));
+      return ok
+        ? probePass(this, `Generic success for unknown email (${res.status})`)
+        : probeFail(this, `Unexpected forgot-password response (${res.status})`, res.status);
+    },
+  },
+  {
+    id: 'edge-oauth-readiness-admin',
+    title: 'OAuth readiness endpoint requires admin session',
+    category: 'authorization',
+    sev: 'medium',
+    suite: 's7',
+    async run() {
+      const unauth = await request(this, {
+        method: 'GET',
+        url: '/api/integrations/oauth-readiness',
+        headers: {},
+      });
+      if (unauth.status !== 401) {
+        return probeFail(this, `Unauthenticated expected 401, got ${unauth.status}`, unauth.status);
+      }
+      const { adminUser } = await resolveTestUsers();
+      const authed = await request(this, {
+        method: 'GET',
+        url: '/api/integrations/oauth-readiness',
+        user: adminUser,
+      });
+      const ok = authed.status === 200 && typeof authed.data === 'object';
+      return ok
+        ? probePass(this, 'Admin receives oauth-readiness payload')
+        : probeFail(this, `Admin oauth-readiness failed (${authed.status})`, authed.status);
+    },
+  },
+  {
+    id: 'san-lead-invalid-phone-country',
+    title: 'Lead save rejects invalid national phone for country',
+    category: 'input-validation',
+    sev: 'high',
+    suite: 's4',
+    async run() {
+      const { adminUser } = await resolveTestUsers();
+      const res = await request(this, {
+        method: 'POST',
+        url: '/api/crm/leads',
+        user: adminUser,
+        data: {
+          name: 'QA Bad Phone',
+          email: `qa-bad-phone-${Date.now()}@example.com`,
+          phone: '1',
+          phoneCountry: 'IN',
+        },
+      });
+      const ok = res.status === 400 || res.status === 422;
+      return ok
+        ? probePass(this, `Invalid IN phone rejected (${res.status})`)
+        : probeFail(this, `Invalid phone accepted (${res.status})`, res.status);
+    },
+  },
+  {
     id: 'edge-login-rate-limit',
     title: '11th login attempt returns 429',
     category: 'rate-limiting',

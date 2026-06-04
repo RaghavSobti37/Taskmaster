@@ -27,9 +27,9 @@ const RecalcSection = ({ member }) => {
       </p>
       {member.recalcChanges?.length > 0 && (
         <ul className="mt-3 border-t border-[var(--color-bg-border)]">
-          {member.recalcChanges.map((row) => (
+          {member.recalcChanges.map((row, index) => (
             <li
-              key={`${row.action}-${row.previousAmount}-${row.amount}`}
+              key={`${row.action}-${row.previousAmount}-${row.amount}-${row.delta}-${index}`}
               className="text-xs text-[var(--color-text-muted)] px-0 py-2 border-b border-[var(--color-bg-border)] last:border-b-0"
             >
               <span className="font-semibold text-[var(--color-text-primary)]">{row.actionLabel}</span>

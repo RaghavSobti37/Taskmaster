@@ -13,7 +13,8 @@
     "lighthouse:public": "node scripts/lighthouse-audit.mjs --public-only",
     "lighthouse:prod": "node scripts/lighthouse-audit.mjs --prod",
     "lighthouse:loop": "node scripts/lighthouse-loop.mjs",
-    "lighthouse:loop:public": "node scripts/lighthouse-loop.mjs --public-only"
+    "lighthouse:loop:public": "node scripts/lighthouse-loop.mjs --public-only",
+    "lighthouse:report": "node scripts/lighthouse-report-only.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

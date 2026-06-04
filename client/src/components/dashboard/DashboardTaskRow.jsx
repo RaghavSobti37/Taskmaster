@@ -7,6 +7,7 @@ import { isTaskOverdue } from '../../utils/dashboardTasks';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { isPendingTask } from '../../utils/pendingTask';
 import MentionTitle from '../mentions/MentionTitle';
+import TaskMentionBadge from '../tasks/TaskMentionBadge';
 
 /**
  * Dashboard task row — flat strip with project accent bar (tm-task-row).
@@ -67,7 +68,10 @@ const DashboardTaskRow = ({
           className="flex-1 flex items-center gap-3 min-w-0 text-left"
         >
           <div className="flex-1 min-w-0 overflow-hidden">
-            <MentionTitle text={task.title} className="tm-task-title" truncate />
+            <div className="flex items-center gap-2 min-w-0">
+              <MentionTitle text={task.title} className="tm-task-title" truncate />
+              <TaskMentionBadge task={task} />
+            </div>
             {projectName && (
               <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{projectName}</p>
             )}

@@ -833,6 +833,15 @@ async function runSecurityHardeningChecks() {
 const QA_API_BASE = () =>
   (process.env.QA_API_BASE_URL || process.env.API_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
 
+/** Allowed-domain email for live auth probes (production register gate). */
+const QA_PROBE_DOMAIN = () =>
+  String(process.env.QA_PROBE_EMAIL_DOMAIN || process.env.ALLOWED_DOMAIN || 'theshakticollective.in')
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, '');
+
+const qaProbeEmail = (prefix) => `${prefix}-${Date.now()}@${QA_PROBE_DOMAIN()}`;
+
 /**
  * Live HTTP probes against a running API (skipped when server unreachable).
  */
@@ -1001,13 +1010,26 @@ async function buildSecurityRuntimeTestCases() {
       'POST',
       '/api/auth/login',
       async (apiBase) => {
-        const email = `qa-login-${Date.now()}@example.com`;
+        const email = qaProbeEmail('qa-login');
         const password = getDefaultSeedPassword();
-        await axios.post(
+        const regRes = await axios.post(
           `${apiBase}/api/auth/register`,
           { name: 'QA Login Probe', email, password, gender: 'male' },
           { validateStatus: () => true, timeout: 8000 }
         );
+        if (regRes.status !== 201 && regRes.status !== 200) {
+          return {
+            passed: false,
+            checkStatus: 'fail',
+            checklistId: 'sec-live-login-no-token-body',
+            error: `Register setup failed (${regRes.status})`,
+            description: 'Could not create probe user for login JWT check',
+            evidence: JSON.stringify(regRes.data?.error || regRes.status).slice(0, 200),
+            category,
+            severity: 'high',
+            message: 'Login JWT probe setup failed',
+          };
+        }
         const res = await axios.post(
           `${apiBase}/api/auth/login`,
           { email, password },

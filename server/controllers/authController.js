@@ -102,14 +102,15 @@ exports.register = async (req, res) => {
     }
 
     const emailLower = email.toLowerCase().trim();
-    const registrationCheck = isRegistrationAllowed(emailLower);
-    if (!registrationCheck.ok) {
-      return res.status(403).json({ error: registrationCheck.error });
-    }
 
     const passwordError = validatePasswordStrength(password);
     if (passwordError) {
       return res.status(400).json({ error: passwordError });
+    }
+
+    const registrationCheck = isRegistrationAllowed(emailLower);
+    if (!registrationCheck.ok) {
+      return res.status(403).json({ error: registrationCheck.error });
     }
 
     const normalizedPassword = normalizePasswordInput(password);

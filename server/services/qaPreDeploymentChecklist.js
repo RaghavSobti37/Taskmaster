@@ -982,7 +982,7 @@ async function buildSecurityRuntimeTestCases() {
           `${apiBase}/api/auth/register`,
           {
             name: 'QA Weak Pass',
-            email: `qa-weak-${Date.now()}@example.com`,
+            email: qaProbeEmail('qa-weak'),
             password: 'password123',
             gender: 'male',
           },

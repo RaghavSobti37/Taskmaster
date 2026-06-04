@@ -17,6 +17,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
+import { canApproveMailTemplates } from '../../utils/mailTemplateApprovers';
 import {
   parseIndexedVariablesFromHtml,
   previewWithDummyValues,
@@ -46,9 +47,10 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const { confirm } = useConfirm();
   const { user } = useAuth();
   const isAdmin = isAdminUser(user);
+  const canApprove = canApproveMailTemplates(user);
 
   const { data: allTemplates = [], refetch: refetchAll } = useMailTemplates();
-  const { data: pendingTemplates = [], refetch: refetchPending } = usePendingMailTemplates(isAdmin);
+  const { data: pendingTemplates = [], refetch: refetchPending } = usePendingMailTemplates(canApprove);
   const saveMutation = useSaveMailTemplate();
   const submitMutation = useSubmitMailTemplate();
   const approveMutation = useApproveMailTemplate();
@@ -265,7 +267,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         <Button size="sm" variant={studioTab === 'library' ? 'primary' : 'secondary'} onClick={() => setStudioTab('library')}>
           My Templates
         </Button>
-        {isAdmin && (
+        {canApprove && (
           <Button size="sm" variant={studioTab === 'pending' ? 'primary' : 'secondary'} onClick={() => setStudioTab('pending')}>
             Pending Approval ({pendingTemplates.length})
           </Button>
@@ -341,7 +343,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                   </Button>
                 </>
               )}
-              {reviewingId && isAdmin && (
+              {reviewingId && canApprove && (
                 <>
                   <Button size="sm" onClick={handleApprove} disabled={approveMutation.isPending}>
                     <Check size={14} /> Approve
@@ -414,7 +416,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         </div>
       )}
 
-      {studioTab === 'pending' && isAdmin && (
+      {studioTab === 'pending' && canApprove && (
         <div className="space-y-3">
           {pendingTemplates.map((t) => (
             <Card key={t._id} className="p-4 flex items-center justify-between bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)]">

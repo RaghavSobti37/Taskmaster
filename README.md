@@ -130,10 +130,12 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Mail Template Studio & Outbound HTML Pipeline
 
-* **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` — visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft → submit → admin approve/reject workflow.
+* **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` — visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft → submit → approve/reject workflow.
+* **Named approvers:** `shared/mailTemplateApprovers.js` lists emails who can approve/reject pending templates in addition to admin-department users (`canApproveMailTemplates` on client + server). Submit notifications go to both admin department and named approvers.
+* **Emails page access:** `/emails` is available to every authenticated user (`hasPageAccess` bypass for `emails`); `emails` is included in `BASE_PAGE_KEYS` for department defaults.
 * **Indexed variables:** `indexedTemplateVariables.js` (client + server) maps HolySheet columns to numbered tokens with dummy preview values for QA and design review.
 * **Unified send path:** `buildFinalEmailHtml.js` + `normalizeOutboundEmailHtml.js` normalize Quill/raw HTML, inline CSS when needed, append signature/footer, then hand off to the locked tracking layer — preview and live send share one pipeline.
-* **Template API:** Extended `/api/mail/templates` routes for CRUD, pending queue, preview, and approval actions (`mailTemplateHelpers.js`).
+* **Template API:** Extended `/api/mail/templates` routes for CRUD, pending queue, preview, and approval actions (`mailTemplateHelpers.js`); `server/tests/mailTemplateApprovers.test.js` guards approver allowlist.
 
 ### Task Creator vs Assignee Split
 

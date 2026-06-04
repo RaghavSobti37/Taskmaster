@@ -70,7 +70,7 @@ const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key));
 
 const BASE_PAGE_KEYS = [
   'dashboard', 'calendar', 'todo', 'inbox',
-  'projects', 'assets', 'schedule', 'logs',
+  'projects', 'assets', 'schedule', 'logs', 'emails',
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
@@ -110,6 +110,7 @@ const getUserPagePermissions = (user) => resolveDepartmentPages(user?.department
 
 const hasPageAccess = (user, pageKey) => {
   if (!pageKey) return true;
+  if (pageKey === 'emails' && user) return true;
   if (isDepartmentAdmin(user?.departmentId)) return ALL_PAGE_KEYS.includes(pageKey);
   return getUserPagePermissions(user).includes(pageKey);
 };

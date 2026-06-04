@@ -7,6 +7,7 @@ const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { canApproveMailTemplates } = require('../utils/mailTemplateApprovers');
 const { getDailyLimitForProvider, FREE_ROTATION_PROVIDER_KEYS } = require('../utils/smtpPresets');
 const { mergeProviderCredentials } = require('../utils/profileCredentials');
 const {
@@ -31,8 +32,8 @@ const { normalizeOutboundEmailHtml } = require('../utils/normalizeOutboundEmailH
 
 router.get('/templates/pending', protect, async (req, res) => {
   try {
-    if (!isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!canApproveMailTemplates(req.user)) {
+      return res.status(403).json({ error: 'Mail template approval access required' });
     }
     await migrateLegacyTemplates();
     const templates = await MailTemplate.find({ status: 'pending_approval' })
@@ -173,8 +174,8 @@ router.post('/templates/:id/submit', protect, async (req, res) => {
 
 router.post('/templates/:id/approve', protect, async (req, res) => {
   try {
-    if (!isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!canApproveMailTemplates(req.user)) {
+      return res.status(403).json({ error: 'Mail template approval access required' });
     }
     const template = await MailTemplate.findById(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });
@@ -201,8 +202,8 @@ router.post('/templates/:id/approve', protect, async (req, res) => {
 
 router.post('/templates/:id/reject', protect, async (req, res) => {
   try {
-    if (!isAdminUser(req.user)) {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!canApproveMailTemplates(req.user)) {
+      return res.status(403).json({ error: 'Mail template approval access required' });
     }
     const template = await MailTemplate.findById(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });

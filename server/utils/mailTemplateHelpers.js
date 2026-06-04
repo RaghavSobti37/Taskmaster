@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const { createNotification } = require('../services/notificationDispatcher');
 const { isAdminUser } = require('./departmentPermissions');
+const { canApproveMailTemplates } = require('./mailTemplateApprovers');
+const { MAIL_TEMPLATE_APPROVER_EMAILS } = require('../../shared/mailTemplateApprovers');
 const { getEffectiveTemplateContent } = require('./indexedTemplateVariables');
 
 const migrateLegacyTemplates = async () => {
@@ -20,31 +22,40 @@ const mapToObject = (mapOrObj) => {
 
 const notifyAdminsTemplateSubmitted = async (template, submitter) => {
   const adminDept = await Department.findOne({ slug: 'admin' }).lean();
-  const filter = adminDept ? { departmentId: adminDept._id } : {};
-  const admins = await User.find(filter).select('_id name').lean();
+  const adminFilter = adminDept ? { departmentId: adminDept._id } : {};
+  const admins = await User.find(adminFilter).select('_id name email').lean();
+  const namedApprovers = await User.find({
+    email: { $in: MAIL_TEMPLATE_APPROVER_EMAILS.map((e) => e.toLowerCase()) },
+  }).select('_id name email').lean();
+
   const submitterId = String(submitter._id || submitter);
+  const recipients = new Map();
+  for (const u of [...admins, ...namedApprovers]) {
+    if (u?._id && String(u._id) !== submitterId) {
+      recipients.set(String(u._id), u);
+    }
+  }
+
   await Promise.all(
-    admins
-      .filter((a) => String(a._id) !== submitterId)
-      .map((admin) =>
-        createNotification({
-          recipientId: admin._id,
-          title: 'Email template pending approval',
-          message: `${submitter.name || 'A user'} submitted "${template.name}" for approval.`,
-          category: 'system',
-          actionUrl: '/emails',
-          actorId: submitter._id,
-          sendEmail: false,
-        }).catch(() => null)
-      )
+    [...recipients.values()].map((recipient) =>
+      createNotification({
+        recipientId: recipient._id,
+        title: 'Email template pending approval',
+        message: `${submitter.name || 'A user'} submitted "${template.name}" for approval.`,
+        category: 'system',
+        actionUrl: '/emails',
+        actorId: submitter._id,
+        sendEmail: false,
+      }).catch(() => null)
+    )
   );
 };
 
 const assertCanEditTemplate = (template, user) => {
   const isOwner = template.createdBy?.toString() === user._id?.toString();
   if (template.status === 'pending_approval') {
-    if (!isAdminUser(user)) {
-      return { ok: false, error: 'Only admins can edit templates pending approval' };
+    if (!canApproveMailTemplates(user)) {
+      return { ok: false, error: 'Only template approvers can edit templates pending approval' };
     }
     return { ok: true };
   }

@@ -191,74 +191,76 @@ assertSafeDbTarget(dbUri, { source: dbSource });
 
 const maskedUri = maskMongoUri(dbUri);
 const resolvedDbName = getDbNameFromUri(dbUri);
-console.log(`[SYSTEM] Initializing DB Connection (${dbSource}): ${maskedUri}`);
-if (resolvedDbName) {
-  console.log(`[SYSTEM] Target database name: ${resolvedDbName}`);
-}
+if (process.env.NODE_ENV !== 'test') {
+  console.log(`[SYSTEM] Initializing DB Connection (${dbSource}): ${maskedUri}`);
+  if (resolvedDbName) {
+    console.log(`[SYSTEM] Target database name: ${resolvedDbName}`);
+  }
 
-mongoose.connect(dbUri, {
-  serverSelectionTimeoutMS: 30000,
-  socketTimeoutMS: 60000,
-  heartbeatFrequencyMS: 10000,
-})
-  .then(() => {
-    const connectedDb = mongoose.connection.db?.databaseName || resolvedDbName || 'unknown';
-    console.log(`[SUCCESS] MongoDB Connected — database: ${connectedDb}`);
+  mongoose.connect(dbUri, {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 60000,
+    heartbeatFrequencyMS: 10000,
+  })
+    .then(() => {
+      const connectedDb = mongoose.connection.db?.databaseName || resolvedDbName || 'unknown';
+      console.log(`[SUCCESS] MongoDB Connected — database: ${connectedDb}`);
 
-    const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('./utils/trackingUrls');
-    console.log(`[MAIL] Tracking pixel base URL: ${resolveTrackingApiBaseUrl()}`);
-    const trackingWarn = getTrackingDbMismatchWarning();
-    if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
+      const { resolveTrackingApiBaseUrl, getTrackingDbMismatchWarning } = require('./utils/trackingUrls');
+      console.log(`[MAIL] Tracking pixel base URL: ${resolveTrackingApiBaseUrl()}`);
+      const trackingWarn = getTrackingDbMismatchWarning();
+      if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
 
-    // Auto-repair zero-dipped history snapshots in background (non-blocking)
-    setImmediate(async () => {
-      try {
-        if (mongoose.connection.readyState !== 1) return;
-        const Artist = require('./models/Artist');
-        const artists = await Artist.find().select('_id name analytics analyticsHistory').lean();
-        for (const artist of artists) {
-          if (artist.analyticsHistory && artist.analyticsHistory.length > 0) {
-            const currentIg = artist.analytics?.instagram?.followers || 0;
-            const currentSp = artist.analytics?.spotify?.followers || 0;
+      // Auto-repair zero-dipped history snapshots in background (non-blocking)
+      setImmediate(async () => {
+        try {
+          if (mongoose.connection.readyState !== 1) return;
+          const Artist = require('./models/Artist');
+          const artists = await Artist.find().select('_id name analytics analyticsHistory').lean();
+          for (const artist of artists) {
+            if (artist.analyticsHistory && artist.analyticsHistory.length > 0) {
+              const currentIg = artist.analytics?.instagram?.followers || 0;
+              const currentSp = artist.analytics?.spotify?.followers || 0;
 
-            const cleanHistory = artist.analyticsHistory.filter((h) => {
-              const ig = h.metrics?.instagram?.followers;
-              const sp = h.metrics?.spotify?.followers;
-              if (currentIg > 0 && ig === 0) return false;
-              if (currentSp > 0 && sp === 0) return false;
-              return true;
-            });
-
-            if (cleanHistory.length !== artist.analyticsHistory.length) {
-              const removedCount = artist.analyticsHistory.length - cleanHistory.length;
-              await Artist.findByIdAndUpdate(artist._id, {
-                $set: { analyticsHistory: cleanHistory },
+              const cleanHistory = artist.analyticsHistory.filter((h) => {
+                const ig = h.metrics?.instagram?.followers;
+                const sp = h.metrics?.spotify?.followers;
+                if (currentIg > 0 && ig === 0) return false;
+                if (currentSp > 0 && sp === 0) return false;
+                return true;
               });
-              console.log(`🧹 [Database Repair] Cleaned ${removedCount} corrupted snapshots for ${artist.name}`);
+
+              if (cleanHistory.length !== artist.analyticsHistory.length) {
+                const removedCount = artist.analyticsHistory.length - cleanHistory.length;
+                await Artist.findByIdAndUpdate(artist._id, {
+                  $set: { analyticsHistory: cleanHistory },
+                });
+                console.log(`🧹 [Database Repair] Cleaned ${removedCount} corrupted snapshots for ${artist.name}`);
+              }
             }
           }
+        } catch (err) {
+          console.error('❌ [Database Repair] Error during startup scan:', err.message);
         }
-      } catch (err) {
-        console.error('❌ [Database Repair] Error during startup scan:', err.message);
-      }
+      });
+    })
+    .catch(err => {
+      console.error('[ERROR] Initial MongoDB connection failed:', err.message);
+      console.log('[SYSTEM] Server will remain active but DB operations will fail until connection is established.');
     });
-  })
-  .catch(err => {
-    console.error('[ERROR] Initial MongoDB connection failed:', err.message);
-    console.log('[SYSTEM] Server will remain active but DB operations will fail until connection is established.');
+
+  mongoose.connection.on('error', err => {
+    console.error('[ERROR] Mongoose connection error:', err.message);
   });
 
-mongoose.connection.on('error', err => {
-  console.error('[ERROR] Mongoose connection error:', err.message);
-});
+  mongoose.connection.on('disconnected', () => {
+    console.warn('[WARN] Mongoose disconnected. Attempting reconnect...');
+  });
 
-mongoose.connection.on('disconnected', () => {
-  console.warn('[WARN] Mongoose disconnected. Attempting reconnect...');
-});
-
-mongoose.connection.on('reconnected', () => {
-  console.log('[SUCCESS] Mongoose reconnected.');
-});
+  mongoose.connection.on('reconnected', () => {
+    console.log('[SUCCESS] Mongoose reconnected.');
+  });
+}
 
 // Routes
 app.use('/api/auth', authRoutes);

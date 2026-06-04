@@ -3,10 +3,10 @@ const { normalizePersonRecord } = require('../utils/personNormalization');
 
 describe('normalizePersonName', () => {
   test('title-cases and produces same nameKey for casing variants', () => {
-    const a = normalizePersonName('Redacted User');
+    const a = normalizePersonName('Raghav Sobti');
     const b = normalizePersonName('raghav  sobti');
-    expect(a.name).toBe('Redacted User');
-    expect(b.name).toBe('Redacted User');
+    expect(a.name).toBe('Raghav Sobti');
+    expect(b.name).toBe('Raghav Sobti');
     expect(a.nameKey).toBe('raghavsobti');
     expect(b.nameKey).toBe(a.nameKey);
   });

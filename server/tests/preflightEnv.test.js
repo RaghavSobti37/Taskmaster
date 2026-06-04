@@ -1,32 +1,20 @@
-/**
- * Pre-flight script contract — retired host detection.
- */
-describe('preflightEnv retired hosts', () => {
-  const runChecks = (envOverrides = {}) => {
-    const errors = [];
-    const RETIRED = ['YOUR-RENDER-SERVICE.onrender.com'];
-    const check = (label, url) => {
-      if (!url) return;
-      const lower = url.toLowerCase();
-      for (const bad of RETIRED) {
-        if (lower.includes(bad)) errors.push(`${label} uses retired host`);
-      }
-    };
-    const env = (k) => (envOverrides[k] || '').trim();
-    check('TRACKING_BASE_URL', env('TRACKING_BASE_URL'));
-    check('SERVER_URL', env('SERVER_URL'));
-    return errors;
-  };
+const { collectPreflightIssues } = require('../scripts/preflightEnv');
 
+describe('preflightEnv retired hosts', () => {
   test('flags retired tracking host', () => {
-    const errors = runChecks({
+    const { errors } = collectPreflightIssues({
+      JWT_SECRET: 'test-secret',
+      MONGODB_URI: 'mongodb://localhost:27017/taskmaster_local',
       TRACKING_BASE_URL: 'https://YOUR-RENDER-SERVICE.onrender.com',
     });
     expect(errors.length).toBeGreaterThan(0);
+    expect(errors.some((e) => /retired host/i.test(e))).toBe(true);
   });
 
   test('allows env-configured API host', () => {
-    const errors = runChecks({
+    const { errors } = collectPreflightIssues({
+      JWT_SECRET: 'test-secret',
+      MONGODB_URI: 'mongodb://localhost:27017/taskmaster_local',
       TRACKING_BASE_URL: 'https://api.example.test',
       SERVER_URL: 'https://api.example.test',
     });

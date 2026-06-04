@@ -62,6 +62,19 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 ---
 
+## Testing
+
+| Command | Scope |
+| --- | --- |
+| `npm test` | Server Jest suite (`server/tests/`, **118** cases) |
+| `npm run ci` | Exposure audit + server tests + client production build |
+
+**CI-friendly:** Integration tests use **MongoDB Memory Server** — no local `mongod` required. The Express app skips startup `mongoose.connect` when `NODE_ENV=test`; `server/tests/setup.js` wires the in-memory URI before routes run.
+
+**Preflight:** `npm run preflight` blocks retired suspended Render API hosts in `TRACKING_BASE_URL` / `SERVER_URL` (see `server/scripts/preflightEnv.js`). Template placeholder `YOUR-RENDER-SERVICE.onrender.com` in docs is allowed; production tracking should use your live Render service URL from the dashboard.
+
+---
+
 ## ◎ Logo philosophy — The Harmonic Frequency
 
 The CoreKnot mark — **The Harmonic Frequency** — is the visual spine of the product. It is not decorative typography; it is a diagram of how **The Stage Company (TSC)** operates as one organism made of six distinct lines of business.

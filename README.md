@@ -126,6 +126,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Attendance hours vs logs:** Time card shows **Worked** (check-in → check-out) and **Not logged** when `(worked − 1h lunch) − daily logs` is ≥ 30 minutes. All `DAILY_LOG` types count (manual, task completion, review). Metrics refresh on fetch, log CRUD, and task completion — shared formula in `shared/attendanceMetrics.js`; `server/utils/refreshAttendanceMetrics.js`.
 * **Local mail tracking guard:** On startup the API logs `[MAIL] ⚠` when public `TRACKING_BASE_URL` is paired with a local database (`taskmaster_local`, `coreknot_local`, etc.). Open/click pixels hit Render; events only persist in the DB your server uses — set `MAIL_USE_PROD_DB=true` for intentional local send tests, or `TRACKING_USE_LOCAL=true` with an ngrok `TRACKING_BASE_URL`.
 * **Attendance office hint (dev):** `GET /api/attendance/work-mode-hint` may treat loopback as office IP only when `NODE_ENV !== production`. Optional `ATTENDANCE_DEBUG=true` logs bypass details (off by default).
+* **Production QA security probes:** Register validates password strength before domain gate (400 for `password123`). Live login probe uses allowed-domain emails and asserts no JWT in JSON (HttpOnly cookie only). Lighthouse on Render defaults to `FRONTEND_URL` (e.g. `https://tsccoreknot.com`), not `localhost:4173`.
 
 ### Mail Template Studio & Outbound HTML Pipeline
 

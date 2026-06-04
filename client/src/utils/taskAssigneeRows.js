@@ -40,10 +40,24 @@ export function buildTaskAssigneeRows(task, assigneeIds = [], directoryUsers = [
     if (uid) assignmentByUserId.set(uid, assignment);
   }
 
-  const ids = (assigneeIds?.length ? assigneeIds : [...assignmentByUserId.keys()]).map(String);
-  const uniqueIds = [...new Set(ids)];
+  const creatorId = resolveUserId(normalized.createdBy);
+  const creatorUser = creatorId
+    ? resolveUserFromRef(normalized.createdBy, directoryById)
+    : null;
 
-  return uniqueIds.map((userId) => {
+  const distinctAssignerIds = new Set();
+  for (const assignment of normalized.assignments || []) {
+    const assigneeId = resolveUserId(assignment.userId);
+    const assignerId = resolveUserId(assignment.assignedBy);
+    if (!assigneeId || !assignerId || assignerId === assigneeId) continue;
+    distinctAssignerIds.add(assignerId);
+  }
+  const showAssignerAttribution = distinctAssignerIds.size > 1;
+
+  const ids = (assigneeIds?.length ? assigneeIds : [...assignmentByUserId.keys()]).map(String);
+  const uniqueIds = [...new Set(ids)].filter((id) => id !== creatorId);
+
+  const assigneeRows = uniqueIds.map((userId) => {
     const assignment = assignmentByUserId.get(userId);
     const user = assignment
       ? resolveUserFromRef(assignment.user || assignment.userId, directoryById)
@@ -53,6 +67,7 @@ export function buildTaskAssigneeRows(task, assigneeIds = [], directoryUsers = [
       : null;
     const assignerId = resolveUserId(assigner);
     const isSelfAssigned = !assignerId || assignerId === userId;
+    const showBy = showAssignerAttribution && !isSelfAssigned;
 
     return {
       userId,
@@ -62,8 +77,24 @@ export function buildTaskAssigneeRows(task, assigneeIds = [], directoryUsers = [
       department: resolveUserDepartmentName(user),
       role: 'assignee',
       roleLabel: 'Assignee',
-      assignerName: isSelfAssigned ? null : assigner?.name,
-      assignerLabel: isSelfAssigned ? null : 'Assigned by',
+      assignerName: showBy ? assigner?.name : null,
+      assignerLabel: showBy ? 'Assigned by' : null,
     };
   });
+
+  if (!creatorId) return assigneeRows;
+
+  const creatorRow = {
+    userId: creatorId,
+    user: creatorUser,
+    name: creatorUser?.name || 'Unknown',
+    avatar: creatorUser?.avatar,
+    department: resolveUserDepartmentName(creatorUser),
+    role: 'creator',
+    roleLabel: 'Creator',
+    assignerName: null,
+    assignerLabel: null,
+  };
+
+  return [creatorRow, ...assigneeRows];
 }

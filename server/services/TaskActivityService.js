@@ -293,7 +293,7 @@ const listActivity = async (taskId, user, { markRead = false } = {}) => {
   }
 
   const rows = await TaskActivity.find({ taskId })
-    .sort({ createdAt: 1 })
+    .sort({ createdAt: -1 })
     .populate('actorId', 'name avatar')
     .populate('assigneeId', 'name avatar')
     .populate('assignedById', 'name avatar')

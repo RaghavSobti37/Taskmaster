@@ -4,6 +4,20 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-04] v1.9.14 — Task Activity & Team Row UX
+
+#### Task history
+- **API:** `TaskActivityService.listActivity` sorts `createdAt` descending (newest first).
+- **Client:** `taskActivityDisplay.js` — timeline panels filter to `created`, `assignment`, `message`; omit self-assignments and status/field-change noise.
+
+#### Task detail header
+- **Creator chip:** `taskAssigneeRows.js` prepends creator from `createdBy` with role `creator`; header locks removal and uses primary action color badge.
+- **Assigner attribution:** “Assigned by” shown only when more than one distinct assigner exists on the task.
+
+Redeploy API + client together. No migration.
+
+---
+
 ### [2026-06-04] v1.9.13 — Mail Template Studio, Creator/Assignee Split & Email Pipeline
 
 #### Mail Template Studio

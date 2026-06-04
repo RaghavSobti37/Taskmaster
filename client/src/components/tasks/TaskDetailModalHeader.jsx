@@ -25,7 +25,13 @@ function AssigneeChip({ row, onRemove, canRemove }) {
       <div className="min-w-0 leading-tight">
         <div className="flex items-center gap-1 min-w-0">
           <span className="text-[11px] font-bold text-[var(--color-text-primary)] truncate">{row.name}</span>
-          <span className="shrink-0 px-1 py-px rounded text-[7px] font-black uppercase tracking-wider bg-[var(--color-brand-teal)]/15 text-[var(--color-brand-teal)]">
+          <span
+            className={`shrink-0 px-1 py-px rounded text-[7px] font-black uppercase tracking-wider ${
+              row.role === 'creator'
+                ? 'bg-[var(--color-action-primary)]/15 text-[var(--color-action-primary)]'
+                : 'bg-[var(--color-brand-teal)]/15 text-[var(--color-brand-teal)]'
+            }`}
+          >
             {row.roleLabel}
           </span>
         </div>
@@ -100,10 +106,12 @@ export default function TaskDetailModalHeader({
           </span>
           <ul className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 content-center max-h-[4.5rem] overflow-y-auto tm-modal-scroll list-none p-0 m-0">
             {assigneeRows.map((row) => {
-              const locked = lockedAssigneeIds.some((id) => String(id) === String(row.userId));
+              const isCreator = row.role === 'creator';
+              const locked = isCreator
+                || lockedAssigneeIds.some((id) => String(id) === String(row.userId));
               return (
                 <AssigneeChip
-                  key={row.userId}
+                  key={`${row.role}-${row.userId}`}
                   row={row}
                   canRemove={teamEditable && !locked}
                   onRemove={

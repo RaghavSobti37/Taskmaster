@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.13-126d5e?style=flat-square" alt="Version 1.9.13" />
+  <img src="https://img.shields.io/badge/version-1.9.14-126d5e?style=flat-square" alt="Version 1.9.14" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -133,9 +133,10 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 ### 💬 Task Activity Timeline & Mentions
 
 * **Per-task conversation:** `TaskDetailModal` splits into header, compose, history, and activity timeline — `@mentions` in messages with unread badges (`TaskMentionBadge.jsx`) and server-side receipt tracking (`TaskMentionReceipt.js`).
-* **Activity API:** `GET/POST /api/tasks/:id/activity` records `created`, `assignment`, `message`, `status_change`, and `field_change` events (`TaskActivity` model, `TaskActivityService.js`); background purge worker trims old rows.
+* **Activity API:** `GET/POST /api/tasks/:id/activity` records `created`, `assignment`, `message`, `status_change`, and `field_change` events (`TaskActivity` model, `TaskActivityService.js`); list returns **newest first**; background purge worker trims old rows.
+* **History UI filter:** `taskActivityDisplay.js` shows only `created`, `assignment`, and `message` in timeline panels — hides status/field edits and self-assignments so the feed reads like a conversation.
 * **Modal stability:** `buildTaskAssigneeRows` guards null tasks; header uses `displayTask ?? task` so reopening a task after a cold mount no longer crashes on `assignments`.
-* **Assignee chips:** `taskAssigneeRows.js` + `TaskDetailModalHeader.jsx` show avatar, department, and assigner context in the team row.
+* **Team row:** Creator appears as a locked **Creator** chip (distinct from assignees); assignees show **Assigned by** only when multiple people assigned the task; creator is never duplicated as an assignee chip.
 
 ### 📅 Attendance Prompt UX (v1.9.11)
 

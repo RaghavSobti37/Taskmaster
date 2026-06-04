@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTaskActivity, usePostTaskMessage } from '../../hooks/queries/tasks';
 import { resolveTaskId } from '../../utils/taskCompletion';
+import { filterTaskActivityForDisplay } from '../../utils/taskActivityDisplay';
 import TaskActivityTimeline from './TaskActivityTimeline';
 import TaskActivityComposer from './TaskActivityComposer';
 
@@ -12,6 +13,7 @@ export default function TaskActivityPanel({ task, enabled = true }) {
     enabled: enabled && !!taskId,
     markRead: true,
   });
+  const visibleItems = useMemo(() => filterTaskActivityForDisplay(items), [items]);
 
   const postMutation = usePostTaskMessage(taskId);
 
@@ -25,7 +27,7 @@ export default function TaskActivityPanel({ task, enabled = true }) {
         History & conversation
       </h4>
       <div className="max-h-[min(280px,40vh)] overflow-y-auto tm-modal-scroll pr-1">
-        <TaskActivityTimeline items={items} isLoading={isLoading} />
+        <TaskActivityTimeline items={visibleItems} isLoading={isLoading} />
       </div>
       <TaskActivityComposer
         taskId={taskId}

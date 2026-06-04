@@ -28,6 +28,11 @@ describe('attendanceMetrics', () => {
     expect(sumDailyLogMinutes(logs)).toBe(105);
   });
 
+  test('sumDailyLogMinutes reads manual logs from payload.timeSpent', () => {
+    const logs = [{ payload: { timeSpent: '2h 15m' }, details: {} }];
+    expect(sumDailyLogMinutes(logs)).toBe(135);
+  });
+
   test('computeUnloggedMinutes is shortfall only, not absolute gap', () => {
     expect(computeUnloggedMinutes(540, 105)).toBe(375);
     expect(computeUnloggedMinutes(540, 540)).toBe(0);

@@ -32,11 +32,10 @@ const getCookieOptions = () => {
 };
 
 const clearCookieVariants = (res, name) => {
-  const expired = new Date(0);
   const variants = [
-    { ...getCookieOptions(), maxAge: 0, expires: expired },
-    { path: '/', httpOnly: true, secure: false, sameSite: 'lax', maxAge: 0, expires: expired },
-    { path: '/', httpOnly: true, secure: true, sameSite: 'none', maxAge: 0, expires: expired },
+    { ...getCookieOptions(), maxAge: 0 },
+    { path: '/', httpOnly: true, secure: false, sameSite: 'lax', maxAge: 0 },
+    { path: '/', httpOnly: true, secure: true, sameSite: 'none', maxAge: 0 },
     {
       path: '/',
       httpOnly: true,
@@ -44,7 +43,6 @@ const clearCookieVariants = (res, name) => {
       sameSite: 'none',
       partitioned: true,
       maxAge: 0,
-      expires: expired,
     },
   ];
   for (const opts of variants) {

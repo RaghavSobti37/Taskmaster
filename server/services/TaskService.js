@@ -581,7 +581,7 @@ exports.getTasks = async (filter, { userId = null } = {}) => {
   const tasks = await Task.find(filter)
     .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours completedAt updatedAt createdBy mentionAccessIds color')
     .populate('projectId', 'name workspace')
-    .populate('createdBy', 'name avatar')
+    .populate({ path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } })
     .populate(TASK_ASSIGNEE_POPULATE)
     .lean({ virtuals: true });
 
@@ -1029,7 +1029,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
 
   const populatedTask = await Task.findById(task._id).session(session)
-    .populate('createdBy', 'name avatar')
+    .populate({ path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } })
     .populate(TASK_ASSIGNEE_POPULATE);
 
   if (!populatedTask) {
@@ -1068,7 +1068,7 @@ exports.deleteTask = async (taskId, user, session) => {
 const populateTaskQuery = () => Task.find()
   .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours createdBy color')
   .populate('projectId', 'name workspace')
-  .populate('createdBy', 'name avatar')
+  .populate({ path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } })
   .populate(TASK_ASSIGNEE_POPULATE);
 
 exports.getReviewQueue = async (user) => {

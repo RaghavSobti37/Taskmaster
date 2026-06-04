@@ -182,7 +182,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         onClose={onClose}
         size="task"
         zIndex={100}
-        panelClassName="!max-h-[min(92vh,960px)] !w-[min(calc(100vw-2rem),1400px)]"
+        panelClassName="!max-h-[min(92vh,960px)] !w-[min(calc(100vw-1rem),1400px)] sm:!w-[min(calc(100vw-2rem),1400px)]"
       >
         <TaskDetailModalHeader
           onClose={onClose}
@@ -203,8 +203,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
         />
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row">
-            <div className="flex-1 min-w-0 min-h-0 overflow-y-auto tm-modal-scroll p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
+          <div className="flex flex-1 min-h-0 flex-col lg:flex-row overflow-y-auto lg:overflow-hidden tm-modal-scroll">
+            <div className="flex-1 min-w-0 shrink-0 lg:shrink lg:min-h-0 lg:overflow-y-auto lg:tm-modal-scroll p-4 sm:p-5 md:p-6 lg:p-7 space-y-5 border-b lg:border-b-0 lg:border-r border-[var(--color-bg-border)]">
               <TaskFormFields
                 values={formValues}
                 onChange={setFormValues}
@@ -221,7 +221,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 onTitleChange={setTitle}
                 lockedAssigneeIds={creatorId ? [creatorId] : []}
                 mentionSessionKey={isOpen ? task._id : undefined}
-                inlineEdit
+                inlineEdit={false}
                 collapseCategoryWhenSelected
                 showDueDateInForm={false}
                 afterTitle={
@@ -230,7 +230,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                     onMessageChange={setDesc}
                     disabled={isDone}
                     mentionSessionKey={isOpen ? task._id : undefined}
-                    inlineEdit
+                    inlineEdit={false}
                     status={formValues.status}
                     onStatusChange={(status, progress) => setFormValues((v) => ({ ...v, status, progress }))}
                     statusDisabled={isDone}
@@ -250,7 +250,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               )}
             </div>
 
-            <div className="w-full lg:w-[min(400px,36vw)] shrink-0 min-h-[280px] lg:min-h-0 lg:max-h-none flex flex-col">
+            <div className="w-full lg:w-[min(400px,36vw)] shrink-0 flex flex-col min-h-[220px] max-h-[min(42vh,360px)] lg:max-h-none lg:min-h-0 border-t lg:border-t-0 border-[var(--color-bg-border)]">
               <TaskHistoryPanel task={displayTask || task} enabled={isOpen} />
             </div>
           </div>

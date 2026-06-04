@@ -1,25 +1,39 @@
 const Attendance = require('../models/Attendance');
 const Log = require('../models/Log');
 const { buildAttendanceMetrics } = require('./attendanceMetrics');
-const { sumDailyLogMinutes } = require('../../shared/attendanceMetrics');
-const { getDateKey, toStartOfDay, endOfDayFromKey } = require('./attendanceDate');
+const {
+  sumDailyLogMinutes,
+  filterLogsForDateKey,
+} = require('../../shared/attendanceMetrics');
+const { getDateKey, toStartOfDay } = require('./attendanceDate');
 
+/**
+ * Sum all DAILY_LOG minutes for a user on the attendance calendar day (IST).
+ * Uses date-key matching (same day as Daily Logs page) and bypassTenant so
+ * manual logs are not dropped by tenant scoping or createdAt range edge cases.
+ */
 async function fetchDailyLogMinutesForDay(userId, dateInput) {
   const dateKey = getDateKey(dateInput);
-  const dayStart = toStartOfDay(dateInput);
-  const dayEnd = endOfDayFromKey(dateKey);
+  if (!dateKey || !userId) return 0;
+
+  const uid = String(userId);
   const logs = await Log.find({
-    userId,
+    $or: [{ userId }, { actorId: uid }],
     action: 'DAILY_LOG',
-    createdAt: { $gte: dayStart, $lte: dayEnd },
-  }).select('details.timeSpent').lean();
-  return sumDailyLogMinutes(logs);
+  })
+    .select('createdAt details payload action')
+    .setOptions({ bypassTenant: true })
+    .lean();
+
+  const dayLogs = filterLogsForDateKey(logs, dateKey);
+  return sumDailyLogMinutes(dayLogs);
 }
 
 async function refreshAttendanceMetrics(attendanceDoc) {
   if (!attendanceDoc) return null;
   const inTime = attendanceDoc.inTimeRecord?.manualTimestamp;
   const outTime = attendanceDoc.outTimeRecord?.manualTimestamp;
+
   if (!inTime || !outTime) return attendanceDoc;
 
   const loggedMinutes = await fetchDailyLogMinutesForDay(
@@ -34,6 +48,7 @@ async function refreshAttendanceMetrics(attendanceDoc) {
   attendanceDoc.discrepancyMinutes = metrics.discrepancyMinutes;
   attendanceDoc.overtimeMinutes = metrics.overtimeMinutes;
   await attendanceDoc.save();
+
   return attendanceDoc;
 }
 
@@ -50,6 +65,7 @@ async function refreshAttendanceMetricsFromLog(log) {
 }
 
 module.exports = {
+  fetchDailyLogMinutesForDay,
   refreshAttendanceMetrics,
   refreshAttendanceMetricsForUserDay,
   refreshAttendanceMetricsFromLog,

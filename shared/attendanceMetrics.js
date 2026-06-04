@@ -1,7 +1,30 @@
 const { parseTimeSpentToMinutes } = require('./timeSpent');
+const { toDateKey } = require('./dateValidation');
 
 const LUNCH_BREAK_MINUTES = 60;
 const UNLOGGED_THRESHOLD_MINUTES = 30;
+
+/** Read minutes from a daily log row (manual, task completion, or review). */
+function readLogTimeSpentMinutes(log) {
+  const details = log?.details || {};
+  const payload = log?.payload || {};
+  const raw = details.timeSpent ?? details.time ?? payload.timeSpent ?? payload.time;
+  if (raw == null || raw === '') {
+    const hours = Number(details.hours);
+    if (Number.isFinite(hours) && hours > 0) return Math.round(hours * 60);
+    return 0;
+  }
+  if (typeof raw === 'number') {
+    return raw > 24 ? Math.round(raw) : Math.round(raw * 60);
+  }
+  return parseTimeSpentToMinutes(raw);
+}
+
+/** Keep logs whose createdAt falls on the same app calendar day (IST) as dateKey. */
+function filterLogsForDateKey(logs = [], dateKey) {
+  if (!dateKey) return [];
+  return logs.filter((log) => toDateKey(log.createdAt) === dateKey);
+}
 
 function parseClockToMinutes(timeStr) {
   if (!timeStr || !String(timeStr).includes(':')) return 0;
@@ -17,10 +40,7 @@ function getWorkedMinutesFromTimes(inTime, outTime) {
 }
 
 function sumDailyLogMinutes(logs = []) {
-  return logs.reduce(
-    (sum, log) => sum + parseTimeSpentToMinutes(log?.details?.timeSpent),
-    0
-  );
+  return logs.reduce((sum, log) => sum + readLogTimeSpentMinutes(log), 0);
 }
 
 function computeExpectedLogMinutes(workedMinutes) {
@@ -52,6 +72,8 @@ function buildAttendanceMetrics({ inTime, outTime, logs = [], loggedMinutes: log
 module.exports = {
   LUNCH_BREAK_MINUTES,
   UNLOGGED_THRESHOLD_MINUTES,
+  readLogTimeSpentMinutes,
+  filterLogsForDateKey,
   parseClockToMinutes,
   getWorkedMinutesFromTimes,
   sumDailyLogMinutes,

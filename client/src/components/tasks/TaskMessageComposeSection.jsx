@@ -31,7 +31,7 @@ export default function TaskMessageComposeSection({
           editSessionKey={mentionSessionKey}
           className={inputClass}
           rows={5}
-          placeholder="Type an update, then Save — it posts to History on the right and this field clears. @name notifies teammates."
+          placeholder="Type an update, then Save — it posts to History and clears here. @name notifies teammates."
           menuPlacement="below"
         />
         {disabled && (

@@ -166,7 +166,10 @@ const NexusDropdown = ({
   }
 
   const filteredOptions = searchable && search
-    ? options.filter((opt) => opt.label.toLowerCase().includes(search.toLowerCase()))
+    ? options.filter((opt) => {
+        const hay = String(opt.searchKey || opt.label || '').toLowerCase();
+        return hay.includes(search.toLowerCase());
+      })
     : options;
 
   const isCompact = variant === 'compact';

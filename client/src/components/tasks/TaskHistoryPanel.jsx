@@ -4,13 +4,35 @@ import { resolveTaskId } from '../../utils/taskCompletion';
 import { filterTaskActivityForDisplay } from '../../utils/taskActivityDisplay';
 import TaskActivityTimeline from './TaskActivityTimeline';
 
+function withCreatedFallback(items, task) {
+  const filtered = filterTaskActivityForDisplay(items);
+  if (filtered.some((item) => item.type === 'created')) return filtered;
+  const createdAt = task?.createdAt;
+  if (!createdAt) return filtered;
+  const creator = task?.createdBy;
+  const actor =
+    creator && typeof creator === 'object'
+      ? { _id: creator._id, name: creator.name, avatar: creator.avatar }
+      : null;
+  return [
+    {
+      _id: `local-created-${resolveTaskId(task)}`,
+      type: 'created',
+      body: '',
+      createdAt,
+      actor,
+    },
+    ...filtered,
+  ];
+}
+
 export default function TaskHistoryPanel({ task, enabled = true }) {
   const taskId = resolveTaskId(task);
-  const { data: items = [], isLoading } = useTaskActivity(taskId, {
+  const { data: items = [], isLoading, isError } = useTaskActivity(taskId, {
     enabled: enabled && !!taskId,
     markRead: true,
   });
-  const visibleItems = useMemo(() => filterTaskActivityForDisplay(items), [items]);
+  const visibleItems = useMemo(() => withCreatedFallback(items, task), [items, task]);
 
   return (
     <aside className="flex flex-col min-h-0 h-full bg-[var(--color-bg-workspace)]/50">
@@ -23,7 +45,11 @@ export default function TaskHistoryPanel({ task, enabled = true }) {
         </p>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto tm-modal-scroll p-4">
-        <TaskActivityTimeline items={visibleItems} isLoading={isLoading} />
+        {isError ? (
+          <p className="text-xs text-red-500 py-4 text-center">Could not load history.</p>
+        ) : (
+          <TaskActivityTimeline items={visibleItems} isLoading={isLoading} />
+        )}
       </div>
     </aside>
   );

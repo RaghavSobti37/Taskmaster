@@ -41,6 +41,7 @@ const TaskFormFields = ({
   showTitle = false,
   showDescription = false,
   lockedAssigneeIds = [],
+  excludeAssigneeUserId,
   mentionSessionKey,
   inlineEdit = false,
   afterTitle = null,
@@ -112,7 +113,8 @@ const TaskFormFields = ({
             onChange={onTitleChange}
             disabled={disabled}
             editSessionKey={mentionSessionKey}
-            className={`${inputClass} font-bold`}
+            className={`${inputClass} font-bold break-words`}
+            wrapRichText
             placeholder="What needs to be done? @name #Asset"
           />
         </div>
@@ -151,7 +153,7 @@ const TaskFormFields = ({
             disabled={disabled}
             editSessionKey={mentionSessionKey}
             className={`${inputClass} min-h-[88px] resize-y`}
-            placeholder="Type an update, then Save — it posts to History on the task and clears for your next message. @name notifies teammates."
+            placeholder="Type an update, then Save — it posts to History and clears here. @name notifies teammates."
           />
         </div>
       )}
@@ -164,6 +166,8 @@ const TaskFormFields = ({
             onChange={(assignees) => set('assignees', assignees)}
             disabled={disabled}
             lockedIds={lockedAssigneeIds}
+            excludeUserId={excludeAssigneeUserId}
+            showAvatarAndDepartment
           />
           <PrioritySelect
             value={values.priority}

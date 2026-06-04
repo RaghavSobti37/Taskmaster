@@ -3,7 +3,8 @@ import { Button, Badge } from '../ui';
 import { Lock, Check, LogIn, LogOut, RotateCcw, Info } from 'lucide-react';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
-import { useWorkModeHint } from '../../hooks/useTaskmasterQueries';
+import { useWorkModeHint, useLogs } from '../../hooks/useTaskmasterQueries';
+import { useAuth } from '../../contexts/AuthContext';
 import WorkModeToggle from './WorkModeToggle';
 import {
   getSelfMarkPanelVisibility,
@@ -16,6 +17,7 @@ import { formatMinuteGap } from '../../utils/timeSpent';
 import {
   getWorkedMinutesFromEntry,
   getUnloggedMinutesFromEntry,
+  getLoggedMinutesFromDailyLogs,
   UNLOGGED_THRESHOLD_MINUTES,
 } from '../../utils/attendanceMetrics';
 
@@ -170,6 +172,21 @@ const UnifiedTimeCard = ({
   isLoading,
   readOnly = false,
 }) => {
+  const { user } = useAuth();
+  const logUserId = entry?.userId || user?._id;
+  const hasIn = hasRecordedCheckIn(entry);
+  const hasOut = hasRecordedCheckOut(entry);
+  const { data: dailyLogs = [] } = useLogs(
+    logUserId,
+    500,
+    Boolean(logUserId && hasIn && hasOut)
+  );
+
+  const loggedMinutesLive = React.useMemo(
+    () => (hasIn && hasOut ? getLoggedMinutesFromDailyLogs(entry, dailyLogs) : null),
+    [entry, dailyLogs, hasIn, hasOut]
+  );
+
   const [localForm, setLocalForm] = React.useState({
     inTime: '',
     outTime: '',
@@ -187,8 +204,6 @@ const UnifiedTimeCard = ({
   const outAppr = !!entry?.outTimeRecord?.isApproved;
   const inFieldLocked = inAppr || (readOnly && (!editScope || editScope === 'in'));
   const outFieldLocked = outAppr || (readOnly && (!editScope || editScope === 'out'));
-  const hasIn = hasRecordedCheckIn(entry);
-  const hasOut = hasRecordedCheckOut(entry);
   const inDisplayTime = formatAttendanceRecordTime(entry?.inTimeRecord);
   const outDisplayTime = formatAttendanceRecordTime(entry?.outTimeRecord);
   const { addToast } = useSystemToast();
@@ -294,7 +309,11 @@ const UnifiedTimeCard = ({
   const showIdentity = !hideTitleRow && (title || subTitle);
   const showOvertime = entry?.overtimeMinutes > 0;
   const workedMinutes = hasIn && hasOut ? getWorkedMinutesFromEntry(entry) : 0;
-  const unloggedMinutes = hasIn && hasOut ? getUnloggedMinutesFromEntry(entry) : 0;
+  const unloggedMinutes = hasIn && hasOut
+    ? getUnloggedMinutesFromEntry(entry, {
+        loggedMinutesOverride: loggedMinutesLive ?? undefined,
+      })
+    : 0;
   const showHoursWorked = workedMinutes > 0;
   const showNotLogged = unloggedMinutes >= UNLOGGED_THRESHOLD_MINUTES;
   const showBadges = showOvertime || showHoursWorked || showNotLogged;

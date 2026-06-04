@@ -40,10 +40,13 @@ export const filterTasksForUser = (tasks, userId) => {
     if (a?.userId) return String(a.userId);
     return null;
   };
-  return normalizeTasks(tasks).filter((t) => {
+  const filtered = normalizeTasks(tasks).filter((t) => {
+    const creatorId = t.createdBy?._id || t.createdBy;
+    if (creatorId && String(creatorId) === uid) return true;
     if (t.assigneeIds?.includes(uid)) return true;
     return t.assignees?.some((a) => resolveAssigneeId(a) === uid);
   });
+  return filtered;
 };
 
 export const useTasks = (userId, { includeOldCompleted = false } = {}) => {
@@ -111,10 +114,13 @@ export const useCreateTask = () => {
       return { snapshots, tempId };
     },
     onSuccess: (createdTask, _variables, context) => {
-      if (!context?.tempId) return;
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === context.tempId ? { ...createdTask, _pending: false } : t))
-      );
+      if (context?.tempId) {
+        updateAllTaskQueries(queryClient, (tasks) =>
+          (tasks || []).map((t) => (t._id === context.tempId ? { ...createdTask, _pending: false } : t))
+        );
+      } else if (createdTask?._id) {
+        updateAllTaskQueries(queryClient, (tasks) => [createdTask, ...(tasks || [])]);
+      }
     },
     onError: (err, _variables, context) => {
       restoreTaskQuerySnapshots(queryClient, context?.snapshots);
@@ -180,6 +186,7 @@ export const useTaskActivity = (taskId, { enabled = true, markRead = true } = {}
     },
     enabled: enabled && !!taskId,
     staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 

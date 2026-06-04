@@ -2,8 +2,8 @@
 
 > **Purpose:** Single authoritative export for any AI coding agent working on this codebase.  
 > **Product name:** CoreKnot (repo folder: `Taskmaster`, GitHub: `CoreKnot`)  
-> **Version:** 1.7.46 (README badge; package.json may lag)  
-> **Last compiled:** 2026-06-02  
+> **Version:** 1.0.0 stable (`v1.0.0` git tag; client + server `package.json` `1.0.0`)  
+> **Last compiled:** 2026-06-04  
 > **Read this entire document before making changes.**
 
 ---
@@ -49,7 +49,7 @@ CoreKnot is an **enterprise multi-tenant CRM & operations hub** built for agency
 - **Data Hub** — unified contact graph across Exly, leads, TSC, booked calls, enquiries, mail, community inlets
 - **Email campaigns** with open/click tracking and geo resolution
 - **Finance document management** with OCR (pdf-parse, tesseract.js)
-- **HR/attendance** with IP-based office verification
+- **HR/attendance** — manual Office/WFH check-in/out, worked vs daily-log reconciliation (1h lunch), live metric refresh
 - **Artist analytics** (Spotify, YouTube, Meta/Instagram OAuth)
 - **Gamification** (XP, levels, weekly leaderboard)
 - **Real-time notifications** (in-app, email, web push)
@@ -73,14 +73,14 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   │   ├── contexts/                  # Auth, Theme, Sidebar, Toast, Confirm
 │   │   ├── hooks/                     # useTaskmasterQueries, useUsdInrRate, useSystemLogs, etc.
 │   │   ├── lib/                       # realtime, notifications, systemLogBridge, pageAnalytics
-│   │   ├── utils/                     # CRM, attendance, mail, usdInr, dataHubInlets, devEnvGuard, etc.
+│   │   ├── utils/                     # CRM, attendance, attendanceMetrics, mail, usdInr, dataHubInlets, devEnvGuard, etc.
 │   │   ├── constants/                 # calendarOptions, etc.
 │   │   ├── config/                    # integrations.config.js (OAuth paths)
 │   │   ├── pages/                     # 57+ page files (admin DataHub, office Subscriptions, etc.)
 │   │   └── components/                # 110+ components (dataHub/, finance/UsdInrAmountFields, mentions/)
 │   ├── vite.config.js
 │   ├── vercel.json                    # API proxy to Render
-│   └── package.json                   # CoreKnot-client v1.7.30
+│   └── package.json                   # CoreKnot-client v1.0.0
 ├── server/                            # Node.js Express API
 │   ├── server.js                      # Entry point, middleware, startup
 │   ├── routes/                        # 43 route files
@@ -96,7 +96,7 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   ├── config/                        # environment, integrations, realtime, uploadthing
 │   ├── plugins/                       # tenantPlugin.js
 │   ├── crm/lib/                       # schema, csv-store, rep-assignment
-│   └── package.json                   # CoreKnot API v1.7.30
+│   └── package.json                   # CoreKnot API v1.0.0
 ├── shared/                            # Cross-runtime shared logic
 │   ├── taskReviewRules.js             # Strict task review governance
 │   ├── projectRoles.js                # Project role ranks
@@ -104,6 +104,8 @@ Taskmaster/                          # Root (also called CoreKnot)
 │   ├── taskPriorityDates.js           # Task date/priority helpers
 │   ├── dataInlets.js                  # Data Hub folder taxonomy + inlet merge helpers
 │   ├── gamificationRules.js           # Shared XP/action rules
+│   ├── attendanceMetrics.js           # Worked / lunch / unlogged minutes (CJS)
+│   ├── attendanceExcludedUsers.js     # Roster + morning-prompt exclusions
 │   ├── dateValidation.js              # IST date-key + no-past-date guards (CJS)
 │   └── mentionTokens.js               # @user / #asset token parsing
 ├── docs/                              # Architecture docs (this file lives here)
@@ -507,7 +509,7 @@ Path: `server/routes/`
 | `projectRoutes.js` | `/api/projects` | protect | Projects, workspaces, members, workload |
 | `taskRoutes.js` | `/api/tasks` | protect | Tasks CRUD, bug report |
 | `userRoutes.js` | `/api/users` | protect/admin | Profile, directory, admin user mgmt |
-| `logRoutes.js` | `/api/logs` | protect | Activity logs, bug reports, QA |
+| `logRoutes.js` | `/api/logs` | protect | Activity logs, daily logs; DAILY_LOG CRUD triggers `refreshAttendanceMetricsFromLog` |
 | `systemLogRoutes.js` | `/api/system-logs` | protect/opsOrAdmin | Client logs, analytics, traces |
 | `chatRoutes.js` | `/api/chat` | protect | Team chat messages |
 | `teamRoutes.js` | `/api/teams` | protect/admin | Team CRUD |
@@ -540,7 +542,7 @@ Path: `server/routes/`
 | `contactRoutes.js` | `/api/contacts` | protect/opsOrAdmin | Contact directory |
 | `exlyRoutes.js` | `/api/exly` | Public webhook; admin protected | Exly bookings, offerings |
 | `financeRoutes.js` | `/api/finance` | protect; opsOnly (after gate) | Invoices, folders, UploadThing, `GET /usd-inr-rate` |
-| `attendanceRoutes.js` | `/api/attendance` | protect | Check-in/out, leave |
+| `attendanceRoutes.js` | `/api/attendance` | protect | Check-in/out, leave; GET refreshes worked/logged/unlogged metrics |
 | `announcementRoutes.js` | `/api/announcements` | Public pixel; rest protect | Broadcast announcements |
 | `adminScriptsRoutes.js` | `/api/admin/scripts` | protect + admin | Maintenance script runner |
 | `dataHubRoutes.js` | `/api/data-hub` | protect + admin | Unified CRM hub: folders, people, analytics, reconcile |
@@ -599,7 +601,10 @@ Critical files:
 - `mergeTags.js` — Template variable substitution
 - `holySheet.js` — HolySheet helpers
 - `sanitizer.js` — Name/email/phone normalization
-- `attendanceDate.js`, `attendanceUsers.js` — IST dates
+- `attendanceDate.js`, `attendanceUsers.js` — IST dates, week ranges
+- `attendanceMetrics.js` — server wrapper over `shared/attendanceMetrics.js` (+ overtime)
+- `refreshAttendanceMetrics.js` — recompute Attendance from in/out + same-day DAILY_LOG sum
+- `attendanceXp.js` — attendance XP on admin lock; day bonus when `unloggedMinutes` < 30
 - `notificationActionUrl.js` — Deep links
 - `encryption.js` — AES for OAuth tokens
 
@@ -715,6 +720,17 @@ Components: Button, Card, Input, Badge, DataTable, TabSwitcher, Switch, NexusMod
 
 ## 12. Feature Modules (Deep Dive)
 
+### v1.0.0 stable release (2026-06-04)
+
+| Area | Highlights |
+|------|------------|
+| **Version** | `1.0.0` packages + git tag `v1.0.0`; prior 1.7.x–1.9.x documented as beta in `docs/VERSION_HISTORY.md` |
+| **Finance** | Documents-hub stat cards; overview charts removed |
+| **Subscriptions** | Monthly vs yearly spend cards (recurring only) |
+| **Leads** | Default table page size 5; full-width filter toolbar |
+| **Exly** | List-price backfill when API returns zero on paid bookings |
+| **Attendance** | Worked / Not logged badges; lunch-adjusted reconciliation; live metric refresh (see Attendance section) |
+
 ### Projects & Tasks
 
 **Pages:** ProjectsView, ProjectCreate, ProjectDetail, TodoPage, SchedulePage
@@ -769,6 +785,8 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 **Pages:** LeadsPage, FollowupsPage, ExlyBookingsPage (legacy list views; Data Hub is admin unified view)
 
+**Leads UI (v1.0.0):** default `pageSize` 5; `toolbarFill` full-width filter row on list pages.
+
 **Lead model key fields:**
 - callStatus, leadStatus, follow-ups, emailStatus
 - assignedRepId → User
@@ -813,7 +831,8 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 **Page:** FinancePage, ProjectFinance, InvoiceTab (settings), ExlyDataContent (admin)
 
-**Features:**
+**Features (v1.0.0):**
+- **Overview hub:** stat cards for documents, files, invoices, pending reimbursements — overview mini-charts removed for cleaner documents-first layout
 - Folder tree structure (FinanceDocument model)
 - UploadThing for file storage
 - OCR via pdf-parse + tesseract.js
@@ -828,6 +847,8 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 **Page:** `/subscriptions` (`SubscriptionsPage.jsx`) — Office nav group; `/office/subscriptions` redirects.
 
 **Model:** `Subscription` — name, INR amount, dueDate, type, periodicity, paymentMode, usedBy (User), reminder tracking.
+
+**v1.0.0 UI:** separate **Monthly Spend** and **Yearly Spend** stat cards (recurring periodicity only; one-time excluded).
 
 **API:** `/api/subscriptions` — CRUD (delete requires opsOrAdmin); shares `getUsdInrRate` with finance.
 
@@ -857,18 +878,49 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 
 ### Attendance & Leave
 
-**Pages:** AttendancePage, Settings AttendanceTab/LeaveTab
+**Pages:** AttendancePage, Settings AttendanceTab/LeaveTab, morning `AttendancePromptModal`, dashboard `MarkAttendanceCard`
 
-**Rules:**
-- IST week boundaries
-- Office IP verification via OFFICE_PUBLIC_IP / whitelist
+**Work mode (v1.9.7+):** Self check-in/out uses **Office ↔ WFH** toggle (`WorkModeToggle.jsx`); `verificationMethod: MANUAL`. Optional `GET /api/attendance/work-mode-hint` pre-selects from `OFFICE_PUBLIC_IP` / `OFFICE_IP_WHITELIST` — no GPS on save.
+
+**Time card metrics (v1.0.0):** `UnifiedTimeCard.jsx` badges when both in/out set:
+
+| Badge | Meaning |
+|-------|---------|
+| **Worked** | Check-in → check-out span (minutes from clock times, not rounded `systemHours` on client) |
+| **Not logged** | `max(0, (worked − 60m lunch) − logged)`; shown when ≥ 30 minutes |
+
+**Formula** (`shared/attendanceMetrics.js`, mirrored in `client/src/utils/attendanceMetrics.js`):
+
+```
+workedMinutes     = outTime − inTime (overnight +24h)
+expectedLogMinutes = max(0, workedMinutes − 60)
+loggedMinutes     = sum of all DAILY_LOG timeSpent that IST calendar day
+unloggedMinutes   = max(0, expectedLogMinutes − loggedMinutes)
+```
+
+**Logged minutes include:** manual daily logs, `TASK_COMPLETION`, and `TASK_REVIEW` (same set as Daily Log page total for the day).
+
+**Refresh triggers** (`server/utils/refreshAttendanceMetrics.js`):
+
+- `GET /api/attendance` — recomputes every row with in+out before response
+- `POST/PUT/DELETE /api/logs` when `action === 'DAILY_LOG'`
+- `TaskService.createTaskDailyLog` after task completion/review logs
+- Check-in/out and ops approve paths (existing `computeAttendanceMetrics`)
+
+**Persistence:** `Attendance.systemHours` (worked decimal hours), `loggedHours`, `unloggedMinutes`, `overtimeMinutes`, legacy `discrepancyMinutes` (= `unloggedMinutes` for XP). **Do not** display stale `discrepancyMinutes` on client — use `getUnloggedMinutesFromEntry()`.
+
+**Gamification:** `attendanceXp.js` — main attendance XP after both in/out **admin-approved**; **ATTENDANCE_DAY_BONUS** when `systemHours` ≥ 8 and `unloggedMinutes` < 30.
+
+**Other rules:**
+- IST week boundaries (`attendanceDate.js`, `endOfDayFromKey` for log queries)
 - Weekends + office holidays = default leave
-- **Independent mark-in / mark-out** — checkout no longer blocked without prior check-in
-- Split admin modals: Morning Check-In vs Evening Check-Out
-- Default admin override work mode: **Office** (self-service still GPS/IP)
+- **Independent mark-in / mark-out**
+- Roster exclusions: `shared/attendanceExcludedUsers.js` + `attendanceUsers.js`
 - Leave request approval workflow (ops/admin)
 
-**Utils:** `attendanceUtils.js`, `attendanceUsers.js`, `officeHolidays.js`
+**Tests:** `server/tests/attendanceMetrics.test.js`, `attendanceXp.test.js`
+
+**Utils:** `attendanceUtils.js`, `attendanceMetrics.js` (client), `attendanceUsers.js`, `officeHolidays.js`
 
 ### Artists / Social Analytics
 
@@ -892,16 +944,18 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 - XPAuditLog for change audit
 - Weekly leaderboard resets Monday 00:00 IST
 - Realtime XP toast on `xp_awarded` socket event
+- **Attendance XP:** granted only after ops approves both check-in and check-out (`attendanceXp.js`, `Attendance.xpGrantedAt`). Day bonus requires ≥ 8h worked and **unlogged** &lt; 30 min (post-lunch vs daily logs).
 
 ### Exly Integration
 
 **Pages:** ExlyCampaignsPage (admin), ExlyBookingsPage (sales linker)
 
-**Metrics (v1.7.28+):**
+**Metrics:**
 - Paid bookings = pricePaid > 0
 - Revenue = sum of pricePaid
 - AOV = paid revenue ÷ paid count
 - Logic in `server/utils/exlyMetrics.js`
+- **v1.0.0:** `exlyUtils.parseExlyMoney`, `inferListPriceFromBookings` — backfill offering `price` when Exly API returns 0 on paid bookings
 
 ### Announcements
 
@@ -920,6 +974,8 @@ owner: 100, manager: 80, admin: 70, artist_management: 60, member: 40, viewer: 2
 ### Inbox / Notifications
 
 **Page:** InboxPage
+
+**Toolbar (v1.9.15+):** Clear all notifications + Mark all read; `DELETE /api/notifications` (category-scoped for non-admin). `useClearAllNotifications` invalidates inbox queries.
 
 **Tri-channel delivery** (notificationDispatcher.js):
 1. In-app → Notification model → `/inbox`
@@ -1107,6 +1163,16 @@ Path: `shared/`
 ### mentionTokens.js
 - Parse/render `@user` and `#asset` tokens in task text
 
+### attendanceMetrics.js
+- `getWorkedMinutesFromTimes(inTime, outTime)` — clock span in minutes
+- `computeExpectedLogMinutes(worked)` — subtract `LUNCH_BREAK_MINUTES` (60)
+- `computeUnloggedMinutes(worked, logged)` — shortfall only (0 if over-logged)
+- `buildAttendanceMetrics({ inTime, outTime, logs | loggedMinutes })`
+- `UNLOGGED_THRESHOLD_MINUTES` = 30 (bonus + UI badge)
+
+### attendanceExcludedUsers.js
+- Ops department slug, named emails, legacy test accounts excluded from ops roster and morning check-in prompt
+
 ---
 
 ## 17. Critical Business Rules
@@ -1133,9 +1199,12 @@ Path: `shared/`
 
 ### Attendance
 
-- Office check-in requires IP match against whitelist
+- Self-service: user picks Office/WFH; IP hint only (`work-mode-hint`), not GPS lock on save
+- **Worked vs logs:** expected loggable time = in→out minus **1 hour lunch**; compare to **all** `DAILY_LOG` minutes that IST day
+- Metrics must be refreshed after log changes — use `refreshAttendanceMetrics.js`, not one-time compute at checkout only
 - Weekends + configured holidays = automatic leave
-- IST timezone for all date calculations
+- IST timezone for attendance dates and log `createdAt` window (`endOfDayFromKey`)
+- Roster exclusions per `shared/attendanceExcludedUsers.js`
 
 ### Gamification
 
@@ -1168,6 +1237,11 @@ Path: `shared/`
 
 - External dispatches (email, socket) happen **after** DB transaction commits
 - Prevents notifying about rolled-back operations
+
+### Daily logs ↔ attendance
+
+- Log mutations (`useCreateLog` / `useUpdateLog` / `useDeleteLog`) invalidate `['attendance']` after server-side `refreshAttendanceMetricsFromLog`
+- Daily Log page totals: all `DAILY_LOG` rows for selected day via `isSameDay(createdAt)`; server uses IST `toStartOfDay` + `endOfDayFromKey` on `createdAt` — keep filters aligned when debugging mismatches
 
 ---
 
@@ -1297,6 +1371,11 @@ From `docs/PROJECT_MEMORY.md` and `client/design_guidelines.md`:
 
 ### Email engine (see Section 13)
 Do not change tracking, geo, HolySheet deselect, raw HTML template logic without explicit user request.
+
+### Logo & spinner (see `docs/LOGO_LOCKED.md`)
+- White Harmonic Frequency mark on `#126d5e`; default loader `frl-v-02`
+- Locked files: `client/src/components/brand/*`, `client/public/brand-mark.svg`, `.brand-logo` in `index.css`
+- Cursor rule: `.cursor/rules/logo-mark-locked.mdc`
 
 ### Verified production behavior
 - Tracking URL must point to CoreKnot-jfw0.onrender.com
@@ -1531,7 +1610,7 @@ Path: `server/models/` (59 files)
 - **FinanceDocument** — folder tree, invoices, UploadThing fileKey, approval workflow
 
 ### HR / Attendance
-- **Attendance** — in/out records, workMode, IP verification
+- **Attendance** — in/out records, `workMode`, `systemHours`, `loggedHours`, `unloggedMinutes`, `overtimeMinutes`, `xpGrantedAt`; legacy `discrepancyMinutes` mirrors unlogged
 - **LeaveRequest** — leave approval workflow
 
 ### Comms & Social
@@ -1579,6 +1658,7 @@ FinanceDocument ──> Project (self-referential folders)
 | README | `README.md` | Human overview, quick start |
 | Project Memory | `docs/PROJECT_MEMORY.md` | Synthesized architecture + mail engine notes |
 | Email Engine Locked | `docs/EMAIL_ENGINE_LOCKED.md` | Frozen email tracking spec |
+| Logo Locked | `docs/LOGO_LOCKED.md` | Harmonic Frequency mark + `frl-v-02` spinner |
 | Transaction Architecture | `docs/transaction_architecture.md` | MongoDB transaction patterns |
 | Startup Guide | `docs/STARTUP_GUIDE.md` | Local setup steps |
 | Local Dev Database | `docs/LOCAL_DEV_DATABASE.md` | Prod→local Mongo sync |
@@ -1590,6 +1670,7 @@ FinanceDocument ──> Project (self-referential folders)
 | Backend Memory | `.specify/memory/backend.md` | Backend-specific notes |
 | Features Page | `.specify/memory/features_page.md` | Feature completion checklist |
 | Cursor Email Rule | `.cursor/rules/email-engine-locked.mdc` | Agent constraint for email engine |
+| Cursor Logo Rule | `.cursor/rules/logo-mark-locked.mdc` | Agent constraint for brand mark + spinner |
 | Design Guidelines | `client/design_guidelines.md` | UI design rules |
 | Implementation Guide | `IMPLEMENTATION_GUIDE.md` | Implementation patterns |
 
@@ -1615,7 +1696,10 @@ Before making changes, verify:
 - [ ] Data Hub changes: update `shared/dataInlets.js` + client `dataHubInlets.js` if inlet keys change
 - [ ] USD/INR UI: use `UsdInrAmountFields` / `useUsdInrRate`; do not hardcode exchange rates
 - [ ] Calendar/task dates: respect `shared/dateValidation.js` no-past rules
+- [ ] Attendance metrics: use `shared/attendanceMetrics.js`; refresh via `refreshAttendanceMetrics.js` when logs or times change
+- [ ] Do not show legacy `discrepancyMinutes` in UI without recomputing — use `unloggedMinutes` / client `getUnloggedMinutesFromEntry`
+- [ ] Logo/spinner: read `docs/LOGO_LOCKED.md` before brand changes
 
 ---
 
-*Compiled from codebase exploration on 2026-06-02 (v1.7.46). For the latest locked email spec, always re-read `docs/EMAIL_ENGINE_LOCKED.md` before touching mail/tracking code.*
+*v1.0.0 stable — compiled 2026-06-04. Re-read `docs/EMAIL_ENGINE_LOCKED.md` before mail/tracking; `docs/LOGO_LOCKED.md` before brand assets.*

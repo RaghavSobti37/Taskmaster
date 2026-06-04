@@ -16,6 +16,10 @@ const isDobMissing = (dateOfBirth) => {
 
 const needsPasswordChange = (user) => Boolean(user?.mustChangePassword);
 
+/** Google OAuth-only accounts with no saved password may set one without the OAuth seed. */
+const canSetPasswordWithoutCurrent = (user) =>
+  Boolean(user?.googleId) && !user?.passwordChangedAt && !user?.password;
+
 const getProfileCompletionIssues = (user) => {
   if (!user) return [];
 
@@ -58,6 +62,10 @@ const attachProfileCompletion = (user) => {
       needsPasswordChange: issues.some((i) => i.id === 'password'),
       issues,
     },
+    authProviders: {
+      google: Boolean(plain.googleId),
+      canSetPasswordWithoutCurrent: canSetPasswordWithoutCurrent(plain),
+    },
   };
 };
 
@@ -65,6 +73,7 @@ module.exports = {
   isPhoneMissing,
   isDobMissing,
   needsPasswordChange,
+  canSetPasswordWithoutCurrent,
   getProfileCompletionIssues,
   attachProfileCompletion,
 };

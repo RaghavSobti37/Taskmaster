@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const { setAuthCookie, clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
 const { createOAuth2Client, resolveGoogleRedirectUri } = require('../utils/googleAuth');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
+const { normalizePasswordInput, passwordCandidatesForCompare } = require('../utils/passwordAuth');
 const { normalizePersonName } = require('../utils/sanitizer');
 const { attachProfileCompletion } = require('../utils/profileCompleteness');
 const { getDefaultSeedPassword } = require('../utils/defaultPassword');
@@ -111,6 +112,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: passwordError });
     }
 
+    const normalizedPassword = normalizePasswordInput(password);
+
     const deptCheck = await resolveSignupDepartment(departmentId);
     if (!deptCheck.ok) {
       return res.status(400).json({ error: deptCheck.error });
@@ -129,10 +132,11 @@ exports.register = async (req, res) => {
     const user = await User.create({
       name: displayName,
       email: emailLower,
-      password,
+      password: normalizedPassword,
       gender: gender || 'male',
       avatar: getRandomAvatar(gender || 'male'),
       departmentId: deptCheck.value,
+      passwordChangedAt: new Date(),
     });
 
     const populated = await User.findById(user._id)
@@ -159,10 +163,16 @@ exports.login = async (req, res) => {
       ? { email: emailTrimmed.toLowerCase() }
       : { $or: [{ phone: emailTrimmed }, { name: emailTrimmed }] };
 
-    const user = await User.findOne(query).select('+password');
+    const user = await User.findOne(query).select('+password').setOptions({ bypassTenant: true });
     let isMatch = false;
     if (user) {
-      isMatch = await user.comparePassword(password);
+      for (const candidate of passwordCandidatesForCompare(password)) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await user.comparePassword(candidate)) {
+          isMatch = true;
+          break;
+        }
+      }
     }
 
     if (user && isMatch) {
@@ -177,6 +187,12 @@ exports.login = async (req, res) => {
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
       setAuthCookie(res, generateToken(populated._id));
       return res.json(formatAuthUser(populated));
+    }
+
+    if (user && user.googleId && !isMatch && !user.password) {
+      return res.status(401).json({
+        error: 'No email password set yet. Sign in with Google, set a password in Profile settings, or use Forgot password.',
+      });
     }
 
     res.status(401).json({ error: 'Invalid email or password' });
@@ -245,11 +261,13 @@ exports.changeRequiredPassword = async (req, res) => {
     if (typeof newPassword !== 'string' || typeof confirmPassword !== 'string') {
       return res.status(400).json({ error: 'Invalid input format' });
     }
-    if (newPassword !== confirmPassword) {
+    const normalizedNewPassword = normalizePasswordInput(newPassword);
+    const normalizedConfirm = normalizePasswordInput(confirmPassword);
+    if (normalizedNewPassword !== normalizedConfirm) {
       return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    const passwordError = validatePasswordStrength(newPassword);
+    const passwordError = validatePasswordStrength(normalizedNewPassword);
     if (passwordError) {
       return res.status(400).json({ error: passwordError });
     }
@@ -262,13 +280,13 @@ exports.changeRequiredPassword = async (req, res) => {
       return res.status(400).json({ error: 'Password change is not required for this account' });
     }
 
-    user.password = newPassword;
+    user.password = normalizedNewPassword;
     user.mustChangePassword = false;
     user.passwordChangedAt = new Date();
     await user.save();
 
     const verified = await User.findById(user._id).select('+password').setOptions({ bypassTenant: true });
-    const passwordSaved = verified ? await verified.comparePassword(newPassword) : false;
+    const passwordSaved = verified ? await verified.comparePassword(normalizedNewPassword) : false;
 
     if (!passwordSaved) {
       logger.error('Auth', 'changeRequiredPassword verification failed', { userId: user._id });
@@ -460,11 +478,13 @@ exports.resetPassword = async (req, res) => {
     if (typeof newPassword !== 'string' || typeof confirmPassword !== 'string') {
       return res.status(400).json({ error: 'Invalid input format' });
     }
-    if (newPassword !== confirmPassword) {
+    const normalizedNewPassword = normalizePasswordInput(newPassword);
+    const normalizedConfirm = normalizePasswordInput(confirmPassword);
+    if (normalizedNewPassword !== normalizedConfirm) {
       return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    const passwordError = validatePasswordStrength(newPassword);
+    const passwordError = validatePasswordStrength(normalizedNewPassword);
     if (passwordError) {
       return res.status(400).json({ error: passwordError });
     }
@@ -481,7 +501,7 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
     }
 
-    user.password = newPassword;
+    user.password = normalizedNewPassword;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     user.mustChangePassword = false;

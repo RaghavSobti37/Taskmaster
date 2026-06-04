@@ -16,10 +16,21 @@ export function resolveUserDepartmentName(user) {
 
 function resolveUserFromRef(ref, directoryById) {
   if (!ref) return null;
-  if (typeof ref === 'object' && ref.name) return ref;
   const id = resolveUserId(ref);
+  const fromDirectory = id ? directoryById.get(id) : null;
+  if (typeof ref === 'object' && (ref.name || fromDirectory)) {
+    const base = fromDirectory || ref;
+    return {
+      ...base,
+      _id: id || base._id,
+      name: ref.name || base.name,
+      avatar: ref.avatar ?? base.avatar,
+      departmentId: base.departmentId || ref.departmentId,
+      department: base.department || ref.department,
+    };
+  }
   if (!id) return null;
-  return directoryById.get(id) || (typeof ref === 'object' ? ref : { _id: id, name: 'Unknown' });
+  return fromDirectory || (typeof ref === 'object' ? ref : { _id: id, name: 'Unknown' });
 }
 
 /**
@@ -92,6 +103,7 @@ export function buildTaskAssigneeRows(task, assigneeIds = [], directoryUsers = [
     department: resolveUserDepartmentName(creatorUser),
     role: 'creator',
     roleLabel: 'Creator',
+    createdAt: normalized.createdAt || null,
     assignerName: null,
     assignerLabel: null,
   };

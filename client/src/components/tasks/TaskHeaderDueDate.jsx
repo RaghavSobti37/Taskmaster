@@ -37,9 +37,9 @@ export default function TaskHeaderDueDate({
   }, [dueDate]);
 
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
       <label
-        className={`${pillClass} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--color-action-primary)]/40'} ${overdue ? 'border-[var(--color-pastel-rose-text)]/40' : ''}`}
+        className={`${pillClass} max-w-full ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[var(--color-action-primary)]/40'} ${overdue ? 'border-[var(--color-pastel-rose-text)]/40' : ''}`}
         title={disabled ? 'Due date' : 'Click to change due date'}
       >
         <span className="text-[8px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] shrink-0">
@@ -52,7 +52,7 @@ export default function TaskHeaderDueDate({
           disabled={disabled}
           onChange={(e) => onChange?.(e.target.value)}
           onClick={(e) => e.stopPropagation()}
-          className={`bg-transparent border-0 outline-none text-[10px] font-semibold tabular-nums w-[7.25rem] p-0 cursor-pointer disabled:cursor-not-allowed ${
+          className={`bg-transparent border-0 outline-none text-[10px] font-semibold tabular-nums w-[6.5rem] sm:w-[7.25rem] max-w-[calc(100vw-8rem)] p-0 cursor-pointer disabled:cursor-not-allowed ${
             overdue
               ? 'text-[var(--color-pastel-rose-text)]'
               : 'text-[var(--color-text-primary)]'

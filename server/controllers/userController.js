@@ -8,6 +8,8 @@ const logger = require('../utils/logger');
 const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength, generateSecurePassword } = require('../utils/passwordValidation');
+const { normalizePasswordInput } = require('../utils/passwordAuth');
+const { canSetPasswordWithoutCurrent } = require('../utils/profileCompleteness');
 const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
 
 const isUserOnline = (u) => {
@@ -164,15 +166,25 @@ exports.updateProfile = async (req, res) => {
     }
 
     let passwordChanged = false;
+    let savedPasswordForVerify = null;
     if (newPassword) {
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current password is required to set a new password' });
+      const normalizedNewPassword = normalizePasswordInput(newPassword);
+      const allowWithoutCurrent = canSetPasswordWithoutCurrent(user);
+      if (!allowWithoutCurrent) {
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Current password is required to set a new password' });
+        }
+        const isMatch = await user.comparePassword(normalizePasswordInput(currentPassword));
+        if (!isMatch) {
+          const rawMatch = currentPassword !== normalizePasswordInput(currentPassword)
+            && await user.comparePassword(currentPassword);
+          if (!rawMatch) return res.status(400).json({ error: 'Current password incorrect' });
+        }
       }
-      const isMatch = await user.comparePassword(currentPassword);
-      if (!isMatch) return res.status(400).json({ error: 'Current password incorrect' });
-      const passwordError = validatePasswordStrength(newPassword);
+      const passwordError = validatePasswordStrength(normalizedNewPassword);
       if (passwordError) return res.status(400).json({ error: passwordError });
-      user.password = newPassword;
+      user.password = normalizedNewPassword;
+      savedPasswordForVerify = normalizedNewPassword;
       user.mustChangePassword = false;
       user.passwordChangedAt = new Date();
       passwordChanged = true;
@@ -183,7 +195,7 @@ exports.updateProfile = async (req, res) => {
 
     if (passwordChanged) {
       const verified = await User.findById(user._id).select('+password').setOptions({ bypassTenant: true });
-      const passwordSaved = verified ? await verified.comparePassword(newPassword) : false;
+      const passwordSaved = verified ? await verified.comparePassword(savedPasswordForVerify) : false;
 
       if (!passwordSaved) {
         logger.error('User', 'updateProfile password verification failed', { userId: user._id });
@@ -355,9 +367,10 @@ exports.updateUserAdmin = async (req, res) => {
     }
 
     if (newPassword) {
-      const passwordError = validatePasswordStrength(newPassword);
+      const normalizedNewPassword = normalizePasswordInput(newPassword);
+      const passwordError = validatePasswordStrength(normalizedNewPassword);
       if (passwordError) return res.status(400).json({ error: passwordError });
-      targetUser.password = newPassword;
+      targetUser.password = normalizedNewPassword;
       targetUser.mustChangePassword = false;
       targetUser.passwordChangedAt = new Date();
     }

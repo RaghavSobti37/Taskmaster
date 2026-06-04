@@ -156,13 +156,15 @@ export default function ProfileTab() {
   const hasProfileChanges =
     !!savedProfileSnapshot && !stableJsonEqual(profileSnapshot, savedProfileSnapshot);
 
+  const isGoogleInitialPassword = Boolean(user?.authProviders?.canSetPasswordWithoutCurrent);
+
   const handleUpdateProfile = async () => {
     setPasswordError('');
-    if (newPassword && !password) {
+    if (newPassword && !isGoogleInitialPassword && !password) {
       setPasswordError('Enter your current password to set a new password.');
       return;
     }
-    if (password && newPassword) {
+    if (newPassword) {
       const error = validatePasswordStrength(newPassword);
       if (error) {
         setPasswordError(error);
@@ -180,8 +182,8 @@ export default function ProfileTab() {
         dateOfBirth: dateOfBirth || null,
         departmentId: departmentId || null,
       };
-      if (password && newPassword) {
-        payload.currentPassword = password;
+      if (newPassword && (password || isGoogleInitialPassword)) {
+        if (password) payload.currentPassword = password;
         payload.newPassword = newPassword;
       }
       const res = await axios.put('/api/users/profile', payload);
@@ -288,20 +290,25 @@ export default function ProfileTab() {
         </div>
 
         <div className="space-y-4">
-       
           <div className="space-y-3">
-            <Input
-              type={showCurrentPassword ? 'text' : 'password'}
-              label="Current Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              icon={Key}
-              className="!text-xs"
-              endAdornment={passwordToggle(showCurrentPassword, setShowCurrentPassword)}
-            />
+            {isGoogleInitialPassword ? (
+              <p className="text-xs text-[var(--color-text-secondary)] font-medium ml-1">
+                Your account uses Google sign-in. Set a password below to also sign in with your email.
+              </p>
+            ) : (
+              <Input
+                type={showCurrentPassword ? 'text' : 'password'}
+                label="Current Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                icon={Key}
+                className="!text-xs"
+                endAdornment={passwordToggle(showCurrentPassword, setShowCurrentPassword)}
+              />
+            )}
             <Input
               type={showNewPassword ? 'text' : 'password'}
-              label="New Password"
+              label={isGoogleInitialPassword ? 'Password' : 'New Password'}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               icon={Shield}

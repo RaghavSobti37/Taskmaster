@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, CheckCircle2, Plus } from 'lucide-react';
 import { ModalShell, ModalFooter } from './ui/ModalShell';
 import { useAuth } from '../contexts/AuthContext';
-import { useCreateTask, useProjects } from '../hooks/useTaskmasterQueries';
+import { useCreateTask, useProjects, useUserDirectory } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import { computeDueDateFromStart, todayDateString } from '../utils/taskPriorityDates';
 import { validateTaskTimelineFields } from '../utils/dateValidation';
@@ -17,7 +17,16 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
   const { addToast } = useSystemToast();
 
   const { data: fetchedProjects = [] } = useProjects();
+  const { data: directoryUsers = [] } = useUserDirectory(isOpen);
   const projects = passedProjects || fetchedProjects;
+
+  const assigneePool = React.useMemo(() => {
+    if (!passedMembers?.length) return directoryUsers;
+    const memberIds = new Set(
+      passedMembers.map((m) => String(m._id || m.user?._id || m)).filter(Boolean)
+    );
+    return directoryUsers.filter((u) => memberIds.has(String(u._id)));
+  }, [passedMembers, directoryUsers]);
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
@@ -86,7 +95,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       projectId: formValues.projectId || null,
       assignees: mergeMentionedUserIdsIntoAssignees(
         formValues.assignees,
-        passedMembers || [],
+        assigneePool,
         title,
         desc
       ).filter((id) => id !== user?._id),
@@ -97,9 +106,15 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
     createTaskMutation.mutate(payload, {
       onSuccess: (created) => {
         if (onTaskCreated) onTaskCreated(created);
+        onClose();
+      },
+      onError: (err) => {
+        addToast({
+          type: 'error',
+          message: err.response?.data?.error || err.response?.data?.message || 'Could not create task',
+        });
       },
     });
-    onClose();
   };
 
   return (
@@ -120,7 +135,8 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             values={formValues}
             onChange={setFormValues}
             projects={projects}
-            members={passedMembers}
+            members={assigneePool}
+            excludeAssigneeUserId={user?._id}
             showProject={!initialProjectId}
             lockProject={!!initialProjectId}
             showStatus={false}
@@ -130,7 +146,6 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
             onTitleChange={setTitle}
             description={desc}
             onDescriptionChange={setDesc}
-            lockedAssigneeIds={user?._id ? [user._id] : []}
             mentionSessionKey={isOpen ? 'create' : undefined}
           />
         </div>
@@ -141,7 +156,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
           </button>
           <button
             type="submit"
-            disabled={!title.trim()}
+            disabled={!title.trim() || createTaskMutation.isPending}
             className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
           >
             <CheckCircle2 size={18} /> Create Task

@@ -282,7 +282,9 @@ const recordAssignmentChanges = async (taskId, oldAssignments, newAssignments, a
 };
 
 const listActivity = async (taskId, user, { markRead = false } = {}) => {
-  const task = await Task.findById(taskId).lean();
+  const task = await Task.findById(taskId)
+    .populate('createdBy', 'name avatar')
+    .lean();
   if (!task) throw new Error('Task not found');
 
   const allowed = await canAccessTaskActivity(task, user);
@@ -299,7 +301,32 @@ const listActivity = async (taskId, user, { markRead = false } = {}) => {
     .populate('assignedById', 'name avatar')
     .lean();
 
-  return rows.map(mapActivityRow);
+  const mapped = rows.map(mapActivityRow);
+  const hasCreated = mapped.some((row) => row.type === 'created');
+  if (!hasCreated && task.createdAt) {
+    const creator = task.createdBy;
+    const actor = creator && typeof creator === 'object'
+      ? { _id: creator._id, name: creator.name, avatar: creator.avatar }
+      : null;
+    mapped.push({
+      _id: `synthetic-created-${taskId}`,
+      type: 'created',
+      body: '',
+      createdAt: task.createdAt,
+      actor,
+      assignee: null,
+      assignedBy: null,
+      mentionedUserIds: [],
+      statusFrom: null,
+      statusTo: null,
+      fieldKey: null,
+      valueFrom: null,
+      valueTo: null,
+    });
+    mapped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  return mapped;
 };
 
 const bumpMentionReceipts = async (taskId, recipientIds, actorId, session) => {

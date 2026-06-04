@@ -21,7 +21,7 @@ const MentionRichText = ({ text, users = [], assets = [], className = '', inline
     ? 'block min-w-0 truncate'
     : inline
       ? 'inline break-words'
-      : 'whitespace-pre-wrap break-words';
+      : 'block w-full min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]';
 
   return (
     <Tag className={`${layoutClass} ${className}`.trim()} title={title}>

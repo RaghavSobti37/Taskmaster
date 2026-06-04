@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { getDbNameFromUri, isProdLikeDbName } = require('../config/database');
 
 const isLocalHostUrl = (url = '') => {
   if (!url) return true;
@@ -35,6 +36,22 @@ const resolveTrackingApiBaseUrl = () => {
   return fallback;
 };
 
+/** True when URI targets a non-production dev database (taskmaster_local, coreknot_local, etc.). */
+const isLocalDevMongoUri = (uri = '') => {
+  const trimmed = String(uri).trim();
+  if (!trimmed) return false;
+  if (/localhost|127\.0\.0\.1/i.test(trimmed)) return true;
+  const name = getDbNameFromUri(trimmed).toLowerCase();
+  if (!name) return false;
+  if (isProdLikeDbName(name)) return false;
+  return (
+    name.includes('local')
+    || name === 'testing'
+    || name === 'coreknot'
+    || name === 'taskmaster'
+  );
+};
+
 /** Warn when tracking hits public API but EmailLog lives on a different DB. */
 const getTrackingDbMismatchWarning = () => {
   if (process.env.MAIL_USE_PROD_DB === 'true' && process.env.MONGODB_URI_PROD) return null;
@@ -45,9 +62,9 @@ const getTrackingDbMismatchWarning = () => {
   const dbUri = (process.env.MONGODB_URI || '').trim();
   const prodUri = (process.env.MONGODB_URI_PROD || '').trim();
   if (!dbUri || !prodUri || dbUri === prodUri) return null;
-  if (dbUri.includes('coreknot_production') || prodUri.includes('coreknot_local')) return null;
+  if (isProdLikeDbName(getDbNameFromUri(dbUri))) return null;
 
-  const localDb = dbUri.includes('coreknot_local') || dbUri.includes('localhost');
+  const localDb = isLocalDevMongoUri(dbUri);
   if (!localDb) return null;
 
   return (
@@ -97,5 +114,6 @@ module.exports = {
   shouldSkipClickWrap,
   isLocalHostUrl,
   getTrackingDbMismatchWarning,
+  isLocalDevMongoUri,
   DEFAULT_PUBLIC_TRACKING,
 };

@@ -65,9 +65,14 @@ function verifyNetworkMatch(clientRawIp, targetOfficeIp) {
     
     const parsedClient = ipaddr.process(cleanedClient);
     
-    if (parsedClient.toString() === '::1' || parsedClient.toString() === '127.0.0.1') {
-      console.log('[ATTENDANCE DEBUG] Localhost loopback detected. Auto-matching for testing.');
-      return true; 
+    if (
+      process.env.NODE_ENV !== 'production'
+      && (parsedClient.toString() === '::1' || parsedClient.toString() === '127.0.0.1')
+    ) {
+      if (process.env.ATTENDANCE_DEBUG === 'true') {
+        console.log('[ATTENDANCE DEBUG] Localhost loopback detected. Auto-matching for testing.');
+      }
+      return true;
     }
     
     const clientString = parsedClient.toString();

@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import MarketingPageBackground from '../../components/MarketingPageBackground';
 import BrandLogo from '../../components/brand/BrandLogo';
+import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 
@@ -34,6 +35,10 @@ const LoginPage = () => {
       setError('Google Authentication failed. Please try again.');
     }
   }, [location]);
+
+  if (authLoading) {
+    return <AppBootFallback />;
+  }
 
   const handleGoogleLogin = () => {
     window.location.href = apiPath('/api/auth/google');

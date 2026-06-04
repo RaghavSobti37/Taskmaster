@@ -1,5 +1,5 @@
 import React from 'react';
-import { format } from 'date-fns';
+import { formatActivityTime } from '../../utils/formatActivityTime';
 import { UserLabel } from '../ui/UserAvatar';
 import MentionTitle from '../mentions/MentionTitle';
 import { DataLoading } from '../ui/DataLoading';
@@ -21,13 +21,6 @@ function StatusPill({ status }) {
       {label}
     </span>
   );
-}
-
-function formatActivityTime(value) {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return format(d, 'MMM dd, yyyy · HH:mm:ss');
 }
 
 function ActivityEvent({ item }) {

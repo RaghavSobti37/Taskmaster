@@ -12,6 +12,7 @@ import {
 import { getAxiosBaseURL } from '../utils/apiBase';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
+import { AXIOS_SKIP_TOAST } from '../lib/notifications';
 
 const defaultAuthContext = {
   user: null,
@@ -35,6 +36,14 @@ const PUBLIC_MARKETING_PATHS = new Set([
   '/privacy',
   '/userdata',
   '/unsubscribe',
+]);
+
+/** Auth routes need an immediate session probe so stale cookies redirect before login submit. */
+const IMMEDIATE_SESSION_PROBE_PATHS = new Set([
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
 ]);
 
 const axiosBase = getAxiosBaseURL();
@@ -101,29 +110,34 @@ export const AuthProvider = ({ children }) => {
     if (loggingOutRef.current) return null;
     const epoch = authEpochRef.current;
     const { clearOn401 = true } = options;
-    try {
-      const res = await axios.get('/api/auth/me');
-      if (epoch !== authEpochRef.current) return null;
-      const newData = res.data;
-      if (userSessionChanged(userRef.current, newData)) {
-        setUser(newData);
-      }
-      if (newData && !userRef.current) {
-        recordAttendanceSessionLogin();
-      }
-      setLoading(false);
-      setSessionReady(true);
-      return newData;
-    } catch (err) {
-      if (epoch !== authEpochRef.current) return null;
-      const status = err.response?.status;
-      if (clearOn401 && (status === 401 || status === 403)) {
+    const res = await axios.get('/api/auth/me', {
+      ...AXIOS_SKIP_TOAST,
+      validateStatus: (status) => status === 200 || status === 401 || status === 403,
+    });
+
+    if (epoch !== authEpochRef.current) {
+      return null;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      if (clearOn401) {
         setUser(null);
         setSessionReady(false);
       }
       setLoading(false);
       return null;
     }
+
+    const newData = res.data;
+    if (userSessionChanged(userRef.current, newData)) {
+      setUser(newData);
+    }
+    if (newData && !userRef.current) {
+      recordAttendanceSessionLogin();
+    }
+    setLoading(false);
+    setSessionReady(true);
+    return newData;
   }, []);
 
   const syncSessionAfterLogin = useCallback(async () => {
@@ -156,10 +170,11 @@ export const AuthProvider = ({ children }) => {
     }
     loggingOutRef.current = false;
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    const isPublicMarketing = PUBLIC_MARKETING_PATHS.has(path);
+    const deferSessionProbe = PUBLIC_MARKETING_PATHS.has(path)
+      && !IMMEDIATE_SESSION_PROBE_PATHS.has(path);
     const runFetch = () => fetchUser();
 
-    if (isPublicMarketing) {
+    if (deferSessionProbe) {
       setLoading(false);
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         const id = window.requestIdleCallback(runFetch, { timeout: 2500 });

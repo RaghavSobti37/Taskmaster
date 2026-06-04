@@ -10,19 +10,19 @@
 </p>
 
 <p align="center">
-  <a href="#-logo-philosophy--the-harmonic-frequency">Logo</a> ·
-  <a href="#-key-features">Features</a> ·
-  <a href="#%EF%B8%8F-architecture--tech-stack">Architecture</a> ·
-  <a href="#%EF%B8%8F-directory-structure">Directory Structure</a> ·
-  <a href="#%EF%B8%8F-quick-start-guide">Quick Start</a> ·
-  <a href="#-environment-configuration">Configuration</a> ·
-  <a href="#-api-architecture--routing">API Surface</a> ·
-  <a href="#-diagnostic--observability-protocol">Diagnostics</a> ·
+  <a href="#logo-philosophy--the-harmonic-frequency">Logo</a> ·
+  <a href="#key-features">Features</a> ·
+  <a href="#architecture--tech-stack">Architecture</a> ·
+  <a href="#directory-structure">Directory Structure</a> ·
+  <a href="#quick-start-guide">Quick Start</a> ·
+  <a href="#environment-configuration">Configuration</a> ·
+  <a href="#api-architecture--routing">API Surface</a> ·
+  <a href="#diagnostic--observability-protocol">Diagnostics</a> ·
   <a href="docs/VERSION_HISTORY.md">Release Notes</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.15-126d5e?style=flat-square" alt="Version 1.9.15" />
+  <img src="https://img.shields.io/badge/version-1.0.0-126d5e?style=flat-square" alt="Version 1.0.0" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -31,7 +31,7 @@
 
 ---
 
-## 📖 Executive Summary
+## Executive Summary
 
 CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell) is a decoupled, multi-tenant operational workspace designed to strip out project management overhead. It streamlines complex business lines—such as financial document optical character recognition (OCR), multi-channel customer relationship management (CRM) ingestion, and department-aware workforce scheduling—into a unified, high-density dashboard.
 
@@ -82,7 +82,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -115,22 +115,29 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-### ✉️ Mail Template Studio & Outbound HTML Pipeline
+### v1.0.0 stable polish
+
+* **Finance overview:** Stat cards for documents, files, invoices, and pending reimbursements; overview charts removed for a cleaner documents hub.
+* **Subscriptions:** Separate monthly and yearly spend totals from recurring periodicity (one-time excluded).
+* **Leads:** Default table page size 5; full-width filter toolbar on list pages.
+* **Exly list price:** Paid-booking mode backfills offering `price` when the API returns zero.
+
+### Mail Template Studio & Outbound HTML Pipeline
 
 * **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` — visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft → submit → admin approve/reject workflow.
 * **Indexed variables:** `indexedTemplateVariables.js` (client + server) maps HolySheet columns to numbered tokens with dummy preview values for QA and design review.
 * **Unified send path:** `buildFinalEmailHtml.js` + `normalizeOutboundEmailHtml.js` normalize Quill/raw HTML, inline CSS when needed, append signature/footer, then hand off to the locked tracking layer — preview and live send share one pipeline.
 * **Template API:** Extended `/api/mail/templates` routes for CRUD, pending queue, preview, and approval actions (`mailTemplateHelpers.js`).
 
-### 👤 Task Creator vs Assignee Split
+### Task Creator vs Assignee Split
 
 * **Data model:** Task creator lives on `task.createdBy` only — never duplicated in `TaskAssignment`; assignee chips and review rules use assignees exclusively.
 * **Mention access:** `mentionAccessIds` on tasks plus `taskAccess.js` keeps @mentioned users in scope without treating the creator as an assignee.
 * **Migration:** One-time `node server/scripts/migrateCreatorAssigneeSplit.js` removes legacy creator rows from assignments and backfills mention access.
 
-### 💬 Task Activity Timeline & Mentions
+### Task Activity Timeline & Mentions
 
 * **Per-task conversation:** `TaskDetailModal` splits into header, compose, history, and activity timeline — `@mentions` in messages with unread badges (`TaskMentionBadge.jsx`) and server-side receipt tracking (`TaskMentionReceipt.js`).
 * **Activity API:** `GET/POST /api/tasks/:id/activity` records `created`, `assignment`, `message`, `status_change`, and `field_change` events (`TaskActivity` model, `TaskActivityService.js`); list returns **newest first**; background purge worker trims old rows.
@@ -138,17 +145,17 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Modal stability:** `buildTaskAssigneeRows` guards null tasks; header uses `displayTask ?? task` so reopening a task after a cold mount no longer crashes on `assignments`.
 * **Team row:** Creator appears as a locked **Creator** chip (distinct from assignees); assignees show **Assigned by** only when multiple people assigned the task; creator is never duplicated as an assignee chip.
 
-### 📅 Attendance Prompt UX (v1.9.11)
+### Attendance Prompt UX (v1.9.11)
 
 * **Full-width time card:** Single-panel `UnifiedTimeCard` no longer uses `max-w-md` — Time In/Out aligns with the Office/WFH toggle width in the morning prompt modal.
 * **Time input fix:** `SelfMarkTimeControl` moved to module scope so typing multi-digit minutes in Chrome/Edge no longer remounts the native `type="time"` field each keystroke.
 * **Dismiss control:** “Remind me later” is a full-width secondary button instead of ghost text.
 
-### 🏆 Leaderboard Recalc UI (v1.9.11)
+### Leaderboard Recalc UI (v1.9.11)
 
 * **React keys:** Recalc change lists in `LeaderboardRecalcHint` and `LeaderboardBreakdownModal` include index + delta so duplicate XP rows (e.g. multiple `COMPLETE_TASK` adjustments) no longer warn in the console.
 
-### ⚡ Frontend Performance & Lighthouse Auditing (v1.9.10)
+### Frontend Performance & Lighthouse Auditing (v1.9.10)
 
 * **Route-level Lighthouse runner:** `client/scripts/lighthouse-audit.mjs` audits 45 app routes (public + authenticated), writes HTML/JSON reports to `client/lighthouse-reports/` (gitignored). Scripts: `npm run lighthouse`, `lighthouse:public`, `lighthouse:prod`.
 * **Prod benchmark workflow:** `npm run build && npm run preview` then `LH_BASE_URL=http://localhost:4173 npm run lighthouse -- --prod` — dev `:5173` scores are not representative (unminified ESM, HMR).
@@ -160,7 +167,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Data overview charts:** `DataOverviewSection` renders stats first; charts load after `IntersectionObserver` + idle callback.
 * **Vite:** Manual chunks for `framer-motion`, `socket.io`, `@xyflow/react`, `mermaid`; Geist variable font via `@fontsource-variable/geist`.
 
-### 🔐 Google OAuth & Meta App Verification (v1.9.9)
+### Google OAuth & Meta App Verification (v1.9.9)
 
 * **Cross-origin Google login fix:** OAuth callback issues a short-lived ticket; `GoogleSuccessPage` calls `POST /api/auth/oauth-establish` so the session cookie is set in the browser’s frontend context (fixes 401 loops after Google sign-in on Vercel + Render).
 * **Redirect URI resolution:** `server/utils/oauthEnv.js` derives callback URLs from request host / `APP_BASE_URL` — register `http://localhost:5000/api/auth/google/callback` and your Render API host in Google Cloud Console.
@@ -169,7 +176,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Docs:** [`docs/GOOGLE_META_APP_VERIFICATION.md`](docs/GOOGLE_META_APP_VERIFICATION.md) — env audit, console URLs, manual test matrix before App Review.
 * **Templates:** `server/.env.production.example` — production OAuth/integration env checklist (no secrets).
 
-### 🔑 Self-Service Password Reset (v1.9.8)
+### Self-Service Password Reset (v1.9.8)
 
 * **Login entry point:** “Forgot password?” on `/login` opens `/forgot-password` — same CoreKnot marketing shell as sign-in.
 * **Email flow:** User submits account email; if it exists, the API sends a 1-hour reset link via **Gmail SMTP** (`EMAIL_ADDRESS` / `EMAIL_PASSWORD` / `EMAIL_SERVICE`) and CCs `ADMIN_EMAIL` for audit visibility.
@@ -177,7 +184,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **API:** `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` — hashed reset tokens on `User`, rate-limited (5/hour per email), generic responses to avoid email enumeration.
 * **Utility:** `server/utils/sendSystemEmail.js` — transactional system mail separate from campaign Resend pipeline (avoids unverified `SYSTEM_VERIFIED_FROM_EMAIL` domain failures in dev).
 
-### 📅 Manual Office / WFH Attendance (v1.9.7)
+### Manual Office / WFH Attendance (v1.9.7)
 
 * **User-controlled work mode:** Self check-in/out uses a single **Office ↔ WFH** toggle (`WorkModeToggle.jsx`) above Time In/Out — default **Office**, tap to swap; no GPS on mark.
 * **IP hint only:** `GET /api/attendance/work-mode-hint` suggests the initial toggle from office egress IP (`OFFICE_PUBLIC_IP` / `OFFICE_IP_WHITELIST`); user choice is always sent on save.
@@ -185,7 +192,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Surfaces:** Dashboard `MarkAttendanceCard`, `/attendance`, and morning attendance prompt modal — all pass `workMode` without geolocation.
 * **Ops modals:** System Logged shows time only; work mode uses the same toggle; tighter modal body spacing (`bodyClassName` on `NexusModal`).
 
-### 🎨 Subtractive Slate UI (v1.9.1)
+### Subtractive Slate UI (v1.9.1)
 
 * **Design language:** Flat slate surfaces (`#0f172a` shell, `#1e293b` cards), minimal borders, no heavy shadows on static surfaces, emerald/teal accents (`#126d5e`, `#2dd4bf`), Geist/system sans typography.
 * **Dashboard widgets:** Shared `DashboardWidgetShell`, `ChartSurface`, `DeltaBadge`, and `DataListRow` primitives; leaderboard podium/card refresh; new `MarkAttendanceCard`.
@@ -193,14 +200,14 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
 * **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
 
-### 📊 Dashboard Widgets & Layout Library (v1.9.5)
+### Dashboard Widgets & Layout Library (v1.9.5)
 
 * **Attendance Overview card:** Multi-series line chart (marked, present, half day, leave) with 7d / 30d / 90d timeframe; `GET /api/dashboard/attendance-overview` aggregates unique people per IST day (ops/admin).
 * **Task Activity chart:** Renamed from “Team Activity”; chronological area chart with correct day ordering and “Tasks” series labels.
 * **Last Backup card (admin):** Highlights latest snapshot plus a **Recent snapshots (last 2)** list; aligns with count-based retention below.
 * **Backup retention:** `BACKUP_RETENTION_COUNT` (default `2`) replaces day-based pruning; `render.yaml` cron sets `BACKUP_RETENTION_COUNT=2`.
 
-### 📊 Dashboard Widgets & Layout Library (v1.9.4)
+### Dashboard Widgets & Layout Library (v1.9.4)
 
 * **Leave Requests card:** Ops sees pending leave awaiting approval; everyone else sees their own submissions — links to Attendance or Settings → Leave.
 * **Reimbursements card:** Personal reimbursement claims from Settings → Reimbursement with status, amount, and project; shared `useMyReimbursements` hook powers dashboard + Invoice tab.
@@ -217,7 +224,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Task modals:** `TaskDetailModal` keeps the modal open until save/delete mutations finish; buttons show pending labels and disable double-submit.
 * **Shared primitives:** Reuse `DataLoading`, `LoadingState`, and `Spinner` from `client/src/components/ui/` for consistent empty vs loading vs ready states.
 
-### 📲 Responsive Shell & Attention Signals (v1.9.2)
+### Responsive Shell & Attention Signals (v1.9.2)
 
 * **Nav badges:** Shared `CountBadge` pill with rose/amber/teal variants; `navStatusCounts.js` maps sidebar paths to overdue, today, in-review, and unread counts from the status-counts API. Bottom nav and `OutletSidebar` show attention totals per route.
 * **PWA desktop mode:** `displayMode.js` detects installed desktop PWAs (`html[data-pwa-desktop]`) so layout hooks (`useBreakpoint`, safe-area CSS) treat shortcut-window installs like desktop, not phone.
@@ -231,20 +238,20 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Task list hygiene:** Server `taskListFilter.js` hides completed tasks older than 2 days (`COMPLETED_VISIBLE_DAYS`); client `taskIndicators.js` drives Todo overview KPIs; `taskListFilter.test.js` covers cutoff logic.
 * **Calendar polish:** `CalendarView` layout refresh; `calendarEventTime.js` helpers; notification routes expose richer status-count payloads for nav badges.
 
-### 📊 Ultra-Density Productivity Engine
+### Ultra-Density Productivity Engine
 
 * **Headerless Three-Column View:** Combines live leaderboard podiums, team announcements, a global pinboard, private sticky notes, and active schedules inside a zero-latency single screen.
 * **Dynamic Gamification:** Tracks user activity and awards Experience Points (XP) from structural configurations. Time-based actions cap at 12 h per event; daily logs use 8 h base + 1.5× overtime. Attendance XP grants only after ops locks both check-in and check-out (`attendanceXp.js`). Leaderboard tap opens per-user XP breakdown. Weekly reset Monday 00:00 IST on `XPAuditLog`; recalc repairs invalid review-approval XP (`reviewExploitRepairService.js`).
 * **Global Navigation:** Keyboard-driven command palettes (`Cmd/Ctrl + K`) and persistent floating Fast Action Buttons (FAB) for instantaneous record generation.
 
-### 💼 Automated Sales & CRM Pipelines
+### Automated Sales & CRM Pipelines
 
 * **Booked calls (CRM direct):** [theshakticollective.in/book-a-call](https://theshakticollective.in/book-a-call) → TSC Website `POST /api/book-call` → Taskmaster `POST /api/webhooks/book-call` → MongoDB lead (no HolySheet, no Google Sheets append). Rep split **2:1:1** (Satyam / Aryaman / Akash). See [`docs/BOOKED_CALLS_CRM_DIRECT.md`](docs/BOOKED_CALLS_CRM_DIRECT.md).
 * **Ingestion Vectors:** CSV uploads, Exly webhooks, and legacy Data Hub inlets; sheet import for booked calls removed in v1.7.57.
 * **Follow-up reminders:** Taskmaster `notificationService` fires in-app reminders from CRM `nextFollowupDate` / `nextFollowupTime` (IST, `dd-MM-yyyy`).
 * **Transactional Communication:** AiSensy WhatsApp confirmations to the booker and assigned rep on each website booking.
 
-### 🛡️ Institutional Task Review Workflow
+### Institutional Task Review Workflow
 
 * **Governance Matrix:** Enforces strict code/task ownership logic (`shared/taskReviewRules.js`). Tasks explicitly delegated to peers are frozen upon completion and routed directly into an immutable `in-review` state queue. Self-assigned entries bypass validation rules entirely.
 * **Role Enforcement:** Restricts execution bounds; only the explicit task creator retains roll-back, state manipulation, or permanent completion override permissions.
@@ -252,7 +259,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **In-review edits:** Save remains available on `in-review` tasks so fields like project, title, and description can be updated; Approve/Rollback actions stay separate for reviewers.
 * **Daily log split on submit:** When a delegatee submits for review, the server writes two automatic daily logs — assignee `TASK_COMPLETION` (hours from the completion modal) and assigner `TASK_REVIEW` (default **15 minutes**, `REVIEW_DEFAULT_HOURS` in `shared/taskReviewRules.js`). Approving does not add a full-task completion log for the reviewer; rolling back removes both logs. Review entries show a **Review** badge on Daily Logs and are excluded from manual-log XP like task completions.
 
-### 🎭 Artist Enquiry Webhook
+### Artist Enquiry Webhook
 
 * **Ingress:** `POST /api/webhooks/artist-enquiry` — receives `/query` form payloads from the marketing site (after Sheets + email succeed).
 * **Routing:** Resolves artist name → TSC ARTISTS project (e.g. YUGM → **YUGM** project); falls back to first matching project when needed.
@@ -260,25 +267,25 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Queue:** BullMQ job `artist-enquiry` with synchronous fallback when Redis is unavailable.
 * **Website wiring:** See [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md).
 
-### 📑 OCR Document Parsing & Finance Ops
+### OCR Document Parsing & Finance Ops
 
 * **Ingestion Pipelines:** Multi-file asynchronous drag-and-drop file uploaders featuring deep retries, intelligent chunk batching, and partial-success state tracking.
 * **Extraction Processing:** Leverages specialized pipelines using `pdf-parse` and `tesseract.js` engines to programmatically turn physical balance sheets or receipts into relational ledger payloads.
 
-### 🐛 Platform Bug Reporting
+### Platform Bug Reporting
 
 * **Floating Report Widget:** Persistent bug-report FAB on all authenticated routes (`HelpBugButton.jsx`).
 * **Auto-Routing:** `POST /api/tasks/bug` creates tasks under **Tech Stack & Maintenance**, assigns to the platform owner, and syncs all users into the project with assign-capable roles.
 * **UX:** Title required, description optional; Enter submits from title field, Ctrl+Enter from description.
 
-### 👥 Project Team Roles
+### Project Team Roles
 
 * **Canonical Roles:** `admin`, `manager`, and `member` (legacy `owner` values normalize to `admin`).
 * **Inline Role Editing:** Project owners and admins can change member roles directly from the Team tab via `NexusDropdown`.
 * **API:** `PATCH /api/projects/:id/members/:userId/role` — restricted to project admin/manager or platform admin.
 * **Shared Logic:** Role rank and assignment permissions live in `shared/projectRoles.js` (consumed by both client and server).
 
-### 🏢 Workspace Settings
+### Workspace Settings
 
 * **Dedicated Route:** `/projects/workspaces/:name/settings` — manage workspace members, linked projects, and metadata from a single settings page.
 * **API:** `GET/PATCH /api/projects/workspaces/:name` with member add/remove and role assignment.
@@ -288,7 +295,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Workspace access control (v1.9.6):** Users only see workspaces they can access—platform admin, workspace creator, default member, or member/owner of at least one project in that workspace. `GET /api/projects/workspaces` and workspace detail return 403 when unauthorized.
 * **Workspace member roster (v1.9.6):** Workspace Settings shows a read-only **Workspace Members** list aggregated from all projects the signed-in user can access in that workspace (owners, teammates, roles per project), plus default-only members tagged **Default**. Logic lives in `server/utils/projectAccess.js` and `buildAllMembersFromProjects` in `projectController.js`.
 
-### 💳 Office Subscriptions
+### Office Subscriptions
 
 * **Tracking:** SaaS, hosting, domain, and recurring vendor subscriptions with INR amounts, due dates, periodicity, and payment mode.
 * **Page:** `/office/subscriptions` — CRUD table with search, modal forms, and assignee linking.
@@ -296,13 +303,13 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Reminders:** Render cron (`CoreKnot-subscription-reminders`) runs daily via `runSubscriptionReminders.js` to email **all** linked assignees (`usedBy` supports multiple users) before due dates.
 * **Multi-assignee:** Subscription `usedBy` is an array; reminder service resolves every populated user email with deduplication.
 
-### 🔔 Inbox & Web Push Notifications
+### Inbox & Web Push Notifications
 
 * **Tri-channel delivery:** In-app inbox, optional email, and Web Push (VAPID) via the service worker (`sw.js`).
 * **Single OS toast per event:** Push subscription pruning (`server/utils/pushSubscriptions.js`), send-time dedupe, service-worker tag guards, and client-side `localStorage` + `BroadcastChannel` dedupe prevent duplicate system notifications on phone and laptop.
 * **Polling fallback:** When push is unavailable, `NotificationBridge` shows OS toasts only after push init completes — never alongside an active push subscription.
 
-### 📊 Department Stats (Admin Dashboard)
+### Department Stats (Admin Dashboard)
 
 * **Timeframe-aware:** `1d` / `7d` / `30d` filters call `GET /api/dashboard/dept-stats?timeframe=` — org-wide metrics for the selected window.
 * **Metrics:** Task completion rate (%), converted lead count (people converted in period), total focus hours from daily logs.
@@ -340,28 +347,28 @@ odemon.json plus server.js listen/port fixes reduce port conflicts during hot re
 * **CLI:** 
 ode server/scripts/normalizePersonData.js (reports under server/reports/, gitignored).
 * **QA:** Purge/verify/subset scripts and personNormalization.test.js guard integration tests.
-### 📅 Calendar & Music Content
+### Calendar & Music Content
 
 * **Past-date guard:** Tasks (`scheduleDate`, `dueDate`) and calendar events cannot be created or moved to the past — enforced in UI (`client/src/utils/dateValidation.js`) and API (`shared/dateValidation.js`, `TaskService`, `calendarRoutes`).
 * **Music Content Calendar:** 35 public `musical_day` events (birthdays, observances, memorials) from `Music_Content_Calendar.pdf`. Seed via admin **Birthdays** button on Calendar, `POST /api/calendar/seed-music-content`, or `npm run seed:music-calendar:prod`.
 * **Cross-tenant public events:** Calendar API uses `bypassTenant` so org-wide public birthdays are visible to all users.
 * **Event types:** `meeting`, `instagram_post`, `youtube_post`, `shoot_day`, `event`, `musical_day` — musical days display as **Musical Day** in the calendar UI.
 
-### 📱 Mobile-First List UI (v1.9.0)
+### Mobile-First List UI (v1.9.0)
 
 * **Layout kit:** `ListPageLayout`, `PageToolbar`, `DataOverviewSection`, `DataMiniChart`, `MobileFilterSheet`, `MobilePageHeader`, `ListCard`, `FilterChips`, `DesktopRecommendedBanner`.
 * **Hooks:** `useBreakpoint`, `useColumnSort`, shared report range state for monthly and project analytics.
 * **Standards:** [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) — modal tree, `DataTable` sort, `UserAvatar`, confirms via `confirmContext` (no `window.alert`).
 * **Migrated pages:** Assets, Finance, CRM (Leads/Followups), Equipment, Contacts, Office assets, Artists, Admin users, Todo, Projects, Inbox, and more use the shared list pattern.
 
-### 📈 Project Analytics (v1.9.0)
+### Project Analytics (v1.9.0)
 
 * **Per-project:** `/projects/:id/analytics` — task throughput, priority mix, focus hours, assignee breakdown for a rolling date range (`ProjectAnalyticsPage.jsx`, `projectAnalyticsService.js`).
 * **Admin rollup:** `/admin/project-analytics` — cross-project comparison for admins (`AdminProjectAnalyticsPage.jsx`).
 * **API:** `GET /api/projects/:id/analytics` and admin aggregate routes on `projectRoutes.js`.
 * **Shared range logic:** `shared/reportRange.js`, `client/src/utils/projectReportRange.js`.
 
-### 🗄️ Data Hub (Unified CRM)
+### Data Hub (Unified CRM)
 
 * **Admin surface:** Admin Panel → **CRM** tab (`DataHubPage.jsx`) — folder sidebar, people table, person detail drawer, analytics panel, TSC HolySheet import.
 * **Inlets:** Exly, Leads, TSC/HolySheet, Booked Calls, Enquiries, Mail Engagement, Community, Active Users, Unsubscribed — configured in `shared/dataInlets.js`.
@@ -370,17 +377,17 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **Scripts:** `node server/scripts/reconcileDataHub.js [--full] [--prod]` for backfill; **Full Sync** button in UI for full re-merge; **Sync New** for incremental updates.
 * **Production DB backup:** **DB Backup** on Data Hub toolbar — `POST /api/data-hub/backup` (admin). Streams prod MongoDB → Atlas GridFS `taskmaster_backups` (7-day retention). Also: `npm run backup:daily` or GitHub Actions (free cron alternative to paid Render cron). See [`docs/DATA_BACKUP.md`](docs/DATA_BACKUP.md).
 
-### ✍️ Task Mentions & Assets
+### Task Mentions & Assets
 
 * **@mentions:** `MentionInput` / `MentionTextarea` in task create/edit — notifies mentioned users who are not already assignees (`server/utils/mentionNotifications.js`, `shared/mentionTokens.js`).
 * **#assets:** Hash tokens link to asset URLs in task title/description.
 
-### 🔔 Notification Policy
+### Notification Policy
 
 * **Overdue alerts removed:** The `checkOverdue` cron (task + follow-up overdue push/in-app alerts) was removed from `notificationService.js`. Upcoming call reminders (~30 min before follow-ups) remain.
 * **Dashboard overdue cards:** UI badges/lists for overdue tasks remain visual-only — no automated notifications.
 
-### 📅 Attendance & Time Tracking
+### Attendance & Time Tracking
 
 * **Independent mark-in / mark-out:** Self-service and admin flows treat check-in and check-out as separate inputs; server no longer blocks checkout without check-in.
 * **Split admin modals:** Team matrix opens dedicated Morning Check-In and Evening Check-Out modals (not one combined panel).
@@ -388,13 +395,13 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **Work mode (v1.9.7):** Employees pick **Office** or **WFH** via a shared toggle before marking; server persists `workMode` with `verificationMethod: MANUAL`. Optional IP hint (`GET /api/attendance/work-mode-hint`) pre-selects the toggle from `OFFICE_PUBLIC_IP` / `OFFICE_IP_WHITELIST` — no GPS on save.
 * **Legacy audit:** Historical rows may still show `GPS` / `NETWORK`; `node server/scripts/auditAttendanceProd.js` remains for prod read-only audits.
 
-### 🔐 Admin Access Hardening
+### Admin Access Hardening
 
 * **Department-based admin:** `isAdminUser()` checks department slug/preset `admin` — not legacy `user.role`.
 * **UI leaks fixed:** Dashboard widgets, sidebar customization, daily logs `?user=`, `/components`, and `/attendance/all` are hidden or redirected for non-admin/ops users.
 * **API guards:** QA routes, HolySheet bulk fetch, log cross-user reads, and attendance reset require admin; dashboard/nav customization filters admin-only entries on save.
 
-### 🛡️ Security Hardening (v1.7.47)
+### Security Hardening (v1.7.47)
 
 * **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v2` cookie — not `localStorage`. Legacy `coreknot_token` is purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
 * **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
@@ -413,13 +420,13 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 * **QA security category:** Pre-deployment checklist includes static + live HTTP security probes (`security-hardening`).
 * **Full spec:** [`docs/SECURITY.md`](docs/SECURITY.md)
 
-### 💱 USD ↔ INR Conversion
+### USD ↔ INR Conversion
 
 * **Live rate:** `GET /api/finance/usd-inr-rate` — cached FX rate for finance, subscriptions, and project finance forms.
 * **Shared fields:** `UsdInrAmountFields.jsx` + `useUsdInrRate.js` sync USD/INR amounts across Finance, Subscriptions, and Project Finance.
 * **Invoice & reimbursement submissions (v1.8.0):** Settings → Invoice tab — workspace/project picker, multi-file receipts, invoice vs reimbursement type, submission history with status badges. Ops/admin approve or reject via Finance page pending queue (`GET /api/finance/pending`, `PATCH /api/finance/:id/approve|reject`). User history: `GET /api/finance/my-invoices`.
 
-### 🛡️ Local Development Safeguards
+### Local Development Safeguards
 
 * **Env Templates:** `server/.env.example` and `client/.env.example` document required variables without secrets.
 * **Dev Guard:** `client/src/utils/devEnvGuard.js` warns in the browser console when `VITE_API_URL` points at a production host.
@@ -427,7 +434,7 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 
 ---
 
-## 🗂️ Directory Structure
+## Directory Structure
 
 ```
 CoreKnot/
@@ -467,7 +474,7 @@ CoreKnot/
 
 ---
 
-## ⚙️ Quick Start Guide
+## Quick Start Guide
 
 ### System Prerequisites
 
@@ -518,12 +525,6 @@ node scripts/seedMusicContentCalendar.js --year=2026        # local calendar eve
 node scripts/reconcileDataHub.js --full                     # backfill Data Hub contacts
 ```
 
-Production one-shot (requires `MONGODB_URI_PROD` in `server/.env`):
-
-```bash
-node scripts/seedMusicContentCalendar.js --year=2026 --prod
-node scripts/reconcileDataHub.js --prod --full
-```
 
 **Password reset (weak → org default `1Million#`):**
 
@@ -583,7 +584,7 @@ Reports: `client/lighthouse-reports/index.html` (local only, gitignored).
 
 ---
 
-## 🔒 Environment Configuration
+## Environment Configuration
 
 The server relies heavily on strict system environment mappings to guarantee secure operation across multi-stage runtime environments.
 
@@ -637,7 +638,7 @@ Artist enquiries from `/query` should forward to the artist-enquiry webhook afte
 
 ---
 
-## 📡 API Architecture & Routing
+## API Architecture & Routing
 
 All application endpoints are structured beneath an explicit global `/api` gateway context pattern.
 
@@ -657,7 +658,7 @@ All application endpoints are structured beneath an explicit global `/api` gatew
 
 ---
 
-## 🔍 Diagnostic & Observability Protocol
+## Diagnostic & Observability Protocol
 
 CoreKnot is engineered to survive production strain with a rigorous multi-tiered observability layout:
 
@@ -667,7 +668,7 @@ CoreKnot is engineered to survive production strain with a rigorous multi-tiered
 
 ---
 
-## 🧪 Global Autonomous QA System & Auditing
+## Global Autonomous QA System & Auditing
 
 CoreKnot ships a **209-case** pre-deployment QA engine (Admin → QA Testing) that runs static checks, live HTTP security probes, integration workflows, and per-page AST scans before release.
 
@@ -717,7 +718,7 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 
 ---
 
-## 📚 Documentation Index
+## Documentation Index
 
 | Document | Purpose |
 | --- | --- |
@@ -729,7 +730,7 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |
 | [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) | Client UI conventions — lists, modals, tables, avatars |
 | [`docs/GOOGLE_META_APP_VERIFICATION.md`](docs/GOOGLE_META_APP_VERIFICATION.md) | Google OAuth + Meta App Review — env vars, redirect URIs, test matrix |
-| [`docs/VERSION_HISTORY.md`](docs/VERSION_HISTORY.md) | Release notes and production migration guides by version |
+| [`docs/VERSION_HISTORY.md`](docs/VERSION_HISTORY.md) | Release notes (beta builds pre-1.0.0) |
 
 ---
 

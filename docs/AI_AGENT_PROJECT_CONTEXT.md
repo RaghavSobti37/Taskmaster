@@ -1268,14 +1268,6 @@ Path: `server/scripts/` (57 files)
 | `syncDataHubToProd.js` | Push local Data Hub collections → prod (destructive) |
 | `compareDataHubDbs.js` | Compare local vs prod Data Hub collection counts |
 
-### Production migration sequence (v1.7.37+)
-
-```bash
-node scripts/migrateReviewWorkflow.js --dry-run --prod
-node scripts/migrateReviewWorkflow.js --execute --prod
-node scripts/cleanupTestTasks.js --prod
-```
-
 ### Admin script runner
 
 `/admin/scripts` page → `POST /api/admin/scripts/:scriptName` — runs whitelisted scripts from server/scripts/

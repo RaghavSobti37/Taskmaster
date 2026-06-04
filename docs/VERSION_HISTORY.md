@@ -2,9 +2,34 @@
 
 Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.md](../README.md).
 
+## Versioning
+
+**v1.0.0** is the first **stable** release. All prior **v1.7.x–v1.9.x** entries were **beta** builds during private deployment (Git commit messages may still show `v1.9.x` tags from that period).
+
 ---
 
-### [2026-06-04] v1.9.15 — Inbox clear, Todo sorting, attendance roster
+### [2026-06-04] v1.0.0 — First stable release
+
+#### Finance (Documents)
+- **Overview:** Four stat cards (Documents, Files, Invoices, Pending or Reimbursements); grey chart row removed from overview.
+- **Layout:** `ListPageLayout` `toolbarFill` + `overviewSectionClassName` for aligned toolbar and overview spacing.
+
+#### Office subscriptions
+- **Spend cards:** Separate **Monthly Spend** and **Yearly Spend** (normalized periodicity); one-time charges excluded from recurring totals.
+
+#### CRM leads
+- **Pagination:** Default page size **5**.
+- **Toolbar:** `toolbarFill` on list layout so filters span the row.
+
+#### Exly offerings
+- **List price:** `inferListPriceFromBookings` backfills `price` from paid booking mode when API returns 0 (e.g. heART of Music Composition → ₹4999).
+- **Utils:** `parseExlyMoney`, `resolveOfferingPriceFromApi` in `exlyUtils.js`; sync no longer zeroes price from empty API fields.
+
+Redeploy API + client together. No migration.
+
+---
+
+### [2026-06-04] v1.9.15 (beta) — Inbox clear, Todo sorting, attendance roster
 
 #### Inbox
 - **Clear all:** `DELETE /api/notifications` + **Clear all** button on `/inbox` (confirm dialog); **Mark all read** unchanged.
@@ -20,7 +45,7 @@ Redeploy API + client together. No migration.
 
 ---
 
-### [2026-06-04] v1.9.14 — Task Activity & Team Row UX
+### [2026-06-04] v1.9.14 (beta) — Task Activity & Team Row UX
 
 #### Task history
 - **API:** `TaskActivityService.listActivity` sorts `createdAt` descending (newest first).
@@ -34,7 +59,7 @@ Redeploy API + client together. No migration.
 
 ---
 
-### [2026-06-04] v1.9.13 — Mail Template Studio, Creator/Assignee Split & Email Pipeline
+### [2026-06-04] v1.9.13 (beta) — Mail Template Studio, Creator/Assignee Split & Email Pipeline
 
 #### Mail Template Studio
 - **Client:** `MailTemplateStudio.jsx` — Quill or raw HTML editor, indexed variables, server preview, draft → submit → admin approve/reject; embedded in refactored `AdminMailContent.jsx`.
@@ -61,7 +86,7 @@ Deploy API + client together. Run creator/assignee migration once on production 
 
 ---
 
-### [2026-06-04] v1.9.12 — QA Checklist Fixes
+### [2026-06-04] v1.9.12 (beta) — QA Checklist Fixes
 
 - **Login rate limit:** `authRoutes.js` `authLoginLimiter` `max: 10` everywhere (pre-deploy checklist + 11th-attempt 429 edge probe).
 - **Project updates:** `updateProject` uses optimistic locking on `__v` — concurrent PUTs return **409** instead of silent double-apply.
@@ -71,7 +96,7 @@ Redeploy API for rate limit + project PUT behavior. No DB migration.
 
 ---
 
-### [2026-06-04] v1.9.11 — Task Activity, Attendance Prompt & Modal Fixes
+### [2026-06-04] v1.9.11 (beta) — Task Activity, Attendance Prompt & Modal Fixes
 
 - **Task activity:** `TaskActivity.js`, `TaskMentionReceipt.js`, `TaskActivityService.js`, `taskActivityPurgeWorker.js`; routes `GET/POST /api/tasks/:id/activity`; client timeline, compose, mention badges.
 - **Task modal:** `TaskDetailModalHeader.jsx` + `taskAssigneeRows.js`; `resolvedTask = displayTask ?? task` prevents null `assignments` crash on reopen.
@@ -83,7 +108,7 @@ Deploy API + client together. MongoDB creates `taskactivities` / `taskmentionrec
 
 ---
 
-### [2026-06-03] v1.9.10 — Frontend Performance & Lighthouse Tooling
+### [2026-06-03] v1.9.10 (beta) — Frontend Performance & Lighthouse Tooling
 
 - **Audit scripts:** `client/scripts/lighthouse-audit.mjs`, `lighthouse-routes.mjs`; npm `lighthouse`, `lighthouse:public`, `lighthouse:prod`; reports gitignored under `client/lighthouse-reports/`.
 - **Boot/shell:** `AppBootFallback.jsx`, lazy `MainLayout`, deferred SW + gamification socket; CSS sidebar (no Framer Motion in `OutletSidebar.jsx`).
@@ -95,7 +120,7 @@ No server migration required. Redeploy client static host after merge.
 
 ---
 
-### [2026-06-03] v1.9.9 — Google OAuth Session Fix & Meta Verification
+### [2026-06-03] v1.9.9 (beta) — Google OAuth Session Fix & Meta Verification
 
 - **OAuth ticket exchange:** `googleAuthCallback` redirects with `?ticket=`; `POST /api/auth/oauth-establish` sets session cookie via credentialed XHR.
 - **Redirect URI:** `oauthEnv.js` + `GET /api/auth/google/redirect-uri` for console registration.
@@ -104,7 +129,7 @@ No server migration required. Redeploy client static host after merge.
 
 ---
 
-### [2026-06-03] v1.9.8 — Self-Service Password Reset
+### [2026-06-03] v1.9.8 (beta) — Self-Service Password Reset
 
 - **Client:** `ForgotPasswordPage.jsx`, `ResetPasswordPage.jsx`; routes `/forgot-password`, `/reset-password`.
 - **API:** `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` (rate limit 5/hour per email).
@@ -112,28 +137,28 @@ No server migration required. Redeploy client static host after merge.
 
 ---
 
-### [2026-06-03] v1.9.7 — Manual Office / WFH Attendance
+### [2026-06-03] v1.9.7 (beta) — Manual Office / WFH Attendance
 
 - **WorkModeToggle.jsx:** user picks Office or WFH before mark-in/out; optional IP hint only.
 - **API:** `GET /api/attendance/work-mode-hint`; `POST /api/attendance/check` accepts `workMode`; removed GPS waterfall.
 
 ---
 
-### [2026-06-03] v1.9.6 — Workspace Member Roster & Access Filtering
+### [2026-06-03] v1.9.6 (beta) — Workspace Member Roster & Access Filtering
 
 - **projectAccess.js:** workspace/project access single source; filtered workspace list; 403 on unauthorized detail.
 - **Roster:** `allMembers` on workspace GET — deduplicated users with per-project roles.
 
 ---
 
-### [2026-06-03] v1.9.5 — Attendance Overview & Count-Based Backup Retention
+### [2026-06-03] v1.9.5 (beta) — Attendance Overview & Count-Based Backup Retention
 
 - **Attendance Overview widget:** `GET /api/dashboard/attendance-overview?timeframe=7d|30d|90d`.
 - **Backup retention:** `BACKUP_RETENTION_COUNT` (default `2`) replaces day-based pruning.
 
 ---
 
-### [2026-06-03] v1.9.4 — Dashboard Widgets, Named Layouts & Backup Progress
+### [2026-06-03] v1.9.4 (beta) — Dashboard Widgets, Named Layouts & Backup Progress
 
 - **Cards:** Leave Requests, Reimbursements, Last Backup widgets.
 - **Layout library:** named dashboard presets with swap-on-drag.
@@ -141,109 +166,109 @@ No server migration required. Redeploy client static host after merge.
 
 ---
 
-### [2026-06-03] v1.9.3 — Loading States, Mentions & Subscription Reminders
+### [2026-06-03] v1.9.3 (beta) — Loading States, Mentions & Subscription Reminders
 
 - **DataTable** spinner when `isLoading`; task modal pending states; multi-assignee subscription reminders.
 
 ---
 
-### [2026-06-03] v1.9.2 — Nav Badges, PWA Desktop, Schedule Horizon & Task Filter
+### [2026-06-03] v1.9.2 (beta) — Nav Badges, PWA Desktop, Schedule Horizon & Task Filter
 
 - **CountBadge** attention signals on sidebar/bottom nav; PWA desktop mode; 1–5 day schedule horizon; completed tasks visible 2 days only.
 
 ---
 
-### [2026-06-03] v1.9.1 — Subtractive Slate UI & Email Design Alignment
+### [2026-06-03] v1.9.1 (beta) — Subtractive Slate UI & Email Design Alignment
 
 - Flat slate shell, rule dividers, emerald/teal accents; email template styling aligned (tracking unchanged).
 
 ---
 
-### [2026-06-02] v1.9.0 — Mobile UI, Project Analytics, Gamification & Chat Removal
+### [2026-06-02] v1.9.0 (beta) — Mobile UI, Project Analytics, Gamification & Chat Removal
 
 - Mobile list kit rolled across CRUD pages; project analytics pages; chat module removed; gamification XP caps and attendance rules.
 
 ---
 
-### [2026-06-02] v1.8.0 — Invoice Approval, Auth Cookie v2 & Unsaved-Changes UX
+### [2026-06-02] v1.8.0 (beta) — Invoice Approval, Auth Cookie v2 & Unsaved-Changes UX
 
 - Invoice/reimbursement submission + ops approval queue; `coreknot_token_v2` cookie; enhanced unsaved-changes bar with field diffs.
 
 ---
 
-### [2026-06-02] v1.7.55 — CRM Phone Validation & QA Cleanup CLI
+### [2026-06-02] v1.7.55 (beta) — CRM Phone Validation & QA Cleanup CLI
 
 - Strict per-country phone validation; lead save cache fix; `qa:audit` / `qa:cleanup` CLI scripts.
 
 ---
 
-### [2026-06-01] v1.7.50 — UX Clarity & QA Purge Extension
+### [2026-06-01] v1.7.50 (beta) — UX Clarity & QA Purge Extension
 
 - Humanized labels across dashboard/CRM/inbox; extended QA purge for probe users and tasks.
 
 ---
 
-### [2026-06-01] v1.7.49 — Attendance Office Detection Fix
+### [2026-06-01] v1.7.49 (beta) — Attendance Office Detection Fix
 
 - Office GPS radius 1000 m; merged `OFFICE_PUBLIC_IP` + `OFFICE_IP_WHITELIST`.
 
 ---
 
-### [2026-06-01] v1.7.48 — QA v2 Engine & Security Hardening
+### [2026-06-01] v1.7.48 (beta) — QA v2 Engine & Security Hardening
 
 - Extended QA suites, live HTTP probes, webhook HMAC enforcement, per-email login rate limits.
 
 ---
 
-### [2026-05-31] v1.7.46 — Department Stats, Music Calendar & Data Hub Full Sync
+### [2026-05-31] v1.7.46 (beta) — Department Stats, Music Calendar & Data Hub Full Sync
 
 - Dept stats widget; music calendar seed; Data Hub full reconcile button.
 
 ---
 
-### [2026-05-31] v1.7.45 — Data Hub, Calendar Guards & Music Content Calendar
+### [2026-05-31] v1.7.45 (beta) — Data Hub, Calendar Guards & Music Content Calendar
 
 - Unified Data Hub CRM; past-date validation; musical_day calendar events; overdue notification cron removed.
 
 ---
 
-### [2026-05-31] v1.7.44 — Notifications, Attendance UX & Admin Access
+### [2026-05-31] v1.7.44 (beta) — Notifications, Attendance UX & Admin Access
 
 - Push dedupe; independent mark-in/out; admin route hardening.
 
 ---
 
-### [2026-05-31] v1.7.43 — Admin Workspace Colors
+### [2026-05-31] v1.7.43 (beta) — Admin Workspace Colors
 
 - `WorkspaceColorPicker`; hex validation on workspace PATCH (admin-only color edits).
 
 ---
 
-### [2026-05-31] v1.7.42 — Daily Logs, Projects UX & Per-User Workspaces
+### [2026-05-31] v1.7.42 (beta) — Daily Logs, Projects UX & Per-User Workspaces
 
 - Daily log task-completion entries; per-user workspace column order; removed six-project cap.
 
 ---
 
-### [2026-05-31] v1.7.40 — Subscriptions, Workspace Settings & Dev Safeguards
+### [2026-05-31] v1.7.40 (beta) — Subscriptions, Workspace Settings & Dev Safeguards
 
 - Office subscriptions module; workspace settings page; `.env.example` + `devEnvGuard.js`.
 
 ---
 
-### [2026-05-31] v1.7.39 — Project Roles & Local DB Isolation
+### [2026-05-31] v1.7.39 (beta) — Project Roles & Local DB Isolation
 
 - Canonical admin/manager/member roles; `database.js` prod-like name guards.
 
 ---
 
-### [2026-05-31] v1.7.38 — Website Book-a-Call Webhook
+### [2026-05-31] v1.7.38 (beta) — Website Book-a-Call Webhook
 
 - Public book-call webhook with BullMQ queue and async rep assignment.
 
 ---
 
-### [2026-05-30] v1.7.37 — Review Workflow, Calendar, Attendance & Gamification
+### [2026-05-30] v1.7.37 (beta) — Review Workflow, Calendar, Attendance & Gamification
 
 #### Task Review Workflow (strict assigner-only)
 - Shared rules: `shared/taskReviewRules.js` + client mirror — delegated assignments only enter review.
@@ -279,7 +304,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-30] v1.7.36 — System Logs, Page Permissions, Backup & Artists Refactor
+### [2026-05-30] v1.7.36 (beta) — System Logs, Page Permissions, Backup & Artists Refactor
 
 #### System Logs & Observability
 - Unified **SystemLog** model with severity (`INFO`/`SUCCESS`/`WARN`/`ERROR`) and module scoping (CRM, PROJECTS, EMAIL, BACKUP, etc.).
@@ -312,7 +337,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-30] v1.7.35 — Attendance Overhaul, Leaderboard Week & CRM Layout
+### [2026-05-30] v1.7.35 (beta) — Attendance Overhaul, Leaderboard Week & CRM Layout
 
 #### Attendance & Leaderboard
 - Weekly leaderboard resets **Monday 00:00 IST** (Mon–Sun window via `getCurrentWeekRange()` in `server/utils/attendanceDate.js`); lifetime `User.exp` / level unchanged.
@@ -332,7 +357,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-30] v1.7.34 — Campaign Metrics, Activity Stream & SMTP Resilience
+### [2026-05-30] v1.7.34 (beta) — Campaign Metrics, Activity Stream & SMTP Resilience
 
 #### Accurate Campaign Stats
 - Stat cards now derive from recipient status counts — **Unsubscribed no longer counted as Sent**.
@@ -350,7 +375,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-30] v1.7.33 — Filtered Campaign Resend & Tracking URL Fix
+### [2026-05-30] v1.7.33 (beta) — Filtered Campaign Resend & Tracking URL Fix
 
 #### Filtered Resend (Campaign Details)
 - **Resend [Filter]** button in Target Recipient Delivery Log — resend only to recipients matching the active status filter.
@@ -369,7 +394,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-30] v1.7.32 — Mail Engine Production Fixes
+### [2026-05-30] v1.7.32 (beta) — Mail Engine Production Fixes
 
 #### Campaign Create (PayloadTooLargeError)
 - Production clients should set `VITE_API_URL=https://CoreKnot-api.onrender.com` to bypass Vercel's ~4.5MB proxy limit.
@@ -391,7 +416,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-29] v1.7.31 — Socket.IO Realtime, Department Permissions & UI Consolidation
+### [2026-05-29] v1.7.31 (beta) — Socket.IO Realtime, Department Permissions & UI Consolidation
 
 #### Realtime
 - Replaced Supabase Realtime with **Socket.IO** (`server/config/realtime.js`, `client/src/lib/realtime.js`).
@@ -412,7 +437,7 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-29] v1.7.30 — Dashboard Redesign, Notifications, PWA & Departments
+### [2026-05-29] v1.7.30 (beta) — Dashboard Redesign, Notifications, PWA & Departments
 
 #### Dashboard
 - Rebuilt dashboard as three-column layout: leaderboard + announcements + pin board + schedule (left), todos + projects today (center), private notes + pin composer (right).
@@ -439,23 +464,23 @@ server/scripts/migrateReviewWorkflow.js
 
 ---
 
-### [2026-05-29] v1.7.29 — Announcement Dispatch Visibility + Professional Email Template
+### [2026-05-29] v1.7.29 (beta) — Announcement Dispatch Visibility + Professional Email Template
 - Live email dispatch tracking on announcement cards (`queued`, `sending`, `completed`, `failed`).
 - Manager-side delete via `DELETE /api/announcements/:id`.
 - Branded announcement HTML template; queued background send with per-recipient tracking.
 - Public open-tracking pixel endpoint.
 
-### [2026-05-29] v1.7.28 — Exly Analytics, Gamification & Dev Stability
+### [2026-05-29] v1.7.28 (beta) — Exly Analytics, Gamification & Dev Stability
 - Accurate paid vs free booking breakdown; shared revenue engine.
 - Weekly XP breakdown endpoint; dashboard leaderboard drill-down.
 - Graceful shutdown handlers; `juice` for HTML email inlining.
 
-### [2026-05-28] v1.7.27 — Production Stability + Data Sync
+### [2026-05-28] v1.7.27 (beta) — Production Stability + Data Sync
 - Fixed sidebar crash (missing `Terminal` icon import).
 - Finance multi-upload batch strategy with retries.
 - Production migration and finance sync scripts.
 
-### [2026-05-28] v1.7.26 — Finance Ops + Admin Script Runner
+### [2026-05-28] v1.7.26 (beta) — Finance Ops + Admin Script Runner
 - Admin Script Runner at `/admin/scripts`.
 - Robust multi-file finance upload pipeline.
 - Uppercase project name enforcement globally.

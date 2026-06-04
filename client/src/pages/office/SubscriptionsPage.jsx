@@ -39,6 +39,23 @@ const formatInr = (amount) =>
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+/** Normalize each line item to equivalent monthly INR from its billing periodicity. */
+const PERIODICITY_MONTHLY_FACTOR = {
+  Monthly: 1,
+  Quarterly: 1 / 3,
+  'Half-yearly': 1 / 6,
+  Yearly: 1 / 12,
+  'One-time': 0,
+};
+
+const subscriptionMonthlyInr = (sub) => {
+  const amount = Number(sub?.amount) || 0;
+  const factor = PERIODICITY_MONTHLY_FACTOR[sub?.periodicity] ?? 1;
+  return amount * factor;
+};
+
+const subscriptionYearlyInr = (sub) => subscriptionMonthlyInr(sub) * 12;
+
 const normalizeUsedByUsers = (usedBy) => {
   if (!usedBy) return [];
   return Array.isArray(usedBy) ? usedBy : [usedBy];
@@ -177,10 +194,13 @@ const SubscriptionsPage = () => {
     isSaving: saveMutation.isPending,
   });
 
-  const totalMonthlyInr = useMemo(
-    () => subscriptions.reduce((sum, sub) => sum + (Number(sub.amount) || 0), 0),
-    [subscriptions]
-  );
+  const { totalMonthlyInr, totalYearlyInr } = useMemo(() => {
+    let monthly = 0;
+    for (const sub of subscriptions) {
+      monthly += subscriptionMonthlyInr(sub);
+    }
+    return { totalMonthlyInr: monthly, totalYearlyInr: monthly * 12 };
+  }, [subscriptions]);
 
   const typeChart = useMemo(
     () => distributionFromField(subscriptions, 'type'),
@@ -245,11 +265,20 @@ const SubscriptionsPage = () => {
             variant: 'info',
           },
           {
-            id: 'spend',
-            label: 'Listed Spend',
+            id: 'spend-monthly',
+            label: 'Monthly Spend',
             value: formatInr(totalMonthlyInr),
             icon: CreditCard,
             variant: 'mint',
+            info: 'Normalized recurring spend per month (by periodicity). One-time charges excluded.',
+          },
+          {
+            id: 'spend-yearly',
+            label: 'Yearly Spend',
+            value: formatInr(totalYearlyInr),
+            icon: CreditCard,
+            variant: 'apricot',
+            info: 'Monthly spend × 12. One-time charges excluded.',
           },
         ],
         charts: typeChart.length

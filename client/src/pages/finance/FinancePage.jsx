@@ -17,7 +17,6 @@ import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, UserLabel, DesktopRecommendedBanner, DataLoading } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
-import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
@@ -34,36 +33,6 @@ const CATEGORIES = [
   { value: 'tax', label: 'Tax' },
   { value: 'other', label: 'Other' },
 ];
-
-const CATEGORY_MIX_LABELS = {
-  reimbursements: 'Reimbursements',
-  ...Object.fromEntries(CATEGORIES.filter((c) => c.value !== 'all').map((c) => [c.value, c.label])),
-};
-
-const FINANCE_MIX_ORDER = [
-  'invoice',
-  'reimbursements',
-  'receipt',
-  'contract',
-  'proposal',
-  'budget',
-  'report',
-  'tax',
-  'other',
-];
-
-const categoryMixToChartData = (mix) => {
-  if (!Array.isArray(mix) || !mix.length) return [];
-  const byKey = Object.fromEntries(mix.map(({ key, count }) => [key, count]));
-  const keys = [
-    ...FINANCE_MIX_ORDER.filter((k) => byKey[k] > 0),
-    ...mix.map((m) => m.key).filter((k) => !FINANCE_MIX_ORDER.includes(k) && byKey[k] > 0),
-  ];
-  return keys.map((key) => ({
-    label: CATEGORY_MIX_LABELS[key] || key.replace(/^\w/, (c) => c.toUpperCase()),
-    value: byKey[key],
-  }));
-};
 
 const CAT_COLORS = {
   invoice: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
@@ -577,44 +546,66 @@ const FinancePage = () => {
   };
 
   const financeOverview = useMemo(() => {
-    let categoryData = categoryMixToChartData(docsRes?.categoryMix);
-    if (!categoryData.length) {
-      categoryData = distributionFromField(
-        docs.filter((d) => !d.isFolder),
-        'category',
-        {
-          labelFn: (raw, row) => (
-            row?.metadata?.submissionType === 'reimbursement'
-              ? 'Reimbursements'
-              : (CATEGORY_MIX_LABELS[raw] || CATEGORY_MIX_LABELS.other)
-          ),
-        },
-      );
-    }
+    const mix = docsRes?.categoryMix || [];
+    const mixByKey = Object.fromEntries(mix.map(({ key, count }) => [key, count || 0]));
+    const fileCount = mix.reduce((sum, row) => sum + (row.count || 0), 0);
+
+    const fourthStat = pendingInvoices.length > 0
+      ? {
+          id: 'pending',
+          label: 'Pending approval',
+          value: pendingInvoices.length,
+          icon: Clock,
+          variant: 'warning',
+          info: 'Invoices awaiting ops approval.',
+        }
+      : {
+          id: 'reimbursements',
+          label: 'Reimbursements',
+          value: mixByKey.reimbursements || 0,
+          icon: FileSpreadsheet,
+          variant: 'rose',
+          info: 'Reimbursement submissions in the current scope.',
+        };
+
     const stats = [
-      { id: 'total', label: 'Documents', value: pagination.total, icon: FileText, variant: 'info' },
+      {
+        id: 'total',
+        label: 'Documents',
+        value: pagination.total,
+        icon: FileText,
+        variant: 'info',
+        info: 'Files and folders matching current filters.',
+      },
+      {
+        id: 'files',
+        label: 'Files',
+        value: fileCount,
+        icon: File,
+        variant: 'mint',
+        info: 'Non-folder documents in the current scope.',
+      },
+      {
+        id: 'invoices',
+        label: 'Invoices',
+        value: mixByKey.invoice || 0,
+        icon: FileText,
+        variant: 'apricot',
+        info: 'Invoice-type documents in the current scope.',
+      },
+      fourthStat,
     ];
-    if (pendingInvoices.length > 0) {
-      stats.push({
-        id: 'pending',
-        label: 'Pending approval',
-        value: pendingInvoices.length,
-        icon: Clock,
-        variant: 'warning',
-      });
-    }
-    return {
-      stats: stats.slice(0, 4),
-      charts: categoryData.length
-        ? [{ id: 'category', title: 'Category mix', type: 'bar', data: categoryData, height: 128 }]
-        : [],
-    };
-  }, [docs, docsRes?.categoryMix, pagination.total, pendingInvoices.length]);
+
+    return { stats };
+  }, [docsRes?.categoryMix, pagination.total, pendingInvoices.length]);
 
   return (
     <ListPageLayout
       maxWidth="1400px"
       containerClassName="!py-4"
+      className="!space-y-2"
+      overviewSectionClassName="!mb-0 !space-y-0"
+      toolbarFill
       overview={financeOverview}
       toolbarActions={(
         <>
@@ -629,13 +620,14 @@ const FinancePage = () => {
       toolbar={(
         <>
           <SearchInput
+            
             placeholder="Search title, file name, vendor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <NexusDropdown
             variant="toolbar"
-            label="Workspace"
+            
             placeholder="All workspaces"
             value={selectedWorkspace}
             onChange={(value) => {
@@ -650,7 +642,7 @@ const FinancePage = () => {
           />
           <NexusDropdown
             variant="toolbar"
-            label="Project"
+           
             placeholder="All projects"
             value={selectedProject}
             onChange={(projectId) => {
@@ -667,7 +659,7 @@ const FinancePage = () => {
           />
           <NexusDropdown
             variant="toolbar"
-            label="Type"
+            
             placeholder="All types"
             value={selectedCategory}
             onChange={setSelectedCategory}

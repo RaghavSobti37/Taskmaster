@@ -20,6 +20,8 @@ export default function ListPageLayout({
   overviewMobileMaxStats = 2,
   mobileFilterCount,
   filterSheetTitle,
+  toolbarFill = false,
+  overviewSectionClassName = '',
 }) {
   const hasOverview =
     overview &&
@@ -35,6 +37,7 @@ export default function ListPageLayout({
             charts={overview.charts}
             mobileCollapsed={overview.mobileCollapsed ?? overviewMobileCollapsed}
             mobileMaxStats={overview.mobileMaxStats ?? overviewMobileMaxStats}
+            className={overviewSectionClassName}
           />
         )}
         {(toolbar || toolbarActions || showToolbarTitle) && (
@@ -44,6 +47,7 @@ export default function ListPageLayout({
             actions={toolbarActions}
             mobileFilterCount={mobileFilterCount}
             filterSheetTitle={filterSheetTitle}
+            toolbarFill={toolbarFill}
           >
             {toolbar}
           </PageToolbar>

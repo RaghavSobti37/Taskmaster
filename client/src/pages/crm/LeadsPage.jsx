@@ -25,7 +25,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(5);
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -343,6 +343,7 @@ export default function LeadsPage() {
   return (
     <ListPageLayout
       containerClassName="!py-4"
+      toolbarFill
       overviewMobileMaxStats={2}
       overview={{
         stats: [
@@ -395,38 +396,38 @@ export default function LeadsPage() {
       toolbar={
         <>
           <SearchInput
+            label="Search"
             placeholder="Search name or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="!w-44 shrink min-w-[9rem]"
           />
           <NexusDropdown
+            label="Interest"
             placeholder="Interest Level"
             options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
             value={filters.leadStatus}
             onChange={(v) => setFilters({ ...filters, leadStatus: v })}
-            className="!w-36 shrink-0"
           />
           <NexusDropdown
+            label="Source"
             placeholder="Source"
             options={[{ value: 'all', label: 'All Sources' }, ...sourcesList.map((s) => ({ value: s, label: s }))]}
             value={filters.source}
             onChange={(v) => setFilters({ ...filters, source: v })}
-            className="!w-40 shrink-0"
           />
           <NexusDropdown
+            label="Quality"
             placeholder="Quality"
             options={[{ value: 'all', label: 'All Quality' }, ...qualitiesList.map((q) => ({ value: q, label: `Level ${q}` }))]}
             value={filters.leadQuality}
             onChange={(v) => setFilters({ ...filters, leadQuality: v })}
-            className="!w-32 shrink-0"
           />
           <NexusDropdown
+            label="Agent"
             placeholder="Agent"
             options={[{ value: 'all', label: 'All Agents' }, { value: 'unassigned', label: 'Unassigned' }, ...team.map((r) => ({ value: r._id, label: r.name }))]}
             value={filters.assignedRepId}
             onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
-            className="!w-36 shrink-0"
           />
         </>
       }

@@ -11,7 +11,11 @@ const logger = require('../utils/logger');
 const { rejectUnlessWebhookSignature } = require('../utils/webhookAuth');
 const { getDepartmentSlug } = require('../utils/departmentPermissions');
 
-const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
+const {
+  parseOfferingTitle,
+  shouldIgnoreOffering,
+  inferListPriceFromBookings,
+} = require('../utils/exlyUtils');
 const {
   computeBookingBreakdown,
   buildDailyChartData,
@@ -111,10 +115,43 @@ exports.getOfferings = async (req, res) => {
       ])
     );
 
+    const offeringsNeedingPrice = offerings
+      .filter((o) => !o.price || o.price <= 0)
+      .map((o) => o.offeringId);
+    const inferredPriceMap = new Map();
+    if (offeringsNeedingPrice.length > 0) {
+      const paidBookings = await ExlyBooking.find({
+        offeringId: { $in: offeringsNeedingPrice },
+        pricePaid: { $gt: 0 },
+      })
+        .select('offeringId pricePaid')
+        .lean();
+      const byOffering = new Map();
+      for (const row of paidBookings) {
+        if (!byOffering.has(row.offeringId)) byOffering.set(row.offeringId, []);
+        byOffering.get(row.offeringId).push(row);
+      }
+      for (const [offeringId, rows] of byOffering.entries()) {
+        const inferred = inferListPriceFromBookings(rows);
+        if (inferred > 0) inferredPriceMap.set(offeringId, inferred);
+      }
+      await Promise.all(
+        [...inferredPriceMap.entries()].map(([offeringId, price]) =>
+          ExlyOffering.updateOne(
+            { offeringId, $or: [{ price: { $lte: 0 } }, { price: null }] },
+            { $set: { price } }
+          )
+        )
+      );
+    }
+
     const enrichedOfferings = offerings.map((offering) => {
       const stats = statsMap.get(offering.offeringId);
-      if (!stats) return offering;
-      return { ...offering, ...stats };
+      const inferredPrice = inferredPriceMap.get(offering.offeringId);
+      const price = offering.price > 0 ? offering.price : (inferredPrice || offering.price || 0);
+      const merged = { ...offering, price };
+      if (!stats) return merged;
+      return { ...merged, ...stats };
     });
 
     await setCache(cacheKey, enrichedOfferings, 120);
@@ -306,12 +343,19 @@ exports.getOfferingDetails = async (req, res) => {
       : 'all';
     const search = (req.query.search || '').trim().toLowerCase();
 
-    const offering = await ExlyOffering.findOne({ offeringId }).lean();
+    let offering = await ExlyOffering.findOne({ offeringId }).lean();
     if (!offering) {
       return res.status(404).json({ error: 'Offering not found.' });
     }
 
     const allBookings = await ExlyBooking.find({ offeringId }).sort({ bookedOn: -1 }).lean();
+    if ((!offering.price || offering.price <= 0) && allBookings.length > 0) {
+      const inferred = inferListPriceFromBookings(allBookings);
+      if (inferred > 0) {
+        offering = { ...offering, price: inferred };
+        await ExlyOffering.updateOne({ offeringId }, { $set: { price: inferred } });
+      }
+    }
     const metrics = computeBookingBreakdown(allBookings);
 
     let filteredBookings = allBookings;

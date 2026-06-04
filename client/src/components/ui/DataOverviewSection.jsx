@@ -75,7 +75,11 @@ export default function DataOverviewSection({
   return (
     <section ref={sectionRef} className={`space-y-3 mb-8 ${className}`} aria-label="Data overview">
       {hasStats && (
-        <div className={`grid gap-3 ${isMobile && insightsOpen ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
+        <div
+          className={`grid w-full gap-3 ${
+            isMobile && insightsOpen ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'
+          }`}
+        >
           {visibleStats.map((s) => {
             const Icon = s.icon || Database;
             return (

@@ -388,6 +388,29 @@ select option {
   flex: 1 1 12rem;
 }
 
+.page-toolbar-controls.page-toolbar-controls--fill {
+  width: 100%;
+}
+
+.page-toolbar-controls.page-toolbar-controls--fill > * {
+  flex: 1 1 0;
+  min-width: 5.5rem;
+}
+
+.page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-field,
+.page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-search {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 5.5rem;
+  max-width: none;
+}
+
+.page-toolbar-controls.page-toolbar-controls--fill .tm-toolbar-date-range {
+  flex: 1 1 0;
+  min-width: 8rem;
+  max-width: none;
+}
+
 .page-toolbar-controls .tm-toolbar-date-range {
   width: auto;
   min-width: 0;

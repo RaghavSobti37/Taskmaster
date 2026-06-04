@@ -38,6 +38,7 @@ export default function PageToolbar({
   mobileFilterCount = 0,
   filterSheetTitle = 'Filters',
   onFilterClear,
+  toolbarFill = false,
 }) {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -247,7 +248,11 @@ export default function PageToolbar({
           )}
         </div>
       )}
-      <div className="page-toolbar-controls flex flex-nowrap items-center gap-2 min-w-0 flex-1">
+      <div
+        className={`page-toolbar-controls flex flex-nowrap items-center gap-2 min-w-0 flex-1 ${
+          toolbarFill ? 'page-toolbar-controls--fill' : ''
+        }`}
+      >
         {desktopChildren}
       </div>
       {actions && (

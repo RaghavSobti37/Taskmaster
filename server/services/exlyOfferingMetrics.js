@@ -4,6 +4,7 @@ const {
   computeBookingBreakdown,
   computeConversionRate
 } = require('../utils/exlyMetrics');
+const { inferListPriceFromBookings } = require('../utils/exlyUtils');
 
 /**
  * Recompute and persist offering aggregates from ExlyBooking + CRM leads.
@@ -29,6 +30,12 @@ async function recalculateOfferingMetrics(offering) {
   offering.totalRevenue = breakdown.totalRevenue;
   offering.avgOrderValue = breakdown.avgOrderValue;
   offering.conversionRate = conversionRate;
+
+  const inferredListPrice = inferListPriceFromBookings(bookingsForOff);
+  if (inferredListPrice > 0 && (!offering.price || offering.price <= 0)) {
+    offering.price = inferredListPrice;
+  }
+
   await offering.save();
 
   return {

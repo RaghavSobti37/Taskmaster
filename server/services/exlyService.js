@@ -2,7 +2,12 @@ const axios = require('axios');
 const ExlyOffering = require('../models/ExlyOffering');
 const ExlyBooking = require('../models/ExlyBooking');
 
-const { parseOfferingTitle, shouldIgnoreOffering } = require('../utils/exlyUtils');
+const {
+  parseOfferingTitle,
+  shouldIgnoreOffering,
+  parseExlyMoney,
+  resolveOfferingPriceFromApi,
+} = require('../utils/exlyUtils');
 const { recalculateOfferingMetrics } = require('./exlyOfferingMetrics');
 
 class ExlyService {
@@ -73,19 +78,20 @@ class ExlyService {
       const { cleanTitle, dateStr, timeStr } = parseOfferingTitle(rawTitle);
       const cleanOffId = offId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
 
+      const apiPrice = resolveOfferingPriceFromApi(off);
+      const offeringUpdate = {
+        title: cleanTitle,
+        eventDate: dateStr,
+        eventTime: timeStr,
+        type: off.type || 'program',
+        currency: off.currency || 'INR',
+        status: off.status || 'active',
+      };
+      if (apiPrice > 0) offeringUpdate.price = apiPrice;
+
       await ExlyOffering.findOneAndUpdate(
         { offeringId: cleanOffId },
-        {
-          $set: {
-            title: cleanTitle,
-            eventDate: dateStr,
-            eventTime: timeStr,
-            type: off.type || 'program',
-            price: isNaN(Number(off.price)) ? 0 : Number(off.price || 0),
-            currency: off.currency || 'INR',
-            status: off.status || 'active'
-          }
-        },
+        { $set: offeringUpdate },
         { upsert: true, new: true }
       );
     }
@@ -122,7 +128,15 @@ class ExlyService {
       const offeringId = b.offeringId || cleanTitle.toLowerCase().replace(/\s+/g, '-');
       const txnId = b.transactionId || b.transactionIdExly || '';
       const custId = b.customerId || b.customerIdExly || '';
-      const pricePaid = isNaN(Number(b.pricePaid)) ? 0 : Number(b.pricePaid || 0);
+      const pricePaid = parseExlyMoney(
+        b.pricePaid
+          ?? b.price
+          ?? b.amount
+          ?? b.transactionAmount
+          ?? b.priceSettled
+          ?? b['Price Paid']
+          ?? b['Transaction Amount']
+      );
       const bookedOn = b.bookedOn ? new Date(b.bookedOn) : new Date();
 
       // Upsert ExlyBooking with secure query

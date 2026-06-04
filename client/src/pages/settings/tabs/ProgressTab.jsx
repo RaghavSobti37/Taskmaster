@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Target, Activity, RefreshCw } from 'lucide-react';
-import { Badge, Button } from '../../../components/ui';
+import { Badge, Button, LoadingPhrase } from '../../../components/ui';
 import {
   useGamificationProgress,
   useGamificationHistory,
@@ -70,9 +70,13 @@ export default function ProgressTab() {
         <div className="md:col-span-2 flex flex-col justify-center">
           <div className="mb-5">
             <h3 className="tm-widget-label">Current Journey</h3>
-            <p className="mt-1.5 text-xs tm-data-meta">
-              {progressLoading ? 'Loading…' : `You are ${progressPercent.toFixed(1)}% through Level ${level}`}
-            </p>
+            <div className="mt-1.5 text-xs tm-data-meta">
+              {progressLoading ? (
+                <LoadingPhrase className="!text-left text-xs tm-data-meta" />
+              ) : (
+                `You are ${progressPercent.toFixed(1)}% through Level ${level}`
+              )}
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -117,7 +121,7 @@ export default function ProgressTab() {
         </div>
         <div className="divide-y divide-[var(--color-bg-border)]">
           {missionsLoading && (
-            <p className="px-6 py-8 text-sm text-[var(--color-text-muted)]">Loading missions…</p>
+            <div className="px-6 py-8 flex justify-center"><LoadingPhrase className="text-sm text-[var(--color-text-muted)]" /></div>
           )}
           {!missionsLoading && missions.length === 0 && (
             <p className="px-6 py-8 text-sm text-[var(--color-text-muted)]">No missions for today yet.</p>

@@ -50,7 +50,7 @@ export default function LeaveRequestsCard() {
         {opsView ? 'Pending leave awaiting approval' : 'Your leave submissions from Settings'}
       </p>
       <div className="flex-1 min-h-0 max-h-[min(40vh,16rem)] overflow-y-auto">
-        {isLoading && <DataLoading message="Loading leave..." className="py-8" />}
+        {isLoading && <DataLoading className="py-8" />}
         {!isLoading && rows.length === 0 && (
           <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-8 px-4">
             {opsView ? 'No pending leave requests' : 'No leave requests yet'}

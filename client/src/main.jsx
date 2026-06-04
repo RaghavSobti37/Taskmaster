@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import '@fontsource-variable/geist/wght.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -30,6 +29,15 @@ import { applyPwaDesktopDocumentFlag } from './utils/displayMode';
 
 applyPwaDesktopDocumentFlag();
 warnIfDevPointsAtProduction();
+
+const loadAppFont = () => {
+  import('@fontsource-variable/geist/wght.css').catch(() => {});
+};
+if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+  window.requestIdleCallback(loadAppFont, { timeout: 2000 });
+} else {
+  window.setTimeout(loadAppFont, 0);
+}
 
 const registerDeferredServiceWorker = () => {
   registerSW({ immediate: true });

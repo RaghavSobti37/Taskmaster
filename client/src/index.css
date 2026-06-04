@@ -154,7 +154,7 @@
 
   --color-text-primary: #F8F9FA;
   --color-text-secondary: #BDC1C6;
-  --color-text-muted: #80868B;
+  --color-text-muted: #9aa0a6;
 
   /* Semantic Pastel System - Dark (Desaturated + High Luminosity) */
   --color-pastel-mint-bg: rgba(15, 41, 22, 0.8);
@@ -928,4 +928,42 @@ html[data-pwa-desktop] [data-page-root] {
   border: 2px solid var(--color-bg-primary);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
   cursor: pointer;
+}
+
+/* Brand logo gallery — dark navy + teal squircle tiles */
+.logo-mark-gallery {
+  background: #0b1218;
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .logo-mark-gallery {
+    padding: 2rem;
+  }
+}
+
+/* LOCKED — white Harmonic Frequency on green (see docs/LOGO_LOCKED.md) */
+.brand-logo {
+  background: #126d5e;
+  border-radius: 22%;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 2px 8px rgb(0 0 0 / 0.12);
+}
+
+.logo-mark-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  background: #126d5e;
+  border-radius: 22%;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 2px 8px rgb(0 0 0 / 0.12);
+}
+
+.logo-mark-gallery-detail {
+  border-left: 4px solid #a8c4a4 !important;
 }

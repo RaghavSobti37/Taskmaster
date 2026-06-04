@@ -12,8 +12,10 @@ import { suggestProjectRole } from '../../utils/taskText';
 import { DEFAULT_WORKSPACE_COLOR, isValidHexColor, normalizeHexColor } from '../../utils/workspaceColors';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 const WorkspaceSettings = () => {
+  const teamSearchLoadingPhrase = useLoadingPhrase();
   const { name: nameParam } = useParams();
   const workspaceName = decodeURIComponent(nameParam || '').trim();
   const navigate = useNavigate();
@@ -298,7 +300,7 @@ const WorkspaceSettings = () => {
           options={users.map((u) => ({ value: u._id, label: u.name }))}
           value=""
           onChange={addMember}
-          placeholder={usersLoading ? 'Loading team members...' : 'Search team members...'}
+          placeholder={usersLoading ? teamSearchLoadingPhrase : 'Search team members...'}
           renderOption={formatOptionLabel}
           searchable
           disabled={!canManageMembers || forbidden || usersLoading}

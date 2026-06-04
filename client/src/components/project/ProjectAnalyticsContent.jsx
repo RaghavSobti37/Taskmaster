@@ -150,7 +150,7 @@ const ProjectAnalyticsContent = ({ projectId, rangeState: externalRangeState }) 
         <Badge variant="slate" className="w-fit">{report.project.workspace}</Badge>
       )}
 
-      {isLoading && !report && <DataLoading message="Loading analytics..." />}
+      {isLoading && !report && <DataLoading />}
       {error && !report && (
         <p className="text-sm text-red-500">
           {error.response?.data?.error || error.message || 'Failed to load analytics.'}

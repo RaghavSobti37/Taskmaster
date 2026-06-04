@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
-import { DashboardWidgetShell, TimeframeFilter, InfoButton } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner } from '../ui';
 import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { COMPONENT_REGISTRY } from '../../lib/componentRegistry';
 import { useDashboardTasks, useMailStats, useActivityGrid, useDepartmentStats } from '../../hooks/useTaskmasterQueries';
@@ -127,7 +127,7 @@ export default function GenericDashboardCard({ componentId }) {
       <ChartSurface className="flex-1" height={200}>
         {!hasData && componentId === 'dept-stats' && deptStatsLoading ? (
           <div className="flex flex-col items-center justify-center h-full w-full py-8">
-            <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            <Spinner size="md" />
           </div>
         ) : !hasData ? (
           <div className="flex flex-col items-center justify-center opacity-40 grayscale h-full w-full py-8">

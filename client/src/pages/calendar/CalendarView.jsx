@@ -158,8 +158,8 @@ const CalendarView = () => {
             {format(currentMonth, 'MMMM yyyy')}
           </span>
           <div className="flex gap-1">
-            <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={14} /></Button>
-            <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={14} /></Button>
+            <Button variant="ghost" size="xs" title="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={14} /></Button>
+            <Button variant="ghost" size="xs" title="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={14} /></Button>
           </div>
         </div>
         <div className="grid grid-cols-7 gap-y-1">
@@ -360,8 +360,8 @@ const CalendarView = () => {
                  <div className="flex items-center gap-4">
                     <Button variant="secondary" size="xs" onClick={() => { const today = new Date(); setCurrentMonth(today); setSelectedDay(today); }}>Today</Button>
                     <div className="flex items-center gap-1">
-                       <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={16} /></Button>
-                       <Button variant="ghost" size="xs" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></Button>
+                       <Button variant="ghost" size="xs" title="Previous month" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft size={16} /></Button>
+                       <Button variant="ghost" size="xs" title="Next month" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight size={16} /></Button>
                     </div>
                     <h3 className="text-xs font-black uppercase tracking-tight ml-2">{format(currentMonth, 'MMMM yyyy')}</h3>
                  </div>
@@ -390,7 +390,7 @@ const CalendarView = () => {
               <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr overflow-hidden relative">
                  {gridLoading && (
                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75 backdrop-blur-[1px]">
-                     <Spinner size="lg" label="Loading calendar" />
+                     <Spinner size="lg" showPhrase />
                    </div>
                  )}
                  {eachDayOfInterval({

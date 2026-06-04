@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Mail, Upload, Plus, Play, CheckCircle2, AlertCircle, FileCode, Users, Trash2, Zap, BarChart2, RefreshCw, Send, Check, Search, Filter, X, UserMinus, Edit, Eye, Save
 } from 'lucide-react';
-import { Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton, TabSwitcher } from '../ui';
+import { Card, Button, Input, Badge, DataTable, StatCard, PageSkeleton, TabSwitcher, DataLoading } from '../ui';
 import NexusDropdown from '../ui/NexusDropdown';
 import {
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile,
@@ -25,11 +25,13 @@ import {
   syncUnsubscribeInContent, appendUnsubscribe, hasUnsubscribeBlock, stripUnsubscribe, countUnsubscribeBlocks,
   parseTemplateVariables, insertVariable, setVariableFallbackInContent, previewMergeTags
 } from '../../utils/emailContentUtils';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 
 export default function AdminMailContent({ initialMode = null, hideModeBar = false, standaloneWizard = false } = {}) {
   const { confirm } = useConfirm();
   const toast = useToast();
+  const fetchLoadingPhrase = useLoadingPhrase();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1185,7 +1187,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                       <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
                     </label>
                     <Button size="xs" onClick={fetchHolySheetData} disabled={loadingHolySheet}>
-                      <RefreshCw size={12} className={loadingHolySheet ? 'animate-spin' : ''} /> {loadingHolySheet ? 'Loading...' : 'Fetch HolySheet'}
+                      <RefreshCw size={12} className={loadingHolySheet ? 'animate-spin' : ''} /> {loadingHolySheet ? fetchLoadingPhrase : 'Fetch HolySheet'}
                     </Button>
                     {csvRecipients.length > 0 && (
                       <Button size="xs" variant="ghost" onClick={() => { setCsvRecipients([]); setExcludedSources([]); setExcludedEmails([]); setCsvFileName(''); }} className="text-rose-500 hover:bg-rose-500/10 ml-2">Clear All</Button>
@@ -1271,7 +1273,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-3">
                   <span className="text-xs font-bold uppercase tracking-tight block">CRM Contacts</span>
                   <Button size="xs" variant="secondary" onClick={loadCrmContactsData} disabled={contactsLoading}>
-                    <RefreshCw size={12} className={contactsLoading ? 'animate-spin' : ''} /> {contactsLoading ? 'Loading...' : 'Fetch CRM'}
+                    <RefreshCw size={12} className={contactsLoading ? 'animate-spin' : ''} /> {contactsLoading ? fetchLoadingPhrase : 'Fetch CRM'}
                   </Button>
                 </div>
                 {allContacts.length > 0 && (
@@ -1328,7 +1330,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-3">
                   <span className="text-xs font-bold uppercase tracking-tight block">Exly Contacts</span>
                   <Button size="xs" variant="secondary" onClick={loadExlyContactsData} disabled={exlyContactsLoading}>
-                    <RefreshCw size={12} className={exlyContactsLoading ? 'animate-spin' : ''} /> {exlyContactsLoading ? 'Loading...' : 'Fetch Exly'}
+                    <RefreshCw size={12} className={exlyContactsLoading ? 'animate-spin' : ''} /> {exlyContactsLoading ? fetchLoadingPhrase : 'Fetch Exly'}
                   </Button>
                 </div>
                 {allExlyContacts.length > 0 && (
@@ -2440,7 +2442,7 @@ function LocationLeadsModal({ location, onClose }) {
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[var(--color-bg-primary)]">
           {isLoading ? (
-            <div className="py-8 text-center text-xs font-mono text-[var(--color-text-muted)] animate-pulse">Loading leads...</div>
+            <div className="py-8 flex justify-center"><DataLoading /></div>
           ) : leads.length === 0 ? (
             <div className="py-8 text-center text-xs font-mono text-[var(--color-text-muted)] italic">No engaged leads found for this location.</div>
           ) : (

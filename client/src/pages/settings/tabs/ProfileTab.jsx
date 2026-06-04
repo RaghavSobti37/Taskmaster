@@ -34,6 +34,7 @@ import {
   AVATAR_TOTAL_COUNT,
 } from '../../../constants/avatarCatalog';
 import { useUnsavedChanges, stableJsonEqual } from '../../../hooks/useUnsavedChanges';
+import { useLoadingPhrase } from '../../../hooks/useLoadingPhrase';
 
 const formatDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
 const toDepartmentId = (dept) => {
@@ -62,6 +63,7 @@ const CATEGORY_ICONS = {
 };
 
 export default function ProfileTab() {
+  const departmentLoadingPhrase = useLoadingPhrase();
   const { user, login } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
@@ -280,7 +282,7 @@ export default function ProfileTab() {
             options={departmentOptions}
             value={departmentId}
             onChange={setDepartmentId}
-            placeholder={departmentsLoading ? 'Loading departments...' : 'Select department'}
+            placeholder={departmentsLoading ? departmentLoadingPhrase : 'Select department'}
             disabled={departmentsLoading}
           />
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { GripVertical, Eye, EyeOff, Plus, Trash2, Edit2, Check, X, RotateCcw } from 'lucide-react';
-import { Button, DesktopRecommendedBanner } from '../../../components/ui';
+import { Button, DesktopRecommendedBanner, LoadingPhrase } from '../../../components/ui';
 import { useIsMobile } from '../../../hooks/useBreakpoint';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfirm } from '../../../contexts/confirmContext';
@@ -142,7 +142,7 @@ export default function SidebarCustomizationTab() {
         <DesktopRecommendedBanner className="mb-4" message="Sidebar drag-and-drop customization works best on desktop." />
 
         {isLoading && (
-          <p className="text-sm text-[var(--color-text-muted)] py-12 text-center">Loading sidebar layout…</p>
+          <div className="py-12 flex justify-center"><LoadingPhrase className="text-sm text-[var(--color-text-muted)]" /></div>
         )}
 
         {isError && !isLoading && groups.length === 0 && (

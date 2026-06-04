@@ -4,7 +4,7 @@ import {
   User, Mail, Phone, MapPin, Star, Clock, ShoppingBag, Database,
   MessageSquare, Activity, GitCommit,
 } from 'lucide-react';
-import { Badge, Card, FullScreenWorkspace } from '../ui';
+import { Badge, Card, FullScreenWorkspace, LoadingPhrase } from '../ui';
 import { useDataHubPerson } from '../../hooks/useTaskmasterQueries';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
 
@@ -184,7 +184,11 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
         </div>
       }
     >
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)] p-4">Loading person data…</p>}
+      {isLoading && (
+        <div className="p-4 flex justify-center">
+          <LoadingPhrase className="text-sm text-[var(--color-text-muted)]" />
+        </div>
+      )}
 
       {!isLoading && person && (
         <>

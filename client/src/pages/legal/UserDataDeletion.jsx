@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, Mail, ExternalLink, Shield, Loader2 } from 'lucide-react';
+import { Trash2, AlertTriangle, CheckCircle, ArrowLeft, Mail, ExternalLink, Shield } from 'lucide-react';
+import { Spinner } from '../../components/ui';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 export default function UserDataDeletion() {
   const location = useLocation();
@@ -54,10 +56,10 @@ export default function UserDataDeletion() {
       {/* Header Bar */}
       <header className="border-b border-[#1F2937] bg-[#111827]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
+          <BrandLogo size={40} />
           <div>
             <span className="font-bold text-base tracking-tight text-white block">Coreknot</span>
-            <span className="text-[10px] text-slate-400 font-mono">Data Deletion Protocol v1.0</span>
+            <span className="text-[10px] text-slate-300 font-mono">Data Deletion Protocol v1.0</span>
           </div>
         </div>
         <Link to="/" className="px-4 py-2 rounded-xl bg-[#1F2937] hover:bg-[#374151] text-xs font-bold text-slate-200 transition flex items-center gap-2">
@@ -72,14 +74,14 @@ export default function UserDataDeletion() {
             <Trash2 size={14} /> Compliance Specification
           </div>
           <h1 className="text-4xl font-black tracking-tight text-white">User Data Deletion Request</h1>
-          <p className="w-full text-sm text-slate-400 mx-auto" style={{ maxWidth: '600px' }}>
+          <p className="w-full text-sm text-slate-300 mx-auto" style={{ maxWidth: '600px' }}>
             In compliance with GDPR and Meta Developer Platform terms, you can instantly revoke OAuth access and request the permanent erasure of your account, API keys, and logged analytics.
           </p>
         </div>
 
         {metaStatusLoading && (
           <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F2937] flex items-center justify-center gap-2 text-xs text-slate-400">
-            <Loader2 size={16} className="animate-spin" /> Checking Meta deletion status…
+            <Spinner size="sm" showPhrase phraseClassName="text-xs text-slate-400" />
           </div>
         )}
 
@@ -107,8 +109,8 @@ export default function UserDataDeletion() {
               <CheckCircle size={32} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white">Deletion Request Confirmed</h3>
-              <p className="text-xs text-slate-400 mx-auto leading-relaxed" style={{ maxWidth: '450px' }}>
+              <h2 className="text-xl font-bold text-white">Deletion Request Confirmed</h2>
+              <p className="text-xs text-slate-300 mx-auto leading-relaxed" style={{ maxWidth: '450px' }}>
                 Your request has been securely logged. All associated OAuth tokens, platform webhook subscriptions, and profile data linked to <strong className="text-emerald-400">{email}</strong> have been marked for immediate purging.
               </p>
             </div>
@@ -134,9 +136,9 @@ export default function UserDataDeletion() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 rounded-3xl bg-[#111827] border border-[#1F2937] space-y-6 shadow-2xl">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-[#1F2937] pb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2 border-b border-[#1F2937] pb-4">
                 <Shield size={18} className="text-rose-500" /> Automated Removal Submission Form
-              </h3>
+              </h2>
 
               {error && (
                 <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold animate-pulse">
@@ -157,8 +159,10 @@ export default function UserDataDeletion() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 ml-1">Target Platform Access to Revoke</label>
+                <label htmlFor="userdata-platform" className="text-xs font-bold text-slate-300 ml-1">Target Platform Access to Revoke</label>
                 <select
+                  id="userdata-platform"
+                  name="platform"
                   className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-[#1F2937] focus:ring-2 focus:ring-rose-500 outline-none text-white text-xs transition"
                   value={platform}
                   onChange={e => setPlatform(e.target.value)}
@@ -191,8 +195,8 @@ export default function UserDataDeletion() {
             </form>
 
             <section className="p-6 rounded-2xl bg-[#111827] border border-[#1F2937] space-y-4">
-              <h4 className="font-bold text-sm text-white">Manual Revocation via Connected Platforms</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <h3 className="font-bold text-sm text-white">Manual Revocation via Connected Platforms</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
                 You can also manually revoke our application's permissions directly within your respective provider settings at any time:
               </p>
               <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
@@ -210,7 +214,7 @@ export default function UserDataDeletion() {
           </div>
         )}
 
-        <footer className="pt-8 border-t border-[#1F2937] flex items-center justify-between text-xs text-slate-500 flex-wrap gap-4">
+        <footer className="pt-8 border-t border-[#1F2937] flex items-center justify-between text-xs text-slate-400 flex-wrap gap-4">
           <span>© 2026 Coreknot / The Shakti Collective. All rights reserved.</span>
           <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
         </footer>

@@ -15,7 +15,7 @@ import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, UserLabel, DesktopRecommendedBanner } from '../../components/ui';
+import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, UserLabel, DesktopRecommendedBanner, DataLoading } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -803,7 +803,7 @@ const FinancePage = () => {
         {tableBreadcrumb}
         {folderToolbar}
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-[var(--color-text-muted)]">Loading documents...</div>
+          <div className="p-8 flex justify-center"><DataLoading /></div>
         ) : docs.length === 0 ? (
           <EmptyState
             icon={FileText}

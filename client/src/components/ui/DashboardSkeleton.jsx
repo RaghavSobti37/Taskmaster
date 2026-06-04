@@ -1,9 +1,13 @@
 import React from 'react';
 import { PageContainer, Card, Skeleton } from './primitives';
+import { Spinner } from './Spinner';
 
 const DashboardSkeleton = () => {
   return (
     <PageContainer className="!py-4 !space-y-4">
+      <div className="flex justify-center py-2" aria-hidden>
+        <Spinner size="sm" />
+      </div>
       <div className="flex items-center justify-between mb-8">
         <div className="space-y-2">
           <Skeleton width="200px" height="32px" />

@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "lighthouse": "node scripts/lighthouse-audit.mjs",
     "lighthouse:public": "node scripts/lighthouse-audit.mjs --public-only",
-    "lighthouse:prod": "node scripts/lighthouse-audit.mjs --prod"
+    "lighthouse:prod": "node scripts/lighthouse-audit.mjs --prod",
+    "lighthouse:loop": "node scripts/lighthouse-loop.mjs",
+    "lighthouse:loop:public": "node scripts/lighthouse-loop.mjs --public-only"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

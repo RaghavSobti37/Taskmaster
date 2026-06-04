@@ -91,7 +91,7 @@ const AggregatedReportShell = ({
         {rangeControls}
       </div>
     </div>
-    {isLoading && <DataLoading message="Generating report..." />}
+    {isLoading && <DataLoading />}
     {error && (
       <div className="space-y-2">
         <p className="text-sm text-red-500">

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
-import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection } from '../../components/ui';
+import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection, Spinner } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import {
   useAttendance,
@@ -526,7 +526,7 @@ const AttendancePage = () => {
                   </thead>
                   <tbody className="bg-[var(--color-bg-secondary)]">
                     {(isLoading || usersLoading) && (
-                      <tr><td className="px-4 py-4 text-center italic" colSpan={1 + (dateColumns.length * 2)}>Loading...</td></tr>
+                      <tr><td className="px-4 py-4 text-center" colSpan={1 + (dateColumns.length * 2)}><Spinner size="sm" showPhrase phraseClassName="text-sm italic text-[var(--color-text-muted)]" /></td></tr>
                     )}
                     {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
                       <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">

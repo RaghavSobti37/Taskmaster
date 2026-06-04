@@ -1,6 +1,6 @@
 import React from 'react';
 import { Target } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow, Badge, CountBadge } from '../ui';
+import { DashboardWidgetShell, DataListRow, Badge, CountBadge, LoadingPhrase } from '../ui';
 import { useGamificationMissions } from '../../hooks/useTaskmasterQueries';
 
 const DailyMissionsCard = () => {
@@ -8,7 +8,7 @@ const DailyMissionsCard = () => {
 
   return (
     <DashboardWidgetShell title="Daily Missions" icon={Target} bodyClassName="p-0">
-      {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-4 py-3">Loading...</p>}
+      {isLoading && <LoadingPhrase className="text-[10px] text-[var(--color-text-muted)] px-4 py-3 !text-left" />}
       {!isLoading && missions.length === 0 && (
         <p className="text-[10px] text-[var(--color-text-muted)] italic px-4 py-3">No missions today</p>
       )}

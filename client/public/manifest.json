@@ -28,9 +28,10 @@
       "purpose": "maskable"
     },
     {
-      "src": "/favicon.png",
+      "src": "/brand-mark.svg",
       "sizes": "any",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "shortcuts": [

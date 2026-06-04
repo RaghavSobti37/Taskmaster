@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { DashboardWidgetShell, TimeframeFilter } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, Spinner } from '../ui';
 import { Filter, TrendingUp, Users, Target, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -21,7 +21,7 @@ export default function PipelineSummaryCard() {
         title="CRM Stats"
         icon={Filter}
       >
-        <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+        <Spinner size="md" />
       </DashboardWidgetShell>
     );
   }

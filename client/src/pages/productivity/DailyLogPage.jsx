@@ -328,11 +328,11 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
             {activeView === 'daily' && (
               <>
                 <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] p-1 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]">
-                  <Button variant="ghost" size="xs" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
+                  <Button variant="ghost" size="xs" title="Previous day" onClick={() => handleDateChange(-1)}><ChevronLeft size={14} /></Button>
                   <div className="px-3 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
                     <CalIcon size={12} className="text-blue-500" /> {format(selectedDate, 'MMM dd')}
                   </div>
-                  <Button variant="ghost" size="xs" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
+                  <Button variant="ghost" size="xs" title="Next day" onClick={() => handleDateChange(1)} disabled={isSameDay(selectedDate, new Date())}><ChevronRight size={14} /></Button>
                 </div>
                 {!adminViewUserId && isSameDay(selectedDate, new Date()) && (
                   <Button size="sm" onClick={() => setIsDrawerOpen(true)}><Plus size={14} /> Log Work</Button>
@@ -404,7 +404,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
              
              <div className="p-6 space-y-4">
                 {loading ? (
-                  <DataLoading message="Loading activity logs..." className="py-16" />
+                  <DataLoading className="py-16" />
                 ) : dailyLogs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
                      <Activity size={48} className="mb-4" />

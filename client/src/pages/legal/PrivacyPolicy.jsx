@@ -1,4 +1,5 @@
 import React from 'react';
+import BrandLogo from '../../components/brand/BrandLogo';
 import { Shield, Lock, Eye, Database, Globe, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -8,7 +9,7 @@ export default function PrivacyPolicy() {
       {/* Header Bar */}
       <header className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]/90 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
+          <BrandLogo size={40} />
           <div>
             <span className="font-bold text-base tracking-tight text-[var(--color-text-primary)] block">Coreknot</span>
             <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Privacy Specification v2.1</span>

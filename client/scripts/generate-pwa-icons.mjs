@@ -56,8 +56,10 @@ function pngSolid(size) {
   ]);
 }
 
+const publicDir = path.join(__dirname, '../public');
 fs.mkdirSync(outDir, { recursive: true });
 for (const size of [192, 512]) {
   fs.writeFileSync(path.join(outDir, `icon-${size}.png`), pngSolid(size));
   console.log(`Wrote icon-${size}.png`);
 }
+console.log('Favicon: use public/brand-mark.svg (SVG). PWA tiles: icons/icon-192.png, icon-512.png');

@@ -6,7 +6,8 @@ import { emitSystemEvent } from '../../lib/systemLogBridge';
 import { SEVERITY, MODULE } from '../../lib/systemLogContract';
 import { PageContainer, PageHeader, Button, Card, Input, FormFieldGrid, Badge, StatCard, TabSwitcher, Switch, ProgressBar, Accordion, DataTable, ListPageLayout, Skeleton, NexusDropdown, EmptyState, AddMembers, SearchInput, IconButton, SectionCard, Spinner, LoadingState, PageSkeleton, DashboardWidgetShell, DataListRow, DeltaBadge, DataOverviewSection } from '../../components/ui';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';
-import { ChartSurface } from '../../components/ui/charts';;
+import { ChartSurface } from '../../components/ui/charts';
+import FluidRibbonLoaderGallery from '../../components/brand/FluidRibbonLoaderGallery';
 
 const SHOWCASE_MOCK_USERS = [
   { _id: 'u1', name: 'Alex Rivera', email: 'alex@coreknot.com', role: 'admin' },
@@ -381,7 +382,7 @@ const ComponentsShowcase = () => {
             <Spinner size="md" />
             <Spinner size="lg" />
           </VariantRow>
-          <LoadingState message="Fetching data..." className="!py-6 border border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]" />
+          <LoadingState className="!py-6 border border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]" />
           <EmptyState
             title="No items found"
             actionLabel="Add item"
@@ -499,6 +500,14 @@ const ComponentsShowcase = () => {
               />
             
           </div>
+        </ShowcaseSection>
+
+        <ShowcaseSection
+          id="brand-logos"
+          title="Brand & loading animations"
+          description="App logo: Harmonic Frequency (#99). Five fluid-ribbon pulse loaders — copy variant id to change DEFAULT_LOADER_VARIANT."
+        >
+          <FluidRibbonLoaderGallery />
         </ShowcaseSection>
 
         <ShowcaseSection id="layout" title="Layout & Page Chrome" description="Prefer ListPageLayout + PageToolbar on data routes. PageHeader for simple pages only; no subtitles.">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { DashboardWidgetShell } from '../ui';
+import { DashboardWidgetShell, LoadingPhrase } from '../ui';
 import { useLeaderboard, useLeaderboardBreakdown } from '../../hooks/useTaskmasterQueries';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
 import LeaderboardBreakdownModal from './LeaderboardBreakdownModal';
@@ -29,7 +29,7 @@ const LeaderboardCard = () => {
         }
         icon={Trophy}
       >
-        {isLoading && <p className="text-xs text-[var(--color-text-muted)]">Loading leaderboard...</p>}
+        {isLoading && <LoadingPhrase className="text-xs text-[var(--color-text-muted)] !text-left" />}
         {!isLoading && entries.length === 0 && (
           <p className="text-xs text-[var(--color-text-muted)]">No XP activity this week yet.</p>
         )}

@@ -15,7 +15,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       injectRegister: false,
-      includeAssets: ['favicon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['brand-mark.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -47,12 +47,30 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        cookieDomainRewrite: '',
+      },
+      '/socket.io': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 600,
+    modulePreload: { polyfill: true },
     rollupOptions: {
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query'],
+          axios: ['axios'],
+          lucide: ['lucide-react'],
           recharts: ['recharts'],
           quill: ['react-quill', 'quill'],
           'framer-motion': ['framer-motion'],

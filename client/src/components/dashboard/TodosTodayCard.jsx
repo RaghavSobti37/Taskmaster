@@ -60,7 +60,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
       }
     >
       <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
-        {loading && <DataLoading message="Loading today's tasks..." className="!py-3" />}
+        {loading && <DataLoading className="!py-3" />}
         {!loading && todayTasks.length === 0 && (
           <p className="tm-caption italic text-center py-4">Nothing due today. Great job!</p>
         )}

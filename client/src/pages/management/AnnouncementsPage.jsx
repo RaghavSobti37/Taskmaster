@@ -114,7 +114,7 @@ const AnnouncementsPage = () => {
           {audienceType === 'selected' && (
             <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2">
               {targetsLoading ? (
-                <DataLoading message="Loading users..." className="py-6" />
+                <DataLoading className="py-6" />
               ) : (
               <>
               <div className="flex gap-2">
@@ -166,7 +166,7 @@ const AnnouncementsPage = () => {
         <section className="lg:col-span-4 p-4 flex flex-col gap-3 self-start w-full">
           <h3 className="tm-section-label text-[var(--color-text-primary)]">Recent Announcements</h3>
           {announcementsLoading ? (
-            <DataLoading message="Loading announcements..." className="py-8" />
+            <DataLoading className="py-8" />
           ) : announcements.length === 0 ? (
             <p className="tm-caption py-4 text-center">No announcements yet.</p>
           ) : (

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="client/public/favicon.svg" alt="CoreKnot Logo" width="80" height="80" />
+  <img src="client/public/brand-mark.svg" alt="CoreKnot Logo" width="80" height="80" />
 </p>
 
 <h1 align="center">CoreKnot</h1>
@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="#-logo-philosophy--the-harmonic-frequency">Logo</a> ·
   <a href="#-key-features">Features</a> ·
   <a href="#%EF%B8%8F-architecture--tech-stack">Architecture</a> ·
   <a href="#%EF%B8%8F-directory-structure">Directory Structure</a> ·
@@ -38,6 +39,45 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Decoupled Architecture:** Vite-optimized React Single Page Application (SPA) paired with a high-performance Express REST API layer.
 * **Resilient Infrastructure:** Integrated Redis task queues (`BullMQ`), state-driven orchestration (`Trigger.dev`), real-time bidirectional state syncing (`Socket.IO`), and an autonomous system-health blocking middleware.
 * **Strict Review Pipelines:** Institutional task governance rules separating individual contributions from multi-tiered peer review workflows.
+
+---
+
+## ◎ Logo philosophy — The Harmonic Frequency
+
+The CoreKnot mark — **The Harmonic Frequency** — is the visual spine of the product. It is not decorative typography; it is a diagram of how **The Stage Company (TSC)** operates as one organism made of six distinct lines of business.
+
+### Six spokes, six segments
+
+The logo is built from a **central hub** and **six hand-drawn spokes** radiating outward. Each spoke stands for one TSC segment that CoreKnot unifies in a single workspace:
+
+| Spoke | TSC segment | Role in the ecosystem |
+|:---|:---|:---|
+| 1 | **TSC Films** | Long-form and campaign film production, delivery, and client pipelines |
+| 2 | **TSC Artists** | Talent, creators, and representation tied to projects and bookings |
+| 3 | **TSC Academy** | Training, cohorts, and learner journeys (offerings, attendance, progress) |
+| 4 | **TSC Collabs** | Brand partnerships, co-productions, and cross-team initiatives |
+| 5 | **TSC Studios** | Studio operations, assets, subscriptions, and production infrastructure |
+| 6 | **TSC Corporate** | Finance, HR, legal, admin, and group-wide governance |
+
+Nothing in the mark is arbitrary: the **hub** is the shared operational truth (tasks, CRM, finance, schedule, inbox) that every segment plugs into. The **spokes** are the six ways TSC touches the world; CoreKnot’s job is to keep them **aligned**, not siloed.
+
+### Bringing together, not blending away
+
+The philosophy is **convergence without erasure**:
+
+- Each segment keeps its identity (Films ≠ Academy ≠ Corporate).
+- The platform is the **frequency** that lets them move in phase — shared data, shared people, shared deadlines — without forcing one department’s workflow onto another.
+- The six-fold symmetry signals **equal weight**: no spoke is “the main business”; Corporate is as present as Films when you stand at the center.
+
+That is why the loader ripples **outward from the hub**: work originates at the center (the dot) and propagates through the rings as activity crosses segments — inner waves first, then the next layer, in steady cadence.
+
+### Brand presentation (locked)
+
+- **Mark:** white Harmonic Frequency on **brand green** (`#126d5e`) shell in the app; geometry and proportions are locked (see `docs/LOGO_LOCKED.md`).
+- **Motion:** default loading indicator is the **Uniform Calm** fluid-ribbon cascade (`frl-v-02`), echoing the same hub-born ripple idea.
+- **Voice:** loading states use rotating human phrases (never generic “Loading…”) — the product should feel alive, not like enterprise shelfware.
+
+> *If you change the logo or loader behavior, treat it as a brand decision, not a casual UI tweak.*
 
 ---
 

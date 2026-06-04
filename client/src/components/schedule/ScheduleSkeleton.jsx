@@ -17,7 +17,7 @@ const ScheduleSkeleton = ({
   const cellAlign = compact ? 'align-middle' : 'align-top';
 
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading schedule">
+    <div className="space-y-4" aria-busy="true" aria-label="Please wait">
       {showStatCards && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (

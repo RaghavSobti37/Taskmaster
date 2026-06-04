@@ -21,7 +21,27 @@ export const Skeleton = ({ className = '', variant = 'rect', width, height }) =>
   );
 };
 
-export const Button = ({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
+export const Button = ({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  title,
+  'aria-label': ariaLabel,
+  type = 'button',
+  ...props
+}) => {
+  const childArray = React.Children.toArray(children);
+  const childText = childArray
+    .filter((c) => typeof c === 'string' || typeof c === 'number')
+    .join('')
+    .trim();
+  const isIconOnly =
+    childArray.length > 0 &&
+    !childText &&
+    childArray.every((c) => React.isValidElement(c));
+  const accessibleName = ariaLabel || (isIconOnly ? title : undefined);
+
   const variants = {
     primary: 'bg-[var(--color-action-primary)] text-[var(--color-bg-primary)] hover:opacity-90 active:scale-[0.98]',
     secondary: 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-bg-border)] hover:bg-[var(--color-bg-border)]',
@@ -39,7 +59,10 @@ export const Button = ({ children, variant = 'primary', size = 'md', className =
   };
 
   return (
-    <button 
+    <button
+      type={type}
+      aria-label={accessibleName}
+      title={title}
       className={`rounded-[var(--radius-atomic)] font-semibold transition-all inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
@@ -515,10 +538,7 @@ export const DataTable = ({
             {isLoading ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Spinner size="md" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Loading...</p>
-                  </div>
+                  <Spinner size="md" showPhrase phraseClassName="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]" />
                 </td>
               </tr>
             ) : showEmpty ? (
@@ -575,8 +595,7 @@ export const DataTable = ({
         <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
           {isLoading ? (
             <div className="px-4 py-12 text-center flex flex-col items-center gap-2">
-              <Spinner size="md" />
-              <p className="tm-widget-label">Loading...</p>
+              <Spinner size="md" showPhrase phraseClassName="tm-widget-label" />
             </div>
           ) : showEmpty ? (
             <div className="px-4 py-12 text-center">

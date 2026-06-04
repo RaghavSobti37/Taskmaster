@@ -1,14 +1,19 @@
 import React from 'react';
+import { Spinner } from './ui/Spinner';
 
-/** Minimal boot fallback — avoids heavy dashboard grid skeleton on auth/bootstrap. */
+/** Full-screen boot — large spinner + random phrase only (no logo) */
 export default function AppBootFallback() {
   return (
     <div
-      className="min-h-screen flex items-center justify-center bg-[var(--color-bg-workspace)]"
+      className="min-h-screen flex items-center justify-center bg-[var(--color-bg-workspace)] px-6"
       role="status"
-      aria-label="Loading"
+      aria-live="polite"
     >
-      <div className="h-8 w-8 rounded-full border-2 border-[var(--color-bg-border)] border-t-[var(--color-brand-teal)] animate-spin" />
+      <Spinner
+        size="boot"
+        showPhrase
+        phraseClassName="text-base sm:text-lg font-medium normal-case tracking-normal text-[var(--color-text-secondary)]"
+      />
     </div>
   );
 }

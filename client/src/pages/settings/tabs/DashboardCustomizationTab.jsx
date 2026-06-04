@@ -645,7 +645,7 @@ export default function DashboardCustomizationTab() {
         </div>
 
         {presetLoading && dashboardElements.length === 0 ? (
-          <LoadingState message="Loading dashboard layout..." className="min-h-[400px] border border-[var(--color-bg-border)] rounded-3xl" />
+          <LoadingState className="min-h-[400px] border border-[var(--color-bg-border)] rounded-3xl" />
         ) : (
         <div
           className="border-[4px] border-[var(--color-text-primary)] bg-[var(--color-bg-workspace)] rounded-3xl p-6"

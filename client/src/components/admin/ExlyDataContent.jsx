@@ -19,6 +19,7 @@ import {
   formatPercent,
   computeOfferingTotals
 } from '../../utils/exlyFormatters';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 const exlyChartTooltipFormatter = (value, name) => {
   if (/revenue|rev/i.test(String(name))) return [formatInr(value), name];
@@ -45,6 +46,7 @@ const MetricBlock = ({ label, value, tone = 'default', title }) => {
 };
 
 const ExlyDataContent = ({ mode = 'campaigns' }) => {
+  const bookingsLoadingPhrase = useLoadingPhrase();
   const [offerings, setOfferings] = useState([]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1565,7 +1567,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
                   </h3>
                   <p className="text-[9px] text-[var(--color-text-muted)] uppercase tracking-wider mt-0.5">
                     {detailsLoading
-                      ? 'Loading bookings...'
+                      ? bookingsLoadingPhrase
                       : `Page ${detailsPagination?.page ?? 1} · ${workspaceBookings.length} shown · ${detailsPagination?.total ?? 0} total (${bookingPaymentFilter})`}
                   </p>
                 </div>

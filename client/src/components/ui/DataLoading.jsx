@@ -1,11 +1,10 @@
 import React from 'react';
 import { Spinner } from './Spinner';
 
-/** Centered spinner for tables, panels, and refetches. */
-export const DataLoading = ({ message = 'Loading data...', className = '' }) => (
-  <div className={`flex flex-col items-center justify-center gap-2 py-10 ${className}`}>
-    <Spinner size="md" />
-    <p className="text-xs text-[var(--color-text-muted)]">{message}</p>
+/** Centered spinner + random phrase for tables, panels, and refetches. */
+export const DataLoading = ({ className = '' }) => (
+  <div className={`flex flex-col items-center justify-center py-10 ${className}`}>
+    <Spinner size="md" showPhrase phraseClassName="text-xs text-[var(--color-text-muted)]" />
   </div>
 );
 

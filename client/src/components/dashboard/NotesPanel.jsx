@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { StickyNote, Save, Trash2 } from 'lucide-react';
-import { DashboardWidgetShell, DataListRow, Button } from '../ui';
+import { DashboardWidgetShell, DataListRow, Button, LoadingPhrase } from '../ui';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
 import {
   useUserNotes,
@@ -111,7 +111,7 @@ const NotesPanel = () => {
       <div
         className={`-mx-0 ${notes.length > 4 ? 'max-h-[min(40vh,280px)] overflow-y-auto custom-scrollbar' : ''}`}
       >
-        {isLoading && <p className="text-[10px] text-[var(--color-text-muted)] px-4 py-2">Loading...</p>}
+        {isLoading && <LoadingPhrase className="text-[10px] text-[var(--color-text-muted)] px-4 py-2 !text-left" />}
         {notes.map((note) => {
           const projectName = note.projectId?.name || 'Personal';
           const dateLabel = format(new Date(note.updatedAt || note.createdAt), 'MMM d, yyyy');

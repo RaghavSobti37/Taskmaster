@@ -5,6 +5,7 @@
 !.env.*.example
 client/dist
 client/lighthouse-reports/
+client/.lighthouse.env
 node_modules
 *.csv
 server/uploads/

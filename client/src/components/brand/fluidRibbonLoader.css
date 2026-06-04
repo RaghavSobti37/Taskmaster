@@ -1,0 +1,24 @@
+/* Uniform wide-hub cascade — even stroke + opacity across 4 layers */
+
+.fluid-ribbon-loader {
+  display: block;
+  overflow: visible;
+}
+
+.frl-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.15;
+  opacity: 0.68;
+}
+
+.frl-hub {
+  fill: currentColor;
+}
+
+.frl-path-4 { opacity: 0.82; }
+.frl-path-3 { opacity: 0.74; }
+.frl-path-2 { opacity: 0.66; }
+.frl-path-1 { opacity: 0.58; }

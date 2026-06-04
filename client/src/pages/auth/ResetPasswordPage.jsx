@@ -6,6 +6,7 @@ import PasswordRequirements from '../../components/auth/PasswordRequirements';
 import { validatePasswordStrength } from '../../utils/passwordValidation';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -79,7 +80,7 @@ const ResetPasswordPage = () => {
       <MarketingPageBackground inkClassName="opacity-40 mix-blend-multiply dark:mix-blend-screen dark:opacity-20" />
       <div className="tm-modal-panel tm-modal-sm max-w-md relative z-10 bg-card backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-border shadow-xl animate-in fade-in zoom-in-95 duration-300">
         <div className="text-center mb-6">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-[var(--color-action-primary)]/25 object-cover mb-4" />
+          <BrandLogo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Choose a new password</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-3 px-1 leading-relaxed font-medium">
             Enter and confirm your new password below.

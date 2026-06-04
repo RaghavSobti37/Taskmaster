@@ -4,10 +4,12 @@ import { Button } from './primitives';
 import NexusDropdown from './NexusDropdown';
 import SearchInput from './SearchInput';
 import SectionCard from './SectionCard';
+import { LoadingPhrase } from './LoadingPhrase';
 import RoleOptionBoxes from './RoleOptionBoxes';
 import { PROJECT_ROLE_OPTIONS } from '../../constants/taskOptions';
 import { suggestProjectRole } from '../../utils/taskText';
 import { getDepartmentSlug } from '../../utils/departmentPermissions';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 const UserAvatar = ({ user, size = 'md' }) => {
   const sizes = { sm: 'w-7 h-7 text-[9px]', md: 'w-9 h-9 text-[10px]', lg: 'w-11 h-11 text-xs' };
@@ -41,6 +43,7 @@ const AddMembers = ({
   const [projectRole, setProjectRole] = useState(defaultRole);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const teamLoadingPhrase = useLoadingPhrase();
 
   const availableUsers = useMemo(
     () => users.filter((u) => !excludeIds.includes(u._id)),
@@ -98,7 +101,7 @@ const AddMembers = ({
             options={userOptions}
             value={selectedUserId}
             onChange={handleSelectUser}
-            placeholder={loading ? 'Loading...' : 'Choose member'}
+            placeholder={loading ? teamLoadingPhrase : 'Choose member'}
             searchable
             disabled={loading}
           />
@@ -131,7 +134,7 @@ const AddMembers = ({
               options={userOptions}
               value={selectedUserId}
               onChange={handleSelectUser}
-              placeholder={loading ? 'Loading...' : 'Select member'}
+              placeholder={loading ? teamLoadingPhrase : 'Select member'}
               searchable
               disabled={loading}
             />
@@ -179,7 +182,7 @@ const AddMembers = ({
 
         <div className="w-full min-w-0 min-h-[8rem] max-h-52 overflow-y-auto custom-scrollbar rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-1.5 space-y-1">
           {loading && (
-            <p className="text-xs text-center py-8 text-[var(--color-text-muted)]">Loading team...</p>
+            <LoadingPhrase className="text-xs text-center py-8 text-[var(--color-text-muted)]" />
           )}
           {!loading && filteredUsers.length === 0 && (
             <p className="text-xs text-center py-8 text-[var(--color-text-muted)]">No members available</p>

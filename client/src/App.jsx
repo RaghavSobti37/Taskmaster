@@ -91,7 +91,7 @@ const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssets
 const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
-const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
+import LandingPage from './pages/LandingPage';
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));

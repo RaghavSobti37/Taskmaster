@@ -39,7 +39,7 @@ const TodosOverdueCard = ({ tasks = [], projects = [], loading, onComplete, onOp
       actions={<CountBadge count={overdueTasks.length} size="sm" variant="overdue" pulse={overdueTasks.length > 0} />}
     >
       <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
-        {loading && <DataLoading message="Loading overdue tasks..." className="!py-3" />}
+        {loading && <DataLoading className="!py-3" />}
         {!loading && overdueTasks.length === 0 && (
           <p className="tm-caption italic text-center py-4 text-green-600 dark:text-green-400">All caught up! No overdue tasks.</p>
         )}

@@ -5,8 +5,11 @@ import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import { useDepartments } from '../../hooks/useTaskmasterQueries';
 import MarketingPageBackground from '../../components/MarketingPageBackground';
+import BrandLogo from '../../components/brand/BrandLogo';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
 const RegisterPage = () => {
+  const departmentLoadingPhrase = useLoadingPhrase();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +47,7 @@ const RegisterPage = () => {
       <MarketingPageBackground />
       <div className="tm-modal-panel max-w-md relative z-10 bg-card backdrop-blur-md p-8 rounded-3xl border border-border shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
         <div className="text-center mb-8">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-16 h-16 rounded-2xl mx-auto shadow-lg shadow-purple-500/30 object-cover mb-4" />
+          <BrandLogo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Create Account</h1>
           <p className="text-[var(--color-text-secondary)] mt-2 font-medium">Join the team today</p>
         </div>
@@ -110,7 +113,7 @@ const RegisterPage = () => {
               disabled={departmentsLoading}
               className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:ring-2 focus:ring-[var(--color-brand-teal)] outline-none disabled:opacity-60"
             >
-              <option value="">{departmentsLoading ? 'Loading departments...' : 'Select department'}</option>
+              <option value="">{departmentsLoading ? departmentLoadingPhrase : 'Select department'}</option>
               {departments.map((d) => (
                 <option key={d._id} value={d._id}>{d.name}</option>
               ))}

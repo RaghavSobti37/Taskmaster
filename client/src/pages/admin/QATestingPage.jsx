@@ -821,7 +821,7 @@ const QATestingPage = () => {
         {/* Control Panel / Test Runner */}
         <section className="p-6 overflow-hidden relative min-h-[300px] flex flex-col justify-center border border-[var(--color-bg-border)]">
           {(historyLoading || projectsLoading) && !historyData ? (
-            <LoadingState message="Loading QA workspace..." />
+            <LoadingState />
           ) : isRunning ? (
             <div className="bg-white dark:bg-gray-900 p-8 rounded-[var(--radius-atomic)] border border-blue-200 dark:border-blue-800/50 w-full max-w-4xl mx-auto">
               <div className="flex justify-between items-center mb-6">

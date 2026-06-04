@@ -39,7 +39,7 @@ export default function AttendanceTab() {
               {isLoading ? (
                 <tr>
                   <td colSpan={3}>
-                    <DataLoading message="Loading attendance..." className="py-8" />
+                    <DataLoading className="py-8" />
                   </td>
                 </tr>
               ) : myAttendance.map((row) => (

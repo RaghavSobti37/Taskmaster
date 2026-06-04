@@ -35,6 +35,25 @@ const PUBLIC_ROUTE_PATHS = new Set(PUBLIC_ROUTES.map((r) => r.path));
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_ROOT = path.resolve(__dirname, '..');
 
+/** Optional local creds file (gitignored): LH_EMAIL=… LH_PASSWORD=… */
+async function loadLocalLhEnv() {
+  const envPath = path.join(CLIENT_ROOT, '.lighthouse.env');
+  try {
+    const raw = await fs.readFile(envPath, 'utf8');
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+      if (key.startsWith('LH_') && !process.env[key]) process.env[key] = val;
+    }
+  } catch {
+    /* optional */
+  }
+}
+
 const args = process.argv.slice(2);
 const publicOnly = args.includes('--public-only');
 const protectedOnly = args.includes('--protected-only');
@@ -192,6 +211,11 @@ function buildSummaryHtml(rows, meta) {
 </html>`;
 }
 
+function headersForRoute(routePath, cookieHeader) {
+  if (!cookieHeader || PUBLIC_ROUTE_PATHS.has(routePath)) return undefined;
+  return { Cookie: cookieHeader };
+}
+
 async function runOne(url, chrome, extraHeaders) {
   const options = {
     logLevel: 'error',
@@ -201,6 +225,12 @@ async function runOne(url, chrome, extraHeaders) {
     extraHeaders,
     formFactor: 'desktop',
     screenEmulation: { mobile: false, width: 1350, height: 940, deviceScaleFactor: 1 },
+    maxWaitForFcp: 120000,
+    maxWaitForLoad: 120000,
+    settings: {
+      throttlingMethod: process.env.LH_NO_THROTTLE === '1' ? 'provided' : 'simulate',
+      skipAudits: [],
+    },
   };
 
   const runnerResult = await lighthouse(url, options);
@@ -208,6 +238,8 @@ async function runOne(url, chrome, extraHeaders) {
 }
 
 async function main() {
+  await loadLocalLhEnv();
+
   if (prodMode && /:5173\b/.test(BASE_URL)) {
     console.warn(
       'Warning: --prod set but LH_BASE_URL looks like Vite dev (:5173). ' +
@@ -259,7 +291,6 @@ async function main() {
 
   await fs.mkdir(path.join(OUTPUT_DIR, 'pages'), { recursive: true });
 
-  const extraHeaders = cookieHeader ? { Cookie: cookieHeader } : undefined;
   const chrome = await chromeLauncher.launch({ chromeFlags: ['--headless', '--no-sandbox'] });
 
   const rows = [];
@@ -273,7 +304,7 @@ async function main() {
       console.log(`[${i + 1}/${total}] ${name} (${routePath})`);
 
       try {
-        const { lhr, report } = await runOne(url, chrome, extraHeaders);
+        const { lhr, report } = await runOne(url, chrome, headersForRoute(routePath, cookieHeader));
         const finalUrl = lhr.finalUrl || url;
         const redirected = finalUrl.replace(/\/$/, '') !== url.replace(/\/$/, '')
           && finalUrl.includes('/login');

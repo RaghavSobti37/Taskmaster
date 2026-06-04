@@ -46,6 +46,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import CountBadge from './ui/CountBadge';
+import BrandLogo from './brand/BrandLogo';
 
 const LEGACY_PAGE_PATHS = {
   '/workspace/emails': '/emails',
@@ -161,6 +162,8 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
+          aria-expanded={isOpen}
+          aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
           className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
         >
           <div className="flex items-center gap-1.5 min-w-0">
@@ -240,7 +243,7 @@ const OutletSidebar = () => {
       >
         <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
           <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
-            <img src="/favicon.png" alt="Coreknot Logo" className="w-7 h-7 shrink-0 rounded-md border border-[var(--color-bg-border)] object-cover" />
+            <BrandLogo size={28} className="shrink-0" />
             {showLabels && (
               <span className="font-bold text-sm tracking-tight text-[var(--color-text-primary)] truncate">
                 Coreknot
@@ -253,6 +256,7 @@ const OutletSidebar = () => {
               <button
                 type="button"
                 onClick={toggleSidebar}
+                aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 className="p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               >
@@ -263,6 +267,7 @@ const OutletSidebar = () => {
               <button
                 type="button"
                 onClick={closeMobileSidebar}
+                aria-label="Close navigation menu"
                 className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] transition-colors"
               >
                 <X size={18} />
@@ -391,7 +396,9 @@ const OutletSidebar = () => {
           {!(!showLabels && !isMobile) && (
             <div className="flex gap-1.5 w-full">
               <button
+                type="button"
                 onClick={() => navigate('/settings')}
+                aria-label="Settings"
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all group overflow-hidden"
                 title="Settings"
               >
@@ -401,7 +408,9 @@ const OutletSidebar = () => {
                 </span>
               </button>
               <button
+                type="button"
                 onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                 className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all flex items-center justify-center shrink-0"
                 title="Toggle Theme"
               >
@@ -413,14 +422,18 @@ const OutletSidebar = () => {
           {(!showLabels && !isMobile) && (
             <div className="flex flex-col gap-1.5 w-full">
               <button
+                type="button"
                 onClick={() => navigate('/settings')}
+                aria-label="Settings"
                 title="Settings"
                 className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
               >
                 <Settings size={16} className="text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] transition-colors" />
               </button>
               <button
+                type="button"
                 onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                 title="Toggle Theme"
                 className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
               >

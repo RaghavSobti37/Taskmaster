@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { DashboardWidgetShell } from '../ui';
+import { DashboardWidgetShell, LoadingPhrase } from '../ui';
 import { useLeaderboard, useLeaderboardBreakdown } from '../../hooks/useTaskmasterQueries';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
 import LeaderboardBreakdownModal from './LeaderboardBreakdownModal';
@@ -32,9 +32,7 @@ const LeaderboardPodium = () => {
         }
         icon={Trophy}
       >
-        {isLoading && (
-          <p className="text-[10px] tm-data-meta px-4 py-3">Loading...</p>
-        )}
+        {isLoading && <LoadingPhrase className="text-[10px] tm-data-meta px-4 py-3 !text-left" />}
         {!isLoading && entries.length === 0 && (
           <p className="text-[10px] tm-data-meta italic px-4 py-3">No team members yet</p>
         )}

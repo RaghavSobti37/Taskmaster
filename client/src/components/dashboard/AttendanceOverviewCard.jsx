@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import { DashboardWidgetShell, TimeframeFilter, InfoButton } from '../ui';
+import { DashboardWidgetShell, TimeframeFilter, InfoButton, Spinner } from '../ui';
 import { ChartSurface, CHART_MUTED } from '../ui/charts';;
 import { useAttendanceOverview } from '../../hooks/queries/dashboard';
 import { formatTimeframeLabel } from '../../utils/displayLabels';
@@ -66,7 +66,7 @@ export default function AttendanceOverviewCard() {
       <ChartSurface className="flex-1" height={200}>
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-full w-full py-8">
-            <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+            <Spinner size="md" />
           </div>
         ) : !hasData ? (
           <div className="flex flex-col items-center justify-center opacity-40 h-full w-full py-8">

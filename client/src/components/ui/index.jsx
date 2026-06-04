@@ -36,6 +36,7 @@ export { default as RoleOptionBoxes } from './RoleOptionBoxes';
 export { default as PageLoadGuard } from './PageLoadGuard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
+export { LoadingPhrase } from './LoadingPhrase';
 export { default as TimeframeFilter } from './TimeframeFilter';
 // ── Dropdowns (Phase 2: consolidate into Select) ──
 export { default as NexusDropdown } from './NexusDropdown';

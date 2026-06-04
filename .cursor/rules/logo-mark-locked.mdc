@@ -1,0 +1,35 @@
+---
+description: Harmonic Frequency logo and default spinner are LOCKED — do not change without explicit user request
+alwaysApply: true
+---
+
+# Logo & spinner — DO NOT CHANGE (Locked Jun 2026)
+
+**White-on-green Harmonic Frequency mark** and **`frl-v-02` loading spinner** are finalized. Do not modify locked logic, geometry, or colors unless the user explicitly asks to unlock the logo or change the spinner.
+
+## Read first
+
+Full spec: `docs/LOGO_LOCKED.md`
+
+## Locked files
+
+- `client/src/components/brand/logoHarmonicGeometry.js`
+- `client/src/components/brand/logoBrandTokens.js`
+- `client/src/components/brand/logoMarkStyles.js`
+- `client/src/components/brand/HarmonicLogo.jsx`
+- `client/src/components/brand/BrandLogo.jsx`
+- `client/public/brand-mark.svg`
+- `client/src/components/brand/fluidRibbonLoaderCatalog.js` (`DEFAULT_LOADER_VARIANT` = `frl-v-02`)
+- `client/src/components/brand/FluidRibbonLoader.jsx` (cascade mask logic)
+- `client/src/components/brand/fluidRibbonPaths.js`
+- `client/src/index.css` (`.brand-logo` shell)
+
+## Locked behavior
+
+1. **Logo:** six spokes + hub dot; `#ffffff` on `#126d5e` shell; 1.15× scale from hub only.
+2. **Spinner:** `Spinner` / `FluidRibbonLoader` default `frl-v-02`; brand green strokes.
+3. **No** white-shell/green-mark inversion, mint spoke colors, or random 2-layer loader without user request.
+
+## If user asks for logo/spinner changes
+
+Confirm unlock intent. Minimal diff. Re-read `docs/LOGO_LOCKED.md` before editing.

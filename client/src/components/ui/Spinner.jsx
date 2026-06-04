@@ -1,33 +1,43 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import FluidRibbonLoader from '../brand/FluidRibbonLoader';
+import { DEFAULT_LOADER_VARIANT } from '../brand/fluidRibbonLoaderCatalog';
+import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
+import { LoadingPhrase } from './LoadingPhrase';
 
-const sizes = {
-  sm: 14,
-  md: 20,
-  lg: 28,
+/**
+ * Spinner — fluid-ribbon loader (default frl-v-02) + random phrase when showPhrase.
+ */
+export const Spinner = ({
+  size = 'md',
+  className = '',
+  variant,
+  showPhrase = false,
+  phraseClassName = '',
+}) => {
+  const phrase = useLoadingPhrase();
+  const loader = (
+    <FluidRibbonLoader
+      variant={variant || DEFAULT_LOADER_VARIANT}
+      size={size}
+      className={className}
+      label={phrase}
+    />
+  );
+  if (!showPhrase) return loader;
+  return (
+    <div className="flex flex-col items-center justify-center gap-4">
+      {loader}
+      <LoadingPhrase phrase={phrase} className={phraseClassName} />
+    </div>
+  );
 };
 
 /**
- * Spinner — inline loading indicator.
+ * LoadingState — centered spinner + random phrase.
  */
-export const Spinner = ({ size = 'md', className = '', label = 'Loading' }) => (
-  <Loader2
-    size={sizes[size] || sizes.md}
-    className={`animate-spin text-[var(--color-action-primary)] ${className}`}
-    aria-label={label}
-    role="status"
-  />
-);
-
-/**
- * LoadingState — centered loading block for page sections.
- */
-export const LoadingState = ({ message = 'Loading...', className = '' }) => (
-  <div className={`flex flex-col items-center justify-center gap-3 py-12 text-center ${className}`}>
-    <Spinner size="lg" />
-    <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-      {message}
-    </p>
+export const LoadingState = ({ className = '', variant, phraseClassName = '' }) => (
+  <div className={`flex flex-col items-center justify-center gap-4 py-12 text-center ${className}`}>
+    <Spinner size="lg" variant={variant} showPhrase phraseClassName={`text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] ${phraseClassName}`} />
   </div>
 );
 

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import MarketingPageBackground from '../components/MarketingPageBackground';
+import BrandLogo from '../components/brand/BrandLogo';
 
 export default function LandingPage() {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function LandingPage() {
       {/* Header Bar */}
       <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3 relative z-10">
-          <img src="/favicon.png" alt="Coreknot Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-purple-500/30 object-cover" />
+          <BrandLogo size={40} />
           <div>
             <span className="font-bold text-base tracking-tight text-foreground block">Coreknot</span>
             <span className="text-[10px] text-[var(--color-text-secondary)] font-mono">Workspace Suite</span>
@@ -74,7 +75,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="w-full max-w-6xl mx-auto px-6 pt-16 pb-14 text-center flex-1 flex flex-col justify-center relative z-10">
-        <div className="w-full max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full max-w-3xl mx-auto space-y-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--color-brand-pumpkin)]/10 border border-[var(--color-brand-pumpkin)]/20 text-[var(--color-brand-pumpkin)] text-xs font-bold">
             <Sparkles size={12} /> Introducing Coreknot Workspace
           </div>
@@ -137,7 +138,7 @@ export default function LandingPage() {
       <footer className="bg-background border-t border-border py-12 relative z-10">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row sm:items-start items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <img src="/favicon.png" alt="Coreknot Logo" className="w-8 h-8 rounded-lg shadow-sm shadow-purple-500/20 object-cover" />
+            <BrandLogo size={32} />
             <span className="font-bold text-sm text-foreground">Coreknot</span>
           </div>
 

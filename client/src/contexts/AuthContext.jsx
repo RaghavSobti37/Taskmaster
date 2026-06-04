@@ -23,6 +23,19 @@ const defaultAuthContext = {
 
 const AuthContext = createContext(defaultAuthContext);
 
+/** Marketing/legal routes — defer session probe so LCP is not blocked. */
+const PUBLIC_MARKETING_PATHS = new Set([
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/relegends',
+  '/privacy',
+  '/userdata',
+  '/unsubscribe',
+]);
+
 const axiosBase = getAxiosBaseURL();
 if (axiosBase) {
   axios.defaults.baseURL = axiosBase;
@@ -141,6 +154,20 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     loggingOutRef.current = false;
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublicMarketing = PUBLIC_MARKETING_PATHS.has(path);
+    const runFetch = () => fetchUser();
+
+    if (isPublicMarketing) {
+      setLoading(false);
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        const id = window.requestIdleCallback(runFetch, { timeout: 2500 });
+        return () => window.cancelIdleCallback(id);
+      }
+      const timer = window.setTimeout(runFetch, 0);
+      return () => window.clearTimeout(timer);
+    }
+
     fetchUser();
   }, [fetchUser, queryClient]);
 

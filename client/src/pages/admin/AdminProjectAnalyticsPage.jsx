@@ -207,7 +207,7 @@ const AdminProjectAnalyticsPage = () => {
             </div>
 
             {(summaryLoading && !summary) || (projectsLoading && !projects.length) ? (
-              <DataLoading message="Loading project summary..." />
+              <DataLoading />
             ) : null}
             {summaryError && !summary && (
               <p className="text-sm text-red-500">

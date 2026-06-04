@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Check, Lock } from 'lucide-react';
-import { UserLabel } from '../ui';
+import { UserLabel, LoadingPhrase } from '../ui';
 import {
   shouldUseSplitLayout,
   getMergedCellLabel,
@@ -114,9 +114,9 @@ const TeamAttendanceMobileList = ({
 }) => {
   if (isLoading || usersLoading) {
     return (
-      <p className="lg:hidden text-sm text-center italic text-[var(--color-text-muted)] py-6">
-        Loading team attendance...
-      </p>
+      <div className="lg:hidden py-6 flex justify-center">
+        <LoadingPhrase className="text-sm italic text-[var(--color-text-muted)]" />
+      </div>
     );
   }
 

@@ -1,0 +1,22 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "preview": {
+      "MONGODB_URI": "@local-mongodb-uri",
+      "DATABASE_ENVIRONMENT": "preview"
+    },
+    "production": {
+      "MONGODB_URI": "@prod-mongodb-uri",
+      "DATABASE_ENVIRONMENT": "production"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "coreknot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CoreKnot monorepo — client + server",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "preflight": "node server/scripts/preflightEnv.js",
+    "audit:exposure": "node scripts/checkCommittedExposure.js",
+    "audit:history": "node scripts/auditGitHistoryExposure.js",
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npx --yes wait-on@8.0.1 tcp:127.0.0.1:5000 -t 120000 && npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "test": "npm test --prefix server",
+    "lint": "npm run lint --prefix client",
+    "build": "npm run build --prefix client",
+    "ci": "npm run audit:exposure && npm test --prefix server && npm run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,18 @@
+# git filter-repo --replace-text (repo root). See docs/GIT_HISTORY_REDACTION.md
+literal:YOUR-RENDER-SERVICE.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:CoreKnot-jfw0.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:YOUR-RENDER-SERVICE.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:REDACTED_ADMIN@example.com==>REDACTED_ADMIN@example.com
+literal:redacted@example.com==>redacted@example.com
+literal:redacted@example.com==>redacted@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:github.com/YOUR_ORG==>github.com/YOUR_ORG
+literal:YOUR_ORG/CoreKnot==>YOUR_ORG/CoreKnot
+literal:YOUR_ORG/Taskmaster==>YOUR_ORG/Taskmaster
+literal:RaghavSobti37==>YOUR_ORG
+literal:Raghav Raj Sobti==>Redacted User
+literal:Raghav Sobti==>Redacted User
+regex:mongodb\+srv://[^ \t\r\n'"`]+==>mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/

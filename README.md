@@ -40,6 +40,25 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 * **Decoupled Architecture:** Vite-optimized React Single Page Application (SPA) paired with a high-performance Express REST API layer.
 * **Resilient Infrastructure:** Integrated Redis task queues (`BullMQ`), state-driven orchestration (`Trigger.dev`), real-time bidirectional state syncing (`Socket.IO`), and an autonomous system-health blocking middleware.
 * **Strict Review Pipelines:** Institutional task governance rules separating individual contributions from multi-tiered peer review workflows.
+* **Security gates:** Pre-commit exposure scan (`npm run audit:exposure`), optional git-history needle scan (`npm run audit:history`), and platform roles stored in MongoDB — not hardcoded emails in source.
+
+---
+
+## Security & compliance
+
+| Check | Command | When |
+| --- | --- | --- |
+| Working tree exposure | `npm run audit:exposure` | Before every commit / CI |
+| Git history needles | `npm run audit:history` | After history rewrite or fork import |
+| Env preflight | `npm run preflight` | Before `npm run dev` |
+
+**Do not commit:** `server/.env.render`, live `vercel.json`, API keys, or MongoDB Atlas URIs. Use `*.example` templates and set secrets on Render/Vercel.
+
+**Git history:** If the repo ever contained personal emails or credentials in old commits, follow [`docs/GIT_HISTORY_REDACTION.md`](docs/GIT_HISTORY_REDACTION.md) (`scripts/runHistoryRedact.sh`, `replacements.txt`). Jun 2026 rewrite completed on `main` and `testing`; collaborators must re-clone or `git fetch && git reset --hard origin/main`.
+
+**Platform admin:** Root access uses `ROOT_ADMIN_USER_IDS` / `PLATFORM_OWNER_USER_ID` env vars and Admin → Platform roles (`PlatformSettings` in MongoDB). See [`docs/DEPLOY_ENV.md`](docs/DEPLOY_ENV.md) and [`security-context.md`](security-context.md).
+
+**Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) — PR checklist includes `npm run audit:exposure` and `npm run ci`.
 
 ---
 
@@ -728,9 +747,14 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 
 | Document | Purpose |
 | --- | --- |
+| [`docs/DOCUMENTATION_INDEX.md`](docs/DOCUMENTATION_INDEX.md) | Master index — start here when unsure which doc to read |
+| [`docs/ENVIRONMENT_MATRIX.md`](docs/ENVIRONMENT_MATRIX.md) | Hosts, DBs, `VITE_API_URL`, webhooks per environment |
 | [`docs/STARTUP_GUIDE.md`](docs/STARTUP_GUIDE.md) | Step-by-step local environment bootstrap |
 | [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) | Local vs production MongoDB isolation |
+| [`docs/DEPLOY_ENV.md`](docs/DEPLOY_ENV.md) | Render/Vercel env checklist (no secrets in repo) |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Auth cookies, webhooks, CORS, password policy, QA security checks |
+| [`docs/GIT_HISTORY_REDACTION.md`](docs/GIT_HISTORY_REDACTION.md) | History rewrite runbook + verification |
+| [`docs/SCRIPTS_RUNBOOK.md`](docs/SCRIPTS_RUNBOOK.md) | Server maintenance scripts (safety tiers) |
 | [`docs/AI_AGENT_PROJECT_CONTEXT.md`](docs/AI_AGENT_PROJECT_CONTEXT.md) | Complete AI agent reference (routes, models, rules) |
 | [`docs/EMAIL_ENGINE_LOCKED.md`](docs/EMAIL_ENGINE_LOCKED.md) | Locked email tracking spec — do not modify without unlock |
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |

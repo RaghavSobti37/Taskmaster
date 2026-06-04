@@ -20,7 +20,7 @@ Requires [git-filter-repo](https://github.com/newren/git-filter-repo) and **Git 
 pip install git-filter-repo
 ```
 
-`replacements.txt` at the repo root drives blob redaction (`git filter-repo --replace-text`). It mirrors `scripts/gitCommitMessageRedact.py` / `scripts/gitMsgFilter.sh` plus a MongoDB Atlas URI regex.
+`replacements.txt` at the repo root drives blob redaction (`git filter-repo --replace-text`). Regex rules cover `mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/`, `whsec_…` (Stripe), `AIzaSy…` (Google API keys), and `REDACTED_DB_USER`. It mirrors `scripts/gitCommitMessageRedact.py` / `scripts/gitMsgFilter.sh` — **no live secrets** in that file.
 
 ### Automated script
 
@@ -56,7 +56,7 @@ git remote add origin https://github.com/YOUR_ORG/Taskmaster.git
 
 ## After rewrite
 
-1. Rotate credentials that ever appeared in history (JWT, Mongo, Google, Resend, etc.).
+1. Rotate credentials that ever appeared in history (MongoDB Atlas passwords, `YOUTUBE_API_KEY`, `RESEND_WEBHOOK_SECRET` / Stripe `whsec_…`, JWT, Resend, etc.).
 2. Re-clone or `git fetch origin && git reset --hard origin/main` on every machine.
 3. Delete forks or rewrite them separately; GitHub may retain old objects until GC.
 

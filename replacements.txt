@@ -1,0 +1,5 @@
+# git-filter-repo --replace-text (regex only — no live secrets in this file)
+regex:whsec_[A-Za-z0-9]+==>whsec_REDACTED
+regex:AIzaSy[A-Za-z0-9_\-]{30,40}==>AIzaSyREDACTED
+regex:mongodb\+srv://[^ \t\r\n'"`]+==>mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/
+regex:REDACTED_DB_USER==>REDACTED_DB_USER

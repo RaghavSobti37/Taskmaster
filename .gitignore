@@ -3,6 +3,7 @@
 .env.*.local
 !.env.example
 !.env.*.example
+server/.env
 server/.env.render
 client/dist
 client/lighthouse-reports/

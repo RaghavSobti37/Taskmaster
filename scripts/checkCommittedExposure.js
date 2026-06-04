@@ -62,6 +62,8 @@ const BLOCKED_LITERALS = [
 const PATTERNS = [
   { id: 'render-host', re: /https?:\/\/[a-z0-9-]+\.onrender\.com/gi, label: 'Render API URL' },
   { id: 'mongodb-srv', re: /mongodb\+srv:\/\/[^\s'"`]+/gi, label: 'MongoDB Atlas URI' },
+  { id: 'stripe-whsec', re: /whsec_[A-Za-z0-9]{20,}/g, label: 'Stripe webhook signing secret' },
+  { id: 'google-api-key', re: /AIzaSy[A-Za-z0-9_\-]{30,40}/g, label: 'Google API key' },
   { id: 'private-key', re: /-----BEGIN (RSA |EC )?PRIVATE KEY-----/g, label: 'Private key PEM' },
   {
     id: 'personal-gmail',
@@ -118,6 +120,7 @@ for (const rel of listGitTrackedFiles()) {
     for (const match of matches) {
       if (id === 'render-host' && isAllowedRenderHost(match)) continue;
       if (id === 'mongodb-srv' && isPlaceholderUri(match)) continue;
+      if ((id === 'stripe-whsec' || id === 'google-api-key') && /REDACTED|your_|example/i.test(match)) continue;
       if (id === 'private-key' && rel.endsWith('.env.example')) continue;
       if (id === 'personal-gmail' && isAllowedGmail(match, rel)) continue;
 

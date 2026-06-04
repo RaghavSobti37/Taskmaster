@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Scan git history for leaked hosts / PII literals (read-only report).
+ * Scan git history for leaked hosts / PII / API secrets (read-only report).
  * Only flags original secrets — not redaction placeholders.
  */
 const { execSync } = require('child_process');
@@ -22,6 +22,9 @@ const NEEDLES = [
   'github.com/YOUR_ORG',
   'YOUR_ORG/CoreKnot',
   'YOUR_ORG/Taskmaster',
+  'REDACTED_DB_USER',
+  'whsec_REDACTED',
+  'AIzaSyBT6YIo',
 ];
 
 const hits = [];
@@ -41,7 +44,7 @@ for (const needle of NEEDLES) {
 }
 
 if (!hits.length) {
-  console.log('Git history exposure scan: no original PII needles found.');
+  console.log('Git history exposure scan: no original PII/secret needles found.');
   process.exit(0);
 }
 

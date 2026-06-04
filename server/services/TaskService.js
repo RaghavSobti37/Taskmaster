@@ -22,6 +22,7 @@ const {
   REVIEW_LOG_LABEL,
 } = require('../../shared/taskReviewRules');
 const { formatTimeSpent, MIN_COMPLETION_MINUTES } = require('../../shared/timeSpent');
+const { refreshAttendanceMetricsForUserDay } = require('../utils/refreshAttendanceMetrics');
 const { clampXpHours } = require('../../shared/gamificationRules');
 const { queueGamificationEvent } = require('./backgroundQueue');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
@@ -279,6 +280,7 @@ const createTaskDailyLog = async ({
     targetId: task._id,
     targetType: 'Task',
   }], { session });
+  refreshAttendanceMetricsForUserDay(userId, new Date()).catch(() => {});
 };
 
 const resolveReviewHoursFromUpdates = (updates = {}) => {

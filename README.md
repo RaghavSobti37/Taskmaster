@@ -123,6 +123,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Subscriptions:** Separate monthly and yearly spend totals from recurring periodicity (one-time excluded).
 * **Leads:** Default table page size 5; full-width filter toolbar on list pages.
 * **Exly list price:** Paid-booking mode backfills offering `price` when the API returns zero.
+* **Attendance hours vs logs:** Time card shows **Worked** (check-in → check-out) and **Not logged** when `(worked − 1h lunch) − daily logs` is ≥ 30 minutes. All `DAILY_LOG` types count (manual, task completion, review). Metrics refresh on fetch, log CRUD, and task completion — shared formula in `shared/attendanceMetrics.js`; `server/utils/refreshAttendanceMetrics.js`.
 
 ### Mail Template Studio & Outbound HTML Pipeline
 

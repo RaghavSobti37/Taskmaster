@@ -181,6 +181,7 @@ export const useCreateLog = () => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     },
@@ -196,6 +197,7 @@ export const useUpdateLog = () => {
     mutationFn: ({ id, data }) => axios.put(`/api/logs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     }
@@ -208,6 +210,7 @@ export const useDeleteLog = () => {
     mutationFn: (id) => axios.delete(`/api/logs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
       queryClient.invalidateQueries({ queryKey: ['projects'], predicate: (q) => q.queryKey[2] === 'analytics' });
     }

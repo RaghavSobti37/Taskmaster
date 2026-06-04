@@ -12,12 +12,20 @@ import {
   hasRecordedCheckOut,
   formatAttendanceRecordTime,
 } from '../../utils/attendanceUtils';
+import { formatMinuteGap } from '../../utils/timeSpent';
+import {
+  getWorkedMinutesFromEntry,
+  getUnloggedMinutesFromEntry,
+  UNLOGGED_THRESHOLD_MINUTES,
+} from '../../utils/attendanceMetrics';
 
 const PASTEL_ROSE_CELL = 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/20';
 const PASTEL_ROSE_TEXT = 'text-[var(--color-pastel-rose-text)]';
 
-const DISCREPANCY_INFO =
-  'Difference between your check-in to check-out duration and total hours logged in Daily Logs for this day. Shown when the gap is 30 minutes or more. Keep both aligned for the attendance day bonus.';
+const HOURS_WORKED_INFO =
+  'Hours between your check-in and check-out for this day.';
+const NOT_LOGGED_INFO =
+  'Time you still need to log: (check-in to check-out, minus 1 hour lunch) minus all Daily Logs for this day (manual entries, task completions, and reviews). Shown when 30 minutes or more remain. Log the gap to earn the attendance day bonus.';
 
 const LOCKED_FIELD_CLASS =
   'disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-[var(--color-bg-secondary)] focus:ring-0';
@@ -285,8 +293,11 @@ const UnifiedTimeCard = ({
 
   const showIdentity = !hideTitleRow && (title || subTitle);
   const showOvertime = entry?.overtimeMinutes > 0;
-  const showDiscrepancy = entry?.discrepancyMinutes >= 30;
-  const showBadges = showOvertime || showDiscrepancy;
+  const workedMinutes = hasIn && hasOut ? getWorkedMinutesFromEntry(entry) : 0;
+  const unloggedMinutes = hasIn && hasOut ? getUnloggedMinutesFromEntry(entry) : 0;
+  const showHoursWorked = workedMinutes > 0;
+  const showNotLogged = unloggedMinutes >= UNLOGGED_THRESHOLD_MINUTES;
+  const showBadges = showOvertime || showHoursWorked || showNotLogged;
   const showMetaSection = showIdentity || showBadges;
 
   return (
@@ -314,13 +325,26 @@ const UnifiedTimeCard = ({
                   OT: {Math.round(entry.overtimeMinutes / 60 * 10) / 10}h
                 </span>
               )}
-              {showDiscrepancy && (
-                <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
-                  Discrepancy: {entry.discrepancyMinutes} Minutes
+              {showHoursWorked && (
+                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20 text-xs font-bold">
+                  Worked: {formatMinuteGap(workedMinutes)}
                   <button
                     type="button"
-                    title={DISCREPANCY_INFO}
-                    aria-label={DISCREPANCY_INFO}
+                    title={HOURS_WORKED_INFO}
+                    aria-label={HOURS_WORKED_INFO}
+                    className="inline-flex items-center opacity-80 hover:opacity-100 transition-opacity"
+                  >
+                    <Info size={13} strokeWidth={2.5} />
+                  </button>
+                </span>
+              )}
+              {showNotLogged && (
+                <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
+                  Not logged: {formatMinuteGap(unloggedMinutes)}
+                  <button
+                    type="button"
+                    title={NOT_LOGGED_INFO}
+                    aria-label={NOT_LOGGED_INFO}
                     className="inline-flex items-center opacity-80 hover:opacity-100 transition-opacity"
                   >
                     <Info size={13} strokeWidth={2.5} />

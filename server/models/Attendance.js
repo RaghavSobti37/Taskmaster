@@ -29,6 +29,9 @@ const attendanceSchema = new mongoose.Schema({
   overtimeMinutes: { type: Number, default: 0 },
   systemHours: { type: Number, default: 0 },
   loggedHours: { type: Number, default: 0 },
+  /** Worked span minus 1h lunch, minus daily logs (minutes not yet logged). */
+  unloggedMinutes: { type: Number, default: 0 },
+  /** @deprecated use unloggedMinutes — kept for older rows / XP reads */
   discrepancyMinutes: { type: Number, default: 0 },
   /** Set when full-day attendance XP is granted after both IN/OUT are admin-approved. */
   xpGrantedAt: { type: Date },

@@ -67,6 +67,16 @@ export function formatHoursMinutes(hours) {
   return formatTimeSpent(hours);
 }
 
+/** Integer minutes → compact label for attendance badges (e.g. 9h 2m). */
+export function formatMinuteGap(totalMinutes) {
+  const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 /** True when separate h/m inputs have any time (not both zero). */
 export function isValidCompletionMinutes(hours, minutes) {
   const h = Math.max(0, parseInt(String(hours ?? ''), 10) || 0);

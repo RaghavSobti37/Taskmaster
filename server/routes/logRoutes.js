@@ -7,6 +7,13 @@ const logger = require('../utils/logger');
 const GamificationService = require('../services/gamificationService');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { parseTimeSpentToMinutes, parseTimeSpentToHours } = require('../../shared/timeSpent');
+const { refreshAttendanceMetricsFromLog } = require('../utils/refreshAttendanceMetrics');
+
+const refreshAttendanceAfterLog = (log) => {
+  refreshAttendanceMetricsFromLog(log).catch((err) => {
+    logger.error('Attendance', 'Failed to refresh metrics after log change', { error: err.message });
+  });
+};
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -128,6 +135,10 @@ router.post('/', protect, async (req, res) => {
     const populatedLog = await Log.findById(log._id).populate('userId', 'name avatar');
     broadcastRealtimeEvent('logs', 'log_update', { logId: log._id, action });
 
+    if (action === 'DAILY_LOG') {
+      refreshAttendanceAfterLog(log);
+    }
+
     if (action === 'DAILY_LOG' && !['TASK_COMPLETION', 'TASK_REVIEW'].includes(details?.type)) {
       const { clampXpHours } = require('../../shared/gamificationRules');
       const rawHours = parseTimeSpentToHours(details?.timeSpent);
@@ -186,6 +197,7 @@ router.put('/:id', protect, async (req, res) => {
     const { details } = req.body;
     log.details = { ...log.details, ...details };
     await log.save();
+    if (log.action === 'DAILY_LOG') refreshAttendanceAfterLog(log);
     res.json(log);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -211,7 +223,8 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to delete this log.' });
     }
 
-    await Log.findByIdAndDelete(req.params.id);
+    const deleted = await Log.findByIdAndDelete(req.params.id);
+    if (deleted?.action === 'DAILY_LOG') refreshAttendanceAfterLog(deleted);
     res.json({ message: 'Log deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

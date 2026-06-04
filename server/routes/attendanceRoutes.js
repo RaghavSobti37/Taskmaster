@@ -8,7 +8,7 @@ const Attendance = require('../models/Attendance');
 const LeaveRequest = require('../models/LeaveRequest');
 const User = require('../models/User');
 const { awardAttendanceXpOnDayLocked, isAttendanceDayLocked } = require('../utils/attendanceXp');
-const { parseTimeSpentToHours } = require('../../shared/timeSpent');
+const { refreshAttendanceMetrics } = require('../utils/refreshAttendanceMetrics');
 const {
   getDateKey,
   toStartOfDay,
@@ -18,10 +18,8 @@ const {
   getCurrentWeekRange,
   getWeekRange,
   validateAttendanceTimes,
-  parseTimeToMinutes,
 } = require('../utils/attendanceDate');
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
-const Log = require('../models/Log');
 const { createNotification } = require('../services/notificationDispatcher');
 
 const isOps = (user) => isOpsUser(user);
@@ -86,44 +84,7 @@ function verifyNetworkMatch(clientRawIp, targetOfficeIp) {
   }
 }
 
-const computeAttendanceMetrics = async (attendanceDoc) => {
-  const inTime = attendanceDoc.inTimeRecord?.manualTimestamp;
-  const outTime = attendanceDoc.outTimeRecord?.manualTimestamp;
-
-  if (!inTime || !outTime) return attendanceDoc;
-
-  const inMin = parseTimeToMinutes(inTime);
-  const outMin = parseTimeToMinutes(outTime);
-  let systemMinutes = outMin - inMin;
-  if (systemMinutes < 0) systemMinutes += 24 * 60;
-
-  const dayStart = toStartOfDay(attendanceDoc.date);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setHours(23, 59, 59, 999);
-
-  const logs = await Log.find({
-    userId: attendanceDoc.userId,
-    action: 'DAILY_LOG',
-    createdAt: { $gte: dayStart, $lte: dayEnd },
-    'details.type': { $nin: ['TASK_COMPLETION', 'TASK_REVIEW'] }
-  }).select('details').lean();
-
-  const loggedHours = logs.reduce(
-    (sum, l) => sum + parseTimeSpentToHours(l.details?.timeSpent),
-    0
-  );
-  const systemHours = systemMinutes / 60;
-  const discrepancyMinutes = Math.abs(Math.round(systemHours * 60) - Math.round(loggedHours * 60));
-  const overtimeMinutes = Math.max(0, systemMinutes - STANDARD_SHIFT_MINUTES);
-
-  attendanceDoc.systemHours = Math.round(systemHours * 100) / 100;
-  attendanceDoc.loggedHours = Math.round(loggedHours * 100) / 100;
-  attendanceDoc.discrepancyMinutes = discrepancyMinutes;
-  attendanceDoc.overtimeMinutes = overtimeMinutes;
-  await attendanceDoc.save();
-
-  return attendanceDoc;
-};
+const computeAttendanceMetrics = (attendanceDoc) => refreshAttendanceMetrics(attendanceDoc);
 
 router.use(protect);
 
@@ -144,8 +105,16 @@ router.get('/', async (req, res) => {
       if (end) query.date.$lte = endOfDayFromKey(end);
     }
 
-    const rows = await Attendance.find(query).sort({ date: -1 }).lean();
-    res.json(rows);
+    const rows = await Attendance.find(query).sort({ date: -1 });
+    await Promise.all(
+      rows.map((row) => {
+        if (row.inTimeRecord?.manualTimestamp && row.outTimeRecord?.manualTimestamp) {
+          return refreshAttendanceMetrics(row);
+        }
+        return null;
+      })
+    );
+    res.json(rows.map((row) => (row.toObject ? row.toObject() : row)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

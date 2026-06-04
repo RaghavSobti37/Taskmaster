@@ -2,7 +2,7 @@ const GamificationService = require('../services/gamificationService');
 const { getDateKey } = require('./attendanceDate');
 
 const STANDARD_SHIFT_HOURS = 8;
-const DISCREPANCY_THRESHOLD_MINUTES = 30;
+const { UNLOGGED_THRESHOLD_MINUTES } = require('./attendanceMetrics');
 
 /** Day is locked when ops approved both check-in and check-out. */
 function isAttendanceDayLocked(attendanceDoc) {
@@ -43,7 +43,8 @@ async function awardAttendanceXpOnDayLocked(attendanceDoc) {
   let bonusXp = null;
   if (
     hours >= STANDARD_SHIFT_HOURS
-    && (attendanceDoc.discrepancyMinutes || 0) < DISCREPANCY_THRESHOLD_MINUTES
+    && (attendanceDoc.unloggedMinutes ?? attendanceDoc.discrepancyMinutes ?? 0)
+      < UNLOGGED_THRESHOLD_MINUTES
   ) {
     bonusXp = await GamificationService.awardActionXp(
       attendanceDoc.userId,
@@ -67,5 +68,5 @@ module.exports = {
   isAttendanceDayLocked,
   awardAttendanceXpOnDayLocked,
   STANDARD_SHIFT_HOURS,
-  DISCREPANCY_THRESHOLD_MINUTES,
+  UNLOGGED_THRESHOLD_MINUTES,
 };

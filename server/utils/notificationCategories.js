@@ -1,7 +1,7 @@
 const ALL_CATEGORIES = ['task', 'review', 'crm', 'attendance', 'announcement', 'department', 'system'];
 
 const DEPT_CATEGORY_MAP = {
-  sales: ['crm'],
+  sales: ['crm', 'task', 'review'],
   operations: ['task', 'review', 'attendance', 'department', 'announcement', 'system'],
   admin: ['task', 'review', 'attendance', 'department', 'announcement', 'system'],
   editor: ['task', 'review', 'system'],

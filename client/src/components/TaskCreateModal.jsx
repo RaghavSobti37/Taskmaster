@@ -9,6 +9,7 @@ import { validateTaskTimelineFields } from '../utils/dateValidation';
 import TaskFormFields from './forms/TaskFormFields';
 import { suppressAutoToasts } from '../lib/notifications';
 import { useSystemToast } from '../lib/systemLogBridge';
+import { mergeMentionedUserIdsIntoAssignees } from '../utils/mentionTokens';
 
 const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members: passedMembers, projects: passedProjects, onTaskCreated }) => {
   const { user } = useAuth();
@@ -26,7 +27,7 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       priority: 'medium',
       projectId: initialProjectId || '',
       workspace: 'General',
-      assignees: user ? [user._id] : [],
+      assignees: [],
       scheduleDate,
       dueDate: computeDueDateFromStart(scheduleDate, 'medium'),
       dueDateManual: false,
@@ -83,7 +84,12 @@ const TaskCreateModal = ({ isOpen, onClose, projectId: initialProjectId, members
       scheduleDate: formValues.scheduleDate || null,
       scheduleSlot: formValues.scheduleSlot,
       projectId: formValues.projectId || null,
-      assignees: formValues.assignees,
+      assignees: mergeMentionedUserIdsIntoAssignees(
+        formValues.assignees,
+        passedMembers || [],
+        title,
+        desc
+      ).filter((id) => id !== user?._id),
       dueDate: formValues.dueDate || null,
       status: 'todo',
     };

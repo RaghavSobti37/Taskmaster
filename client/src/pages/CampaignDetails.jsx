@@ -465,7 +465,27 @@ export default function CampaignDetails() {
                                 ? '• Email sent'
                                 : '• Event'}
                   {eventCityLabel(evt) && (
-                    <span className="text-sky-400/80 ml-1">@ {eventCityLabel(evt)}</span>
+                    <span
+                      className={`ml-1 ${
+                        evt.locationTrust === 'verified'
+                          ? 'text-emerald-400/90'
+                          : evt.locationTrust === 'inferred'
+                            ? 'text-sky-400/80'
+                            : 'text-slate-500 italic'
+                      }`}
+                      title={
+                        evt.locationTrust === 'verified'
+                          ? 'City from click (verified)'
+                          : evt.locationTrust === 'inferred'
+                            ? 'City inferred from recipient click'
+                            : evt.locationTrust === 'proxy'
+                              ? 'Open via mail proxy — not shown on geo map'
+                              : ''
+                      }
+                    >
+                      @ {eventCityLabel(evt)}
+                      {evt.locationTrust === 'proxy' && ' (proxy)'}
+                    </span>
                   )}
                 </span>
                 </div>

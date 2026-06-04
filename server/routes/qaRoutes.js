@@ -13,6 +13,7 @@ router.use(protect, admin);
 router.post('/start', qaTestingController.startQATesting);
 
 router.get('/categories', qaTestingController.listCategories);
+router.get('/lighthouse-routes', qaTestingController.listLighthouseRoutes);
 
 /**
  * @GET /api/qa/progress

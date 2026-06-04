@@ -63,20 +63,31 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 600,
-    modulePreload: { polyfill: true },
+    modulePreload: {
+      polyfill: true,
+      resolveDependencies: (_filename, deps) =>
+        deps.filter(
+          (dep) =>
+            !/mermaid|recharts|quill|xyflow|framer-motion|cytoscape|wardley|@xyflow/i.test(dep)
+        ),
+    },
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          query: ['@tanstack/react-query'],
-          axios: ['axios'],
-          lucide: ['lucide-react'],
-          recharts: ['recharts'],
-          quill: ['react-quill', 'quill'],
-          'framer-motion': ['framer-motion'],
-          socket: ['socket.io-client'],
-          xyflow: ['@xyflow/react'],
-          mermaid: ['mermaid'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/.test(id)) {
+            return 'react';
+          }
+          if (id.includes('@tanstack/react-query')) return 'query';
+          if (id.includes('axios')) return 'axios';
+          if (id.includes('lucide-react')) return 'lucide';
+          if (id.includes('socket.io-client')) return 'socket';
+          if (id.includes('recharts')) return 'recharts';
+          if (id.includes('react-quill') || /[\\/]quill[\\/]/.test(id)) return 'quill';
+          if (id.includes('framer-motion')) return 'framer-motion';
+          if (id.includes('@xyflow')) return 'xyflow';
+          if (id.includes('mermaid')) return 'mermaid';
+          return undefined;
         },
       },
     },

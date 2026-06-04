@@ -6,7 +6,15 @@ const fs = require('fs');
 const multer = require('multer');
 const Campaign = require('../models/Campaign');
 const MailCampaign = require('../models/MailCampaign');
+const MailTemplate = require('../models/MailTemplate');
 const Lead = require('../models/Lead');
+const {
+  getEffectiveTemplateContent,
+  validateVariableMapping,
+  leadToRowData,
+} = require('../utils/indexedTemplateVariables');
+const { migrateLegacyTemplates } = require('../utils/mailTemplateHelpers');
+const { normalizeOutboundEmailHtml } = require('../utils/normalizeOutboundEmailHtml');
 const { protect } = require('../middleware/authMiddleware');
 const { dispatchCampaignJobs, stopCampaign } = require('../services/queueService');
 const { computeRecipientStats } = require('../utils/campaignStats');
@@ -37,25 +45,37 @@ const upload = multer({
 
 router.get('/', async (req, res) => {
   try {
-    const listProjection = '-recipients -content';
-    const coreCampaigns = await Campaign.find({ createdBy: req.user._id }).select(listProjection).sort('-createdAt').lean();
-    const mailCampaigns = await MailCampaign.find({ createdBy: req.user._id }).select(listProjection).sort('-createdAt').lean();
+    const userId = req.user._id;
+    const listPipeline = [
+      { $match: { createdBy: userId } },
+      { $addFields: { recipientCount: { $size: { $ifNull: ['$recipients', []] } } } },
+      { $project: { content: 0, recipients: 0 } },
+      { $sort: { createdAt: -1 } },
+    ];
+    const [coreCampaigns, mailCampaigns] = await Promise.all([
+      Campaign.aggregate(listPipeline),
+      MailCampaign.aggregate(listPipeline),
+    ]);
     const allCampaigns = [...coreCampaigns, ...mailCampaigns].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     for (const camp of allCampaigns) {
       const stats = camp.stats || {};
       const metrics = camp.metrics || {};
-      camp.recipientCount = stats.total ?? metrics.totalRecipients ?? camp.recipientCount ?? 0;
-      if (!camp.stats) {
-        camp.stats = {
-          total: camp.recipientCount,
-          sent: metrics.totalSent ?? 0,
-          opened: metrics.opened ?? 0,
-          clicked: metrics.clicked ?? 0,
-          bounced: metrics.bounced ?? 0,
-          unsubscribed: stats.unsubscribed ?? 0,
-        };
-      }
+      const targetTotal = Math.max(
+        camp.recipientCount || 0,
+        stats.total || 0,
+        metrics.totalRecipients || 0,
+      );
+      camp.recipientCount = targetTotal;
+      camp.stats = {
+        total: targetTotal,
+        sent: stats.sent ?? metrics.totalSent ?? 0,
+        opened: stats.opened ?? metrics.opened ?? 0,
+        clicked: stats.clicked ?? metrics.clicked ?? 0,
+        bounced: stats.bounced ?? metrics.bounced ?? 0,
+        unsubscribed: stats.unsubscribed ?? 0,
+        invalid: stats.invalid ?? 0,
+      };
       if (!camp.metrics) {
         camp.metrics = {
           totalSent: stats.sent ?? 0,
@@ -160,6 +180,17 @@ router.get('/:id', async (req, res) => {
     const clickCityByEmail = await buildClickCityByEmail(geoEvents, ipCache);
     const cityByEventId = new Map();
 
+    const inferLocationTrust = (evt, displayCity) => {
+      if (evt.eventType === 'Click') return displayCity ? 'verified' : 'none';
+      if (evt.eventType !== 'Open') return 'none';
+      if (!displayCity) return 'none';
+      const email = String(evt.email || '').toLowerCase().trim();
+      const clickCity = clickCityByEmail.get(email);
+      if (clickCity && clickCity === displayCity) return 'inferred';
+      if (evt.location?.city) return 'verified';
+      return 'proxy';
+    };
+
     const resolveEventCityCached = async (evt) => {
       const key = String(evt._id);
       if (cityByEventId.has(key)) return cityByEventId.get(key);
@@ -168,10 +199,14 @@ router.get('/:id', async (req, res) => {
       return city;
     };
 
-    campaign.events = await Promise.all(recentEvents.map(async (evt) => ({
-      ...evt,
-      displayCity: await resolveEventCityCached(evt),
-    })));
+    campaign.events = await Promise.all(recentEvents.map(async (evt) => {
+      const displayCity = await resolveEventCityCached(evt);
+      return {
+        ...evt,
+        displayCity,
+        locationTrust: inferLocationTrust(evt, displayCity),
+      };
+    }));
 
     const locationBreakdown = {};
     const timeSeriesMap = {};
@@ -179,9 +214,14 @@ router.get('/:id', async (req, res) => {
     for (const evt of geoEvents) {
       const city = await resolveEventCityCached(evt);
       if (city) {
-        if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
-        if (evt.eventType === 'Open') locationBreakdown[city].opens++;
-        else locationBreakdown[city].clicks++;
+        const trust = inferLocationTrust(evt, city);
+        if (evt.eventType === 'Open' && trust === 'proxy') {
+          /* skip proxy opens in geo charts — clicks and inferred opens only */
+        } else {
+          if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
+          if (evt.eventType === 'Open') locationBreakdown[city].opens++;
+          else locationBreakdown[city].clicks++;
+        }
       }
 
       const date = new Date(evt.timestamp);
@@ -220,9 +260,40 @@ router.post('/', async (req, res) => {
     const {
       title, subject, content, senderProfileId, senderMode, senderProfileIds,
       systemProvider, includeSignature, attachments, eventTag, leadIds, customRecipients,
-      removeUnsubscribe, variableFallbacks,
+      removeUnsubscribe, variableFallbacks, mailTemplateId, variableMapping,
+      action,
     } = req.body;
+    const dispatchNow = action === 'dispatch';
     const campaignId = crypto.randomBytes(12).toString('hex');
+
+    if (!mailTemplateId) {
+      return res.status(400).json({ error: 'mailTemplateId is required — select an approved template' });
+    }
+    await migrateLegacyTemplates();
+    const template = await MailTemplate.findById(mailTemplateId);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (template.status !== 'approved') {
+      return res.status(400).json({ error: 'Only approved templates can be used for campaigns' });
+    }
+
+    const templateContent = normalizeOutboundEmailHtml(getEffectiveTemplateContent(template));
+    const resolvedSubject = subject || template.subject || title;
+    const mappingObj = variableMapping && typeof variableMapping === 'object' ? variableMapping : {};
+    const mappingCheck = validateVariableMapping([templateContent, resolvedSubject], mappingObj);
+    if (!mappingCheck.ok) {
+      return res.status(400).json({
+        error: `Map all template variables: ${mappingCheck.missing.map((i) => `{${i}}`).join(', ')}`,
+      });
+    }
+
+    const toRowDataMap = (rowData) => {
+      if (!rowData || typeof rowData !== 'object') return undefined;
+      const m = new Map();
+      for (const [k, v] of Object.entries(rowData)) {
+        m.set(String(k).toLowerCase().trim(), v != null ? String(v) : '');
+      }
+      return m.size ? m : undefined;
+    };
 
     const leads = leadIds && leadIds.length ? await Lead.find({ _id: { $in: leadIds }, unsubscribed: { $ne: true }, emailStatus: { $ne: 'Bounced' } }) : [];
     const buildRecipientRow = (row) => {
@@ -232,6 +303,7 @@ router.post('/', async (req, res) => {
         leadId: row.leadId,
         email,
         name: (row.name || '').trim(),
+        rowData: toRowDataMap(row.rowData) || toRowDataMap(leadToRowData(row.leadDoc)),
       };
       if (!isValidEmail(email)) {
         return { ...base, status: 'Invalid', error: 'Invalid email address' };
@@ -243,12 +315,15 @@ router.post('/', async (req, res) => {
       leadId: l._id,
       email: l.email,
       name: l.name || '',
+      leadDoc: l,
+      rowData: leadToRowData(l),
     })).filter(Boolean);
 
     const custom = (Array.isArray(customRecipients) ? customRecipients : [])
       .map((r) => buildRecipientRow({
         email: r?.email,
         name: (r?.name || r?.firstName || '').trim(),
+        rowData: r?.rowData,
       }))
       .filter(Boolean);
 
@@ -272,12 +347,14 @@ router.post('/', async (req, res) => {
     const campaignPayload = {
       campaignId,
       title,
-      subject,
-      content,
+      subject: resolvedSubject,
+      content: normalizeOutboundEmailHtml(content || templateContent),
+      mailTemplateId: template._id,
+      variableMapping: mappingObj,
       senderProfileId: senderProfileId || undefined,
       senderMode: mode,
       senderProfileIds: senderProfileIds || [],
-      includeSignature: includeSignature !== false,
+      includeSignature: includeSignature === true,
       removeUnsubscribe: removeUnsubscribe === true,
       attachments: (attachments || []).map((a) => ({
         filename: a.filename,
@@ -286,7 +363,9 @@ router.post('/', async (req, res) => {
       })),
       eventTag: eventTag || 'General',
       recipients: allRecipients,
-      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0, totalRecipients: allRecipients.length },
+      recipientCount: allRecipients.length,
+      status: dispatchNow ? 'Queued' : 'Draft',
+      metrics: { totalSent: 0, opened: 0, clicked: 0, bounced: 0 },
       createdBy: req.user._id
     };
     if (systemProvider === 'resend' || systemProvider === 'env_smtp') {
@@ -298,13 +377,18 @@ router.post('/', async (req, res) => {
 
     const campaign = await Campaign.create(campaignPayload);
 
+    let dispatchResult = null;
     const sendableCount = allRecipients.filter((r) => r.status === 'Pending').length;
-    if (sendableCount > 0) {
-      dispatchCampaignJobs(campaign._id);
+    if (dispatchNow && sendableCount > 0) {
+      dispatchResult = await dispatchCampaignJobs(campaign._id);
     }
 
     const campaignObj = campaign.toObject ? campaign.toObject() : campaign;
-    res.status(201).json({ ...campaignObj, skippedInvalidCount });
+    res.status(201).json({
+      ...campaignObj,
+      skippedInvalidCount,
+      dispatch: dispatchResult,
+    });
   } catch (err) {
     console.error('Create campaign error:', err);
     res.status(500).json({ error: err.message });
@@ -315,7 +399,12 @@ router.post('/:id/dispatch', async (req, res) => {
   try {
     const resolved = await resolveCampaignByParam(req.params.id);
     if (!resolved) return res.status(404).json({ error: 'Campaign not found' });
-    const result = await dispatchCampaignJobs(resolved.campaign._id);
+    const { campaign } = resolved;
+    if (!resolved.isLegacy && campaign.status === 'Draft') {
+      campaign.status = 'Queued';
+      await campaign.save();
+    }
+    const result = await dispatchCampaignJobs(campaign._id);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -503,6 +592,12 @@ router.post('/:id/resend-filtered', async (req, res) => {
 
     if (source.variableFallbacks) {
       campaignPayload.variableFallbacks = source.variableFallbacks;
+    }
+    if (source.mailTemplateId) campaignPayload.mailTemplateId = source.mailTemplateId;
+    if (source.variableMapping) {
+      campaignPayload.variableMapping = source.variableMapping instanceof Map
+        ? Object.fromEntries(source.variableMapping.entries())
+        : source.variableMapping;
     }
 
     const campaign = await Campaign.create(campaignPayload);

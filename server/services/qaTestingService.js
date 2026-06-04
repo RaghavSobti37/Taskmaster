@@ -57,6 +57,7 @@ class QATestingService {
       initiatedBy: this.userId,
       status: 'pending',
       selectedCategories: this.config.categories?.length ? this.config.categories : [],
+      selectedLighthousePaths: this.config.lighthousePaths?.length ? this.config.lighthousePaths : [],
       testIdentity: {
         name: this.config.testAgentName || 'QA Agent',
         role: this.config.testRole || 'user',
@@ -424,9 +425,17 @@ class QATestingService {
       !this.config.categories?.length ||
       this.config.categories.map((c) => String(c).toLowerCase()).includes(LIGHTHOUSE_CATEGORY);
     if (wantsLighthouse) {
-      const { buildLighthouseBatchTestCase } = require('./qa/qaLighthouseRunner');
-      testCases.push(buildLighthouseBatchTestCase(this));
-      await reportDiscovery('Queued Lighthouse category (all app routes)');
+      const { buildLighthouseBatchTestCase, getAllLighthouseRoutes } = require('./qa/qaLighthouseRunner');
+      const lhPaths = this.config.lighthousePaths?.length
+        ? this.config.lighthousePaths
+        : null;
+      testCases.push(buildLighthouseBatchTestCase(this, lhPaths));
+      const total = lhPaths?.length || getAllLighthouseRoutes().length;
+      await reportDiscovery(
+        lhPaths?.length
+          ? `Queued Lighthouse (${lhPaths.length} selected routes)`
+          : `Queued Lighthouse category (${total} app routes)`
+      );
     }
 
     return testCases;

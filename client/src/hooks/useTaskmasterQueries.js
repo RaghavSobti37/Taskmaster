@@ -781,12 +781,24 @@ export const useLeadAudits = (params, enabled = true) => {
   });
 };
 
-export const useMailTemplates = (enabled = true) => {
+export const useMailTemplates = (status = null, enabled = true) => {
   return useQuery({
-    queryKey: ['mail', 'templates'],
-    queryFn: async () => (await axios.get('/api/mail/templates')).data,
+    queryKey: ['mail', 'templates', status || 'all'],
+    queryFn: async () => {
+      const params = status ? { status } : {};
+      return (await axios.get('/api/mail/templates', { params })).data;
+    },
     enabled,
     staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const usePendingMailTemplates = (enabled = true) => {
+  return useQuery({
+    queryKey: ['mail', 'templates', 'pending'],
+    queryFn: async () => (await axios.get('/api/mail/templates/pending')).data,
+    enabled,
+    staleTime: 1000 * 30,
   });
 };
 
@@ -800,10 +812,40 @@ export const useSaveMailTemplate = () => {
   });
 };
 
+export const useSubmitMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => axios.post(`/api/mail/templates/${id}/submit`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
+  });
+};
+
+export const useApproveMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, content, subject }) => axios.post(`/api/mail/templates/${id}/approve`, { content, subject }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
+  });
+};
+
+export const useRejectMailTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, rejectionNote }) => axios.post(`/api/mail/templates/${id}/reject`, { rejectionNote }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
+    }
+  });
+};
+
 export const useDeleteMailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name) => axios.delete(`/api/mail/templates/${name}`),
+    mutationFn: (id) => axios.delete(`/api/mail/templates/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mail', 'templates'] });
     }

@@ -19,10 +19,48 @@ const { sendCampaign, scanBounces, updateEmailTags } = require('../services/mail
 const { google } = require('googleapis');
 
 // --- TEMPLATES ---
+const {
+  migrateLegacyTemplates,
+  mapToObject,
+  notifyAdminsTemplateSubmitted,
+  assertCanEditTemplate,
+  getEffectiveTemplateContent,
+} = require('../utils/mailTemplateHelpers');
+const { parseIndexedVariablesFromHtml } = require('../utils/indexedTemplateVariables');
+const { normalizeOutboundEmailHtml } = require('../utils/normalizeOutboundEmailHtml');
+
+router.get('/templates/pending', protect, async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    await migrateLegacyTemplates();
+    const templates = await MailTemplate.find({ status: 'pending_approval' })
+      .sort({ submittedAt: -1 })
+      .populate('createdBy', 'name email');
+    res.json(templates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/templates', protect, async (req, res) => {
   try {
-    const templates = await MailTemplate.find().sort({ createdAt: -1 });
+    await migrateLegacyTemplates();
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+    const templates = await MailTemplate.find(filter).sort({ createdAt: -1 });
     res.json(templates);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/templates/:id', protect, async (req, res) => {
+  try {
+    const template = await MailTemplate.findById(req.params.id).populate('createdBy', 'name email');
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    res.json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,18 +68,150 @@ router.get('/templates', protect, async (req, res) => {
 
 router.post('/templates', protect, async (req, res) => {
   try {
-    const { name, content, format } = req.body;
+    const { id, name, content, format, subject, dummyValues } = req.body;
+    if (!name || !content) {
+      return res.status(400).json({ error: 'name and content are required' });
+    }
+    const normalizedContent = normalizeOutboundEmailHtml(content);
     const payload = {
-      content,
+      name: String(name).trim(),
+      content: normalizedContent,
       format: format === 'rawHtml' ? 'rawHtml' : 'visual',
+      subject: subject || '',
+      status: 'draft',
+      dummyValues: dummyValues && typeof dummyValues === 'object' ? dummyValues : {},
+      submittedAt: undefined,
+      approvedAt: undefined,
+      approvedBy: undefined,
+      rejectionNote: undefined,
+      approvedContent: undefined,
     };
-    let template = await MailTemplate.findOne({ name });
-    if (template) {
+
+    let template;
+    if (id) {
+      template = await MailTemplate.findById(id);
+      if (!template) return res.status(404).json({ error: 'Template not found' });
+      const editCheck = assertCanEditTemplate(template, req.user);
+      if (!editCheck.ok) return res.status(403).json({ error: editCheck.error });
+      if (!['draft', 'rejected'].includes(template.status) && !isAdminUser(req.user)) {
+        return res.status(400).json({ error: 'Only draft or rejected templates can be saved as draft' });
+      }
       Object.assign(template, payload);
+      if (template.status === 'rejected') template.status = 'draft';
       await template.save();
     } else {
-      template = await MailTemplate.create({ name, ...payload, createdBy: req.user._id });
+      const existing = await MailTemplate.findOne({ name: payload.name });
+      if (existing && existing.createdBy?.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
+        return res.status(409).json({ error: 'Template name already in use' });
+      }
+      if (existing) {
+        const editCheck = assertCanEditTemplate(existing, req.user);
+        if (!editCheck.ok) return res.status(403).json({ error: editCheck.error });
+        Object.assign(existing, payload);
+        if (existing.status === 'rejected') existing.status = 'draft';
+        template = await existing.save();
+      } else {
+        template = await MailTemplate.create({ ...payload, createdBy: req.user._id });
+      }
     }
+    res.json(template);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/templates/:id', protect, async (req, res) => {
+  try {
+    const template = await MailTemplate.findById(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    const editCheck = assertCanEditTemplate(template, req.user);
+    if (!editCheck.ok) return res.status(403).json({ error: editCheck.error });
+
+    const { name, content, format, subject, dummyValues } = req.body;
+    if (name) template.name = String(name).trim();
+    if (content !== undefined) template.content = normalizeOutboundEmailHtml(content);
+    if (format !== undefined) template.format = format === 'rawHtml' ? 'rawHtml' : 'visual';
+    if (subject !== undefined) template.subject = subject;
+    if (dummyValues && typeof dummyValues === 'object') template.dummyValues = dummyValues;
+    await template.save();
+    res.json(template);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/templates/:id/submit', protect, async (req, res) => {
+  try {
+    const template = await MailTemplate.findById(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (!['draft', 'rejected'].includes(template.status)) {
+      return res.status(400).json({ error: 'Only draft or rejected templates can be submitted' });
+    }
+    if (template.createdBy?.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const dummies = mapToObject(template.dummyValues);
+    const indices = parseIndexedVariablesFromHtml(`${template.content || ''}${template.subject || ''}`);
+    const missingDummies = indices.filter((i) => !dummies[i] && !dummies[String(i)]);
+    if (missingDummies.length) {
+      return res.status(400).json({
+        error: `Provide dummy values for variables: ${missingDummies.map((i) => `{${i}}`).join(', ')}`,
+      });
+    }
+
+    template.status = 'pending_approval';
+    template.submittedAt = new Date();
+    template.rejectionNote = undefined;
+    await template.save();
+    await notifyAdminsTemplateSubmitted(template, req.user);
+    res.json(template);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/templates/:id/approve', protect, async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const template = await MailTemplate.findById(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (template.status !== 'pending_approval') {
+      return res.status(400).json({ error: 'Template is not pending approval' });
+    }
+    const { content, subject } = req.body;
+    if (content !== undefined) {
+      template.approvedContent = normalizeOutboundEmailHtml(content);
+    } else {
+      template.approvedContent = normalizeOutboundEmailHtml(template.content);
+    }
+    if (subject !== undefined) template.subject = subject;
+    template.status = 'approved';
+    template.approvedAt = new Date();
+    template.approvedBy = req.user._id;
+    template.rejectionNote = undefined;
+    await template.save();
+    res.json(template);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/templates/:id/reject', protect, async (req, res) => {
+  try {
+    if (!isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    const template = await MailTemplate.findById(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (template.status !== 'pending_approval') {
+      return res.status(400).json({ error: 'Template is not pending approval' });
+    }
+    template.status = 'rejected';
+    template.rejectionNote = req.body.rejectionNote || '';
+    await template.save();
     res.json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -50,6 +220,14 @@ router.post('/templates', protect, async (req, res) => {
 
 router.delete('/templates/:id', protect, async (req, res) => {
   try {
+    const template = await MailTemplate.findById(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (template.createdBy?.toString() !== req.user._id.toString() && !isAdminUser(req.user)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    if (template.status === 'approved') {
+      return res.status(400).json({ error: 'Cannot delete approved templates' });
+    }
     await MailTemplate.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (err) {
@@ -292,11 +470,77 @@ router.post('/campaigns/:id/send', protect, async (req, res) => {
   }
 });
 
+router.post('/preview', protect, async (req, res) => {
+  try {
+    const {
+      content,
+      subject,
+      includeSignature,
+      removeUnsubscribe,
+      senderProfileId,
+      sampleRecipient,
+      variableMapping,
+      theme,
+    } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ error: 'content is required' });
+    }
+
+    const { buildFinalEmailHtml, personalizeEmailContent, wrapPreviewDocument } = require('../utils/buildFinalEmailHtml');
+    const { leadToRowData } = require('../utils/indexedTemplateVariables');
+
+    let profile = null;
+    if (senderProfileId) {
+      profile = await EmailProfile.findById(senderProfileId);
+    }
+
+    const recipient = sampleRecipient && typeof sampleRecipient === 'object'
+      ? {
+        email: sampleRecipient.email || 'preview@example.com',
+        name: sampleRecipient.name || '',
+        rowData: sampleRecipient.rowData || leadToRowData(sampleRecipient),
+      }
+      : { email: 'preview@example.com', name: 'Preview', rowData: {} };
+
+    const { html: personalizedHtml } = personalizeEmailContent({
+      html: content,
+      subject: subject || '',
+      recipient,
+      leadDoc: null,
+      variableMapping: variableMapping || {},
+    });
+
+    const bodyHtml = await buildFinalEmailHtml({
+      html: personalizedHtml,
+      includeSignature: includeSignature === true,
+      signature: profile?.signature || '',
+      removeUnsubscribe: removeUnsubscribe === true,
+      mode: 'preview',
+    });
+
+    const { subject: personalizedSubject } = personalizeEmailContent({
+      html: '',
+      subject: subject || '',
+      recipient,
+      variableMapping: variableMapping || {},
+    });
+
+    res.json({
+      html: wrapPreviewDocument(bodyHtml, { theme: theme === 'dark' ? 'dark' : 'light' }),
+      subject: personalizedSubject,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/test-campaign', protect, async (req, res) => {
   try {
     const {
       subject, content, testEmail, senderProfileId, includeSignature,
-      senderMode, senderProfileIds
+      senderMode, senderProfileIds, removeUnsubscribe,
+      variableMapping, sampleRecipient,
     } = req.body;
 
     if (!subject || !content || !testEmail) {
@@ -311,18 +555,12 @@ router.post('/test-campaign', protect, async (req, res) => {
       return res.status(400).json({ error: 'Select at least one profile for pool mode test send.' });
     }
 
-    let html = content;
     let profile = null;
-
     const profileIdForSig = senderProfileId || senderProfileIds?.[0];
     if (profileIdForSig) {
       profile = await EmailProfile.findById(profileIdForSig);
       if (!profile && mode === 'single') {
         return res.status(404).json({ error: 'Sender profile not found' });
-      }
-      if (profile && includeSignature !== false && profile.signature) {
-        const { appendSignatureIfMissing } = require('../utils/emailSignature');
-        html = appendSignatureIfMissing(html, profile.signature);
       }
     }
 
@@ -337,17 +575,43 @@ router.post('/test-campaign', protect, async (req, res) => {
         smtpHost: '',
         smtpPort: 587,
         smtpUser: '',
-        smtpPass: ''
+        smtpPass: '',
       };
     }
+
+    const { buildFinalEmailHtml, personalizeEmailContent } = require('../utils/buildFinalEmailHtml');
+    const { leadToRowData } = require('../utils/indexedTemplateVariables');
+    const recipient = sampleRecipient && typeof sampleRecipient === 'object'
+      ? {
+        email: testEmail,
+        name: sampleRecipient.name || '',
+        rowData: sampleRecipient.rowData || leadToRowData(sampleRecipient),
+      }
+      : { email: testEmail, name: '', rowData: {} };
+
+    const { html: personalizedHtml, subject: mergedSubject } = personalizeEmailContent({
+      html: content,
+      subject,
+      recipient,
+      variableMapping: variableMapping || {},
+    });
+
+    const html = await buildFinalEmailHtml({
+      html: personalizedHtml,
+      includeSignature: includeSignature === true,
+      signature: profile?.signature || '',
+      removeUnsubscribe: removeUnsubscribe === true,
+      mode: 'test',
+    });
 
     const mailService = require('../services/mailService');
     await mailService.sendTestEmail({
       to: testEmail,
-      subject,
+      subject: mergedSubject,
       html,
       profile,
-      senderMode: mode
+      senderMode: mode,
+      skipPipeline: true,
     });
 
     res.json({ success: true, message: `Test email sent to ${testEmail}` });
@@ -766,10 +1030,16 @@ router.get('/holysheet/all', protect, admin, async (req, res) => {
         if (!row) continue;
         const email = row[emailIdx];
         if (email && email.includes('@')) {
+          const rowData = {};
+          headers.forEach((h, idx) => {
+            if (!h) return;
+            rowData[h] = row[idx] != null ? String(row[idx]).trim() : '';
+          });
           results.push({
             name: nameIdx !== -1 ? (row[nameIdx] || '') : '',
             email: email.trim(),
-            source: tabName
+            source: tabName,
+            rowData,
           });
         }
       }

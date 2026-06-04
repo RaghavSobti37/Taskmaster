@@ -43,13 +43,14 @@ export const canUserApproveReview = (user, assignments) => {
   );
 };
 
-export const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => {
+export const normalizeAssigneeIds = (assigneeIds, creatorId) => {
   const creator = normalizeId(creatorId);
-  const ids = [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))];
-  if (creator && !ids.includes(creator)) ids.unshift(creator);
-  if (!ids.length && creator) return [creator];
-  return ids;
+  return [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))]
+    .filter((id) => !creator || id !== creator);
 };
+
+/** @deprecated Use normalizeAssigneeIds */
+export const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => normalizeAssigneeIds(assigneeIds, creatorId);
 
 export const filterReviewQueueTasks = (tasks, user, getAssignments) => {
   const uid = normalizeId(user?._id || user);

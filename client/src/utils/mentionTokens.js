@@ -121,6 +121,19 @@ export const extractAssetMentionLabels = (text) => {
   return uniqueLabels(labels);
 };
 
+/** Merge @mentioned users (must be in users list = project/workspace roster) into assignees. */
+export const mergeMentionedUserIdsIntoAssignees = (assignees = [], users = [], ...texts) => {
+  const roster = new Set((users || []).map((u) => String(u._id || u)));
+  const labels = extractUserMentionLabelsFromFields(...texts);
+  const ids = new Set((assignees || []).map((id) => String(id)));
+  for (const label of labels) {
+    const mentioned = resolveUserByLabel(label, users);
+    const mid = mentioned?._id ? String(mentioned._id) : null;
+    if (mid && roster.has(mid)) ids.add(mid);
+  }
+  return [...ids];
+};
+
 export const extractUserMentionLabelsFromFields = (...texts) => {
   const labels = texts.flatMap((t) => extractUserMentionLabels(t || ''));
   return uniqueLabels(labels);

@@ -15,7 +15,7 @@ describe('TaskActivityService', () => {
   let mentioned;
 
   beforeEach(async () => {
-    creator = await User.create({ name: 'Aryaman Test', email: 'aryaman-activity@test.com' });
+    creator = await User.create({ name: 'QA Creator', email: 'qa-creator-activity@test.com' });
     assignee = await User.create({ name: 'Assignee User', email: 'assignee-activity@test.com' });
     mentioned = await User.create({ name: 'Harshika Overseer', email: 'harshika-activity@test.com' });
   });
@@ -38,9 +38,8 @@ describe('TaskActivityService', () => {
 
     const rows = await TaskActivity.find({ taskId: task._id }).sort({ createdAt: 1 }).lean();
     expect(rows[0].type).toBe('created');
-    expect(rows.some((r) => r.type === 'status_change' && r.statusTo === 'todo')).toBe(true);
-    expect(rows.some((r) => r.type === 'field_change' && r.fieldKey === 'category')).toBe(true);
-    expect(rows.some((r) => r.type === 'field_change' && r.fieldKey === 'slot')).toBe(true);
+    expect(rows.some((r) => r.type === 'status_change')).toBe(false);
+    expect(rows.some((r) => r.type === 'field_change')).toBe(false);
     expect(rows.some((r) => r.type === 'message' && r.body === 'Initial brief from creator')).toBe(true);
     expect(rows.filter((r) => r.type === 'assignment')).toHaveLength(2);
   });

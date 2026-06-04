@@ -22,12 +22,19 @@ const campaignSchema = new mongoose.Schema({
     of: String,
     default: () => new Map(),
   },
+  mailTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'MailTemplate' },
+  variableMapping: {
+    type: Map,
+    of: String,
+    default: () => new Map(),
+  },
   attachments: [{
     filename: String,
     contentType: String,
     storageKey: String
   }],
   status: { type: String, enum: ['Draft', 'Queued', 'Sending', 'Stopped', 'Completed', 'Failed'], default: 'Draft' },
+  recipientCount: { type: Number, default: 0 },
   stoppedAt: { type: Date },
   eventTag: { type: String, index: true }, // Ties campaign metrics back to events
   sentAt: { type: Date, default: Date.now },
@@ -50,6 +57,10 @@ const campaignSchema = new mongoose.Schema({
     leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
     email: String,
     name: String,
+    rowData: {
+      type: Map,
+      of: String,
+    },
     status: { type: String, enum: ['Pending', 'Queued', 'Sent', 'Failed', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed', 'Invalid', 'Cancelled'], default: 'Pending' },
     sentAt: Date,
     error: String,

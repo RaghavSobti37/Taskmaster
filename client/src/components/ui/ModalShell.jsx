@@ -1,6 +1,5 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
 /** Pixel widths — inline styles so modals never collapse when Tailwind max-w isn't applied */
@@ -88,42 +87,33 @@ export const ModalShell = ({
   const panelStyle = getModalPanelStyle(widthPx ?? size);
   const handleBackdropClick = closeOnBackdrop ? onClose : undefined;
 
+  if (!isOpen) return null;
+
   return createPortal(
-    <AnimatePresence>
-      {isOpen && (
+    <div
+      className={`fixed inset-0 ${className}`}
+      style={{ zIndex }}
+      role="presentation"
+    >
+      <div
+        className="tm-modal-backdrop absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        onClick={handleBackdropClick}
+      />
+      <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
         <div
-          className={`fixed inset-0 ${className}`}
-          style={{ zIndex }}
-          role="presentation"
+          style={{
+            ...panelStyle,
+            width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
+          }}
+          className={`${MODAL_PANEL_CLASS} tm-modal-panel-enter tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden w-full ${panelClassName}`}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-            onClick={handleBackdropClick}
-          />
-          <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.15 }}
-              style={{
-                ...panelStyle,
-                width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
-              }}
-              className={`${MODAL_PANEL_CLASS} tm-floating pointer-events-auto relative bg-[var(--color-bg-primary)] rounded-[var(--radius-lg)] border border-[var(--color-bg-border)] shadow-2xl flex flex-col max-h-[min(85vh,900px)] overflow-hidden w-full ${panelClassName}`}
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-            >
-              {children}
-            </motion.div>
-          </div>
+          {children}
         </div>
-      )}
-    </AnimatePresence>,
+      </div>
+    </div>,
     document.body
   );
 };

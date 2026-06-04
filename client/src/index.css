@@ -508,6 +508,33 @@ a.tm-hashtag-chip:hover {
   opacity: 1;
 }
 
+@keyframes tm-modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tm-modal-panel-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.tm-modal-backdrop {
+  animation: tm-modal-backdrop-in 0.15s ease-out;
+}
+
+.tm-modal-panel-enter {
+  animation: tm-modal-panel-in 0.15s ease-out;
+}
+
+@keyframes tm-unsaved-bar-in {
+  from { opacity: 0; transform: translate(-50%, 100%); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.tm-unsaved-bar-enter {
+  animation: tm-unsaved-bar-in 0.2s ease-out;
+}
+
 /* Modal layout system — flex-centered panels collapse to min-content without explicit width */
 @layer components {
   /* Overlay: grid centering (never flex shrink collapse) */

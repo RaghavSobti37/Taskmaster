@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../../models/User');
 const Department = require('../../models/Department');
 const { ADMIN_SLUG, OPS_SLUG, SALES_SLUG } = require('../../utils/departmentPermissions');
+const { qaExcludedEmailNinFilter, pickFirstNonExcludedUser } = require('../../utils/qaExcludedUsers');
 const { reportQaActivity, sanitizePayload } = require('./qaActivity');
 
 const QA_API_BASE = () =>
@@ -15,22 +16,35 @@ function authHeaders(user) {
 
 let cachedUsers = null;
 
+function clearResolveTestUsersCache() {
+  cachedUsers = null;
+}
+
+async function findProbeUser(filter) {
+  const populate = { path: 'departmentId', select: 'name slug' };
+  const candidates = await User.find({ ...filter, ...qaExcludedEmailNinFilter() })
+    .populate(populate)
+    .limit(12)
+    .lean();
+  return pickFirstNonExcludedUser(candidates);
+}
+
 async function resolveTestUsers() {
   if (cachedUsers) return cachedUsers;
-  const populate = { path: 'departmentId', select: 'name slug' };
-  const anyUser = await User.findOne().populate(populate);
+
+  const anyUser = await findProbeUser({});
   const adminDept = await Department.findOne({ slug: ADMIN_SLUG }).select('_id');
   const opsDept = await Department.findOne({ slug: OPS_SLUG }).select('_id');
   const salesDept = await Department.findOne({ slug: SALES_SLUG }).select('_id');
 
   const adminUser = adminDept
-    ? await User.findOne({ departmentId: adminDept._id }).populate(populate)
+    ? await findProbeUser({ departmentId: adminDept._id })
     : null;
   const opsUser = opsDept
-    ? await User.findOne({ departmentId: opsDept._id }).populate(populate)
+    ? await findProbeUser({ departmentId: opsDept._id })
     : null;
   const salesUser = salesDept
-    ? await User.findOne({ departmentId: salesDept._id }).populate(populate)
+    ? await findProbeUser({ departmentId: salesDept._id })
     : null;
 
   cachedUsers = {
@@ -142,6 +156,7 @@ module.exports = {
   QA_API_BASE,
   authHeaders,
   resolveTestUsers,
+  clearResolveTestUsersCache,
   isApiReachable,
   skipProbeResult,
   probeFail,

@@ -1,0 +1,157 @@
+const cheerio = require('cheerio');
+
+const INDENT_STYLE_PROP = /^(padding-left|margin-left|text-indent|border-left|border-left-width|border-left-style)\s*:/i;
+const SHORTHAND_INDENT_PROP = /^(margin|padding)\s*:/i;
+const QUILL_STYLE_RE = /\.ql-|ql-indent|quill/i;
+const LIST_TAGS = new Set(['ul', 'ol']);
+const BLOCK_TAGS = new Set(['p', 'div', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'table', 'span', 'a']);
+const FLUSH_INLINE = 'margin:0!important;padding:0!important;padding-left:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
+const LIST_UL_INLINE = 'margin:0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;padding-left:1.5em!important';
+
+const hasLeftIndentInShorthand = (value) => {
+  if (!value) return false;
+  const v = value.trim().toLowerCase();
+  const parts = v.split(/\s+/);
+  if (parts.length === 4) return parseFloat(parts[3]) > 0;
+  if (parts.length === 3) return parseFloat(parts[2]) > 0;
+  if (parts.length === 2) return parseFloat(parts[1]) > 0;
+  return false;
+};
+
+const cleanIndentFromStyle = (style) => {
+  if (!style) return '';
+  return style
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => {
+      if (!part) return false;
+      if (INDENT_STYLE_PROP.test(part)) return false;
+      if (SHORTHAND_INDENT_PROP.test(part) && hasLeftIndentInShorthand(part.split(':').slice(1).join(':'))) {
+        return false;
+      }
+      return true;
+    })
+    .join('; ');
+};
+
+const mergeInlineStyle = (existing, preset) => {
+  const cleaned = cleanIndentFromStyle(existing);
+  if (!cleaned) return preset;
+  return `${preset};${cleaned}`;
+};
+
+const isEmptyParagraph = ($, el) => {
+  const tag = (el.tagName || '').toLowerCase();
+  if (tag !== 'p' && tag !== 'div') return false;
+  const inner = $(el).html() || '';
+  const plain = inner
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+  return !plain;
+};
+
+const extractBodyInner = (html) => {
+  if (!/<html[\s>]/i.test(html) && !/<body[\s>]/i.test(html)) return html;
+  const $doc = cheerio.load(html, { decodeEntities: false });
+  const body = $doc('body').html();
+  return body != null ? body : html;
+};
+
+/**
+ * Strip Quill/editor indent + spacer paragraphs so Gmail renders flush left without extra blank lines.
+ */
+const normalizeOutboundEmailHtml = (html) => {
+  if (!html || typeof html !== 'string') return html || '';
+  let input = extractBodyInner(html);
+  if (!/<[a-z][\s\S]*>/i.test(input)) return input;
+
+  const $ = cheerio.load(
+    `<div id="ck-email-root">${input}</div>`,
+    { decodeEntities: false },
+    false
+  );
+
+  $('style').each((_, el) => {
+    const text = $(el).html() || '';
+    if (QUILL_STYLE_RE.test(text)) $(el).remove();
+  });
+
+  $('#ck-email-root').find('blockquote').each((_, el) => {
+    const inner = $(el).html() || '';
+    $(el).replaceWith(`<p style="${FLUSH_INLINE}">${inner}</p>`);
+  });
+
+  $('#ck-email-root').find('*').each((_, el) => {
+    const tag = (el.tagName || '').toLowerCase();
+    const $el = $(el);
+
+    if (el.attribs?.class) {
+      const classes = el.attribs.class
+        .split(/\s+/)
+        .filter((c) => c && !/^ql-/i.test(c) && !/^ql-align/i.test(c) && c !== 'email-preview-root');
+      if (classes.length) $el.attr('class', classes.join(' '));
+      else $el.removeAttr('class');
+    }
+
+    $el.removeAttr('data-indent');
+
+    if (BLOCK_TAGS.has(tag) && el.attribs?.style) {
+      const preset = LIST_TAGS.has(tag) ? LIST_UL_INLINE : FLUSH_INLINE;
+      $el.attr('style', mergeInlineStyle(el.attribs.style, preset));
+    } else if (BLOCK_TAGS.has(tag)) {
+      const preset = LIST_TAGS.has(tag) ? LIST_UL_INLINE : FLUSH_INLINE;
+      $el.attr('style', preset);
+    }
+  });
+
+  $('#ck-email-root').find('p, div').each((_, el) => {
+    if (isEmptyParagraph($, el)) $(el).remove();
+  });
+
+  const unwrapClasses = ['ql-editor', 'ql-container', 'ql-snow', 'email-preview-root'];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    $('#ck-email-root').children().each((_, el) => {
+      const tag = (el.tagName || '').toLowerCase();
+      if (tag !== 'div') return;
+      const cls = el.attribs?.class || '';
+      const onlyWrapper = !cls || unwrapClasses.some((c) => cls.includes(c));
+      const $el = $(el);
+      if (onlyWrapper && $el.children().length > 0) {
+        $el.replaceWith($el.html() || '');
+        changed = true;
+      }
+    });
+  }
+
+  let out = $('#ck-email-root').html() || '';
+  out = out
+    .replace(/padding-left\s*:\s*[^;"']+;?/gi, (match, offset, str) => {
+      const before = str.slice(Math.max(0, offset - 30), offset);
+      if (/<(ul|ol)\b/i.test(before)) return match;
+      return '';
+    })
+    .replace(/margin-left\s*:\s*[^;"']+;?/gi, '')
+    .replace(/text-indent\s*:\s*[^;"']+;?/gi, '')
+    .replace(/border-left\s*:\s*[^;"']+;?/gi, '')
+    .replace(/\sstyle="\s*"/gi, '')
+    .replace(/\sclass="\s*"/gi, '')
+    .replace(/(<\/p>)\s*(<p[^>]*>)\s*(<br\s*\/?>)\s*(<\/p>)/gi, '$1')
+    .replace(/(<\/p>)\s*(<p[^>]*>)\s*<\/p>/gi, '$1');
+
+  return out.trim();
+};
+
+/** Outer shell — same reset preview iframe uses, inlined for Gmail. */
+const wrapEmailShell = (bodyHtml) => {
+  const inner = (bodyHtml || '').trim();
+  if (!inner) return inner;
+  return `<div style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42;color:#0f172a;word-wrap:break-word;">${inner}</div>`;
+};
+
+module.exports = { normalizeOutboundEmailHtml, wrapEmailShell, FLUSH_INLINE };

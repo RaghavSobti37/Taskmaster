@@ -1,15 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
 import { X, ZoomIn, ZoomOut, RefreshCw, FileText, Layers, Share2 } from 'lucide-react';
-import { Card, Button, Badge } from './index';
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  securityLevel: 'loose',
-  fontFamily: 'Geist, sans-serif',
-});
-
+import { Card, Button, Badge } from './primitives';
 import DOMPurify from 'dompurify';
 
 const sanitizeHtml = (html) => {
@@ -20,26 +11,50 @@ const sanitizeHtml = (html) => {
   });
 };
 
-export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explainer", data }) => {
+let mermaidReady;
+
+async function renderMermaidDiagram(source) {
+  if (!mermaidReady) {
+    const mermaid = (await import('mermaid')).default;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+      fontFamily: 'Geist, sans-serif',
+    });
+    mermaidReady = mermaid;
+  }
+  const id = `mermaid-svg-${Date.now()}`;
+  const { svg } = await mermaidReady.render(id, source);
+  return svg;
+}
+
+export const VisualExplainerModal = ({ isOpen, onClose, title = 'Visual Explainer', data }) => {
   const containerRef = useRef(null);
   const [svgContent, setSvgContent] = useState('');
-  const [activeTab, setActiveTab] = useState('diagram'); // diagram | report
+  const [activeTab, setActiveTab] = useState('diagram');
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    if (isOpen && data?.mermaid && activeTab === 'diagram') {
-      const renderDiagram = async () => {
-        try {
-          const id = `mermaid-svg-${Date.now()}`;
-          const { svg } = await mermaid.render(id, data.mermaid);
-          setSvgContent(svg);
-        } catch (err) {
-          console.error("Mermaid render error:", err);
+    if (!isOpen || !data?.mermaid || activeTab !== 'diagram') return undefined;
+    let cancelled = false;
+
+    const renderDiagram = async () => {
+      try {
+        const svg = await renderMermaidDiagram(data.mermaid);
+        if (!cancelled) setSvgContent(svg);
+      } catch (err) {
+        console.error('Mermaid render error:', err);
+        if (!cancelled) {
           setSvgContent('<div className="p-4 text-rose-500 text-xs font-mono">Failed to render architecture diagram. Verify syntax.</div>');
         }
-      };
-      renderDiagram();
-    }
+      }
+    };
+
+    renderDiagram();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, data, activeTab]);
 
   if (!isOpen) return null;
@@ -47,7 +62,6 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
   return (
     <div className="tm-modal-overlay fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
       <Card className="tm-modal-panel max-w-5xl h-[85vh] bg-[var(--color-bg-workspace)] border-white/10 flex flex-col overflow-hidden shadow-2xl" role="dialog" aria-modal="true">
-        {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 bg-[var(--color-bg-secondary)] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
@@ -72,9 +86,9 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
 
             {activeTab === 'diagram' && (
               <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-1 mr-2">
-                <Button size="xs" variant="ghost" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}><ZoomOut size={12} /></Button>
+                <Button size="xs" variant="ghost" onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}><ZoomOut size={12} /></Button>
                 <span className="text-[10px] font-mono px-2 text-slate-300">{Math.round(scale * 100)}%</span>
-                <Button size="xs" variant="ghost" onClick={() => setScale(s => Math.min(2, s + 0.1))}><ZoomIn size={12} /></Button>
+                <Button size="xs" variant="ghost" onClick={() => setScale((s) => Math.min(2, s + 0.1))}><ZoomIn size={12} /></Button>
                 <Button size="xs" variant="ghost" onClick={() => setScale(1)}><RefreshCw size={12} /></Button>
               </div>
             )}
@@ -83,10 +97,9 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
           </div>
         </div>
 
-        {/* Content Body */}
         <div className="flex-1 overflow-auto p-8 flex items-center justify-center relative bg-slate-950/50">
           {activeTab === 'diagram' ? (
-            <div 
+            <div
               ref={containerRef}
               style={{ transform: `scale(${scale})`, transition: 'transform 0.2s ease' }}
               className="w-full h-full flex items-center justify-center cursor-move select-none"
@@ -104,7 +117,6 @@ export const VisualExplainerModal = ({ isOpen, onClose, title = "Visual Explaine
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-3 border-t border-white/10 bg-[var(--color-bg-secondary)]/50 flex items-center justify-between text-[10px] text-slate-400 font-mono">
           <span>System Flow & Activity Visualizer</span>
           <Button size="xs" variant="ghost" className="hover:text-white" onClick={() => navigator.clipboard.writeText(data?.mermaid || '')}>

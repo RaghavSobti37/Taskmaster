@@ -5,10 +5,11 @@ const TaskMentionReceipt = require('../models/TaskMentionReceipt');
 const Project = require('../models/Project');
 const User = require('../models/User');
 const { sanitizeName } = require('../utils/sanitizer');
-const { buildMentionNotifications } = require('../utils/mentionNotifications');
+const { buildMentionNotifications, resolveNewlyMentionedUserIds } = require('../utils/mentionNotifications');
 const { buildTaskActionUrl } = require('../utils/notificationActionUrl');
 const { extractUserMentionLabels, resolveUserByLabel } = require('../../shared/mentionTokens');
 const { isAdminUser } = require('../utils/departmentPermissions');
+const { userHasTaskScopeAccess } = require('../utils/taskAccess');
 const { resolveMentionedUserIds } = require('../utils/mentionNotifications');
 
 const assignmentUserId = (value) => (value?._id || value)?.toString?.() || null;
@@ -79,8 +80,14 @@ const canAccessTaskActivity = async (task, user) => {
     if (project && userHasProjectAccess(project, user._id)) return true;
   }
 
+  if ((task.mentionAccessIds || []).some((id) => (id?._id || id)?.toString() === uid)) {
+    return true;
+  }
+
   const mentionedUserIds = await resolveAllMentionedUserIdsForTask(task);
-  if (mentionedUserIds.has(uid)) return true;
+  if (mentionedUserIds.has(uid)) {
+    return userHasTaskScopeAccess(task, uid);
+  }
 
   return false;
 };
@@ -187,29 +194,6 @@ const recordFieldChangesFromTask = async (existing, task, actor, coreUpdates, se
   }
 };
 
-const seedInitialFieldValues = (task, actorId, rows) => {
-  const seeds = [
-    { key: 'category', value: task.type || 'general' },
-    { key: 'slot', value: task.scheduleSlot || 'FULL' },
-    { key: 'scheduleDate', value: task.scheduleDate },
-    { key: 'dueDate', value: task.dueDate },
-  ];
-
-  for (const { key, value } of seeds) {
-    const to = normalizeFieldValue(key, value);
-    if (!to) continue;
-    rows.push({
-      taskId: task._id,
-      type: 'field_change',
-      body: '',
-      actorId,
-      fieldKey: key,
-      valueFrom: '',
-      valueTo: to,
-    });
-  }
-};
-
 const recordStatusChange = async (taskId, actor, statusFrom, statusTo, session) => {
   const from = String(statusFrom || '').toLowerCase();
   const to = String(statusTo || '').toLowerCase();
@@ -240,20 +224,6 @@ const seedCreatedAndAssignments = async (task, assignments, actor, session) => {
       actorId,
     },
   ];
-
-  const initialStatus = String(task.status || 'todo').toLowerCase();
-  if (initialStatus) {
-    rows.push({
-      taskId: task._id,
-      type: 'status_change',
-      body: '',
-      actorId,
-      statusFrom: '',
-      statusTo: initialStatus,
-    });
-  }
-
-  seedInitialFieldValues(task, actorId, rows);
 
   const initialMessage = normalizeMessageBody(task.description);
   if (initialMessage) {
@@ -335,10 +305,14 @@ const listActivity = async (taskId, user, { markRead = false } = {}) => {
 const bumpMentionReceipts = async (taskId, recipientIds, actorId, session) => {
   const actorStr = actorId?.toString?.();
   const now = new Date();
+  const { isQaProbeActive } = require('../utils/qaProbeContext');
+  const { isQaExcludedUserId } = require('../utils/qaExcludedUsers');
+  const qaActive = isQaProbeActive();
 
   for (const recipientId of recipientIds) {
     const rid = recipientId?.toString?.() || recipientId;
     if (!rid || rid === actorStr) continue;
+    if (qaActive && (await isQaExcludedUserId(rid))) continue;
 
     await TaskMentionReceipt.findOneAndUpdate(
       { userId: rid, taskId },
@@ -360,7 +334,7 @@ const appendTaskMessage = async ({
   requireChange = true,
 }) => {
   if (!task?._id || !user?._id) {
-    return { activity: null, mentionPayloads: [] };
+    return { activity: null, mentionPayloads: [], assignNotifications: [] };
   }
 
   if (task.status === 'done') {
@@ -369,9 +343,9 @@ const appendTaskMessage = async ({
 
   const sanitized = normalizeMessageBody(body);
   const previous = normalizeMessageBody(previousBody);
-  if (!sanitized) return { activity: null, mentionPayloads: [] };
+  if (!sanitized) return { activity: null, mentionPayloads: [], assignNotifications: [] };
   if (requireChange && sanitized === previous) {
-    return { activity: null, mentionPayloads: [] };
+    return { activity: null, mentionPayloads: [], assignNotifications: [] };
   }
 
   const mentionedUserIds = await resolveMentionedUserIdsFromText(sanitized);
@@ -392,11 +366,20 @@ const appendTaskMessage = async ({
 
   await bumpMentionReceipts(task._id, mentionedUserIds, user._id, session);
 
+  const newlyMentioned = await resolveNewlyMentionedUserIds(sanitized, previousBody || '');
+  const TaskService = require('./TaskService');
+  const { pendingNotifications: assignNotifications } = await TaskService.addMentionedUsersAsAssignees({
+    taskId: task._id,
+    mentionedUserIds: newlyMentioned,
+    user,
+    session,
+  });
+
   const mentionPayloads = await buildMentionNotifications({
     text: sanitized,
     previousText: previousBody || '',
     actor: user,
-    assigneeIds,
+    assigneeIds: [...new Set([...assigneeIds, ...newlyMentioned])],
     task,
     source: 'thread',
   });
@@ -406,7 +389,7 @@ const appendTaskMessage = async ({
     .populate('actorId', 'name avatar')
     .lean();
 
-  return { activity: mapActivityRow(populated), mentionPayloads };
+  return { activity: mapActivityRow(populated), mentionPayloads, assignNotifications };
 };
 
 const postMessage = async (taskId, user, body, session) => {

@@ -66,6 +66,8 @@ app.use(compression());
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
   'https://tsccoreknot.com',
   'https://www.tsccoreknot.com',
   'https://theshakticollective.in',
@@ -85,10 +87,15 @@ const corsAllowlist = new Set([
 const allowVercelPreviews = process.env.NODE_ENV !== 'production'
   || String(process.env.CORS_ALLOW_VERCEL_PREVIEWS).trim() === 'true';
 
+const isLocalDevOrigin = (origin) =>
+  process.env.NODE_ENV !== 'production' &&
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || '');
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
     if (corsAllowlist.has(origin)) return callback(null, true);
+    if (isLocalDevOrigin(origin)) return callback(null, true);
     if (allowVercelPreviews && origin.endsWith('.vercel.app')) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },

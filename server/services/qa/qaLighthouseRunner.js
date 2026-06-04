@@ -154,10 +154,21 @@ async function loadLighthouseModules() {
   return { lighthouse, launchChrome, extractPageInsights };
 }
 
-async function runFullLighthouseAudit(onPage) {
+function resolveLighthouseRoutes(pathFilter) {
+  const all = getAllLighthouseRoutes();
+  if (!pathFilter?.length) return all;
+  const wanted = new Set(pathFilter.map((p) => String(p).trim()).filter(Boolean));
+  const picked = all.filter((r) => wanted.has(r.path));
+  if (!picked.length) {
+    throw new Error('No Lighthouse routes matched the selected pages');
+  }
+  return picked;
+}
+
+async function runFullLighthouseAudit(onPage, options = {}) {
   await loadLhEnv();
   const baseUrl = (process.env.LH_BASE_URL || 'http://localhost:4173').replace(/\/$/, '');
-  const routes = getAllLighthouseRoutes();
+  const routes = resolveLighthouseRoutes(options.paths);
   const needsAuth = routes.some((r) => !PUBLIC_PATHS.has(r.path));
 
   let cookieHeader = null;
@@ -279,7 +290,13 @@ function pageToTestCasePayload(page) {
   };
 }
 
-function buildLighthouseBatchTestCase(qaService) {
+function buildLighthouseBatchTestCase(qaService, pathFilter) {
+  const routeCount = resolveLighthouseRoutes(pathFilter).length;
+  const targetLabel =
+    pathFilter?.length && pathFilter.length < getAllLighthouseRoutes().length
+      ? `${routeCount} selected routes`
+      : 'all routes';
+
   return {
     name: '[Lighthouse] Full site perf & accessibility audit',
     category: 'lighthouse',
@@ -287,8 +304,8 @@ function buildLighthouseBatchTestCase(qaService) {
     severity: 'medium',
     qaMeta: {
       kind: 'lighthouse',
-      action: 'Chrome Lighthouse audit for every app route',
-      target: 'all routes',
+      action: `Chrome Lighthouse audit for ${targetLabel}`,
+      target: targetLabel,
     },
     test: async () => {
       const report = await runFullLighthouseAudit(async ({ index, total, path: routePath, name }) => {
@@ -303,7 +320,7 @@ function buildLighthouseBatchTestCase(qaService) {
         });
         const progress = Math.round((index / total) * 100);
         await qaService.updateProgress(progress, { name: `[Lighthouse] ${name}`, category: 'lighthouse' }, index, total);
-      });
+      }, { paths: pathFilter });
       return {
         passed: true,
         checkStatus: 'pass',
@@ -319,8 +336,11 @@ function buildLighthouseBatchTestCase(qaService) {
 module.exports = {
   buildLighthouseBatchTestCase,
   runFullLighthouseAudit,
+  resolveLighthouseRoutes,
   assignPageWeights,
   pageToTestCasePayload,
   PERF_PASS,
   A11Y_PASS,
+  getAllLighthouseRoutes,
+  PUBLIC_PATHS,
 };

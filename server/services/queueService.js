@@ -88,6 +88,10 @@ const dispatchCampaignJobs = async (campaignId) => {
     return { success: false, queuedCount: 0, message: 'Campaign is stopped' };
   }
 
+  if (!isLegacy && campaign.status === 'Draft') {
+    return { success: false, queuedCount: 0, message: 'Campaign is a draft — dispatch explicitly to send' };
+  }
+
   campaign.status = 'Sending';
   await campaign.save();
   stoppedCampaignIds.delete(campaign._id.toString());

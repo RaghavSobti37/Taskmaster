@@ -13,4 +13,3 @@ export {
 } from './ModalShell';
 /** @deprecated Use ModalShell — see docs/COMPONENT_STANDARDS.md */
 export { CenteredModal } from './CenteredModal';
-export { VisualExplainerModal } from './VisualExplainerModal';

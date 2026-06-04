@@ -82,6 +82,11 @@ const createNotification = async ({
   iconType,
   sendEmail = true
 }) => {
+  const { shouldSuppressNotificationForRecipient } = require('../utils/qaExcludedUsers');
+  if (await shouldSuppressNotificationForRecipient(recipientId)) {
+    return null;
+  }
+
   const resolvedIconType = resolveIconType({ iconType, actorId, relatedTaskId, category });
 
   const notification = await Notification.create({

@@ -17,11 +17,12 @@
   <a href="#%EF%B8%8F-quick-start-guide">Quick Start</a> ·
   <a href="#-environment-configuration">Configuration</a> ·
   <a href="#-api-architecture--routing">API Surface</a> ·
-  <a href="#-diagnostic--observability-protocol">Diagnostics</a>
+  <a href="#-diagnostic--observability-protocol">Diagnostics</a> ·
+  <a href="docs/VERSION_HISTORY.md">Release Notes</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.11-126d5e?style=flat-square" alt="Version 1.9.11" />
+  <img src="https://img.shields.io/badge/version-1.9.13-126d5e?style=flat-square" alt="Version 1.9.13" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -116,7 +117,20 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ## 🚀 Key Features
 
-### 💬 Task Activity Timeline & Mentions (v1.9.11)
+### ✉️ Mail Template Studio & Outbound HTML Pipeline
+
+* **Template studio:** Admin mail surfaces embed `MailTemplateStudio.jsx` — visual or raw HTML editor, indexed merge tokens (`{{1}}`, `{{2}}`), server-side preview, draft → submit → admin approve/reject workflow.
+* **Indexed variables:** `indexedTemplateVariables.js` (client + server) maps HolySheet columns to numbered tokens with dummy preview values for QA and design review.
+* **Unified send path:** `buildFinalEmailHtml.js` + `normalizeOutboundEmailHtml.js` normalize Quill/raw HTML, inline CSS when needed, append signature/footer, then hand off to the locked tracking layer — preview and live send share one pipeline.
+* **Template API:** Extended `/api/mail/templates` routes for CRUD, pending queue, preview, and approval actions (`mailTemplateHelpers.js`).
+
+### 👤 Task Creator vs Assignee Split
+
+* **Data model:** Task creator lives on `task.createdBy` only — never duplicated in `TaskAssignment`; assignee chips and review rules use assignees exclusively.
+* **Mention access:** `mentionAccessIds` on tasks plus `taskAccess.js` keeps @mentioned users in scope without treating the creator as an assignee.
+* **Migration:** One-time `node server/scripts/migrateCreatorAssigneeSplit.js` removes legacy creator rows from assignments and backfills mention access.
+
+### 💬 Task Activity Timeline & Mentions
 
 * **Per-task conversation:** `TaskDetailModal` splits into header, compose, history, and activity timeline — `@mentions` in messages with unread badges (`TaskMentionBadge.jsx`) and server-side receipt tracking (`TaskMentionReceipt.js`).
 * **Activity API:** `GET/POST /api/tasks/:id/activity` records `created`, `assignment`, `message`, `status_change`, and `field_change` events (`TaskActivity` model, `TaskActivityService.js`); background purge worker trims old rows.
@@ -711,288 +725,7 @@ During QA runs, gamification jobs use `QA_SYNC_GAMIFICATION` so BullMQ awards co
 | [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md) | Wire `/query` form on theshakticollective.in to Taskmaster |
 | [`docs/COMPONENT_STANDARDS.md`](docs/COMPONENT_STANDARDS.md) | Client UI conventions — lists, modals, tables, avatars |
 | [`docs/GOOGLE_META_APP_VERIFICATION.md`](docs/GOOGLE_META_APP_VERIFICATION.md) | Google OAuth + Meta App Review — env vars, redirect URIs, test matrix |
-
----
-
-## 🚀 Production Migration Sequence
-
-### v1.9.11 — Task Activity, Attendance Prompt & Modal Fixes
-
-- **Task activity:** `TaskActivity.js`, `TaskMentionReceipt.js`, `TaskActivityService.js`, `taskActivityPurgeWorker.js`; routes `GET/POST /api/tasks/:id/activity`; client `TaskHistoryPanel`, `TaskActivityTimeline`, `TaskMessageComposeSection`, mention badges.
-- **Task modal:** `TaskDetailModalHeader.jsx` + `taskAssigneeRows.js`; `resolvedTask = displayTask ?? task` prevents null `assignments` crash on reopen.
-- **Attendance:** `UnifiedTimeCard` full-width single panel; `SelfMarkTimeControl` module-level; `AttendancePromptModal` secondary dismiss button.
-- **Leaderboard:** unique React keys in recalc hover/breakdown lists.
-- **QA/Lighthouse:** extended probes, `qaLighthouseRunner.js`, `lighthouse-insights.mjs`, suite v19 hooks in pre-deploy checklist.
-
-Deploy API + client together so activity routes and modal components stay in sync. MongoDB creates `taskactivities` / `taskmentionreceipts` collections on first write; no manual migration script.
-
-### v1.9.10 — Frontend Performance & Lighthouse Tooling
-
-- **Audit scripts:** `client/scripts/lighthouse-audit.mjs`, `lighthouse-routes.mjs`, `split-ui-imports.mjs`; npm scripts `lighthouse`, `lighthouse:public`, `lighthouse:prod`; `.gitignore` → `client/lighthouse-reports/`.
-- **Boot/shell:** `AppBootFallback.jsx`, lazy `MainLayout`, deferred SW + gamification socket; `MarketingPageBackground.jsx` on auth/landing pages; CSS sidebar (no Framer Motion in `OutletSidebar.jsx`).
-- **Barrel split:** `charts.jsx`, `modals.jsx`; direct imports on list pages (todo, inbox, schedule, equipment, contacts, DataHub).
-- **Dashboard:** `dashboardWidgetLoaders.js`, `DashboardWidgetSkeleton.jsx`, phased widget mount, CLS-stable review queue + pin board, deferred attendance prompt modal.
-- **Queries:** `useProjects` / `useWorkspaces` accept `enabled`; dashboard secondary queries staggered after summary.
-- **Auth:** `authRoutes.js` login limiter `max: 10` (all environments).
-
-No server migration required. Redeploy client static host after merge; optional Render API redeploy for auth rate-limit tweak only.
-
-### v1.9.12 — QA checklist fixes (rate limit, concurrency, probes)
-
-- **Login rate limit:** `authRoutes.js` `authLoginLimiter` `max: 10` everywhere (pre-deploy checklist + 11th-attempt 429 edge probe).
-- **Project updates:** `updateProject` uses optimistic locking on `__v` — concurrent PUTs return **409** instead of silent double-apply (QA bottleneck / concurrency probes).
-- **QA probes:** `skipAuth` for unauthenticated oauth-readiness and login rate-limit tests; forgot-password pre-deploy check uses `pages/auth/*` paths; Lighthouse QA falls back to admin session cookie when `LH_*` login fails.
-- **Password reset routes:** unchanged in `App.jsx` (`/forgot-password`, `/reset-password`); pre-deploy static check path corrected.
-
-Redeploy API for rate limit + project PUT behavior. No DB migration.
-
-### v1.9.9 — Google OAuth Session Fix & Meta Verification Tooling
-
-- **OAuth ticket exchange:** `googleAuthCallback` redirects with `?ticket=`; `POST /api/auth/oauth-establish` sets `coreknot_token_v2` via credentialed XHR (fixes cross-origin cookie partition issues).
-- **Redirect URI:** `oauthEnv.js` + `googleAuth.js` resolve callback from request host / `APP_BASE_URL`; `GET /api/auth/google/redirect-uri` for console registration.
-- **Meta data deletion:** `metaDataDeletionController.js`, `MetaDeletionRequest.js`, `metaSignedRequest.js`, webhook route; `UserDataDeletion.jsx` status lookup.
-- **Integrations QA:** `integrationsVerifyController.js`, `GET /api/integrations/oauth-readiness` (admin).
-- **Docs:** `docs/GOOGLE_META_APP_VERIFICATION.md`, `server/.env.production.example`.
-
-Set real `GOOGLE_CLIENT_SECRET` on Render and in local `server/.env`. Register redirect URIs in Google Cloud Console. No DB migration beyond optional `MetaDeletionRequest` collection.
-
-### v1.9.8 — Self-Service Password Reset
-
-- **Client:** `ForgotPasswordPage.jsx`, `ResetPasswordPage.jsx`; “Forgot password?” link on `LoginPage.jsx`; routes `/forgot-password`, `/reset-password` in `App.jsx`.
-- **API:** `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` in `authController.js` + `authRoutes.js` (rate limit 5/hour per email).
-- **User model:** `passwordResetToken` (hashed, select:false), `passwordResetExpires`.
-- **Email:** `server/utils/sendSystemEmail.js` uses `EMAIL_ADDRESS` / `EMAIL_PASSWORD` / `EMAIL_SERVICE`; CC `ADMIN_EMAIL`; reset link `${FRONTEND_URL}/reset-password?token=…`.
-- **mailDriver.js:** optional `cc` on Resend/SendGrid/nodemailer paths (campaign mail only; reset bypasses Resend).
-
-Ensure Render/production has `EMAIL_ADDRESS`, `EMAIL_PASSWORD`, `FRONTEND_URL`, and `ADMIN_EMAIL` set. No DB migration beyond new optional User fields (Mongoose auto-adds on save).
-
-### v1.9.7 — Manual Office / WFH Attendance Toggle
-
-- **WorkModeToggle.jsx:** Single swappable control with tap-to-switch affordance; compact variant for ops modals.
-- **UnifiedTimeCard.jsx:** Shared toggle in self-mode; `useWorkModeHint`; removed geolocation-driven mode display; ops System Logged time-only; reduced modal gap via `hideTitleRow` spacing.
-- **API:** `GET /api/attendance/work-mode-hint`; `POST /api/attendance/check` body `{ type, manualTime, workMode }`; removed GPS tier, diagnostic logs, `_attendanceDiagnostic`.
-- **Clients:** `Dashboard.jsx`, `AttendancePage.jsx`, `AttendancePromptModal.jsx` — `executeAttendanceCheck(type, time, workMode)` without `navigator.geolocation`.
-- **Hooks:** `useWorkModeHint` in `useTaskmasterQueries.js`.
-- **NexusModal:** optional `bodyClassName` for tighter attendance edit modals.
-
-No DB migration. Redeploy API + static client.
-
-### v1.9.6 — Workspace Member Roster & Access Filtering
-
-- **Access rules:** `server/utils/projectAccess.js` — `userCanAccessWorkspace`, `filterWorkspacesForUser`, shared `getAccessibleProjectsFilter` / `canAccessProject` (also used by `projectAnalyticsService.js`).
-- **API:** `GET /api/projects/workspaces` filters to accessible workspaces; `GET/PATCH /api/projects/workspaces/:name` returns 403 when unauthorized; non-admins only see projects they own or belong to.
-- **Roster:** `GET /api/projects/workspaces/:name` adds `allMembers` — deduplicated users with per-project roles; default members without projects appear with a Default tag.
-- **UI:** `WorkspaceSettings.jsx` — read-only Workspace Members section; 403 message on direct URL access. `ProjectsView.jsx` hides inaccessible empty workspace columns for non-admins.
-
-No DB migration. Redeploy API + static client.
-
-### v1.9.5 — Attendance Overview Widget & Count-Based Backup Retention
-
-- **Attendance Overview:** `AttendanceOverviewCard.jsx` + `useAttendanceOverview`; `GET /api/dashboard/attendance-overview?timeframe=7d|30d|90d` with 60s Redis cache; buckets marked/present/halfDay/leave per IST day.
-- **Task Activity:** `team-activity` registry label → **Task Activity**; `GenericDashboardCard` fixes chronological chart order and tooltip series name.
-- **Last Backup UI:** Shows last two completed snapshots in-widget; aligns with retention policy.
-- **Backup retention:** `BACKUP_RETENTION_COUNT` (default `2`) replaces day-based `BACKUP_RETENTION_DAYS`; `pruneOldSnapshots` keeps newest N completed snapshots; `render.yaml` + `server/.env.example` updated.
-- **Exports:** `getTzOffset` re-exported from `attendanceDate.js` for dashboard date math.
-
-No DB migration. Redeploy API + static client. Set `BACKUP_RETENTION_COUNT` on backup cron if overriding default.
-
-### v1.9.4 — Dashboard Widgets, Named Layouts & Backup Progress
-
-- **Dashboard cards:** `LeaveRequestsCard`, `ReimbursementsCard`, `LastBackupCard` replace generic `leave-alerts` / `invoice-alerts` placeholders; wired in `Dashboard.jsx` + `componentRegistry.js`.
-- **Layout library:** `DashboardCustomizationTab` — name-on-save modal, **My layouts** optgroup, swap-on-drag grid (`applyDragLayout`); `POST /api/customization/dashboard/preset` upserts `presets[]`; `POST /api/customization/dashboard/preset/layout/:layoutName` activates a saved layout.
-- **Backup progress:** In-memory progress state in `databaseBackupService.js`; `GET /api/data-hub/backup/progress`; production backup uses **202 + poll** from Data Hub and dashboard widget.
-- **Hooks:** `useMyReimbursements`, `useDataHubBackupProgress`, `savedLayoutOptionValue` / `parseSavedLayoutOptionValue`.
-- **render.yaml:** Backup cron env group documents `MONGODB_URI_PROD`, Resend, and admin notification addresses.
-
-No DB migration. Redeploy API + static client. Ensure backup cron service has `MONGODB_URI_PROD` set on Render.
-
-### v1.9.3 — Loading States, Mentions & Subscription Reminders
-
-- **Frontend loading audit:** `DataTable` spinner when `isLoading`; Calendar, Emails, Announcements, Daily Log, QA Testing, Data Hub, Lead Audits, Invoice tab, Settings tabs, Workspace Settings, Register, Admin Scripts wired to show fetch/mutation pending UI.
-- **TaskDetailModal:** Save/delete pending states; modal closes only after successful mutation.
-- **Mentions:** `MentionUserChip.jsx`, richer `mentionTokens.js` / `MentionRichText.jsx` for `@user` chips in task copy.
-- **Time spent:** Shared `timeSpent.js` tweaks + `server/tests/timeSpent.test.js` alignment.
-- **Subscriptions:** `usedBy` multi-user array on model/controller; `subscriptionReminderService.js` emails all assignees with formatted names in HTML.
-
-No DB migration. Redeploy API + static client.
-
-### v1.9.2 — Nav Badges, PWA Desktop, Schedule Horizon & Task Filter
-
-- **Attention signals:** `CountBadge.jsx`, `navStatusCounts.js` — rose overdue, amber today/in-review, teal info; wired through `OutletSidebar`, `BottomNavigation`, and `CommandPalette`.
-- **PWA desktop:** `displayMode.js` + `applyPwaDesktopDocumentFlag()` in `main.jsx`; CSS safe-area and breakpoint hooks respect `data-pwa-desktop`.
-- **Schedule:** `ScheduleDayViewControl.jsx` (1–5 day horizon); `ScheduleGrid` / `scheduleLayout.js` multi-day layout; `SchedulePage` integrates day-count state.
-- **Attendance:** `UnifiedTimeCard.jsx` rewrite; `TeamAttendanceMobileList.jsx`; `AttendancePage` mobile ops list; `attendanceUtils.js` shared formatters.
-- **Leaderboard:** `LeaderboardRow.jsx`, `LeaderboardRankBadge.jsx` extracted from `LeaderboardCard` / `LeaderboardPodium`.
-- **Inbox:** Category filter chips with unread counts; `DataOverviewSection` overview header.
-- **Tasks:** `server/utils/taskListFilter.js` — completed tasks visible for 2 calendar days only; applied in `taskController.js` / `TaskService.js`; client `taskIndicators.js` for Todo KPIs.
-- **Finance:** `financeController.js` pending-invoice count surfaced for nav/status APIs.
-- **Calendar:** `CalendarView` refresh; `calendarEventTime.js`; minor `CalendarEvent` schema + route tweaks.
-- **Avatars (optional):** `server/scripts/assignBigSmileAvatars.js` — one-time DiceBear Big Smile migration by gender (`--dry-run` / `--apply`).
-
-No DB migration. Redeploy API + static client. Run avatar script only if migrating existing user photos.
-
-### v1.9.1 — Subtractive Slate UI & Email Design Alignment
-
-- **Subtractive slate shell:** App-wide migration to flat slate surfaces, rule dividers instead of card shadows, emerald/teal action colors, and Geist typography (`index.css`, `design_guidelines.md`, `COMPONENT_STANDARDS.md`).
-- **Dashboard widgets:** `DashboardWidgetShell`, `ChartSurface`, `DeltaBadge`, `DataListRow`, `MarkAttendanceCard`; leaderboard podium/card polish; `GenericDashboardCard` chart token updates.
-- **Todo gradients:** Priority-tinted today/overdue dashboard cards without heavy elevation.
-- **Profile tab:** Settings profile save/display fix in `ProfileTab.jsx`.
-- **Email design (styling only):** `server/templates/*`, `AdminMailContent.jsx` defaults, announcement/CRM/calendar/subscription/backup transactional HTML — slate-900 backgrounds, flat emerald CTAs, teal accents; no tracking or geo logic changes.
-- **Template seeding:** Empty `TEMPLATE_DIR` now copies bundled `server/templates` files instead of inline duplicates.
-
-No DB migration. Redeploy API + static client.
-
-### v1.9.0 — Mobile UI, Project Analytics, Gamification & Chat Removal
-
-- **Mobile list system:** Shared layout components (`ListPageLayout`, `PageToolbar`, `MobileFilterSheet`, etc.) rolled across major CRUD pages; `useBreakpoint` for responsive behavior; PWA manifest and safe-area tweaks.
-- **Component standards:** `docs/COMPONENT_STANDARDS.md`; shadcn `button.jsx` removed — use `Button` from `primitives.jsx` only; deprecated `DashboardEditor`, `CustomizationTab`, `CenteredModal` patterns removed.
-- **Project analytics:** `projectAnalyticsService.js`, per-project and admin analytics pages, chart helpers (`buildChartSeries.js`, `DataMiniChart.jsx`).
-- **Monthly reports:** Refactored panels with `MonthlyReportBody`, `ReportRangeControls`, `shared/monthlyReportTimeframe.js` and `shared/reportRange.js`.
-- **Gamification:** Time-based XP caps, daily-log overtime tiers, attendance XP on approved lock (`attendanceXp.js`), leaderboard breakdown modal, admin recalc runs `reviewExploitRepairService.js`; expanded `gamificationService.test.js` and `attendanceXp.test.js`.
-- **Chat removed:** Deleted chat routes, models, controllers, and all `client/src/components/chat/*` + `ChatPage.jsx`; realtime config trimmed.
-- **Admin panel:** Ribbon metrics (`adminRibbonMetrics.js`), project analytics nav entry, gamification admin recalc hints (`LeaderboardRecalcHint.jsx`).
-- **Settings:** Sidebar customization uses `defaultNavbarGroups.js`; dashboard customization tab only (legacy customization tab removed).
-
-No DB migration. Redeploy API + static client.
-
-### v1.8.0 — Invoice Approval, Auth Cookie v2 & Unsaved-Changes UX
-
-- **Invoice workflow:** Settings `InvoiceTab.jsx` — submit invoices/reimbursements with workspace, project, vendor, amount, tax, expense date, and multi-file attachments via UploadThing. Submissions stay `pending` until ops approves; Finance page shows amber approval queue with view/approve/reject actions.
-- **Finance API:** `submitInvoice` accepts `metadata.submissionType`, `attachments[]`, and project; `listMyInvoices` for submitter history; `FinanceDocument.metadata` gains `submissionType` and `attachments`.
-- **Auth cookie v2:** Session cookie renamed to `coreknot_token_v2`; `purgeLegacyAuthCookies` middleware strips stuck `coreknot_token` on every response; logout clears all SameSite/Partitioned variants.
-- **Logout hardening:** `authSession.js` force-logout flag survives redirect; `AuthContext` skips `/me` while logging out; 403 clears session like 401.
-- **Unsaved changes:** `formFieldChanges.js` + enhanced `UnsavedChangesBar` (field diff list, portal for elevated z-index, mobile safe-area offset). Modals (dashboard editor, project settings, departments, channel links) use inline Discard/Save instead of global bar (`enabled: false`).
-- **ConfirmContext split:** `confirmContext.js` + `ConfirmProvider.jsx` for React Fast Refresh compatibility.
-- **UploadThing:** Credentials sent only to CoreKnot API routes, not `ingest.uploadthing.com`. Vite dev proxy sets `cookieDomainRewrite: ''`.
-
-No DB migration. Redeploy API + static client (one deploy clears legacy auth cookies).
-
-### v1.7.55 — CRM Phone Validation, Lead Save Fix & QA Cleanup CLI
-
-- **Lead modal UX:** `PhoneNumberFields.jsx` splits country code and national number; `leadPhoneCountries.js` enforces digit counts per region (+91=10, +971=9, +60=9, +65=8, +61=9, +44=10, +1=10); inline errors replace silent “Will save as…” hints.
-- **Save reliability:** `useUpdateLead` updates paginated `['leads', params]` cache and invalidates stats; `FullScreenWorkspace` shows saving state; required-field validation blocks unsanitized saves.
-- **Server validation:** `phoneCountryValidation.js` strict E.164 on create/update; `crmController.js` merges/clears corrupt duplicate leads on update.
-- **Phone repair:** `sanitizer.js` + `leadPhoneRepair.js` handle overlong concatenated numbers (not just `-DUP-` suffixes); `repair:phones*` npm scripts for local/prod.
-- **QA cleanup CLI:** `qa:audit`, `qa:cleanup` scripts for read-only audit and targeted purge without touching real contacts.
-
-No DB migration. Redeploy API + static client.
-
-### v1.7.50 — UX Clarity Remediation & QA Purge Extension
-
-- **Shared labels:** `client/src/utils/displayLabels.js` — humanized task status/priority, inbox categories, timeframe labels, timestamps with timezone.
-- **Dashboard & campaigns:** Fixed `totalOpened` metric; removed misleading empty chart; honest activity-stream copy; engagement rate rename; toast-based confirmations (no blocking alerts) in campaign and admin mail surfaces.
-- **CRM / Data Hub / Inbox / Todo:** Column and filter labels clarified; sync error handling; human status text; DataTable empty-state props; Review Queue “Assigned by” copy.
-- **Attendance / schedule / projects:** Geo toasts, team matrix legend, reset confirm, schedule PageHeader, progress tooltips.
-- **Settings / finance / admin:** Labeled date filters, delete confirms with filenames, inline validation, settings deep-link tabs, mobile-visible actions.
-- **QA purge:** `purgeQaUsers()` + `purgeQaTasks()` in `qaTestData.js` — deletes probe users, XSS/QA probe tasks, assignments, related logs, and adjusts project task counts; UI invalidates tasks/projects/user caches after purge.
-
-No DB migration. Redeploy API + static client.
-
-### v1.7.49 — Attendance Office Detection Fix
-
-- **Geofence:** Office GPS radius increased from 150 m to **1000 m** (`OFFICE_RADIUS_METERS` in `attendanceRoutes.js`).
-- **IP whitelist:** Tier 2 now merges **`OFFICE_PUBLIC_IP`** and **`OFFICE_IP_WHITELIST`** (fixes production WFH when only the legacy var was set).
-- **Env:** On Render, set both vars with current office egress IPv4/IPv6 (comma-separated, spaces trimmed). Example: `49.36.41.166,49.36.41.118` plus office IPv6 if used.
-- **Script:** `server/scripts/auditAttendanceProd.js` — read-only prod/local audit of today’s `workMode`, `verificationMethod`, and `checkInIp`.
-
-No DB migration. Redeploy API, then undo/re check-in to refresh today’s mode if needed.
-
-### v1.7.48 — QA v2 Engine, Security Hardening & Gamification Test Sync
-
-- **QA backend v2:** Suites 3–8 — `qaSuite3Static.js`, `qaExtendedProbes.js`, `qaIntegrationRunners.js` (~45 integration cases), `qaActivity.js` live logging; `triggerQaHttp.js` for CI/local HTTP runs.
-- **QA UI:** `QATestingPage.jsx` live probe panel, copy-failures actions, activity log on `QATestRun`.
-- **Security fixes:** Webhook HMAC rejects missing signatures; CRM duplicate leads return **409**; task/announcement sanitization; unsubscribe dual-writes `Contact`; finance tenant spoof probes; login rate limit keyed per **email** (not shared IP).
-- **Gamification QA:** `QA_SYNC_GAMIFICATION` waits on BullMQ during scans; `hasAwardForEntity` matches string/ObjectId entity ids.
-- **Auth:** Per-email `express-rate-limit` on `/api/auth/login`; security probes skip on transient 429.
-
-No mandatory production migration scripts for this release.
-
-### v1.7.46 — Department Stats, Music Calendar Seed & Data Hub Full Sync
-
-- **Department Stats:** New `/api/dashboard/dept-stats` with `1d`/`7d`/`30d` org-wide aggregations; widget shows completion %, converted count, and focus hours (`dashboardController.js`, `GenericDashboardCard.jsx`).
-- **Music Content Calendar:** `musicCalendarSeedService.js`; admin **Birthdays** button on Calendar; `POST /api/calendar/seed-music-content`; `npm run seed:prod-content` bundles calendar + Data Hub full reconcile.
-- **Calendar visibility:** Public events fetched with `bypassTenant` so seeded birthdays appear for all tenants.
-- **Data Hub:** **Full Sync** button triggers `POST /api/data-hub/reconcile?full=true` for complete inlet re-merge.
-
-Post-deploy production data (UI or CLI):
-
-```bash
-# Option A — in app (admin): Calendar → Birthdays; Data Hub → Full Sync
-
-# Option B — CLI against MONGODB_URI_PROD
-cd server
-npm run seed:prod-content
-```
-
-### v1.7.45 — Data Hub, Calendar Guards & Music Content Calendar
-
-- **Data Hub:** Unified CRM at Admin → CRM (`DataHubPage`, `DataHubService`, `/api/data-hub`, `shared/dataInlets.js`). Folder inlets: Exly, Leads, TSC, Booked Calls, Enquiries, Mail, Community, Active, Unsubscribed. Reconcile via UI or `reconcileDataHub.js`.
-- **Past-date validation:** Tasks and calendar events blocked in past (IST) — `shared/dateValidation.js`, `TaskService`, `calendarRoutes`, client `dateValidation.js`.
-- **Music Content Calendar:** 35 public `musical_day` events from `Music_Content_Calendar.pdf` — `seedMusicContentCalendar.js --year=2026 [--prod]`.
-- **Task mentions:** `@user` / `#asset` tokens in task title/description with notification dispatch (`mentionNotifications.js`, `mentions/` components).
-- **Overdue notifications removed:** `checkOverdue` cron deleted from `notificationService.js` (no overdue task/follow-up alerts).
-- **Gamification:** Shared rules in `shared/gamificationRules.js`. Booked-call contacts merge via `LeadService` on webhook (v1.7.57+); legacy `bookedCallsSyncService.js` removed.
-
-Post-deploy production data (legacy one-liners; prefer `npm run seed:prod-content` in v1.7.46+):
-
-```bash
-cd server
-node scripts/seedMusicContentCalendar.js --year=2026 --prod
-node scripts/reconcileDataHub.js --prod --full
-```
-
-### v1.7.44 - Notifications, Attendance UX & Admin Access
-
-- **Double OS notifications:** Prune push subscriptions on subscribe; dedupe send targets by OS+browser bucket; SW `getNotifications` guard; `NotificationBridge` awaits push init; cross-tab dedupe via `localStorage` + `BroadcastChannel` (`pushSubscriptions.js`, `notifications.js`, `sw.js`).
-- **Attendance:** Independent mark-in/out (UI + server); split admin check-in/check-out modals; blue locked cells; Office default in admin Mode Override dropdown.
-- **Admin hardening:** Filter dashboard widgets and sidebar prefs; scope daily logs; protect QA/HolySheet/logs/attendance-reset APIs; redirect non-ops from `/attendance/all` (`navPageAccess.js`, `dashboardComponents.js`).
-
-### v1.7.43 - Admin Workspace Colors & Hex Picker
-
-- **WorkspaceColorPicker:** Reusable preset swatches and validated hex input (`client/src/components/ui/WorkspaceColorPicker.jsx`).
-- **workspaceColors.js:** Shared `PRESET_WORKSPACE_COLORS`, `normalizeHexColor`, and `isValidHexColor`.
-- **Workspace Settings:** Admins edit workspace color; creators/admins manage members (`WorkspaceSettings.jsx`).
-- **API:** Workspace create/update validates hex; only admins may change color on PATCH (`projectController.js`).
-- **Projects view:** Create-workspace flow uses shared picker and presets (`ProjectsView.jsx`).
-### v1.7.42 - Daily Logs, Projects UX and Per-User Workspaces
-
-- **Daily logs:** Daily log list includes `TASK_COMPLETION` activity entries for the selected day (`DailyLogPage.jsx` filter fix).
-- **Navigation:** Removed duplicate **Emails** sidebar entry when customization already exposes mail routes (`OutletSidebar.jsx`, `customizationController.js`).
-- **Workspace order:** Per-user workspace column order in `WorkspacePreference`; workspaces API returns order for the signed-in user (`projectController.js`, `WorkspacePreference.js`).
-- **Projects view:** All projects show in each workspace card (removed six-project cap); workspace grip reorder with optimistic cache updates (`ProjectsView.jsx`).
-### v1.7.40 — Subscriptions, Workspace Settings & Dev Safeguards
-
-- Office **Subscriptions** module: model, CRUD API, `/office/subscriptions` page, and daily Render cron for due-date reminders.
-- **Workspace Settings** page and workspace member/project management API.
-- **Local dev safeguards:** `client/.env.example`, `server/.env.example`, `devEnvGuard.js` console warning for prod API URLs, `syncProdToLocal.js` one-shot prod→local DB copy.
-- Calendar event time handling, project list/create UX, equipment registry, and dashboard card refinements.
-
-### v1.7.39 — Project Roles & Local DB Isolation
-
-- Canonical project roles: `admin` / `manager` / `member` with legacy `owner` → `admin` normalization in `shared/projectRoles.js`.
-- `PATCH /api/projects/:id/members/:userId/role` for inline team role updates; UI in `ProjectTeam.jsx`.
-- `server/config/database.js` centralizes MongoDB URI resolution with production-like DB name guards for local dev.
-- Sync scripts default to `taskmaster_local` / `taskmaster_production` database names.
-- New docs: `LOCAL_DEV_DATABASE.md`, `AI_AGENT_PROJECT_CONTEXT.md`.
-
-### v1.7.38 — Website Book-a-Call Webhook
-
-- `POST /api/webhooks/book-call` accepts public bookings from [theshakticollective.in/book-a-call](https://theshakticollective.in/book-a-call).
-- BullMQ queue `WebhookQueue` processes IST conversion, rep assignment, AiSensy, and Google Sheets (`BookedCalls`) asynchronously; Redis-down paths fall back to synchronous processing.
-- Google service account resolution no longer depends on a developer-local file path.
-
-When deploying release targets `v1.7.37` or above, perform these structural database updates down against live system targets:
-
-```bash
-# 1. Execute a non-destructive simulation to verify existing dataset structures
-node scripts/migrateReviewWorkflow.js --dry-run --prod
-
-# 2. Execute the migration against your live database collections
-node scripts/migrateReviewWorkflow.js --execute --prod
-
-# 3. Clean up non-conforming test entries or legacy structural artifacts
-node scripts/cleanupTestTasks.js --prod
-```
+| [`docs/VERSION_HISTORY.md`](docs/VERSION_HISTORY.md) | Release notes and production migration guides by version |
 
 ---
 

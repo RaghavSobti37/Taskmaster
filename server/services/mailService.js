@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const imaps = require('imap-simple');
 const { simpleParser } = require('mailparser');
 const { Resend } = require('resend');
-const juice = require('juice');
+const { normalizeOutboundEmailHtml, wrapEmailShell } = require('../utils/normalizeOutboundEmailHtml');
 const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
@@ -179,20 +179,13 @@ const sendCampaign = async (campaignId) => {
       </div>`;
 
       let personalizedContent = campaign.content || '';
-      
-      // Preserve line breaks for plain text input
+
       if (!/<(br|p|div|h[1-6])[^>]*>/i.test(personalizedContent)) {
         personalizedContent = personalizedContent.replace(/\n/g, '<br />');
       }
 
-      // Inline CSS styles for email client compatibility
-      try {
-        personalizedContent = juice(personalizedContent);
-      } catch (inlineErr) {
-        logger.warn('CSS Inlining', 'Failed to inline CSS, continuing without inlining', { error: inlineErr.message });
-      }
+      personalizedContent = normalizeOutboundEmailHtml(personalizedContent);
 
-      // Automatically wrap all external links in click tracker
       personalizedContent = personalizedContent.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*)>/gi, (match, before, url, after) => {
         if (url.includes('/api/mail/')) return match;
         const clickTrackerUrl = `${baseUrl}/api/mail/click/${campaign._id}/${recipient._id}?email=${encodeURIComponent(recipient.email)}&url=${encodeURIComponent(url)}`;
@@ -200,7 +193,7 @@ const sendCampaign = async (campaignId) => {
       });
 
       const finalUnsubscribeFooter = campaign.removeUnsubscribe ? '' : unsubscribeFooter;
-      const htmlWithTracking = `${personalizedContent}${finalUnsubscribeFooter}${trackingPixel}`;
+      const htmlWithTracking = wrapEmailShell(`${personalizedContent}${finalUnsubscribeFooter}${trackingPixel}`);
       const senderFrom = profile ? `"${profile.name}" <${profile.email}>` : 'onboarding@resend.dev';
 
       let messageIdStr = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -453,14 +446,17 @@ const scanBounces = async (profileId) => {
 };
 
 module.exports = { sendCampaign, scanBounces, updateEmailTags, sendTestEmail: async (opts) => {
-  const { to, subject, html, profile, senderMode } = opts;
+  const { to, subject, html, profile, senderMode, skipPipeline } = opts;
   const { resolveMailTransport, sendViaTransport } = require('../utils/smtpTransport');
+  const { buildFinalEmailHtml } = require('../utils/buildFinalEmailHtml');
 
   let inlinedHtml = html;
-  try {
-    inlinedHtml = juice(html);
-  } catch (inlineErr) {
-    logger.warn('CSS Inlining', 'Test email CSS inlining failed, sending without inlining', { error: inlineErr.message });
+  if (!skipPipeline) {
+    inlinedHtml = await buildFinalEmailHtml({
+      html,
+      includeSignature: false,
+      mode: 'test',
+    });
   }
 
   const transport = await resolveMailTransport({

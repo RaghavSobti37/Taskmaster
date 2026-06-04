@@ -80,13 +80,15 @@ const isAssignerOnlyReviewer = (assignments, userId) => {
   return !isDelegatedAssignee;
 };
 
-const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => {
+/** Assignees only; creator lives on task.createdBy */
+const normalizeAssigneeIds = (assigneeIds, creatorId) => {
   const creator = normalizeId(creatorId);
-  const ids = [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))];
-  if (creator && !ids.includes(creator)) ids.unshift(creator);
-  if (!ids.length && creator) return [creator];
-  return ids;
+  return [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))]
+    .filter((id) => !creator || id !== creator);
 };
+
+/** @deprecated Use normalizeAssigneeIds */
+const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => normalizeAssigneeIds(assigneeIds, creatorId);
 
 module.exports = {
   normalizeId,
@@ -101,6 +103,7 @@ module.exports = {
   canUserApproveReview,
   isSelfWorkOnlyTask,
   mergeAssigneeIdsWithCreator,
+  normalizeAssigneeIds,
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
   isAssignerOnlyReviewer,

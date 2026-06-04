@@ -254,8 +254,9 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     return rows;
   }, [dailyLogs, logSearch, logSort, logWorkspaceFilter, logProjectFilter, projects]);
 
-  const dailyTasks = useMemo(() => tasks.filter(t => {
-    const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.createdAt);
+  const dailyTasks = useMemo(() => tasks.filter((t) => {
+    if (t.status !== 'done') return false;
+    const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.updatedAt || t.createdAt);
     return isSameDay(taskDate, selectedDate);
   }), [tasks, selectedDate]);
 

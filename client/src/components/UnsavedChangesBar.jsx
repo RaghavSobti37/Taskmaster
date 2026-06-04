@@ -1,6 +1,5 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/primitives';
 
 const MAX_VISIBLE_CHANGES = 4;
@@ -16,14 +15,11 @@ export default function UnsavedChangesBar({
   const visibleChanges = changes.slice(0, MAX_VISIBLE_CHANGES);
   const hiddenCount = Math.max(0, changes.length - MAX_VISIBLE_CHANGES);
 
+  if (!hasChanges) return null;
+
   const bar = (
-    <AnimatePresence>
-      {hasChanges && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className={`fixed left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-[min(420px,calc(100vw-2rem))] max-w-[min(720px,calc(100vw-2rem))] sm:justify-between bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-6 ${
+        <div
+          className={`tm-unsaved-bar-enter fixed left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-[min(420px,calc(100vw-2rem))] max-w-[min(720px,calc(100vw-2rem))] sm:justify-between bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-6 ${
             elevated ? 'z-[1200]' : 'z-50'
           }`}
         >
@@ -69,9 +65,7 @@ export default function UnsavedChangesBar({
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
   );
 
   if (elevated && typeof document !== 'undefined') {

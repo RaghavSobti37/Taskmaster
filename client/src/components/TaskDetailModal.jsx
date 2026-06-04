@@ -16,6 +16,7 @@ import TaskHistoryPanel from './tasks/TaskHistoryPanel';
 import TaskMessageComposeSection from './tasks/TaskMessageComposeSection';
 import TaskDetailModalHeader from './tasks/TaskDetailModalHeader';
 import { progressForTaskStatus } from '../utils/taskStatusButtons';
+import { mergeMentionedUserIdsIntoAssignees } from '../utils/mentionTokens';
 
 const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate }) => {
   const { user } = useAuth();
@@ -97,7 +98,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       type: normalizeTaskCategory(formValues.type),
       projectId: formValues.projectId || null,
       workspace: formValues.workspace,
-      assignees: formValues.assignees,
+      assignees: mergeMentionedUserIdsIntoAssignees(
+        formValues.assignees,
+        directoryUsers,
+        title,
+        desc
+      ).filter((id) => id !== creatorId?.toString()),
       reviewAction,
     };
 

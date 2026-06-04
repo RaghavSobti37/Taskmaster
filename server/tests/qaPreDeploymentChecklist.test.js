@@ -39,6 +39,12 @@ describe('qaPreDeploymentChecklist', () => {
     expect(corsCheck.status).toBe('pass');
   });
 
+  it('suite 5 feature checks include task activity and QA exclusion', async () => {
+    const checks = await runAllPreDeploymentChecks();
+    expect(checks.find((c) => c.id === 'feat-task-activity-routes')?.status).toBe('pass');
+    expect(checks.find((c) => c.id === 'feat-qa-excluded-users-registry')?.status).toBe('pass');
+  });
+
   it('security hardening checks include webhook and cookie guards', async () => {
     const checks = await runAllPreDeploymentChecks();
     const ids = [

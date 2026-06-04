@@ -8,6 +8,11 @@ import { MODULE } from '../../lib/systemLogContract';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useProjects } from '../../hooks/useTaskmasterQueries';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import {
+  formatLighthouseReportPlain,
+  formatLighthouseReportMarkdown,
+  copyTextToClipboard,
+} from '../../utils/lighthouseReportCopy';
 
 const PREDEPLOY_CATEGORIES = new Set([
   'authorization', 'password-reset', 'input-validation', 'cors', 'rate-limiting',
@@ -110,6 +115,9 @@ const QA_AGENTS = [
   { id: 'guest-qa', name: 'Gamma (Unauth / Guest)', role: 'guest', desc: 'Tests public surface area', icon: Monitor },
 ];
 
+/** Staff who never receive QA probe emails or notifications (see shared/qaExcludedUsers.js). */
+const QA_EXCLUDED_STAFF_NOTE = 'Excluded from QA notify/email: Aryaman';
+
 const useQAProgress = (testRunId) => {
   return useQuery({
     queryKey: ['qa-progress', testRunId],
@@ -190,7 +198,7 @@ function LiveProbePanel({ currentRun }) {
 
       {live.kind === 'lighthouse' && (
         <p className="text-xs text-teal-800 dark:text-teal-200 bg-teal-500/5 border border-teal-500/25 rounded-lg px-3 py-2">
-          Chrome Lighthouse — one route at a time. Full grid appears under Lighthouse when batch completes (~2–5 min for all routes).
+          Chrome Lighthouse — one route at a time. Use <code className="font-mono">npm run build && npm run preview</code> (port 4173) and restart the API after CORS changes. Grid + copy buttons appear when the batch finishes.
         </p>
       )}
 
@@ -265,8 +273,32 @@ const QATestingPage = () => {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(QA_AGENTS[0]);
   const [selectedCategories, setSelectedCategories] = useState(() => new Set(ALL_QA_CATEGORY_KEYS));
+  const [selectedLighthousePaths, setSelectedLighthousePaths] = useState(() => new Set());
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
+
+  const { data: lighthouseRoutesData } = useQuery({
+    queryKey: ['qa-lighthouse-routes'],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/qa/lighthouse-routes');
+      return data;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const allLighthouseRoutes = lighthouseRoutesData?.all || [];
+  const publicLighthousePaths = React.useMemo(
+    () => new Set((lighthouseRoutesData?.public || []).map((r) => r.path)),
+    [lighthouseRoutesData]
+  );
+
+  React.useEffect(() => {
+    if (!allLighthouseRoutes.length) return;
+    setSelectedLighthousePaths((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set(allLighthouseRoutes.map((r) => r.path));
+    });
+  }, [allLighthouseRoutes]);
 
   const { data: historyData, isLoading: historyLoading } = useQuery({
     queryKey: ['qa-history'],
@@ -314,11 +346,19 @@ const QATestingPage = () => {
       const categories = selectedCategories.size === ALL_QA_CATEGORY_KEYS.length
         ? []
         : [...selectedCategories];
+      const runsLighthouse = selectedCategories.has(LIGHTHOUSE_CATEGORY);
+      const allLhSelected =
+        !allLighthouseRoutes.length ||
+        selectedLighthousePaths.size >= allLighthouseRoutes.length;
+      const lighthousePaths =
+        runsLighthouse && !allLhSelected ? [...selectedLighthousePaths] : [];
+
       const { data } = await axios.post(`/api/qa/start`, {
         testAgentName: selectedAgent.name,
         testRole: selectedAgent.role,
         permissions: [],
         categories,
+        lighthousePaths,
       });
       return data;
     },
@@ -384,8 +424,25 @@ const QATestingPage = () => {
       toastError('Select at least one category to run', { module: MODULE.SYSTEM });
       return;
     }
+    if (selectedCategories.has(LIGHTHOUSE_CATEGORY) && selectedLighthousePaths.size === 0) {
+      toastError('Select at least one Lighthouse page to audit', { module: MODULE.SYSTEM });
+      return;
+    }
     startMutation.mutate();
-  }, [startMutation, selectedCategories.size, toastError]);
+  }, [startMutation, selectedCategories, selectedLighthousePaths.size, toastError]);
+
+  const toggleLighthousePath = useCallback((routePath) => {
+    setSelectedLighthousePaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(routePath)) next.delete(routePath);
+      else next.add(routePath);
+      return next;
+    });
+  }, []);
+
+  const setLighthousePathSelection = useCallback((paths) => {
+    setSelectedLighthousePaths(new Set(paths));
+  }, []);
 
   const toggleCategory = useCallback((cat) => {
     setSelectedCategories((prev) => {
@@ -591,8 +648,61 @@ const QATestingPage = () => {
             </button>
           </div>
           <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-            Audits every route · red = heaviest load · yellow = medium · green = lightest
+            Pick pages below · red = heaviest load · yellow = medium · green = lightest
           </p>
+          {selectedCategories.has(LIGHTHOUSE_CATEGORY) && allLighthouseRoutes.length > 0 && (
+            <div className="mt-3 p-3 rounded-lg border border-teal-500/25 bg-teal-500/5 space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+              <div className="flex flex-wrap gap-2 sticky top-0 bg-[var(--color-bg-primary)]/95 py-1 z-10">
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={isRunning}
+                  onClick={() => setLighthousePathSelection(allLighthouseRoutes.map((r) => r.path))}
+                >
+                  All pages
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  disabled={isRunning}
+                  onClick={() =>
+                    setLighthousePathSelection(
+                      allLighthouseRoutes.filter((r) => publicLighthousePaths.has(r.path)).map((r) => r.path)
+                    )
+                  }
+                >
+                  Public only
+                </Button>
+                <Button variant="ghost" size="xs" disabled={isRunning} onClick={() => setLighthousePathSelection([])}>
+                  Clear
+                </Button>
+                <span className="text-[10px] text-[var(--color-text-muted)] self-center ml-auto">
+                  {selectedLighthousePaths.size}/{allLighthouseRoutes.length} selected
+                </span>
+              </div>
+              {allLighthouseRoutes.map((route) => {
+                const checked = selectedLighthousePaths.has(route.path);
+                return (
+                  <label
+                    key={route.path}
+                    className={`flex items-center gap-2 text-xs cursor-pointer rounded px-2 py-1 ${
+                      checked ? 'bg-teal-500/10' : 'hover:bg-[var(--color-bg-secondary)]'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-[var(--color-bg-border)]"
+                      checked={checked}
+                      disabled={isRunning}
+                      onChange={() => toggleLighthousePath(route.path)}
+                    />
+                    <span className="font-medium text-[var(--color-text-primary)] truncate">{route.name}</span>
+                    <code className="text-[10px] text-[var(--color-text-muted)] truncate">{route.path}</code>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -617,6 +727,30 @@ const QATestingPage = () => {
     };
   };
 
+  const handleCopyLighthouseReport = useCallback(
+    async (format = 'plain') => {
+      const report = resolveLighthouseReport();
+      if (!report?.pages?.length) {
+        toastError('No Lighthouse report to copy yet', { module: MODULE.SYSTEM });
+        return;
+      }
+      try {
+        const text =
+          format === 'markdown'
+            ? formatLighthouseReportMarkdown(report)
+            : formatLighthouseReportPlain(report);
+        await copyTextToClipboard(text);
+        toastSuccess(
+          format === 'markdown' ? 'Lighthouse markdown copied' : 'Lighthouse report copied',
+          { module: MODULE.SYSTEM }
+        );
+      } catch (err) {
+        toastError(err.message || 'Failed to copy Lighthouse report', { module: MODULE.SYSTEM });
+      }
+    },
+    [latestResults, progressData, toastSuccess, toastError]
+  );
+
   const renderLighthousePanel = () => {
     const report = resolveLighthouseReport();
     if (!report?.pages?.length) return null;
@@ -636,9 +770,16 @@ const QATestingPage = () => {
       <div className="mt-8 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <Gauge className="text-teal-600 dark:text-teal-400" /> Lighthouse — all pages
+            <Gauge className="text-teal-600 dark:text-teal-400" /> Lighthouse — {pages.length} page{pages.length === 1 ? '' : 's'}
           </h2>
-          <div className="flex flex-wrap gap-2 text-xs font-bold">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleCopyLighthouseReport('plain')} className="gap-1.5">
+              <Copy size={14} /> Copy report
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleCopyLighthouseReport('markdown')} className="gap-1.5">
+              <Copy size={14} /> Copy markdown
+            </Button>
+            <div className="flex flex-wrap gap-2 text-xs font-bold">
             <span className="px-2.5 py-1 rounded-full border border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300">
               {summary.heavy} heavy
             </span>
@@ -648,6 +789,7 @@ const QATestingPage = () => {
             <span className="px-2.5 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
               {summary.light} light
             </span>
+            </div>
           </div>
         </div>
 
@@ -1071,6 +1213,7 @@ const QATestingPage = () => {
                       </div>
                     ))}
                   </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">{QA_EXCLUDED_STAFF_NOTE}</p>
                 </div>
               </div>
 
@@ -1079,7 +1222,7 @@ const QATestingPage = () => {
                 <div>
                   <h3 className="font-bold text-lg mb-2 text-[var(--color-text-primary)]">Pre-Flight Checks</h3>
                   <ul className="space-y-3 text-sm text-[var(--color-text-secondary)] mb-6">
-                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Pre-deployment checklist (9 categories + business logic)</li>
+                    <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Pre-deploy + Suite 5 (task history, mail pipeline, exclusions)</li>
                     <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Dynamic page pentest (CRM, Finance, Projects)</li>
                     <li className="flex items-center gap-2"><CheckCircle size={16} className="text-emerald-500" /> Agent {selectedAgent.name} primed with {selectedAgent.role} access</li>
                   </ul>

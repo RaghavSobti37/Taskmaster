@@ -9,9 +9,12 @@ const { broadcastRealtimeEvent } = require('../config/realtime');
 exports.startQATesting = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { testAgentName, testRole, permissions, categories } = req.body || {};
+    const { testAgentName, testRole, permissions, categories, lighthousePaths } = req.body || {};
     const normalizedCategories = Array.isArray(categories)
       ? [...new Set(categories.map((c) => String(c).trim()).filter(Boolean))]
+      : [];
+    const normalizedLighthousePaths = Array.isArray(lighthousePaths)
+      ? [...new Set(lighthousePaths.map((p) => String(p).trim()).filter(Boolean))]
       : [];
 
     // Check if test already running globally
@@ -29,10 +32,15 @@ exports.startQATesting = async (req, res, next) => {
       testRole: testRole || 'user',
       permissions: permissions || [],
       categories: normalizedCategories,
+      lighthousePaths: normalizedLighthousePaths,
     });
 
     await qaService.initTestRun();
 
+    const { refreshExcludedUserIds } = require('../utils/qaExcludedUsers');
+    const { clearResolveTestUsersCache } = require('../services/qa/qaApiClient');
+    clearResolveTestUsersCache();
+    await refreshExcludedUserIds();
     process.env.QA_SYNC_GAMIFICATION = 'true';
     qaService.executeTests().catch((err) => {
       logger.error('QA', 'Error in background testing', { error: err.message });
@@ -216,6 +224,20 @@ exports.cleanupTestData = async (req, res, next) => {
     logger.error('QA', 'Error cleaning up test data', { error: error.message });
     next(error);
   }
+};
+
+/** Routes available for Lighthouse audits in QA */
+exports.listLighthouseRoutes = async (req, res) => {
+  const {
+    PUBLIC_ROUTES,
+    PROTECTED_ROUTES,
+    getAllLighthouseRoutes,
+  } = require('../services/qa/lighthouseRoutes');
+  res.json({
+    public: PUBLIC_ROUTES,
+    protected: PROTECTED_ROUTES,
+    all: getAllLighthouseRoutes(),
+  });
 };
 
 /** List available QA test categories for filtered runs */

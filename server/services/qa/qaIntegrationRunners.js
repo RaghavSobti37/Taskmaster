@@ -5,6 +5,7 @@ const GamificationConfig = require('../../models/GamificationConfig');
 const { ACTION_CONFIG_KEY } = require('../../../shared/gamificationRules');
 const Project = require('../../models/Project');
 const Task = require('../../models/Task');
+const TaskAssignment = require('../../models/TaskAssignment');
 const Lead = require('../../models/Lead');
 const FinanceDocument = require('../../models/FinanceDocument');
 const Contact = require('../../models/Contact');
@@ -19,6 +20,8 @@ const GamificationService = require('../gamificationService');
 const DataHubService = require('../DataHubService');
 const { computeRecipientStats } = require('../../utils/campaignStats');
 const { isWeekend } = require('../../utils/attendanceDate');
+const TaskActivity = require('../../models/TaskActivity');
+const TaskMentionReceipt = require('../../models/TaskMentionReceipt');
 const {
   resolveTestUsers,
   skipProbeResult,
@@ -28,6 +31,7 @@ const {
   sleep,
   extractId,
 } = require('./qaApiClient');
+const { userMatchesQaExclusion, QA_EXCLUDED_EMAILS } = require('../../utils/qaExcludedUsers');
 
 const SERVER_ROOT = path.join(__dirname, '../..');
 
@@ -52,8 +56,13 @@ async function distinctUsers() {
   const assigner = users.adminUser;
   let assignee = users.salesUser;
   let outsider = users.opsUser;
-  if (!assignee || assignee._id.toString() === assigner._id.toString()) assignee = users.anyUser;
-  if (!outsider || outsider._id.toString() === assigner._id.toString()) outsider = users.anyUser;
+  if (!assignee || assignee._id.toString() === assigner._id.toString() || userMatchesQaExclusion(assignee)) {
+    assignee = users.anyUser;
+  }
+  if (!outsider || outsider._id.toString() === assigner._id.toString() || userMatchesQaExclusion(outsider)) {
+    outsider = users.anyUser;
+  }
+  if (userMatchesQaExclusion(assignee) || userMatchesQaExclusion(outsider)) return null;
   if (assignee._id.toString() === assigner._id.toString()) return null;
   return { assigner, assignee, outsider };
 }
@@ -843,6 +852,158 @@ async function runConcurrentXp(def, ctx) {
     : probeFail(def, 'Entity-scoped XP idempotency not found');
 }
 
+async function runTaskActivityCreatedSeed(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const createRes = await request(def, {
+    method: 'POST',
+    url: '/api/tasks',
+    user: pair.assigner,
+    data: {
+      title: `QA Activity Seed ${Date.now()}`,
+      description: 'Initial scope for QA activity timeline',
+      projectId: project._id,
+      assignees: [pair.assignee._id],
+    },
+  });
+  const taskId = extractId(createRes);
+  if (!taskId) return probeFail(def, 'Task create failed');
+  track(ctx, 'task', taskId);
+
+  await sleep(300);
+  const actRes = await request(def, {
+    method: 'GET',
+    url: `/api/tasks/${taskId}/activity`,
+    user: pair.assigner,
+  });
+  if (actRes.status !== 200) {
+    return { ...probeFail(def, `Activity list failed (${actRes.status})`), artifacts: ctx.artifacts };
+  }
+  const rows = Array.isArray(actRes.data) ? actRes.data : actRes.data?.activity || [];
+  const created = rows.find((r) => r.type === 'created');
+  if (created) {
+    return { ...probePass(def, 'Task create seeds created activity row'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, 'No created activity row after task POST'), artifacts: ctx.artifacts };
+}
+
+async function runTaskActivityThreadMessage(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const createRes = await request(def, {
+    method: 'POST',
+    url: '/api/tasks',
+    user: pair.assigner,
+    data: {
+      title: `QA Thread ${Date.now()}`,
+      projectId: project._id,
+      assignees: [pair.assignee._id, pair.assigner._id],
+    },
+  });
+  const taskId = extractId(createRes);
+  if (!taskId) return probeFail(def, 'Task create failed');
+  track(ctx, 'task', taskId);
+
+  const postRes = await request(def, {
+    method: 'POST',
+    url: `/api/tasks/${taskId}/activity`,
+    user: pair.assignee,
+    data: { body: 'QA thread ping — assets ready?' },
+  });
+  if (postRes.status !== 201 && postRes.status !== 200) {
+    return { ...probeFail(def, `Activity post failed (${postRes.status})`), artifacts: ctx.artifacts };
+  }
+
+  const listRes = await request(def, {
+    method: 'GET',
+    url: `/api/tasks/${taskId}/activity`,
+    user: pair.assigner,
+  });
+  const rows = Array.isArray(listRes.data) ? listRes.data : listRes.data?.activity || [];
+  const msg = rows.find((r) => r.type === 'message');
+  if (msg) {
+    return { ...probePass(def, 'Thread message persisted on task activity'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, 'No message row after activity POST'), artifacts: ctx.artifacts };
+}
+
+async function runCreatorNotInAssignments(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const createRes = await request(def, {
+    method: 'POST',
+    url: '/api/tasks',
+    user: pair.assigner,
+    data: {
+      title: `QA Creator Split ${Date.now()}`,
+      projectId: project._id,
+      assignees: [pair.assigner._id, pair.assignee._id],
+    },
+  });
+  const taskId = extractId(createRes);
+  if (!taskId) return probeFail(def, 'Task create failed');
+  track(ctx, 'task', taskId);
+
+  const creatorId = pair.assigner._id.toString();
+  const rows = await TaskAssignment.find({ taskId }).select('userId').lean();
+  const hasCreatorRow = rows.some((r) => r.userId?.toString() === creatorId);
+  if (!hasCreatorRow && rows.length >= 1) {
+    return { ...probePass(def, 'Creator not duplicated in TaskAssignment'), artifacts: ctx.artifacts };
+  }
+  return {
+    ...probeFail(def, hasCreatorRow ? 'Creator still in assignments' : 'No assignee rows'),
+    artifacts: ctx.artifacts,
+  };
+}
+
+async function runQaExcludedNoNotify(def, ctx) {
+  const excluded = await User.findOne({ email: QA_EXCLUDED_EMAILS[0] }).select('_id name email').lean();
+  if (!excluded) {
+    return skipProbeResult(def, `Excluded user ${QA_EXCLUDED_EMAILS[0]} not in DB`);
+  }
+  const users = await resolveTestUsers();
+  const assigner = users.adminUser;
+  const project = await pickProject();
+  if (!project) return skipProbeResult(def, 'No project');
+
+  const label = (excluded.name || excluded.email || 'user').split('@')[0].trim();
+  const createRes = await request(def, {
+    method: 'POST',
+    url: '/api/tasks',
+    user: assigner,
+    data: {
+      title: `QA Excluded Mention ${Date.now()}`,
+      description: `Ping @${label} for assets`,
+      projectId: project._id,
+      assignees: [assigner._id],
+    },
+  });
+  const taskId = extractId(createRes);
+  if (!taskId) return probeFail(def, 'Task create failed');
+  track(ctx, 'task', taskId);
+
+  await sleep(500);
+  const note = await Notification.findOne({
+    recipient: excluded._id,
+    relatedTaskId: taskId,
+  }).lean();
+  const receipt = await TaskMentionReceipt.findOne({ taskId, userId: excluded._id }).lean();
+
+  if (!note && !receipt) {
+    return { ...probePass(def, 'Excluded user received no mention notification/receipt during QA'), artifacts: ctx.artifacts };
+  }
+  if (note) {
+    return { ...probeFail(def, 'Excluded user got in-app notification'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, 'Excluded user got mention receipt row', receipt?.unreadCount), artifacts: ctx.artifacts };
+}
+
 const PLANNED_INTEGRATION_DEFS = [
   { id: 'sm-review-rollback', title: 'Assigner rolls back task from in-review', sev: 'high', category: 'business-logic' },
   { id: 'sm-invoice-submit-pending', title: 'Invoice submission sets approvalStatus=pending', sev: 'high', category: 'business-logic' },
@@ -879,6 +1040,10 @@ const PLANNED_INTEGRATION_DEFS = [
   { id: 'sync-folder-count-match', title: 'Data Hub folder counts match Contact', sev: 'high', category: 'business-logic' },
   { id: 'sync-multiinlet-count-accurate', title: 'inletCount reflects active inlets', sev: 'high', category: 'business-logic' },
   { id: 'int-concurrent-xp', title: 'Duplicate XP blocked per entity', sev: 'high', category: 'business-logic' },
+  { id: 'int-task-activity-created', title: 'Task create seeds activity timeline', sev: 'high', category: 'business-logic' },
+  { id: 'int-task-activity-thread', title: 'Task thread POST adds message activity', sev: 'high', category: 'business-logic' },
+  { id: 'int-creator-split-assignments', title: 'Creator omitted from TaskAssignment rows', sev: 'critical', category: 'business-logic' },
+  { id: 'int-qa-excluded-no-notify', title: 'QA excluded staff get no mention notify/email', sev: 'critical', category: 'business-logic' },
 ];
 
 const PLANNED_RUNNERS = {
@@ -917,6 +1082,10 @@ const PLANNED_RUNNERS = {
   'sync-folder-count-match': runFolderCountMatch,
   'sync-multiinlet-count-accurate': runMultiinletCountAccurate,
   'int-concurrent-xp': runConcurrentXp,
+  'int-task-activity-created': runTaskActivityCreatedSeed,
+  'int-task-activity-thread': runTaskActivityThreadMessage,
+  'int-creator-split-assignments': runCreatorNotInAssignments,
+  'int-qa-excluded-no-notify': runQaExcludedNoNotify,
 };
 
 module.exports = { PLANNED_INTEGRATION_DEFS, PLANNED_RUNNERS };

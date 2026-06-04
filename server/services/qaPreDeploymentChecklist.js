@@ -1149,6 +1149,7 @@ async function runAllPreDeploymentChecks() {
     runBusinessLogicChecks(),
     runSecurityHardeningChecks(),
     runSuite3StaticChecks(),
+    require('./qa/qaSuite5Features').runSuite5FeatureChecks(),
   ]);
   return groups.flat();
 }
@@ -1237,6 +1238,20 @@ async function buildPreDeploymentTestCases(onProgress) {
   const suite4 = await runSuite4V19Checks();
   for (const check of suite4) {
     if (check.category === 'password-reset') continue;
+    staticCases.push({
+      name: `[Pre-Deploy] ${check.title}`,
+      category: check.category,
+      severity: check.severity,
+      checklistId: check.id,
+      qaMeta: preDeployMeta(check),
+      test: async () => checklistToTestResult(check),
+    });
+  }
+
+  if (onProgress) await onProgress('Pre-deploy: evaluating Suite 5 (task history, mail pipeline)…');
+  const { runSuite5FeatureChecks } = require('./qa/qaSuite5Features');
+  const suite5 = await runSuite5FeatureChecks();
+  for (const check of suite5) {
     staticCases.push({
       name: `[Pre-Deploy] ${check.title}`,
       category: check.category,

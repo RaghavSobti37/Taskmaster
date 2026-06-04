@@ -75,7 +75,10 @@ router.get('/', async (req, res) => {
     }));
 
     const assignedTaskIds = await getAssignedTaskIds(req.user._id);
-    const taskOr = [{ createdBy: req.user._id }];
+    const taskOr = [
+      { createdBy: req.user._id },
+      { mentionAccessIds: req.user._id },
+    ];
     if (assignedTaskIds.length) {
       taskOr.push({ _id: { $in: assignedTaskIds } });
     }

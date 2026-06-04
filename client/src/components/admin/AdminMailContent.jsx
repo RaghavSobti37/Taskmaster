@@ -9,8 +9,20 @@ import NexusDropdown from '../ui/NexusDropdown';
 import {
   useMailProfiles, useMailCampaigns, useMailStats, useCreateMailProfile,
   useDeleteMailProfile, useCreateCampaign, useUploadCampaignAttachment, useSendCampaign, useDeleteCampaign, useLiveLeads, useUserDirectory, useScanBounces, useCumulativeAnalytics,
-  useMailTemplates, useSaveMailTemplate, useDeleteMailTemplate, useSyncUnsubscribed, useLocationLeads, useContacts, useUpdateMailProfile
+  useMailTemplates, useSyncUnsubscribed, useLocationLeads, useContacts, useUpdateMailProfile
 } from '../../hooks/useTaskmasterQueries';
+import MailTemplateStudio from './MailTemplateStudio';
+import {
+  parseIndexedVariablesFromHtml,
+  applyIndexedVariables,
+  previewWithDummyValues,
+  validateVariableMapping,
+  getEffectiveTemplateContent,
+  leadToRowData,
+  collectAvailableColumns,
+  resolveRowValuesFromRecipient,
+} from '../../utils/indexedTemplateVariables';
+import { computeAudienceHealthCheck } from '../../utils/audienceHealthCheck';
 import { format } from 'date-fns';
 import { isValidEmail, normalizeEmail, filterValidRecipientRows } from '../../utils/emailValidation';
 import ReactQuill from 'react-quill';
@@ -23,7 +35,6 @@ import { iconIg, iconX, iconYt } from '../../utils/signatureIcons';
 import { SMTP_PRESETS, FREE_ROTATION_PROVIDER_KEYS, ADDITIONAL_ROTATION_PROVIDERS, SMTP_AUTH_HINTS, inferProviderFromEmail, getProfileRotationProviders, emptyProviderCredentials, appendSignature, syncSignatureInContent, stripSignature, hasSignatureBlock, countSignatureBlocks, estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../utils/smtpPresets';
 import {
   syncUnsubscribeInContent, appendUnsubscribe, hasUnsubscribeBlock, stripUnsubscribe, countUnsubscribeBlocks,
-  parseTemplateVariables, insertVariable, setVariableFallbackInContent, previewMergeTags
 } from '../../utils/emailContentUtils';
 import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 
@@ -54,8 +65,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [allExlyContacts, setAllExlyContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [exlyContactsLoading, setExlyContactsLoading] = useState(false);
-  const [templateVariables, setTemplateVariables] = useState({});
-  const [showVariableWarning, setShowVariableWarning] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [variableMapping, setVariableMapping] = useState({});
   const [testCampaignEmail, setTestCampaignEmail] = useState('');
   const [showHtmlPasteModal, setShowHtmlPasteModal] = useState(false);
   const [htmlPasteText, setHtmlPasteText] = useState('');
@@ -147,9 +158,8 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [selectedLocationForModal, setSelectedLocationForModal] = useState(null);
 
   // Templates Management State
-  const { data: templates = [], refetch: refetchTemplates } = useMailTemplates();
-  const saveTemplateMutation = useSaveMailTemplate();
-  const deleteTemplateMutation = useDeleteMailTemplate();
+  const { data: approvedTemplates = [] } = useMailTemplates('approved');
+  const { data: templateLibrary = [] } = useMailTemplates();
 
   const [selectedTemplateName, setSelectedTemplateName] = useState('');
   const [templateName, setTemplateName] = useState('');
@@ -406,6 +416,9 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
   // New Campaign State
   const [campaignStep, setCampaignStep] = useState(1);
+  const [previewRecipientIndex, setPreviewRecipientIndex] = useState(0);
+  const [serverPreviewDoc, setServerPreviewDoc] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [holySheetTab, setHolySheetTab] = useState('');
   const [loadingHolySheet, setLoadingHolySheet] = useState(false);
   const [editingProfileId, setEditingProfileId] = useState(null);
@@ -416,7 +429,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [senderProfileId, setSenderProfileId] = useState('');
   const [senderMode, setSenderMode] = useState('single');
   const [senderProfileIds, setSenderProfileIds] = useState([]);
-  const [includeSignature, setIncludeSignature] = useState(true);
+  const [includeSignature, setIncludeSignature] = useState(false);
   const [signatureProfileId, setSignatureProfileId] = useState('');
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [csvRecipients, setCsvRecipients] = useState([]);
@@ -427,7 +440,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const [excludedSources, setExcludedSources] = useState([]);
   const [excludedEmails, setExcludedEmails] = useState([]);
 
-  const [includeUnsubscribe, setIncludeUnsubscribe] = useState(true);
+  const [includeUnsubscribe, setIncludeUnsubscribe] = useState(false);
 
   const isRawHtmlPreview = useMemo(() => {
     return useRawHtml
@@ -435,13 +448,6 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       || /^\s*<!DOCTYPE/i.test(content)
       || /^\s*<html[\s>]/i.test(content);
   }, [useRawHtml, isCustomHtml, content]);
-
-  const emailPreviewSrcDoc = useMemo(() => {
-    if (!content) return '';
-    if (isRawHtmlPreview) return content;
-    const sanitized = DOMPurify.sanitize(content);
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="margin:0;padding:16px;background-color:#0f172a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${sanitized}</body></html>`;
-  }, [content, isRawHtmlPreview]);
 
   const findProfile = (id) => profiles?.find((p) => String(p._id) === String(id));
 
@@ -481,33 +487,20 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     setContent(value);
   };
 
-  const getTemplateSavePayload = (html) => ({
-    content: html || '',
-    format: useRawHtml ? 'rawHtml' : 'visual',
-  });
+  const selectedTemplate = useMemo(
+    () => approvedTemplates.find((t) => String(t._id) === String(selectedTemplateId)),
+    [approvedTemplates, selectedTemplateId]
+  );
 
-  const detectedVariables = useMemo(() => {
-    const parsed = parseTemplateVariables(content);
-    return parsed.map((v) => ({
-      ...v,
-      fallback: v.inlineFallback ?? templateVariables[v.key] ?? null,
-      hasFallback: Boolean(v.inlineFallback ?? templateVariables[v.key]),
-    }));
-  }, [content, templateVariables]);
+  const templateBody = useMemo(
+    () => (selectedTemplate ? getEffectiveTemplateContent(selectedTemplate) : ''),
+    [selectedTemplate]
+  );
 
-  const insertFirstnameVariable = () => {
-    setContent((prev) => insertVariable(prev, 'firstname'));
-  };
-
-  const handleVariableClick = (varKey, currentFallback) => {
-    const fallback = window.prompt(
-      `Fallback for {{${varKey}}} when name is missing from sheet/CRM:`,
-      currentFallback || 'Friend'
-    );
-    if (fallback === null) return;
-    setTemplateVariables((prev) => ({ ...prev, [varKey]: fallback }));
-    setContent((prev) => setVariableFallbackInContent(prev, varKey, fallback));
-  };
+  const templateIndices = useMemo(
+    () => parseIndexedVariablesFromHtml(`${templateBody}${subject}`),
+    [templateBody, subject]
+  );
 
   const handleIncludeUnsubscribeChange = (checked) => {
     setIncludeUnsubscribe(checked);
@@ -548,44 +541,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     }
   }, [senderProfileId, signatureProfileId]);
 
-  useEffect(() => {
-    if (campaignStep !== 3) return;
-    setContent((prev) => {
-      if (useRawHtml) {
-        let next = prev;
-        if (includeUnsubscribe && !hasUnsubscribeBlock(next)) {
-          next = appendUnsubscribe(next);
-        }
-        if (includeSignature && activeProfileSignature && !hasSignatureBlock(next)) {
-          next = appendSignature(next, activeProfileSignature);
-        }
-        return next;
-      }
-      if (countUnsubscribeBlocks(prev) > 1 || countSignatureBlocks(prev) > 1) {
-        return applyVisualEditorBlocks(prev);
-      }
-      let next = prev;
-      if (includeUnsubscribe && !hasUnsubscribeBlock(next)) {
-        next = appendUnsubscribe(next);
-      }
-      if (includeSignature && activeProfileSignature && !hasSignatureBlock(next)) {
-        next = appendSignature(next, activeProfileSignature);
-      }
-      return next;
-    });
-  }, [campaignStep, useRawHtml, includeUnsubscribe, includeSignature, activeProfileSignature]);
-
   const isSenderConfigured = () => {
     if (senderMode === 'single') return !!senderProfileId;
     if (senderMode === 'pool') return senderProfileIds.length > 0;
     return true;
   };
-
-  const contentForPreview = useMemo(() => {
-    let html = buildEditorContent(content);
-    html = previewMergeTags(html, { firstname: 'Alex', name: 'Alex Smith' });
-    return html;
-  }, [content, includeSignature, includeUnsubscribe, activeProfileSignature]);
 
   // Handle CSV File Upload
   const handleCsvUpload = (e) => {
@@ -600,7 +560,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
       const header = lines[0].split(',').map(h => h.trim().toLowerCase());
       const emailIdx = header.findIndex(h => h.includes('email'));
-      const nameIdx = header.findIndex(h => h.includes('name'));
+      const nameIdx = header.findIndex(h => h === 'name' || h.includes('first name'));
 
       if (emailIdx === -1) {
         toast.warn('Could not detect "email" column in CSV header.');
@@ -613,12 +573,16 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
         const parts = lines[i].split(',').map(p => p.trim());
         const email = parts[emailIdx];
         const name = nameIdx !== -1 ? parts[nameIdx] : '';
+        const rowData = {};
+        header.forEach((h, idx) => {
+          if (h) rowData[h] = parts[idx] != null ? parts[idx] : '';
+        });
         if (!email) continue;
         const splitEmails = email.split(/[,;]/).map(e => e.trim()).filter(Boolean);
         splitEmails.forEach(se => {
           const normalized = normalizeEmail(se);
           if (isValidEmail(normalized)) {
-            parsed.push({ name, email: normalized, source: 'CSV Upload' });
+            parsed.push({ name, email: normalized, source: 'CSV Upload', rowData });
           } else if (normalized) {
             skipped += 1;
           }
@@ -674,6 +638,82 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
   const activeCsvRecipients = useMemo(() => {
     return csvRecipients.filter(r => !excludedSources.includes(r.source) && !excludedEmails.includes(r.email));
   }, [csvRecipients, excludedSources, excludedEmails]);
+
+  const previewRecipients = useMemo(() => {
+    const selectedCrmList = allContacts.filter((c) => selectedLeadIds.includes(c._id));
+    const selectedExlyList = allExlyContacts.filter((c) => selectedLeadIds.includes(c._id));
+    return [
+      ...activeCsvRecipients,
+      ...selectedCrmList.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
+      ...selectedExlyList.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
+    ];
+  }, [activeCsvRecipients, selectedLeadIds, allContacts, allExlyContacts]);
+
+  const availableColumns = useMemo(
+    () => collectAvailableColumns(previewRecipients),
+    [previewRecipients]
+  );
+
+  const firstPreviewRecipient = previewRecipients[0] || null;
+  const activePreviewRecipient = previewRecipients[previewRecipientIndex] || firstPreviewRecipient;
+
+  const audienceHealth = useMemo(
+    () => computeAudienceHealthCheck(
+      previewRecipients,
+      templateIndices,
+      variableMapping,
+      availableColumns
+    ),
+    [previewRecipients, templateIndices, variableMapping, availableColumns]
+  );
+
+  useEffect(() => {
+    if (campaignStep !== 3 || !templateBody || !activePreviewRecipient) {
+      setServerPreviewDoc('');
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      setPreviewLoading(true);
+      try {
+        const { data } = await axios.post('/api/mail/preview', {
+          content: templateBody,
+          subject,
+          includeSignature,
+          removeUnsubscribe: !includeUnsubscribe,
+          senderProfileId: senderProfileId || senderProfileIds[0] || undefined,
+          sampleRecipient: activePreviewRecipient,
+          variableMapping,
+          theme: 'dark',
+        });
+        if (!cancelled) setServerPreviewDoc(data.html || '');
+      } catch {
+        if (!cancelled) {
+          setServerPreviewDoc('<p style="padding:16px;font-family:sans-serif;color:#f87171">Preview failed to load.</p>');
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [
+    campaignStep,
+    templateBody,
+    subject,
+    activePreviewRecipient,
+    variableMapping,
+    includeSignature,
+    includeUnsubscribe,
+    senderProfileId,
+    senderProfileIds,
+  ]);
+
+  const emailPreviewSrcDoc = useMemo(() => {
+    if (serverPreviewDoc) return serverPreviewDoc;
+    if (!content) return '';
+    if (isRawHtmlPreview) return content;
+    return '<p style="padding:16px">Loading preview…</p>';
+  }, [serverPreviewDoc, content, isRawHtmlPreview]);
 
   const holySheetSourceTabs = useMemo(
     () => Array.from(new Set(csvRecipients.map((r) => r.source))),
@@ -746,46 +786,21 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     e.target.value = '';
   };
 
-  const handleCreateCampaign = async () => {
-    if (!title || !subject || !content || !isSenderConfigured()) {
-      toast.warn('Please complete campaign title, subject, content, and configure a sender.');
-      return;
-    }
-    if (selectedLeadIds.length === 0 && activeCsvRecipients.length === 0) {
-      toast.warn('Please select CRM leads or upload a recipient CSV.');
-      return;
-    }
-
-    const selectedCrmList = allContacts.filter(c => selectedLeadIds.includes(c._id));
-    const selectedExlyList = allExlyContacts.filter(c => selectedLeadIds.includes(c._id));
+  const buildCampaignPayload = () => {
+    const selectedCrmList = allContacts.filter((c) => selectedLeadIds.includes(c._id));
+    const selectedExlyList = allExlyContacts.filter((c) => selectedLeadIds.includes(c._id));
     const rawMerged = [
       ...activeCsvRecipients,
-      ...selectedCrmList.map(c => ({ name: c.name, email: c.email })),
-      ...selectedExlyList.map(c => ({ name: c.name, email: c.email }))
+      ...selectedCrmList.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
+      ...selectedExlyList.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
     ];
-    const { valid: mergedRecipients, skipped } = filterValidRecipientRows(rawMerged);
-    if (skipped.length > 0) {
-      const proceed = window.confirm(`Skipped ${skipped.length} invalid email(s) (phone numbers or bad format). Continue with ${mergedRecipients.length} valid recipient(s)?`);
-      if (!proceed) return;
-    }
-    if (mergedRecipients.length === 0) {
-      toast.warn('No valid email recipients after filtering. Check CRM/CSV/HolySheet data.');
-      return;
-    }
-
-    let processedContent = buildEditorContent(content);
-
-    const variableFallbacks = {};
-    parseTemplateVariables(processedContent).forEach((v) => {
-      const fb = v.inlineFallback ?? templateVariables[v.key];
-      if (fb) variableFallbacks[v.key] = fb;
-    });
-    Object.assign(variableFallbacks, templateVariables);
-
-    const payload = {
+    const { valid: mergedRecipients } = filterValidRecipientRows(rawMerged);
+    return {
       title,
       subject,
-      content: processedContent,
+      content: templateBody,
+      mailTemplateId: selectedTemplateId,
+      variableMapping,
       senderProfileId: senderMode === 'single' ? senderProfileId : (senderProfileIds[0] || undefined),
       senderMode,
       senderProfileIds: senderMode === 'pool' ? senderProfileIds : [],
@@ -793,39 +808,50 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       ...(senderMode === 'system_smtp' ? { systemProvider: 'env_smtp' } : {}),
       includeSignature,
       removeUnsubscribe: !includeUnsubscribe,
-      variableFallbacks,
-      attachments: attachments.map(a => ({ filename: a.filename, contentType: a.contentType, storageKey: a.storageKey })),
+      attachments: attachments.map((a) => ({ filename: a.filename, contentType: a.contentType, storageKey: a.storageKey })),
       leadIds: [],
       customRecipients: mergedRecipients,
-      autoDispatch: false,
     };
+  };
 
+  const handleCreateCampaign = async (action = 'save_draft') => {
+    if (!title || !subject || !isSenderConfigured()) {
+      toast.warn('Complete title, subject, and sender in Strategy step.');
+      return;
+    }
+    if (!selectedTemplateId || !selectedTemplate) {
+      toast.warn('Select an approved template.');
+      return;
+    }
+    if (!audienceHealth.ok) {
+      toast.warn(audienceHealth.issues.find((i) => i.severity === 'error')?.message || 'Fix audience health issues first.');
+      return;
+    }
+
+    const payload = { ...buildCampaignPayload(), action };
     const payloadSize = estimateJsonBytes(payload);
     if (payloadSize > PAYLOAD_SAFE_BYTES) {
       toast.error(`Campaign payload too large (${(payloadSize / 1024 / 1024).toFixed(1)}MB). Remove inline base64 images or reduce HTML size.`);
       return;
     }
-    if ((processedContent.match(/data:image/gi) || []).length > 3) {
+    if ((templateBody.match(/data:image/gi) || []).length > 3) {
       const proceed = window.confirm('Large inline images detected. These increase payload size and may fail in production. Continue anyway?');
       if (!proceed) return;
     }
 
     await createCampaignMutation.mutateAsync(payload);
 
-    toast.success('Draft saved — open the campaign list and click Dispatch Now to send.');
-
-    try {
-      await saveTemplateMutation.mutateAsync({
-        name: `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.html`,
-        ...getTemplateSavePayload(useRawHtml ? content : processedContent),
-      });
-    } catch (templateErr) {
-      console.warn('Template auto-save failed:', templateErr.message);
-    }
+    toast.success(
+      action === 'dispatch'
+        ? 'Campaign created and dispatch started.'
+        : 'Campaign saved as draft. Dispatch from the list when ready.'
+    );
 
     setTitle('');
     setSubject('');
-    setContent('');
+    setSelectedTemplateId('');
+    setVariableMapping({});
+    setPreviewRecipientIndex(0);
     setAttachments([]);
     setSelectedLeadIds([]);
     setCsvRecipients([]);
@@ -833,11 +859,22 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
     setHtmlFileName('');
     setIsCustomHtml(false);
     setUseRawHtml(false);
+    setCampaignStep(1);
     if (standaloneWizard) {
       navigate('/emails');
     } else {
       setMode('campaigns');
     }
+  };
+
+  const canAdvanceFromStep = (step) => {
+    if (step === 1) {
+      return title && subject && isSenderConfigured() && selectedTemplateId;
+    }
+    if (step === 2) {
+      return previewRecipients.length > 0 && audienceHealth.ok;
+    }
+    return true;
   };
 
 
@@ -865,7 +902,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
       render: (row) => (
         <div className="flex items-center gap-4">
           <div className="text-[11px] font-bold">
-            {row.stats?.total || 0} Target
+            {row.recipientCount ?? row.stats?.total ?? 0} Target
           </div>
           <div className="text-[11px] font-bold text-[var(--color-pastel-mint-text)]">
             {row.stats?.sent || 0} Sent
@@ -892,7 +929,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                 onClick={(e) => { e.stopPropagation(); sendCampaignMutation.mutate(row._id); }}
                 disabled={sendCampaignMutation.isPending}
               >
-                <Play size={12} /> Send
+                <Play size={12} /> Dispatch
               </Button>
             )}
             <Button
@@ -953,7 +990,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               size="sm"
               onClick={() => setMode('templates')}
             >
-              <FileCode size={14} /> Manage Templates ({templates.length})
+              <FileCode size={14} /> Template Studio ({templateLibrary.length})
             </Button>
             <Button
               variant={mode === 'analytics' ? 'primary' : 'secondary'}
@@ -1029,12 +1066,11 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
               <Mail size={16} /> Campaign Architect
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {[
-                { step: 1, label: 'Setup' },
-                { step: 2, label: 'Recipients' },
-                { step: 3, label: 'Content' },
-                { step: 4, label: 'Review' },
+                { step: 1, label: 'Strategy' },
+                { step: 2, label: 'Audience & Mapping' },
+                { step: 3, label: 'Pre-flight' },
               ].map(({ step, label }) => {
                 const done = campaignStep > step;
                 const active = campaignStep === step;
@@ -1166,11 +1202,145 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
                   Uses server {senderMode === 'system_resend' ? 'RESEND_API_KEY' : 'SMTP_HOST/USER/PASS'} env vars — not tied to a profile.
                 </div>
               )}
+              <div className="flex flex-wrap items-center gap-2 text-xs pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleIncludeSignatureChange(!includeSignature)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
+                    includeSignature
+                      ? 'bg-[var(--color-action-primary)]/10 border-[var(--color-action-primary)]/40 text-[var(--color-action-primary)]'
+                      : 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/30'
+                  }`}
+                >
+                  {includeSignature ? <Check size={12} /> : <Edit size={12} />}
+                  Signature
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleIncludeUnsubscribeChange(!includeUnsubscribe)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all ${
+                    includeUnsubscribe
+                      ? 'bg-[var(--color-action-primary)]/10 border-[var(--color-action-primary)]/40 text-[var(--color-action-primary)]'
+                      : 'bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)] text-[var(--color-text-muted)] hover:border-[var(--color-action-primary)]/30'
+                  }`}
+                >
+                  {includeUnsubscribe ? <Check size={12} /> : <UserMinus size={12} />}
+                  Unsubscribe
+                </button>
+                <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase tracking-wider hover:border-[var(--color-action-primary)]/30 transition-all">
+                  <Upload size={12} /> Attachments ({attachments.length})
+                  <input type="file" multiple className="hidden" onChange={handleAttachmentUpload} />
+                </label>
+              </div>
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {attachments.map((att, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-[var(--color-bg-secondary)] border px-3 py-1.5 rounded-lg text-[11px] font-mono">
+                      <span>{att.filename}</span>
+                      <button type="button" className="text-rose-500" onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}><X size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="space-y-3 pt-4 border-t border-[var(--color-bg-border)]">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                  <FileCode size={14} /> Approved Template
+                </h4>
+                {approvedTemplates.length === 0 ? (
+                  <div className="p-6 text-center border border-dashed rounded-xl opacity-50">
+                    <p className="text-xs font-bold mb-2">No approved templates yet.</p>
+                    <Button size="sm" onClick={() => setMode('templates')}>Open Template Studio</Button>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedTemplateId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedTemplateId(id);
+                        const t = approvedTemplates.find((x) => String(x._id) === id);
+                        if (t?.subject && !subject) setSubject(t.subject);
+                        setVariableMapping({});
+                      }}
+                      className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-sm outline-none"
+                    >
+                      <option value="">— Select template —</option>
+                      {approvedTemplates.map((t) => (
+                        <option key={t._id} value={t._id}>{t.name}</option>
+                      ))}
+                    </select>
+                    {selectedTemplate && (
+                      <p className="text-[10px] text-[var(--color-text-muted)]">
+                        Required variables: {templateIndices.length ? templateIndices.map((i) => `{${i}}`).join(', ') : 'none'}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
 
           {campaignStep === 2 && (
             <div className="space-y-6 animate-in fade-in">
+              {selectedTemplate && templateIndices.length > 0 && (
+                <div className="space-y-3 p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                    Map {'{n}'} variables to columns
+                  </h4>
+                  {previewRecipients.length === 0 ? (
+                    <p className="text-xs text-amber-500">Load audience below before mapping.</p>
+                  ) : (
+                    <table className="w-full text-xs border border-[var(--color-bg-border)] rounded-xl overflow-hidden">
+                      <thead className="bg-[var(--color-bg-primary)]">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-bold uppercase text-[10px]">Variable</th>
+                          <th className="px-3 py-2 text-left font-bold uppercase text-[10px]">Column</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templateIndices.map((idx) => (
+                          <tr key={idx} className="border-t border-[var(--color-bg-border)]">
+                            <td className="px-3 py-2 font-mono font-bold">{`{${idx}}`}</td>
+                            <td className="px-3 py-2">
+                              <select
+                                value={variableMapping[idx] || variableMapping[String(idx)] || ''}
+                                onChange={(e) => setVariableMapping((prev) => ({ ...prev, [idx]: e.target.value }))}
+                                className="w-full px-2 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg outline-none"
+                              >
+                                <option value="">— Select column —</option>
+                                {availableColumns.map((col) => (
+                                  <option key={col} value={col}>{col}</option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+              <div className={`p-4 rounded-xl border ${audienceHealth.ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/40 bg-amber-500/10'}`}>
+                <h4 className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                  <AlertCircle size={14} /> Audience Health Check
+                </h4>
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase mb-2">
+                  <div className="p-2 rounded-lg bg-[var(--color-bg-primary)]">Total {previewRecipients.length}</div>
+                  <div className="p-2 rounded-lg bg-[var(--color-bg-primary)]">Valid {audienceHealth.validCount}</div>
+                  <div className="p-2 rounded-lg bg-[var(--color-bg-primary)]">Issues {audienceHealth.issues.length}</div>
+                </div>
+                {audienceHealth.issues.length === 0 ? (
+                  <p className="text-xs text-emerald-600">Ready to proceed — mapping and audience look good.</p>
+                ) : (
+                  <ul className="text-xs space-y-1">
+                    {audienceHealth.issues.map((issue, i) => (
+                      <li key={i} className={issue.severity === 'error' ? 'text-rose-500' : 'text-amber-600'}>
+                        {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <h4 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
                 <Users size={14} /> Target Audience ({selectedLeadIds.length + activeCsvRecipients.length} Selected)
               </h4>
@@ -1408,320 +1578,120 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
           )}
 
           {campaignStep === 3 && (
-            <div className="space-y-2 animate-in fade-in">
-              <div className="flex items-center justify-between gap-3">
-                <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={useRawHtml}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setUseRawHtml(checked);
-                      setIsCustomHtml(checked);
-                      if (checked) {
-                        setContent((prev) => {
-                          let next = prev;
-                          if (includeUnsubscribe) next = syncUnsubscribeInContent(next, true);
-                          if (includeSignature) next = applySignatureToContent(next);
-                          return next;
-                        });
-                      }
-                    }}
-                    className="w-4 h-4 rounded cursor-pointer"
-                  />
-                  Raw HTML Mode
-                </label>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button size="xs" variant="secondary" onClick={insertFirstnameVariable}>
-                    <Plus size={12} /> Insert {'{{firstname}}'}
-                  </Button>
-
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in">
+              <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
+                  <CheckCircle2 size={14} /> Review
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                    <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Title</span>
+                    {title || '—'}
+                  </div>
+                  <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                    <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Subject</span>
+                    {subject || '—'}
+                  </div>
+                  <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                    <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Valid recipients</span>
+                    {audienceHealth.validCount}
+                  </div>
+                  <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
+                    <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Template</span>
+                    {selectedTemplate?.name || '—'}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
-                    <Eye size={12} /> Preview
-                  </Button>
-                  {!useRawHtml && (
-                    <>
-                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
-                        <Upload size={12} /> {htmlFileName ? htmlFileName : 'Upload HTML File'}
-                        <input type="file" accept=".html,.htm" className="hidden" onChange={handleHtmlUpload} />
-                      </label>
-                      <Button
-                        size="xs"
-                        variant="secondary"
-                        onClick={() => setShowHtmlPasteModal(true)}
-                      >
-                        <Upload size={12} /> Paste HTML
-                      </Button>
-                    </>
-                  )}
-                  <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] font-black uppercase hover:border-[var(--color-action-primary)] transition-all">
-                    <Upload size={12} /> Attachments ({attachments.length})
-                    <input type="file" multiple className="hidden" onChange={handleAttachmentUpload} />
-                  </label>
-                  {templates.length > 0 && !useRawHtml && (
-                    <select
-                      className="bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] rounded-lg px-3 py-1 text-[10px] font-black uppercase outline-none"
-                      onChange={(e) => {
-                        const t = templates.find(temp => temp._id === e.target.value);
-                        if (t) {
-                          setContent(t.content);
-                          e.target.value = '';
+                {!audienceHealth.ok && (
+                  <p className="text-xs text-rose-500">Fix health check issues before sending.</p>
+                )}
+                {templateIndices.length > 0 && (
+                  <div className="p-3 bg-[var(--color-bg-secondary)] rounded-xl border text-[10px] font-mono space-y-1">
+                    {templateIndices.map((idx) => (
+                      <div key={idx}>{`{${idx}}`} → {variableMapping[idx] || '—'}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Test send</label>
+                  <div className="flex gap-2">
+                    <Input type="email" placeholder="Test email" value={testCampaignEmail} onChange={(e) => setTestCampaignEmail(e.target.value)} className="flex-1" />
+                    <Button
+                      size="md"
+                      variant="secondary"
+                      onClick={async () => {
+                        if (!testCampaignEmail) { toast.warn('Enter test email'); return; }
+                        if (!selectedTemplate) { toast.warn('Select a template'); return; }
+                        if (senderMode === 'single' && !senderProfileId) {
+                          toast.warn('Select sender in Setup step.');
+                          return;
+                        }
+                        try {
+                          await axios.post('/api/mail/test-campaign', {
+                            subject,
+                            content: templateBody,
+                            testEmail: testCampaignEmail,
+                            senderProfileId: senderProfileId || senderProfileIds[0] || undefined,
+                            senderProfileIds: senderMode === 'pool' ? senderProfileIds : [],
+                            senderMode,
+                            includeSignature,
+                            removeUnsubscribe: !includeUnsubscribe,
+                            variableMapping,
+                            sampleRecipient: activePreviewRecipient,
+                          });
+                          toast.success(`Test email sent to ${testCampaignEmail}`);
+                        } catch (e) {
+                          toast.error('Failed to send test: ' + (e.response?.data?.error || e.message));
                         }
                       }}
                     >
-                      <option value="">Load Template...</option>
-                      {templates.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                    </select>
-                  )}
-                  <Button size="xs" variant="primary" onClick={() => {
-                    const name = window.prompt('Enter a name for this template:');
-                    if (name) {
-                      saveTemplateMutation.mutate({ name, ...getTemplateSavePayload(content) });
-                      toast.success('Template saved');
-                    }
-                  }}>
-                    <Save size={12} /> Save
-                  </Button>
-                </div>
-              </div>
-
-              {detectedVariables.length > 0 && (
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg space-y-2">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-xs text-yellow-600 flex-1">
-                      <p className="font-bold mb-1">Personalization Variables</p>
-                      <p className="text-[10px]">First name pulled from HolySheet / CRM / CSV name column. Click a variable to set fallback.</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {detectedVariables.map((v) => (
-                      <button
-                        key={v.key}
-                        type="button"
-                        onClick={() => handleVariableClick(v.key, v.fallback)}
-                        className={`px-3 py-1.5 rounded-lg border text-[10px] font-mono font-bold uppercase transition-all ${v.hasFallback
-                            ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-700'
-                            : 'bg-yellow-500/30 border-yellow-500 animate-pulse text-yellow-800'
-                          }`}
-                      >
-                        {`{{${v.key}${v.hasFallback ? `|${v.fallback}` : ''}}}`}
-                        {!v.hasFallback && ' — click to set fallback'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-
-
-              {useRawHtml ? (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                      <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
-                      Include signature in HTML
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-                      <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
-                      Include unsubscribe in HTML
-                    </label>
-                    {includeSignature && profiles.length > 0 && (
-                      <select
-                        value={signatureProfileId || senderProfileId || profiles[0]?._id || ''}
-                        onChange={(e) => handleSignatureProfileChange(e.target.value)}
-                        className="px-2 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-lg text-[10px] outline-none"
-                      >
-                        {profiles.map((p) => (
-                          <option key={p._id} value={p._id}>Signature: {p.name}</option>
-                        ))}
-                      </select>
-                    )}
-                    {includeSignature && !activeProfileSignature && (
-                      <span className="text-[9px] text-[var(--color-text-muted)]">No signature on selected profile</span>
-                    )}
-                    <span className="hidden sm:inline text-[var(--color-bg-border)]">|</span>
-                    <Button size="xs" variant="secondary" onClick={() => setShowHtmlPasteModal(true)}>
-                      <Upload size={12} /> Paste HTML
+                      <Send size={12} /> Send Test
                     </Button>
-                    {templates.filter((t) => t.format === 'rawHtml' || /\.html$/i.test(t.name || '')).length > 0 && (
-                      <select
-                        className="bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-primary)] rounded-lg px-3 py-1 text-[10px] font-black uppercase outline-none"
-                        defaultValue=""
-                        onChange={(e) => {
-                          const t = templates.find((temp) => temp._id === e.target.value);
-                          if (t) {
-                            let next = t.content || '';
-                            if (includeUnsubscribe) next = syncUnsubscribeInContent(next, true);
-                            if (includeSignature) next = applySignatureToContent(next);
-                            setContent(next);
-                            setUseRawHtml(true);
-                            e.target.value = '';
-                          }
-                        }}
+                  </div>
+                </div>
+              </div>
+              <div className="lg:sticky lg:top-4 lg:self-start space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">Inbox preview (server-rendered)</p>
+                  {previewRecipients.length > 1 && (
+                    <div className="flex gap-1">
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        disabled={previewRecipientIndex <= 0}
+                        onClick={() => setPreviewRecipientIndex((i) => Math.max(0, i - 1))}
                       >
-                        <option value="">Load Raw Template...</option>
-                        {templates
-                          .filter((t) => t.format === 'rawHtml' || /\.html$/i.test(t.name || ''))
-                          .map((t) => (
-                            <option key={t._id} value={t._id}>{t.name}</option>
-                          ))}
-                      </select>
-                    )}
-                    <span className="w-full sm:w-auto text-[9px] text-[var(--color-text-muted)]">
-                      When checked, the app injects signature and unsubscribe blocks into your HTML.
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <textarea
-                      className="w-full h-[400px] px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-mono outline-none resize-none"
-                      value={content}
-                      onChange={e => handleRawHtmlChange(e.target.value)}
-                      placeholder="Paste or edit raw HTML. When signature/unsubscribe are checked, the app injects those blocks automatically."
-                    />
-
-
-                    <div className={`bg-white overflow-auto ${previewMode === 'mobile' ? 'max-w-md mx-auto' : ''}`} style={{ height: '400px' }}>
-                      <iframe
-                        srcDoc={contentForPreview}
-                        className="w-full h-full border-none"
-                        title="Email Preview"
-                        sandbox="allow-same-origin"
-                      />
-
+                        Prev
+                      </Button>
+                      <span className="text-[10px] font-mono self-center">
+                        {previewRecipientIndex + 1} / {previewRecipients.length}
+                      </span>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        disabled={previewRecipientIndex >= previewRecipients.length - 1}
+                        onClick={() => setPreviewRecipientIndex((i) => Math.min(previewRecipients.length - 1, i + 1))}
+                      >
+                        Next
+                      </Button>
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="rounded-lg overflow-hidden border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]">
-                    <div className="px-3 py-2 border-b border-[var(--color-bg-border)] flex items-center gap-4 text-xs text-[var(--color-text-primary)]">
-                      <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)]">
-                        <input type="checkbox" checked={includeSignature} onChange={e => handleIncludeSignatureChange(e.target.checked)} />
-                        Include profile signature
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)]">
-                        <input type="checkbox" checked={includeUnsubscribe} onChange={e => handleIncludeUnsubscribeChange(e.target.checked)} />
-                        Include unsubscribe footer
-                      </label>
-                    </div>
-                    <ReactQuill theme="snow" value={content} onChange={handleQuillContentChange} className="h-[400px] mb-12" />
-                  </div>
-                </>
-              )}
-
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {attachments.map((att, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] px-3 py-1.5 rounded-lg text-[11px] font-mono">
-                      <span>{att.filename}</span>
-                      <button type="button" className="text-rose-500 hover:text-rose-400" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}><X size={12} /></button>
-                    </div>
-                  ))}
+                  )}
                 </div>
-              )}
-
-              <div className="flex items-center gap-2 mt-4 text-xs text-[var(--color-text-muted)]">
-                <span>Unsubscribe link points to <code className="font-mono text-[10px]">/unsubscribe</code> — recipients enter their email on that page.</span>
-              </div>
-
-              <div className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">Test Campaign</label>
-                  <span className="text-[9px] text-[var(--color-text-muted)]">Send preview to test email</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="email"
-                    placeholder="Test email address"
-                    value={testCampaignEmail}
-                    onChange={e => setTestCampaignEmail(e.target.value)}
-                    className="flex-1"
+                <p className="text-[10px] text-[var(--color-text-muted)] font-mono truncate">
+                  {activePreviewRecipient?.email || 'Select audience'}
+                </p>
+                <div className="bg-white rounded-lg border overflow-hidden relative" style={{ height: '420px' }}>
+                  {previewLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-xs font-bold z-10">
+                      Rendering…
+                    </div>
+                  )}
+                  <iframe
+                    srcDoc={emailPreviewSrcDoc || '<p style="padding:16px">Select template and audience</p>'}
+                    className="w-full h-full border-none"
+                    title="Campaign preview"
+                    sandbox="allow-same-origin"
                   />
-                  <Button
-                    size="md"
-                    variant="secondary"
-                    onClick={async () => {
-                      if (!testCampaignEmail) {
-                        toast.warn('Enter test email');
-                        return;
-                      }
-                      if (senderMode === 'single' && !senderProfileId) {
-                        toast.warn('Select a sender profile, or switch to System Resend / System SMTP in Step 1.');
-                        return;
-                      }
-                      try {
-                        await axios.post('/api/mail/test-campaign', {
-                          subject,
-                          content: buildEditorContent(content),
-                          testEmail: testCampaignEmail,
-                          senderProfileId: senderProfileId || senderProfileIds[0] || undefined,
-                          senderProfileIds: senderMode === 'pool' ? senderProfileIds : [],
-                          senderMode,
-                          includeSignature
-                        });
-                        toast.success(`Test email sent to ${testCampaignEmail}`);
-                      } catch (e) {
-                        toast.error('Failed to send test: ' + (e.response?.data?.error || e.message));
-                      }
-                    }}
-                  >
-                    <Send size={12} /> Send Test
-                  </Button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {campaignStep === 4 && (
-            <div className="space-y-6 animate-in fade-in">
-              <h4 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                <CheckCircle2 size={14} /> Review & Send
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-sm font-mono">
-                <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Campaign Title</span>
-                  {title || '—'}
-                </div>
-                <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Subject</span>
-                  {subject || '—'}
-                </div>
-                <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Total Recipients</span>
-                  {selectedLeadIds.length + activeCsvRecipients.length}
-                </div>
-                <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block mb-1">Attachments</span>
-                  {attachments.length} files
-                </div>
-              </div>
-              <div className="p-4 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-bg-border)]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase text-[var(--color-text-muted)] block">
-                    {isRawHtmlPreview ? 'Content Preview (Raw HTML)' : 'Content Preview'}
-                  </span>
-                  <Button size="xs" variant="secondary" onClick={() => setShowPreviewModal(true)}>
-                    <Eye size={12} /> Visual Preview
-                  </Button>
-                </div>
-                {isRawHtmlPreview ? (
-                  <div className="border border-[var(--color-bg-border)] rounded-lg overflow-hidden bg-white" style={{ height: '320px' }}>
-                    <iframe
-                      srcDoc={content}
-                      className="w-full h-full border-none"
-                      title="Email Preview"
-                      sandbox="allow-same-origin"
-                    />
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-[var(--color-text-secondary)] whitespace-pre-wrap max-h-40 overflow-y-auto">
-                    {content.substring(0, 500)}{content.length > 500 ? '...' : ''}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1736,21 +1706,35 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               {campaignStep === 1 ? 'Cancel' : 'Back'}
             </Button>
 
-            {campaignStep < 4 ? (
-              <Button onClick={() => setCampaignStep(campaignStep + 1)}>
+            {campaignStep < 3 ? (
+              <Button
+                onClick={() => {
+                  if (!canAdvanceFromStep(campaignStep)) {
+                    if (campaignStep === 1) toast.warn('Complete title, subject, sender, and template.');
+                    else toast.warn('Add audience and fix health check issues.');
+                    return;
+                  }
+                  setCampaignStep(campaignStep + 1);
+                }}
+              >
                 Next Step
               </Button>
             ) : (
-              <Button
-                onClick={() => {
-                  handleCreateCampaign();
-                  setCampaignStep(1);
-                  setIsCustomHtml(false);
-                }}
-                disabled={createCampaignMutation.isPending || (!title || !subject || !content || !isSenderConfigured() || (selectedLeadIds.length === 0 && activeCsvRecipients.length === 0))}
-              >
-                <Play size={14} /> Save as Draft
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => handleCreateCampaign('save_draft')}
+                  disabled={createCampaignMutation.isPending || !audienceHealth.ok}
+                >
+                  <Save size={14} /> Save Draft
+                </Button>
+                <Button
+                  onClick={() => handleCreateCampaign('dispatch')}
+                  disabled={createCampaignMutation.isPending || !audienceHealth.ok}
+                >
+                  <Play size={14} /> Dispatch Now
+                </Button>
+              </div>
             )}
           </div>
         </Card>
@@ -2026,64 +2010,15 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
 
       {/* Mode: Templates */}
       {mode === 'templates' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--color-action-primary)] flex items-center gap-2">
-                <FileCode size={16} /> Manage Saved Templates
-              </h3>
-            </div>
-
-            <div className="space-y-3">
-              {templates.map(t => (
-                <Card key={t._id} className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-xs tracking-tight block">{t.name}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-mono uppercase">Created: {format(new Date(t.createdAt), 'MMM dd')}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setMode('new_campaign');
-                        setContent(t.content);
-                        setUseRawHtml(t.format === 'rawHtml' || /\.html$/i.test(t.name || ''));
-                        setIsCustomHtml(t.format === 'rawHtml');
-                        setCampaignStep(3);
-                      }}
-                    >
-                      <Play size={14} /> Use Template
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-rose-500 hover:bg-rose-500/10"
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: 'Delete template?',
-                          message: `Permanently remove "${t.name}"? Existing campaigns are not affected.`,
-                          confirmLabel: 'Delete',
-                          type: 'danger',
-                        });
-                        if (ok) deleteTemplateMutation.mutate(t._id);
-                      }}
-                      disabled={deleteTemplateMutation.isPending}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-              {templates.length === 0 && (
-                <div className="p-12 text-center opacity-30 border border-dashed border-[var(--color-bg-border)] rounded-2xl">
-                  <FileCode size={32} className="mx-auto mb-2" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">No Templates Saved</p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
+        <MailTemplateStudio
+          onUseInCampaign={(t) => {
+            setMode('new_campaign');
+            setSelectedTemplateId(t._id);
+            if (t.subject) setSubject(t.subject);
+            setVariableMapping({});
+            setCampaignStep(3);
+          }}
+        />
       )}
 
       {/* Mode: CSV Import */}
@@ -2204,7 +2139,7 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
               <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                <StatCard label="Total Target" value={selectedCampaign.stats?.total || 0} icon={Users} variant="slate" />
+                <StatCard label="Total Target" value={selectedCampaign.recipientCount ?? selectedCampaign.stats?.total ?? 0} icon={Users} variant="slate" />
                 <StatCard label="Sent Success" value={selectedCampaign.stats?.sent || 0} icon={Send} variant="mint" />
                 <StatCard label="Opened" value={selectedCampaign.stats?.opened || 0} icon={CheckCircle2} variant="info" />
                 <StatCard label="Clicked" value={selectedCampaign.stats?.clicked || 0} icon={Play} variant="apricot" />

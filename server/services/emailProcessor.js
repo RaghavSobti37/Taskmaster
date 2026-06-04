@@ -1,7 +1,5 @@
 const logger = require('../utils/logger');
-const { prepareCampaignHTML } = require('../utils/emailTracker');
-const { appendSignatureIfMissing } = require('../utils/emailSignature');
-const { applyMergeTags, buildRecipientValues } = require('../utils/mergeTags');
+const { buildFinalEmailHtml, personalizeEmailContent } = require('../utils/buildFinalEmailHtml');
 const { stripUnsubscribe } = require('../utils/emailContentUtils');
 const { incrementProfileSendCount, incrementProviderSendCount, resolvePoolProfile, resolveRotationProvider, usesSmtpRotation, getProfileRotationProviders } = require('./profileSendStats');
 const { SMTP_PRESETS } = require('../utils/smtpPresets');
@@ -13,16 +11,6 @@ const path = require('path');
 
 const { resolveTrackingApiBaseUrl } = require('../utils/trackingUrls');
 const resolveTrackingBaseUrl = () => resolveTrackingApiBaseUrl();
-
-/** Per-campaign base HTML (signature/unsubscribe) — merge tags applied per recipient. */
-const campaignHtmlCache = new Map();
-
-const clearCampaignHtmlCache = (campaignId) => {
-  const prefix = `${campaignId}:`;
-  for (const key of campaignHtmlCache.keys()) {
-    if (key.startsWith(prefix)) campaignHtmlCache.delete(key);
-  }
-};
 
 const updateRecipientFields = async (Model, campaignId, recipientId, fields, inc = null) => {
   const $set = {};
@@ -222,7 +210,6 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
       const isDone = freshCamp.recipients.every((r) => r.status !== 'Pending' && r.status !== 'Queued');
       if (isDone && freshCamp.status !== 'Stopped') {
         await Model.findByIdAndUpdate(campaignId, { $set: { status: 'Completed' } });
-        clearCampaignHtmlCache(campaignId);
       }
     }
   };
@@ -313,36 +300,38 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   const baseUrl = resolveTrackingBaseUrl();
 
   const recipient = getRecipient();
-  const shouldIncludeSignature = campaign.includeSignature !== false;
-
-  const cacheKey = `${campaign._id}:${content || campaign.content || ''}:${campaign.removeUnsubscribe}:${shouldIncludeSignature}:${profile.signature || ''}`;
-  let baseHtml = campaignHtmlCache.get(cacheKey);
-  if (!baseHtml) {
-    baseHtml = content || campaign.content || '';
-    if (campaign.removeUnsubscribe) {
-      baseHtml = stripUnsubscribe(baseHtml);
-    }
-    if (shouldIncludeSignature && profile.signature) {
-      baseHtml = appendSignatureIfMissing(baseHtml, profile.signature);
-    }
-    campaignHtmlCache.set(cacheKey, baseHtml);
+  const shouldIncludeSignature = campaign.includeSignature === true;
+  let baseHtml = content || campaign.content || '';
+  if (campaign.removeUnsubscribe) {
+    baseHtml = stripUnsubscribe(baseHtml);
   }
 
-  const mergeValues = buildRecipientValues(recipient, leadDoc);
+  const variableMapping = campaign.variableMapping instanceof Map
+    ? Object.fromEntries(campaign.variableMapping.entries())
+    : (campaign.variableMapping || {});
   const fallbacks = campaign.variableFallbacks instanceof Map
     ? Object.fromEntries(campaign.variableFallbacks.entries())
     : (campaign.variableFallbacks || {});
-  const htmlContent = applyMergeTags(baseHtml, mergeValues, fallbacks);
 
-  const mergedSubject = applyMergeTags(subject || campaign.subject || campaign.title, mergeValues, fallbacks);
+  const { html: htmlContent, subject: mergedSubject } = personalizeEmailContent({
+    html: baseHtml,
+    subject: subject || campaign.subject || campaign.title,
+    recipient,
+    leadDoc,
+    variableMapping,
+    variableFallbacks: fallbacks,
+  });
 
-  const { processedHtml } = await prepareCampaignHTML(
-    htmlContent,
-    campaign.campaignId || campaign._id.toString(),
-    email,
-    baseUrl,
-    { skipAutoFooter: campaign.removeUnsubscribe === true }
-  );
+  const processedHtml = await buildFinalEmailHtml({
+    html: htmlContent,
+    includeSignature: shouldIncludeSignature,
+    signature: profile.signature || '',
+    mode: 'live',
+    campaignId: campaign.campaignId || campaign._id.toString(),
+    leadEmail: email,
+    trackingBaseUrl: baseUrl,
+    removeUnsubscribe: campaign.removeUnsubscribe === true,
+  });
 
   const senderFrom = `"${profile.name}" <${profile.email}>`;
   const mailSubject = mergedSubject;
@@ -371,6 +360,13 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
     messageIdStr = resp?.id || resp?.data?.id || messageIdStr;
     return true;
   };
+
+  const sendRecipient = getRecipient();
+  if (sendRecipient?.status === 'Sent') {
+    logger.info('Email Processor', `Skip duplicate send — already Sent: ${email}`);
+    await checkCompletion();
+    return;
+  }
 
   try {
     const preSendCamp = await Model.findById(campaignId).select('status').lean();

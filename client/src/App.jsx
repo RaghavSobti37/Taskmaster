@@ -3,38 +3,6 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import AppBootFallback from './components/AppBootFallback';
-import {
-  slugId,
-  parseErrorPayload,
-  shouldShowApiSuccessToast,
-  shouldShowApiErrorToast,
-} from './lib/notifications';
-import { emitSystemEvent, getClientTraceId, startClientTrace } from './lib/systemLogBridge';
-import { inferModuleFromRoute, SEVERITY } from './lib/systemLogContract';
-import axios from 'axios';
-import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from './utils/projectUtils';
-import { normalizeTasks, normalizeSchedulePayload } from './utils/normalizeTask';
-
-const normalizeProjectsInResponse = (url, data) => {
-  if (data == null) return data;
-  const path = (url || '').split('?')[0];
-  if (path === '/api/projects' || path.endsWith('/api/projects')) {
-    return normalizeProjects(data);
-  }
-  if (/^\/api\/projects\/[^/]+$/.test(path) && data && !Array.isArray(data)) {
-    return normalizeProject(data);
-  }
-  if (path.startsWith('/api/finance') && data?.data) {
-    return { ...data, data: normalizePopulatedProjectList(data.data) };
-  }
-  if (path === '/api/schedule' || path.endsWith('/api/schedule')) {
-    return normalizeSchedulePayload(data);
-  }
-  if (path === '/api/tasks' || path.endsWith('/api/tasks')) {
-    return normalizeTasks(data);
-  }
-  return data;
-};
 
 // Helper to retry dynamic imports when a redeploy changes chunk hashes
 const lazyWithRetry = (componentImport) => 
@@ -91,7 +59,7 @@ const OfficeAssetsPage = lazyWithRetry(() => import('./pages/office/OfficeAssets
 const MetaOAuthCallback = lazyWithRetry(() => import('./pages/auth/MetaOAuthCallback'));
 const PrivacyPolicy = lazyWithRetry(() => import('./pages/legal/PrivacyPolicy'));
 const UserDataDeletion = lazyWithRetry(() => import('./pages/legal/UserDataDeletion'));
-import LandingPage from './pages/LandingPage';
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
 const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
@@ -118,60 +86,11 @@ const LegacyWorkspaceRedirect = () => {
 
 function App() {
   React.useEffect(() => {
-    const reqInterceptor = axios.interceptors.request.use((config) => {
-      if (!config.headers['X-Trace-Id'] && !config.headers['x-trace-id']) {
-        config.headers['X-Trace-Id'] = getClientTraceId();
-      }
-      return config;
+    let teardown;
+    import('./lib/setupAxiosInterceptors').then(({ setupAxiosInterceptors }) => {
+      teardown = setupAxiosInterceptors();
     });
-
-    const resInterceptor = axios.interceptors.response.use(
-      (response) => {
-        if (response.data != null) {
-          response.data = normalizeProjectsInResponse(response.config?.url, response.data);
-        }
-        const method = response.config.method?.toLowerCase();
-        if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiSuccessToast(response)) {
-          const url = (response.config?.url || '').split('?')[0];
-          const message = response.data.message;
-          emitSystemEvent({
-            severity: SEVERITY.SUCCESS,
-            message,
-            module: inferModuleFromRoute(url),
-            id: slugId('api-ok', method, url),
-          });
-        }
-        if (response.data?.traceId) {
-          startClientTrace();
-        }
-        return response;
-      },
-      (error) => {
-        const method = error.config?.method?.toLowerCase();
-        if (['post', 'put', 'patch', 'delete'].includes(method) && shouldShowApiErrorToast(error)) {
-          const url = (error.config?.url || '').split('?')[0];
-          const { title, description, technicalError, errorCode, status, traceId } = parseErrorPayload(error);
-          emitSystemEvent({
-            severity: SEVERITY.ERROR,
-            title,
-            message: title,
-            description,
-            technicalError,
-            errorCode,
-            status,
-            traceId: traceId || error.response?.headers?.['x-trace-id'] || getClientTraceId(),
-            module: inferModuleFromRoute(url),
-            timestamp: error.response?.data?.timestamp || new Date().toISOString(),
-            id: slugId('api-err', method, url),
-          });
-        }
-        return Promise.reject(error);
-      }
-    );
-    return () => {
-      axios.interceptors.request.eject(reqInterceptor);
-      axios.interceptors.response.eject(resInterceptor);
-    };
+    return () => teardown?.();
   }, []);
 
   return (

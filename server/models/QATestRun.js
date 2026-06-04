@@ -160,6 +160,7 @@ const qaTestRunSchema = new mongoose.Schema({
     errors: [String],
   },
   selectedCategories: [String],
+  selectedLighthousePaths: [String],
   lighthouseReport: {
     generatedAt: Date,
     baseUrl: String,

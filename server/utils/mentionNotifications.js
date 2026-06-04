@@ -23,6 +23,20 @@ const resolveMentionedUserIds = async (title, description) => {
   return ids;
 };
 
+/** Resolve user ids for @mentions newly added since previousText. */
+const resolveNewlyMentionedUserIds = async (nextText, previousText = '') => {
+  const labels = labelsAddedSince(nextText, previousText);
+  if (!labels.length) return [];
+
+  const users = await User.find({}).select('name email').lean();
+  const ids = [];
+  for (const label of labels) {
+    const mentioned = resolveUserByLabel(label, users);
+    if (mentioned?._id) ids.push(mentioned._id.toString());
+  }
+  return [...new Set(ids)];
+};
+
 const isMentionOnlyUser = (userId, assigneeIds, mentionedUserIds) => {
   const uid = userId?.toString?.();
   if (!uid || !mentionedUserIds?.has(uid)) return false;
@@ -55,11 +69,16 @@ const buildMentionNotifications = async ({
   const notified = new Set();
   const payloads = [];
 
+  const { isQaProbeActive } = require('./qaProbeContext');
+  const { userMatchesQaExclusion } = require('../../shared/qaExcludedUsers');
+  const qaActive = isQaProbeActive();
+
   for (const label of addedLabels) {
     const mentioned = resolveUserByLabel(label, users);
     if (!mentioned) continue;
 
     const recipientId = mentioned._id.toString();
+    if (qaActive && userMatchesQaExclusion(mentioned)) continue;
     if (recipientId === actorId) continue;
     if (task && skipAssignees && assigneeSet.has(recipientId)) continue;
     if (notified.has(recipientId)) continue;
@@ -106,5 +125,6 @@ module.exports = {
   buildMentionNotifications,
   labelsAddedSince,
   resolveMentionedUserIds,
+  resolveNewlyMentionedUserIds,
   isMentionOnlyUser,
 };

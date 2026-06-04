@@ -214,7 +214,8 @@ exports.getTasks = async (req, res, next) => {
 
         queryFilter.$or = [
           { createdBy: req.user._id },
-          { _id: { $in: taskIds } }
+          { _id: { $in: taskIds } },
+          { mentionAccessIds: req.user._id },
         ];
       }
     }
@@ -353,16 +354,19 @@ exports.postTaskActivity = async (req, res, next) => {
     }
 
     let activity;
-    let mentionPayloads = [];
+    let notificationPayloads = [];
 
     await withTransactionRetry(session, async () => {
       const TaskActivityService = require('../services/TaskActivityService');
       const result = await TaskActivityService.postMessage(req.params.id, req.user, body, session);
       activity = result.activity;
-      mentionPayloads = result.mentionPayloads || [];
+      notificationPayloads = [
+        ...(result.mentionPayloads || []),
+        ...(result.assignNotifications || []),
+      ];
     });
 
-    dispatchTaskNotifications(mentionPayloads);
+    dispatchTaskNotifications(notificationPayloads);
     broadcastRealtimeEvent('tasks', 'task_activity', { taskId: req.params.id });
     res.status(201).json(activity);
   } catch (error) {

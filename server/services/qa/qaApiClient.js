@@ -105,8 +105,8 @@ async function request(def, { method, url, data, headers, user, skipAuth = false
   const fullUrl = url.startsWith('http') ? url : `${base}${url}`;
   const httpMethod = (method || 'GET').toUpperCase();
   const h = skipAuth
-    ? { 'Content-Type': 'application/json', ...headers }
-    : { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...headers };
+    ? { 'Content-Type': 'application/json', ...(headers || {}) }
+    : { ...authHeaders(user || (await resolveTestUsers()).anyUser), ...(headers || {}) };
   if (def.category === 'business-logic' || def.category === 'permission') {
     h['x-qa-integration-probe'] = 'true';
   }

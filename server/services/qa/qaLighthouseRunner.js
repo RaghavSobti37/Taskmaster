@@ -78,27 +78,54 @@ async function loadLhEnv() {
   }
 }
 
-async function loginCookie() {
-  if (process.env.LH_COOKIE?.trim()) return process.env.LH_COOKIE.trim();
-  const email = process.env.LH_EMAIL;
-  const password = process.env.LH_PASSWORD;
-  const apiUrl = (process.env.LH_API_URL || process.env.API_URL || 'http://localhost:5000').replace(/\/$/, '');
-  if (!email || !password) return null;
-
-  const res = await fetch(`${apiUrl}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error(`Lighthouse login failed (${res.status})`);
-
+function extractSetCookieHeader(res) {
   const cookies = typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
   if (cookies.length === 0) {
     const single = res.headers.get('set-cookie');
     if (single) cookies.push(single);
   }
-  if (!cookies.length) throw new Error('Lighthouse login: no Set-Cookie');
   return cookies.map((c) => c.split(';')[0].trim()).filter(Boolean).join('; ');
+}
+
+async function qaAdminCookieHeader() {
+  try {
+    const jwt = require('jsonwebtoken');
+    const { resolveTestUsers } = require('./qaApiClient');
+    const { COOKIE_NAME } = require('../../utils/authCookie');
+    const { adminUser } = await resolveTestUsers();
+    if (!adminUser?._id) return null;
+    const token = jwt.sign({ id: adminUser._id }, process.env.JWT_SECRET || 'secret');
+    return `${COOKIE_NAME}=${token}`;
+  } catch {
+    return null;
+  }
+}
+
+async function loginCookie() {
+  if (process.env.LH_COOKIE?.trim()) return process.env.LH_COOKIE.trim();
+  const email = process.env.LH_EMAIL;
+  const password = process.env.LH_PASSWORD;
+  const apiUrl = (process.env.LH_API_URL || process.env.API_URL || 'http://localhost:5000').replace(/\/$/, '');
+
+  if (email && password) {
+    const res = await fetch(`${apiUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.ok) {
+      const header = extractSetCookieHeader(res);
+      if (header) return header;
+    }
+  }
+
+  const qaCookie = await qaAdminCookieHeader();
+  if (qaCookie) return qaCookie;
+
+  if (email && password) {
+    throw new Error('Lighthouse login failed (401) — check LH_EMAIL/LH_PASSWORD or seed admin in DB');
+  }
+  return null;
 }
 
 async function loadLighthouseModules() {

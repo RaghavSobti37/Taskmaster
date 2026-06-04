@@ -137,7 +137,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 * **Route-level Lighthouse runner:** `client/scripts/lighthouse-audit.mjs` audits 45 app routes (public + authenticated), writes HTML/JSON reports to `client/lighthouse-reports/` (gitignored). Scripts: `npm run lighthouse`, `lighthouse:public`, `lighthouse:prod`.
 * **Prod benchmark workflow:** `npm run build && npm run preview` then `LH_BASE_URL=http://localhost:4173 npm run lighthouse -- --prod` — dev `:5173` scores are not representative (unminified ESM, HMR).
-* **Auth for protected routes:** set `LH_EMAIL` / `LH_PASSWORD` (or `LH_COOKIE`); script fails fast if login fails. Dev login rate limit raised to 100 attempts per 15 min (production stays 10).
+* **Auth for protected routes:** set `LH_EMAIL` / `LH_PASSWORD` (or `LH_COOKIE`); QA Lighthouse runner falls back to admin JWT cookie when env login fails. Login rate limit: **10 attempts / 15 min** (all environments).
 * **Boot path:** Removed global auth skeleton gate in `App.jsx`; `AppBootFallback` + lazy `MainLayout`; deferred PWA service worker registration and gamification socket via `requestIdleCallback`.
 * **UI barrel split:** Heavy chart/modal exports moved to `components/ui/charts.jsx` and `modals.jsx`; list pages use direct imports to avoid pulling Recharts on every route.
 * **Dashboard:** Per-widget code splitting (`dashboardWidgetLoaders.js`), two-phase widget mount (priority → idle secondary → analytics/recharts), no preset skeleton block, stable widget min-heights for CLS, deferred `AttendancePromptModal` and `TaskCompletionModal`.
@@ -733,9 +733,18 @@ Deploy API + client together so activity routes and modal components stay in syn
 - **Barrel split:** `charts.jsx`, `modals.jsx`; direct imports on list pages (todo, inbox, schedule, equipment, contacts, DataHub).
 - **Dashboard:** `dashboardWidgetLoaders.js`, `DashboardWidgetSkeleton.jsx`, phased widget mount, CLS-stable review queue + pin board, deferred attendance prompt modal.
 - **Queries:** `useProjects` / `useWorkspaces` accept `enabled`; dashboard secondary queries staggered after summary.
-- **Auth dev UX:** `authRoutes.js` login limiter `max: 100` in non-production.
+- **Auth:** `authRoutes.js` login limiter `max: 10` (all environments).
 
 No server migration required. Redeploy client static host after merge; optional Render API redeploy for auth rate-limit tweak only.
+
+### v1.9.12 — QA checklist fixes (rate limit, concurrency, probes)
+
+- **Login rate limit:** `authRoutes.js` `authLoginLimiter` `max: 10` everywhere (pre-deploy checklist + 11th-attempt 429 edge probe).
+- **Project updates:** `updateProject` uses optimistic locking on `__v` — concurrent PUTs return **409** instead of silent double-apply (QA bottleneck / concurrency probes).
+- **QA probes:** `skipAuth` for unauthenticated oauth-readiness and login rate-limit tests; forgot-password pre-deploy check uses `pages/auth/*` paths; Lighthouse QA falls back to admin session cookie when `LH_*` login fails.
+- **Password reset routes:** unchanged in `App.jsx` (`/forgot-password`, `/reset-password`); pre-deploy static check path corrected.
+
+Redeploy API for rate limit + project PUT behavior. No DB migration.
 
 ### v1.9.9 — Google OAuth Session Fix & Meta Verification Tooling
 

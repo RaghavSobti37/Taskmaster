@@ -422,11 +422,19 @@ exports.updateProject = async (req, res) => {
       if (req.body.workspace === undefined) {
         return res.status(403).json({ error: 'Not authorized to update this project' });
       }
-      const updated = await Project.findByIdAndUpdate(
-        req.params.id,
-        { workspace: req.body.workspace.toUpperCase().trim() },
+      const expectedVersion =
+        typeof req.body.__v === 'number' ? req.body.__v : project.__v;
+      const updated = await Project.findOneAndUpdate(
+        { _id: req.params.id, __v: expectedVersion },
+        {
+          $set: { workspace: req.body.workspace.toUpperCase().trim() },
+          $inc: { __v: 1 },
+        },
         { new: true, runValidators: true }
       );
+      if (!updated) {
+        return res.status(409).json({ error: 'Version conflict — refresh and retry' });
+      }
       broadcastRealtimeEvent('projects', 'project_change', { projectId: updated._id, action: 'update' });
       return res.json(updated);
     }
@@ -444,7 +452,16 @@ exports.updateProject = async (req, res) => {
       }
     }
 
-    const updated = await Project.findByIdAndUpdate(req.params.id, sanitizedUpdate, { new: true, runValidators: true });
+    const expectedVersion =
+      typeof req.body.__v === 'number' ? req.body.__v : project.__v;
+    const updated = await Project.findOneAndUpdate(
+      { _id: req.params.id, __v: expectedVersion },
+      { $set: sanitizedUpdate, $inc: { __v: 1 } },
+      { new: true, runValidators: true }
+    );
+    if (!updated) {
+      return res.status(409).json({ error: 'Version conflict — refresh and retry' });
+    }
 
     // Handle Event Dispatch for Gamification
     if (sanitizedUpdate.status === 'completed' && project.status !== 'completed') {

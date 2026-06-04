@@ -543,7 +543,7 @@ const PROBE_DEFS = [
       const unauth = await request(this, {
         method: 'GET',
         url: '/api/integrations/oauth-readiness',
-        headers: {},
+        skipAuth: true,
       });
       if (unauth.status !== 401) {
         return probeFail(this, `Unauthenticated expected 401, got ${unauth.status}`, unauth.status);
@@ -599,7 +599,7 @@ const PROBE_DEFS = [
         const res = await request(this, {
           method: 'POST',
           url: '/api/auth/login',
-          headers: {},
+          skipAuth: true,
           data: { email, password: 'WrongPass123!' },
         });
         lastStatus = res.status;

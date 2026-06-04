@@ -198,8 +198,8 @@ async function runSuite4V19Checks() {
       appJsx &&
         appJsx.includes('/forgot-password') &&
         appJsx.includes('/reset-password') &&
-        (await readRepoText('client/src/pages/ForgotPasswordPage.jsx')) &&
-        (await readRepoText('client/src/pages/ResetPasswordPage.jsx'))
+        (await readRepoText('client/src/pages/auth/ForgotPasswordPage.jsx')) &&
+        (await readRepoText('client/src/pages/auth/ResetPasswordPage.jsx'))
         ? 'pass'
         : 'fail',
       'ForgotPasswordPage + ResetPasswordPage mounted in App.jsx',

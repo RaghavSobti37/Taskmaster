@@ -39,7 +39,7 @@ git push --force origin testing   # if applicable
 | 2 | `git filter-branch` | Commit **messages** via `scripts/gitMsgFilter.sh` (`cat \| sed`) |
 | 2 | `git filter-branch` | Author/committer **email & name** via `scripts/gitEnvRedact.sh` |
 | 3 | `git reflog expire` + `git gc` | Drop old objects |
-| 4 | Built-in checks | Fails if `redacted@example.com` or `RaghavSobti37` still appear in history |
+| 4 | Built-in checks | Fails if original personal-email or GitHub-org needles still appear in history |
 
 After `filter-repo`, re-add `origin` if removed:
 
@@ -62,7 +62,7 @@ git remote add origin https://github.com/YOUR_ORG/Taskmaster.git
 
 ## Completed run (Jun 2026)
 
-Repo: [https://github.com/YOUR_ORG/Taskmaster](https://github.com/YOUR_ORG/Taskmaster)
+Repo: `https://github.com/YOUR_ORG/Taskmaster` (force-pushed Jun 2026)
 
 | Phase | Command / artifact |
 |-------|-------------------|

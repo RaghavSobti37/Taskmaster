@@ -25,7 +25,22 @@ const EXT_SCAN = new Set([
 ]);
 
 /** Never commit generated deploy configs with real hosts. */
-const SKIP_FILES = new Set(['vercel.json', 'client/vercel.json']);
+const SKIP_FILES = new Set([
+  'vercel.json',
+  'client/vercel.json',
+  'replacements.txt',
+  'docs/GIT_HISTORY_REDACTION.md',
+  'scripts/auditGitHistoryExposure.js',
+  'scripts/checkCommittedExposure.js',
+  'scripts/runHistoryRedact.sh',
+  'scripts/gitMsgFilter.sh',
+  'scripts/gitEnvRedact.sh',
+  'scripts/gitCommitMessageRedact.py',
+  'scripts/gitEmailRedact.py',
+  'scripts/gitFilterCommitMsg.py',
+  'scripts/gitNameRedact.py',
+  'server/.env.render.example',
+]);
 
 const SKIP_PATH_PREFIXES = ['server/tests/'];
 
@@ -59,7 +74,7 @@ const isPlaceholderUri = (match) =>
   /\.\.\.|user:pass|u:p@|USER:PASS|your_|example|localhost/i.test(match);
 
 const isAllowedRenderHost = (match) =>
-  /YOUR[-_]RENDER|your[-_]render|example\.test|<[^>]+>|CoreKnot-jfw0|coreknot-api/i.test(
+  /YOUR[-_]RENDER|YOUR[-_]SERVICE|your[-_]render|your[-_]service|example\.test|<[^>]+>|CoreKnot-jfw0|coreknot-api/i.test(
     match
   );
 

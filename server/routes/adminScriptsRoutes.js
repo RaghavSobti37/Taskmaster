@@ -3,112 +3,28 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { protect, admin } = require('../middleware/authMiddleware');
+const SCRIPTS_CATALOG = require('../config/adminScriptsCatalog');
 
 const router = express.Router();
 
 const SCRIPTS_DIR = path.join(__dirname, '..', 'scripts');
+const SERVER_ROOT = path.join(__dirname, '..');
 
-const SCRIPT_META = {
-  'importInvoices.js': {
-    title: 'Import Finance Invoices',
-    description: 'Imports finance files from Basecamp folders into UploadThing and Finance documents.',
-  },
-  'deleteFinanceFolders.js': {
-    title: 'Delete Empty Finance Folders',
-    description: 'Deletes specific finance folder records and moves child docs to project root if needed.',
-  },
-  'reorganizeFinanceFolders.js': {
-    title: 'Sync Finance Folder Placement',
-    description: 'Aligns folder placement in database with Downloads disk layout.',
-  },
-  'sync-workspaces-to-prod.js': {
-    title: 'Sync Workspaces To Production',
-    description: 'Copies workspace records from local database to production.',
-  },
-  'migrate-local.js': {
-    title: 'Run Local Migration',
-    description: 'Runs migration logic against local environment.',
-  },
-  'migrate-production.js': {
-    title: 'Run Production Migration',
-    description: 'Runs migration logic intended for production environment.',
-  },
-  'resetAttendance.js': {
-    title: 'Reset Attendance',
-    description: 'Resets attendance data according to attendance script rules.',
-  },
-  'sync-prod-to-local.js': {
-    title: 'Sync Production To Local',
-    description: 'Copies selected production data down to local database.',
-  },
-  'dbPush.js': {
-    title: 'Push DB Fixes',
-    description: 'Connects to production DB and applies cleanup updates.',
-  },
-  'setUserRole.js': {
-    title: 'Set User Role',
-    description: 'Updates a user role from script parameters.',
-  },
-  'migrateArtists.js': {
-    title: 'Migrate Artists',
-    description: 'Runs artist migration and consistency updates.',
-  },
-  'userFlowAudit.js': {
-    title: 'User Flow Audit',
-    description: 'Executes user-flow audit checks and outputs findings.',
-  },
-  'realPerformanceAudit.js': {
-    title: 'Real Performance Audit',
-    description: 'Runs real-world performance diagnostics and report generation.',
-  },
-  'generateAudit.js': {
-    title: 'Generate Audit Report',
-    description: 'Builds audit output from current data state.',
-  },
-  'performanceAudit.js': {
-    title: 'Performance Audit',
-    description: 'Runs performance audit checks on project services.',
-  },
-  'generateER.js': {
-    title: 'Generate ER Diagram Data',
-    description: 'Generates entity relationship references from models/data.',
-  },
-  'extractRefs.js': {
-    title: 'Extract References',
-    description: 'Extracts model and code references for diagnostics.',
-  },
-  'split_holysheet_contacts.js': {
-    title: 'Split Holysheet Contacts',
-    description: 'Splits imported Holysheet contact data into normalized records.',
-  },
-  'runQATests.js': {
-    title: 'Run QA Tests',
-    description: 'Runs script-level QA sanity tests.',
-  },
-  'importBasecampInvoices.js': {
-    title: 'Legacy Basecamp Import',
-    description: 'Legacy importer for Basecamp invoice files.',
-  },
-  'clean_holysheet.js': {
-    title: 'Clean Holysheet Data',
-    description: 'Cleans imported Holysheet rows and formatting.',
-  },
+const formatCommand = (fileName, args = []) => {
+  const tail = args.length ? ` ${args.join(' ')}` : '';
+  return `node scripts/${fileName}${tail}`;
 };
 
-const buildScriptList = () => {
-  if (!fs.existsSync(SCRIPTS_DIR)) return [];
-  const files = fs.readdirSync(SCRIPTS_DIR).filter((f) => f.endsWith('.js'));
-  return files.map((fileName) => {
-    const meta = SCRIPT_META[fileName] || {};
+const buildScriptList = () =>
+  SCRIPTS_CATALOG.map((entry) => {
+    const scriptPath = path.join(SCRIPTS_DIR, entry.fileName);
+    const exists = fs.existsSync(scriptPath);
     return {
-      id: fileName,
-      fileName,
-      title: meta.title || fileName.replace('.js', '').replace(/[-_]/g, ' '),
-      description: meta.description || 'Project script.',
-      command: `node scripts/${fileName}`,
+      ...entry,
+      command: formatCommand(entry.fileName, entry.args || []),
+      missing: !exists,
     };
-  });
-};
+  }).filter((entry) => !entry.missing);
 
 router.use(protect, admin);
 
@@ -133,10 +49,11 @@ router.post('/:scriptId/run', async (req, res) => {
     }
 
     const scriptPath = path.join(SCRIPTS_DIR, selected.fileName);
+    const args = selected.args || [];
     const startedAt = Date.now();
 
-    const child = spawn('node', [scriptPath], {
-      cwd: path.join(__dirname, '..'),
+    const child = spawn('node', [scriptPath, ...args], {
+      cwd: SERVER_ROOT,
       env: process.env,
       windowsHide: true,
     });

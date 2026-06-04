@@ -242,12 +242,26 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Component registry:** `last-backup` admin widget; centralized `VALID_DASHBOARD_COMPONENT_IDS` in `dashboardComponents.js`.
 * **Render cron:** Daily backup job documents required env vars (`MONGODB_URI_PROD`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `BACKUP_FROM_EMAIL`).
 
-### ⏳ Async Loading UX (v1.9.3)
+### ⏳ Loading UX policy (Jun 2026)
 
-* **`DataTable` loading rows:** Passing `isLoading` now renders a centered spinner (desktop table + mobile card stack) instead of a blank body.
-* **Page coverage:** Calendar grid overlay, Emails overview placeholders, Announcements feed/targets, Daily Log list, QA Testing bootstrap, Data Hub people table, Lead Audits, Invoice reimbursements, Settings (attendance, dashboard preset, profile department), Register/Workspace member pickers, Admin Scripts refresh state.
-* **Task modals:** `TaskDetailModal` keeps the modal open until save/delete mutations finish; buttons show pending labels and disable double-submit.
-* **Shared primitives:** Reuse `DataLoading`, `LoadingState`, and `Spinner` from `client/src/components/ui/` for consistent empty vs loading vs ready states.
+* **Spinner-only by default:** Most routes, tables, and panels use `Spinner` / `DataLoading` without visible copy (`showPhrase={false}`).
+* **Phrases kept for:** full-screen boot (`AppBootFallback` — login, auth, Suspense), **dashboard widgets** (`LoadingPhrase` + `DataLoading showPhrase` on todo/leave/reimburse cards), and opt-in **heavy pages** (Finance, Daily Log, QA Testing, Dashboard customization).
+* **Policy file:** `client/src/lib/loadingDisplay.js` — toggle `LOADING_SHOW_PHRASE_*` flags app-wide.
+* **`DataTable` loading rows:** Centered spinner on desktop and mobile (no phrase under the grid).
+
+### PWA & home-screen icons (Jun 2026)
+
+* **Single source:** `client/public/brand-mark.svg` (Harmonic Frequency — white mark on `#126d5e`).
+* **Generated assets:** `npm run generate-icons` (runs on `prebuild`) rasterizes PNGs for favicon, Apple touch (120–180), maskable 512, Windows tile, OG image; syncs `favicon.svg` and `safari-pinned-tab.svg`.
+* **Meta:** `client/index.html` + `manifest.json` + `client/src/constants/brandIcons.js` for notifications and SW.
+* **iOS home screen:** After deploy, remove old shortcut and re-add — Safari caches icons aggressively.
+
+### Admin Script Runner (Jun 2026)
+
+* **Route:** `/admin/scripts` (admin-only) — runs whitelisted maintenance scripts from the API host.
+* **Catalog:** `server/config/adminScriptsCatalog.js` — 31 curated entries (QA, backup, data repair, finance, audits); **not** every file in `server/scripts/`.
+* **Safety tiers:** Safe / Caution / Danger badges in UI; production scripts pass explicit CLI flags (e.g. `syncProdToLocal.js --yes`).
+* **Runbook:** [`docs/SCRIPTS_RUNBOOK.md`](docs/SCRIPTS_RUNBOOK.md) · `npm run sync-db` → `syncProdToLocal.js --yes`
 
 ### Responsive Shell & Attention Signals (v1.9.2)
 
@@ -465,9 +479,13 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 CoreKnot/
 ├── client/                     # Frontend Application Root
 │   ├── public/                 # Static Assets & PWA manifests
-│   │   ├── manifest.json       # PWA configurations & deep link schemes
-│   │   └── icons/              # Responsive multi-device application icons
-│   ├── scripts/                # Frontend automation utilities
+│   │   ├── brand-mark.svg      # Canonical logo (favicon + icon generator source)
+│   │   ├── manifest.json       # PWA manifest (icons auto-updated by generate-icons)
+│   │   └── icons/              # Raster PWA / Apple / OG assets (from brand-mark.svg)
+│   ├── scripts/
+│   │   └── generate-pwa-icons.mjs
+│   ├── src/constants/brandIcons.js
+│   ├── src/lib/loadingDisplay.js
 │   └── src/
 │       ├── components/
 │       │   ├── dataHub/        # Data Hub folder sidebar, stats, person detail, analytics, TSC import
@@ -479,7 +497,9 @@ CoreKnot/
 │       ├── contexts/           # Global State Hubs (Auth, Theme, Socket, Toasts)
 │       └── sw.js               # Service Worker utilizing injectManifest compilation
 ├── server/                     # Backend API Application Root
-│   ├── config/                 # Database URI resolution & dev/prod safety guards
+│   ├── config/
+│   │   ├── database.js         # URI resolution & dev/prod safety guards
+│   │   └── adminScriptsCatalog.js  # Admin Script Runner whitelist
 │   ├── routes/                 # Explicitly mapped REST routing topologies
 │   ├── controllers/            # Pure business logic controllers
 │   ├── models/                 # Mongoose schema primitives and indexes

@@ -10,7 +10,7 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 |---------|--------|--------|-------|
 | `preflight` | `preflightEnv.js` | 🟢 | Env check before dev |
 | `test` | Jest | 🟢 | CI gate |
-| `sync-db` | `sync-prod-to-local.js` | 🟡 | Pull prod → local DB |
+| `sync-db` | `syncProdToLocal.js --yes` | 🔴 | Pull prod → local DB (replaces local) |
 | `backup:daily` | `runDailyBackup.js` | 🟡 | GridFS backup (also Render cron) |
 | `repair:lead-phones` | `repairCorruptPhones.js` | 🟡 | Idempotent phone repair |
 | `repair:phones:prod` | same `--prod` | 🔴 | Production repair |
@@ -72,7 +72,7 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | `repairCorruptPhones.js` | 🟡/🔴 | Phone dedup (`--local` / `--prod`) |
 | `auditLeadPhones.js` / `scanCorruptPhones.js` | 🟢 | Read-only phone audit |
 | `normalizePersonData.js` | 🟡/🔴 | Person normalization |
-| `sync-prod-to-local.js` | 🟡 | DB sync (`npm run sync-db`) |
+| `syncProdToLocal.js` | 🔴 | DB sync (`npm run sync-db`) — replaces all local collections |
 | `syncDataHubToProd.js` / `compareDataHubDbs.js` | 🔴 | Data Hub prod sync |
 | `syncFinanceToProd.js` | 🔴 | Finance → prod |
 | `sync-workspaces-to-prod.js` | 🔴 | Workspaces → prod |
@@ -116,6 +116,10 @@ All paths: `cd server && node scripts/<file>` unless `npm run <script>` exists.
 | Script | Safety | Purpose |
 |--------|--------|---------|
 | `clean_holysheet.js` / `split_holysheet_contacts.js` | 🟡 | Legacy sheet utilities |
+
+## Admin Script Runner (`/admin/scripts`)
+
+The UI lists only entries in **`server/config/adminScriptsCatalog.js`** (not every file in `server/scripts/`). Duplicates and one-off migrations are excluded. Danger-tier scripts use a red Run button.
 
 ## Rules
 

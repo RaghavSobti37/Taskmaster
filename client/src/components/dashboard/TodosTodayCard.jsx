@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ListTodo, ArrowDown, ArrowUp } from 'lucide-react';
 import { DashboardWidgetShell, DataLoading, Button, TimeframeFilter, CountBadge } from '../ui';
+import { LOADING_SHOW_PHRASE_DASHBOARD } from '../../lib/loadingDisplay';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { resolveTaskWorkspaceColor } from '../../utils/workspaceColors';
 import { filterTasksByTimeframe, sortTasksByDate } from '../../utils/dashboardTasks';
@@ -60,7 +61,7 @@ const TodosTodayCard = ({ tasks = [], projects = [], loading, onComplete, onOpen
       }
     >
       <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0">
-        {loading && <DataLoading className="!py-3" />}
+        {loading && <DataLoading className="!py-3" showPhrase={LOADING_SHOW_PHRASE_DASHBOARD} />}
         {!loading && todayTasks.length === 0 && (
           <p className="tm-caption italic text-center py-4">Nothing due today. Great job!</p>
         )}

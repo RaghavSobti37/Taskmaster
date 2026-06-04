@@ -81,7 +81,7 @@ export default function UserDataDeletion() {
 
         {metaStatusLoading && (
           <div className="p-6 rounded-2xl bg-[#111827] border border-[#1F2937] flex items-center justify-center gap-2 text-xs text-slate-400">
-            <Spinner size="sm" showPhrase phraseClassName="text-xs text-slate-400" />
+            <Spinner size="sm" />
           </div>
         )}
 

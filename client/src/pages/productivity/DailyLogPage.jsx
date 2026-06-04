@@ -405,7 +405,7 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
              
              <div className="p-6 space-y-4">
                 {loading ? (
-                  <DataLoading className="py-16" />
+                  <DataLoading showPhrase className="py-16" />
                 ) : dailyLogs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 opacity-20 text-center">
                      <Activity size={48} className="mb-4" />

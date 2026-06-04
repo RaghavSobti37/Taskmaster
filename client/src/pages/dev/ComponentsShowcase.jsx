@@ -383,6 +383,7 @@ const ComponentsShowcase = () => {
             <Spinner size="lg" />
           </VariantRow>
           <LoadingState className="!py-6 border border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]" />
+          <LoadingState showPhrase className="!py-6 border border-dashed border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] mt-4" />
           <EmptyState
             title="No items found"
             actionLabel="Add item"

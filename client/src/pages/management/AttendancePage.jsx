@@ -526,7 +526,7 @@ const AttendancePage = () => {
                   </thead>
                   <tbody className="bg-[var(--color-bg-secondary)]">
                     {(isLoading || usersLoading) && (
-                      <tr><td className="px-4 py-4 text-center" colSpan={1 + (dateColumns.length * 2)}><Spinner size="sm" showPhrase phraseClassName="text-sm italic text-[var(--color-text-muted)]" /></td></tr>
+                      <tr><td className="px-4 py-4 text-center" colSpan={1 + (dateColumns.length * 2)}><Spinner size="sm" /></td></tr>
                     )}
                     {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
                       <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">

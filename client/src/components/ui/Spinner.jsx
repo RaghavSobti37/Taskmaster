@@ -5,7 +5,8 @@ import { useLoadingPhrase } from '../../hooks/useLoadingPhrase';
 import { LoadingPhrase } from './LoadingPhrase';
 
 /**
- * Spinner — fluid-ribbon loader (default frl-v-02) + random phrase when showPhrase.
+ * Spinner — fluid-ribbon loader (default frl-v-02).
+ * Visible phrase only when showPhrase (boot, dashboard widgets, heavy pages).
  */
 export const Spinner = ({
   size = 'md',
@@ -20,7 +21,7 @@ export const Spinner = ({
       variant={variant || DEFAULT_LOADER_VARIANT}
       size={size}
       className={className}
-      label={phrase}
+      label={showPhrase ? phrase : 'Loading'}
     />
   );
   if (!showPhrase) return loader;
@@ -33,11 +34,21 @@ export const Spinner = ({
 };
 
 /**
- * LoadingState — centered spinner + random phrase.
+ * LoadingState — centered spinner; phrase only when showPhrase.
  */
-export const LoadingState = ({ className = '', variant, phraseClassName = '' }) => (
+export const LoadingState = ({
+  className = '',
+  variant,
+  phraseClassName = '',
+  showPhrase = false,
+}) => (
   <div className={`flex flex-col items-center justify-center gap-4 py-12 text-center ${className}`}>
-    <Spinner size="lg" variant={variant} showPhrase phraseClassName={`text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] ${phraseClassName}`} />
+    <Spinner
+      size="lg"
+      variant={variant}
+      showPhrase={showPhrase}
+      phraseClassName={`text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)] ${phraseClassName}`}
+    />
   </div>
 );
 

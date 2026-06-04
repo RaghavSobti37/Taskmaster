@@ -795,7 +795,7 @@ const FinancePage = () => {
         {tableBreadcrumb}
         {folderToolbar}
         {isLoading ? (
-          <div className="p-8 flex justify-center"><DataLoading /></div>
+          <div className="p-8 flex justify-center"><DataLoading showPhrase /></div>
         ) : docs.length === 0 ? (
           <EmptyState
             icon={FileText}

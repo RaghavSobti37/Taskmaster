@@ -538,7 +538,7 @@ export const DataTable = ({
             {isLoading ? (
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <Spinner size="md" showPhrase phraseClassName="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]" />
+                  <Spinner size="md" />
                 </td>
               </tr>
             ) : showEmpty ? (
@@ -595,7 +595,7 @@ export const DataTable = ({
         <div className="grid grid-cols-1 gap-0 p-0 lg:hidden divide-y divide-[var(--color-bg-border)]">
           {isLoading ? (
             <div className="px-4 py-12 text-center flex flex-col items-center gap-2">
-              <Spinner size="md" showPhrase phraseClassName="tm-widget-label" />
+              <Spinner size="md" />
             </div>
           ) : showEmpty ? (
             <div className="px-4 py-12 text-center">

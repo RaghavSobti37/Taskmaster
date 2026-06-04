@@ -390,7 +390,7 @@ const CalendarView = () => {
               <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr overflow-hidden relative">
                  {gridLoading && (
                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-workspace)]/75 backdrop-blur-[1px]">
-                     <Spinner size="lg" showPhrase />
+                     <Spinner size="lg" />
                    </div>
                  )}
                  {eachDayOfInterval({

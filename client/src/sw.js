@@ -3,6 +3,7 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+/** Must match BRAND_ICONS.notification in src/constants/brandIcons.js */
 const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href;
 
 self.addEventListener('push', (event) => {

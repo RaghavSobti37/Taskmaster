@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CalendarDays, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { DashboardWidgetShell, DataListRow, Badge, DataLoading } from '../ui';
+import { LOADING_SHOW_PHRASE_DASHBOARD } from '../../lib/loadingDisplay';
 import { useLeaveRequests } from '../../hooks/useTaskmasterQueries';
 import { isOpsUser } from '../../utils/departmentPermissions';
 import { useAuth } from '../../contexts/AuthContext';
@@ -50,7 +51,7 @@ export default function LeaveRequestsCard() {
         {opsView ? 'Pending leave awaiting approval' : 'Your leave submissions from Settings'}
       </p>
       <div className="flex-1 min-h-0 max-h-[min(40vh,16rem)] overflow-y-auto">
-        {isLoading && <DataLoading className="py-8" />}
+        {isLoading && <DataLoading className="py-8" showPhrase={LOADING_SHOW_PHRASE_DASHBOARD} />}
         {!isLoading && rows.length === 0 && (
           <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-8 px-4">
             {opsView ? 'No pending leave requests' : 'No leave requests yet'}

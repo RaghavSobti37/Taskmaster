@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
-import { DashboardSkeleton } from "../../components/ui";
+import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 
 const GoogleSuccessPage = () => {
@@ -85,7 +85,7 @@ const GoogleSuccessPage = () => {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
-  return <DashboardSkeleton />;
+  return <AppBootFallback />;
 };
 
 export default GoogleSuccessPage;

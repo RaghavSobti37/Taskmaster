@@ -1,8 +1,15 @@
+import fs from 'fs'
 import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const publicDir = path.resolve(__dirname, 'public')
+const iconsDir = path.join(publicDir, 'icons')
+const brandIconAssets = fs.existsSync(iconsDir)
+  ? fs.readdirSync(iconsDir).filter((f) => /\.(png|json)$/i.test(f)).map((f) => `icons/${f}`)
+  : []
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,7 +22,14 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       injectRegister: false,
-      includeAssets: ['brand-mark.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: [
+        'brand-mark.svg',
+        'favicon.svg',
+        'favicon.ico',
+        'safari-pinned-tab.svg',
+        'manifest.json',
+        ...brandIconAssets,
+      ],
       manifest: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

@@ -1,3 +1,5 @@
+import { getNotificationIconUrl } from '../constants/brandIcons';
+
 const PUSH_PREF_KEY = 'coreknot_push_enabled';
 const OS_NOTIF_DEDUPE_KEY = 'coreknot_os_notif_dedupe';
 const OS_NOTIF_DEDUPE_TTL_MS = 5 * 60 * 1000;
@@ -5,12 +7,7 @@ const NOTIF_BC_CHANNEL = 'coreknot-notif';
 
 let notifBroadcastChannel = null;
 
-export const getNotificationIconUrl = () => {
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}/icons/icon-192.png`;
-  }
-  return '/icons/icon-192.png';
-};
+export { getNotificationIconUrl };
 
 const readDedupeMap = () => {
   try {

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Target, Activity, RefreshCw } from 'lucide-react';
-import { Badge, Button, LoadingPhrase } from '../../../components/ui';
+import { Badge, Button, Spinner } from '../../../components/ui';
 import {
   useGamificationProgress,
   useGamificationHistory,
@@ -72,7 +72,7 @@ export default function ProgressTab() {
             <h3 className="tm-widget-label">Current Journey</h3>
             <div className="mt-1.5 text-xs tm-data-meta">
               {progressLoading ? (
-                <LoadingPhrase className="!text-left text-xs tm-data-meta" />
+                <div className="mt-1.5 flex justify-start"><Spinner size="sm" /></div>
               ) : (
                 `You are ${progressPercent.toFixed(1)}% through Level ${level}`
               )}
@@ -121,7 +121,7 @@ export default function ProgressTab() {
         </div>
         <div className="divide-y divide-[var(--color-bg-border)]">
           {missionsLoading && (
-            <div className="px-6 py-8 flex justify-center"><LoadingPhrase className="text-sm text-[var(--color-text-muted)]" /></div>
+            <div className="px-6 py-8 flex justify-center"><Spinner size="md" /></div>
           )}
           {!missionsLoading && missions.length === 0 && (
             <p className="px-6 py-8 text-sm text-[var(--color-text-muted)]">No missions for today yet.</p>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Receipt, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { DashboardWidgetShell, DataListRow, Badge, DataLoading } from '../ui';
+import { LOADING_SHOW_PHRASE_DASHBOARD } from '../../lib/loadingDisplay';
 import { useMyReimbursements } from '../../hooks/useTaskmasterQueries';
 import { formatProjectName } from '../../utils/projectUtils';
 
@@ -30,7 +31,7 @@ export default function ReimbursementsCard() {
         Claims submitted from Settings → Reimbursement
       </p>
       <div className="flex-1 min-h-0 max-h-[min(40vh,16rem)] overflow-y-auto">
-        {isLoading && <DataLoading className="py-8" />}
+        {isLoading && <DataLoading className="py-8" showPhrase={LOADING_SHOW_PHRASE_DASHBOARD} />}
         {!isLoading && rows.length === 0 && (
           <p className="text-[10px] text-[var(--color-text-muted)] italic text-center py-8 px-4">
             No reimbursement claims yet

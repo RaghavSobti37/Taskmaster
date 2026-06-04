@@ -371,7 +371,7 @@ select option {
 }
 
 .page-toolbar-controls {
-  align-items: center;
+  align-items: flex-end;
 }
 
 .page-toolbar-controls .tm-toolbar-field {

@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.14-126d5e?style=flat-square" alt="Version 1.9.14" />
+  <img src="https://img.shields.io/badge/version-1.9.15-126d5e?style=flat-square" alt="Version 1.9.15" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -225,6 +225,9 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Attendance mobile:** `UnifiedTimeCard` overhaul with team roster context; `TeamAttendanceMobileList` for ops mobile grid; expanded `attendanceUtils.js` helpers.
 * **Leaderboard density:** Extracted `LeaderboardRow` + `LeaderboardRankBadge` for podium/list reuse and recalc delta hints.
 * **Inbox filters:** Category chips with per-category unread `CountBadge`; overview header uses `DataOverviewSection` pattern.
+* **Inbox actions:** **Mark all read** and **Clear all** (with confirm) — `DELETE /api/notifications` removes your notification history; badges refresh via `status-counts`.
+* **Todo table:** Desktop `/todo` grid supports sort on every column (Task, Type, Assigned by, Status, Priority, Due); toolbar search aligns with labeled filter dropdowns.
+* **Attendance roster:** `shared/attendanceExcludedUsers.js` — ops department, named staff emails, and legacy test accounts excluded from ops matrix and morning check-in prompt (work emails stay on roster when not listed).
 * **Task list hygiene:** Server `taskListFilter.js` hides completed tasks older than 2 days (`COMPLETED_VISIBLE_DAYS`); client `taskIndicators.js` drives Todo overview KPIs; `taskListFilter.test.js` covers cutoff logic.
 * **Calendar polish:** `CalendarView` layout refresh; `calendarEventTime.js` helpers; notification routes expose richer status-count payloads for nav badges.
 

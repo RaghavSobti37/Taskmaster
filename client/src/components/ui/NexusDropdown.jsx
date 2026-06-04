@@ -253,12 +253,12 @@ const NexusDropdown = ({
 
   return (
     <div
-      className={`relative w-full min-w-0 ${isToolbar ? 'tm-toolbar-field' : 'flex flex-col gap-2'} ${className}`}
+      className={`relative w-full min-w-0 ${isToolbar ? 'tm-toolbar-field flex flex-col gap-1.5' : 'flex flex-col gap-2'} ${className}`}
       ref={dropdownRef}
       data-toolbar-field={isToolbar ? '' : undefined}
     >
-      {label && !isToolbar && (
-        <label className="block tm-section-label">
+      {label && (
+        <label className="block tm-section-label leading-none">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}

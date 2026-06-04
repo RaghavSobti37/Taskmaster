@@ -4,6 +4,22 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-04] v1.9.15 — Inbox clear, Todo sorting, attendance roster
+
+#### Inbox
+- **Clear all:** `DELETE /api/notifications` + **Clear all** button on `/inbox` (confirm dialog); **Mark all read** unchanged.
+
+#### Todo & toolbar
+- **Column sort:** All desktop table headers on `/todo` toggle asc → desc → off (Due defaults asc).
+- **Toolbar alignment:** `SearchInput` toolbar label; `NexusDropdown` shows filter labels in toolbar row; controls bottom-aligned.
+
+#### Attendance
+- **`shared/attendanceExcludedUsers.js`:** Excludes Operations department, `redacted@example.com`, `redacted-staff@example.com`, and legacy test/demo names from ops attendance grid and check-in prompt. Work email `REDACTED_ADMIN@example.com` remains eligible unless explicitly listed.
+
+Redeploy API + client together. No migration.
+
+---
+
 ### [2026-06-04] v1.9.14 — Task Activity & Team Row UX
 
 #### Task history

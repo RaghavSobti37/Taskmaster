@@ -22,33 +22,39 @@ const SearchInput = ({
   };
 
   if (variant === 'toolbar') {
+    const toolbarLabel = label ?? 'Search';
     return (
       <div
-        className={`relative tm-toolbar-field tm-toolbar-search min-w-[10rem] w-[12rem] max-w-[16rem] shrink-0 ${className}`}
+        className={`tm-toolbar-field tm-toolbar-search flex flex-col gap-1.5 min-w-[10rem] w-[12rem] max-w-[16rem] shrink-0 ${className}`}
         data-toolbar-field=""
       >
-        <Search
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]"
-        />
-        <input
-          type="search"
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className="tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
-          {...props}
-        />
-        {value ? (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-            aria-label="Clear search"
-          >
-            <X size={14} />
-          </button>
+        {toolbarLabel ? (
+          <span className="block tm-section-label leading-none">{toolbarLabel}</span>
         ) : null}
+        <div className="relative min-w-0">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none z-[1]"
+          />
+          <input
+            type="search"
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            className="tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
+            {...props}
+          />
+          {value ? (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-[var(--radius-atomic)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }

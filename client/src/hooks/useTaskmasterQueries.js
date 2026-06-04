@@ -1259,6 +1259,17 @@ export const useMarkAllNotificationsRead = () => {
   });
 };
 
+export const useClearAllNotifications = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => axios.delete('/api/notifications'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      invalidateStatusCounts(queryClient);
+    },
+  });
+};
+
 export const useUpdateUserDepartment = () => {
   const queryClient = useQueryClient();
   return useMutation({

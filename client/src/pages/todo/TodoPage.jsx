@@ -36,7 +36,7 @@ import {
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
-import { sortTasksByDueDate } from '../../utils/dashboardTasks';
+import { getPriorityRank, getTaskDay } from '../../utils/dashboardTasks';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
 import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
@@ -81,8 +81,34 @@ const TodoPage = () => {
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
-  const [dueDateSort, setDueDateSort] = useState('asc');
+  const [sortConfig, setSortConfig] = useState({ field: 'dueDate', order: 'asc' });
   const [statFilter, setStatFilter] = useState(null);
+
+  const toggleSort = (field) => {
+    setSortConfig((prev) => {
+      if (prev.field !== field) return { field, order: 'asc' };
+      if (prev.order === 'asc') return { field, order: 'desc' };
+      return { field: null, order: 'asc' };
+    });
+  };
+
+  const SortHeader = ({ field, label }) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(field)}
+      className="inline-flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
+      title={
+        sortConfig.field === field
+          ? `Sorted ${sortConfig.order === 'asc' ? 'ascending' : 'descending'} — click to change`
+          : `Sort by ${label}`
+      }
+    >
+      {label}
+      {sortConfig.field === field && (
+        sortConfig.order === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+      )}
+    </button>
+  );
 
   const taskIndicators = useMemo(() => computeTaskIndicators(tasks), [tasks]);
 
@@ -128,10 +154,42 @@ const TodoPage = () => {
     });
   }, [tasks, search, statusFilter, priorityFilter, typeFilter, projectFilter, statFilter]);
 
-  const sortedFiltered = useMemo(
-    () => sortTasksByDueDate(filtered, dueDateSort),
-    [filtered, dueDateSort]
-  );
+  const sortedFiltered = useMemo(() => {
+    const list = [...filtered];
+    const { field, order } = sortConfig;
+    if (!field) return list;
+
+    const dir = order === 'asc' ? 1 : -1;
+    const cmpStr = (a, b) => dir * String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+
+    list.sort((a, b) => {
+      switch (field) {
+        case 'title':
+          return cmpStr(a.title, b.title);
+        case 'type':
+          return cmpStr(normalizeTaskCategory(a.type), normalizeTaskCategory(b.type));
+        case 'assignedBy': {
+          const aName = displayPersonName(resolveDirectoryUser(getTaskAssignedBy(a), users)) || '';
+          const bName = displayPersonName(resolveDirectoryUser(getTaskAssignedBy(b), users)) || '';
+          return cmpStr(aName, bName);
+        }
+        case 'status':
+          return cmpStr(a.status, b.status);
+        case 'priority': {
+          const diff = getPriorityRank(a.priority) - getPriorityRank(b.priority);
+          return diff !== 0 ? dir * diff : 0;
+        }
+        case 'dueDate': {
+          const aTime = getTaskDay(a, 'due')?.getTime() ?? Number.POSITIVE_INFINITY;
+          const bTime = getTaskDay(b, 'due')?.getTime() ?? Number.POSITIVE_INFINITY;
+          return order === 'asc' ? aTime - bTime : bTime - aTime;
+        }
+        default:
+          return 0;
+      }
+    });
+    return list;
+  }, [filtered, sortConfig, users]);
 
   const activeTasks = sortedFiltered.filter((t) => t.status !== 'done');
   const doneTasks = sortedFiltered.filter((t) => t.status === 'done');
@@ -366,6 +424,7 @@ const TodoPage = () => {
       toolbar={
         <>
           <SearchInput
+            label="Search"
             placeholder="Search tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -410,22 +469,12 @@ const TodoPage = () => {
           <thead>
             <tr className="border-b border-[var(--color-bg-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
               <th className="px-4 py-3 w-10" />
-              <th className="px-4 py-3">Task</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Assigned by</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Priority</th>
-              <th className="px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setDueDateSort((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                  className="inline-flex items-center gap-1 hover:text-[var(--color-action-primary)] transition-colors"
-                  title={`Sort due date ${dueDateSort === 'asc' ? 'ascending' : 'descending'}`}
-                >
-                  Due
-                  {dueDateSort === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                </button>
-              </th>
+              <th className="px-4 py-3"><SortHeader field="title" label="Task" /></th>
+              <th className="px-4 py-3"><SortHeader field="type" label="Type" /></th>
+              <th className="px-4 py-3"><SortHeader field="assignedBy" label="Assigned by" /></th>
+              <th className="px-4 py-3"><SortHeader field="status" label="Status" /></th>
+              <th className="px-4 py-3"><SortHeader field="priority" label="Priority" /></th>
+              <th className="px-4 py-3"><SortHeader field="dueDate" label="Due" /></th>
             </tr>
           </thead>
           <tbody>

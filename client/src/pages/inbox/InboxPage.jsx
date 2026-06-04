@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Inbox, CheckCheck, Shield, ListTodo, Bell } from 'lucide-react';
+import { Inbox, CheckCheck, Shield, ListTodo, Bell, Trash2 } from 'lucide-react';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageLoadGuard from '../../components/ui/PageLoadGuard';
 import PageSkeleton from '../../components/ui/PageSkeleton';
@@ -13,10 +13,12 @@ import {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  useClearAllNotifications,
   useStatusCounts,
 } from '../../hooks/useTaskmasterQueries';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/confirmContext';
 import { parseActionUrl, applyFlashHighlight } from '../../utils/navigationHighlight';
 import { formatInboxCategory } from '../../utils/displayLabels';
 
@@ -54,8 +56,10 @@ const InboxPage = () => {
   const [filter, setFilter] = useState('all');
   const { data, isLoading } = useNotifications();
   const { data: statusCounts } = useStatusCounts(!!user);
+  const { confirm } = useConfirm();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const clearAll = useClearAllNotifications();
 
   const notifications = data?.notifications || (Array.isArray(data) ? data : []);
   const allowedCategories = data?.allowedCategories || ['all', 'task', 'review', 'crm', 'attendance', 'announcement', 'department', 'system'];
@@ -92,6 +96,17 @@ const InboxPage = () => {
       navigate(path);
       if (highlightId) applyFlashHighlight(highlightId);
     }
+  };
+
+  const handleClearAll = async () => {
+    if (!notifications.length) return;
+    const ok = await confirm({
+      title: 'Clear all notifications?',
+      message: 'This permanently removes your notification history. This cannot be undone.',
+      confirmLabel: 'Clear all',
+      type: 'danger',
+    });
+    if (ok) clearAll.mutate();
   };
 
   const filterChipClass = (active) =>
@@ -173,9 +188,24 @@ const InboxPage = () => {
         </div>
       }
       toolbarActions={
-        <Button size="xs" variant="secondary" onClick={() => markAllRead.mutate()} disabled={markAllRead.isPending}>
-          <CheckCheck size={14} className="mr-1" /> Mark all read
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => markAllRead.mutate()}
+            disabled={markAllRead.isPending || unreadTotal === 0}
+          >
+            <CheckCheck size={14} className="mr-1" /> Mark all read
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={handleClearAll}
+            disabled={clearAll.isPending || notifications.length === 0}
+          >
+            <Trash2 size={14} className="mr-1" /> Clear all
+          </Button>
+        </div>
       }
     >
       <div className="min-w-0">

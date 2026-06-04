@@ -223,4 +223,18 @@ router.patch('/read-all', protect, async (req, res) => {
   }
 });
 
+router.delete('/', protect, async (req, res) => {
+  try {
+    const allowed = await getAllowedCategoriesForUser(req.user);
+    const filter = { recipient: req.user._id };
+    if (!isAdminUser(req.user)) {
+      filter.category = { $in: allowed };
+    }
+    const result = await Notification.deleteMany(filter);
+    res.json({ message: 'Notifications cleared', deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear notifications' });
+  }
+});
+
 module.exports = router;

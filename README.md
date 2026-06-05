@@ -142,12 +142,21 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 | **Backend** | API Engine | Node.js, Express, Mongoose ODM, BullMQ, Trigger.dev |
 | **Data & Cache** | Storage Engine | MongoDB Atlas, Redis (asynchronous queues & cache clusters) |
 | **Realtime** | Transport Layer | Socket.IO WebSockets with automatic fallback protocols |
-| **Security** | Authentication | HttpOnly JWT cookie (`coreknot_token_v2`), Google OAuth 2.0, RBAC, webhook HMAC, registration lockdown |
+| **Security** | Authentication | HttpOnly sliding JWT cookie (`coreknot_token_v3`), Google OAuth 2.0, RBAC, webhook HMAC, registration lockdown |
 | **Deployment** | CI/CD Infrastructure | Render (Web Services + Managed Static CDN handles asset distribution) |
 
 ---
 
 ## Key Features
+
+### Sliding sessions & global cookie reset (Jun 2026)
+
+* **Inactivity logout:** Sessions expire after **7 days without activity** (`JWT_EXPIRES_IN=7d`). Active users stay signed in — the server re-issues the cookie on API traffic (throttled to once per hour).
+* **Absolute cap:** Even active users re-authenticate after **30 days** from first login (`JWT_ABSOLUTE_MAX_DAYS=30`) for a periodic security refresh.
+* **Cookie `coreknot_token_v3`:** Deploy bumps the session cookie name so **all devices** receive a one-time re-login and pick up the new sliding-session tokens. Legacy `coreknot_token_v2` and `coreknot_token` are purged on every API response.
+* **Server:** `server/utils/authSession.js` — `establishSession`, `refreshSessionIfDue`, `loginAt` preserved across slides; `authMiddleware` enforces the 30-day cap.
+* **Client:** `AuthContext` retries `/api/auth/me` before clearing state (Safari/iOS cookie races), 5-minute session heartbeat, tab-visibility refresh on return.
+* **Tests:** `server/tests/authSession.test.js` — sliding window, absolute expiry, cookie v3 legacy purge.
 
 ### v1.0.0 stable polish
 
@@ -455,7 +464,7 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 
 ### Security Hardening (v1.7.47)
 
-* **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v2` cookie — not `localStorage`. Legacy `coreknot_token` is purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
+* **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v3` cookie — not `localStorage`. Sliding inactivity (`JWT_EXPIRES_IN`) + 30-day absolute cap (`JWT_ABSOLUTE_MAX_DAYS`). Legacy `coreknot_token_v2` / `coreknot_token` purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
 * **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
 * **Logout (v1.7.52 / v1.8.0):** Logout bumps an auth epoch so in-flight `/me` retries cannot re-set the user after sign-out. v1.8.0 adds `authSession.js` force-logout flag across redirect and treats 403 like 401 on session fetch.
 * **CRM lead updates (v1.7.55):** Lead modal uses country-code + national-number fields with strict per-country digit rules (no silent truncation). Invalid phones block save with clear errors; server validates via `phoneCountryValidation.js`. Lead table refreshes after save (`useUpdateLead` cache fix). Legacy overlong/concatenated phones repaired via `leadPhoneRepair.js` and QA audit/cleanup CLI scripts.
@@ -650,6 +659,9 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | --- | --- | --- |
 | `MONGODB_URI` | **Required** | Unified database connection string specifying target authorization endpoints. |
 | `JWT_SECRET` | **Required** | Cryptographic key utilized to sign statelessly managed web token tokens. |
+| `JWT_EXPIRES_IN` | Recommended | Sliding inactivity window before session expires (default: `7d`). Renewed on activity. |
+| `JWT_ABSOLUTE_MAX_DAYS` | Recommended | Hard re-login cap from first login in a session chain (default: `30`). |
+| `JWT_REFRESH_MINUTES` | Optional | Minimum minutes between `Set-Cookie` refreshes on activity (default: `60`; reduces mobile cookie churn). |
 | `FRONTEND_URL` | Production Only | The public consumer web location utilized to build structural email CTA references. |
 | `VITE_API_URL` | Highly Recommended | Direct endpoint address pointing to the static web API host, intentionally skipping standard middle-tier routing paths during massive data payload uploads. |
 | `REDIS_URL` | Optional | Direct connection reference used to drive active state machine queues (`BullMQ`). |

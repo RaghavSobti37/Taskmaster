@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
-const { setAuthCookie, clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
+const { clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
+const { establishSession } = require('../utils/authSession');
 const { createOAuth2Client, resolveGoogleRedirectUri } = require('../utils/googleAuth');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { normalizePasswordInput, passwordCandidatesForCompare } = require('../utils/passwordAuth');
@@ -14,10 +15,6 @@ const { getDefaultSeedPassword } = require('../utils/defaultPassword');
 const { sendSystemEmail } = require('../utils/sendSystemEmail');
 
 const oauth2Client = createOAuth2Client(resolveGoogleRedirectUri());
-
-const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
-  expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-});
 
 const generateOAuthTicket = (id) => jwt.sign(
   { id, purpose: 'oauth_establish' },
@@ -61,8 +58,7 @@ const formatAuthUser = (populated) => attachProfileCompletion(
 );
 
 const sendAuthSuccess = (res, populated) => {
-  const token = generateToken(populated._id);
-  setAuthCookie(res, token);
+  establishSession(res, populated._id);
   return res.json(formatAuthUser(populated));
 };
 
@@ -144,7 +140,7 @@ exports.register = async (req, res) => {
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
-    setAuthCookie(res, generateToken(populated._id));
+    establishSession(res, populated._id);
     return res.status(201).json(formatAuthUser(populated));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -186,7 +182,7 @@ exports.login = async (req, res) => {
       const populated = await User.findById(user._id)
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-      setAuthCookie(res, generateToken(populated._id));
+      establishSession(res, populated._id);
       return res.json(formatAuthUser(populated));
     }
 
@@ -413,7 +409,7 @@ exports.oauthEstablishSession = async (req, res) => {
       return res.status(401).json({ error: 'User no longer exists' });
     }
 
-    setAuthCookie(res, generateToken(populated._id));
+    establishSession(res, populated._id);
     return res.json(formatAuthUser(populated));
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });

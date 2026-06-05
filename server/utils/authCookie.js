@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-/** Current session cookie (Jun 2026+). */
-const COOKIE_NAME = 'coreknot_token_v2';
+/** Current session cookie — sliding inactivity sessions (Jun 2026+). */
+const COOKIE_NAME = 'coreknot_token_v3';
 
-/** Pre-fix cookie names — purged on every response after deploy so logout works for existing users. */
-const LEGACY_COOKIE_NAMES = ['coreknot_token'];
+/** Prior cookie names — purged on every response so deploy forces fresh login on all devices. */
+const LEGACY_COOKIE_NAMES = ['coreknot_token_v2', 'coreknot_token'];
 
 const parseJwtExpiryMs = () => {
   const raw = process.env.JWT_EXPIRES_IN || '7d';

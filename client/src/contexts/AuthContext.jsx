@@ -109,35 +109,54 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
     const epoch = authEpochRef.current;
-    const { clearOn401 = true } = options;
-    const res = await axios.get('/api/auth/me', {
-      ...AXIOS_SKIP_TOAST,
-      validateStatus: (status) => status === 200 || status === 401 || status === 403,
-    });
+    const { clearOn401 = true, retries = 3 } = options;
 
-    if (epoch !== authEpochRef.current) {
-      return null;
-    }
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      if (epoch !== authEpochRef.current) return null;
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        if (epoch !== authEpochRef.current) return null;
+      }
 
-    if (res.status === 401 || res.status === 403) {
-      if (clearOn401) {
-        setUser(null);
-        setSessionReady(false);
+      let res;
+      try {
+        res = await axios.get('/api/auth/me', {
+          ...AXIOS_SKIP_TOAST,
+          validateStatus: (status) => status === 200 || status === 401 || status === 403,
+        });
+      } catch {
+        if (attempt < retries - 1) continue;
+        setLoading(false);
+        return null;
+      }
+
+      if (epoch !== authEpochRef.current) return null;
+
+      if (res.status === 401 || res.status === 403) {
+        const sessionExpired = String(res.data?.error || '').includes('Session expired');
+        if (!sessionExpired && attempt < retries - 1) continue;
+        if (clearOn401) {
+          setUser(null);
+          setSessionReady(false);
+        }
+        setLoading(false);
+        return null;
+      }
+
+      const newData = res.data;
+      if (userSessionChanged(userRef.current, newData)) {
+        setUser(newData);
+      }
+      if (newData && !userRef.current) {
+        recordAttendanceSessionLogin();
       }
       setLoading(false);
-      return null;
+      setSessionReady(true);
+      return newData;
     }
 
-    const newData = res.data;
-    if (userSessionChanged(userRef.current, newData)) {
-      setUser(newData);
-    }
-    if (newData && !userRef.current) {
-      recordAttendanceSessionLogin();
-    }
     setLoading(false);
-    setSessionReady(true);
-    return newData;
+    return null;
   }, []);
 
   const syncSessionAfterLogin = useCallback(async () => {
@@ -189,11 +208,23 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (user?._id) {
-      const interval = setInterval(fetchUser, 30000);
+      const interval = setInterval(() => {
+        fetchUser({ clearOn401: true, retries: 2 });
+      }, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
     return undefined;
   }, [user?._id, fetchUser]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && userRef.current?._id && !loggingOutRef.current) {
+        fetchUser({ clearOn401: true, retries: 3 });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchUser]);
 
   useEffect(() => {
     const onPageShow = (event) => {

@@ -1,5 +1,9 @@
-const jwt = require('jsonwebtoken');
 const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
+const {
+  verifySessionToken,
+  isAbsoluteSessionExpired,
+  refreshSessionIfDue,
+} = require('../utils/authSession');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
@@ -88,8 +92,17 @@ const protect = async (req, res, next) => {
       }
       req.user = dbUser;
     } else {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = verifySessionToken(token);
+      if (decoded.purpose) {
+        return res.status(401).json({ error: 'Not authorized, token failed' });
+      }
+      if (isAbsoluteSessionExpired(decoded)) {
+        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+      }
       req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
+      if (req.user) {
+        refreshSessionIfDue(res, decoded);
+      }
     }
 
     if (!req.user) {

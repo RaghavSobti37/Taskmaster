@@ -24,7 +24,7 @@ describe('Authentication API', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.headers['set-cookie']).toEqual(
-        expect.arrayContaining([expect.stringContaining('coreknot_token_v2=')])
+        expect.arrayContaining([expect.stringContaining('coreknot_token_v3=')])
       );
       expect(res.body).not.toHaveProperty('token');
       expect(res.body.email).toEqual('test@example.com');
@@ -67,7 +67,7 @@ describe('Authentication API', () => {
 
       expect(res.statusCode).toEqual(200);
       expect(res.headers['set-cookie']).toEqual(
-        expect.arrayContaining([expect.stringContaining('coreknot_token_v2=')])
+        expect.arrayContaining([expect.stringContaining('coreknot_token_v3=')])
       );
       expect(res.body).not.toHaveProperty('token');
     });

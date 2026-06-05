@@ -740,6 +740,7 @@ async function runSecurityHardeningChecks() {
       'JWT stored in HttpOnly cookie (not response body)',
       authCookie &&
         authCookie.includes('httpOnly: true') &&
+        authCookie.includes('coreknot_token_v3') &&
         authCookie.includes('coreknot_token_v2') &&
         authCookie.includes('purgeLegacyAuthCookies') &&
         authCtrl &&
@@ -748,7 +749,7 @@ async function runSecurityHardeningChecks() {
         !authCtrl.includes("token: generateToken")
         ? 'pass'
         : 'fail',
-      'authCookie sets coreknot_token_v2 and purges legacy coreknot_token',
+      'authCookie sets coreknot_token_v3 and purges legacy v1/v2 cookies',
       'utils/authCookie.js + controllers/authController.js',
       'high'
     )

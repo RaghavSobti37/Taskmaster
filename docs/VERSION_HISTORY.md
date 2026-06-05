@@ -8,6 +8,19 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-05] v1.0.1 — Sliding sessions & global cookie reset
+
+#### Authentication
+- **Sliding inactivity:** Sessions expire after **7 days without activity** (`JWT_EXPIRES_IN=7d`). Active users stay signed in — cookie re-issued on API traffic (throttled to once per hour via `JWT_REFRESH_MINUTES`).
+- **Absolute cap:** Re-login required after **30 days** from first login in a session chain (`JWT_ABSOLUTE_MAX_DAYS=30`).
+- **Cookie `coreknot_token_v3`:** Deploy bumps session cookie name — **one-time re-login on all devices**; legacy `coreknot_token_v2` / `coreknot_token` purged on every API response.
+- **Server:** `server/utils/authSession.js` — `establishSession`, `refreshSessionIfDue`, `loginAt` preserved across slides.
+- **Client:** `AuthContext` retries `/api/auth/me` before logout (Safari/iOS), 5-minute heartbeat, tab-visibility refresh.
+
+**Deploy:** Redeploy API + client together. Set on Render: `JWT_EXPIRES_IN=7d`, `JWT_ABSOLUTE_MAX_DAYS=30`, `JWT_REFRESH_MINUTES=60`. All users must sign in once after deploy.
+
+---
+
 ### [2026-06-04] v1.0.0 — First stable release
 
 #### Finance (Documents)

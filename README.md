@@ -66,13 +66,29 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Command | Scope |
 | --- | --- |
-| `npm test` | Server Jest suite (`server/tests/`, **126** cases) |
+| `npm test` | Server Jest suite (`server/tests/`, **194** cases incl. Zod validation) |
+| `npm test --prefix client` | Client Vitest (keyboard shortcuts, command palette, schedule layout) |
+| `npm run test:e2e:public` | Playwright smoke — landing + login (no credentials) |
+| `npm run test:e2e:auth` | Playwright auth flows — shortcuts, notes unsaved bar, sessions (`E2E_EMAIL` + `E2E_PASSWORD`) |
 | `npm run ci` | Exposure audit + server tests + client production build |
 | Admin → QA Testing | Integration probes incl. task review rollback/re-submit, platform-owner rollback, bug auto-assign |
 
 **CI-friendly:** Integration tests use **MongoDB Memory Server** — no local `mongod` required. The Express app skips startup `mongoose.connect` when `NODE_ENV=test`; `server/tests/setup.js` wires the in-memory URI before routes run.
 
 **Preflight:** `npm run preflight` blocks retired suspended Render API hosts in `TRACKING_BASE_URL` / `SERVER_URL` (see `server/scripts/preflightEnv.js`). Template placeholder `YOUR-RENDER-SERVICE.onrender.com` in docs is allowed; production tracking should use your live Render service URL from the dashboard.
+
+### Recent improvements (Jun 2026)
+
+| Area | What changed |
+| --- | --- |
+| **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
+| **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout |
+| **Finance** | Document tables migrated to shared `DataTable`; OCR upload state badges; unsaved-changes bar on edits |
+| **Tasks & gamification** | `TaskReviewActions` component; in-review approve CTA; leaderboard shows XP gap to next rank |
+| **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard |
+| **E2E & CI** | Playwright public + auth smoke specs; Lighthouse a11y gate; ESLint + Vitest in GitHub Actions |
+
+Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) · UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
 
 ---
 

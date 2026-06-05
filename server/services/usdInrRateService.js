@@ -52,11 +52,23 @@ const getUsdInrRate = async () => {
 
   const redisCached = await getCache(CACHE_KEY);
   if (redisCached?.rate) {
-    return { ...redisCached, cached: true, stale: false };
+    return {
+      rate: redisCached.rate,
+      asOf: redisCached.asOf,
+      source: redisCached.source || 'frankfurter',
+      fetchedAt: redisCached.fetchedAt,
+      cached: true,
+      stale: false,
+    };
   }
 
   if (memoryCache?.data?.rate && memoryCache.expiresAt > Date.now()) {
-    return { ...memoryCache.data, cached: true, stale: false };
+    return {
+      ...memoryCache.data,
+      source: memoryCache.data.source || 'frankfurter',
+      cached: true,
+      stale: false,
+    };
   }
 
   try {
@@ -71,7 +83,12 @@ const getUsdInrRate = async () => {
     return { ...payload, cached: false, stale: false };
   } catch (error) {
     if (lastSuccessfulRate?.rate) {
-      return { ...lastSuccessfulRate, cached: true, stale: true };
+      return {
+        ...lastSuccessfulRate,
+        source: lastSuccessfulRate.source || 'frankfurter',
+        cached: true,
+        stale: true,
+      };
     }
     throw error;
   }

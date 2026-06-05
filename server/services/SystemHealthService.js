@@ -26,6 +26,33 @@ class SystemHealthService {
     }
   }
 
+  static getDetailedStatus() {
+    const mongoState = mongoose.connection.readyState;
+    const mongoLabels = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    let redisStatus = 'unknown';
+    try {
+      const { redisAvailable } = require('./backgroundQueue');
+      redisStatus = redisAvailable ? 'connected' : 'unavailable';
+    } catch {
+      redisStatus = 'unavailable';
+    }
+    return {
+      status: systemStatus,
+      reason: failReason,
+      dependencies: {
+        mongodb: {
+          ok: mongoState === 1 || mongoState === 2,
+          state: mongoLabels[mongoState] || String(mongoState),
+        },
+        redis: {
+          ok: redisStatus === 'connected',
+          state: redisStatus,
+        },
+      },
+      uptimeSeconds: Math.floor(process.uptime()),
+    };
+  }
+
   static getStatus() {
     return { status: systemStatus, reason: failReason };
   }

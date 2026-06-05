@@ -7,7 +7,22 @@ const {
   canAccessComponent,
   VALID_DASHBOARD_COMPONENT_IDS,
 } = require('../utils/dashboardComponents');
-const { hasPageAccess } = require('../utils/pagePermissions');
+const { hasPageAccess, hasAnyPageAccess } = require('../utils/pagePermissions');
+const { isLegacyNavbarGroups, migrateLegacyNavbarGroups } = require('../utils/navbarMigration');
+
+const HUB_PATH_CHILD_KEYS = {
+  '/crm': ['leads', 'followups', 'bookings'],
+  '/office': ['equipment', 'contacts', 'subscriptions'],
+  '/management': ['finance', 'announcements', 'ops_logs', 'artists'],
+  '/admin/console': [
+    'admin_users',
+    'admin_data',
+    'admin_exly',
+    'admin_scripts',
+    'admin_gamification',
+    'admin_project_analytics',
+  ],
+};
 
 const NAV_PATH_ACCESS = {
   '/dashboard': 'dashboard',
@@ -31,12 +46,29 @@ const NAV_PATH_ACCESS = {
   '/ops-logs': 'ops_logs',
   '/artists': 'artists',
   '/admin/users': 'admin_users',
+  '/admin/teams': 'admin_users',
   '/admin': 'admin_data',
   '/admin/exly-campaigns': 'admin_exly',
   '/admin/scripts': 'admin_scripts',
   '/admin/gamification': 'admin_gamification',
   '/admin/project-analytics': 'admin_project_analytics',
   '/admin/qa': 'admin_data',
+  '/crm': 'crm_hub',
+  '/office': 'office_hub',
+  '/management': 'management_hub',
+  '/admin/console': 'admin_console',
+};
+
+const canAccessNavPath = (user, path) => {
+  if (path === '/settings') return !!user;
+  const key = NAV_PATH_ACCESS[path];
+  if (!key) return true;
+  if (key.endsWith('_hub') || key === 'admin_console') {
+    const hubPath = Object.keys(HUB_PATH_CHILD_KEYS).find((p) => NAV_PATH_ACCESS[p] === key);
+    const childKeys = HUB_PATH_CHILD_KEYS[hubPath] || [];
+    return hasAnyPageAccess(user, childKeys);
+  }
+  return hasPageAccess(user, key);
 };
 
 const filterNavbarGroupsForUser = (groups, user) => (groups || [])
@@ -45,11 +77,10 @@ const filterNavbarGroupsForUser = (groups, user) => (groups || [])
     pages: (group.pages || []).filter((page) => {
       const path = normalizeNavPath(page.path);
       if (REMOVED_NAV_PATHS.has(path)) return false;
-      const key = NAV_PATH_ACCESS[path];
-      return !key || hasPageAccess(user, key);
+      return canAccessNavPath(user, path);
     }),
   }))
-  .filter((group) => group.id !== 'admin' || group.pages.length > 0);
+  .filter((group) => group.pages.length > 0);
 
 const LEGACY_NAV_PATHS = {
   '/workspace/emails': '/emails',
@@ -61,7 +92,7 @@ const LEGACY_NAV_PATHS = {
 
 const normalizeNavPath = (path) => LEGACY_NAV_PATHS[path] || path;
 
-const REMOVED_NAV_PATHS = new Set(['/chat']);
+const REMOVED_NAV_PATHS = new Set(['/chat', '/settings']);
 
 const dedupeNavPages = (pages) => {
   const seen = new Set();
@@ -77,11 +108,13 @@ const dedupeNavPages = (pages) => {
 
 /** Add default pages missing from saved navbar groups (e.g. new features after user saved prefs). */
 const mergeNavbarWithDefaults = (userGroups) => {
+  const defaults = NavbarPreference.DEFAULT_NAVBAR_GROUPS;
+
   if (!Array.isArray(userGroups) || userGroups.length === 0) {
-    return NavbarPreference.DEFAULT_NAVBAR_GROUPS;
+    return defaults;
   }
 
-  const merged = userGroups.map((group) => ({
+  let groups = userGroups.map((group) => ({
     ...group,
     pages: (group.pages || []).map((page) => ({
       ...page,
@@ -89,7 +122,16 @@ const mergeNavbarWithDefaults = (userGroups) => {
     })),
   }));
 
-  for (const defaultGroup of NavbarPreference.DEFAULT_NAVBAR_GROUPS) {
+  if (isLegacyNavbarGroups(groups)) {
+    groups = migrateLegacyNavbarGroups(groups, defaults);
+  }
+
+  const merged = groups.map((group) => ({
+    ...group,
+    pages: dedupeNavPages(group.pages),
+  }));
+
+  for (const defaultGroup of defaults) {
     let userGroup = merged.find((g) => g.id === defaultGroup.id);
     if (!userGroup) {
       merged.push({ ...defaultGroup, pages: [...defaultGroup.pages] });
@@ -107,10 +149,12 @@ const mergeNavbarWithDefaults = (userGroups) => {
     userGroup.pages = dedupeNavPages(userGroup.pages);
   }
 
-  return merged.map((group) => ({
-    ...group,
-    pages: dedupeNavPages(group.pages),
-  }));
+  return merged
+    .map((group) => ({
+      ...group,
+      pages: dedupeNavPages(group.pages),
+    }))
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 // ============ DASHBOARD ENDPOINTS ============

@@ -1,3 +1,5 @@
+import { HUB_CONFIG } from './navbarConfig';
+
 export const PAGE_GROUPS = [
   {
     id: 'platform',
@@ -17,6 +19,7 @@ export const PAGE_GROUPS = [
       { key: 'assets', label: 'Assets', path: '/assets' },
       { key: 'schedule', label: 'Schedule', path: '/schedule' },
       { key: 'logs', label: 'Daily Logs', path: '/logs' },
+      { key: 'notes', label: 'Notes', path: '/notes' },
       { key: 'emails', label: 'Emails', path: '/emails' },
     ],
   },
@@ -53,7 +56,8 @@ export const PAGE_GROUPS = [
     id: 'admin',
     label: 'Admin',
     pages: [
-      { key: 'admin_users', label: 'Users & Teams', path: '/admin/users' },
+      { key: 'admin_users', label: 'Users', path: '/admin/users' },
+      { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
       { key: 'admin_data', label: 'Data Hub', path: '/admin' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
@@ -68,7 +72,7 @@ export const ALL_PAGE_KEYS = PAGE_GROUPS.flatMap((g) => g.pages.map((p) => p.key
 
 export const BASE_PAGE_KEYS = [
   'dashboard', 'calendar', 'todo', 'inbox',
-  'projects', 'assets', 'schedule', 'logs', 'emails',
+  'projects', 'assets', 'schedule', 'logs', 'notes', 'emails',
   'equipment', 'contacts', 'attendance', 'subscriptions',
 ];
 
@@ -147,4 +151,10 @@ export function isArtistManagerUser(user) {
 
 export function groupHasVisiblePages(user, pageKeys) {
   return pageKeys.some((k) => hasPageAccess(user, k));
+}
+
+export function hasHubAccess(user, hubPath) {
+  const hub = HUB_CONFIG[hubPath];
+  if (!hub) return false;
+  return hasAnyPageAccess(user, hub.childKeys);
 }

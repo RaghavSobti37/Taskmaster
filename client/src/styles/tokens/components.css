@@ -1,0 +1,57 @@
+/* Tier 3: Component tokens — localized overrides */
+
+:root {
+  --table-cell-padding: 0.5rem 0.75rem;
+  --table-cell-padding-compact: 0.25rem 0.375rem;
+  --sidebar-active-border-width: 2px;
+  --sidebar-icon-size: 18px;
+  --toast-left-border-width: 2px;
+  --command-palette-bg: var(--token-surface-3);
+}
+
+[data-density="compact"] {
+  --spacing-row-padding: var(--table-cell-padding-compact);
+}
+
+[data-text-size="small"] {
+  font-size: 0.8125rem;
+}
+
+[data-text-size="medium"] {
+  font-size: 0.875rem;
+}
+
+[data-text-size="large"] {
+  font-size: 1rem;
+}
+
+[data-reduced-motion="true"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Global focus ring */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--token-brand-accent);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[role="switch"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-action-primary);
+}

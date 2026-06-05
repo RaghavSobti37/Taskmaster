@@ -43,6 +43,7 @@ const PROTECTED_ROUTES = [
   { path: '/admin/control', name: 'Admin panel' },
   { path: '/admin/qa', name: 'QA testing' },
   { path: '/admin/users', name: 'Admin users' },
+  { path: '/admin/teams', name: 'Admin teams' },
   { path: '/admin/exly-campaigns', name: 'Exly campaigns' },
   { path: '/admin/scripts', name: 'Admin scripts' },
   { path: '/admin/gamification', name: 'Gamification' },

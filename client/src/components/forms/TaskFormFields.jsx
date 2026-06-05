@@ -15,9 +15,9 @@ import { getTodayDateKey, validateTaskTimelineFields } from '../../utils/dateVal
 
 const fieldLabelClass = 'block text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-2';
 const fieldInputClass =
-  'block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30';
+  'mobile-form-control block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] disabled:opacity-60 text-sm outline-none focus:ring-2 focus:ring-[var(--color-action-primary)]/30';
 const ghostInputClass =
-  'block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-transparent bg-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] disabled:opacity-60 text-sm outline-none';
+  'mobile-form-control block w-full min-w-0 min-h-[2.5rem] px-3 py-2 rounded-[var(--radius-atomic)] border border-transparent bg-transparent hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-surface)] focus:ring-1 focus:ring-[var(--color-bg-border)] disabled:opacity-60 text-sm outline-none';
 
 const TaskFormFields = ({
   values,

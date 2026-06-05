@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 /** Pixel widths — inline styles so modals never collapse when Tailwind max-w isn't applied */
 export const MODAL_WIDTH_PX = {
@@ -53,6 +54,8 @@ export const ModalOverlay = ({
   </div>
 );
 
+const ModalTitleIdContext = React.createContext(null);
+
 /**
  * Shared modal overlay + panel shell.
  * Uses grid centering + explicit width (not flex shrink) to prevent collapsed modals.
@@ -68,7 +71,12 @@ export const ModalShell = ({
   panelClassName = '',
   closeOnBackdrop = true,
   closeOnEscape = true,
+  ariaLabel,
 }) => {
+  const panelRef = React.useRef(null);
+  const titleId = React.useId();
+  useFocusTrap(isOpen, panelRef);
+
   React.useEffect(() => {
     if (!isOpen) return undefined;
     const onKey = (e) => {
@@ -101,6 +109,7 @@ export const ModalShell = ({
       />
       <div className={`absolute inset-0 ${MODAL_OVERLAY_CLASS} p-4 sm:p-6 pointer-events-none overflow-y-auto`}>
         <div
+          ref={panelRef}
           style={{
             ...panelStyle,
             width: `min(calc(100vw - 2rem), ${typeof (widthPx ?? size) === 'number' ? widthPx ?? size : MODAL_WIDTH_PX[widthPx ?? size] || MODAL_WIDTH_PX.lg}px)`,
@@ -109,8 +118,12 @@ export const ModalShell = ({
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabel ? undefined : titleId}
         >
-          {children}
+          <ModalTitleIdContext.Provider value={titleId}>
+            {children}
+          </ModalTitleIdContext.Provider>
         </div>
       </div>
     </div>,
@@ -127,7 +140,11 @@ export const ModalHeader = ({
   showClose = true,
   subtitleFirst = false,
   prominentTitle = false,
-}) => (
+  titleId: titleIdProp,
+}) => {
+  const contextTitleId = React.useContext(ModalTitleIdContext);
+  const titleId = titleIdProp || contextTitleId;
+  return (
   <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] shrink-0">
     <div className="flex items-center gap-2 min-w-0">
       {Icon && (
@@ -140,6 +157,7 @@ export const ModalHeader = ({
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] truncate">{subtitle}</p>
         )}
         <h2
+          id={titleId || undefined}
           className={
             prominentTitle
               ? 'text-xl font-black leading-tight normal-case tracking-normal truncate'
@@ -154,12 +172,13 @@ export const ModalHeader = ({
       </div>
     </div>
     {showClose && onClose && (
-      <button type="button" onClick={onClose} className="p-1.5 hover:bg-black/5 rounded transition-colors shrink-0">
+      <button type="button" onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-black/5 rounded transition-colors shrink-0">
         <X size={16} className="text-[var(--color-text-muted)]" />
       </button>
     )}
   </div>
-);
+  );
+};
 
 export const ModalBody = ({ children, className = '' }) => (
   <div className={`tm-modal-scroll p-6 space-y-4 flex-1 min-h-0 ${className}`}>{children}</div>

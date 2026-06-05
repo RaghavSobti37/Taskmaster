@@ -17,17 +17,17 @@ import { useAuth } from '../../contexts/AuthContext';
 const fetchTasks = async ({ includeOldCompleted = false } = {}) => {
   const params = includeOldCompleted ? { includeOldCompleted: '1' } : undefined;
   const { data } = await axios.get('/api/tasks', { params });
-  return data;
+  return Array.isArray(data) ? data : data?.tasks || [];
 };
 
 const fetchDashboardTasks = async () => {
   const { data } = await axios.get('/api/tasks', { params: { scope: 'dashboard' } });
-  return data;
+  return Array.isArray(data) ? data : data?.tasks || [];
 };
 
 const fetchReviewTasks = async () => {
   const { data } = await axios.get('/api/tasks', { params: { scope: 'review' } });
-  return data;
+  return Array.isArray(data) ? data : data?.tasks || [];
 };
 
 export const filterTasksForUser = (tasks, userId) => {
@@ -55,6 +55,22 @@ export const useTasks = (userId, { includeOldCompleted = false } = {}) => {
     queryFn: () => fetchTasks({ includeOldCompleted }),
     placeholderData: keepPreviousData,
     select: (tasks) => filterTasksForUser(tasks, userId),
+  });
+};
+
+export const useTodoTasks = (params, userId, enabled = true) => {
+  return useQuery({
+    queryKey: ['tasks', 'todo', params],
+    queryFn: async () => {
+      const { data } = await axios.get('/api/tasks', { params: { scope: 'todo', ...params } });
+      return data;
+    },
+    enabled: enabled && !!userId,
+    placeholderData: keepPreviousData,
+    select: (data) => ({
+      ...data,
+      tasks: normalizeTasks(data?.tasks || []),
+    }),
   });
 };
 

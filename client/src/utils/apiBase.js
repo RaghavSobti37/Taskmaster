@@ -1,3 +1,5 @@
+import { shouldUseSameOriginApi } from './displayMode';
+
 const LOCAL_API_RE = /^https?:\/\/(localhost|127\.0\.0\.1):5000\/?$/i;
 
 /** API origin for auth redirects (OAuth) and absolute URLs. Empty = same-origin / Vite proxy. */
@@ -10,22 +12,29 @@ export function useViteProxyInDev() {
   return import.meta.env.DEV && LOCAL_API_RE.test(getApiBaseUrl());
 }
 
-/** Axios base URL: undefined = relative paths via Vite proxy. */
-export function getAxiosBaseURL() {
+/** Direct Render API — large payloads that exceed Vercel's ~4.5MB proxy limit. */
+export function getDirectApiBaseUrl() {
   if (useViteProxyInDev()) return undefined;
-  const base = getApiBaseUrl();
-  return base || undefined;
+  return getApiBaseUrl() || undefined;
+}
+
+/** Axios base URL: undefined = relative paths via Vite/Vercel proxy. */
+export function getAxiosBaseURL() {
+  if (useViteProxyInDev() || shouldUseSameOriginApi()) return undefined;
+  return getDirectApiBaseUrl();
 }
 
 /** Socket.io origin (Vite proxy supports ws in dev). */
 export function getRealtimeOrigin() {
+  if (typeof window === 'undefined') return '';
   if (useViteProxyInDev()) return window.location.origin;
-  return getApiBaseUrl() || window.location.origin;
+  return getDirectApiBaseUrl() || window.location.origin;
 }
 
-/** Build API path; uses VITE_API_URL when set (production cross-origin). */
+/** Build API path; home-screen PWAs use same-origin /api for reliable iOS cookies. */
 export function apiPath(path) {
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  const base = getApiBaseUrl();
+  if (useViteProxyInDev() || shouldUseSameOriginApi()) return normalized;
+  const base = getDirectApiBaseUrl();
   return base ? `${base}${normalized}` : normalized;
 }

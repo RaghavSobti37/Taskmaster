@@ -21,7 +21,7 @@ const SystemLogsPage = () => {
 
   return (
     <ListPageLayout
-      containerClassName="!py-4"
+      containerClassName="!py-4 ops-terminal-page"
       overview={{
         stats: [
           {

@@ -36,28 +36,16 @@ export function useAuthenticatedRealtime({ userId, sessionReady, setUser }) {
         const actionLabel = payload.actionLabel || payload.action?.replace(/_/g, ' ') || 'XP';
         pushCustomToast(
           () => (
-            <div className="max-w-sm w-full bg-[var(--color-bg-surface)] border border-[var(--color-bg-border)] shadow-2xl rounded-2xl pointer-events-auto flex overflow-hidden">
-              <div className="p-4 flex-1">
-                <div className="flex items-center">
-                  <div className="shrink-0 bg-blue-500/10 p-2 rounded-xl">
-                    <span className="text-xl">✨</span>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-[var(--color-text-primary)]">
-                      XP Gained!
-                    </p>
-                    <p className="text-[10px] font-bold text-[var(--color-text-muted)] mt-0.5">
-                      +{payload.amount} XP • {actionLabel}
-                    </p>
-                    <div className="mt-2 w-full bg-[var(--color-bg-border)] rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="bg-amber-500 h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div
+              className="max-w-xs w-full bg-[var(--token-surface-1)] shadow-lg rounded-xl pointer-events-auto border-l-[2px] px-3 py-2.5"
+              style={{ borderLeftColor: '#27a644' }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
+                +{payload.amount} XP
+              </p>
+              <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5 truncate">
+                {actionLabel}
+              </p>
             </div>
           ),
           { id: `xp-${payload.action}`, duration: 4000 }

@@ -23,6 +23,17 @@ const {
 } = require('../controllers/projectController');
 const { linkProjectCalendar, getProjectCalendarEvents } = require('../controllers/googleController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const {
+  projectBody,
+  createWorkspaceBody,
+  reorderWorkspacesBody,
+  workspaceUpdateBody,
+  addMemberBody,
+  updateMemberRoleBody,
+  removeMemberBody,
+  linkCalendarBody,
+} = require('../validation/schemas/projects');
 
 const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
@@ -39,34 +50,34 @@ router.get('/workspaces-plain.txt', (req, res, next) => {
 router.use(protect);
 
 router.route('/')
-  .post(createProject)
+  .post(validateBody(projectBody), createProject)
   .get(getProjects);
 
 router.route('/workspaces')
   .get(getWorkspaces)
-  .post(createWorkspace)
-  .put(reorderWorkspaces);
+  .post(validateBody(createWorkspaceBody), createWorkspace)
+  .put(validateBody(reorderWorkspacesBody), reorderWorkspaces);
 
 router.route('/workspaces/:name')
   .get(getWorkspaceByName)
-  .patch(updateWorkspace)
+  .patch(validateBody(workspaceUpdateBody), updateWorkspace)
   .delete(deleteWorkspace);
 
 router.get('/analytics-summary', getProjectsAnalyticsSummary);
 
 router.route('/:id')
   .get(getProjectById)
-  .put(updateProject)
+  .put(validateBody(projectBody), updateProject)
   .delete(deleteProject);
 
-router.post('/:id/members', addMember);
-router.patch('/:id/members/:userId/role', updateMemberRole);
-router.put('/:id/remove-member', removeMember);
+router.post('/:id/members', validateBody(addMemberBody), addMember);
+router.patch('/:id/members/:userId/role', validateBody(updateMemberRoleBody), updateMemberRole);
+router.put('/:id/remove-member', validateBody(removeMemberBody), removeMember);
 router.get('/:id/workload', getProjectWorkload);
 router.get('/:id/hours-summary', getProjectHoursSummary);
 router.get('/:id/analytics', getProjectAnalytics);
 
-router.post('/:id/link-calendar', linkProjectCalendar);
+router.post('/:id/link-calendar', validateBody(linkCalendarBody), linkProjectCalendar);
 router.get('/:id/calendar-events', getProjectCalendarEvents);
 
 module.exports = router;

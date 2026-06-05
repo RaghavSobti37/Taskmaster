@@ -10,5 +10,6 @@ export const useStatusCounts = (enabled = true) => {
     enabled,
     staleTime: 1000 * 15,
     refetchInterval: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
 };

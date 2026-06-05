@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Trash2, CheckCircle2,
   Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, GitCommit, Layers, Calendar, MessageSquare, Send, Bell, History, UserPlus
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown } from '../../components/ui';
-import { Modal } from '../../components/ui/modals';;
+import { Modal } from '../../components/ui/modals';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -16,21 +17,75 @@ import { formatExlyTag } from '../../utils/crmUtils';
 import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
+import LeadLockIndicator from '../../components/crm/LeadLockIndicator';
+import LeadRowActions from '../../components/crm/LeadRowActions';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { applyFlashHighlight } from '../../utils/navigationHighlight';
+
+const CRM_LEADS_FILTERS_KEY = 'crm-leads-filters';
+
+const loadLeadsFilters = () => {
+  try {
+    const raw = localStorage.getItem(CRM_LEADS_FILTERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return {
+    leadStatus: 'all',
+    meaningfulConnect: 'all',
+    source: 'all',
+    leadQuality: 'all',
+    assignedRepId: 'all',
+    pageSize: 25,
+  };
+};
+
+const isLockedByOther = (lead, currentUserId) => {
+  if (!lead?.lockedBy || !currentUserId) return false;
+  return String(lead.lockedBy) !== String(currentUserId);
+};
+
+const formatLockToast = (err) => {
+  const name = err.response?.data?.lockedByUser?.name || 'Another user';
+  return `${name} is editing this lead`;
+};
+
+const releaseLeadLock = async (leadId) => {
+  if (!leadId) return;
+  try {
+    await axios.post(`/api/crm/leads/${leadId}/unlock`, null, {
+      headers: { 'x-skip-toast': 'true' },
+    });
+  } catch {
+    /* best-effort */
+  }
+};
+
+const closeLeadEditor = (leadId, setSelectedLead) => {
+  releaseLeadLock(leadId);
+  setSelectedLead(null);
+};
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const { confirm } = useConfirm();
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(() => loadLeadsFilters().pageSize || 25);
   const [selectedLead, setSelectedLead] = useState(null);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [statFilter, setStatFilter] = useState(null);
-  const [filters, setFilters] = useState({ leadStatus: 'all', meaningfulConnect: 'all' });
+  const [filters, setFilters] = useState(() => {
+    const saved = loadLeadsFilters();
+    const { pageSize: _ps, ...rest } = saved;
+    return rest;
+  });
 
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -65,6 +120,14 @@ export default function LeadsPage() {
     });
   };
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(CRM_LEADS_FILTERS_KEY, JSON.stringify({ ...filters, pageSize }));
+    } catch {
+      /* ignore */
+    }
+  }, [filters, pageSize]);
+
   React.useEffect(() => {
     if (selectedLead) {
       const loaded = buildLeadEditState(selectedLead);
@@ -75,15 +138,24 @@ export default function LeadsPage() {
       // Fetch audit trail for the selected lead
       axios.get(`/api/crm/leads/${selectedLead._id}/audit`)
         .then(res => setLeadLogs(res.data))
-        .catch(err => console.error('Failed to fetch lead logs', err));
-    } else {
-      setLeadLogs([]);
-      setFieldErrors({});
-      setEditBaseline(null);
+        .catch(() => setLeadLogs([]));
+
+      const heartbeat = window.setInterval(() => {
+        axios.post(`/api/crm/leads/${selectedLead._id}/lock-heartbeat`, null, {
+          headers: { 'x-skip-toast': 'true' },
+        }).catch(() => {});
+      }, 30_000);
+
+      return () => window.clearInterval(heartbeat);
     }
+    setLeadLogs([]);
+    setFieldErrors({});
+    setEditBaseline(null);
+    return undefined;
   }, [selectedLead]);
 
   const hasLeadChanges = leadEditHasChanges(editLeadData, editBaseline);
+
   const handleRevertLeadEdits = () => {
     if (editBaseline) {
       setEditLeadData(editBaseline);
@@ -105,12 +177,28 @@ export default function LeadsPage() {
         data: sanitized,
       });
       toast.success('Lead saved');
-      setSelectedLead(null);
+      closeLeadEditor(selectedLead._id, setSelectedLead);
       setFieldErrors({});
     } catch (err) {
+      if (err.response?.status === 423) {
+        toast.error(formatLockToast(err));
+        return;
+      }
       toast.error(err.response?.data?.error || err.message || 'Failed to save lead');
     }
   };
+
+  useUnsavedChanges({
+    baseline: editBaseline,
+    draft: editLeadData,
+    setDraft: setEditLeadData,
+    hasChanges: hasLeadChanges && !!selectedLead,
+    onSave: handleSaveLead,
+    onCancel: handleRevertLeadEdits,
+    isSaving: updateMutation.isPending,
+    enabled: !!selectedLead,
+    elevated: true,
+  });
 
   const handleDeleteLead = async () => {
     if (!selectedLead) return;
@@ -123,7 +211,7 @@ export default function LeadsPage() {
     if (!ok) return;
     try {
       await axios.delete(`/api/crm/leads/${selectedLead._id}`);
-      setSelectedLead(null);
+      closeLeadEditor(selectedLead._id, setSelectedLead);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['crm', 'stats'] });
     } catch (err) {
@@ -222,6 +310,26 @@ export default function LeadsPage() {
   const leads = data?.leads || [];
   const totalLeads = data?.total || 0;
   const totalPages = data?.pages || 1;
+  const highlightHandledRef = useRef(null);
+
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (!highlightId || highlightHandledRef.current === highlightId) return;
+    const match = leads.find((l) => String(l._id) === highlightId);
+    if (match) {
+      highlightHandledRef.current = highlightId;
+      setSelectedLead(match);
+      applyFlashHighlight(highlightId);
+      return;
+    }
+    axios.get(`/api/crm/leads/${highlightId}`)
+      .then((res) => {
+        highlightHandledRef.current = highlightId;
+        setSelectedLead(res.data);
+        applyFlashHighlight(highlightId);
+      })
+      .catch(() => {});
+  }, [searchParams, leads]);
   const sourcesList = crmConfig?.sources || ['Organic / Direct', 'Webinar', 'Facebook Ads', 'Google Ads', 'Referral'];
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
@@ -251,8 +359,13 @@ export default function LeadsPage() {
       mobilePrimary: true,
       mobileSubtitle: (row) => [row?.email, row?.phone].filter(Boolean).join(' • '),
       render: (row) => (
-        <div className="flex flex-col gap-1.5">
+        <div className={`relative flex flex-col gap-1.5 pr-16 ${isLockedByOther(row, user?._id) ? 'opacity-60' : ''}`}>
+          <LeadRowActions
+            onEdit={() => setSelectedLead(row)}
+            onHistory={() => setSelectedLead(row)}
+          />
           <div className="flex items-center gap-2 flex-wrap">
+            <LeadLockIndicator lead={row} currentUserId={user?._id} />
             <span className="font-bold text-xs tracking-tight">{row?.name || 'Unknown'}</span>
             {row.artistType && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] text-[var(--color-text-muted)] font-normal tracking-tight">
@@ -450,11 +563,13 @@ export default function LeadsPage() {
         sortState={tableSortState}
         onSortChange={handleTableSortChange}
         isLoading={isLoading}
+        rowEstimateSize={58}
+        tableMaxHeight="70vh"
       />
 
       <FullScreenWorkspace
         isOpen={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
+        onClose={() => closeLeadEditor(selectedLead?._id, setSelectedLead)}
         title={selectedLead?.name || 'Customer Details'}
         subtitle={selectedLead ? `ref: ${selectedLead._id?.substring(0, 8) || '—'}` : ''}
         onSave={handleSaveLead}
@@ -489,8 +604,12 @@ export default function LeadsPage() {
                     data: updatedData
                   });
                   toast.success('Follow-up marked done');
-                  setSelectedLead(null);
+                  closeLeadEditor(selectedLead._id, setSelectedLead);
                 } catch (err) {
+                  if (err.response?.status === 423) {
+                    toast.error(formatLockToast(err));
+                    return;
+                  }
                   toast.error(err.response?.data?.error || err.message || 'Failed to update lead');
                 }
               }}

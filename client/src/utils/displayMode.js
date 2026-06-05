@@ -9,6 +9,11 @@ export function isStandaloneDisplay() {
   );
 }
 
+/** iOS/Android home-screen app — use same-origin /api so auth cookies stay first-party. */
+export function shouldUseSameOriginApi() {
+  return isStandaloneDisplay();
+}
+
 /** Mouse/trackpad primary — not phone/tablet touch UI */
 export function isDesktopLikeInput() {
   if (typeof window === 'undefined') return true;
@@ -31,4 +36,22 @@ export function applyPwaDesktopDocumentFlag() {
   } else {
     delete document.documentElement.dataset.pwaDesktop;
   }
+}
+
+/** Re-apply display flags on resize / display-mode change */
+export function watchDisplayModeFlags() {
+  if (typeof window === 'undefined') return () => {};
+
+  const refresh = () => applyPwaDesktopDocumentFlag();
+  window.addEventListener('resize', refresh);
+  STANDALONE_MODES.forEach((mode) => {
+    window.matchMedia(`(display-mode: ${mode})`).addEventListener('change', refresh);
+  });
+
+  return () => {
+    window.removeEventListener('resize', refresh);
+    STANDALONE_MODES.forEach((mode) => {
+      window.matchMedia(`(display-mode: ${mode})`).removeEventListener('change', refresh);
+    });
+  };
 }

@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { Brackets, Play, Clock3, CheckCircle2, XCircle } from 'lucide-react';
+import { Brackets, Play, Clock3, CheckCircle2, XCircle, Layers } from 'lucide-react';
 import { Badge, Button, Input, PageContainer, PageHeader, PageSkeleton } from '../../components/ui';
+import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 
 const formatMs = (ms = 0) => {
   if (ms < 1000) return `${ms}ms`;
@@ -39,6 +40,12 @@ const AdminScriptsPage = () => {
   const { data: scripts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['admin-scripts'],
     queryFn: async () => (await axios.get('/api/admin/scripts')).data?.data || [],
+  });
+
+  const { data: queueStatus, isFetching: queuesFetching, refetch: refetchQueues } = useQuery({
+    queryKey: ['admin-queues'],
+    queryFn: async () => (await axios.get('/api/admin/queues/status')).data,
+    refetchInterval: 30_000,
   });
 
   const filtered = useMemo(() => {
@@ -119,6 +126,51 @@ const AdminScriptsPage = () => {
           <code className="text-[10px] font-mono">server/config/adminScriptsCatalog.js</code> to add or remove.
         </p>
       </PageHeader>
+
+      <section className="rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Layers size={16} className="text-[var(--color-brand-teal)]" />
+            <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Background queues</h2>
+            <Badge variant={queueStatus?.redisAvailable ? 'success' : 'warning'}>
+              {queueStatus?.redisAvailable ? 'Redis' : 'Memory fallback'}
+            </Badge>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => refetchQueues()} disabled={queuesFetching}>
+            {queuesFetching ? 'Refreshing...' : 'Refresh queues'}
+          </Button>
+        </div>
+        {!queueStatus?.redisAvailable ? (
+          <p className="text-xs text-[var(--color-text-muted)]">
+            BullMQ stats need Redis. Jobs still run via in-memory fallback when Redis is down.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {(queueStatus?.queues || []).map((q) => (
+              <div key={q.name} className="rounded-lg border border-[var(--color-bg-border)] p-3">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-xs font-bold font-mono text-[var(--color-text-primary)]">{q.name}</span>
+                  <Badge variant="info">waiting {q.waiting}</Badge>
+                  <Badge variant="info">active {q.active}</Badge>
+                  <Badge variant={q.failed > 0 ? 'danger' : 'success'}>failed {q.failed}</Badge>
+                </div>
+                {q.recentFailed?.length > 0 && (
+                  <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
+                    {q.recentFailed.map((job) => (
+                      <li key={`${q.name}-${job.id}`} className="font-mono truncate" title={job.failedReason || ''}>
+                        #{job.id} {job.name} — {job.failedReason || 'failed'}
+                        {job.finishedOn ? (
+                          <> · <RelativeTimestamp value={job.finishedOn} /></>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {filtered.length === 0 ? (
         <p className="text-sm text-[var(--color-text-muted)] py-8 text-center">

@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const { validateParams } = require('../validation/validateParams');
+const { runAdminScriptBody, adminScriptParams } = require('../validation/schemas/admin');
 const SCRIPTS_CATALOG = require('../config/adminScriptsCatalog');
 
 const router = express.Router();
@@ -38,7 +41,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/:scriptId/run', async (req, res) => {
+router.post('/:scriptId/run', validateParams(adminScriptParams), validateBody(runAdminScriptBody), async (req, res) => {
   try {
     const { scriptId } = req.params;
     const scripts = buildScriptList();

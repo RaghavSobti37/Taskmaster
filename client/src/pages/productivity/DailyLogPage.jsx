@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, isSameDay, eachDayOfInterval } from 'date-fns';
 
 const ACTIVITY_GRID_START = new Date(2026, 4, 12); // 12 May 2026
 import {
   Calendar as CalIcon, CheckCircle2, Clock, ChevronLeft,
-  ChevronRight, Plus, Send, Timer, Zap, Target,
+  ChevronRight, Plus, Send, Timer, Zap,
   Activity, Trophy, RefreshCw, Edit2, Trash2, CheckSquare, NotebookPen, History, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, NexusDropdown, PageHeader, PageContainer, Button, Input, StatCard, TabSwitcher, DataLoading } from '../../components/ui';
-import { NexusModal } from '../../components/ui/modals';;
+import DailyLogEntryModal from '../../components/productivity/DailyLogEntryModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
@@ -18,7 +18,7 @@ import { useConfirm } from '../../contexts/confirmContext';
 import { useSearchParams } from 'react-router-dom';
 import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
-  useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useCreateLog, useUpdateLog, useDeleteLog, useActivityGrid 
+  useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
 import WorkspaceProjectFields, {
   resolveWorkspaceFromProjectName,
@@ -52,12 +52,16 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   };
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ? new Date(searchParams.get('date')) : new Date());
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [timeSpent, setTimeSpent] = useState('');
-  const [selectedWorkspace, setSelectedWorkspace] = useState('General');
-  const [selectedProject, setSelectedProject] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('add') === '1') {
+      setIsDrawerOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('add');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const [editingLogId, setEditingLogId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -88,7 +92,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
   const targetUser = userDirectory.find(u => u._id === targetUserId);
   const targetUserName = adminViewUserName || targetUser?.name || '';
 
-  const createLogMutation = useCreateLog();
   const updateLogMutation = useUpdateLog();
   const deleteLogMutation = useDeleteLog();
 
@@ -153,40 +156,6 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     const nextDate = new Date(selectedDate);
     nextDate.setDate(selectedDate.getDate() + days);
     setSelectedDate(nextDate);
-  };
-
-  const handleManualSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!title.trim()) return;
-
-    const projectRecord = projects.find((p) => p._id === selectedProject);
-    createLogMutation.mutate({
-      action: 'DAILY_LOG',
-      details: {
-        title,
-        message: description,
-        timeSpent,
-        workspace: selectedWorkspace || projectRecord?.workspace || 'General',
-        project: projectRecord?.name || 'General',
-      },
-      targetId: selectedProject || null,
-      targetType: selectedProject ? 'Project' : 'System'
-    }, {
-      onSuccess: () => {
-        setTitle('');
-        setDescription('');
-        setTimeSpent('');
-        setSelectedWorkspace('General');
-        setSelectedProject('');
-        setIsDrawerOpen(false);
-        addToast({
-          title: 'Log saved',
-          message: 'Daily log entry added — XP awarded if under today\'s cap.',
-          type: 'success',
-          module: MODULE.SYSTEM,
-        });
-      }
-    });
   };
 
   const dailyLogs = useMemo(() => logs.filter(l =>
@@ -551,47 +520,10 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
         </aside>
       </div>
 
-      <NexusModal
+      <DailyLogEntryModal
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        title="Log Your Work"
-        showFooter={false}
-        size="lg"
-      >
-        <form onSubmit={handleManualSubmit} className="space-y-6">
-            <Input label="What did you work on?" value={title} onChange={e => setTitle(e.target.value)} placeholder="Task name or summary" icon={Target} required />
-            <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Time Spent</label>
-               <NexusDropdown options={timeOptions.map(opt => ({ value: opt, label: opt }))} value={timeSpent} onChange={setTimeSpent} placeholder="Select time" />
-            </div>
-            <WorkspaceProjectFields
-              projects={projects}
-              workspace={selectedWorkspace}
-              projectId={selectedProject}
-              onChange={({ workspace, projectId }) => {
-                setSelectedWorkspace(workspace);
-                setSelectedProject(projectId);
-              }}
-              layout="inline"
-              allowEmptyProject
-              emptyProjectLabel="None"
-            />
-            <div className="space-y-1.5">
-               <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Description</label>
-               <textarea 
-                 value={description} 
-                 onChange={e => setDescription(e.target.value)}
-                 className="w-full px-4 py-3 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-xs font-medium outline-none min-h-[120px] focus:ring-1 focus:ring-blue-500/30 transition-all resize-none"
-                 placeholder="Any extra details..."
-               />
-            </div>
-           <Button type="submit" className="w-full" disabled={createLogMutation.isLoading || !title.trim()}>
-              {createLogMutation.isLoading ? <RefreshCw size={14} className="animate-spin" /> : <><Plus size={14} /> Log Work</>}
-           </Button>
-        </form>
-      </NexusModal>
-
-      <NexusModal isOpen={createLogMutation.isSuccess} onClose={() => createLogMutation.reset()} title="Work Logged" message="Your work has been saved successfully." type="success" />
+      />
         </>
       )}
     </PageContainer>

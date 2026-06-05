@@ -41,7 +41,7 @@ const SearchInput = ({
             placeholder={placeholder}
             value={value}
             onChange={onChange}
-            className="tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
+            className="mobile-form-control tm-toolbar-control block w-full pl-9 pr-8 text-xs bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] outline-none transition-colors focus:border-[var(--color-action-primary)]"
             {...props}
           />
           {value ? (

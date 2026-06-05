@@ -31,88 +31,53 @@ const navbarPreferenceSchema = new mongoose.Schema({
 
 navbarPreferenceSchema.index({ userId: 1 });
 
-// Default navbar groups
+// Default navbar groups — 3-zone usage-driven IA
 const DEFAULT_NAVBAR_GROUPS = [
   {
-    id: 'platform',
-    title: 'Platform',
+    id: 'primary',
+    title: 'Primary',
     order: 1,
     visible: true,
     isCustom: false,
+    flat: true,
     pages: [
       { path: '/dashboard', label: 'Dashboard', order: 1, visible: true },
-      { path: '/calendar', label: 'Calendar', order: 2, visible: true },
-      { path: '/todo', label: 'To-Do', order: 3, visible: true },
-      { path: '/inbox', label: 'Inbox', order: 4, visible: true }
-    ]
+      { path: '/projects', label: 'Projects', order: 2, visible: true },
+      { path: '/todo', label: 'Todo', order: 3, visible: true },
+      { path: '/inbox', label: 'Inbox', order: 4, visible: true },
+      { path: '/attendance', label: 'Attendance', order: 5, visible: true },
+    ],
   },
   {
-    id: 'workspace',
-    title: 'Workspace',
+    id: 'tools',
+    title: 'Tools',
     order: 2,
     visible: true,
     isCustom: false,
+    defaultOpen: true,
     pages: [
-      { path: '/projects', label: 'Projects', order: 1, visible: true },
-      { path: '/assets', label: 'Assets', order: 2, visible: true },
-      { path: '/schedule', label: 'Schedule', order: 3, visible: true },
-      { path: '/logs', label: 'Daily Logs', order: 4, visible: true },
-      { path: '/emails', label: 'Emails', order: 5, visible: true }
-    ]
+      { path: '/calendar', label: 'Calendar', order: 1, visible: true },
+      { path: '/logs', label: 'Daily Logs', order: 2, visible: true },
+      { path: '/notes', label: 'Notes', order: 3, visible: true },
+      { path: '/assets', label: 'Assets', order: 4, visible: true },
+      { path: '/schedule', label: 'Schedule', order: 5, visible: true },
+      { path: '/emails', label: 'Emails', order: 6, visible: true },
+    ],
   },
   {
-    id: 'office',
-    title: 'Office',
+    id: 'hubs',
+    title: 'Modules',
     order: 3,
     visible: true,
     isCustom: false,
+    defaultOpen: false,
     pages: [
-      { path: '/equipment', label: 'Equipment', order: 1, visible: true },
-      { path: '/contacts', label: 'Contacts', order: 2, visible: true },
-      { path: '/attendance', label: 'Attendance', order: 3, visible: true },
-      { path: '/subscriptions', label: 'Subscriptions', order: 4, visible: true }
-    ]
+      { path: '/crm', label: 'CRM', order: 1, visible: true },
+      { path: '/office', label: 'People & Office', order: 2, visible: true },
+      { path: '/management', label: 'Management', order: 3, visible: true },
+      { path: '/admin/console', label: 'Admin', order: 4, visible: true },
+    ],
   },
-  {
-    id: 'crm',
-    title: 'CRM',
-    order: 4,
-    visible: true,
-    isCustom: false,
-    pages: [
-      { path: '/leads', label: 'Leads', order: 1, visible: true },
-      { path: '/followups', label: 'Followups', order: 2, visible: true },
-      { path: '/bookings', label: 'Bookings', order: 3, visible: true }
-    ]
-  },
-  {
-    id: 'management',
-    title: 'Management',
-    order: 5,
-    visible: true,
-    isCustom: false,
-    pages: [
-      { path: '/finance', label: 'Finance', order: 1, visible: true },
-      { path: '/announcements', label: 'Announcements', order: 2, visible: true },
-      { path: '/ops-logs', label: 'Ops Logs', order: 3, visible: true },
-      { path: '/artists', label: 'Artists', order: 4, visible: true }
-    ]
-  },
-  {
-    id: 'admin',
-    title: 'Admin',
-    order: 6,
-    visible: true,
-    isCustom: false,
-    pages: [
-      { path: '/admin/users', label: 'Users & Teams', order: 1, visible: true },
-      { path: '/admin', label: 'Data Hub', order: 2, visible: true },
-      { path: '/admin/exly-campaigns', label: 'Exly Data', order: 3, visible: true },
-      { path: '/admin/scripts', label: 'Script Runner', order: 4, visible: true },
-      { path: '/admin/gamification', label: 'Gamification', order: 5, visible: true },
-      { path: '/admin/project-analytics', label: 'Project Analytics', order: 6, visible: true }
-    ]
-  }
 ];
 
 module.exports = mongoose.model('NavbarPreference', navbarPreferenceSchema);

@@ -8,6 +8,8 @@ server/.env.render
 client/dist
 client/lighthouse-reports/
 client/.lighthouse.env
+test-results/
+playwright-report/
 node_modules
 *.csv
 server/uploads/

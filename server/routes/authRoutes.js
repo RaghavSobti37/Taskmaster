@@ -1,8 +1,21 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { register, login, logout, getMe, changeRequiredPassword, googleLogin, googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword } = require('../controllers/authController');
+const {
+  register, login, logout, getMe, changeRequiredPassword, googleLogin,
+  googleAuthRedirect, googleAuthCallback, oauthEstablishSession, forgotPassword, resetPassword,
+  listSessions, revokeSession, revokeOtherSessions,
+} = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const {
+  registerBody,
+  loginBody,
+  forgotPasswordBody,
+  resetPasswordBody,
+  changeRequiredPasswordBody,
+  oauthEstablishBody,
+} = require('../validation/schemas/auth');
 
 const authLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -42,13 +55,13 @@ const authForgotPasswordLimiter = rateLimit({
   },
 });
 
-router.post('/register', authSignupLimiter, register);
-router.post('/login', authLoginLimiter, login);
-router.post('/forgot-password', authForgotPasswordLimiter, forgotPassword);
-router.post('/reset-password', authForgotPasswordLimiter, resetPassword);
+router.post('/register', authSignupLimiter, validateBody(registerBody), register);
+router.post('/login', authLoginLimiter, validateBody(loginBody), login);
+router.post('/forgot-password', authForgotPasswordLimiter, validateBody(forgotPasswordBody), forgotPassword);
+router.post('/reset-password', authForgotPasswordLimiter, validateBody(resetPasswordBody), resetPassword);
 router.post('/logout', logout);
 router.post('/google-login', googleLogin);
-router.post('/oauth-establish', authLoginLimiter, oauthEstablishSession);
+router.post('/oauth-establish', authLoginLimiter, validateBody(oauthEstablishBody), oauthEstablishSession);
 router.get('/google/redirect-uri', (req, res) => {
   const { resolveGoogleRedirectUri } = require('../utils/googleAuth');
   res.json({ redirectUri: resolveGoogleRedirectUri(req) });
@@ -56,6 +69,9 @@ router.get('/google/redirect-uri', (req, res) => {
 router.get('/google', googleAuthRedirect);
 router.get('/google/callback', googleAuthCallback);
 router.get('/me', protect, getMe);
-router.post('/change-required-password', protect, changeRequiredPassword);
+router.get('/sessions', protect, listSessions);
+router.delete('/sessions/:jti', protect, revokeSession);
+router.post('/sessions/revoke-others', protect, revokeOtherSessions);
+router.post('/change-required-password', protect, validateBody(changeRequiredPasswordBody), changeRequiredPassword);
 
 module.exports = router;

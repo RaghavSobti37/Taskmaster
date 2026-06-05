@@ -5,6 +5,15 @@ const artistAnalyticsController = require('../controllers/artistAnalyticsControl
 const artistShareController = require('../controllers/artistShareController');
 const connectionAuth = require('../controllers/connectionAuthController');
 const { protect, artistOrAdmin } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const { validateParams } = require('../validation/validateParams');
+const {
+  createArtistBody,
+  updateArtistBody,
+  injectEventBody,
+  artistConnectionParams,
+  trackedVideoBody,
+} = require('../validation/schemas/artist');
 
 const callback = (provider) => (req, res) => {
   req.params.provider = provider;
@@ -32,16 +41,21 @@ router.get('/:id/auth/youtube', connectionAuth.legacyYoutubeRedirect);
 router.use(protect);
 
 router.get('/', artistController.getArtists);
-router.post('/', artistOrAdmin, artistController.createArtist);
+router.post('/', artistOrAdmin, validateBody(createArtistBody), artistController.createArtist);
 router.get('/:id/connections', artistController.getArtistConnections);
 router.post('/:id/share-link', artistOrAdmin, artistShareController.createShareLink);
 router.post('/:id/claim', artistShareController.claimArtistWorkspace);
-router.put('/:id/connections/:connectionId/primary', artistOrAdmin, artistController.setPrimaryConnection);
-router.put('/:id', artistOrAdmin, artistController.updateArtist);
+router.put(
+  '/:id/connections/:connectionId/primary',
+  artistOrAdmin,
+  validateParams(artistConnectionParams),
+  artistController.setPrimaryConnection,
+);
+router.put('/:id', artistOrAdmin, validateBody(updateArtistBody), artistController.updateArtist);
 router.delete('/:id', artistOrAdmin, artistController.deleteArtist);
-router.post('/:id/inject-event', artistOrAdmin, artistController.injectEvent);
+router.post('/:id/inject-event', artistOrAdmin, validateBody(injectEventBody), artistController.injectEvent);
 router.post('/:id/sync-stats', artistOrAdmin, artistAnalyticsController.syncArtistStats);
-router.post('/:id/tracked-video', artistOrAdmin, artistAnalyticsController.addTrackedVideo);
+router.post('/:id/tracked-video', artistOrAdmin, validateBody(trackedVideoBody), artistAnalyticsController.addTrackedVideo);
 router.post('/:id/webhooks/subscribe', artistOrAdmin, artistAnalyticsController.enableInstagramWebhooks);
 router.get('/:id/analytics/:platform', artistOrAdmin, artistAnalyticsController.getPlatformAnalytics);
 router.get('/:id', artistController.getArtistById);

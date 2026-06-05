@@ -11,13 +11,15 @@ const {
   reportBug,
 } = require('../controllers/taskController');
 const { protect } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const { createTaskBody } = require('../validation/schemas/tasks');
 
 router.use(protect);
 
 router.post('/bug', reportBug);
 
 router.route('/')
-  .post(createTask)
+  .post(validateBody(createTaskBody), createTask)
   .get(getTasks);
 
 router.get('/:id/activity', getTaskActivity);

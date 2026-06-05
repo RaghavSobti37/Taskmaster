@@ -66,6 +66,17 @@ const TASK_ASSIGNEE_POPULATE = {
 
 exports.TASK_ASSIGNEE_POPULATE = TASK_ASSIGNEE_POPULATE;
 
+/** Lighter populate for list views (Todo, dashboard) — skips department nesting. */
+const TASK_LIST_ASSIGNEE_POPULATE = {
+  path: 'assignees',
+  populate: [
+    { path: 'userId', select: 'name avatar' },
+    { path: 'assignedBy', select: 'name avatar' },
+  ],
+};
+
+exports.TASK_LIST_ASSIGNEE_POPULATE = TASK_LIST_ASSIGNEE_POPULATE;
+
 const queueTaskCompletedGamification = async (userId, task) => {
   if (!userId || !task?._id) return;
   const job = queueGamificationEvent('TASK_COMPLETED', {
@@ -587,24 +598,89 @@ exports.createTask = async (taskData, user, session) => {
   return { taskDto: mapTaskDTO(taskObj), pendingNotifications };
 };
 
-exports.getTasks = async (filter, { userId = null } = {}) => {
-  const tasks = await Task.find(filter)
+exports.getTasks = async (filter, { userId = null, listMode = false, page, limit, sort } = {}) => {
+  const assigneePopulate = listMode ? TASK_LIST_ASSIGNEE_POPULATE : TASK_ASSIGNEE_POPULATE;
+  const createdByPopulate = listMode
+    ? { path: 'createdBy', select: 'name avatar' }
+    : { path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } };
+
+  const sortSpec = sort && Object.keys(sort).length ? sort : { dueDate: 1, _id: 1 };
+
+  const baseQuery = Task.find(filter)
     .select('title description status priority type scheduleSlot scheduleDate projectId workspace progress dueDate startDate duration plannedHours actualHours completedAt updatedAt createdBy mentionAccessIds color')
     .populate('projectId', 'name workspace')
-    .populate({ path: 'createdBy', select: 'name avatar', populate: { path: 'departmentId', select: 'name' } })
-    .populate(TASK_ASSIGNEE_POPULATE)
-    .lean({ virtuals: true });
+    .populate(createdByPopulate)
+    .populate(assigneePopulate);
 
+  const attachUnread = async (mapped) => {
+    if (!userId || !mapped.length) return mapped;
+    const taskIds = mapped.map((t) => t._id);
+    const TaskActivityService = require('./TaskActivityService');
+    const unreadMap = await TaskActivityService.getUnreadMentionCountsByTask(userId, taskIds);
+    return mapped.map((t) => ({
+      ...t,
+      unreadMentions: unreadMap[t._id.toString()] || 0,
+    }));
+  };
+
+  if (page && limit) {
+    const skip = (Math.max(1, page) - 1) * limit;
+    const [total, tasks] = await Promise.all([
+      Task.countDocuments(filter),
+      baseQuery.sort(sortSpec).skip(skip).limit(limit).lean({ virtuals: true }),
+    ]);
+    const mapped = tasks.map(mapTaskDTO);
+    const withUnread = await attachUnread(mapped);
+    return {
+      tasks: withUnread,
+      total,
+      page: Math.max(1, page),
+      pages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  const tasks = await baseQuery.sort(sortSpec).lean({ virtuals: true });
   const mapped = tasks.map(mapTaskDTO);
-  if (!userId || !mapped.length) return mapped;
+  return attachUnread(mapped);
+};
 
-  const taskIds = mapped.map((t) => t._id);
-  const TaskActivityService = require('./TaskActivityService');
-  const unreadMap = await TaskActivityService.getUnreadMentionCountsByTask(userId, taskIds);
-  return mapped.map((t) => ({
-    ...t,
-    unreadMentions: unreadMap[t._id.toString()] || 0,
-  }));
+/** KPI counts for Todo overview chips (user-scoped base filter, no UI filters). */
+exports.getTodoStats = async (baseFilter) => {
+  const { getDateKey, startOfDayFromKey } = require('../utils/attendanceDate');
+  const todayStart = startOfDayFromKey(getDateKey());
+  const tomorrow = new Date(todayStart);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const overdueExpr = {
+    status: { $ne: 'done' },
+    $expr: {
+      $and: [
+        { $ne: [{ $ifNull: ['$dueDate', '$scheduleDate'] }, null] },
+        { $lt: [{ $ifNull: ['$dueDate', '$scheduleDate'] }, todayStart] },
+      ],
+    },
+  };
+
+  const todayExpr = {
+    status: { $ne: 'done' },
+    $expr: {
+      $and: [
+        { $gte: [{ $ifNull: ['$dueDate', '$scheduleDate'] }, todayStart] },
+        { $lt: [{ $ifNull: ['$dueDate', '$scheduleDate'] }, tomorrow] },
+      ],
+    },
+  };
+
+  const merge = (extra) => ({ $and: [baseFilter, extra] });
+
+  const [open, inReview, overdue, today] = await Promise.all([
+    Task.countDocuments(merge({ status: { $ne: 'done' } })),
+    Task.countDocuments(merge({ status: 'in-review' })),
+    Task.countDocuments(merge(overdueExpr)),
+    Task.countDocuments(merge(todayExpr)),
+  ]);
+
+  return { open, inReview, overdue, today };
 };
 
 exports.updateTask = async (taskId, updates, user, session) => {

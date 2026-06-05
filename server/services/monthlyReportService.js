@@ -11,17 +11,23 @@ const {
   resolveReportRangeOptions,
   getWindowFromParams,
 } = require('../../shared/monthlyReportTimeframe');
-const { getDateKey } = require('../utils/attendanceDate');
+const { getDateKey, startOfDayFromKey, endOfDayFromKey } = require('../utils/attendanceDate');
 
 const parseMonth = (monthParam) => {
   if (!monthParam || !/^\d{4}-\d{2}$/.test(monthParam)) {
     throw new Error('month query param required (YYYY-MM)');
   }
   const [year, month] = monthParam.split('-').map(Number);
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const monthStartKey = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEndKey = getDateKey(new Date(year, month, 0));
+  const startDate = startOfDayFromKey(monthStartKey);
+  const endDate = endOfDayFromKey(monthEndKey);
   return { monthParam, startDate, endDate };
 };
+
+const hasAttendanceCheck = (row) => Boolean(
+  row?.inTimeRecord?.manualTimestamp || row?.outTimeRecord?.manualTimestamp
+);
 
 const groupBy = (items, keyFn) => {
   const map = new Map();
@@ -59,14 +65,15 @@ const buildAttendanceSummary = (rows) => {
 
   rows.forEach((row) => {
     const dayKey = getDateKey(row.date);
+    const checkedIn = hasAttendanceCheck(row);
     let status = 'empty';
-    if (row.onLeave) {
+    if (row.onLeave && !checkedIn) {
       status = 'leave';
       leave += 1;
     } else if (row.isHalfDay) {
       status = 'halfDay';
       halfDay += 1;
-    } else if (row.timeIn || row.timeOut) {
+    } else if (checkedIn) {
       status = 'present';
       present += 1;
     } else {
@@ -75,9 +82,9 @@ const buildAttendanceSummary = (rows) => {
     attendanceByDay.push({
       date: dayKey,
       status,
-      timeIn: row.timeIn || '',
-      timeOut: row.timeOut || '',
-      isApproved: !!row.isApproved,
+      timeIn: row.inTimeRecord?.manualTimestamp || '',
+      timeOut: row.outTimeRecord?.manualTimestamp || '',
+      isApproved: !!(row.inTimeRecord?.isApproved && row.outTimeRecord?.isApproved),
     });
   });
 

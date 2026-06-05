@@ -1,12 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle2, Trash2, Check, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Trash2 } from 'lucide-react';
 import { Button, Spinner } from './ui';
 import { NexusModal, ModalShell, ModalFooter } from './ui/modals';;
 import { useProjects, useUpdateTask, useUserDirectory } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
-import { canReviewTask, canRollbackTask } from '../utils/taskReview';
+import {
+  canReviewTask,
+  canRollbackTask,
+  canUserApproveReview,
+  getTaskAssignedBy,
+  displayPersonName,
+  getTaskAssignments,
+} from '../utils/taskReview';
+import TaskCompletionFlash from './tasks/TaskCompletionFlash';
+import TaskReviewActions from './tasks/TaskReviewActions';
 import { resolveTaskId } from '../utils/taskCompletion';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
@@ -42,10 +51,15 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showRollbackForm, setShowRollbackForm] = useState(false);
+  const [rollbackReason, setRollbackReason] = useState('');
+  const [showCompletionFlash, setShowCompletionFlash] = useState(false);
   const isSaving = updateTaskMutation.isPending;
 
   const canReview = canReviewTask(task, user);
   const canRollback = canRollbackTask(task, user);
+  const canApproveReview = canUserApproveReview(user, getTaskAssignments(task));
+  const assigner = getTaskAssignedBy(task);
   const creatorId = task?.createdBy?._id || task?.createdBy;
   const isCreator = creatorId?.toString() === user?._id?.toString();
   const canEditTimeline = canReview || isCreator;
@@ -57,6 +71,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       setDisplayTask(task);
       setTitle(task.title || '');
       setDesc('');
+      setShowRollbackForm(false);
+      setRollbackReason('');
+      setShowCompletionFlash(false);
       setFormValues({
         status: task.status || 'todo',
         progress: task.progress ?? progressForTaskStatus(task.status || 'todo'),
@@ -93,9 +110,14 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     const taskId = resolveTaskId(task);
     if (!taskId) return;
 
+    if (reviewAction === 'rollback' && !rollbackReason.trim()) {
+      addToast({ type: 'error', message: 'Please provide a reason for rollback.' });
+      return;
+    }
+
     const payload = {
       title,
-      description: desc,
+      description: reviewAction === 'rollback' ? rollbackReason.trim() : desc,
       status: reviewAction ? undefined : formValues.status,
       progress: reviewAction ? undefined : formValues.progress,
       priority: formValues.priority,
@@ -138,7 +160,16 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       { id: taskId, data: payload },
       {
         onSuccess: (data) => {
+          if (reviewAction === 'approve') {
+            setShowCompletionFlash(true);
+            setDesc('');
+            notifyUpdate(data);
+            setTimeout(() => onClose(), 1200);
+            return;
+          }
           setDesc('');
+          setShowRollbackForm(false);
+          setRollbackReason('');
           notifyUpdate(data);
           onClose();
         },
@@ -229,6 +260,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 collapseCategoryWhenSelected
                 showDueDateInForm={false}
                 afterTitle={
+                  <>
+                  <TaskCompletionFlash show={showCompletionFlash} />
                   <TaskMessageComposeSection
                     message={desc}
                     onMessageChange={setDesc}
@@ -239,23 +272,25 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                     onStatusChange={(status, progress) => setFormValues((v) => ({ ...v, status, progress }))}
                     statusDisabled={formLocked}
                   />
+                  </>
                 }
               />
 
-              {isInReview && (canReview || canRollback) && (
-                <div className="flex flex-wrap gap-3 py-3 border-t border-amber-500/30">
-                  {canReview && (
-                    <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
-                      <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
-                    </Button>
-                  )}
-                  {canRollback && (
-                    <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
-                      <RotateCcw size={14} className="mr-1" /> Rollback
-                    </Button>
-                  )}
-                </div>
-              )}
+              <TaskReviewActions
+                isInReview={isInReview}
+                canReview={canReview}
+                canRollback={canRollback}
+                canApproveReview={canApproveReview}
+                assignerName={displayPersonName(assigner, 'assigner')}
+                isSaving={isSaving}
+                showRollbackForm={showRollbackForm}
+                rollbackReason={rollbackReason}
+                onRollbackReasonChange={setRollbackReason}
+                onShowRollbackForm={() => setShowRollbackForm(true)}
+                onHideRollbackForm={() => { setShowRollbackForm(false); setRollbackReason(''); }}
+                onApprove={(e) => handleSubmit(e, 'approve')}
+                onConfirmRollback={(e) => handleSubmit(e, 'rollback')}
+              />
 
               {canEditDoneStatus && (
                 <p className="text-xs text-[var(--color-text-muted)] py-2 border-t border-[var(--color-bg-border)]">

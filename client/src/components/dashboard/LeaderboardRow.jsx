@@ -1,12 +1,26 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import LeaderboardRankBadge from './LeaderboardRankBadge';
 import { hasLeaderboardRecalcHint, LeaderboardRecalcHover } from './LeaderboardRecalcHint';
 
-const LeaderboardRow = ({ member, onSelect }) => {
+const PODIUM_BORDER = {
+  1: 'tm-leaderboard-podium--gold',
+  2: 'tm-leaderboard-podium--silver',
+  3: 'tm-leaderboard-podium--bronze',
+};
+
+const LeaderboardRow = ({ member, onSelect, entries = [], currentUserId }) => {
   const showHint = hasLeaderboardRecalcHint(member);
+  const podiumClass = PODIUM_BORDER[member.rank] || '';
+  const xpToNext = useMemo(() => {
+    if (!currentUserId || member._id !== currentUserId || member.rank <= 1) return null;
+    const above = entries.find((entry) => entry.rank === member.rank - 1);
+    if (!above) return null;
+    const gap = (above.weeklyXp || 0) - (member.weeklyXp || 0);
+    return gap > 0 ? gap : null;
+  }, [entries, currentUserId, member._id, member.rank, member.weeklyXp]);
 
   return (
-    <div className="relative group focus-within:z-20">
+    <div className={`relative group focus-within:z-20 ${podiumClass}`}>
       <button
         type="button"
         onClick={() => onSelect?.(member)}
@@ -27,6 +41,11 @@ const LeaderboardRow = ({ member, onSelect }) => {
             {showHint && member.weeklyXpDelta !== 0 && (
               <span className="ml-1 text-[9px] text-sky-400 font-semibold">
                 ({member.weeklyXpDelta > 0 ? '+' : ''}{member.weeklyXpDelta})
+              </span>
+            )}
+            {xpToNext != null && (
+              <span className="ml-1.5 text-[9px] font-semibold text-[var(--color-text-muted)]">
+                +{xpToNext} to next rank
               </span>
             )}
           </span>

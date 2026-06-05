@@ -64,6 +64,8 @@ const publicOnly = args.includes('--public-only');
 const protectedOnly = args.includes('--protected-only');
 const prodMode = args.includes('--prod');
 const routeFilter = args.find((a) => a.startsWith('--route='))?.slice('--route='.length);
+const minA11yArg = args.find((a) => a.startsWith('--min-a11y='))?.slice('--min-a11y='.length);
+const minA11y = parseInt(process.env.LH_MIN_A11Y || minA11yArg || '0', 10);
 
 const BASE_URL = (
   process.env.LH_BASE_URL || (prodMode ? 'http://localhost:4173' : 'http://localhost:5173')
@@ -400,6 +402,20 @@ async function main() {
 
   console.log(`\nDone. Open ${path.join(OUTPUT_DIR, 'index.html')}`);
   console.log(`Detail report: ${path.join(OUTPUT_DIR, 'PERFORMANCE_REPORT.md')}`);
+
+  if (minA11y > 0) {
+    const failures = rows.filter(
+      (r) => !r.error && (r.scores?.accessibility ?? 0) < minA11y
+    );
+    if (failures.length) {
+      console.error(`\nAccessibility gate failed (min ${minA11y}):`);
+      for (const f of failures) {
+        console.error(`  ${f.path}: ${f.scores?.accessibility ?? 'n/a'}`);
+      }
+      process.exit(1);
+    }
+    console.log(`\nAccessibility gate passed (min ${minA11y}).`);
+  }
 }
 
 main().catch((err) => {

@@ -289,10 +289,21 @@ const queueGamificationEvent = async (eventType, payload) => {
   }
 };
 
+const getManagedQueues = () => {
+  if (!redisAvailable) return [];
+  return [
+    { name: 'holySheetQueue', queue: holySheetQueue },
+    { name: 'csvBackupQueue', queue: csvBackupQueue },
+    { name: 'gamificationQueue', queue: gamificationQueue },
+  ].filter((entry) => entry.queue);
+};
+
 module.exports = {
   queueHolySheetSync,
   queueCsvBackup,
-  queueGamificationEvent
+  queueGamificationEvent,
+  isRedisAvailable: () => redisAvailable,
+  getManagedQueues,
 };
 
 // Daily cron job for Platform Analytics (Offload Read Path)

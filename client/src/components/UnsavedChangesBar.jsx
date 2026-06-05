@@ -19,7 +19,7 @@ export default function UnsavedChangesBar({
 
   const bar = (
         <div
-          className={`tm-unsaved-bar-enter fixed left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-[min(420px,calc(100vw-2rem))] max-w-[min(720px,calc(100vw-2rem))] sm:justify-between bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-6 ${
+          className={`tm-unsaved-bar-enter fixed left-1/2 -translate-x-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] shadow-2xl rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 min-w-[min(420px,calc(100vw-2rem))] max-w-[min(720px,calc(100vw-2rem))] sm:justify-between bottom-[calc(5.25rem+env(safe-area-inset-bottom))] lg:bottom-6 ${
             elevated ? 'z-[1200]' : 'z-50'
           }`}
         >

@@ -35,6 +35,16 @@ import MonthlyAttendanceGrid from '../../components/attendance/MonthlyAttendance
 import SelfMonthlyAttendanceCalendar from '../../components/attendance/SelfMonthlyAttendanceCalendar';
 import TeamAttendanceMobileList from '../../components/attendance/TeamAttendanceMobileList';
 import UnifiedTimeCard from '../../components/attendance/UnifiedTimeCard';
+import HygieneProgressMeter from '../../components/attendance/HygieneProgressMeter';
+import {
+  hasRecordedCheckIn,
+  hasRecordedCheckOut,
+} from '../../utils/attendanceUtils';
+import {
+  getLoggedMinutesFromDailyLogs,
+  getUnloggedMinutesFromEntry,
+} from '../../utils/attendanceMetrics';
+import { useLogs } from '../../hooks/useTaskmasterQueries';
 
 const VIEW_MODES = {
   DAILY: 'daily',
@@ -191,7 +201,18 @@ const AttendancePage = () => {
   );
   
   const { data: selfTodayRows = [] } = useAttendance({ start: todayKey, end: todayKey, mine: 'true' }, true);
-  
+  const selfTodayEntry = selfTodayRows[0];
+  const selfHasIn = hasRecordedCheckIn(selfTodayEntry);
+  const selfHasOut = hasRecordedCheckOut(selfTodayEntry);
+  const { data: selfDailyLogs = [] } = useLogs(user?._id, 500, Boolean(user?._id && selfHasIn && selfHasOut));
+  const selfUnloggedMinutes = React.useMemo(() => {
+    if (!selfHasIn || !selfHasOut) return 0;
+    const logged = getLoggedMinutesFromDailyLogs(selfTodayEntry, selfDailyLogs);
+    return getUnloggedMinutesFromEntry(selfTodayEntry, {
+      loggedMinutesOverride: logged ?? undefined,
+    });
+  }, [selfTodayEntry, selfDailyLogs, selfHasIn, selfHasOut]);
+
   const { data: users = [], isLoading: usersLoading } = useUserDirectory();
   const { data: leaveRequests = [] } = useLeaveRequests({ status: 'pending' }, canEdit);
   
@@ -381,7 +402,7 @@ const AttendancePage = () => {
           },
         ].filter((s) => canEdit || s.id !== 'team')}
       />
-      <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-h-[44px] pb-3 mb-4 border-b border-[var(--color-bg-border)]">
+      <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-h-[44px] pb-3 mb-4">
         <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center gap-2 lg:gap-x-3 lg:gap-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
             <div className="p-2 bg-[var(--color-action-primary)]/10 rounded-lg text-[var(--color-action-primary)] border border-[var(--color-action-primary)]/10 shrink-0">
@@ -415,8 +436,14 @@ const AttendancePage = () => {
 
       {/* Unified Time Card for Current User */}
       {!showTeamOverview && (
+        <div className="space-y-4">
+          {selfHasIn && selfHasOut && (
+            <div className="flex justify-end">
+              <HygieneProgressMeter unloggedMinutes={selfUnloggedMinutes} />
+            </div>
+          )}
         <UnifiedTimeCard
-          entry={selfTodayRows[0]}
+          entry={selfTodayEntry}
           subTitle={user?.name}
           title={format(today, 'EEE, MMM d, yyyy')}
           alwaysShowMarkInAccess
@@ -426,6 +453,7 @@ const AttendancePage = () => {
           onUndo={(type) => undoCheck.mutate({ type })}
           isLoading={checkIn.isPending}
         />
+        </div>
       )}
 
       {/* Monthly Attendance Calendar for Current User */}

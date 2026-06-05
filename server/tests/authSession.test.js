@@ -31,6 +31,7 @@ describe('authSession sliding sessions', () => {
     expect(decoded.id).toBe('user123');
     expect(decoded.loginAt).toBeDefined();
     expect(decoded.loginAt).toBe(decoded.iat);
+    expect(decoded.jti).toBeDefined();
   });
 
   it('preserves loginAt across sliding refresh tokens', () => {

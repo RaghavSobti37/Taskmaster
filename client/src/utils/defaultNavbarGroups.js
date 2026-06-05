@@ -1,19 +1,7 @@
-import { PAGE_GROUPS } from './pagePermissions';
+import { DEFAULT_NAVBAR_GROUPS as NAVBAR_GROUPS } from './navbarConfig';
 
 /** Default sidebar groups (mirrors server NavbarPreference.DEFAULT_NAVBAR_GROUPS). */
-export const DEFAULT_NAVBAR_GROUPS = PAGE_GROUPS.map((group, idx) => ({
-  id: group.id,
-  title: group.label,
-  order: idx + 1,
-  visible: true,
-  isCustom: false,
-  pages: group.pages.map((page, pIdx) => ({
-    path: page.path,
-    label: page.label,
-    order: pIdx + 1,
-    visible: true,
-  })),
-}));
+export const DEFAULT_NAVBAR_GROUPS = NAVBAR_GROUPS;
 
 export function sortNavbarGroups(groups) {
   return (groups || [])

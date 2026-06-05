@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { formatDistanceToNow } from 'date-fns';
+import React, { useState, useMemo, useEffect } from 'react';
+import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
+import RelativeTimestamp from '../../components/ui/RelativeTimestamp';
 import { Inbox, CheckCheck, Shield, ListTodo, Bell, Trash2 } from 'lucide-react';
 import ListPageLayout from '../../components/ui/ListPageLayout';
 import PageLoadGuard from '../../components/ui/PageLoadGuard';
@@ -50,10 +51,16 @@ const NotificationAvatar = ({ notification: n }) => {
   );
 };
 
+const INBOX_FILTERS_KEY = 'inbox-filters';
+
 const InboxPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => loadPageFilters(INBOX_FILTERS_KEY, { filter: 'all' }).filter);
+
+  useEffect(() => {
+    savePageFilters(INBOX_FILTERS_KEY, { filter });
+  }, [filter]);
   const { data, isLoading } = useNotifications();
   const { data: statusCounts } = useStatusCounts(!!user);
   const { confirm } = useConfirm();
@@ -231,7 +238,7 @@ const InboxPage = () => {
             )}
             trailing={(
               <span className="text-[9px] text-[var(--color-text-muted)] whitespace-nowrap">
-                {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                <RelativeTimestamp value={n.createdAt} />
               </span>
             )}
           />

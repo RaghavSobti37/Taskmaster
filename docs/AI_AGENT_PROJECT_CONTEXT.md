@@ -1672,6 +1672,8 @@ FinanceDocument ──> Project (self-referential folders)
 | Cursor Email Rule | `.cursor/rules/email-engine-locked.mdc` | Agent constraint for email engine |
 | Cursor Logo Rule | `.cursor/rules/logo-mark-locked.mdc` | Agent constraint for brand mark + spinner |
 | Design Guidelines | `client/design_guidelines.md` | UI design rules |
+| UX Architecture Roadmap | `docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md` | 1.0.0 per-file change manifest + acceptance criteria by module |
+| Improvement Roadmap | `docs/IMPROVEMENT_ROADMAP.md` | Full audit backlog tracker (phased A–E) |
 | Implementation Guide | `IMPLEMENTATION_GUIDE.md` | Implementation patterns |
 
 ---
@@ -1692,6 +1694,7 @@ Before making changes, verify:
 - [ ] Production API host is CoreKnot-jfw0.onrender.com (not suspended host)
 - [ ] Large payloads bypass Vercel proxy via VITE_API_URL
 - [ ] Follow 4px grid, high-density UI conventions
+- [ ] UX 1.0.0 work: read `docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md` for phased file manifest + acceptance criteria
 - [ ] No mock/placeholder data in pages
 - [ ] Data Hub changes: update `shared/dataInlets.js` + client `dataHubInlets.js` if inlet keys change
 - [ ] USD/INR UI: use `UsdInrAmountFields` / `useUsdInrRate`; do not hardcode exchange rates

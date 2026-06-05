@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { setAuthCookie } = require('./authCookie');
+const { newJti } = require('./tokenRevocation');
 
 /** Sliding inactivity window — renewed on activity (default 7 days). */
 const inactivityExpiresIn = () => process.env.JWT_EXPIRES_IN || '7d';
@@ -41,7 +42,7 @@ const generateSessionToken = (userId, loginAt = null) => {
   const iat = nowSec();
   const sessionLoginAt = loginAt ?? iat;
   return jwt.sign(
-    { id: userId, loginAt: sessionLoginAt },
+    { id: userId, loginAt: sessionLoginAt, jti: newJti() },
     process.env.JWT_SECRET,
     { expiresIn: inactivityExpiresIn() },
   );
@@ -70,7 +71,8 @@ const refreshSessionIfDue = (res, decoded) => {
   }
   const token = generateSessionToken(decoded.id, resolveLoginAt(decoded));
   setAuthCookie(res, token);
-  return { refreshed: true, absoluteExpired: false };
+  const newDecoded = verifySessionToken(token);
+  return { refreshed: true, absoluteExpired: false, newDecoded };
 };
 
 /** Fresh login / register / OAuth — new absolute window + inactivity clock. */

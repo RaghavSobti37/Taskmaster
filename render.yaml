@@ -41,3 +41,14 @@ services:
         value: production
       - key: SUBSCRIPTION_REMINDERS_ENABLED
         value: "true"
+  - type: cron
+    name: CoreKnot-keep-warm
+    schedule: "*/14 * * * *"
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node scripts/keepWarm.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: KEEP_WARM_URL
+        value: https://CoreKnot-jfw0.onrender.com/api/health

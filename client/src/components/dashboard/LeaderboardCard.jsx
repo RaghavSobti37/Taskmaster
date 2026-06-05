@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { DashboardWidgetShell, LoadingPhrase } from '../ui';
 import { useLeaderboard, useLeaderboardBreakdown } from '../../hooks/useTaskmasterQueries';
+import { useAuth } from '../../contexts/AuthContext';
 import { LeaderboardUpdatedBadge } from './LeaderboardRecalcHint';
 import LeaderboardBreakdownModal from './LeaderboardBreakdownModal';
 import LeaderboardRow from './LeaderboardRow';
 
 const LeaderboardCard = () => {
+  const { user } = useAuth();
   const { data, isLoading } = useLeaderboard(true);
   const entries = data?.entries ?? [];
   const meta = data?.meta;
@@ -39,6 +41,8 @@ const LeaderboardCard = () => {
               <LeaderboardRow
                 key={member._id}
                 member={member}
+                entries={entries}
+                currentUserId={user?._id}
                 onSelect={setSelectedMember}
               />
             ))}

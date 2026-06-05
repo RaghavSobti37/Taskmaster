@@ -28,16 +28,27 @@ import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 const FOLLOWUP_PAGE_SIZE = 50;
+const CRM_FOLLOWUPS_FILTERS_KEY = 'crm-followups-filters';
+
+const loadFollowupFilters = () => {
+  try {
+    const raw = localStorage.getItem(CRM_FOLLOWUPS_FILTERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return { activeTab: 'today', sortField: 'nextFollowupDate', sortOrder: 'asc' };
+};
 
 export default function FollowupsPage() {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState(() => loadFollowupFilters().activeTab || 'today');
   const [followupPage, setFollowupPage] = useState(1);
-  const [sortField, setSortField] = useState('nextFollowupDate');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortField, setSortField] = useState(() => loadFollowupFilters().sortField || 'nextFollowupDate');
+  const [sortOrder, setSortOrder] = useState(() => loadFollowupFilters().sortOrder || 'asc');
   const [selectedLead, setSelectedLead] = useState(null);
   const [newNoteText, setNewNoteText] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -67,6 +78,14 @@ export default function FollowupsPage() {
 
   useEffect(() => {
     setFollowupPage(1);
+  }, [activeTab, sortField, sortOrder]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CRM_FOLLOWUPS_FILTERS_KEY, JSON.stringify({ activeTab, sortField, sortOrder }));
+    } catch {
+      /* ignore */
+    }
   }, [activeTab, sortField, sortOrder]);
 
   const isDefaultSort = sortField === 'nextFollowupDate' && sortOrder === 'asc';

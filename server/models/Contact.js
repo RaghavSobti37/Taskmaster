@@ -61,6 +61,7 @@ contactSchema.pre('save', function(next) {
 });
 contactSchema.index({ 'inlets.key': 1 });
 contactSchema.index({ updatedAt: -1 });
+contactSchema.index({ name: 'text', email: 'text', phone: 'text' });
 
 contactSchema.plugin(tenantPlugin);
 

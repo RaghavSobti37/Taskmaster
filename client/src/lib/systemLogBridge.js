@@ -7,7 +7,7 @@ import {
   normalizeSystemEventEntry,
   makeToastId,
 } from './systemLogContract';
-import { showSystemToast, suppressAutoToasts, dismissSystemToast } from './notifications';
+import { showSystemToast, suppressAutoToasts, dismissSystemToast, shouldSuppressDuplicateToast } from './notifications';
 
 let currentTraceId = globalThis.crypto?.randomUUID?.() || `trace-${Date.now()}`;
 
@@ -59,7 +59,7 @@ export function emitSystemEvent(rawEntry = {}) {
   const traceId = entry.traceId || (needsTrace ? getClientTraceId() : undefined);
   const toastId = entry.id;
 
-  if (entry.userVisible) {
+  if (entry.userVisible && !shouldSuppressDuplicateToast(entry)) {
     const duration = entry.duration ?? TOAST_DURATION[entry.severity] ?? 5000;
     suppressAutoToasts(duration === Infinity ? 60000 : Math.min(duration, 8000));
 

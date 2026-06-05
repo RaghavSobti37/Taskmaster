@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { ChevronDown, Check, Search } from 'lucide-react';
+import { useIsMobile } from '../../hooks/useBreakpoint';
+import MobileSelectSheet from './MobileSelectSheet';
 
 const MENU_LIST_MAX = 280;
 const SEARCH_BLOCK_HEIGHT = 44;
@@ -27,6 +29,7 @@ const NexusDropdown = ({
   menuMinWidth = 280,
   matchTriggerWidth = false,
 }) => {
+  const isMobile = useIsMobile();
   const multiSelect = isMulti || multi;
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -100,10 +103,10 @@ const NexusDropdown = ({
   }, [isOpen, usePortal, updateMenuPosition, search, options.length]);
 
   useEffect(() => {
-    if (isOpen && searchable && searchRef.current) {
+    if (isOpen && searchable && searchRef.current && !isMobile) {
       searchRef.current.focus();
     }
-  }, [isOpen, searchable]);
+  }, [isOpen, searchable, isMobile]);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -199,11 +202,11 @@ const NexusDropdown = ({
             <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               ref={searchRef}
-              type="text"
+              type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-7 pr-2 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-[11px] outline-none"
+              className="mobile-form-control w-full pl-7 pr-2 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] text-sm outline-none"
             />
           </div>
         </div>
@@ -248,11 +251,16 @@ const NexusDropdown = ({
     </div>
   );
 
-  const renderedMenu = isOpen
+  const renderedMenu = isOpen && !isMobile
     ? usePortal && typeof document !== 'undefined'
       ? createPortal(menuPanel, document.body)
       : menuPanel
     : null;
+
+  const closeSheet = () => {
+    setIsOpen(false);
+    setSearch('');
+  };
 
   return (
     <div
@@ -277,9 +285,9 @@ const NexusDropdown = ({
           w-full flex items-center justify-between gap-2 transition-all outline-none overflow-hidden whitespace-nowrap
           bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)]
           rounded-[var(--radius-atomic)]
-          ${isToolbar ? 'tm-toolbar-control px-3 text-xs' : ''}
-          ${isCompact ? 'px-2 py-1 text-[11px] min-h-[2rem]' : ''}
-          ${!isToolbar && !isCompact ? 'min-h-[2.5rem] px-3 py-2 text-sm' : ''}
+          ${isToolbar ? `tm-toolbar-control px-3 ${isMobile ? 'text-base' : 'text-xs'}` : ''}
+          ${isCompact ? `px-2 py-1 min-h-[2rem] ${isMobile ? 'text-base' : 'text-[11px]'}` : ''}
+          ${!isToolbar && !isCompact ? `min-h-[2.5rem] px-3 py-2 ${isMobile ? 'text-base' : 'text-sm'}` : ''}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-action-primary)] cursor-pointer'}
           ${isOpen ? 'border-[var(--color-action-primary)]' : ''}
         `}
@@ -300,6 +308,24 @@ const NexusDropdown = ({
       </button>
 
       {renderedMenu}
+
+      {isMobile && (
+        <MobileSelectSheet
+          open={isOpen}
+          onClose={closeSheet}
+          title={label || placeholder}
+          options={options}
+          value={value}
+          onChange={onChange}
+          searchable={searchable}
+          search={search}
+          onSearchChange={setSearch}
+          renderOption={renderOption}
+          isSelected={isSelected}
+          onSelect={handleSelect}
+          multiSelect={multiSelect}
+        />
+      )}
     </div>
   );
 };

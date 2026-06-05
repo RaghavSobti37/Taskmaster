@@ -1,23 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { SidebarProvider } from './contexts/SidebarContext'
-import { ThemeProvider } from './contexts/ThemeContext'
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './lib/queryClient'
 
 
 import { ToastProvider } from './contexts/ToastContext';
@@ -25,9 +16,14 @@ import { ConfirmProvider } from './contexts/ConfirmProvider';
 import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
-import { applyPwaDesktopDocumentFlag } from './utils/displayMode';
+import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
+import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
+import { initSentry } from './lib/sentry';
 
+initSentry();
 applyPwaDesktopDocumentFlag();
+watchDisplayModeFlags();
+purgeExpiredNoteDrafts();
 warnIfDevPointsAtProduction();
 
 const loadAppFont = () => {
@@ -49,21 +45,32 @@ if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
   window.setTimeout(registerDeferredServiceWorker, 2000);
 }
 
+const MotionConfigBridge = ({ children }) => {
+  const { effectiveReducedMotion } = useTheme();
+  return (
+    <MotionConfig reducedMotion={effectiveReducedMotion ? 'always' : 'user'}>
+      {children}
+    </MotionConfig>
+  );
+};
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <ThemeProvider>
-            <SidebarProvider>
-              <ToastProvider>
-                <ConfirmProvider>
-                  <UnsavedChangesProvider>
-                    <App />
-                  </UnsavedChangesProvider>
-                </ConfirmProvider>
-              </ToastProvider>
-            </SidebarProvider>
+            <MotionConfigBridge>
+              <SidebarProvider>
+                <ToastProvider>
+                  <ConfirmProvider>
+                    <UnsavedChangesProvider>
+                      <App />
+                    </UnsavedChangesProvider>
+                  </ConfirmProvider>
+                </ToastProvider>
+              </SidebarProvider>
+            </MotionConfigBridge>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

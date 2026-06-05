@@ -1,21 +1,28 @@
 import { format } from 'date-fns';
 
+/** Default calendar wall time (IST) for date-only tasks and events without an explicit time. */
+export const DEFAULT_EVENT_TIME = '09:00';
+/** UTC hour:minute that renders as 9:00 AM IST via formatTimeFromParts (matches buildDateTimeFromParts storage). */
+const DEFAULT_EVENT_TIME_UTC = '03:30';
+
 /** Combine YYYY-MM-DD + HH:mm into UTC Date (matches server storage). */
-export function combineDateAndTime(dateStr, timeStr = '09:00') {
+export function combineDateAndTime(dateStr, timeStr = DEFAULT_EVENT_TIME) {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split('-').map(Number);
-  const [hh = 9, mm = 0] = (timeStr || '09:00').split(':').map(Number);
+  const [hh = 9, mm = 0] = (timeStr || DEFAULT_EVENT_TIME).split(':').map(Number);
   return new Date(Date.UTC(y, m - 1, d, hh, mm, 0, 0));
 }
 
 export function extractDateAndTime(raw) {
-  if (!raw) return { date: '', time: '09:00' };
+  if (!raw) return { date: '', time: DEFAULT_EVENT_TIME_UTC };
   const str = String(raw);
   const datePart = str.split('T')[0];
-  if (!str.includes('T')) return { date: datePart, time: '09:00' };
+  if (!str.includes('T')) return { date: datePart, time: DEFAULT_EVENT_TIME_UTC };
   const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return { date: datePart, time: '09:00' };
-  const time = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  if (Number.isNaN(d.getTime())) return { date: datePart, time: DEFAULT_EVENT_TIME_UTC };
+  let time = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+  // Midnight UTC = date-only task dueDate sentinel (would otherwise show as 5:30 AM IST).
+  if (time === '00:00') time = DEFAULT_EVENT_TIME_UTC;
   return { date: datePart, time };
 }
 
@@ -45,12 +52,12 @@ export function formatEventTimeLabel(raw) {
 
 /** Start–end label for calendar events (single time if no end or same instant). */
 export function formatEventRangeLabel(startRaw, endRaw) {
-  if (!startRaw) return 'All day';
+  if (!startRaw) return formatTimeFromParts(DEFAULT_EVENT_TIME_UTC);
   const start = extractDateAndTime(startRaw);
   const end = endRaw ? extractDateAndTime(endRaw) : start;
   const hasTime = String(startRaw).includes('T') || (endRaw && String(endRaw).includes('T'));
 
-  if (!hasTime) return 'All day';
+  if (!hasTime) return formatTimeFromParts(DEFAULT_EVENT_TIME_UTC);
 
   if (start.date === end.date) {
     if (start.time === end.time) return formatTimeFromParts(start.time);

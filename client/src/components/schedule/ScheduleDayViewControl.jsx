@@ -58,6 +58,11 @@ export default function ScheduleDayViewControl({
       className="w-full rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] px-4 py-3"
       aria-label="Schedule day range"
     >
+      {rangeHint && (
+        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)] text-center mb-2">
+          Showing {dayCount} {dayCount === 1 ? 'day' : 'days'} · {rangeHint}
+        </p>
+      )}
       <div
         className="grid gap-1 px-1 sm:px-2"
         style={{

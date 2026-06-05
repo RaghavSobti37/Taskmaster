@@ -222,10 +222,12 @@ exports.getTasks = async (req, res, next) => {
       }
     }
 
+    const { mergeTaskListFilter } = require('../utils/taskListFilter');
+
     if (scope === 'dashboard') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const futureLimit = new Date(today.getTime() + 35 * 24 * 60 * 60 * 1000); // 35 days ahead
+      const futureLimit = new Date(today.getTime() + 35 * 24 * 60 * 60 * 1000);
 
       queryFilter.status = { $nin: ['done', 'in-review'] };
       queryFilter.$expr = {
@@ -239,12 +241,47 @@ exports.getTasks = async (req, res, next) => {
           },
         },
       };
+    } else if (scope === 'todo') {
+      const TaskAssignment = require('../models/TaskAssignment');
+      const assignments = await TaskAssignment.find({ userId: req.user._id }).lean();
+      const taskIds = assignments.map((a) => a.taskId);
+      queryFilter = {
+        $or: [
+          { createdBy: req.user._id },
+          ...(taskIds.length ? [{ _id: { $in: taskIds } }] : []),
+          { mentionAccessIds: req.user._id },
+        ],
+      };
+
+      const { applyTodoFilters, getTodoSort } = require('../utils/todoQueryBuilder');
+      const statsBaseFilter = mergeTaskListFilter({ ...queryFilter }, { includeOldCompleted: includeAllCompleted });
+      queryFilter = applyTodoFilters(statsBaseFilter, req.query);
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+      const sort = getTodoSort(req.query.sort, req.query.order);
+      const [result, stats] = await Promise.all([
+        TaskService.getTasks(queryFilter, {
+          userId: req.user._id,
+          listMode: true,
+          page,
+          limit,
+          sort,
+        }),
+        TaskService.getTodoStats(statsBaseFilter),
+      ]);
+      return res.json({ ...result, stats });
     } else {
-      const { mergeTaskListFilter } = require('../utils/taskListFilter');
       queryFilter = mergeTaskListFilter(queryFilter, { includeOldCompleted: includeAllCompleted });
     }
 
-    const tasksDto = await TaskService.getTasks(queryFilter, { userId: req.user._id });
+    const page = parseInt(req.query.page, 10);
+    const limit = parseInt(req.query.limit, 10);
+    const listMode = !projectId && scope !== 'review';
+    const tasksDto = await TaskService.getTasks(queryFilter, {
+      userId: req.user._id,
+      listMode,
+      ...(page > 0 && limit > 0 ? { page, limit } : {}),
+    });
     res.json(tasksDto);
   } catch (error) {
     next(error);

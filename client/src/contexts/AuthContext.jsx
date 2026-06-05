@@ -10,6 +10,7 @@ import {
   recordAttendanceSessionLogin,
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
+import { isStandaloneDisplay } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { AXIOS_SKIP_TOAST } from '../lib/notifications';
@@ -46,11 +47,15 @@ const IMMEDIATE_SESSION_PROBE_PATHS = new Set([
   '/reset-password',
 ]);
 
-const axiosBase = getAxiosBaseURL();
-if (axiosBase) {
-  axios.defaults.baseURL = axiosBase;
-}
+const applyAxiosBaseURL = () => {
+  const axiosBase = getAxiosBaseURL();
+  axios.defaults.baseURL = axiosBase || undefined;
+};
+
+applyAxiosBaseURL();
 axios.defaults.withCredentials = true;
+
+const defaultSessionRetries = () => (isStandaloneDisplay() ? 6 : 3);
 
 function userSessionChanged(prev, next) {
   if (!prev && !next) return false;
@@ -80,12 +85,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const userRef = useRef(user);
+  const sessionReadyRef = useRef(sessionReady);
   const authEpochRef = useRef(0);
   const loggingOutRef = useRef(false);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    sessionReadyRef.current = sessionReady;
+  }, [sessionReady]);
+
+  useEffect(() => {
+    applyAxiosBaseURL();
+  }, []);
 
   const queryClient = useQueryClient();
 
@@ -109,7 +123,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
     const epoch = authEpochRef.current;
-    const { clearOn401 = true, retries = 3 } = options;
+    const { clearOn401 = true, retries = defaultSessionRetries() } = options;
 
     for (let attempt = 0; attempt < retries; attempt += 1) {
       if (epoch !== authEpochRef.current) return null;
@@ -216,24 +230,42 @@ export const AuthProvider = ({ children }) => {
     return undefined;
   }, [user?._id, fetchUser]);
 
+  const resumePwaSession = useCallback(async () => {
+    if (loggingOutRef.current) return;
+    const sessionUser = await fetchUser({ clearOn401: true, retries: defaultSessionRetries() });
+    if (sessionUser) {
+      refetchUserScopedQueries(queryClient);
+    }
+  }, [fetchUser, queryClient]);
+
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && userRef.current?._id && !loggingOutRef.current) {
-        fetchUser({ clearOn401: true, retries: 3 });
+      if (document.visibilityState !== 'visible' || loggingOutRef.current) return;
+      if (isStandaloneDisplay()) {
+        resumePwaSession();
+        return;
+      }
+      if (userRef.current?._id) {
+        fetchUser({ clearOn401: true, retries: defaultSessionRetries() });
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchUser]);
+  }, [fetchUser, resumePwaSession]);
 
   useEffect(() => {
     const onPageShow = (event) => {
-      if (!event.persisted || !userRef.current?._id || !sessionReady) return;
+      if (loggingOutRef.current) return;
+      if (isStandaloneDisplay()) {
+        resumePwaSession();
+        return;
+      }
+      if (!event.persisted || !userRef.current?._id || !sessionReadyRef.current) return;
       refetchUserScopedQueries(queryClient);
     };
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
-  }, [sessionReady, queryClient]);
+  }, [resumePwaSession, queryClient]);
 
   useAuthenticatedRealtime({
     userId: user?._id,

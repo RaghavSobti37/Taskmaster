@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import axios from 'axios';
 import { subscribeToChannel } from '../../lib/realtime';
 import { normalizeProject, normalizeProjects } from '../../utils/projectUtils';
@@ -93,6 +93,38 @@ export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) =>
     enabled: queryEnabled,
     staleTime: 1000 * 60,
     placeholderData: keepPreviousData,
+  });
+};
+
+export const useUpdateProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }) => axios.put(`/api/projects/${id}`, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      const previousProjects = queryClient.getQueryData(['projects']);
+      const previousProject = queryClient.getQueryData(['projects', id]);
+      if (previousProject) {
+        queryClient.setQueryData(['projects', id], { ...previousProject, ...data });
+      }
+      if (previousProjects) {
+        queryClient.setQueryData(['projects'], (old) =>
+          (old || []).map((p) => (p._id === id ? { ...p, ...data } : p)));
+      }
+      return { previousProjects, previousProject };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousProjects) {
+        queryClient.setQueryData(['projects'], context.previousProjects);
+      }
+      if (context?.previousProject) {
+        queryClient.setQueryData(['projects', variables.id], context.previousProject);
+      }
+    },
+    onSettled: (_data, _error, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects', id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
   });
 };
 

@@ -8,13 +8,24 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useConfirm } from '../../../contexts/confirmContext';
 import { useUnsavedChanges } from '../../../hooks/useUnsavedChanges';
 import { useNavbarPreferences } from '../../../hooks/useTaskmasterQueries';
-import { hasPageAccess } from '../../../utils/departmentPermissions';
+import { hasPageAccess, hasAnyPageAccess } from '../../../utils/departmentPermissions';
 import { filterNavGroupsForUser } from '../../../utils/navPageAccess';
 import { DEFAULT_NAVBAR_GROUPS, sortNavbarGroups } from '../../../utils/defaultNavbarGroups';
+import { HUB_CONFIG } from '../../../utils/navbarConfig';
+
+const HUB_PATHS = new Set(['/crm', '/office', '/management', '/admin/console']);
+
+function getHubIncludedPages(path) {
+  const hub = HUB_CONFIG[path];
+  if (!hub) return [];
+  if (hub.tabs) return hub.tabs.map((tab) => tab.label);
+  if (hub.tiles) return hub.tiles.map((tile) => tile.label);
+  return [];
+}
 
 function normalizeNavbarGroups(rawGroups, user) {
   const sorted = sortNavbarGroups(rawGroups?.length ? rawGroups : DEFAULT_NAVBAR_GROUPS);
-  return filterNavGroupsForUser(sorted, user, hasPageAccess);
+  return filterNavGroupsForUser(sorted, user, hasPageAccess, hasAnyPageAccess);
 }
 
 export default function SidebarCustomizationTab() {
@@ -133,6 +144,7 @@ export default function SidebarCustomizationTab() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Sidebar Layout</h1>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">Primary rail, tools, and module hubs</p>
           </div>
           <Button size="sm" variant="outline" onClick={handleReset} disabled={saving} className="gap-2">
             <RotateCcw size={14} /> Reset to defaults
@@ -209,20 +221,35 @@ export default function SidebarCustomizationTab() {
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <span className="font-semibold text-[13px] text-[var(--color-text-primary)] truncate">{page.label}</span>
                                   <span className="text-[11px] text-[var(--color-text-muted)] font-mono shrink-0">{page.path}</span>
+                                  {HUB_PATHS.has(page.path) && (
+                                    <span className="text-[10px] text-[var(--color-text-muted)] truncate hidden md:inline">
+                                      · {getHubIncludedPages(page.path).join(' · ')}
+                                    </span>
+                                  )}
                                 </div>
-                                {/* Move + visibility */}
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <select
-                                    className="text-[11px] font-medium bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-2 py-1 outline-none text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)] transition-colors cursor-pointer"
-                                    value={group.id}
-                                    onChange={(e) => movePageToGroup(page.path, group.id, e.target.value)}
-                                  >
-                                    {groups.map(g => <option key={g.id} value={g.id}>→ {g.title}</option>)}
-                                  </select>
-                                  <button onClick={() => togglePageVisibility(group.id, page.path)} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded transition-all">
-                                    {page.visible ? <Eye className="w-3.5 h-3.5 text-blue-500" /> : <EyeOff className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />}
-                                  </button>
-                                </div>
+                                {HUB_PATHS.has(page.path) ? (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                      Hub
+                                    </span>
+                                    <button onClick={() => togglePageVisibility(group.id, page.path)} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded transition-all">
+                                      {page.visible ? <Eye className="w-3.5 h-3.5 text-blue-500" /> : <EyeOff className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <select
+                                      className="text-[11px] font-medium bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] px-2 py-1 outline-none text-[var(--color-text-primary)] hover:border-[var(--color-action-primary)] transition-colors cursor-pointer"
+                                      value={group.id}
+                                      onChange={(e) => movePageToGroup(page.path, group.id, e.target.value)}
+                                    >
+                                      {groups.map(g => <option key={g.id} value={g.id}>→ {g.title}</option>)}
+                                    </select>
+                                    <button onClick={() => togglePageVisibility(group.id, page.path)} className="p-1 hover:bg-[var(--color-bg-secondary)] rounded transition-all">
+                                      {page.visible ? <Eye className="w-3.5 h-3.5 text-blue-500" /> : <EyeOff className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />}
+                                    </button>
+                                  </div>
+                                )}
                               </Reorder.Item>
                             ))}
                           </Reorder.Group>
@@ -239,8 +266,8 @@ export default function SidebarCustomizationTab() {
           <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-0">
             <div className="bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)] overflow-hidden">
               <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-border)]">
-                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Tab Groups</h3>
-                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Manage sidebar sections</p>
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Sidebar Zones</h3>
+                <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Primary, tools, and module hubs</p>
               </div>
               <div className="p-3 space-y-2">
                 {groups.map((group) => (

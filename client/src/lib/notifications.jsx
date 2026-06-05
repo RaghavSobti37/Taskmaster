@@ -26,9 +26,44 @@ const GENERIC_API_MESSAGES = new Set([
   'created',
   'updated',
   'deleted',
+  'saved',
+  'lead saved',
+  'saved successfully',
+  'updated successfully',
 ]);
 
 let suppressAutoUntil = 0;
+
+const TOAST_DEDUPE_MS = 3500;
+const recentToastFingerprints = new Map();
+
+/** Fingerprint for deduping identical toasts within a short window (optimistic + interceptor). */
+export function fingerprintToast(severity, message) {
+  return `${severity}:${String(message || '').trim().toLowerCase().slice(0, 120)}`;
+}
+
+function pruneToastFingerprints(now) {
+  if (recentToastFingerprints.size <= 40) return;
+  for (const [key, ts] of recentToastFingerprints) {
+    if (now - ts > TOAST_DEDUPE_MS) recentToastFingerprints.delete(key);
+  }
+}
+
+/** Returns true when the same severity+message was shown recently — skip duplicate toast. */
+export function shouldSuppressDuplicateToast({ severity, message, title }) {
+  const fp = fingerprintToast(severity, message || title);
+  const now = Date.now();
+  const last = recentToastFingerprints.get(fp);
+  if (last != null && now - last < TOAST_DEDUPE_MS) return true;
+  recentToastFingerprints.set(fp, now);
+  pruneToastFingerprints(now);
+  return false;
+}
+
+/** @internal test helper */
+export function resetToastDedupeState() {
+  recentToastFingerprints.clear();
+}
 
 /** Call before multi-step axios flows that show their own toast */
 export function suppressAutoToasts(ms = 4000) {
@@ -78,7 +113,7 @@ export function slugId(...parts) {
 const TOAST_WIDTH_CLASS = 'w-full max-w-[min(420px,calc(100vw-2rem))]';
 
 const cardBase =
-  `pointer-events-auto ${TOAST_WIDTH_CLASS} shadow-lg rounded-xl border transition-all duration-300`;
+  `pointer-events-auto ${TOAST_WIDTH_CLASS} shadow-lg rounded-xl border-0 transition-all duration-300`;
 
 export function buildErrorCopyText(props) {
   return buildCopyFromContract(props);
@@ -88,22 +123,22 @@ const SEVERITY_UI = {
   [SEVERITY.SUCCESS]: {
     Icon: CheckCircle,
     iconClass: 'text-[var(--color-pastel-mint-text)]',
-    borderClass: 'border-[var(--color-pastel-mint-text)]/25',
+    leftBorderColor: '#27a644',
   },
   [SEVERITY.INFO]: {
     Icon: Info,
     iconClass: 'text-[var(--color-pastel-blue-text)]',
-    borderClass: 'border-[var(--color-pastel-apricot-text)]/25',
+    leftBorderColor: 'var(--token-brand-accent)',
   },
   [SEVERITY.WARN]: {
     Icon: AlertTriangle,
     iconClass: 'text-[var(--color-pastel-apricot-text)]',
-    borderClass: 'border-[var(--color-pastel-apricot-text)]/25',
+    leftBorderColor: '#d97706',
   },
   [SEVERITY.ERROR]: {
     Icon: OctagonX,
     iconClass: 'text-[var(--color-pastel-rose-text)]',
-    borderClass: 'border-[var(--color-pastel-rose-text)]/30 dark:border-red-900/50',
+    leftBorderColor: '#ef4444',
   },
 };
 
@@ -153,7 +188,8 @@ const SystemToastCard = ({
 
   return (
     <div
-      className={`${cardBase} bg-[var(--color-bg-surface)] ${ui.borderClass} p-4 flex flex-col gap-3`}
+      className={`${cardBase} bg-[var(--token-surface-1)] p-4 flex flex-col gap-3 border-l-[2px]`}
+      style={{ borderLeftColor: ui.leftBorderColor }}
       role="alert"
     >
       <div className="flex items-start gap-3 w-full">
@@ -315,26 +351,29 @@ export const ERPNotificationProvider = () => {
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <Toaster
-      position="top-right"
-      reverseOrder={false}
-      gutter={8}
-      containerClassName="tm-toast-container"
-      containerStyle={{
-        zIndex: 10060,
-      }}
-      toastOptions={{
-        className: 'tm-toast-host',
-        style: {
-          background: 'transparent',
-          boxShadow: 'none',
-          padding: 0,
-          margin: 0,
-          maxWidth: 'min(420px, calc(100vw - 2rem))',
-          width: 'max-content',
-        },
-      }}
-    />,
+    <>
+      <div aria-live="polite" aria-atomic="true" className="sr-only" id="coreknot-toast-live" />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+        containerClassName="tm-toast-container"
+        containerStyle={{
+          zIndex: 10060,
+        }}
+        toastOptions={{
+          className: 'tm-toast-host',
+          style: {
+            background: 'transparent',
+            boxShadow: 'none',
+            padding: 0,
+            margin: 0,
+            maxWidth: 'min(420px, calc(100vw - 2rem))',
+            width: 'max-content',
+          },
+        }}
+      />
+    </>,
     document.body
   );
 };

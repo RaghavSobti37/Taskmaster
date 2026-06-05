@@ -5,6 +5,7 @@ import { Badge, Button, PageSkeleton } from '../../components/ui';
 import { useSystemLogs, useTopPages } from '../../hooks/useSystemLogs';
 import { SEVERITY } from '../../lib/systemLogContract';
 import SystemLogSandbox from '../../components/admin/SystemLogSandbox';
+import OpsTerminalView from '../../components/admin/OpsTerminalView';
 
 const SEVERITY_VARIANT = {
   [SEVERITY.ERROR]: 'danger',
@@ -110,23 +111,15 @@ const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
           <TopPagesCard pages={topPagesData?.pages || []} isLoading={topLoading} />
         </div>
 
-        <div className="lg:col-span-2 border border-[var(--color-bg-border)] min-h-[480px] flex flex-col">
-          <div className="px-4 py-2.5 border-b border-[var(--color-bg-border)] flex items-center justify-between">
-            <span className="tm-widget-label">
-              Global activity
+        <div className="lg:col-span-2 border border-[var(--color-bg-border)] min-h-[480px] flex flex-col bg-[var(--color-bg-workspace)] font-mono">
+          <div className="px-4 py-2.5 border-b border-[var(--color-bg-border)] flex items-center justify-between bg-[var(--color-bg-surface)]">
+            <span className="tm-widget-label font-mono text-[10px] uppercase tracking-widest">
+              ops-terminal · global activity
             </span>
-            <span className="text-[9px] font-mono text-emerald-500">live</span>
+            <span className="text-[9px] font-mono text-emerald-500 animate-pulse">● live</span>
           </div>
-          <div className="p-3 flex-1 max-h-[70vh] overflow-y-auto">
-            {logs.length === 0 && (
-              <div className="py-16 text-center opacity-40">
-                <Activity size={28} className="mx-auto mb-2" />
-                <p className="text-xs font-semibold uppercase">No events yet</p>
-              </div>
-            )}
-            {logs.map((log) => (
-              <LogFeedItem key={log._id} log={log} />
-            ))}
+          <div className="px-3 py-2 flex-1 max-h-[70vh] overflow-y-auto">
+            <OpsTerminalView logs={logs} />
           </div>
         </div>
       </div>

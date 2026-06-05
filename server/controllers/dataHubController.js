@@ -37,7 +37,18 @@ exports.listPeople = async (req, res) => {
 
 exports.getPerson = async (req, res) => {
   try {
-    const person = await DataHubService.getPerson360(req.params.id);
+    const section = req.query.section;
+    if (section) {
+      const data = await DataHubService.getPersonSection(req.params.id, section);
+      if (!data) return res.status(404).json({ error: 'Person not found' });
+      return res.json(data);
+    }
+    if (req.query.full === 'true' || req.query.full === '1') {
+      const person = await DataHubService.getPerson360(req.params.id);
+      if (!person) return res.status(404).json({ error: 'Person not found' });
+      return res.json(person);
+    }
+    const person = await DataHubService.getPersonBase(req.params.id);
     if (!person) return res.status(404).json({ error: 'Person not found' });
     res.json(person);
   } catch (error) {

@@ -16,6 +16,7 @@ import {
 import { useDashboardTaskActions } from '../hooks/useDashboardTaskActions';
 import { PinBoardProvider } from '../components/dashboard/PinBoardContext';
 const TaskCompletionModal = lazy(() => import('../components/TaskCompletionModal'));
+const MobileAttendanceBar = lazy(() => import('../components/mobile/MobileAttendanceBar'));
 import { useAttendanceCheck, useUndoAttendanceCheck, useAttendance } from '../hooks/useTaskmasterQueries';
 import { formatDateKeyIST } from '../utils/attendanceUtils';
 import { LAYOUT_TEMPLATES, canAccessComponent, getMobileWidgetOrder, isAnalyticsWidget } from '../lib/componentRegistry';
@@ -115,7 +116,12 @@ const Dashboard = () => {
   }, [elementsToRender, isMobile]);
 
   const primaryElements = useMemo(
-    () => (isMobile ? sortedElements.filter((el) => !isAnalyticsWidget(el.componentId)) : sortedElements),
+    () =>
+      isMobile
+        ? sortedElements.filter(
+            (el) => !isAnalyticsWidget(el.componentId) && el.componentId !== 'mark-attendance'
+          )
+        : sortedElements,
     [sortedElements, isMobile]
   );
 
@@ -245,7 +251,10 @@ const Dashboard = () => {
   };
 
   return (
-    <PageContainer className="!py-4 !space-y-4">
+    <PageContainer>
+      <Suspense fallback={null}>
+        <MobileAttendanceBar />
+      </Suspense>
       <PinBoardProvider>
         <div
           className="dashboard-widget-grid grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-0 gap-3 grid-flow-row-dense auto-rows-max"

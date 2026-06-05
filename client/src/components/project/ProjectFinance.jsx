@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,8 @@ import {
   ChevronLeft, ChevronRight, X, Eye, Check, Info, ArrowLeft
 } from 'lucide-react';
 import UsdInrAmountFields from '../finance/UsdInrAmountFields';
+import { buildProjectFinanceTableColumns } from '../finance/buildFinanceTableColumns';
+import { DataTable } from '../ui';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
 import { useConfirm } from '../../contexts/confirmContext';
@@ -66,6 +68,40 @@ const InfoTooltip = ({ content }) => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+const ProjectFinanceTable = ({ docs, isLoading, onViewDoc, onDeleteDoc, confirm }) => {
+  const handleConfirmDeleteDoc = useCallback(async () => confirm({
+    title: 'Delete record?',
+    message: 'Delete record?',
+    confirmLabel: 'Delete',
+    type: 'danger',
+  }), [confirm]);
+
+  const columns = useMemo(
+    () => buildProjectFinanceTableColumns({
+      onViewDoc,
+      onDeleteDoc,
+      onConfirmDeleteDoc: handleConfirmDeleteDoc,
+    }),
+    [onViewDoc, onDeleteDoc, handleConfirmDeleteDoc],
+  );
+
+  return (
+    <DataTable
+      columns={columns}
+      data={docs}
+      isLoading={isLoading}
+      serverSide
+      paginated={false}
+      virtualize={false}
+      onRowClick={onViewDoc}
+      getRowId={(row) => row._id}
+      emptyTitle="No finance records for this project"
+      emptyDescription="Upload invoices and receipts for this project to see them here."
+      tableMaxHeight="60vh"
+    />
   );
 };
 
@@ -187,111 +223,13 @@ const ProjectFinance = ({ projectId }) => {
 
       {/* Finance Table */}
       <div className="overflow-hidden border-t border-[var(--color-bg-border)]">
-        {isLoading ? (
-          <div className="p-20 text-center animate-pulse text-[var(--color-text-muted)] font-black uppercase tracking-widest">Loading Finance Records...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-[var(--color-bg-workspace)]/50 text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] border-b border-[var(--color-bg-border)]">
-                <tr>
-                  <th className="px-4 py-2">Document Title</th>
-                  <th className="px-4 py-2">Vendor</th>
-                  <th className="px-4 py-2 text-right">Amount</th>
-                  <th className="px-4 py-2">Category</th>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-bg-border)]">
-                {docs.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-20 text-center opacity-30">
-                      <FileText size={48} className="mx-auto mb-4" />
-                      <p className="text-[10px] font-black uppercase">No finance records for this project</p>
-                    </td>
-                  </tr>
-                ) : (
-                  docs.map((doc) => {
-                    const cat = CAT_COLORS[doc.category] || CAT_COLORS.other;
-                    const isImage = doc.fileType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(doc.fileName);
-                    
-                    return (
-                      <tr
-                        key={doc._id}
-                        className="hover:bg-[var(--color-bg-secondary)]/50 transition-all cursor-pointer group"
-                        onClick={() => setSelectedDoc(doc)}
-                      >
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-3">
-                            {isImage ? (
-                              <img src={doc.fileUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-[var(--color-bg-border)] flex-shrink-0" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--color-bg-workspace)] flex-shrink-0 border border-[var(--color-bg-border)]">
-                                <FileText size={14} className="text-[var(--color-text-muted)]" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <span className="text-xs font-black text-[var(--color-text-primary)] uppercase tracking-tight block truncate max-w-[200px]">{doc.title}</span>
-                              <span className="text-[9px] text-[var(--color-text-muted)] block truncate max-w-[150px]">{doc.fileName}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 text-xs font-bold text-[var(--color-text-secondary)] uppercase">
-                          {doc.metadata?.vendor || '—'}
-                        </td>
-                        <td className="px-4 py-2 text-xs font-black text-[var(--color-text-primary)] tabular-nums text-right">
-                          {doc.metadata?.amount ? `${doc.metadata.currency || 'INR'} ${Number(doc.metadata.amount).toLocaleString('en-IN')}` : '—'}
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider" style={{ background: cat.bg, color: cat.text }}>
-                            {doc.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest tabular-nums">
-                          {new Date(doc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setSelectedDoc(doc); }}
-                              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-[var(--color-text-secondary)] transition-colors"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <a
-                              href={doc.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-blue-500 transition-colors"
-                            >
-                              <Download size={14} />
-                            </a>
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                const ok = await confirm({
-                                  title: 'Delete record?',
-                                  message: 'Delete record?',
-                                  confirmLabel: 'Delete',
-                                  type: 'danger',
-                                });
-                                if (ok) deleteMutation.mutate(doc._id);
-                              }}
-                              className="p-1.5 hover:bg-red-500/10 rounded text-red-500 transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ProjectFinanceTable
+          docs={docs}
+          isLoading={isLoading}
+          onViewDoc={setSelectedDoc}
+          onDeleteDoc={(id) => deleteMutation.mutate(id)}
+          confirm={confirm}
+        />
 
         {/* Pagination Controls */}
         {pagination.pages > 1 && (

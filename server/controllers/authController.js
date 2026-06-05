@@ -5,7 +5,13 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 const logger = require('../utils/logger');
 const { clearAuthCookie, hadAuthCookie } = require('../utils/authCookie');
-const { establishSession } = require('../utils/authSession');
+const {
+  verifySessionToken,
+  generateSessionToken,
+  resolveLoginAt,
+} = require('../utils/authSession');
+const { setAuthCookie } = require('../utils/authCookie');
+const { finishAuthSession, listUserSessions, removeSession, ensureSession } = require('../utils/sessionRegistry');
 const { createOAuth2Client, resolveGoogleRedirectUri } = require('../utils/googleAuth');
 const { validatePasswordStrength } = require('../utils/passwordValidation');
 const { normalizePasswordInput, passwordCandidatesForCompare } = require('../utils/passwordAuth');
@@ -57,8 +63,8 @@ const formatAuthUser = (populated) => attachProfileCompletion(
   populated.toObject ? populated.toObject() : populated
 );
 
-const sendAuthSuccess = (res, populated) => {
-  establishSession(res, populated._id);
+const sendAuthSuccess = async (req, res, populated) => {
+  await finishAuthSession(req, res, populated._id);
   return res.json(formatAuthUser(populated));
 };
 
@@ -140,7 +146,7 @@ exports.register = async (req, res) => {
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
-    establishSession(res, populated._id);
+    await finishAuthSession(req, res, populated._id);
     return res.status(201).json(formatAuthUser(populated));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -182,7 +188,7 @@ exports.login = async (req, res) => {
       const populated = await User.findById(user._id)
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
-      establishSession(res, populated._id);
+      await finishAuthSession(req, res, populated._id);
       return res.json(formatAuthUser(populated));
     }
 
@@ -228,13 +234,32 @@ exports.googleLogin = async (req, res) => {
       .select('-password')
       .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
 
-    return sendAuthSuccess(res, populated);
+    return sendAuthSuccess(req, res, populated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
+  try {
+    const { getTokenFromRequest } = require('../utils/authCookie');
+    const { verifySessionToken } = require('../utils/authSession');
+    const { revokeToken } = require('../utils/tokenRevocation');
+    const token = getTokenFromRequest(req);
+    if (token) {
+      try {
+        const decoded = verifySessionToken(token);
+        if (!decoded.purpose) {
+          await revokeToken(decoded);
+          if (decoded.jti) await removeSession(decoded.id, decoded.jti);
+        }
+      } catch {
+        /* ignore invalid token on logout */
+      }
+    }
+  } catch {
+    /* revocation is best-effort */
+  }
   clearAuthCookie(res);
   res.json({ success: true, hadCookie: hadAuthCookie(req) });
 };
@@ -409,10 +434,100 @@ exports.oauthEstablishSession = async (req, res) => {
       return res.status(401).json({ error: 'User no longer exists' });
     }
 
-    establishSession(res, populated._id);
+    await finishAuthSession(req, res, populated._id);
     return res.json(formatAuthUser(populated));
   } catch (error) {
     return res.status(401).json({ error: 'Invalid or expired OAuth ticket' });
+  }
+};
+
+const currentSessionDecoded = (req) => {
+  const { getTokenFromRequest } = require('../utils/authCookie');
+  const token = getTokenFromRequest(req);
+  if (!token) return null;
+  try {
+    return verifySessionToken(token);
+  } catch {
+    return null;
+  }
+};
+
+const resolveSessionDecoded = (req, res) => {
+  let decoded = currentSessionDecoded(req);
+  if (!decoded?.id) return null;
+  if (!decoded.jti) {
+    const token = generateSessionToken(decoded.id, resolveLoginAt(decoded));
+    setAuthCookie(res, token);
+    decoded = verifySessionToken(token);
+  }
+  return decoded;
+};
+
+exports.listSessions = async (req, res) => {
+  try {
+    const decoded = resolveSessionDecoded(req, res);
+    if (!decoded?.jti || !decoded.id) {
+      return res.status(401).json({ error: 'Not authorized' });
+    }
+    await ensureSession(req, decoded.id, decoded);
+    const sessions = await listUserSessions(decoded.id, decoded.jti);
+    return res.json({ sessions });
+  } catch (error) {
+    logger.error('authController', 'listSessions failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to load sessions' });
+  }
+};
+
+exports.revokeSession = async (req, res) => {
+  try {
+    const decoded = currentSessionDecoded(req);
+    if (!decoded?.jti || !decoded.id) {
+      return res.status(401).json({ error: 'Not authorized' });
+    }
+    const targetJti = req.params.jti;
+    if (!targetJti) {
+      return res.status(400).json({ error: 'Missing session id' });
+    }
+    const sessions = await listUserSessions(decoded.id);
+    const target = sessions.find((s) => s.jti === targetJti);
+    if (!target) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const { revokeToken } = require('../utils/tokenRevocation');
+    await revokeToken({ jti: targetJti, exp: decoded.exp });
+    await removeSession(decoded.id, targetJti);
+
+    const isCurrent = targetJti === decoded.jti;
+    if (isCurrent) clearAuthCookie(res);
+    return res.json({ success: true, revokedCurrent: isCurrent });
+  } catch (error) {
+    logger.error('authController', 'revokeSession failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to revoke session' });
+  }
+};
+
+exports.revokeOtherSessions = async (req, res) => {
+  try {
+    const decoded = currentSessionDecoded(req);
+    if (!decoded?.jti || !decoded.id) {
+      return res.status(401).json({ error: 'Not authorized' });
+    }
+    const sessions = await listUserSessions(decoded.id, decoded.jti);
+    const { revokeToken } = require('../utils/tokenRevocation');
+    let revoked = 0;
+    for (const session of sessions) {
+      if (session.current) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await revokeToken({ jti: session.jti, exp: decoded.exp });
+      // eslint-disable-next-line no-await-in-loop
+      await removeSession(decoded.id, session.jti);
+      revoked += 1;
+    }
+    return res.json({ success: true, revoked });
+  } catch (error) {
+    logger.error('authController', 'revokeOtherSessions failed', { error: error.message || error });
+    return res.status(500).json({ error: 'Failed to revoke sessions' });
   }
 };
 

@@ -163,13 +163,17 @@ exports.getLocationLeads = async (req, res) => {
     const { location } = req.query;
     if (!location) return res.status(400).json({ error: 'Location query parameter required' });
 
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const skip = (page - 1) * limit;
+
     const targetLoc = normalizeLocation(location);
     const engagedEmails = await collectEngagedEmails();
     const matchQuery = engagedEmails.length > 0
       ? { email: { $in: engagedEmails } }
       : { emailStatus: 'Active' };
 
-    const matchedLeads = await Lead.aggregate([
+    const pipeline = [
       { $match: matchQuery },
       {
         $addFields: {
@@ -199,10 +203,28 @@ exports.getLocationLeads = async (req, res) => {
         },
       },
       { $match: { normalizedLoc: targetLoc } },
-      { $limit: 500 },
-    ]);
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          total: [{ $count: 'count' }],
+        },
+      },
+    ];
 
-    res.status(200).json(matchedLeads);
+    const [result] = await Lead.aggregate(pipeline);
+    const matchedLeads = result?.data || [];
+    const total = result?.total?.[0]?.count || 0;
+
+    res.status(200).json({
+      data: matchedLeads,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 0,
+      },
+    });
   } catch (error) {
     logger.error('analyticsController', 'Get location leads ', { error: error.message || error });
     res.status(500).json({ error: error.message });

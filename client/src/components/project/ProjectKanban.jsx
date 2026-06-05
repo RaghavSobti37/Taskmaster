@@ -25,9 +25,15 @@ const KanbanCard = ({ task, onMove, onDetail, workspaces, projects, completingTa
   const isDone = task.status === 'done';
   const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
 
+  const isInReview = task.status === 'in-review';
+
   return (
     <div
-      className={`tm-task-row p-3 border-b border-[var(--color-bg-border)] transition-colors group ${isDone ? 'tm-task-row--completed' : 'hover:bg-[var(--color-bg-secondary)]/40'}`}
+      className={`tm-task-row p-3 border-b transition-colors group ${
+        isInReview
+          ? 'border-dashed border-[var(--color-action-primary)] bg-[var(--color-action-primary)]/[0.03]'
+          : 'border-[var(--color-bg-border)]'
+      } ${isDone ? 'tm-task-row--completed' : 'hover:bg-[var(--color-bg-secondary)]/40'}`}
       style={isDone ? getCompletedTaskRowStyle() : getTaskRowStyle(accent)}
       data-highlight-id={task._id}
     >

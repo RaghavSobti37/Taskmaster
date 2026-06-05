@@ -29,6 +29,14 @@ const {
 } = require('../utils/mailTemplateHelpers');
 const { parseIndexedVariablesFromHtml } = require('../utils/indexedTemplateVariables');
 const { normalizeOutboundEmailHtml } = require('../utils/normalizeOutboundEmailHtml');
+const { validateBody } = require('../validation/validateBody');
+const {
+  mailProfileBody,
+  updateMailProfileBody,
+  createCampaignBody,
+  mailTemplateDraftBody,
+  mailTemplateRejectBody,
+} = require('../validation/schemas/mail');
 
 router.get('/templates/pending', protect, async (req, res) => {
   try {
@@ -67,7 +75,7 @@ router.get('/templates/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/templates', protect, async (req, res) => {
+router.post('/templates', protect, validateBody(mailTemplateDraftBody), async (req, res) => {
   try {
     const { id, name, content, format, subject, dummyValues } = req.body;
     if (!name || !content) {
@@ -121,7 +129,7 @@ router.post('/templates', protect, async (req, res) => {
   }
 });
 
-router.put('/templates/:id', protect, async (req, res) => {
+router.put('/templates/:id', protect, validateBody(mailTemplateDraftBody), async (req, res) => {
   try {
     const template = await MailTemplate.findById(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });
@@ -200,7 +208,7 @@ router.post('/templates/:id/approve', protect, async (req, res) => {
   }
 });
 
-router.post('/templates/:id/reject', protect, async (req, res) => {
+router.post('/templates/:id/reject', protect, validateBody(mailTemplateRejectBody), async (req, res) => {
   try {
     if (!canApproveMailTemplates(req.user)) {
       return res.status(403).json({ error: 'Mail template approval access required' });
@@ -298,7 +306,7 @@ router.get('/profiles', protect, async (req, res) => {
   }
 });
 
-router.post('/profiles', protect, async (req, res) => {
+router.post('/profiles', protect, validateBody(mailProfileBody), async (req, res) => {
   try {
     const data = { ...req.body };
     if (!data.name?.trim() || !data.email?.trim()) {
@@ -351,7 +359,7 @@ router.delete('/profiles/:id', protect, async (req, res) => {
   }
 });
 
-router.put('/profiles/:id', protect, async (req, res) => {
+router.put('/profiles/:id', protect, validateBody(updateMailProfileBody), async (req, res) => {
   try {
     const profile = await EmailProfile.findById(req.params.id);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
@@ -411,7 +419,7 @@ router.get('/campaigns', protect, async (req, res) => {
   }
 });
 
-router.post('/campaigns', protect, async (req, res) => {
+router.post('/campaigns', protect, validateBody(createCampaignBody), async (req, res) => {
   try {
     const { leadIds, customRecipients, ...rest } = req.body;
     const mongoose = require('mongoose');

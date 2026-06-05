@@ -10,7 +10,10 @@ const Project = require('../models/Project');
 const User = require('../models/User');
 const { dispatchEmailPayload } = require('../services/mailDriver');
 const GamificationService = require('../services/gamificationService');
-const { validateCalendarEventRange } = require('../utils/dateValidation');
+const { validateCalendarEventRange, buildDateTimeFromParts, toDateKey } = require('../utils/dateValidation');
+const { validateQuery } = require('../validation/validateQuery');
+const { validateBody } = require('../validation/validateBody');
+const { calendarQuery, calendarEventBody } = require('../validation/schemas/calendar');
 
 function normalizeMeetingLink(link) {
   if (!link || typeof link !== 'string') return '';
@@ -32,7 +35,7 @@ async function getAssignedTaskIds(userId) {
 }
 
 // GET /api/calendar — fetch all events visible to current user
-router.get('/', async (req, res) => {
+router.get('/', validateQuery(calendarQuery), async (req, res) => {
   try {
     const now = new Date();
     const startDate = req.query.start ? new Date(req.query.start) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -91,20 +94,24 @@ router.get('/', async (req, res) => {
 
     const tasks = await Task.find(taskQuery).populate('createdBy', 'name avatar').lean();
 
-    const taskEvents = tasks.map((t) => ({
-      _id: t._id,
-      title: `[Task] ${t.title}`,
-      description: t.description || '',
-      date: t.dueDate,
-      dueDate: t.dueDate,
-      visibility: 'private',
-      createdBy: t.createdBy,
-      type: 'task',
-      eventType: 'event',
-      status: t.status,
-      priority: t.priority,
-      projectId: t.projectId,
-    }));
+    const taskEvents = tasks.map((t) => {
+      const dateKey = toDateKey(t.dueDate);
+      const atNine = dateKey ? buildDateTimeFromParts(dateKey, '09:00') : t.dueDate;
+      return {
+        _id: t._id,
+        title: `[Task] ${t.title}`,
+        description: t.description || '',
+        date: atNine,
+        dueDate: atNine,
+        visibility: 'private',
+        createdBy: t.createdBy,
+        type: 'task',
+        eventType: 'event',
+        status: t.status,
+        priority: t.priority,
+        projectId: t.projectId,
+      };
+    });
 
     const combined = [...calendarOnly, ...taskEvents].sort((a, b) => new Date(a.date || a.dueDate) - new Date(b.date || b.dueDate));
     res.json(combined);
@@ -137,7 +144,7 @@ router.post('/seed-music-content', async (req, res) => {
 });
 
 // POST /api/calendar — create new calendar event
-router.post('/', async (req, res) => {
+router.post('/', validateBody(calendarEventBody), async (req, res) => {
   try {
     const {
       title,
@@ -249,7 +256,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/calendar/:id — update event (only owner)
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateBody(calendarEventBody), async (req, res) => {
   try {
     const event = await CalendarEvent.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Event not found' });

@@ -4,6 +4,7 @@ const {
   toDateKey,
   validateTaskTimelineFields,
   validateCalendarEventRange: validateCalendarEventRangeShared,
+  buildDateTimeFromParts,
 } = require('../../shared/dateValidation');
 
 const TZ_OFFSETS = {
@@ -27,4 +28,5 @@ module.exports = {
   validateCalendarEventRange,
   getAppTodayDateKey,
   toDateKey,
+  buildDateTimeFromParts,
 };

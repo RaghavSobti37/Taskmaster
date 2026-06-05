@@ -1,0 +1,501 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CoreKnot API",
+    "version": "1.0.5",
+    "description": "Curated subset of CoreKnot REST endpoints. Full surface area is larger — extend this spec incrementally."
+  },
+  "servers": [
+    { "url": "/api", "description": "Same-origin API (relative)" }
+  ],
+  "tags": [
+    { "name": "system" },
+    { "name": "auth" },
+    { "name": "tasks" },
+    { "name": "projects" },
+    { "name": "crm" },
+    { "name": "data-hub" },
+    { "name": "attendance" },
+    { "name": "notifications" },
+    { "name": "dashboard" },
+    { "name": "admin" },
+    { "name": "search" },
+    { "name": "mail" },
+    { "name": "campaigns" },
+    { "name": "finance" },
+    { "name": "schedule" },
+    { "name": "calendar" },
+    { "name": "notes" },
+    { "name": "gamification" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Health check",
+        "responses": {
+          "200": { "description": "Healthy or starting" },
+          "503": { "description": "Degraded" }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": ["system"],
+        "summary": "OpenAPI document",
+        "responses": { "200": { "description": "This specification" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Email/password login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Session established (HttpOnly cookie)" },
+          "401": { "description": "Invalid credentials" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Logout and revoke session token",
+        "responses": { "200": { "description": "Logged out" } }
+      }
+    },
+    "/auth/sessions": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "List active sessions for current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Session list with current device marker" } }
+      }
+    },
+    "/auth/sessions/{jti}": {
+      "delete": {
+        "tags": ["auth"],
+        "summary": "Revoke a session by jti",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "jti", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Revoked" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/auth/sessions/revoke-others": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Revoke all sessions except current",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Other sessions revoked" } }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "List tasks for current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Task list" } }
+      },
+      "post": {
+        "tags": ["tasks"],
+        "summary": "Create task",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/tasks/{id}": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "Get task by id",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Task" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["tasks"],
+        "summary": "Update task",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated" } }
+      }
+    },
+    "/projects": {
+      "get": {
+        "tags": ["projects"],
+        "summary": "List projects",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Project list" } }
+      },
+      "post": {
+        "tags": ["projects"],
+        "summary": "Create project",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/campaigns": {
+      "post": {
+        "tags": ["campaigns"],
+        "summary": "Create campaign (draft or dispatch)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/campaigns/{id}/resend": {
+      "post": {
+        "tags": ["campaigns"],
+        "summary": "Resend campaign to selected recipient statuses",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Dispatch queued" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/projects/{id}": {
+      "put": {
+        "tags": ["projects"],
+        "summary": "Update project",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/gamification/missions": {
+      "get": {
+        "tags": ["gamification"],
+        "summary": "Daily missions for current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Mission list" } }
+      }
+    },
+    "/gamification/leaderboard": {
+      "get": {
+        "tags": ["gamification"],
+        "summary": "XP leaderboard",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Leaderboard rows" } }
+      }
+    },
+    "/crm/leads": {
+      "get": {
+        "tags": ["crm"],
+        "summary": "Paginated leads",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 25 } }
+        ],
+        "responses": { "200": { "description": "Leads page" } }
+      },
+      "post": {
+        "tags": ["crm"],
+        "summary": "Create lead",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" } }
+      }
+    },
+    "/crm/leads/{id}/notes": {
+      "post": {
+        "tags": ["crm"],
+        "summary": "Add note to lead",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": { "text": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated lead" } }
+      }
+    },
+    "/crm/leads/{id}/lock-heartbeat": {
+      "post": {
+        "tags": ["crm"],
+        "summary": "Renew lead edit lock",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Lock renewed" } }
+      }
+    },
+    "/data-hub/people": {
+      "get": {
+        "tags": ["data-hub"],
+        "summary": "Paginated people directory",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "folder", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "People page" } }
+      }
+    },
+    "/attendance": {
+      "get": {
+        "tags": ["attendance"],
+        "summary": "Attendance records",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "start", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "end", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "mine", "in": "query", "schema": { "type": "string", "enum": ["true", "false"] } },
+          { "name": "week", "in": "query", "schema": { "type": "string", "enum": ["current"] } },
+          { "name": "weekStart", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": { "200": { "description": "Attendance list" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/attendance/check": {
+      "post": {
+        "tags": ["attendance"],
+        "summary": "Check in or check out",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["in", "out"] },
+                  "manualTime": { "type": "string" },
+                  "workMode": { "type": "string", "enum": ["office", "wfh"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Updated" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/attendance/leave": {
+      "post": {
+        "tags": ["attendance"],
+        "summary": "Submit leave request",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/attendance/leave/requests": {
+      "get": {
+        "tags": ["attendance"],
+        "summary": "List leave requests",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": { "200": { "description": "Leave requests" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": ["notifications"],
+        "summary": "User notifications",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Notification feed" } }
+      }
+    },
+    "/notifications/push/subscribe": {
+      "post": {
+        "tags": ["notifications"],
+        "summary": "Save web push subscription",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Subscribed" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/notifications/push/unsubscribe": {
+      "delete": {
+        "tags": ["notifications"],
+        "summary": "Remove web push subscription",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Unsubscribed" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/dashboard/summary": {
+      "get": {
+        "tags": ["dashboard"],
+        "summary": "Dashboard summary widgets",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Summary payload" } }
+      }
+    },
+    "/search/unified": {
+      "get": {
+        "tags": ["search"],
+        "summary": "Unified search",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "q", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Search results" } }
+      }
+    },
+    "/admin/queues/status": {
+      "get": {
+        "tags": ["admin"],
+        "summary": "BullMQ queue snapshot (ops)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Queue counts and recent failures" } }
+      }
+    },
+    "/mail/profiles": {
+      "get": {
+        "tags": ["mail"],
+        "summary": "List SMTP profiles with usage stats",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Profile list" } }
+      },
+      "post": {
+        "tags": ["mail"],
+        "summary": "Create SMTP profile",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Created profile" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/mail/campaigns": {
+      "post": {
+        "tags": ["mail"],
+        "summary": "Create mail campaign draft",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Campaign created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/mail/templates": {
+      "post": {
+        "tags": ["mail"],
+        "summary": "Save mail template draft",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Template saved" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/finance/submit-invoice": {
+      "post": {
+        "tags": ["finance"],
+        "summary": "Submit invoice or reimbursement for ops review",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Submitted" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/finance/folders": {
+      "post": {
+        "tags": ["finance"],
+        "summary": "Create finance document folder (ops)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Folder created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/schedule": {
+      "get": {
+        "tags": ["schedule"],
+        "summary": "Team schedule grid (departments, members, tasks)",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "start", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "end", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "projectId", "in": "query", "schema": { "type": "string" } },
+          { "name": "departmentId", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Schedule payload" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/calendar": {
+      "get": {
+        "tags": ["calendar"],
+        "summary": "Calendar events and task due dates in range",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          { "name": "start", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "end", "in": "query", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "Combined events + tasks" }, "400": { "description": "Validation error" } }
+      },
+      "post": {
+        "tags": ["calendar"],
+        "summary": "Create calendar event",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/calendar/{id}": {
+      "put": {
+        "tags": ["calendar"],
+        "summary": "Update calendar event (owner only)",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated" }, "400": { "description": "Validation error" }, "403": { "description": "Not owner" } }
+      },
+      "delete": {
+        "tags": ["calendar"],
+        "summary": "Delete calendar event",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" }, "403": { "description": "Not authorized" } }
+      }
+    },
+    "/notes": {
+      "get": {
+        "tags": ["notes"],
+        "summary": "List user notes (owned + shared project notes)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Note list" } }
+      },
+      "post": {
+        "tags": ["notes"],
+        "summary": "Create note",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Created" }, "400": { "description": "Validation error" } }
+      }
+    },
+    "/notes/{id}": {
+      "get": {
+        "tags": ["notes"],
+        "summary": "Get note by id",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Note" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "tags": ["notes"],
+        "summary": "Update note (owner only)",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated" }, "400": { "description": "Validation error" } }
+      },
+      "delete": {
+        "tags": ["notes"],
+        "summary": "Delete note",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Deleted" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "token",
+        "description": "HttpOnly JWT session cookie set by POST /auth/login"
+      }
+    }
+  }
+}

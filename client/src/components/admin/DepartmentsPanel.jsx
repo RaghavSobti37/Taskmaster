@@ -204,7 +204,7 @@ const DepartmentsPanel = ({ users = [], departments = [] }) => {
 
   return (
     <>
-      <section className="space-y-4 border-t border-[var(--color-bg-border)] pt-4 h-fit">
+      <section className="space-y-4 h-fit">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Building2 size={14} className="text-[var(--color-action-primary)]" />

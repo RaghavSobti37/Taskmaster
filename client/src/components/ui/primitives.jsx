@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Spinner } from './Spinner';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
@@ -92,7 +93,7 @@ export const Card = ({ children, className = '', hover = false, variant = 'flat'
 export const PageContainer = ({ children, className = '', maxWidth = '1600px' }) => (
   <div
     data-page-root
-    className={`mx-auto px-4 py-4 space-y-4 pb-16 min-w-0 max-w-full overflow-x-clip ${className}`}
+    className={`mx-auto tm-page-container min-w-0 max-w-full overflow-x-clip ${className}`}
     style={{ maxWidth }}
   >
     {children}
@@ -194,7 +195,7 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
           rows={rows}
           onChange={handleTextareaChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
+          className={`mobile-form-control block w-full min-w-0 min-h-[5rem] p-3 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${
             autoGrow ? 'resize-y overflow-hidden' : 'resize-y'
           } ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
@@ -205,7 +206,7 @@ export const Input = ({ label, icon: Icon, multiline = false, rows = 4, classNam
         <input
           onChange={onChange}
           aria-invalid={error ? 'true' : undefined}
-          className={`block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
+          className={`mobile-form-control block w-full min-w-0 min-h-[2.5rem] ${Icon ? 'pl-9' : 'px-3'} ${endAdornment ? 'pr-9' : 'pr-3'} py-2 border rounded-[var(--radius-atomic)] outline-none transition-all text-sm ${fieldStyles} ${
             error ? 'border-rose-500 focus:border-rose-500' : ''
           } ${className}`}
           {...props}
@@ -396,6 +397,7 @@ export const DataTable = ({
   data = [], 
   onRowClick,
   getRowId,
+  getRowClassName,
   className = '', 
   defaultPageSize = 10, 
   paginated = true,
@@ -412,6 +414,10 @@ export const DataTable = ({
   fitWidth = false,
   sortState: controlledSortState,
   onSortChange,
+  mobileRowRender,
+  rowEstimateSize = 52,
+  tableMaxHeight = '600px',
+  virtualize = true,
 }) => {
   const [localSortState, setLocalSortState] = useState(null);
   const sortState = controlledSortState !== undefined ? controlledSortState : localSortState;
@@ -471,11 +477,12 @@ export const DataTable = ({
 
   const parentRef = useRef();
 
+  const useRowVirtualizer = virtualize && paginatedData.length > 0;
   const rowVirtualizer = useVirtualizer({
-    count: paginatedData.length,
+    count: useRowVirtualizer ? paginatedData.length : 0,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 50,
-    overscan: 5,
+    estimateSize: () => rowEstimateSize,
+    overscan: 8,
   });
 
   const mobileColumns = columns.filter((c) => !c.mobileHidden);
@@ -487,7 +494,8 @@ export const DataTable = ({
     <div className={`w-full flex flex-col ${className}`}>
       <div
         ref={parentRef}
-        className={`w-full max-lg:overflow-visible lg:overflow-y-auto lg:max-h-[600px] custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
+        className={`w-full max-lg:overflow-visible lg:overflow-y-auto custom-scrollbar overflow-x-clip ${fitWidth ? '' : 'lg:overflow-x-auto'}`}
+        style={{ maxHeight: tableMaxHeight }}
       >
         <table
           className={`w-full text-left border-collapse hidden lg:table ${fitWidth ? 'table-fixed' : 'min-w-[540px]'}`}
@@ -509,7 +517,7 @@ export const DataTable = ({
                 return (
                   <th
                     key={i}
-                    className={`px-4 py-2 tm-widget-label whitespace-nowrap ${alignClass} ${
+                    className={`px-4 py-2 tm-widget-label whitespace-nowrap ${alignClass} ${col.headerClassName || ''} ${
                       sortable ? 'cursor-pointer select-none hover:text-[var(--color-text-primary)]' : ''
                     }`}
                     onClick={sortable ? () => handleSortClick(col) : undefined}
@@ -550,24 +558,24 @@ export const DataTable = ({
                   )}
                 </td>
               </tr>
-            ) : (
+            ) : useRowVirtualizer ? (
               <>
             {rowVirtualizer.getVirtualItems().length > 0 && (
-              <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} />
+              <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} aria-hidden />
             )}
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = paginatedData[virtualRow.index];
               const rowId = getRowId?.(row);
               const rowKey = rowId ?? virtualRow.index;
               return (
-                <tr 
+                <tr
                   key={rowKey}
                   data-highlight-id={rowId || undefined}
                   onClick={(e) => {
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     onRowClick?.(row);
                   }}
-                  className="data-table-row cursor-pointer relative group"
+                  className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
                   style={{ height: `${virtualRow.size}px` }}
                 >
                   {columns.map((col, j) => {
@@ -584,9 +592,37 @@ export const DataTable = ({
               );
             })}
             {rowVirtualizer.getVirtualItems().length > 0 && (
-              <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} />
+              <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} aria-hidden />
             )}
               </>
+            ) : (
+              paginatedData.map((row, i) => {
+                const rowId = getRowId?.(row);
+                const rowKey = rowId ?? i;
+                return (
+                  <tr
+                    key={rowKey}
+                    data-highlight-id={rowId || undefined}
+                    onClick={(e) => {
+                      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                      onRowClick?.(row);
+                    }}
+                    className={`data-table-row cursor-pointer relative group ${getRowClassName?.(row) || ''}`}
+                  >
+                    {columns.map((col, j) => {
+                      const alignClass = col.align === 'right' || col.numeric ? 'text-right tabular-nums' : '';
+                      return (
+                        <td
+                          key={j}
+                          className={`px-4 py-2 text-sm tm-data-primary ${alignClass} ${fitWidth ? 'max-w-0 truncate' : ''} ${col.cellClassName || ''}`}
+                        >
+                          {col.render ? col.render(row) : row[col.key]}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -612,43 +648,54 @@ export const DataTable = ({
               }}
               className="tm-data-row cursor-pointer min-w-0"
             >
-              {primaryCol && (
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-[var(--color-text-primary)] min-w-0">
-                    {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
-                  </div>
-                  {primaryCol.mobileSubtitle && (
-                    <div className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
-                      {typeof primaryCol.mobileSubtitle === 'function'
-                        ? primaryCol.mobileSubtitle(row)
-                        : row[primaryCol.mobileSubtitle]}
+              {mobileRowRender ? (
+                mobileRowRender(row)
+              ) : (
+                <>
+                  {primaryCol && (
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-[var(--color-text-primary)] min-w-0">
+                        {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
+                      </div>
+                      {primaryCol.mobileSubtitle && (
+                        <div className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
+                          {typeof primaryCol.mobileSubtitle === 'function'
+                            ? primaryCol.mobileSubtitle(row)
+                            : row[primaryCol.mobileSubtitle]}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-              {detailColumns.length > 0 && (
-                <dl className="mt-3 space-y-2 border-t border-[var(--color-bg-border)] pt-3">
-                  {detailColumns.map((col, j) => (
-                    <div key={j} className="flex flex-col gap-0.5 min-w-0">
-                      <dt className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">{col.header}</dt>
-                      <dd className="text-sm text-[var(--color-text-primary)] min-w-0 break-words">
-                        {col.render ? col.render(row) : row[col.key]}
-                      </dd>
+                  {detailColumns.length > 0 && (
+                    <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-[var(--color-bg-border)] pt-2.5">
+                      {detailColumns.map((col, j) => (
+                        <div
+                          key={j}
+                          className={`min-w-0 ${col.mobileFullWidth ? 'col-span-2' : ''}`}
+                        >
+                          <dt className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider leading-none mb-1">
+                            {col.header}
+                          </dt>
+                          <dd className="text-sm text-[var(--color-text-primary)] min-w-0 break-words leading-snug">
+                            {col.render ? col.render(row) : row[col.key]}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                  {actionColumns.length > 0 && (
+                    <div
+                      className="mt-2.5 flex flex-wrap gap-2 pt-2.5 border-t border-[var(--color-bg-border)]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {actionColumns.map((col, j) => (
+                        <div key={j} className="flex-1 min-w-[120px]">
+                          {col.render ? col.render(row) : row[col.key]}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </dl>
-              )}
-              {actionColumns.length > 0 && (
-                <div
-                  className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-[var(--color-bg-border)]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {actionColumns.map((col, j) => (
-                    <div key={j} className="flex-1 min-w-[120px]">
-                      {col.render ? col.render(row) : row[col.key]}
-                    </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -686,6 +733,9 @@ export const FullScreenWorkspace = ({
   mainClassName = 'max-w-4xl',
 }) => {
   const dirty = isOpen && hasChanges && !!onSave;
+  const workspaceRef = useRef(null);
+  const titleId = React.useId();
+  useFocusTrap(isOpen, workspaceRef);
 
   useUnsavedChanges({
     hasChanges: dirty && !saveDisabled,
@@ -712,16 +762,20 @@ export const FullScreenWorkspace = ({
     <>
       {isOpen && (
         <div
+          ref={workspaceRef}
           className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
         >
           {/* Top Bar Navigation */}
           <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between px-4 sm:px-6 shrink-0">
              <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
-                <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0">
+                <button type="button" onClick={onClose} aria-label="Close workspace" className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0">
                    <X size={20} />
                 </button>
                 <div className="min-w-0">
-                   <h2 className="tm-data-primary text-sm font-medium leading-none truncate">{title}</h2>
+                   <h2 id={titleId} className="tm-data-primary text-sm font-medium leading-none truncate">{title}</h2>
                    {subtitle && <p className="tm-data-meta text-xs mt-1 truncate">{subtitle}</p>}
                 </div>
              </div>

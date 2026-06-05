@@ -6,8 +6,18 @@
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "background_color": "#fcf8f2",
   "theme_color": "#126d5e",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/favicon-48.png",

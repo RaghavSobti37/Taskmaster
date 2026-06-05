@@ -1,22 +1,39 @@
-import React from 'react';
+import React, { useId, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Input } from '../ui';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { usdToInr, inrToUsd, formatRateTime } from '../../utils/usdInr';
 
 const compactInputClass =
-  'w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50';
+  'w-full pl-7 pr-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-blue-500/50 tabular-nums';
+
+const inrFormatter = new Intl.NumberFormat('en-IN', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const parseInrInput = (raw) => String(raw || '').replace(/,/g, '').trim();
+
+const formatInrDisplay = (raw) => {
+  const cleaned = parseInrInput(raw);
+  if (cleaned === '' || cleaned === '.') return cleaned;
+  const num = Number(cleaned);
+  if (!Number.isFinite(num)) return raw;
+  return inrFormatter.format(num);
+};
+
+const isRateWarning = (rateData) =>
+  rateData?.source === 'override' || rateData?.stale === true;
 
 /**
- * USD + INR amount inputs with live conversion. INR is always editable — never locked after convert.
- *
- * @param {string} inrValue - controlled INR string
- * @param {string} usdValue - controlled USD string (UI helper; not persisted unless caller saves it)
- * @param {(value: string) => void} onInrChange
- * @param {(value: string) => void} onUsdChange
- * @param {boolean} [enabled=true] - fetch live rate when true
- * @param {boolean} [compact=false] - finance-style compact inputs
- * @param {'grid'|'stack'} [layout='grid']
+ * INR-primary amount field with live USD conversion subline.
  */
 export default function UsdInrAmountFields({
   inrValue = '',
@@ -35,53 +52,67 @@ export default function UsdInrAmountFields({
   usdInputProps = {},
   rateHintClassName = 'mt-1 text-[10px] text-[var(--color-text-muted)]',
 }) {
+  const sublineId = useId();
   const { data: rateData, isLoading: rateLoading, isError: rateError } = useUsdInrRate({ enabled });
   const rate = rateData?.rate;
   const hasRate = Number.isFinite(rate) && rate > 0;
+  const rateWarning = isRateWarning(rateData);
 
-  const handleUsdChange = (raw) => {
-    onUsdChange(raw);
-    if (raw === '' || raw === '.') {
-      onInrChange('');
-      return;
-    }
-    if (hasRate) {
-      onInrChange(String(usdToInr(raw, rate)));
-    }
-  };
+  const displayInr = useMemo(() => formatInrDisplay(inrValue), [inrValue]);
+
+  const usdEquivalent = useMemo(() => {
+    const cleaned = parseInrInput(inrValue);
+    if (!cleaned || !hasRate) return null;
+    const num = Number(cleaned);
+    if (!Number.isFinite(num) || num <= 0) return null;
+    return inrToUsd(num, rate);
+  }, [inrValue, hasRate, rate]);
 
   const handleInrChange = (raw) => {
-    onInrChange(raw);
-    if (raw === '' || raw === '.') {
+    const cleaned = parseInrInput(raw);
+    onInrChange(cleaned);
+    if (cleaned === '' || cleaned === '.') {
       onUsdChange('');
       return;
     }
     if (hasRate) {
-      onUsdChange(String(inrToUsd(raw, rate)));
+      onUsdChange(String(inrToUsd(cleaned, rate)));
     }
   };
 
-  const rateHint = showRateInfo && (
+  const conversionSubline = showRateInfo && (
     <>
       {rateLoading && (
-        <p className={`${rateHintClassName} flex items-center gap-1`}>
+        <p className={`${rateHintClassName} flex items-center gap-1`} id={sublineId}>
           <Loader2 size={10} className="animate-spin" />
           Fetching exchange rate...
         </p>
       )}
       {!rateLoading && rateError && (
-        <p className={`${rateHintClassName} text-red-500`}>
+        <p className={`${rateHintClassName} text-red-500`} id={sublineId}>
           Could not load exchange rate. Enter INR amount directly.
         </p>
       )}
       {!rateLoading && !rateError && hasRate && (
-        <p className={rateHintClassName}>
-          1 USD = ₹{rate.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+        <p
+          id={sublineId}
+          className={`${rateHintClassName} ${rateWarning ? 'text-amber-600 dark:text-amber-400' : ''}`}
+          title={rateWarning ? 'Rate is from override or cached fallback — USD estimate may be offline.' : undefined}
+        >
+          {usdEquivalent != null ? (
+            <>
+              ≈ {usdFormatter.format(usdEquivalent)} USD
+              {' '}(Rate: ₹{inrFormatter.format(rate)})
+            </>
+          ) : (
+            <>1 USD = ₹{inrFormatter.format(rate)}</>
+          )}
           {rateData?.asOf && (
             <>
               {' '}
-              · Rate as of {formatRateTime(rateData.asOf)}
+              · {formatRateTime(rateData.asOf)}
               {rateData.stale ? ' (cached)' : ''}
+              {rateData.source === 'override' ? ' (override)' : ''}
             </>
           )}
         </p>
@@ -89,74 +120,78 @@ export default function UsdInrAmountFields({
     </>
   );
 
-  const layoutClass =
-    layout === 'stack' ? 'flex flex-col gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-3';
-
-  if (compact) {
-    return (
-      <div className={`${layoutClass} ${className}`}>
-        <div>
-          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-            {usdLabel}
-          </label>
+  const inrField = (
+    <div>
+      <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
+        {inrLabel}
+        {inrRequired && ' *'}
+      </label>
+      <div className="relative">
+        <span
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-text-muted)] leading-none pointer-events-none"
+          aria-hidden
+        >
+          ₹
+        </span>
+        {compact ? (
           <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={usdValue}
-            onChange={(e) => handleUsdChange(e.target.value)}
-            placeholder="Optional"
-            disabled={rateLoading}
-            className={compactInputClass}
-            {...usdInputProps}
-          />
-          {rateHint}
-        </div>
-        <div>
-          <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
-            {inrLabel}
-            {inrRequired && ' *'}
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={inrValue}
+            type="text"
+            inputMode="decimal"
+            value={displayInr}
             onChange={(e) => handleInrChange(e.target.value)}
             required={inrRequired}
+            aria-describedby={sublineId}
             className={compactInputClass}
             {...inrInputProps}
           />
-        </div>
+        ) : (
+          <input
+            type="text"
+            inputMode="decimal"
+            value={displayInr}
+            onChange={(e) => handleInrChange(e.target.value)}
+            required={inrRequired}
+            aria-describedby={sublineId}
+            className="w-full pl-7 pr-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-xl text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50 tabular-nums"
+            {...inrInputProps}
+          />
+        )}
+      </div>
+      {conversionSubline}
+    </div>
+  );
+
+  if (compact || layout === 'stack') {
+    return (
+      <div className={`${layout === 'stack' ? 'flex flex-col gap-3' : ''} ${className}`}>
+        {inrField}
       </div>
     );
   }
 
   return (
-    <div className={`${layoutClass} ${className}`}>
-      <div>
-        <Input
-          label={usdLabel}
-          type="number"
-          min="0"
-          step="0.01"
-          value={usdValue}
-          onChange={(e) => handleUsdChange(e.target.value)}
-          placeholder="Optional"
-          disabled={rateLoading}
-          {...usdInputProps}
-        />
-        {rateHint}
-      </div>
+    <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${className}`}>
+      {inrField}
       <Input
-        label={inrLabel}
+        label={usdLabel}
         type="number"
         min="0"
         step="0.01"
-        value={inrValue}
-        onChange={(e) => handleInrChange(e.target.value)}
-        required={inrRequired}
-        {...inrInputProps}
+        value={usdValue}
+        onChange={(e) => {
+          const raw = e.target.value;
+          onUsdChange(raw);
+          if (raw === '' || raw === '.') {
+            onInrChange('');
+            return;
+          }
+          if (hasRate) {
+            onInrChange(String(usdToInr(raw, rate)));
+          }
+        }}
+        placeholder="Optional"
+        disabled={rateLoading}
+        {...usdInputProps}
       />
     </div>
   );

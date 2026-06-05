@@ -1,25 +1,40 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import OutletSidebar from './OutletSidebar';
-import { useSidebar } from '../contexts/SidebarContext';
+import { QuickAddProvider } from '../contexts/QuickAddContext.jsx';
+import BottomNavigation from './BottomNavigation';
+import QuickAddMenu from './QuickAddMenu';
+import { useSidebar, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_SHELL_WIDTH_COLLAPSED } from '../contexts/SidebarContext';
 import ForcePasswordChangeModal from './auth/ForcePasswordChangeModal';
 import { useIsDesktop } from '../hooks/useBreakpoint';
+import MobileRouteGuard from './mobile/MobileRouteGuard';
+import NetworkStatusBanner from './NetworkStatusBanner';
+import RouteErrorBoundary from './RouteErrorBoundary';
+import { useAuth } from '../contexts/AuthContext';
+import { scheduleIdlePrefetch } from '../lib/navPrefetch';
+import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
 
 const AttendancePromptModal = lazy(() => import('./attendance/AttendancePromptModal'));
 
 const CommandPalette = lazy(() => import('./CommandPalette'));
-const QuickAddMenu = lazy(() => import('./QuickAddMenu'));
 const PwaInstallBanner = lazy(() => import('./PwaInstallBanner'));
 const PageAnalyticsTracker = lazy(() => import('./PageAnalyticsTracker'));
 const NotificationBridge = lazy(() => import('./NotificationBridge'));
-const BottomNavigation = lazy(() => import('./BottomNavigation'));
+const MobileAppShell = lazy(() => import('./mobile/MobileAppShell'));
 const ProfileCompletionAlerts = lazy(() => import('./ProfileCompletionAlerts'));
 const FlashHighlightListener = lazy(() => import('./ui/FlashHighlight'));
+const KeyboardShortcutsOverlay = lazy(() => import('./KeyboardShortcutsOverlay'));
+const GChordHint = lazy(() => import('./GChordHint'));
 
 const MainLayout = () => {
   const { isOpen } = useSidebar();
   const isDesktop = useIsDesktop();
+  const { user } = useAuth();
   const [attendancePromptReady, setAttendancePromptReady] = useState(false);
+
+  useEffect(() => {
+    if (user?._id) scheduleIdlePrefetch(user._id);
+  }, [user?._id]);
 
   useEffect(() => {
     const enable = () => setAttendancePromptReady(true);
@@ -32,9 +47,19 @@ const MainLayout = () => {
   }, []);
 
   return (
+    <KeyboardShortcutsProvider>
+    <QuickAddProvider>
+    <NetworkStatusBanner />
     <div className="flex min-h-screen bg-[var(--color-bg-workspace)]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--color-bg-primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <OutletSidebar />
       <Suspense fallback={null}>
+        <MobileAppShell />
         <CommandPalette />
         <NotificationBridge />
         <PageAnalyticsTracker />
@@ -42,6 +67,8 @@ const MainLayout = () => {
         <QuickAddMenu />
         <BottomNavigation />
         <FlashHighlightListener />
+        <KeyboardShortcutsOverlay />
+        <GChordHint />
       </Suspense>
       <ForcePasswordChangeModal />
       {attendancePromptReady && (
@@ -53,22 +80,29 @@ const MainLayout = () => {
       <div
         className="flex-1 flex flex-col min-w-0 w-full transition-[margin] duration-300 ease-in-out"
         style={{
-          marginLeft: isDesktop ? (isOpen ? 160 : 56) : 0,
+          marginLeft: isDesktop ? (isOpen ? SIDEBAR_SHELL_WIDTH_OPEN : SIDEBAR_SHELL_WIDTH_COLLAPSED) : 0,
         }}
       >
         <main
+          id="main-content"
           data-page-root
-          className="flex-1 w-full min-w-0 p-4 pb-24 lg:p-5 lg:min-h-0 lg:flex lg:flex-col overflow-x-clip"
+          className="flex-1 w-full min-w-0 tm-page-shell lg:min-h-0 lg:flex lg:flex-col overflow-x-clip"
         >
           <div className="w-full lg:min-h-0">
             <Suspense fallback={null}>
               <ProfileCompletionAlerts />
             </Suspense>
-            <Outlet />
+            <MobileRouteGuard>
+              <RouteErrorBoundary>
+                <Outlet />
+              </RouteErrorBoundary>
+            </MobileRouteGuard>
           </div>
         </main>
       </div>
     </div>
+    </QuickAddProvider>
+    </KeyboardShortcutsProvider>
   );
 };
 

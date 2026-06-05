@@ -197,6 +197,8 @@ export default function ArtistDetail({ isPreview = false }) {
         normalized={normalized || analyticsData?.normalized}
         connectionCount={connections.filter((c) => c.accountHandle).length}
         artist={artist}
+        connections={connections}
+        onReconnect={handleSync}
       />
 
       <PlatformSummaryCards

@@ -1,4 +1,6 @@
 require('dotenv').config();
+const { initSentry, setupSentryExpress, captureException } = require('./utils/sentry');
+initSentry();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
@@ -173,7 +175,25 @@ app.use((req, res, next) => {
 
 // System Health Check Middleware
 const SystemHealthService = require('./services/SystemHealthService');
-app.use('/api/', SystemHealthService.middleware);
+
+app.use('/api', require('./routes/openApiRoutes'));
+
+app.get('/api/health', (_req, res) => {
+  const detail = SystemHealthService.getDetailedStatus();
+  const ok = detail.status === 'HEALTHY' || detail.status === 'STARTING';
+  res.status(ok ? 200 : 503).json({
+    ok,
+    status: detail.status,
+    reason: detail.reason || null,
+    dependencies: detail.dependencies,
+    uptimeSeconds: detail.uptimeSeconds,
+  });
+});
+
+app.use('/api/', (req, res, next) => {
+  if (req.path === '/health' || req.path === '/openapi.json') return next();
+  return SystemHealthService.middleware(req, res, next);
+});
 
 const traceMiddleware = require('./middleware/traceMiddleware');
 app.use(traceMiddleware);
@@ -211,38 +231,7 @@ if (process.env.NODE_ENV !== 'test') {
       const trackingWarn = getTrackingDbMismatchWarning();
       if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
 
-      // Auto-repair zero-dipped history snapshots in background (non-blocking)
-      setImmediate(async () => {
-        try {
-          if (mongoose.connection.readyState !== 1) return;
-          const Artist = require('./models/Artist');
-          const artists = await Artist.find().select('_id name analytics analyticsHistory').lean();
-          for (const artist of artists) {
-            if (artist.analyticsHistory && artist.analyticsHistory.length > 0) {
-              const currentIg = artist.analytics?.instagram?.followers || 0;
-              const currentSp = artist.analytics?.spotify?.followers || 0;
-
-              const cleanHistory = artist.analyticsHistory.filter((h) => {
-                const ig = h.metrics?.instagram?.followers;
-                const sp = h.metrics?.spotify?.followers;
-                if (currentIg > 0 && ig === 0) return false;
-                if (currentSp > 0 && sp === 0) return false;
-                return true;
-              });
-
-              if (cleanHistory.length !== artist.analyticsHistory.length) {
-                const removedCount = artist.analyticsHistory.length - cleanHistory.length;
-                await Artist.findByIdAndUpdate(artist._id, {
-                  $set: { analyticsHistory: cleanHistory },
-                });
-                console.log(`🧹 [Database Repair] Cleaned ${removedCount} corrupted snapshots for ${artist.name}`);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('❌ [Database Repair] Error during startup scan:', err.message);
-        }
-      });
+      // Artist analytics repair moved to scripts/repairArtistAnalytics.js (run via admin scripts / cron)
     })
     .catch(err => {
       console.error('[ERROR] Initial MongoDB connection failed:', err.message);
@@ -327,6 +316,7 @@ app.use('/api/departments', require('./routes/departmentRoutes'));
 app.use('/api/schedule', require('./routes/scheduleRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
+app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/pinboard', require('./routes/pinBoardRoutes'));
 app.use('/api/mail', require('./routes/mailRoutes'));
 app.use('/api/ses', require('./routes/sesRoutes'));
@@ -345,6 +335,7 @@ app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
+app.use('/api/admin/queues', require('./routes/queueAdminRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");
@@ -381,6 +372,8 @@ if (process.env.NODE_ENV === 'production') {
   app.get('/', (req, res) => res.send('CoreKnot API Active (Development Mode)'));
 }
 
+setupSentryExpress(app);
+
 // Centralized structured error handling middleware
 const errorHandler = require('./middleware/errorMiddleware');
 app.use(errorHandler);
@@ -402,12 +395,14 @@ function logProcessCrash(label, err) {
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] uncaughtException', err);
+  captureException(err, { label: 'uncaughtException' });
   logProcessCrash('uncaughtException', err);
 });
 
 process.on('unhandledRejection', (reason) => {
   const err = reason instanceof Error ? reason : new Error(String(reason));
   console.error('[FATAL] unhandledRejection', err);
+  captureException(err, { label: 'unhandledRejection' });
   logProcessCrash('unhandledRejection', err);
 });
 

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import {
   User, Mail, Phone, MapPin, Star, Clock, ShoppingBag, Database,
-  MessageSquare, Activity, GitCommit,
+  MessageSquare, Activity, GitCommit, Copy, Check,
 } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
 import { Badge, Card, FullScreenWorkspace, Spinner } from '../ui';
-import { useDataHubPerson } from '../../hooks/useTaskmasterQueries';
+import { useDataHubPerson, useDataHubPersonSection } from '../../hooks/useTaskmasterQueries';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
 
 const INLET_COLORS = {
@@ -122,6 +123,41 @@ function InletSummary({ inletKey, summary }) {
   );
 }
 
+function CopyableField({ icon: Icon, value, label }) {
+  const toast = useToast();
+  const [copied, setCopied] = React.useState(false);
+  const text = value && value !== '—' ? String(value) : '';
+
+  const handleCopy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(`${label} copied`);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error('Copy failed');
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 group">
+      <Icon size={14} className="shrink-0 text-[var(--color-text-muted)]" />
+      <span className="truncate flex-1">{text || '—'}</span>
+      {text && (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="shrink-0 rounded p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action-primary)]"
+          aria-label={`Copy ${label}`}
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function QuickStatRow({ label, value, highlight }) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-[var(--color-bg-border)] last:border-0">
@@ -133,13 +169,29 @@ function QuickStatRow({ label, value, highlight }) {
 
 export default function DataHubPersonDetail({ contactId, onClose }) {
   const [tab, setTab] = useState('overview');
-  const { data, isLoading } = useDataHubPerson(contactId);
+  const { data: base, isLoading: baseLoading } = useDataHubPerson(contactId);
+  const { data: sectionData, isLoading: sectionLoading } = useDataHubPersonSection(contactId, tab);
+
+  const person = useMemo(() => {
+    if (!base) return null;
+    return {
+      contact: base.contact,
+      overview: { ...base.overview, ...(sectionData?.overview || {}) },
+      crm: sectionData?.crm,
+      exly: sectionData?.exly,
+      tsc: sectionData?.tsc,
+      bookedCalls: sectionData?.bookedCalls,
+      enquiries: sectionData?.enquiries,
+      mail: sectionData?.mail,
+      timeline: sectionData?.timeline,
+    };
+  }, [base, sectionData]);
+
+  const overview = person?.overview || base?.overview;
+  const contact = person?.contact || base?.contact;
+  const loading = baseLoading || sectionLoading;
 
   if (!contactId) return null;
-
-  const person = data;
-  const overview = person?.overview;
-  const contact = person?.contact;
 
   return (
     <FullScreenWorkspace
@@ -152,10 +204,13 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
           <Card className="p-4 space-y-3">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Identity</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2"><User size={14} /><span>{contact?.name}</span></div>
-              <div className="flex items-center gap-2"><Mail size={14} /><span className="truncate">{contact?.email || '—'}</span></div>
-              <div className="flex items-center gap-2"><Phone size={14} /><span>{contact?.phone || '—'}</span></div>
-              <div className="flex items-center gap-2"><MapPin size={14} /><span>{contact?.city || '—'}</span></div>
+              <CopyableField icon={User} value={contact?.name} label="Name" />
+              <CopyableField icon={Mail} value={contact?.email} label="Email" />
+              <CopyableField icon={Phone} value={contact?.phone} label="Phone" />
+              <CopyableField icon={MapPin} value={contact?.city} label="City" />
+              {contact?._id && (
+                <CopyableField icon={Database} value={contact._id} label="Contact ID" />
+              )}
             </div>
           </Card>
           <Card className="p-4 space-y-2">
@@ -184,13 +239,13 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
         </div>
       }
     >
-      {isLoading && (
+      {loading && (
         <div className="p-4 flex justify-center">
           <Spinner size="md" />
         </div>
       )}
 
-      {!isLoading && person && (
+      {!loading && person && (
         <>
           <div className="flex gap-1 flex-wrap border-b border-[var(--color-bg-border)] mb-4 pb-2">
             {TABS.map((t) => (
@@ -198,6 +253,8 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
+                aria-selected={tab === t.id}
+                role="tab"
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
                   tab === t.id
                     ? 'bg-[var(--color-action-primary)] text-white'
@@ -235,8 +292,8 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
               <Card className="p-4">
                 <h4 className="text-[10px] font-black uppercase mb-3">Quick Stats</h4>
                 <div>
-                  <QuickStatRow label="CRM leads" value={person.crm?.leads?.length || 0} highlight={!!person.crm?.leads?.length} />
-                  <QuickStatRow label="Exly bookings" value={person.exly?.bookings?.length || 0} highlight={!!person.exly?.bookings?.length} />
+                  <QuickStatRow label="CRM leads" value={overview?.crmLeadCount ?? person.crm?.leads?.length ?? 0} highlight={!!(overview?.crmLeadCount || person.crm?.leads?.length)} />
+                  <QuickStatRow label="Exly bookings" value={overview?.exlyBookingCount ?? person.exly?.bookings?.length ?? 0} highlight={!!(overview?.exlyBookingCount || person.exly?.bookings?.length)} />
                   <QuickStatRow label="TSC rows" value={person.tsc?.rows?.length || 0} />
                   <QuickStatRow label="Enquiries" value={person.enquiries?.length || 0} />
                   <QuickStatRow label="Mail events" value={person.mail?.events?.length || 0} />

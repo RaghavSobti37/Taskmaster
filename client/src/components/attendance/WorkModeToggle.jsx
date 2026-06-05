@@ -13,9 +13,11 @@ const WorkModeToggle = ({
   loading = false,
   compact = false,
   className = '',
+  suggestedMode = null,
 }) => {
   const isOffice = value === 'office';
   const label = MODE_LABELS[value] || MODE_LABELS.office;
+  const hintMatches = suggestedMode === value && !loading && !disabled;
 
   const handleClick = () => {
     if (disabled || loading || !onChange) return;
@@ -38,14 +40,22 @@ const WorkModeToggle = ({
             ? 'cursor-not-allowed opacity-50 border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]'
             : 'cursor-pointer hover:brightness-[1.02] active:scale-[0.99]',
           isOffice
-            ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-            : 'border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-400',
+            ? 'border-[color-mix(in_srgb,var(--color-action-primary)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-action-primary)_12%,transparent)] text-[var(--color-action-primary)]'
+            : 'border-[color-mix(in_srgb,var(--color-pastel-violet-text)_50%,transparent)] bg-[color-mix(in_srgb,var(--color-pastel-violet-text)_12%,transparent)] text-[var(--color-pastel-violet-text)]',
         ].join(' ')}
       >
         {isOffice ? (
-          <Building2 size={compact ? 14 : 16} className="shrink-0" aria-hidden />
+          <Building2
+            size={compact ? 14 : 16}
+            className={`shrink-0 transition-all duration-300 ${hintMatches ? 'scale-110 text-[var(--color-action-primary)]' : ''}`}
+            aria-hidden
+          />
         ) : (
-          <Home size={compact ? 14 : 16} className="shrink-0" aria-hidden />
+          <Home
+            size={compact ? 14 : 16}
+            className={`shrink-0 transition-all duration-300 ${hintMatches ? 'scale-110 text-[var(--color-pastel-violet-text)]' : ''}`}
+            aria-hidden
+          />
         )}
         <span className="font-bold tracking-wide">{loading ? 'Detecting…' : label}</span>
         {!loading && !disabled && (

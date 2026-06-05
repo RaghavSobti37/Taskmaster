@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { loadPageFilters, savePageFilters } from '../../utils/pageFilterStorage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -7,79 +8,31 @@ import {
   FileText, Upload, Trash2, Download,
   FolderOpen, X, ChevronDown, File,
   FileSpreadsheet, Image as ImageIcon,
-  Calendar, ChevronLeft, ChevronRight, Info, Check, Eye, ArrowLeft, ArrowUp, ArrowDown,
+  Calendar, ChevronLeft, ChevronRight, Info, Check, Eye, ArrowLeft,
   FolderPlus, Clock, XCircle,
 } from 'lucide-react';
 import { uploadFinanceFiles } from '../../utils/financeUpload';
 import UploadDocumentModal from '../../components/finance/UploadDocumentModal';
+import NeedsAttentionAccordion from '../../components/finance/NeedsAttentionAccordion';
 import UsdInrAmountFields from '../../components/finance/UsdInrAmountFields';
 import { useUsdInrRate } from '../../hooks/useUsdInrRate';
 import { inrToUsd } from '../../utils/usdInr';
-import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, UserLabel, DesktopRecommendedBanner, DataLoading } from '../../components/ui';
+import { Button, SearchInput, NexusDropdown, EmptyState, IconButton, TablePagination, ListPageLayout, DesktopRecommendedBanner, DataLoading, DataTable } from '../../components/ui';
+import { buildFinanceTableColumns } from '../../components/finance/buildFinanceTableColumns';
+import { FINANCE_CATEGORIES, buildFinanceTableRows, formatFinanceBytes } from '../../utils/financeDisplay';
 import { NexusModal } from '../../components/ui/modals';;
 import { useConfirm } from '../../contexts/confirmContext';
 import { formatProjectName, normalizeProjects, normalizePopulatedProjectList } from '../../utils/projectUtils';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
+import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
+import {
+  buildFinanceEditForm,
+  cloneFinanceEditForm,
+  financeEditPayload,
+} from '../../utils/financeEditForm';
 
-const CATEGORIES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'invoice', label: 'Invoice' },
-  { value: 'receipt', label: 'Receipt' },
-  { value: 'contract', label: 'Contract' },
-  { value: 'proposal', label: 'Proposal' },
-  { value: 'budget', label: 'Budget' },
-  { value: 'report', label: 'Report' },
-  { value: 'tax', label: 'Tax' },
-  { value: 'other', label: 'Other' },
-];
-
-const CAT_COLORS = {
-  invoice: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
-  receipt: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-  contract: { bg: '#E6F4EA', text: '#137333', darkBg: '#0F2916', darkText: '#81C995' }, // Success
-  proposal: { bg: '#FEF7E0', text: '#B06000', darkBg: '#2E2003', darkText: '#FDD663' }, // Warning
-  budget: { bg: '#FEF7E0', text: '#B06000', darkBg: '#2E2003', darkText: '#FDD663' }, // Warning
-  report: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-  tax: { bg: '#FCE8E6', text: '#C5221F', darkBg: '#30100F', darkText: '#F28B82' }, // Danger
-  other: { bg: '#F1F3F4', text: '#3C4043', darkBg: '#202124', darkText: '#BDC1C6' }, // Info
-};
-
-const formatBytes = (bytes) => {
-  if (!bytes) return '—';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / 1048576).toFixed(1) + ' MB';
-};
-
-const formatDocDate = (doc) => {
-  const raw = doc?.metadata?.date;
-  if (!raw) return '—';
-  return new Date(raw).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-const SortableTh = ({ label, field, sortConfig, onSort }) => (
-  <th className="px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-    <button
-      type="button"
-      onClick={() => onSort(field)}
-      className="inline-flex items-center gap-1 hover:text-[var(--color-text-primary)] transition-colors"
-    >
-      {label}
-      {sortConfig.field === field && (
-        sortConfig.order === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
-      )}
-    </button>
-  </th>
-);
-
-const getFileIcon = (type) => {
-  if (!type) return File;
-  if (type.includes('pdf')) return FileText;
-  if (type.includes('sheet') || type.includes('csv') || type.includes('excel')) return FileSpreadsheet;
-  if (type.includes('image')) return ImageIcon;
-  return File;
-};
+const CATEGORIES = FINANCE_CATEGORIES;
 
 const InfoTooltip = ({ content }) => {
   const [show, setShow] = useState(false);
@@ -121,15 +74,39 @@ const FinancePage = () => {
   const [newFolderWorkspace, setNewFolderWorkspace] = useState('General');
   const [newFolderProject, setNewFolderProject] = useState('');
 
-  const [selectedWorkspace, setSelectedWorkspace] = useState('');
-  const [selectedProject, setSelectedProject] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const FINANCE_FILTERS_KEY = 'finance-filters';
+  const savedFinanceFilters = useMemo(() => loadPageFilters(FINANCE_FILTERS_KEY, {
+    selectedWorkspace: '',
+    selectedProject: '',
+    selectedCategory: 'all',
+    pageSize: 10,
+    sortField: 'docDate',
+    sortOrder: 'desc',
+  }), []);
+
+  const [selectedWorkspace, setSelectedWorkspace] = useState(savedFinanceFilters.selectedWorkspace);
+  const [selectedProject, setSelectedProject] = useState(savedFinanceFilters.selectedProject);
+  const [selectedCategory, setSelectedCategory] = useState(savedFinanceFilters.selectedCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortConfig, setSortConfig] = useState({ field: 'docDate', order: 'desc' });
+  const [pageSize, setPageSize] = useState(savedFinanceFilters.pageSize);
+  const [sortConfig, setSortConfig] = useState({
+    field: savedFinanceFilters.sortField,
+    order: savedFinanceFilters.sortOrder,
+  });
+
+  useEffect(() => {
+    savePageFilters(FINANCE_FILTERS_KEY, {
+      selectedWorkspace,
+      selectedProject,
+      selectedCategory,
+      pageSize,
+      sortField: sortConfig.field,
+      sortOrder: sortConfig.order,
+    });
+  }, [selectedWorkspace, selectedProject, selectedCategory, pageSize, sortConfig]);
 
   const [stagedFiles, setStagedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -138,7 +115,9 @@ const FinancePage = () => {
   // Selected document for Workspace Preview Modal
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [editBaseline, setEditBaseline] = useState(null);
   const [editAmountUsd, setEditAmountUsd] = useState('');
+  const [flashOcrFields, setFlashOcrFields] = useState(() => new Set());
 
   const { data: rateData } = useUsdInrRate({ enabled: !!selectedDoc });
   const usdInrRate = rateData?.rate;
@@ -149,26 +128,32 @@ const FinancePage = () => {
   });
 
   useEffect(() => {
+    if (!selectedDoc?._id) {
+      setFlashOcrFields(new Set());
+      return;
+    }
+    const fields = new Set();
+    if (selectedDoc.metadata?.vendor) fields.add('vendor');
+    if (selectedDoc.metadata?.amount) fields.add('amount');
+    if (selectedDoc.metadata?.tax) fields.add('tax');
+    if (selectedDoc.metadata?.date) fields.add('date');
+    if (fields.size > 0) {
+      setFlashOcrFields(fields);
+      const t = setTimeout(() => setFlashOcrFields(new Set()), 2200);
+      return () => clearTimeout(t);
+    }
+    setFlashOcrFields(new Set());
+  }, [selectedDoc?._id]);
+
+  useEffect(() => {
     if (selectedDoc) {
-      const projectId = selectedDoc.project?._id || selectedDoc.project || '';
-      const projectRecord = projects.find((p) => p._id === projectId);
-      setEditForm({
-        title: selectedDoc.title || '',
-        description: selectedDoc.description || '',
-        workspace: projectRecord?.workspace || 'General',
-        project: projectId,
-        category: selectedDoc.category || 'other',
-        metadata: {
-          vendor: selectedDoc.metadata?.vendor || '',
-          amount: selectedDoc.metadata?.amount || 0,
-          currency: selectedDoc.metadata?.currency || 'INR',
-          tax: selectedDoc.metadata?.tax || 0,
-          date: selectedDoc.metadata?.date ? new Date(selectedDoc.metadata.date).toISOString().split('T')[0] : ''
-        }
-      });
+      const form = buildFinanceEditForm(selectedDoc, projects);
+      setEditForm(form);
+      setEditBaseline(cloneFinanceEditForm(form));
       setEditAmountUsd('');
     } else {
       setEditForm(null);
+      setEditBaseline(null);
       setEditAmountUsd('');
     }
   }, [selectedDoc?._id, projects]);
@@ -182,16 +167,6 @@ const FinancePage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedProject, selectedCategory, searchQuery, startDate, endDate, currentFolderId, pageSize, sortConfig.field, sortConfig.order]);
-
-  const toggleSort = (field) => {
-    setSortConfig((prev) => {
-      if (prev.field === field) {
-        if (prev.order === 'asc') return { field, order: 'desc' };
-        if (prev.order === 'desc') return { field: null, order: 'asc' };
-      }
-      return { field, order: 'asc' };
-    });
-  };
 
   const navigateToFolder = (folderId) => {
     const next = new URLSearchParams(searchParams);
@@ -425,6 +400,38 @@ const FinancePage = () => {
     },
   });
 
+  const hasFinanceEdits =
+    !!selectedDoc && !!editForm && !!editBaseline && !stableJsonEqual(editForm, editBaseline);
+
+  const handleSaveFinanceEdits = async () => {
+    if (!selectedDoc || !editForm) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: selectedDoc._id,
+        payload: financeEditPayload(editForm, selectedDoc),
+      });
+      setEditBaseline(cloneFinanceEditForm(editForm));
+    } catch {
+      /* updateMutation onError handles alert */
+    }
+  };
+
+  const handleRevertFinanceEdits = () => {
+    if (editBaseline) setEditForm(cloneFinanceEditForm(editBaseline));
+  };
+
+  useUnsavedChanges({
+    baseline: editBaseline,
+    draft: editForm,
+    setDraft: setEditForm,
+    hasChanges: hasFinanceEdits,
+    onSave: handleSaveFinanceEdits,
+    onCancel: handleRevertFinanceEdits,
+    isSaving: updateMutation.isPending,
+    enabled: !!selectedDoc && !!editForm,
+    elevated: true,
+  });
+
   const deleteFolderMutation = useMutation({
     mutationFn: (folderId) => axios.delete(`/api/finance/folders/${folderId}`),
     onSuccess: () => {
@@ -480,6 +487,39 @@ const FinancePage = () => {
     });
     if (ok) deleteFolderMutation.mutate(folder._id);
   };
+
+  const handleConfirmDeleteDoc = useCallback(async (doc) => confirm({
+    title: 'Delete document?',
+    message: `Delete "${doc.title || doc.fileName || 'this document'}"? This cannot be undone.`,
+    confirmLabel: 'Delete',
+    type: 'danger',
+  }), [confirm]);
+
+  const financeTableRows = useMemo(
+    () => buildFinanceTableRows(docs, { currentFolderId, selectedProject }),
+    [docs, currentFolderId, selectedProject],
+  );
+
+  const financeColumns = useMemo(
+    () => buildFinanceTableColumns({
+      onViewDoc: setSelectedDoc,
+      onDeleteDoc: (id) => deleteMutation.mutate(id),
+      onDeleteFolder: handleDeleteFolder,
+      onConfirmDeleteDoc: handleConfirmDeleteDoc,
+      deleteFolderPending: deleteFolderMutation.isPending,
+    }),
+    [handleConfirmDeleteDoc, handleDeleteFolder, deleteMutation, deleteFolderMutation.isPending],
+  );
+
+  const handleFinanceRowClick = useCallback((row) => {
+    if (row._isDivider) return;
+    if (row.isFolder) {
+      if (!selectedProject && row.project?._id) setSelectedProject(row.project._id);
+      navigateToFolder(row._id);
+      return;
+    }
+    setSelectedDoc(row);
+  }, [selectedProject, navigateToFolder]);
 
   const handleFilesSelected = async (fileList) => {
     const files = Array.from(fileList || []);
@@ -687,108 +727,14 @@ const FinancePage = () => {
         </>
       )}
     >
+      <NeedsAttentionAccordion
+        pendingInvoices={pendingInvoices}
+        onApprove={(id) => approveInvoiceMutation.mutate(id)}
+        onReject={handleRejectInvoice}
+        isApproving={approveInvoiceMutation.isPending}
+        isRejecting={rejectInvoiceMutation.isPending}
+      />
       <DesktopRecommendedBanner message="Finance document management works best on desktop. You can browse folders on mobile with limited preview." />
-      {pendingInvoices.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
-          <div className="px-4 py-3 border-b border-amber-500/20 flex items-center gap-2">
-            <Clock size={14} className="text-amber-600" />
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
-              Pending Invoice Approvals ({pendingInvoices.length})
-            </h3>
-          </div>
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-amber-500/10">
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Title</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Type</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Vendor</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted By</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Amount</th>
-                  <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Submitted</th>
-                  <th className="px-4 py-2 w-0" aria-hidden />
-                </tr>
-              </thead>
-              <tbody>
-                {pendingInvoices.map((inv) => (
-                  <tr key={inv._id} className="group border-b border-amber-500/10 last:border-0 hover:bg-amber-500/5">
-                    <td className="px-4 py-3 font-semibold text-[var(--color-text-primary)]">{inv.title}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)] capitalize">
-                      {inv.metadata?.submissionType === 'reimbursement' ? 'Reimbursement' : 'Invoice'}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                      {inv.project?.name ? formatProjectName(inv.project.name) : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.metadata?.vendor || '—'}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">{inv.submittedBy?.name || inv.uploadedBy?.name || '—'}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)] tabular-nums">
-                      {inv.metadata?.amount ? `₹${Number(inv.metadata.amount).toLocaleString('en-IN')}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">
-                      {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                        {inv.fileUrl && (
-                          <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="xs"><Eye size={14} /> View</Button>
-                          </a>
-                        )}
-                        <Button
-                          variant="success"
-                          size="xs"
-                          disabled={approveInvoiceMutation.isPending}
-                          onClick={() => approveInvoiceMutation.mutate(inv._id)}
-                        >
-                          <Check size={14} /> Approve
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="xs"
-                          disabled={rejectInvoiceMutation.isPending}
-                          onClick={() => handleRejectInvoice(inv)}
-                        >
-                          <XCircle size={14} /> Reject
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="lg:hidden divide-y divide-amber-500/10">
-            {pendingInvoices.map((inv) => (
-              <div key={inv._id} className="p-4 space-y-2">
-                <p className="text-sm font-bold text-[var(--color-text-primary)]">{inv.title}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {inv.project?.name ? formatProjectName(inv.project.name) : '—'}
-                  {inv.metadata?.amount ? (
-                    <span className="tabular-nums">{` · ₹${Number(inv.metadata.amount).toLocaleString('en-IN')}`}</span>
-                  ) : ''}
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {inv.fileUrl && (
-                    <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="xs"><Eye size={14} /> View</Button>
-                    </a>
-                  )}
-                  <Button variant="success" size="xs" disabled={approveInvoiceMutation.isPending} onClick={() => approveInvoiceMutation.mutate(inv._id)}>
-                    <Check size={14} /> Approve
-                  </Button>
-                  <Button variant="danger" size="xs" disabled={rejectInvoiceMutation.isPending} onClick={() => handleRejectInvoice(inv)}>
-                    <XCircle size={14} /> Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="px-4 py-2 text-[10px] text-[var(--color-text-muted)] border-t border-amber-500/10">
-            Approved invoices appear in the document list below. Pending submissions are hidden until approved.
-          </p>
-        </div>
-      )}
 
       {/* Documents Table */}
       <div className="min-w-0 overflow-hidden">
@@ -805,225 +751,29 @@ const FinancePage = () => {
             onAction={currentFolderId ? goToProjectRoot : undefined}
           />
         ) : (
-          <>
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[720px]">
-              <thead>
-                <tr className="border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)]">
-                  <SortableTh label="Name" field="title" sortConfig={sortConfig} onSort={toggleSort} />
-                  <th className="px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Project</th>
-                  <SortableTh label="Category" field="category" sortConfig={sortConfig} onSort={toggleSort} />
-                  <SortableTh label="Size" field="fileSize" sortConfig={sortConfig} onSort={toggleSort} />
-                  <th className="px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Uploaded By</th>
-                  <SortableTh label="Doc Date" field="docDate" sortConfig={sortConfig} onSort={toggleSort} />
-                  <th className="px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]" />
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((doc, index) => {
-                  const prev = docs[index - 1];
-                  const showRootDivider =
-                    !currentFolderId
-                    && selectedProject
-                    && !doc.isFolder
-                    && prev?.isFolder;
-
-                  if (doc.isFolder) {
-                    return (
-                      <motion.tr
-                        key={doc._id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="border-b border-[var(--color-bg-border)] last:border-0 hover:bg-amber-500/5 transition-colors cursor-pointer group"
-                        onClick={() => {
-                          if (!selectedProject && doc.project?._id) setSelectedProject(doc.project._id);
-                          navigateToFolder(doc._id);
-                        }}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/15 border border-amber-500/30">
-                              <FolderOpen size={18} className="text-amber-600 dark:text-amber-400" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-[var(--color-text-primary)] group-hover:text-amber-600 transition-colors">
-                                {doc.folderName}
-                              </p>
-                              <p className="text-[10px] text-[var(--color-text-muted)]">
-                                {doc.documentCount ?? 0} document{(doc.documentCount ?? 0) !== 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs font-bold text-[var(--color-text-secondary)]">
-                            {formatProjectName(doc.project?.name) || '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400">
-                            Folder
-                          </span>
-                        </td>
-                        <td colSpan={3} className="px-4 py-3" />
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteFolder(e, doc)}
-                              disabled={deleteFolderMutation.isPending}
-                              className="p-1 hover:bg-red-500/10 rounded text-red-500 transition-colors"
-                              title="Delete folder"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                            <ChevronRight size={16} className="text-[var(--color-text-muted)] group-hover:text-amber-500" />
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  }
-
-                  const FileIcon = getFileIcon(doc.fileType);
-                  const cat = CAT_COLORS[doc.category] || CAT_COLORS.other;
-                  const isImage = doc.fileType?.includes('image') || /\.(png|jpe?g|webp)$/i.test(doc.fileName);
-
-                  return (
-                    <React.Fragment key={doc._id}>
-                      {showRootDivider && (
-                        <tr className="bg-[var(--color-bg-workspace)]">
-                          <td colSpan={7} className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                            Documents at project root
-                          </td>
-                        </tr>
-                      )}
-                      <motion.tr
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="border-b border-[var(--color-bg-border)] last:border-0 hover:bg-slate-100/75 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                        onClick={() => setSelectedDoc(doc)}
-                      >
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-3">
-                            {isImage ? (
-                              <img src={doc.fileUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-[var(--color-bg-border)] flex-shrink-0" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--color-bg-workspace)] flex-shrink-0 border border-[var(--color-bg-border)]">
-                                <FileIcon size={16} className="text-[var(--color-text-muted)]" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-[var(--color-text-primary)] group-hover:text-blue-500 transition-colors truncate max-w-[280px]">{doc.title}</p>
-                              {doc.fileName && <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[200px]">{doc.fileName}</p>}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="text-xs font-bold text-[var(--color-text-secondary)]">{doc.project?.name || '—'}</span>
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider" style={{ background: cat.bg, color: cat.text }}>
-                            {doc.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-xs text-[var(--color-text-muted)]">{formatBytes(doc.fileSize)}</td>
-                        <td className="px-4 py-2">
-                          <UserLabel
-                            user={doc.uploadedBy}
-                            name={doc.uploadedBy?.name || '—'}
-                            size="xs"
-                            nameClassName="text-[10px] font-bold text-[var(--color-text-secondary)] truncate max-w-[120px]"
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-[10px] text-[var(--color-text-muted)]">
-                          {formatDocDate(doc)}
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity justify-end">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setSelectedDoc(doc); }}
-                              className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-[var(--color-text-secondary)] transition-colors"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <a
-                              href={doc.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-blue-500 transition-colors"
-                            >
-                              <Download size={14} />
-                            </a>
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                const ok = await confirm({
-                                  title: 'Delete document?',
-                                  message: `Delete "${doc.title || doc.fileName || 'this document'}"? This cannot be undone.`,
-                                  confirmLabel: 'Delete',
-                                  type: 'danger',
-                                });
-                                if (ok) deleteMutation.mutate(doc._id);
-                              }}
-                              className="p-1 hover:bg-red-500/10 rounded text-red-500 transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="lg:hidden divide-y divide-[var(--color-bg-border)]">
-            {docs.map((doc) => {
-              if (doc.isFolder) {
-                return (
-                  <button
-                    key={doc._id}
-                    type="button"
-                    onClick={() => {
-                      if (!selectedProject && doc.project?._id) setSelectedProject(doc.project._id);
-                      navigateToFolder(doc._id);
-                    }}
-                    className="w-full text-left p-4 flex items-center gap-3 min-h-[44px] hover:bg-[var(--color-bg-secondary)]"
-                  >
-                    <FolderOpen size={20} className="text-amber-600 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate">{doc.folderName}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">{doc.documentCount ?? 0} documents</p>
-                    </div>
-                    <ChevronRight size={16} className="shrink-0 text-[var(--color-text-muted)]" />
-                  </button>
-                );
+          <DataTable
+            columns={financeColumns}
+            data={financeTableRows}
+            serverSide
+            paginated={false}
+            virtualize={false}
+            tableMaxHeight="70vh"
+            sortState={sortConfig.field ? { key: sortConfig.field, direction: sortConfig.order } : null}
+            onSortChange={(state) => {
+              if (!state?.key || !state?.direction) {
+                setSortConfig({ field: null, order: 'asc' });
+              } else {
+                setSortConfig({ field: state.key, order: state.direction });
               }
-              const FileIcon = getFileIcon(doc.fileType);
-              const cat = CAT_COLORS[doc.category] || CAT_COLORS.other;
-              return (
-                <button
-                  key={doc._id}
-                  type="button"
-                  onClick={() => setSelectedDoc(doc)}
-                  className="w-full text-left p-4 min-h-[44px] hover:bg-[var(--color-bg-secondary)]"
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <FileIcon size={18} className="shrink-0 mt-0.5 text-[var(--color-text-muted)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold truncate">{doc.title}</p>
-                      <p className="text-xs text-[var(--color-text-muted)] mt-1 truncate">
-                        {doc.project?.name || '—'} · {doc.category} · {formatBytes(doc.fileSize)}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          </>
+            }}
+            onRowClick={handleFinanceRowClick}
+            getRowId={(row) => row._id}
+            getRowClassName={(row) => {
+              if (row._isDivider) return 'bg-[var(--color-bg-workspace)] pointer-events-none';
+              if (row.isFolder) return 'hover:bg-amber-500/5';
+              return '';
+            }}
+          />
         )}
 
         {!isLoading && pagination.total > 0 && (
@@ -1057,6 +807,7 @@ const FinancePage = () => {
         onFilesSelected={handleFilesSelected}
         onBulkSubmit={handleBulkSubmit}
         isSubmitting={bulkCreateMutation.isPending}
+        isParsing={bulkCreateMutation.isPending}
       />
 
       <NexusModal
@@ -1290,7 +1041,7 @@ const FinancePage = () => {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className={flashOcrFields.has('vendor') ? 'flash-highlight rounded-lg' : ''}>
                           <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
                             Vendor Name
                             <InfoTooltip content="Extracted Seller/Vendor letterhead name detected in invoice text." />
@@ -1311,6 +1062,7 @@ const FinancePage = () => {
                         </div>
                       </div>
 
+                      <div className={flashOcrFields.has('amount') ? 'flash-highlight rounded-lg' : ''}>
                       <UsdInrAmountFields
                         compact
                         enabled={!!selectedDoc}
@@ -1337,6 +1089,7 @@ const FinancePage = () => {
                         }}
                         rateHintClassName="mt-1 text-[9px] text-[var(--color-text-muted)]"
                       />
+                      </div>
 
                       <div className="grid grid-cols-3 gap-2">
                         <div>
@@ -1355,7 +1108,7 @@ const FinancePage = () => {
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
-                        <div>
+                        <div className={flashOcrFields.has('tax') ? 'flash-highlight rounded-lg' : ''}>
                           <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">
                             Tax Amount
                             <InfoTooltip content="Extracted CGST, SGST, IGST, VAT, or simple tax values from the receipt." />
@@ -1374,7 +1127,7 @@ const FinancePage = () => {
                             className="w-full px-2.5 py-1.5 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-action-primary)]/50"
                           />
                         </div>
-                        <div>
+                        <div className={flashOcrFields.has('date') ? 'flash-highlight rounded-lg' : ''}>
                           <label className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1 block">Doc Date</label>
                           <input
                             type="date"
@@ -1437,7 +1190,7 @@ const FinancePage = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>File Size</span>
-                        <span className="font-bold text-[var(--color-text-primary)]">{formatBytes(selectedDoc.fileSize)}</span>
+                        <span className="font-bold text-[var(--color-text-primary)]">{formatFinanceBytes(selectedDoc.fileSize)}</span>
                       </div>
                     </div>
                   </div>

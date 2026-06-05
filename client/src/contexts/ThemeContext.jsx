@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const ThemeContext = createContext();
+
+const readReducedMotionOverride = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('reducedMotion');
+  if (saved === 'true') return true;
+  if (saved === 'false') return false;
+  return null;
+};
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = useState(() => {
@@ -19,14 +27,18 @@ export const ThemeProvider = ({ children }) => {
     return 'medium';
   });
 
-  const [reducedMotion, setReducedMotionState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('reducedMotion') === 'true';
-    }
-    return false;
+  const [reducedMotionOverride, setReducedMotionOverride] = useState(readReducedMotionOverride);
+  const [osReducedMotion, setOsReducedMotion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState('light');
+
+  const effectiveReducedMotion = useMemo(
+    () => (reducedMotionOverride !== null ? reducedMotionOverride : osReducedMotion),
+    [reducedMotionOverride, osReducedMotion]
+  );
 
   // Theme Logic
   useEffect(() => {
@@ -59,15 +71,24 @@ export const ThemeProvider = ({ children }) => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
+  // OS prefers-reduced-motion sync
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setOsReducedMotion(mediaQuery.matches);
+    setOsReducedMotion(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   // Text Size Logic
   useEffect(() => {
     document.documentElement.dataset.textSize = textSize;
   }, [textSize]);
 
-  // Reduced Motion Logic
+  // Reduced Motion Logic — dataset uses hyphenated data-reduced-motion
   useEffect(() => {
-    document.documentElement.dataset.reducedMotion = reducedMotion;
-  }, [reducedMotion]);
+    document.documentElement.dataset.reducedMotion = String(effectiveReducedMotion);
+  }, [effectiveReducedMotion]);
 
   const setTheme = (newTheme) => {
     setThemeState(newTheme);
@@ -80,8 +101,8 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const setReducedMotion = (value) => {
-    setReducedMotionState(value);
-    localStorage.setItem('reducedMotion', value);
+    setReducedMotionOverride(value);
+    localStorage.setItem('reducedMotion', String(value));
   };
 
   const toggleTheme = () => {
@@ -89,10 +110,12 @@ export const ThemeProvider = ({ children }) => {
   };
 
   return (
-    <ThemeContext.Provider value={{ 
+    <ThemeContext.Provider value={{
       theme, effectiveTheme, toggleTheme, setTheme,
       textSize, setTextSize,
-      reducedMotion, setReducedMotion
+      reducedMotion: reducedMotionOverride ?? osReducedMotion,
+      effectiveReducedMotion,
+      setReducedMotion,
     }}>
       {children}
     </ThemeContext.Provider>

@@ -14,6 +14,8 @@ const { getVapidPublicKey } = require('../services/pushNotificationService');
 const { prunePushSubscriptions } = require('../utils/pushSubscriptions');
 const TaskService = require('../services/TaskService');
 const logger = require('../utils/logger');
+const { validateBody } = require('../validation/validateBody');
+const { pushSubscribeBody, pushUnsubscribeBody } = require('../validation/schemas/notifications');
 
 router.get('/status-counts', protect, async (req, res) => {
   try {
@@ -130,7 +132,7 @@ router.get('/push/vapid-key', protect, (req, res) => {
   res.json({ publicKey: getVapidPublicKey() });
 });
 
-router.post('/push/subscribe', protect, async (req, res) => {
+router.post('/push/subscribe', protect, validateBody(pushSubscribeBody), async (req, res) => {
   try {
     const { subscription } = req.body;
     const endpoint = subscription?.endpoint;
@@ -160,7 +162,7 @@ router.post('/push/subscribe', protect, async (req, res) => {
   }
 });
 
-router.delete('/push/unsubscribe', protect, async (req, res) => {
+router.delete('/push/unsubscribe', protect, validateBody(pushUnsubscribeBody), async (req, res) => {
   try {
     const { endpoint } = req.body;
     await User.findByIdAndUpdate(req.user._id, {

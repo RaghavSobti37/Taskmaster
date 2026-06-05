@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useStatusCounts } from '../hooks/useStatusCounts';
@@ -13,38 +13,32 @@ import {
   Inbox,
   FolderArchive,
   NotebookPen,
+  StickyNote,
   Mail,
-  Wrench,
-  Contact,
   ClipboardCheck,
-  UserPlus,
-  PhoneCall,
-  CalendarCheck,
-  CircleDollarSign,
-  Megaphone,
-  Mic2,
-  Users,
-  Database,
-  BarChart2,
-  BarChart3,
-  Brackets,
-  Trophy,
-  Activity,
   ChevronDown,
-  CreditCard,
   X,
   Moon,
   Sun,
   Settings,
+  Monitor,
+  UserPlus,
+  Building2,
+  CircleDollarSign,
+  Shield,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSidebar } from '../contexts/SidebarContext';
+import { useSidebar, SIDEBAR_SHELL_WIDTH_COLLAPSED, SIDEBAR_SHELL_WIDTH_OPEN, SIDEBAR_MOBILE_SHELL_WIDTH } from '../contexts/SidebarContext';
 import { useAuth } from '../contexts/AuthContext';
-import { hasPageAccess, getDepartmentName } from '../utils/departmentPermissions';
+import { hasPageAccess, hasAnyPageAccess, getDepartmentName, getDepartmentSlug } from '../utils/departmentPermissions';
 import { useNavbarPreferences } from '../hooks/useNavbarPreferences';
 import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
+import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
+import { canAccessNavPath } from '../utils/navPageAccess';
+import { isNavDesktopOnly } from '../utils/mobilePageSupport';
+import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
 
@@ -77,55 +71,91 @@ const PAGE_CONFIG = {
   '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
+  '/notes': { icon: StickyNote, label: 'Notes', accessKey: 'notes' },
   '/emails': { icon: Mail, label: 'Emails', accessKey: 'emails' },
-  '/equipment': { icon: Wrench, label: 'Equipment', accessKey: 'equipment' },
-  '/contacts': { icon: Contact, label: 'Contacts', accessKey: 'contacts' },
-  '/subscriptions': { icon: CreditCard, label: 'Subscriptions', accessKey: 'subscriptions' },
   '/attendance': { icon: ClipboardCheck, label: 'Attendance', accessKey: 'attendance' },
-  '/leads': { icon: UserPlus, label: 'Leads', accessKey: 'leads' },
-  '/followups': { icon: PhoneCall, label: 'Followups', accessKey: 'followups' },
-  '/bookings': { icon: CalendarCheck, label: 'Bookings', accessKey: 'bookings' },
-  '/finance': { icon: CircleDollarSign, label: 'Finance', accessKey: 'finance' },
-  '/announcements': { icon: Megaphone, label: 'Announcements', accessKey: 'announcements' },
-  '/ops-logs': { icon: Activity, label: 'Ops Logs', accessKey: 'ops_logs' },
-  '/artists': { icon: Mic2, label: 'Artists', accessKey: 'artists' },
-  '/admin/users': { icon: Users, label: 'Users & Teams', accessKey: 'admin_users' },
-  '/admin': { icon: Database, label: 'Data Hub', accessKey: 'admin_data', end: true },
-  '/admin/exly-campaigns': { icon: BarChart2, label: 'Exly Data', accessKey: 'admin_exly' },
-  '/admin/scripts': { icon: Brackets, label: 'Script Runner', accessKey: 'admin_scripts' },
-  '/admin/gamification': { icon: Trophy, label: 'Gamification', accessKey: 'admin_gamification' },
-  '/admin/project-analytics': { icon: BarChart3, label: 'Project Analytics', accessKey: 'admin_project_analytics' },
-  '/admin/qa': { icon: Activity, label: 'QA Testing', accessKey: 'admin_data' },
+  '/crm': {
+    icon: UserPlus,
+    label: 'CRM',
+    accessKey: 'crm_hub',
+    matchPaths: ['/crm', '/leads', '/followups', '/bookings'],
+  },
+  '/office': {
+    icon: Building2,
+    label: 'People & Office',
+    accessKey: 'office_hub',
+    matchPaths: ['/office', '/equipment', '/contacts', '/subscriptions'],
+  },
+  '/management': {
+    icon: CircleDollarSign,
+    label: 'Management',
+    accessKey: 'management_hub',
+    matchPaths: ['/management', '/finance', '/announcements', '/ops-logs', '/artists'],
+  },
+  '/admin/console': {
+    icon: Shield,
+    label: 'Admin',
+    accessKey: 'admin_console',
+    matchPaths: ['/admin/console', '/admin/users', '/admin/teams', '/admin/exly-campaigns', '/admin/scripts', '/admin/gamification', '/admin/project-analytics', '/admin/qa', '/admin/control'],
+    end: true,
+  },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, end }) => {
+const canShowNavPage = (user, path) => {
+  if (!PAGE_CONFIG[path]) return false;
+  return canAccessNavPath(user, path, hasPageAccess, hasAnyPageAccess);
+};
+
+const NAV_ICON_TONES = {
+  '/dashboard': { chip: 'rgba(148, 163, 184, 0.18)', icon: '#94a3b8' },
+  '/projects': { chip: 'rgba(59, 130, 246, 0.18)', icon: '#60a5fa' },
+  '/todo': { chip: 'rgba(34, 197, 94, 0.18)', icon: '#4ade80' },
+  '/inbox': { chip: 'rgba(244, 63, 94, 0.16)', icon: '#fb7185' },
+  '/attendance': { chip: 'rgba(245, 158, 11, 0.18)', icon: '#fbbf24' },
+  '/calendar': { chip: 'rgba(168, 85, 247, 0.16)', icon: '#c084fc' },
+  '/logs': { chip: 'rgba(249, 115, 22, 0.16)', icon: '#fb923c' },
+  '/assets': { chip: 'rgba(6, 182, 212, 0.16)', icon: '#22d3ee' },
+  '/schedule': { chip: 'rgba(99, 102, 241, 0.16)', icon: '#818cf8' },
+  '/emails': { chip: 'rgba(14, 165, 233, 0.16)', icon: '#38bdf8' },
+  '/crm': { chip: 'rgba(16, 185, 129, 0.16)', icon: '#34d399' },
+  '/office': { chip: 'rgba(20, 184, 166, 0.16)', icon: '#2dd4bf' },
+  '/management': { chip: 'rgba(234, 179, 8, 0.16)', icon: '#facc15' },
+  '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
+};
+
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, desktopOnly, iconTone }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
-  const isActive = end
-    ? location.pathname === to.split('?')[0] && location.search === (to.includes('?') ? '?' + to.split('?')[1] : '')
-    : location.pathname.startsWith(to.split('?')[0]);
+  const pathOnly = to.split('?')[0];
+  const isHubMatch = (matchPaths || []).some((prefix) =>
+    location.pathname === prefix || location.pathname.startsWith(`${prefix}/`)
+  );
+  const isExactMatch = end
+    ? location.pathname === pathOnly && location.search === (to.includes('?') ? `?${to.split('?')[1]}` : '')
+    : location.pathname.startsWith(pathOnly);
+  const isActive = matchPaths?.length ? isHubMatch : isExactMatch;
   const iconOnly = collapsed && !isMobile;
+  const tone = iconTone || NAV_ICON_TONES[pathOnly] || NAV_ICON_TONES['/dashboard'];
 
   return (
     <NavLink
       to={to}
       end={end}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       title={iconOnly ? label : undefined}
-      className={({ isActive: navIsActive }) => {
-        const active = end ? isActive : navIsActive;
-        return `
-        flex items-center rounded-lg transition-all duration-200 relative
-        ${iconOnly ? 'justify-center px-2 py-2 gap-0' : 'gap-2.5 px-2.5 py-1.5'}
-        ${active
-            ? 'bg-[var(--color-action-primary)] text-white'
-            : 'hover:bg-[var(--color-bg-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}
-      `;
-      }}
+      aria-label={iconOnly ? label : undefined}
+      aria-current={isActive ? 'page' : undefined}
+      className={`tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''}`}
     >
       <div className="relative flex items-center justify-center shrink-0">
-        <Icon size={18} className="shrink-0" />
+        <span
+          className="tm-sidebar-icon-chip"
+          style={{ backgroundColor: tone.chip, color: tone.icon }}
+        >
+          <Icon size={16} className="shrink-0" strokeWidth={2.1} />
+        </span>
         {count > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse border-2 border-[var(--color-bg-surface)] shadow-[0_0_8px_rgba(244,63,94,0.5)] z-10" />
         )}
@@ -135,7 +165,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
       </div>
       {(!collapsed || isMobile) && (
         <>
-          <span className="flex-1 min-w-0 font-semibold text-[11px] tracking-wide truncate">
+          <span className="tm-sidebar-nav-label truncate">
             {label}
           </span>
           {displayBadge > 0 && (
@@ -147,6 +177,14 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
               className="!border-[var(--color-bg-surface)]"
             />
           )}
+          {desktopOnly && (
+            <span
+              className="shrink-0 flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400"
+              title="Best on desktop"
+            >
+              <Monitor size={11} strokeWidth={2.5} />
+            </span>
+          )}
         </>
       )}
     </NavLink>
@@ -157,14 +195,14 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const iconOnly = collapsed && !isMobile;
   return (
-    <div className="flex flex-col mb-2">
+    <div className="flex flex-col mb-1.5 tm-sidebar-group-toggle">
       {!iconOnly && (
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
           aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title} section`}
-          className="flex items-center justify-between px-2 py-0.5 mb-0.5 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
+          className="flex items-center justify-between px-1.5 py-1 mb-1 text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-primary)] transition-colors focus:outline-none"
         >
           <div className="flex items-center gap-1.5 min-w-0">
             {Icon && <Icon size={12} />}
@@ -174,11 +212,11 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
         </button>
       )}
       {isOpen && (!collapsed || isMobile) ? (
-        <div className="overflow-hidden flex flex-col gap-0.5">
+        <div className="overflow-hidden flex flex-col gap-1">
           {children}
         </div>
       ) : iconOnly ? (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           {children}
         </div>
       ) : null}
@@ -188,11 +226,13 @@ const NavGroup = ({ title, icon: Icon, children, collapsed, isMobile, defaultOpe
 
 const OutletSidebar = () => {
   const { isOpen, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
+  const asideRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const [shellQueriesReady, setShellQueriesReady] = useState(false);
 
   useEffect(() => {
@@ -216,17 +256,127 @@ const OutletSidebar = () => {
   } } = useStatusCounts(shellQueriesEnabled);
 
   const isMobile = useIsMobile();
+  const departmentSlug = getDepartmentSlug(user);
 
   useEffect(() => {
     closeMobileSidebar();
-  }, [location]);
+  }, [location, closeMobileSidebar]);
+
+  useEffect(() => {
+    if (!isMobileOpen || !isMobile) return undefined;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileSidebar({ returnFocus: true });
+        return;
+      }
+      if (event.key !== 'Tab' || !asideRef.current) return;
+      const focusable = asideRef.current.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileOpen, isMobile, closeMobileSidebar]);
+
+  const navGroups = useMemo(() => {
+    const rawGroups = navbarPreferences?.groups?.length
+      ? navbarPreferences.groups
+      : DEFAULT_NAVBAR_GROUPS;
+
+    return rawGroups
+      .map((group) => {
+        const seen = new Set();
+        const pages = (group.pages || [])
+          .map((page) => ({
+            ...page,
+            path: normalizeNavPagePath(page.path),
+          }))
+          .filter((page) => {
+            if (!page.path || seen.has(page.path)) return false;
+            seen.add(page.path);
+            return true;
+          });
+        return { ...group, pages };
+      })
+      .filter((group) => group.visible !== false)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [navbarPreferences]);
 
   const showLabels = isMobile ? isMobileOpen : isOpen;
-  const asideClassName = isMobile
-    ? `w-[260px] ${isMobileOpen ? 'translate-x-0' : '-translate-x-[280px]'}`
-    : isOpen
-      ? 'w-[160px]'
-      : 'w-14';
+
+  const prefetchNavPage = (path) => {
+    prefetchNavRoute(path, user?._id);
+    if (path === '/dashboard') {
+      queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data });
+    } else if (path === '/calendar') {
+      queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
+    } else if (path === '/projects') {
+      queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data });
+    } else if (path === '/assets') {
+      queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data });
+    } else if (path === '/crm') {
+      queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data });
+    } else if (path === '/management') {
+      queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data });
+    } else if (path === '/admin/console') {
+      queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
+      queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
+    }
+  };
+
+  const renderNavPages = (pages) => pages
+    .filter((page) => page.path !== '/chat' && page.visible !== false && canShowNavPage(user, page.path))
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map((page) => {
+      const config = PAGE_CONFIG[page.path];
+      const navCounts = getNavCountsForPath(page.path, statusCounts);
+      return (
+        <NavItem
+          key={page.path}
+          to={page.path}
+          icon={config.icon}
+          label={page.label || config.label}
+          iconTone={NAV_ICON_TONES[page.path]}
+          collapsed={!showLabels}
+          isMobile={isMobile}
+          end={config.end}
+          matchPaths={config.matchPaths}
+          count={navCounts.count}
+          todayCount={navCounts.todayCount}
+          badgeCount={navCounts.badgeCount}
+          badgeVariant={navCounts.badgeVariant}
+          onClick={isMobile ? closeMobileSidebar : undefined}
+          onMouseEnter={() => prefetchNavPage(page.path)}
+          desktopOnly={isMobile && isNavDesktopOnly(page.path)}
+        />
+      );
+    });
+
+  const hubsDefaultOpen = ['sales', 'operations', 'admin', 'artist-management'].includes(departmentSlug);
+
+  const shellWidth = isMobile
+    ? SIDEBAR_MOBILE_SHELL_WIDTH
+    : showLabels
+      ? SIDEBAR_SHELL_WIDTH_OPEN
+      : SIDEBAR_SHELL_WIDTH_COLLAPSED;
+
+  const shellClassName = isMobile
+    ? `fixed left-0 top-0 h-screen z-[70] tm-sidebar-shell transition-transform duration-300 ease-in-out ${isMobileOpen ? 'translate-x-0' : '-translate-x-[216px]'}`
+    : `fixed left-0 top-0 h-screen z-[70] tm-sidebar-shell transition-[width] duration-300 ease-in-out ${showLabels ? '' : 'tm-sidebar-shell--collapsed'}`;
 
   return (
     <>
@@ -234,176 +384,95 @@ const OutletSidebar = () => {
         <div
           role="presentation"
           onClick={closeMobileSidebar}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 bg-slate-950/45 dark:bg-slate-950/55 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-200"
         />
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-surface)] border-r border-[var(--color-bg-border)] z-[70] flex flex-col transition-[width,transform] duration-300 ease-in-out ${asideClassName}`}
+        ref={asideRef}
+        aria-label="Main navigation"
+        className={shellClassName}
+        style={{ width: shellWidth }}
       >
-        <div className={`flex items-center overflow-hidden border-b border-[var(--color-bg-border)] ${showLabels ? 'p-2.5 justify-between' : 'p-2 justify-center flex-col gap-2'}`}>
-          <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2' : ''}`}>
+        <div className="tm-sidebar-panel">
+        <div className={`tm-sidebar-header flex items-center overflow-hidden ${showLabels ? 'px-3 py-3 justify-between' : 'px-2 py-2 justify-center flex-col gap-2'}`}>
+          <div className={`flex items-center min-w-0 ${showLabels ? 'gap-2.5' : ''}`}>
             <BrandLogo size={28} className="shrink-0" />
             {showLabels && (
-              <span className="font-bold text-sm tracking-tight text-[var(--color-text-primary)] truncate">
+              <span className="font-semibold text-[13px] tracking-tight text-[var(--color-text-primary)] truncate">
                 Coreknot
               </span>
             )}
           </div>
 
-          <div className={`flex items-center shrink-0 ${showLabels ? 'gap-0.5' : 'flex-col gap-1'}`}>
+          <div className={`flex items-center shrink-0 ${showLabels ? 'gap-1' : 'flex-col gap-1'}`}>
             {!isMobile && (
               <button
                 type="button"
                 onClick={toggleSidebar}
                 aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-                className="p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                className="tm-sidebar-control p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               >
-                {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                {isOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
               </button>
             )}
             {isMobileOpen && (
               <button
+                ref={closeButtonRef}
                 type="button"
-                onClick={closeMobileSidebar}
+                onClick={() => closeMobileSidebar({ returnFocus: true })}
                 aria-label="Close navigation menu"
-                className="lg:hidden p-1.5 hover:bg-[var(--color-bg-border)] rounded-md text-[var(--color-text-muted)] transition-colors"
+                className="lg:hidden tm-sidebar-control p-1.5 text-[var(--color-text-muted)] transition-colors"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             )}
           </div>
         </div>
 
-        <nav className="flex-1 px-2 mt-2 space-y-1 overflow-y-auto custom-scrollbar pb-4">
-          {(() => {
-            const rawGroups = navbarPreferences?.groups && navbarPreferences.groups.length > 0 ? navbarPreferences.groups : [
-              { id: 'platform', title: 'Platform', visible: true, pages: [{ path: '/dashboard' }, { path: '/calendar' }, { path: '/todo' }, { path: '/inbox' }] },
-              { id: 'workspace', title: 'Workspace', visible: true, pages: [{ path: '/projects' }, { path: '/assets' }, { path: '/schedule' }, { path: '/logs' }, { path: '/emails' }] },
-              { id: 'office', title: 'Office', visible: true, pages: [{ path: '/equipment' }, { path: '/contacts' }, { path: '/attendance' }, { path: '/subscriptions' }] },
-              { id: 'crm', title: 'CRM', visible: true, pages: [{ path: '/leads' }, { path: '/followups' }, { path: '/bookings' }] },
-              { id: 'management', title: 'Management', visible: true, pages: [{ path: '/finance' }, { path: '/announcements' }, { path: '/ops-logs' }, { path: '/artists' }] },
-              { id: 'admin', title: 'Admin', visible: true, pages: [{ path: '/admin/users' }, { path: '/admin' }, { path: '/admin/exly-campaigns' }, { path: '/admin/scripts' }, { path: '/admin/gamification' }, { path: '/admin/project-analytics' }, { path: '/admin/qa' }] }
-            ];
+        <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar min-h-0" aria-label="Application pages">
+          {navGroups.map((group) => {
+            const visiblePages = (group.pages || [])
+              .filter((page) => page.path !== '/chat' && page.visible !== false && canShowNavPage(user, page.path));
 
-            // Force inject new pages if missing from user's custom preferences
-            const hasQA = rawGroups.some(g => g.pages?.some(p => p.path === '/admin/qa'));
-            if (!hasQA) {
-              const adminGroup = rawGroups.find(g => g.id === 'admin');
-              if (adminGroup) {
-                adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/qa', visible: true }];
-              }
-            }
+            if (visiblePages.length === 0) return null;
 
-            const hasProjectAnalytics = rawGroups.some((g) =>
-              (g.pages || []).some((p) => p.path === '/admin/project-analytics')
-            );
-            if (!hasProjectAnalytics) {
-              const adminGroup = rawGroups.find((g) => g.id === 'admin');
-              if (adminGroup) {
-                adminGroup.pages = [...(adminGroup.pages || []), { path: '/admin/project-analytics', visible: true }];
-              }
-            }
-
-            const hasSubscriptions = rawGroups.some((g) =>
-              (g.pages || []).some((p) => normalizeNavPagePath(p.path) === '/subscriptions')
-            );
-            if (!hasSubscriptions) {
-              const officeGroup = rawGroups.find((g) => g.id === 'office');
-              if (officeGroup) {
-                officeGroup.pages = [
-                  ...(officeGroup.pages || []),
-                  { path: '/subscriptions', label: 'Subscriptions', visible: true },
-                ];
-              }
-            }
-
-            return rawGroups.map((group) => {
-              const seen = new Set();
-              const pages = (group.pages || [])
-                .map((page) => ({
-                  ...page,
-                  path: normalizeNavPagePath(page.path),
-                }))
-                .filter((page) => {
-                  if (seen.has(page.path)) return false;
-                  seen.add(page.path);
-                  return true;
-                });
-              return { ...group, pages };
-            });
-          })()
-            .filter(group => group.visible)
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map(group => {
-              const visiblePages = (group.pages || [])
-                .filter(page => page.path !== '/chat' && (page.visible !== false) && PAGE_CONFIG[page.path] && hasPageAccess(user, PAGE_CONFIG[page.path].accessKey))
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-              if (visiblePages.length === 0) return null;
-
+            if (group.flat || group.id === 'primary') {
               return (
-                <NavGroup
-                  key={group.id}
-                  title={group.title}
-                  collapsed={!showLabels}
-                  isMobile={isMobile}
-                >
-                  {visiblePages.map(page => {
-                    const config = PAGE_CONFIG[page.path];
-                    const navCounts = getNavCountsForPath(page.path, statusCounts);
-                    return (
-                      <NavItem
-                        key={page.path}
-                        to={page.path}
-                        icon={config.icon}
-                        label={page.label || config.label}
-                        collapsed={!showLabels}
-                        isMobile={isMobile}
-                        end={config.end}
-                        count={navCounts.count}
-                        todayCount={navCounts.todayCount}
-                        badgeCount={navCounts.badgeCount}
-                        badgeVariant={navCounts.badgeVariant}
-                        onMouseEnter={() => {
-                          if (page.path === '/dashboard') {
-                            queryClient.prefetchQuery({ queryKey: ['logs', user?._id], queryFn: async () => (await axios.get(`/api/logs?userId=${user?._id}`)).data });
-                          } else if (page.path === '/calendar') {
-                            queryClient.prefetchQuery({ queryKey: ['calendar'], queryFn: async () => (await axios.get('/api/calendar')).data });
-                          } else if (page.path === '/projects') {
-                            queryClient.prefetchQuery({ queryKey: ['projects'], queryFn: async () => (await axios.get('/api/projects')).data });
-                          } else if (page.path === '/assets') {
-                            queryClient.prefetchQuery({ queryKey: ['assets'], queryFn: async () => (await axios.get('/api/assets')).data });
-                          } else if (page.path === '/leads') {
-                            queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: async () => (await axios.get('/api/crm/leads')).data });
-                          } else if (page.path === '/artists') {
-                            queryClient.prefetchQuery({ queryKey: ['artists'], queryFn: async () => (await axios.get('/api/artists')).data });
-                          } else if (page.path === '/admin/users') {
-                            queryClient.prefetchQuery({ queryKey: ['userDirectory'], queryFn: async () => (await axios.get('/api/users/directory')).data.users });
-                            queryClient.prefetchQuery({ queryKey: ['teams'], queryFn: async () => (await axios.get('/api/teams')).data });
-                          }
-                        }}
-                      />
-                    );
-                  })}
-                </NavGroup>
+                <div key={group.id} className="flex flex-col gap-1 mb-1.5" aria-label={group.title}>
+                  {renderNavPages(visiblePages)}
+                </div>
               );
-            })}
+            }
+
+            const defaultOpen = group.defaultOpen ?? (group.id === 'hubs' ? hubsDefaultOpen : true);
+            return (
+              <NavGroup
+                key={group.id}
+                title={group.title}
+                collapsed={!showLabels}
+                isMobile={isMobile}
+                defaultOpen={defaultOpen}
+              >
+                {renderNavPages(visiblePages)}
+              </NavGroup>
+            );
+          })}
         </nav>
 
-        <div className="p-2 border-t border-[var(--color-bg-border)] space-y-1.5">
+        <div className="p-2 space-y-1.5">
           {!(!showLabels && !isMobile) && (
             <div className="flex gap-1.5 w-full">
               <button
                 type="button"
                 onClick={() => navigate('/settings')}
                 aria-label="Settings"
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all group overflow-hidden"
+                className="tm-sidebar-control flex-1 flex items-center justify-center gap-2 px-3 py-2 transition-all group overflow-hidden"
                 title="Settings"
               >
-                <Settings size={16} className="text-[var(--color-text-secondary)] group-hover:text-[var(--color-action-primary)] transition-colors" />
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+                <Settings size={15} className="text-[var(--color-text-secondary)] group-hover:text-[var(--color-action-primary)] transition-colors" />
+                <span className="text-[10px] font-semibold tracking-wide text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
                   Settings
                 </span>
               </button>
@@ -411,10 +480,10 @@ const OutletSidebar = () => {
                 type="button"
                 onClick={toggleTheme}
                 aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-                className="px-3 py-2 bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-lg hover:border-[var(--color-action-primary)]/50 transition-all flex items-center justify-center shrink-0"
+                className="tm-sidebar-control px-3 py-2 transition-all flex items-center justify-center shrink-0"
                 title="Toggle Theme"
               >
-                {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
+                {theme === 'dark' ? <Sun size={15} className="text-yellow-500" /> : <Moon size={15} className="text-[var(--color-text-secondary)]" />}
               </button>
             </div>
           )}
@@ -426,18 +495,18 @@ const OutletSidebar = () => {
                 onClick={() => navigate('/settings')}
                 aria-label="Settings"
                 title="Settings"
-                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
+                className="w-full tm-sidebar-control flex items-center justify-center p-2 transition-colors"
               >
-                <Settings size={16} className="text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] transition-colors" />
+                <Settings size={15} className="text-[var(--color-text-secondary)] hover:text-[var(--color-action-primary)] transition-colors" />
               </button>
               <button
                 type="button"
                 onClick={toggleTheme}
                 aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                 title="Toggle Theme"
-                className="w-full flex items-center justify-center p-2 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] hover:border-[var(--color-action-primary)]/50 transition-colors"
+                className="w-full tm-sidebar-control flex items-center justify-center p-2 transition-colors"
               >
-                {theme === 'dark' ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-[var(--color-text-secondary)]" />}
+                {theme === 'dark' ? <Sun size={15} className="text-yellow-500" /> : <Moon size={15} className="text-[var(--color-text-secondary)]" />}
               </button>
             </div>
           )}
@@ -447,7 +516,7 @@ const OutletSidebar = () => {
             className="w-full text-left group cursor-pointer"
             title={!showLabels ? user?.name : undefined}
           >
-            <div className={`bg-[var(--color-bg-workspace)] rounded-lg border border-[var(--color-bg-border)] group-hover:border-[var(--color-action-primary)]/50 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
+            <div className={`tm-sidebar-footer-card group-hover:border-[var(--color-action-primary)]/35 transition-all duration-300 overflow-hidden ${showLabels ? 'px-2.5 py-2' : 'p-1.5 flex justify-center'}`}>
               <div className={`flex items-center ${showLabels ? 'gap-2.5' : 'justify-center'}`}>
                 <div className="relative shrink-0 group/avatar">
                   <div className={`rounded-lg bg-gray-200 overflow-hidden border border-[var(--color-bg-border)] z-10 relative ${showLabels ? 'w-8 h-8' : 'w-7 h-7'}`}>
@@ -471,7 +540,7 @@ const OutletSidebar = () => {
                       <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white text-[8px] font-black px-1 rounded-sm shadow-sm z-20">
                         {user.level}
                       </div>
-                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-black text-white text-[8px] font-bold rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-30 transition-opacity">
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-slate-800 text-white text-[8px] font-bold rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-30 transition-opacity">
                         Level {user.level} • {user.exp} / {Math.floor(100 * Math.pow(user.level, 1.5))} XP
                       </div>
                     </>
@@ -486,6 +555,7 @@ const OutletSidebar = () => {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </aside>
     </>

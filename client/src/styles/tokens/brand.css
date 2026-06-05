@@ -1,0 +1,25 @@
+/* TSC Brand Book — swatches from TSC_BrandBook.pdf (Adobe color group "TSC") */
+
+:root {
+  --brand-teal-deep: #083d3a;
+  --brand-green: #126d5e;
+  --brand-teal-mid: #08525f;
+  --brand-cream: #ffecd1;
+  --brand-cream-muted: #f4eee3;
+  --brand-cream-wash: #fcf8f2;
+  --brand-pumpkin: #b74b02;
+  --brand-espresso: #592314;
+  --brand-burgundy: #6d2039;
+  --brand-rust: #88281c;
+  --brand-amber: #b56f1c;
+  --brand-charcoal: #2d2d2d;
+  --brand-white: #ffffff;
+  --brand-black: #000000;
+
+  /* Derived tints for UI (light mode pastels) */
+  --brand-green-soft: #e6f4f1;
+  --brand-green-muted: #7ab8aa;
+  --brand-pumpkin-soft: #fef7e0;
+  --brand-burgundy-soft: #fce8ec;
+  --brand-teal-soft: #e8f3f5;
+}

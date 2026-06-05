@@ -81,7 +81,7 @@ describe('Authentication API', () => {
         });
 
       expect(res.statusCode).toEqual(400);
-      expect(res.body).toHaveProperty('error', 'Invalid credentials format');
+      expect(res.body).toHaveProperty('error', 'Invalid input format');
     });
   });
 });

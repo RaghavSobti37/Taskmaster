@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const crmController = require('../controllers/crmController');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const { createLeadBody, updateLeadBody, leadNoteBody } = require('../validation/schemas/crm');
 const { checkLock } = require('../middleware/concurrencyMiddleware');
 const Lead = require('../models/Lead');
 
@@ -49,16 +51,19 @@ router.get('/followups', crmController.getFollowups);
 
 router.route('/leads')
   .get(crmController.getLeads)
-  .post(crmController.createLead);
+  .post(validateBody(createLeadBody), crmController.createLead);
 
 router.get('/leads/audit-logs', admin, crmController.getAllAuditLogs);
 router.delete('/leads/audit-logs/purge', admin, crmController.purgeAuditLogs);
 
 router.route('/leads/:id')
-  .put(checkLock(Lead), crmController.updateLead)
+  .get(crmController.getLead)
+  .put(validateBody(updateLeadBody), checkLock(Lead), crmController.updateLead)
   .delete(admin, crmController.deleteLead);
 
-router.post('/leads/:id/notes', crmController.addNote);
+router.post('/leads/:id/notes', validateBody(leadNoteBody), crmController.addNote);
+router.post('/leads/:id/lock-heartbeat', crmController.heartbeatLeadLock);
+router.post('/leads/:id/unlock', crmController.releaseLeadLock);
 
 router.route('/leads/:leadId/emis')
   .get(crmController.getEmis)

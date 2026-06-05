@@ -1,0 +1,41 @@
+/* Tier 1: Global tokens — raw values on 4px baseline grid */
+
+:root {
+  --global-canvas: #e4eaf2;
+  --global-surface-1: #ffffff;
+  --global-surface-2: #eef2f7;
+  --global-surface-3: #ffffff;
+  --global-hairline: #c5d0de;
+  --global-text-primary: #0f172a;
+  --global-text-muted: #64748b;
+  --global-brand-accent: var(--brand-green);
+  --global-semantic-success: var(--brand-green);
+  --global-semantic-warning: var(--brand-amber);
+  --global-semantic-danger: var(--brand-rust);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+
+.dark {
+  /* Neutral dark shell — near-black canvas, brand green on accents/CTAs only */
+  --global-canvas: #070809;
+  --global-surface-1: #0f1012;
+  --global-surface-2: #141519;
+  --global-surface-3: #1a1c22;
+  --global-hairline: #252830;
+  --global-text-primary: #eef0f3;
+  --global-text-muted: #7a808a;
+  --global-brand-accent: var(--brand-green);
+  --global-semantic-success: var(--brand-green);
+  --global-semantic-warning: var(--brand-amber);
+  --global-semantic-danger: var(--brand-rust);
+}

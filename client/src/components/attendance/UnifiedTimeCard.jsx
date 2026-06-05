@@ -6,6 +6,7 @@ import { MODULE } from '../../lib/systemLogContract';
 import { useWorkModeHint, useLogs } from '../../hooks/useTaskmasterQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import WorkModeToggle from './WorkModeToggle';
+import AttendanceTimeline from './AttendanceTimeline';
 import {
   getSelfMarkPanelVisibility,
   isAtOrAfterMarkOutCutoff,
@@ -280,13 +281,9 @@ const UnifiedTimeCard = ({
 
   const wrapperClass = compact
     ? 'space-y-2'
-    : isSelfMode
-      ? hideTitleRow
-        ? 'space-y-6'
-        : 'space-y-6 border-t border-[var(--color-bg-border)] pt-4'
-      : hideTitleRow
-        ? 'space-y-0'
-        : 'space-y-6';
+    : hideTitleRow && !isSelfMode
+      ? 'space-y-0'
+      : 'space-y-6';
 
   const panelGridClass = compact
     ? panelVisibility.showInPanel && panelVisibility.showOutPanel
@@ -358,8 +355,12 @@ const UnifiedTimeCard = ({
                 </span>
               )}
               {showNotLogged && (
-                <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}>
-                  Not logged: {formatMinuteGap(unloggedMinutes)}
+                <span
+                  className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg ${PASTEL_ROSE_CELL} ${PASTEL_ROSE_TEXT} text-xs font-bold`}
+                  role="status"
+                  aria-live="assertive"
+                >
+                  Action Required: {formatMinuteGap(unloggedMinutes)} Not Logged
                   <button
                     type="button"
                     title={NOT_LOGGED_INFO}
@@ -382,11 +383,19 @@ const UnifiedTimeCard = ({
             value={activeWorkMode}
             loading={workModeHintLoading}
             disabled={workModeToggleDisabled}
+            suggestedMode={workModeHint?.suggestedMode}
             onChange={(v) => {
               workModeHintTouchedRef.current = true;
               setForm && setForm((f) => ({ ...f, workMode: v }));
             }}
           />
+          {hasIn && hasOut && (
+            <AttendanceTimeline
+              entry={entry}
+              loggedMinutesOverride={loggedMinutesLive ?? undefined}
+              compact={compact}
+            />
+          )}
           <div className={panelGridClass}>
             {panelVisibility.showInPanel && (
             <section className="flex flex-col rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] border-l-[3px] border-l-emerald-500/80 overflow-hidden min-w-0">
@@ -508,15 +517,6 @@ const UnifiedTimeCard = ({
             </section>
             )}
           </div>
-          {compact && hasIn && hasOut && (
-            <div className="flex items-center justify-center gap-1.5 rounded-md border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/30 px-2 py-1.5">
-              <span className="text-[11px] font-medium text-[var(--color-text-muted)] tabular-nums">
-                {inDisplayTime || '--:--'}
-                {' → '}
-                {outDisplayTime || '--:--'}
-              </span>
-            </div>
-          )}
         </>
       ) : (
         <div className={hideTitleRow ? 'space-y-0' : 'space-y-6'}>

@@ -1,6 +1,19 @@
-import { resolveTaskSpan } from './scheduleTaskDates';
+import { resolveTaskSpan, spanCoversDateKey } from './scheduleTaskDates';
 
-export { resolveTaskSpan };
+export { resolveTaskSpan, spanCoversDateKey };
+
+/** Tasks visible on a schedule day (matches desktop span placement). */
+export function tasksForScheduleDay(tasks, dayKey) {
+  const seen = new Set();
+  return (tasks || []).filter((task) => {
+    const span = resolveTaskSpan(task);
+    if (!spanCoversDateKey(span, dayKey)) return false;
+    const id = task._id?.toString();
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
 
 export function getTaskPlacement(task, dateKeys) {
   if (dateKeys.length === 0) return null;

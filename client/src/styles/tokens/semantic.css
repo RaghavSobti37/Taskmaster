@@ -1,0 +1,15 @@
+/* Tier 2: Semantic tokens — functional meaning */
+
+:root {
+  --token-canvas: var(--global-canvas);
+  --token-surface-1: var(--global-surface-1);
+  --token-surface-2: var(--global-surface-2);
+  --token-surface-3: var(--global-surface-3);
+  --token-hairline: var(--global-hairline);
+  --token-text-primary: var(--global-text-primary);
+  --token-text-muted: var(--global-text-muted);
+  --token-brand-accent: var(--global-brand-accent);
+  --token-semantic-success: var(--global-semantic-success);
+  --token-semantic-warning: var(--global-semantic-warning);
+  --token-semantic-danger: var(--global-semantic-danger);
+}

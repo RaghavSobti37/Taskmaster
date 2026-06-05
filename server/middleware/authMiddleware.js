@@ -96,12 +96,27 @@ const protect = async (req, res, next) => {
       if (decoded.purpose) {
         return res.status(401).json({ error: 'Not authorized, token failed' });
       }
+      const { isTokenRevoked } = require('../utils/tokenRevocation');
+      if (await isTokenRevoked(decoded)) {
+        return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
+      }
       if (isAbsoluteSessionExpired(decoded)) {
         return res.status(401).json({ error: 'Session expired. Please sign in again.' });
       }
       req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
       if (req.user) {
-        refreshSessionIfDue(res, decoded);
+        const refresh = refreshSessionIfDue(res, decoded);
+        const { ensureSession, touchSession, rotateSession } = require('../utils/sessionRegistry');
+        const { revokeToken } = require('../utils/tokenRevocation');
+        if (decoded.jti) {
+          await ensureSession(req, decoded.id, decoded);
+        }
+        if (refresh.refreshed && refresh.newDecoded) {
+          await rotateSession(req, decoded.id, decoded.jti, refresh.newDecoded);
+          if (decoded.jti) await revokeToken(decoded);
+        } else if (decoded.jti) {
+          await touchSession(decoded.id, decoded.jti);
+        }
       }
     }
 

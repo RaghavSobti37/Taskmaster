@@ -26,6 +26,7 @@ import {
   getEffectiveTemplateContent,
 } from '../../utils/indexedTemplateVariables';
 import axios from 'axios';
+import { useUnsavedChanges, stableJsonEqual, cloneSnapshot } from '../../hooks/useUnsavedChanges';
 const STATUS_LABELS = {
   draft: 'Draft',
   pending_approval: 'Pending',
@@ -58,7 +59,9 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const deleteMutation = useDeleteMailTemplate();
 
   const [draft, setDraft] = useState(emptyDraft());
+  const [draftBaseline, setDraftBaseline] = useState(() => cloneSnapshot(emptyDraft()));
   const [useRawHtml, setUseRawHtml] = useState(false);
+  const [rawHtmlBaseline, setRawHtmlBaseline] = useState(false);
   const [studioTab, setStudioTab] = useState('editor');
   const [reviewingId, setReviewingId] = useState(null);
 
@@ -109,27 +112,52 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     return () => { cancelled = true; };
   }, [draft.content, draft.subject, draft.dummyValues, useRawHtml]);
 
+  const studioDraft = useMemo(
+    () => ({ ...draft, format: useRawHtml ? 'rawHtml' : 'visual' }),
+    [draft, useRawHtml]
+  );
+  const studioBaseline = useMemo(
+    () => ({ ...draftBaseline, format: rawHtmlBaseline ? 'rawHtml' : 'visual' }),
+    [draftBaseline, rawHtmlBaseline]
+  );
+  const hasStudioEdits = studioTab === 'editor' && !stableJsonEqual(studioDraft, studioBaseline);
+
+  const syncBaseline = (nextDraft, rawHtml = useRawHtml) => {
+    const snap = cloneSnapshot(nextDraft);
+    setDraftBaseline(snap);
+    setRawHtmlBaseline(rawHtml);
+  };
+
   const loadTemplate = (t) => {
     const dummies = t.dummyValues && typeof t.dummyValues === 'object'
       ? (t.dummyValues instanceof Map ? Object.fromEntries(t.dummyValues) : t.dummyValues)
       : {};
-    setDraft({
+    const loaded = {
       id: t._id,
       name: t.name,
       subject: t.subject || '',
       content: t.content || '',
       format: t.format || 'visual',
       dummyValues: dummies,
-    });
+    };
+    setDraft(loaded);
     setUseRawHtml(t.format === 'rawHtml');
+    syncBaseline(loaded, t.format === 'rawHtml');
     setStudioTab('editor');
   };
 
   const handleNew = () => {
-    setDraft(emptyDraft());
+    const fresh = emptyDraft();
+    setDraft(fresh);
     setUseRawHtml(false);
+    syncBaseline(fresh, false);
     setReviewingId(null);
     setStudioTab('editor');
+  };
+
+  const handleRevertStudioEdits = () => {
+    setDraft(cloneSnapshot(draftBaseline));
+    setUseRawHtml(rawHtmlBaseline);
   };
 
   const handleInsertVariable = () => {
@@ -165,7 +193,13 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         format: useRawHtml ? 'rawHtml' : 'visual',
         dummyValues: draft.dummyValues,
       });
-      setDraft((prev) => ({ ...prev, id: data._id }));
+      const saved = {
+        ...draft,
+        id: data._id,
+        format: useRawHtml ? 'rawHtml' : 'visual',
+      };
+      setDraft(saved);
+      syncBaseline(saved, useRawHtml);
       toast.success('Template draft saved');
       refetchAll();
     } catch (e) {
@@ -257,6 +291,28 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
   const myTemplates = allTemplates.filter(
     (t) => isAdmin || String(t.createdBy?._id || t.createdBy) === String(user?._id)
   );
+
+  useUnsavedChanges({
+    baseline: studioBaseline,
+    draft: studioDraft,
+    setDraft: (snap) => {
+      const { format, ...rest } = snap;
+      setDraft(rest);
+      setUseRawHtml(format === 'rawHtml');
+    },
+    hasChanges: hasStudioEdits,
+    onSave: handleSaveDraft,
+    onCancel: handleRevertStudioEdits,
+    isSaving: saveMutation.isPending,
+    enabled: studioTab === 'editor',
+    elevated: true,
+    fieldLabels: {
+      name: 'Template name',
+      subject: 'Subject',
+      content: 'Content',
+      format: 'Format',
+    },
+  });
 
   return (
     <div className="space-y-6">

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Upload, X, FileText, Loader2, FolderOpen, FolderPlus, ChevronDown } from 'lucide-react';
+import { FinanceUploadProgressBar, FinanceUploadStateBadge, FINANCE_UPLOAD_STATES } from './FinanceDocumentRow';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter } from '../ui/ModalShell';
 import WorkspaceProjectFields, { filterProjectsByWorkspace } from '../forms/WorkspaceProjectFields';
 
@@ -179,6 +180,7 @@ const UploadDocumentModal = ({
   onFilesSelected,
   onBulkSubmit,
   isSubmitting,
+  isParsing = false,
 }) => {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
@@ -428,6 +430,14 @@ const UploadDocumentModal = ({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">{file.fileName}</p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">{formatBytes(file.fileSize)}</p>
+                      {(isUploading || isParsing) && (
+                        <div className="mt-2 space-y-1.5">
+                          <FinanceUploadStateBadge
+                            state={isParsing ? FINANCE_UPLOAD_STATES.PARSING : FINANCE_UPLOAD_STATES.UPLOADING}
+                          />
+                          <FinanceUploadProgressBar progress={isParsing ? 66 : uploadProgress} />
+                        </div>
+                      )}
                     </div>
                   </div>
 

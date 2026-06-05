@@ -4,7 +4,7 @@ const {
   assertDateKeyNotBeforeToday,
   validateTaskTimelineFields,
 } = require('../../shared/dateValidation');
-const { validateCalendarEventRange } = require('../utils/dateValidation');
+const { validateCalendarEventRange, buildDateTimeFromParts } = require('../utils/dateValidation');
 
 describe('dateValidation', () => {
   it('compares date keys as yyyy-MM-dd strings', () => {
@@ -40,5 +40,12 @@ describe('dateValidation', () => {
   it('normalizes ISO values to date keys', () => {
     const key = toDateKey('2026-06-02');
     expect(key).toBe('2026-06-02');
+  });
+
+  it('re-exports buildDateTimeFromParts for calendar task mapping', () => {
+    expect(typeof buildDateTimeFromParts).toBe('function');
+    const atNine = buildDateTimeFromParts('2026-06-05', '09:00');
+    expect(atNine).toBeInstanceOf(Date);
+    expect(atNine.toISOString()).toBe('2026-06-05T03:30:00.000Z');
   });
 });

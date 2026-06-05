@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const { getScheduleForUser } = require('../services/scheduleService');
+const { validateQuery } = require('../validation/validateQuery');
+const { scheduleQuery } = require('../validation/schemas/schedule');
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', validateQuery(scheduleQuery), async (req, res) => {
   try {
     const { start, end, projectId, departmentId } = req.query;
     const payload = await getScheduleForUser({

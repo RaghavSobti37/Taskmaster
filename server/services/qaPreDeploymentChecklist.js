@@ -744,7 +744,7 @@ async function runSecurityHardeningChecks() {
         authCookie.includes('coreknot_token_v2') &&
         authCookie.includes('purgeLegacyAuthCookies') &&
         authCtrl &&
-        authCtrl.includes('setAuthCookie') &&
+        (authCtrl.includes('setAuthCookie') || authCtrl.includes('establishSession') || authCtrl.includes('finishAuthSession')) &&
         authCtrl.includes('formatAuthUser') &&
         !authCtrl.includes("token: generateToken")
         ? 'pass'

@@ -4,6 +4,8 @@ const GamificationConfig = require('../models/GamificationConfig');
 const GamificationService = require('../services/gamificationService');
 const logger = require('../utils/logger');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { validateBody } = require('../validation/validateBody');
+const { gamificationConfigBody } = require('../validation/schemas/gamification');
 
 const ALLOWED_CONFIG_FIELDS = [
   'taskCompletion',
@@ -46,7 +48,7 @@ router.get('/config', protect, admin, async (req, res) => {
   }
 });
 
-router.put('/config', protect, admin, async (req, res) => {
+router.put('/config', protect, admin, validateBody(gamificationConfigBody), async (req, res) => {
   try {
     const updates = req.body;
     let config = await GamificationConfig.findOne().sort({ updatedAt: -1 });

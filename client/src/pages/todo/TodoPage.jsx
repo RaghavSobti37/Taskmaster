@@ -1,4 +1,4 @@
-import React, { useState, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { Search, ListTodo, AlertCircle, Clock, ClipboardCheck, Layers } from 'lucide-react';
 import axios from 'axios';
 import ListPageLayout from '../../components/ui/ListPageLayout';
@@ -7,16 +7,16 @@ import PageSkeleton from '../../components/ui/PageSkeleton';
 import SearchInput from '../../components/ui/SearchInput';
 import ListCard from '../../components/ui/ListCard';
 import { UserLabel } from '../../components/ui/UserAvatar';
-import { Badge } from '../../components/ui/primitives';
+import { Badge, TablePagination, EmptyState } from '../../components/ui';
 import { DataLoading } from '../../components/ui/DataLoading';
 import StatusSelect from '../../components/forms/StatusSelect';
 import PrioritySelect from '../../components/forms/PrioritySelect';
 import NexusDropdown from '../../components/ui/NexusDropdown';
 import { filterProjectsByWorkspace } from '../../components/forms/WorkspaceProjectFields';
-import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, taskCategoryLabel, getPriorityBadgeVariant } from '../../constants/taskOptions';
+import { TASK_CATEGORY_OPTIONS, normalizeTaskCategory, getPriorityBadgeVariant } from '../../constants/taskOptions';
 import { formatTaskStatus, formatTaskPriority } from '../../utils/displayLabels';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
+import { useTodoTasks, useProjects, useWorkspaces, useUserDirectory } from '../../hooks/useTaskmasterQueries';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { formatDueDate } from '../../utils/formatDueDate';
 import { resolveTaskWorkspaceColor, getTaskRowStyle } from '../../utils/workspaceColors';
@@ -36,13 +36,26 @@ import {
 import { getTaskAssignedBy, displayPersonName, resolveTaskFinishIntent } from '../../utils/taskReview';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { isPendingTask } from '../../utils/pendingTask';
-import { getPriorityRank, getTaskDay } from '../../utils/dashboardTasks';
 import { TaskTableRowSkeleton } from '../../components/tasks/TaskPendingSkeleton';
 import { Circle, CheckCircle2, ArrowUp, ArrowDown } from 'lucide-react';
 import MentionTitle from '../../components/mentions/MentionTitle';
 import TaskMentionBadge from '../../components/tasks/TaskMentionBadge';
 import FlashHighlightListener from '../../components/ui/FlashHighlight';
-import { computeTaskIndicators } from '../../utils/taskIndicators';
+import VirtualTaskList from '../../components/tasks/VirtualTaskList';
+import { useDebounce } from '../../hooks/useDebounce';
+
+const TODO_FILTERS_KEY = 'todo-filters';
+const DEFAULT_PAGE_SIZE = 50;
+
+const loadTodoFilters = () => {
+  try {
+    const raw = localStorage.getItem(TODO_FILTERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
 
 function resolveDirectoryUser(person, users = []) {
   if (!person) return null;
@@ -63,33 +76,88 @@ function isDueOverdue(task) {
 }
 
 const TodoPage = () => {
+  const savedFilters = useMemo(() => loadTodoFilters(), []);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { addToast } = useSystemToast();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const includeOldCompleted = statusFilter === 'done' || search.trim().length > 0;
-  const { data: tasks = [], isLoading } = useTasks(user?._id, { includeOldCompleted });
+  const [search, setSearch] = useState(savedFilters?.search || '');
+  const debouncedSearch = useDebounce(search, 300);
+  const [statusFilter, setStatusFilter] = useState(savedFilters?.statusFilter || 'all');
+  const includeOldCompleted = statusFilter === 'done' || debouncedSearch.trim().length > 0;
+  const [priorityFilter, setPriorityFilter] = useState(savedFilters?.priorityFilter || 'all');
+  const [typeFilter, setTypeFilter] = useState(savedFilters?.typeFilter || 'all');
+  const [workspaceFilter, setWorkspaceFilter] = useState(savedFilters?.workspaceFilter || 'all');
+  const [projectFilter, setProjectFilter] = useState(savedFilters?.projectFilter || 'all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(savedFilters?.pageSize || DEFAULT_PAGE_SIZE);
+  const [sortConfig, setSortConfig] = useState(savedFilters?.sortConfig || { field: 'dueDate', order: 'asc' });
+  const [statFilter, setStatFilter] = useState(savedFilters?.statFilter ?? null);
+
+  const todoParams = useMemo(() => ({
+    page,
+    limit: pageSize,
+    search: debouncedSearch.trim() || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+    type: typeFilter !== 'all' ? typeFilter : undefined,
+    projectId: projectFilter !== 'all' ? projectFilter : undefined,
+    workspace: workspaceFilter !== 'all' ? workspaceFilter : undefined,
+    statFilter: statFilter || undefined,
+    sort: sortConfig.field || 'dueDate',
+    order: sortConfig.order || 'asc',
+    ...(includeOldCompleted ? { includeOldCompleted: '1' } : {}),
+  }), [
+    page, pageSize, debouncedSearch, statusFilter, priorityFilter, typeFilter,
+    projectFilter, workspaceFilter, statFilter, sortConfig, includeOldCompleted,
+  ]);
+
+  const { data, isLoading } = useTodoTasks(todoParams, user?._id);
+  const tasks = data?.tasks || [];
+  const taskIndicators = data?.stats || { open: 0, overdue: 0, today: 0, inReview: 0 };
+  const totalPages = data?.pages || 1;
+  const totalItems = data?.total || 0;
+
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: users = [] } = useUserDirectory();
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [workspaceFilter, setWorkspaceFilter] = useState('all');
-  const [projectFilter, setProjectFilter] = useState('all');
+
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskToComplete, setTaskToComplete] = useState(null);
   const [completionSubmitForReview, setCompletionSubmitForReview] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ field: 'dueDate', order: 'asc' });
-  const [statFilter, setStatFilter] = useState(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter, statFilter]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        TODO_FILTERS_KEY,
+        JSON.stringify({
+          search,
+          statusFilter,
+          priorityFilter,
+          typeFilter,
+          workspaceFilter,
+          projectFilter,
+          sortConfig,
+          statFilter,
+          pageSize,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [search, statusFilter, priorityFilter, typeFilter, workspaceFilter, projectFilter, sortConfig, statFilter, pageSize]);
 
   const toggleSort = (field) => {
     setSortConfig((prev) => {
       if (prev.field !== field) return { field, order: 'asc' };
       if (prev.order === 'asc') return { field, order: 'desc' };
-      return { field: null, order: 'asc' };
+      return { field: 'dueDate', order: 'asc' };
     });
+    setPage(1);
   };
 
   const SortHeader = ({ field, label }) => (
@@ -110,8 +178,6 @@ const TodoPage = () => {
     </button>
   );
 
-  const taskIndicators = useMemo(() => computeTaskIndicators(tasks), [tasks]);
-
   const typeOptions = useMemo(
     () => [{ value: 'all', label: 'All categories' }, ...TASK_CATEGORY_OPTIONS],
     []
@@ -130,69 +196,16 @@ const TodoPage = () => {
     ...filterProjectsByWorkspace(projects, workspaceFilter).map((p) => ({ value: p._id, label: p.name }))
   ], [projects, workspaceFilter]);
 
-  const filtered = useMemo(() => {
-    return tasks.filter((t) => {
-      const q = search.toLowerCase();
-      const matchesSearch = !q || t.title?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q);
-      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-      const matchesType = typeFilter === 'all' || normalizeTaskCategory(t.type) === typeFilter;
-      const pid = t.projectId?._id || t.projectId;
-      const matchesProject = projectFilter === 'all' || pid?.toString() === projectFilter;
-      let matchesStat = true;
-      if (statFilter === 'overdue') matchesStat = isDueOverdue(t) && t.status !== 'done';
-      else if (statFilter === 'today') {
-        const raw = t.dueDate || t.scheduleDate;
-        if (!raw || t.status === 'done') matchesStat = false;
-        else {
-          const d = startOfDay(new Date(raw));
-          matchesStat = !Number.isNaN(d.getTime()) && d.getTime() === startOfDay(new Date()).getTime();
-        }
-      } else if (statFilter === 'in-review') matchesStat = t.status === 'in-review';
-      else if (statFilter === 'open') matchesStat = t.status !== 'done';
-      return matchesSearch && matchesStatus && matchesPriority && matchesType && matchesProject && matchesStat;
-    });
-  }, [tasks, search, statusFilter, priorityFilter, typeFilter, projectFilter, statFilter]);
+  const getWorkspaceRowProps = (task, isDone) => {
+    const workspaceColor = resolveTaskWorkspaceColor(task, workspaces, projects);
+    return {
+      style: getTaskRowStyle(workspaceColor),
+      className: isDone ? 'tm-task-row tm-task-row--completed' : 'tm-task-row',
+    };
+  };
 
-  const sortedFiltered = useMemo(() => {
-    const list = [...filtered];
-    const { field, order } = sortConfig;
-    if (!field) return list;
-
-    const dir = order === 'asc' ? 1 : -1;
-    const cmpStr = (a, b) => dir * String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
-
-    list.sort((a, b) => {
-      switch (field) {
-        case 'title':
-          return cmpStr(a.title, b.title);
-        case 'type':
-          return cmpStr(normalizeTaskCategory(a.type), normalizeTaskCategory(b.type));
-        case 'assignedBy': {
-          const aName = displayPersonName(resolveDirectoryUser(getTaskAssignedBy(a), users)) || '';
-          const bName = displayPersonName(resolveDirectoryUser(getTaskAssignedBy(b), users)) || '';
-          return cmpStr(aName, bName);
-        }
-        case 'status':
-          return cmpStr(a.status, b.status);
-        case 'priority': {
-          const diff = getPriorityRank(a.priority) - getPriorityRank(b.priority);
-          return diff !== 0 ? dir * diff : 0;
-        }
-        case 'dueDate': {
-          const aTime = getTaskDay(a, 'due')?.getTime() ?? Number.POSITIVE_INFINITY;
-          const bTime = getTaskDay(b, 'due')?.getTime() ?? Number.POSITIVE_INFINITY;
-          return order === 'asc' ? aTime - bTime : bTime - aTime;
-        }
-        default:
-          return 0;
-      }
-    });
-    return list;
-  }, [filtered, sortConfig, users]);
-
-  const activeTasks = sortedFiltered.filter((t) => t.status !== 'done');
-  const doneTasks = sortedFiltered.filter((t) => t.status === 'done');
+  const activeTasks = tasks.filter((t) => t.status !== 'done');
+  const doneTasks = tasks.filter((t) => t.status === 'done');
 
   const handleCompleteRequest = (task) => {
     const intent = resolveTaskFinishIntent(task, user, projects, users);
@@ -221,11 +234,12 @@ const TodoPage = () => {
         { status: 'done', actualHours: normalizeCompletionHours(task.actualHours, hours) },
         AXIOS_SKIP_TOAST
       );
-      const toast = taskCompletionToast(taskRes.data?.status, task.title);
-      addToast({ ...toast, module: MODULE.PROJECTS });
-      updateAllTaskQueries(queryClient, (tasks) =>
-        (tasks || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
+      const toastMsg = taskCompletionToast(taskRes.data?.status, task.title);
+      addToast({ ...toastMsg, module: MODULE.PROJECTS });
+      updateAllTaskQueries(queryClient, (list) =>
+        (list || []).map((t) => (t._id === task._id ? { ...t, ...taskRes.data } : t))
       );
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'todo'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
     } catch (err) {
       addToast({
@@ -247,57 +261,41 @@ const TodoPage = () => {
     const isInReview = task.status === 'in-review';
     const assignerUser = resolveDirectoryUser(getTaskAssignedBy(task), users);
     const projectName = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
-    const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
-    const dueRaw = task.dueDate || task.scheduleDate;
     const overdue = isDueOverdue(task);
+    const dueRaw = task.dueDate || task.scheduleDate;
+    const rowProps = getWorkspaceRowProps(task, isDone);
 
     return (
       <ListCard
-        key={task?._id}
-        highlightId={task?._id}
+        key={task._id}
         onClick={() => setSelectedTask(task)}
-        className={`tm-task-row ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
-        style={getTaskRowStyle(accent)}
-        leading={
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isDone && !isInReview) handleCompleteRequest(task);
-            }}
-            disabled={isInReview}
-            className={`min-w-[44px] min-h-[44px] flex items-center justify-center ${isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500 opacity-60' : 'text-[var(--color-text-muted)]'}`}
-            title={isInReview ? 'Awaiting reviewer approval' : isDone ? 'Completed' : 'Mark complete'}
-          >
-            {isDone ? <CheckCircle2 size={22} /> : <Circle size={22} />}
-          </button>
-        }
-        primary={
-          <div className={`text-sm font-bold min-w-0 flex items-center gap-2 ${isDone ? 'line-through' : ''}`}>
-            <MentionTitle text={task?.title} className="tm-task-title" truncate />
-            <TaskMentionBadge task={task} />
+        style={rowProps.style}
+        className={rowProps.className}
+        primary={(
+          <div className="flex items-start gap-2 min-w-0">
+            <button
+              type="button"
+              className="mt-0.5 shrink-0"
+              onClick={(e) => { e.stopPropagation(); if (!isDone && !isInReview) handleCompleteRequest(task); }}
+              aria-label={isDone ? 'Completed' : 'Mark complete'}
+            >
+              {isDone ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Circle size={18} className="text-[var(--color-text-muted)]" />}
+            </button>
+            <div className="min-w-0 flex-1">
+              <MentionTitle text={task.title} className="text-sm font-bold truncate block" truncate />
+              <p className="text-[10px] text-[var(--color-text-muted)] truncate">{projectName || task.workspace}</p>
+            </div>
+            <TaskMentionBadge count={task.unreadMentions} />
           </div>
-        }
-        trailing={
-          overdue && dueRaw ? (
-            <Badge variant="overdue">Overdue</Badge>
-          ) : (
-            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">{formatDueDate(dueRaw)}</span>
-          )
-        }
-        secondary={projectName ? <p className="text-xs truncate text-[var(--color-text-muted)]">{projectName}</p> : null}
-        meta={
-          <>
+        )}
+        secondary={(
+          <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant={isInReview ? 'warning' : 'todo'}>{isInReview ? 'Awaiting review' : formatTaskStatus(task?.status)}</Badge>
             <Badge variant={getPriorityBadgeVariant(task.priority)}>{formatTaskPriority(task?.priority)}</Badge>
-            {task.type && (
-              <span className="text-[10px] font-bold uppercase text-[var(--color-text-muted)]">{taskCategoryLabel(task.type)}</span>
-            )}
-            {assignerUser && (
-              <UserLabel user={assignerUser} name={displayPersonName(assignerUser)} size="xs" nameClassName="text-xs truncate" />
-            )}
-          </>
-        }
+            {assignerUser && <UserLabel user={assignerUser} size="xs" />}
+            <span className="text-[10px] text-[var(--color-text-muted)]">{formatDueDate(dueRaw)}{overdue && !isDone ? ' · Overdue' : ''}</span>
+          </div>
+        )}
       />
     );
   };
@@ -309,47 +307,36 @@ const TodoPage = () => {
     const isDone = task.status === 'done';
     const isInReview = task.status === 'in-review';
     const assignerUser = resolveDirectoryUser(getTaskAssignedBy(task), users);
-    const project = task.projectId?.name || projects.find((p) => p._id === (task.projectId?._id || task.projectId))?.name;
-    const accent = resolveTaskWorkspaceColor(task, workspaces, projects);
-    const dueRaw = task.dueDate || task.scheduleDate;
     const overdue = isDueOverdue(task);
+    const dueRaw = task.dueDate || task.scheduleDate;
+    const rowProps = getWorkspaceRowProps(task, isDone);
+
     return (
       <tr
-        key={task?._id}
-        data-highlight-id={task?._id}
-        className={`tm-task-row cursor-pointer ${isDone ? 'opacity-60' : ''} ${isInReview ? 'ring-1 ring-amber-500/30' : ''}`}
-        style={getTaskRowStyle(accent)}
+        key={task._id}
+        className={`${rowProps.className} hover:opacity-95 cursor-pointer transition-colors`}
+        style={rowProps.style}
         onClick={() => setSelectedTask(task)}
       >
-        <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+        <td className="px-4 py-2">
           <button
             type="button"
-            onClick={() => (isDone || isInReview ? null : handleCompleteRequest(task))}
-            disabled={isInReview}
-            className={isDone ? 'text-emerald-500' : isInReview ? 'text-amber-500 opacity-60 cursor-not-allowed' : 'text-[var(--color-text-muted)] hover:text-emerald-500'}
-            title={isInReview ? 'Awaiting reviewer approval' : isDone ? 'Completed' : 'Mark complete'}
+            onClick={(e) => { e.stopPropagation(); if (!isDone && !isInReview) handleCompleteRequest(task); }}
+            aria-label={isDone ? 'Completed' : 'Mark complete'}
           >
-            {isDone ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+            {isDone ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Circle size={16} className="text-[var(--color-text-muted)]" />}
           </button>
         </td>
-        <td className="px-4 py-2 max-w-0 w-full">
-          <div className={`text-sm font-bold min-w-0 flex items-center gap-2 ${isDone ? 'line-through' : ''}`}>
-            <MentionTitle text={task?.title} className="tm-task-title" truncate />
-            <TaskMentionBadge task={task} />
+        <td className="px-4 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <MentionTitle text={task.title} className="text-sm font-bold truncate" truncate />
+            <TaskMentionBadge count={task.unreadMentions} />
           </div>
-          {project && (
-            <p className="tm-caption mt-0.5 truncate text-[var(--color-text-muted)]">{project}</p>
-          )}
         </td>
-        <td className="px-4 py-2 text-[10px] font-bold uppercase">{task.type ? taskCategoryLabel(task.type) : '—'}</td>
-        <td className="px-4 py-2 min-w-[120px]">
+        <td className="px-4 py-2 text-xs">{taskCategoryLabel(normalizeTaskCategory(task.type))}</td>
+        <td className="px-4 py-2">
           {assignerUser ? (
-            <UserLabel
-              user={assignerUser}
-              name={displayPersonName(assignerUser)}
-              size="xs"
-              nameClassName="text-xs font-bold text-[var(--color-text-primary)] truncate"
-            />
+            <UserLabel user={assignerUser} size="xs" nameClassName="text-xs font-bold text-[var(--color-text-primary)] truncate" />
           ) : (
             <span className="text-xs text-[var(--color-text-muted)]">—</span>
           )}
@@ -383,7 +370,7 @@ const TodoPage = () => {
             icon: Layers,
             variant: 'info',
             info: 'Tasks assigned to you that are not marked done.',
-            onClick: () => setStatFilter(statFilter === 'open' ? null : 'open'),
+            onClick: () => { setStatFilter(statFilter === 'open' ? null : 'open'); setPage(1); },
             active: statFilter === 'open',
           },
           {
@@ -393,7 +380,7 @@ const TodoPage = () => {
             icon: AlertCircle,
             variant: 'rose',
             info: 'Open tasks past their due date.',
-            onClick: () => setStatFilter(statFilter === 'overdue' ? null : 'overdue'),
+            onClick: () => { setStatFilter(statFilter === 'overdue' ? null : 'overdue'); setPage(1); },
             active: statFilter === 'overdue',
           },
           {
@@ -403,7 +390,7 @@ const TodoPage = () => {
             icon: Clock,
             variant: 'apricot',
             info: 'Open tasks due today.',
-            onClick: () => setStatFilter(statFilter === 'today' ? null : 'today'),
+            onClick: () => { setStatFilter(statFilter === 'today' ? null : 'today'); setPage(1); },
             active: statFilter === 'today',
           },
           {
@@ -413,7 +400,7 @@ const TodoPage = () => {
             icon: ClipboardCheck,
             variant: 'mint',
             info: 'Tasks you submitted that are waiting for reviewer approval.',
-            onClick: () => setStatFilter(statFilter === 'in-review' ? null : 'in-review'),
+            onClick: () => { setStatFilter(statFilter === 'in-review' ? null : 'in-review'); setPage(1); },
             active: statFilter === 'in-review',
           },
         ],
@@ -448,22 +435,31 @@ const TodoPage = () => {
     >
       <FlashHighlightListener />
 
-      {/* Mobile: card list */}
       <div className="lg:hidden space-y-3">
         {isLoading && <DataLoading />}
-        {!isLoading && filtered.length === 0 && (
-          <p className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</p>
+        {!isLoading && tasks.length === 0 && (
+          <EmptyState
+            title="No tasks match filters"
+            description="Try clearing filters or create a task from the + menu."
+          />
         )}
-        {activeTasks.map(renderTaskCard)}
+        {activeTasks.length > 20 ? (
+          <VirtualTaskList items={activeTasks} renderItem={(task) => renderTaskCard(task)} />
+        ) : (
+          activeTasks.map(renderTaskCard)
+        )}
         {activeTasks.length > 0 && doneTasks.length > 0 && (
           <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-1">
             Completed ({doneTasks.length})
           </p>
         )}
-        {doneTasks.map(renderTaskCard)}
+        {doneTasks.length > 20 ? (
+          <VirtualTaskList items={doneTasks} renderItem={(task) => renderTaskCard(task)} />
+        ) : (
+          doneTasks.map(renderTaskCard)
+        )}
       </div>
 
-      {/* Desktop: table */}
       <div className="overflow-hidden hidden lg:block border-t border-[var(--color-bg-border)]">
         <table className="w-full text-left">
           <thead>
@@ -471,7 +467,7 @@ const TodoPage = () => {
               <th className="px-4 py-3 w-10" />
               <th className="px-4 py-3"><SortHeader field="title" label="Task" /></th>
               <th className="px-4 py-3"><SortHeader field="type" label="Type" /></th>
-              <th className="px-4 py-3"><SortHeader field="assignedBy" label="Assigned by" /></th>
+              <th className="px-4 py-3">Assigned by</th>
               <th className="px-4 py-3"><SortHeader field="status" label="Status" /></th>
               <th className="px-4 py-3"><SortHeader field="priority" label="Priority" /></th>
               <th className="px-4 py-3"><SortHeader field="dueDate" label="Due" /></th>
@@ -481,7 +477,7 @@ const TodoPage = () => {
             {isLoading && (
               <tr><td colSpan={7}><DataLoading /></td></tr>
             )}
-            {!isLoading && filtered.length === 0 && (
+            {!isLoading && tasks.length === 0 && (
               <tr><td colSpan={7} className="p-12 text-center text-sm text-[var(--color-text-muted)] italic">No tasks match filters</td></tr>
             )}
             {activeTasks.map(renderRow)}
@@ -494,6 +490,18 @@ const TodoPage = () => {
           </tbody>
         </table>
       </div>
+
+      {totalItems > 0 && (
+        <TablePagination
+          pageSize={pageSize}
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          rowCount={tasks.length}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+        />
+      )}
 
       {(selectedTask || taskToComplete) && (
         <Suspense fallback={null}>
@@ -508,5 +516,6 @@ const TodoPage = () => {
 
 export default TodoPage;
 
-
-// Performance Optimization: useCallback(eventHandler) memoization guard
+function taskCategoryLabel(type) {
+  return TASK_CATEGORY_OPTIONS.find((o) => o.value === type)?.label || type || '—';
+}

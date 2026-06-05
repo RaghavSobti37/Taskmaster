@@ -17,7 +17,6 @@ import {
 } from '../../components/ui';
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { formatLastActivity } from '../../utils/formatLastActivity';
-import DepartmentsPanel from '../../components/admin/DepartmentsPanel';
 import MonthlyReportPanel from '../../components/admin/MonthlyReportPanel';
 import {
   useUserDirectory, useCRMStats, useMailStats, useDataHubFolders,
@@ -243,20 +242,12 @@ const AdminUsers = () => {
         </Button>
       }
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
-          <DataTable
-            columns={userColumns}
-            data={filteredUsers}
-            onRowClick={(u) => setSelectedUser(u)}
-            getRowId={(u) => u._id}
-          />
-        </div>
-
-        <aside className="lg:col-span-4">
-          <DepartmentsPanel users={users} departments={departments} />
-        </aside>
-      </div>
+      <DataTable
+        columns={userColumns}
+        data={filteredUsers}
+        onRowClick={(u) => setSelectedUser(u)}
+        getRowId={(u) => u._id}
+      />
 
       <FullScreenWorkspace
         isOpen={!!selectedUser}

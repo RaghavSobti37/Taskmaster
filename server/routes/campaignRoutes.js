@@ -27,6 +27,12 @@ const {
 } = require('../utils/emailValidation');
 const { resolveMailEventCityAsync, buildClickCityByEmail } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
+const { validateBody } = require('../validation/validateBody');
+const {
+  createCampaignBody,
+  resendCampaignBody,
+  resendFilteredCampaignBody,
+} = require('../validation/schemas/campaigns');
 
 router.use(protect);
 
@@ -255,7 +261,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', validateBody(createCampaignBody), async (req, res) => {
   try {
     const {
       title, subject, content, senderProfileId, senderMode, senderProfileIds,
@@ -411,7 +417,7 @@ router.post('/:id/dispatch', async (req, res) => {
   }
 });
 
-router.post('/:id/resend', async (req, res) => {
+router.post('/:id/resend', validateBody(resendCampaignBody), async (req, res) => {
   try {
     const {
       senderMode, senderProfileId, senderProfileIds, systemProvider,
@@ -490,7 +496,7 @@ router.post('/:id/resend', async (req, res) => {
   }
 });
 
-router.post('/:id/resend-filtered', async (req, res) => {
+router.post('/:id/resend-filtered', validateBody(resendFilteredCampaignBody), async (req, res) => {
   try {
     const {
       recipientEmails,

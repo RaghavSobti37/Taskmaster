@@ -275,6 +275,154 @@ class DataHubService {
     };
   }
 
+  async getPersonBase(contactId) {
+    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    if (!contact) return null;
+    contact.inlets = dedupeInletEntries(contact.inlets || []);
+    return {
+      contact,
+      overview: {
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        city: contact.city,
+        inletCount: contact.inletCount,
+        isMultiInlet: contact.isMultiInlet,
+        inlets: contact.inlets || [],
+        emailStatus: contact.emailStatus,
+        unsubscribed: contact.unsubscribed,
+        firstSeen: contact.createdAt,
+        lastSeen: contact.updatedAt,
+        exlyRevenue: 0,
+      },
+    };
+  }
+
+  async getPersonSection(contactId, section) {
+    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    if (!contact) return null;
+    contact.inlets = dedupeInletEntries(contact.inlets || []);
+    const match = identityMatch(contact.email, contact.phone);
+    if (!match) {
+      return { section, contact, overview: { inlets: contact.inlets || [] } };
+    }
+
+    if (section === 'crm') {
+      const leads = await Lead.find(match).sort({ updatedAt: -1 }).lean();
+      const leadIds = leads.map((l) => l._id);
+      const [audits, emis, reps] = await Promise.all([
+        leadIds.length ? CRMAudit.find({ leadId: { $in: leadIds } }).sort({ timestamp: -1 }).limit(50).lean() : [],
+        leadIds.length ? EMI.find({ leadId: { $in: leadIds } }).sort({ dueDate: 1 }).lean() : [],
+        (async () => {
+          const repIds = [...new Set(leads.map((l) => String(l.assignedRepId)).filter(Boolean))];
+          if (!repIds.length) return {};
+          const users = await User.find({ _id: { $in: repIds } }).select('name email').lean();
+          return Object.fromEntries(users.map((u) => [String(u._id), u]));
+        })(),
+      ]);
+      return { section, crm: { leads, audits, emis, reps } };
+    }
+
+    if (section === 'exly') {
+      const bookings = await ExlyBooking.find(match).sort({ bookedOn: -1 }).lean();
+      const revenue = bookings.reduce((sum, b) => sum + (Number(b.pricePaid) || 0), 0);
+      return {
+        section,
+        exly: {
+          bookings,
+          revenue,
+          offerings: [...new Set(bookings.map((b) => b.offeringTitle))],
+        },
+      };
+    }
+
+    if (section === 'tsc') {
+      const rows = await TscData.find(match).sort({ createdAt: -1 }).lean();
+      return { section, tsc: { rows } };
+    }
+
+    if (section === 'booked') {
+      const leads = await Lead.find(match).sort({ updatedAt: -1 }).lean();
+      return { section, bookedCalls: { leads: leads.filter((l) => isBookedCallSource(l.source)) } };
+    }
+
+    if (section === 'enquiries') {
+      const enquiryTasks = await Task.find({ type: 'enquiry' }).sort({ createdAt: -1 }).limit(200).lean();
+      const filtered = enquiryTasks.filter((t) => {
+        const parsed = parseEnquiryDescription(t.description);
+        const eMatch = contact.email && parsed.email?.toLowerCase() === contact.email.toLowerCase();
+        const pMatch = contact.phone && parsed.phone === contact.phone;
+        return eMatch || pMatch || (t.description || '').includes(contact.email || '') || (t.description || '').includes(contact.phone || '');
+      });
+      return {
+        section,
+        enquiries: filtered.map((t) => ({ ...t, parsed: parseEnquiryDescription(t.description) })),
+      };
+    }
+
+    if (section === 'mail') {
+      const events = contact.email
+        ? await MailEvent.find({ email: new RegExp(`^${escapeRegExp(contact.email)}$`, 'i') })
+          .sort({ timestamp: -1 }).limit(100).lean()
+        : [];
+      return { section, mail: { events } };
+    }
+
+    if (section === 'timeline') {
+      const [leads, tscRows, exlyBookings, enquiryTasks, mailEvents] = await Promise.all([
+        Lead.find(match).sort({ updatedAt: -1 }).lean(),
+        TscData.find(match).sort({ createdAt: -1 }).lean(),
+        ExlyBooking.find(match).sort({ bookedOn: -1 }).lean(),
+        Task.find({ type: 'enquiry' }).sort({ createdAt: -1 }).limit(200).lean(),
+        contact.email
+          ? MailEvent.find({ email: new RegExp(`^${escapeRegExp(contact.email)}$`, 'i') })
+            .sort({ timestamp: -1 }).limit(100).lean()
+          : [],
+      ]);
+      const filteredEnquiries = enquiryTasks.filter((t) => {
+        const parsed = parseEnquiryDescription(t.description);
+        const eMatch = contact.email && parsed.email?.toLowerCase() === contact.email.toLowerCase();
+        const pMatch = contact.phone && parsed.phone === contact.phone;
+        return eMatch || pMatch || (t.description || '').includes(contact.email || '') || (t.description || '').includes(contact.phone || '');
+      });
+      const timeline = [];
+      for (const lead of leads) {
+        timeline.push({ type: 'lead', date: lead.updatedAt || lead.createdAt, label: `Lead: ${lead.leadStatus}`, data: lead });
+      }
+      for (const row of tscRows) {
+        timeline.push({ type: 'tsc', date: row.createdAt, label: `TSC: ${row.campaign || row.originSource || 'import'}`, data: row });
+      }
+      for (const b of exlyBookings) {
+        timeline.push({ type: 'exly', date: b.bookedOn || b.createdAt, label: `Exly: ${b.offeringTitle}`, data: b });
+      }
+      for (const t of filteredEnquiries) {
+        timeline.push({ type: 'enquiry', date: t.createdAt, label: `Enquiry: ${t.title}`, data: t });
+      }
+      for (const evt of mailEvents) {
+        timeline.push({ type: 'mail', date: evt.timestamp || evt.createdAt, label: `Mail ${evt.eventType}`, data: evt });
+      }
+      timeline.sort((a, b) => new Date(b.date) - new Date(a.date));
+      return { section, timeline };
+    }
+
+    if (section === 'overview') {
+      const bookings = await ExlyBooking.find(match).select('pricePaid bookedOn').lean();
+      const exlyRevenue = bookings.reduce((sum, b) => sum + (Number(b.pricePaid) || 0), 0);
+      const crmCount = await Lead.countDocuments(match);
+      const exlyCount = bookings.length;
+      return {
+        section,
+        overview: {
+          exlyRevenue,
+          crmLeadCount: crmCount,
+          exlyBookingCount: exlyCount,
+        },
+      };
+    }
+
+    return { section, data: null };
+  }
+
   async getPerson360(contactId) {
     const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
     if (!contact) return null;

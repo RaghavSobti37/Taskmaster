@@ -21,6 +21,14 @@ const {
 } = require('../utils/attendanceDate');
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const { createNotification } = require('../services/notificationDispatcher');
+const { validateQuery } = require('../validation/validateQuery');
+const { validateBody } = require('../validation/validateBody');
+const {
+  attendanceQuery,
+  attendanceCheckBody,
+  leaveRequestBody,
+  leaveRequestsQuery,
+} = require('../validation/schemas/attendance');
 
 const isOps = (user) => isOpsUser(user);
 
@@ -93,7 +101,7 @@ const computeAttendanceMetrics = (attendanceDoc) => refreshAttendanceMetrics(att
 
 router.use(protect);
 
-router.get('/', async (req, res) => {
+router.get('/', validateQuery(attendanceQuery), async (req, res) => {
   try {
     const { start, end, mine, week, weekStart } = req.query;
     const query = {};
@@ -142,7 +150,7 @@ router.get('/work-mode-hint', async (req, res) => {
   }
 });
 
-router.post('/check', async (req, res) => {
+router.post('/check', validateBody(attendanceCheckBody), async (req, res) => {
   try {
     const now = new Date();
     const today = todayStart();
@@ -308,7 +316,7 @@ router.put('/upsert/by-user-date', async (req, res) => {
   }
 });
 
-router.post('/leave', async (req, res) => {
+router.post('/leave', validateBody(leaveRequestBody), async (req, res) => {
   // Unchanged leave functionality
   try {
     const { fromDate, toDate, reason } = req.body;
@@ -329,7 +337,7 @@ router.post('/leave', async (req, res) => {
   }
 });
 
-router.get('/leave/requests', async (req, res) => {
+router.get('/leave/requests', validateQuery(leaveRequestsQuery), async (req, res) => {
   try {
     const query = {};
     if (isOps(req.user)) {

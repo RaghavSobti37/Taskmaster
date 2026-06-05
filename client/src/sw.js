@@ -1,7 +1,32 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { ExpirationPlugin } from 'workbox-expiration';
 
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
+
+/** Cache GET /api/* reads for offline fallback (excludes auth + live notification feeds). */
+registerRoute(
+  ({ request, url }) =>
+    request.method === 'GET'
+    && url.pathname.startsWith('/api/')
+    && !url.pathname.startsWith('/api/auth')
+    && !url.pathname.startsWith('/api/notifications'),
+  new NetworkFirst({
+    cacheName: 'coreknot-api-read-v1',
+    networkTimeoutSeconds: 10,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({
+        maxEntries: 120,
+        maxAgeSeconds: 5 * 60,
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
 
 /** Must match BRAND_ICONS.notification in src/constants/brandIcons.js */
 const NOTIFICATION_ICON = new URL('/icons/icon-192.png', self.location.origin).href;

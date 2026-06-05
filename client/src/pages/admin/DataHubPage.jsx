@@ -20,14 +20,29 @@ import {
 } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '../../hooks/useDebounce';
-import { dedupeInletEntries } from '../../utils/dataHubInlets';
+import DataHubInletCluster from '../../components/dataHub/DataHubInletCluster';
+import DataHubTemporalColumn from '../../components/dataHub/DataHubTemporalColumn';
 import { emitSystemEvent } from '../../lib/systemLogBridge';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 
-const INLET_COLORS = {
-  exly: 'info', leads: 'mint', tsc: 'neutral', booked_calls: 'warning',
-  enquiries: 'rose', mail: 'info', community: 'success',
+const STICKY_CELL = 'sticky left-0 z-10 bg-[var(--token-surface-1)]';
+
+const DATA_HUB_FILTERS_KEY = 'datahub-filters';
+
+const loadDataHubFilters = () => {
+  try {
+    const raw = localStorage.getItem(DATA_HUB_FILTERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return {
+    activeFolder: 'all',
+    pageSize: 25,
+    emailStatusFilter: 'all',
+    showAnalytics: true,
+  };
 };
 
 const AUTO_SYNC_MS = DATA_HUB_REFRESH_MS;
@@ -57,16 +72,30 @@ function formatBytes(bytes) {
 }
 
 export function DataHubContent() {
-  const [activeFolder, setActiveFolder] = useState('all');
+  const savedFilters = useMemo(() => loadDataHubFilters(), []);
+  const [activeFolder, setActiveFolder] = useState(savedFilters.activeFolder);
   const [tscSubFilter, setTscSubFilter] = useState(null);
   const [tscSubFilterParams, setTscSubFilterParams] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(savedFilters.pageSize);
   const [selectedPersonId, setSelectedPersonId] = useState(null);
-  const [showAnalytics, setShowAnalytics] = useState(true);
-  const [emailStatusFilter, setEmailStatusFilter] = useState('all');
+  const [showAnalytics, setShowAnalytics] = useState(savedFilters.showAnalytics);
+  const [emailStatusFilter, setEmailStatusFilter] = useState(savedFilters.emailStatusFilter);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DATA_HUB_FILTERS_KEY, JSON.stringify({
+        activeFolder,
+        pageSize,
+        emailStatusFilter,
+        showAnalytics,
+      }));
+    } catch {
+      /* ignore */
+    }
+  }, [activeFolder, pageSize, emailStatusFilter, showAnalytics]);
 
   const queryClient = useQueryClient();
   const { confirm } = useConfirm();
@@ -219,6 +248,8 @@ export function DataHubContent() {
   const columns = [
     {
       header: 'Person',
+      headerClassName: STICKY_CELL,
+      cellClassName: STICKY_CELL,
       render: (item) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center font-black text-[10px] shrink-0">
@@ -238,18 +269,7 @@ export function DataHubContent() {
     },
     {
       header: 'Inlets',
-      render: (item) => (
-        <div className="flex flex-wrap gap-1">
-          {(dedupeInletEntries(item.inlets || [])).map((inlet) => (
-            <Badge key={inlet.key} variant={INLET_COLORS[inlet.key] || 'neutral'}>
-              {inlet.key}
-            </Badge>
-          ))}
-          {item.inletCount >= 2 && (
-            <Badge variant="warning" title="Merged from multiple sources">{item.inletCount} inlets</Badge>
-          )}
-        </div>
-      ),
+      render: (item) => <DataHubInletCluster inlets={item.inlets || []} />,
     },
     {
       header: 'City',
@@ -265,11 +285,7 @@ export function DataHubContent() {
     },
     {
       header: 'Updated',
-      render: (item) => (
-        <span className="text-[9px] text-[var(--color-text-muted)]">
-          {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '—'}
-        </span>
-      ),
+      render: (item) => <DataHubTemporalColumn value={item.updatedAt} label="Updated" />,
     },
   ];
 
@@ -351,6 +367,7 @@ export function DataHubContent() {
             />
           </PageToolbar>
 
+          <div data-density="compact">
           <DataTable
             columns={columns}
             data={peopleData?.data || []}
@@ -364,7 +381,10 @@ export function DataHubContent() {
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+            rowEstimateSize={56}
+            tableMaxHeight="70vh"
           />
+          </div>
         </div>
 
         {showAnalytics && (

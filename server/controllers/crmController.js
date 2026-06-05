@@ -319,6 +319,61 @@ exports.getLeads = async (req, res) => {
   }
 };
 
+/**
+ * Fetch a single lead by id (for deep links / command palette highlight).
+ */
+exports.getLead = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid lead id' });
+    }
+
+    let query = { _id: new mongoose.Types.ObjectId(req.params.id) };
+    if (!isAdminUser(req.user)) {
+      query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
+    }
+
+    const pipeline = [
+      { $match: query },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'assignedRepId',
+          foreignField: '_id',
+          as: 'assignedRep',
+        },
+      },
+      {
+        $unwind: {
+          path: '$assignedRep',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          assignedRepId: 1,
+          name: 1, email: 1, phone: 1, city: 1, source: 1,
+          webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
+          artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
+          meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
+          remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
+          createdAt: 1, updatedAt: 1,
+          exlyOfferings: 1, exlyOfferingTitle: 1, exlyOfferingId: 1,
+          lockedBy: 1, lockedAt: 1,
+          'assignedRep.name': 1, 'assignedRep.email': 1, 'assignedRep.avatar': 1,
+        },
+      },
+    ];
+
+    const [lead] = await Lead.aggregate(pipeline);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    res.json(lead);
+  } catch (error) {
+    logger.error('crmController', 'in getLead:', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to fetch lead' });
+  }
+};
+
 const normalizeLeadInput = (leadData, res, { requireName = false, requirePhone = false } = {}) => {
   const errors = normalizeAndValidateLeadFields(leadData, {
     requireName,
@@ -491,7 +546,7 @@ exports.updateLead = async (req, res) => {
             null,
             lead.name
           );
-          console.log(`✅ WhatsApp sent to ${lead.phone}`);
+          logger.info('crmController', 'WhatsApp sent after first call', { phone: lead.phone });
         }
 
         // Send Email
@@ -1126,6 +1181,50 @@ exports.purgeAuditLogs = async (req, res) => {
   } catch (error) {
     logger.error('crmController', 'Failed to purge lead audits:', { error: error.message || error });
     res.status(500).json({ error: 'Failed to purge audit logs' });
+  }
+};
+
+const LOCK_HEARTBEAT_MS = 60 * 1000;
+
+exports.releaseLeadLock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id.toString();
+    const lead = await Lead.findById(id).select('lockedBy').lean();
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (lead.lockedBy && lead.lockedBy !== userId) {
+      return res.status(409).json({ error: 'Lock held by another user' });
+    }
+    await Lead.findByIdAndUpdate(id, { $unset: { lockedBy: 1, lockedAt: 1 } });
+    broadcastRealtimeEvent('leads', 'lead_unlock', { leadId: id });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('crmController', 'Release lead lock', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to release lock' });
+  }
+};
+
+exports.heartbeatLeadLock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id.toString();
+    const lockDuration = new Date(Date.now() - LOCK_HEARTBEAT_MS);
+    const lead = await Lead.findOneAndUpdate(
+      {
+        _id: id,
+        lockedBy: userId,
+        lockedAt: { $gte: lockDuration },
+      },
+      { $set: { lockedAt: new Date() } },
+      { new: true },
+    ).select('lockedBy lockedAt');
+    if (!lead) {
+      return res.status(409).json({ error: 'Lock not held or expired' });
+    }
+    res.json({ success: true, lockedAt: lead.lockedAt });
+  } catch (error) {
+    logger.error('crmController', 'Heartbeat lead lock', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to refresh lock' });
   }
 };
 

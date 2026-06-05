@@ -31,6 +31,8 @@ const upload = multer({
 });
 
 const { isOpsUser } = require('../utils/departmentPermissions');
+const { validateBody } = require('../validation/validateBody');
+const { submitInvoiceBody, createFolderBody } = require('../validation/schemas/finance');
 
 // Department gate: ops or admin
 const opsOnly = (req, res, next) => {
@@ -47,7 +49,7 @@ router.use(protect);
 router.get('/usd-inr-rate', getUsdInrRate);
 
 // Any authenticated user can submit an invoice for ops review
-router.post('/submit-invoice', submitInvoice);
+router.post('/submit-invoice', validateBody(submitInvoiceBody), submitInvoice);
 router.get('/my-invoices', listMyInvoices);
 router.post('/upload-invoice', upload.single('file'), uploadFile);
 
@@ -76,7 +78,7 @@ router.post('/bulk', uploadDocumentsBulk);
 
 router.post('/sync-folder-placement', syncFolderPlacementFromDiskHandler);
 router.post('/reorganize-folders', syncFolderPlacementFromDiskHandler);
-router.post('/folders', createFolder);
+router.post('/folders', validateBody(createFolderBody), createFolder);
 router.get('/folders', getFolders);
 router.get('/folders/:folderId/breadcrumb', getFolderBreadcrumb);
 router.delete('/folders/:folderId', deleteFolder);

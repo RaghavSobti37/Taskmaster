@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
 import AppBootFallback from './components/AppBootFallback';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 
 // Helper to retry dynamic imports when a redeploy changes chunk hashes
 const lazyWithRetry = (componentImport) => 
@@ -37,6 +38,7 @@ const WorkspaceSettings = lazyWithRetry(() => import('./pages/projects/Workspace
 const AdminPanel = lazyWithRetry(() => import('./pages/admin/AdminPanel'));
 const SystemLogsPage = lazyWithRetry(() => import('./pages/admin/SystemLogsPage'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
+const AdminTeamsPage = lazyWithRetry(() => import('./pages/admin/AdminTeamsPage'));
 const AdminExly = lazyWithRetry(() => import('./pages/admin/AdminExly'));
 const AdminMail = lazyWithRetry(() => import('./pages/admin/AdminMail'));
 const AdminCRM = lazyWithRetry(() => import('./pages/admin/AdminCRM'));
@@ -74,9 +76,15 @@ const SubscriptionsPage = lazyWithRetry(() => import('./pages/office/Subscriptio
 const SchedulePage = lazyWithRetry(() => import('./pages/schedule/SchedulePage'));
 const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
+const NotesPage = lazyWithRetry(() => import('./pages/notes/NotesPage'));
+const NoteEditorPage = lazyWithRetry(() => import('./pages/notes/NoteEditorPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
+const CrmHub = lazyWithRetry(() => import('./pages/hubs/CrmHub'));
+const OfficeHub = lazyWithRetry(() => import('./pages/hubs/OfficeHub'));
+const ManagementHub = lazyWithRetry(() => import('./pages/hubs/ManagementHub'));
+const AdminConsole = lazyWithRetry(() => import('./pages/hubs/AdminConsole'));
 const MainLayout = lazyWithRetry(() => import('./components/MainLayout'));
 
 const LegacyWorkspaceRedirect = () => {
@@ -95,6 +103,7 @@ function App() {
 
   return (
     <Suspense fallback={<AppBootFallback />}>
+      <RouteErrorBoundary>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -145,37 +154,49 @@ function App() {
               <Route element={<PageRoute page="todo" />}>
                 <Route path="/todo" element={<TodoPage />} />
               </Route>
+              <Route element={<PageRoute page="notes" />}>
+                <Route path="/notes" element={<NotesPage />} />
+                <Route path="/notes/new" element={<NotesPage />} />
+                <Route path="/notes/:id" element={<NoteEditorPage />} />
+              </Route>
               <Route element={<PageRoute page="admin_data" />}>
                 <Route path="/components" element={<ComponentsShowcase />} />
               </Route>
-              <Route element={<PageRoute page="equipment" />}>
-                <Route path="/equipment" element={<EquipmentPage />} />
-              </Route>
-              <Route element={<PageRoute page="contacts" />}>
-                <Route path="/contacts" element={<ContactsPage />} />
-              </Route>
-              <Route element={<PageRoute page="subscriptions" />}>
-                <Route path="/subscriptions" element={<SubscriptionsPage />} />
-              </Route>
-              <Route path="/management/equipment" element={<Navigate to="/equipment" replace />} />
-              <Route path="/management/contacts" element={<Navigate to="/contacts" replace />} />
-              <Route path="/office/subscriptions" element={<Navigate to="/subscriptions" replace />} />
+              <Route path="/management/equipment" element={<Navigate to="/office?tab=equipment" replace />} />
+              <Route path="/management/contacts" element={<Navigate to="/office?tab=contacts" replace />} />
+              <Route path="/office/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
               <Route path="/management/attendance" element={<Navigate to="/attendance" replace />} />
+              <Route element={<PageRoute pages={['leads', 'followups', 'bookings']} />}>
+                <Route path="/crm" element={<CrmHub />} />
+              </Route>
+              <Route element={<PageRoute pages={['equipment', 'contacts', 'subscriptions']} />}>
+                <Route path="/office" element={<OfficeHub />} />
+              </Route>
+              <Route element={<PageRoute pages={['finance', 'announcements', 'ops_logs', 'artists']} />}>
+                <Route path="/management" element={<ManagementHub />} />
+              </Route>
+              <Route element={<PageRoute pages={['admin_users', 'admin_data', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics']} />}>
+                <Route path="/admin/console" element={<AdminConsole />} />
+              </Route>
+              <Route path="/leads" element={<Navigate to="/crm?tab=leads" replace />} />
+              <Route path="/followups" element={<Navigate to="/crm?tab=followups" replace />} />
+              <Route path="/bookings" element={<Navigate to="/crm?tab=bookings" replace />} />
+              <Route path="/equipment" element={<Navigate to="/office?tab=equipment" replace />} />
+              <Route path="/contacts" element={<Navigate to="/office?tab=contacts" replace />} />
+              <Route path="/subscriptions" element={<Navigate to="/office?tab=subscriptions" replace />} />
+              <Route path="/finance" element={<Navigate to="/management?tab=finance" replace />} />
+              <Route path="/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
+              <Route path="/ops-logs" element={<Navigate to="/management?tab=ops-logs" replace />} />
+              <Route path="/management/ops-logs" element={<Navigate to="/management?tab=ops-logs" replace />} />
+              <Route path="/management/announcements" element={<Navigate to="/management?tab=announcements" replace />} />
+              <Route path="/artists" element={<Navigate to="/management?tab=artists" replace />} />
+
               <Route element={<PageRoute page="assets" />}>
                 <Route path="/assets" element={<AssetsPage />} />
               </Route>
               <Route path="/office-assets" element={<OfficeAssetsPage />} />
-              <Route element={<PageRoute page="leads" />}>
-                <Route path="/leads" element={<LeadsPage />} />
-              </Route>
-              <Route element={<PageRoute page="followups" />}>
-                <Route path="/followups" element={<FollowupsPage />} />
-              </Route>
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
-              <Route element={<PageRoute page="bookings" />}>
-                <Route path="/bookings" element={<ExlyBookingsPage />} />
-              </Route>
 
               <Route element={<PageRoute page="admin_data" />}>
                 <Route path="/admin" element={<AdminCRM />} />
@@ -184,6 +205,7 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/teams" element={<AdminTeamsPage />} />
               </Route>
               <Route element={<PageRoute page="admin_exly" />}>
                 <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
@@ -211,27 +233,15 @@ function App() {
               <Route path="/workspace/emails/create" element={<Navigate to="/emails/create" replace />} />
 
               <Route element={<PageRoute page="artists" />}>
-                <Route path="/artists" element={<ArtistsCollection />} />
                 <Route path="/artists/:id/*" element={<ArtistDetail />} />
               </Route>
-
-              <Route element={<PageRoute page="finance" />}>
-                <Route path="/finance" element={<FinancePage />} />
-              </Route>
-              <Route element={<PageRoute page="announcements" />}>
-                <Route path="/announcements" element={<AnnouncementsPage />} />
-              </Route>
-              <Route element={<PageRoute page="ops_logs" />}>
-                <Route path="/ops-logs" element={<SystemLogsPage />} />
-              </Route>
-              <Route path="/management/announcements" element={<Navigate to="/announcements" replace />} />
-              <Route path="/management/ops-logs" element={<Navigate to="/ops-logs" replace />} />
             </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+      </RouteErrorBoundary>
+    </Suspense>
   );
 }
 

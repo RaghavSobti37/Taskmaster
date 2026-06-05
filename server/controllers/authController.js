@@ -155,6 +155,29 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    // #region agent log
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      fs.appendFileSync(
+        path.join(__dirname, '..', '..', 'debug-07dabc.log'),
+        `${JSON.stringify({
+          sessionId: '07dabc',
+          location: 'authController.js:login',
+          message: 'login request received',
+          data: {
+            origin: req.headers.origin || null,
+            forwardedHost: req.headers['x-forwarded-host'] || null,
+            host: req.headers.host || null,
+            hadAuthCookie: hadAuthCookie(req),
+            userAgentMobile: /iPhone|iPad|iPod|Android/i.test(req.headers['user-agent'] || ''),
+          },
+          hypothesisId: 'B',
+          timestamp: Date.now(),
+        })}\n`
+      );
+    } catch { /* ignore debug log errors */ }
+    // #endregion
     const { email, password } = req.body;
 
     if (typeof email !== 'string' || typeof password !== 'string') {
@@ -189,6 +212,30 @@ exports.login = async (req, res) => {
         .select('-password')
         .populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
       await finishAuthSession(req, res, populated._id);
+      // #region agent log
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const setCookieHeader = res.getHeader('set-cookie');
+        fs.appendFileSync(
+          path.join(__dirname, '..', '..', 'debug-07dabc.log'),
+          `${JSON.stringify({
+            sessionId: '07dabc',
+            location: 'authController.js:login',
+            message: 'login success cookie issued',
+            data: {
+              userId: String(populated._id),
+              setCookiePresent: Boolean(setCookieHeader),
+              setCookieCount: Array.isArray(setCookieHeader) ? setCookieHeader.length : (setCookieHeader ? 1 : 0),
+              cookieHasPartitioned: String(setCookieHeader || '').includes('Partitioned'),
+              cookieSameSite: String(setCookieHeader || '').match(/SameSite=(\w+)/i)?.[1] || null,
+            },
+            hypothesisId: 'B',
+            timestamp: Date.now(),
+          })}\n`
+        );
+      } catch { /* ignore debug log errors */ }
+      // #endregion
       return res.json(formatAuthUser(populated));
     }
 

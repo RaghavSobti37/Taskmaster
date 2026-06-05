@@ -16,7 +16,7 @@ describe('validateLeadFormFields', () => {
   it('accepts valid lead payload', () => {
     const { valid, sanitized } = validateLeadFormFields({
       name: 'Raghav Raj Sobti',
-      email: 'redacted@example.com',
+      email: 'qa-lead@example.com',
       phone: '+918591499393',
     });
     expect(valid).toBe(true);

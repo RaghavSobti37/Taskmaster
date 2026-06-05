@@ -8,6 +8,20 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.2 — Mobile login proxy fix & public-page theming
+
+#### Authentication
+- **Vercel API proxy:** `vercel.json` and `client/vercel.json` rewrite `/api/*` to live Render API via `RENDER_API_PROXY_URL` / `scripts/generateVercelConfig.js` (replaces stale proxy target). Mobile browsers route auth through same-origin `/api`; broken proxy caused login failures on phone/tablet while desktop direct API still worked.
+- **render.yaml:** Keep-warm cron uses `YOUR-RENDER-SERVICE.onrender.com` placeholder — set real health URL in Render Dashboard.
+
+#### Public marketing pages
+- **MarketingThemeToggle:** Shared light/dark control on home (`LandingPage`), Privacy Policy, and User Data Deletion pages.
+- **Privacy Policy v2.2 / Data Deletion v1.1:** Migrated from hardcoded dark palette to semantic theme tokens (`bg-background`, `bg-card`, `border-border`); `MarketingPageBackground` on legal pages.
+
+**Deploy:** Set `RENDER_API_PROXY_URL` on Vercel, run `node scripts/generateVercelConfig.js`, redeploy frontend so `/api` rewrites hit the live API host.
+
+---
+
 ### [2026-06-05] v1.0.1 — Sliding sessions & global cookie reset
 
 #### Authentication

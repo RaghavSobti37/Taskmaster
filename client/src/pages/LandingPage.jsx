@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import MarketingPageBackground from '../components/MarketingPageBackground';
+import MarketingThemeToggle from '../components/MarketingThemeToggle';
 import BrandLogo from '../components/brand/BrandLogo';
 
 export default function LandingPage() {
@@ -60,7 +61,8 @@ export default function LandingPage() {
             <span className="text-[10px] text-[var(--color-text-secondary)] font-mono">Workspace Suite</span>
           </div>
         </div>
-        <div className="flex items-center gap-4 relative z-10">
+        <div className="flex items-center gap-3 relative z-10">
+          <MarketingThemeToggle />
           <Link to="/privacy" className="text-xs text-[var(--color-text-secondary)] hover:text-foreground transition hidden sm:inline">
             Privacy Policy
           </Link>

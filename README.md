@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.1-126d5e?style=flat-square" alt="Version 1.0.1" />
+  <img src="https://img.shields.io/badge/version-1.0.2-126d5e?style=flat-square" alt="Version 1.0.2" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -81,6 +81,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Area | What changed |
 | --- | --- |
+| **Mobile login** | Vercel `/api` proxy targets live Render API (`RENDER_API_PROXY_URL` at build); mobile browsers use same-origin auth so iOS Safari keeps session cookies |
+| **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
 | **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings → Profile |

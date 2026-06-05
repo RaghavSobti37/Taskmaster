@@ -148,29 +148,6 @@ export const AuthProvider = ({ children }) => {
 
       if (res.status === 401 || res.status === 403) {
         const sessionExpired = String(res.data?.error || '').includes('Session expired');
-        // #region agent log
-        fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '07dabc' },
-          body: JSON.stringify({
-            sessionId: '07dabc',
-            location: 'AuthContext.jsx:fetchUser',
-            message: 'session probe unauthorized',
-            data: {
-              status: res.status,
-              attempt,
-              retries,
-              clearOn401,
-              sessionExpired,
-              axiosBaseURL: axios.defaults.baseURL || null,
-              requestUrl: res.config?.url || null,
-              error: res.data?.error || null,
-            },
-            hypothesisId: 'E',
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         if (!sessionExpired && attempt < retries - 1) continue;
         if (clearOn401) {
           setUser(null);
@@ -181,25 +158,6 @@ export const AuthProvider = ({ children }) => {
       }
 
       const newData = res.data;
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '07dabc' },
-        body: JSON.stringify({
-          sessionId: '07dabc',
-          location: 'AuthContext.jsx:fetchUser',
-          message: 'session probe ok',
-          data: {
-            attempt,
-            userId: newData?._id || null,
-            axiosBaseURL: axios.defaults.baseURL || null,
-            requestUrl: res.config?.url || null,
-          },
-          hypothesisId: 'E',
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (userSessionChanged(userRef.current, newData)) {
         setUser(newData);
       }

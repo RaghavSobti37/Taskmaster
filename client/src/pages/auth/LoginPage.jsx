@@ -66,69 +66,11 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const loginUrl = apiPath('/api/auth/login');
-    // #region agent log
-    fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '07dabc' },
-      body: JSON.stringify({
-        sessionId: '07dabc',
-        location: 'LoginPage.jsx:handleSubmit',
-        message: 'login submit start',
-        data: {
-          loginUrl,
-          axiosBaseURL: axios.defaults.baseURL || null,
-          pageOrigin: window.location.origin,
-        },
-        hypothesisId: 'C',
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     try {
-      const res = await axios.post(loginUrl, { email, password }, AXIOS_SKIP_TOAST);
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '07dabc' },
-        body: JSON.stringify({
-          sessionId: '07dabc',
-          location: 'LoginPage.jsx:handleSubmit',
-          message: 'login POST success',
-          data: {
-            status: res.status,
-            hasUser: Boolean(res.data?._id),
-            requestUrl: res.config?.url || null,
-            responseOrigin: res.request?.responseURL || null,
-          },
-          hypothesisId: 'B',
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+      const res = await axios.post(apiPath('/api/auth/login'), { email, password }, AXIOS_SKIP_TOAST);
       await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7696/ingest/9fe794f2-6839-468d-9f06-29f35c20a490', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '07dabc' },
-        body: JSON.stringify({
-          sessionId: '07dabc',
-          location: 'LoginPage.jsx:handleSubmit',
-          message: 'login POST failed',
-          data: {
-            hasResponse: Boolean(err.response),
-            status: err.response?.status || null,
-            errorMessage: err.response?.data?.error || err.message || null,
-            requestUrl: err.config?.url || null,
-            axiosBaseURL: err.config?.baseURL || axios.defaults.baseURL || null,
-          },
-          hypothesisId: err.response ? 'B' : 'D',
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (!err.response) {
         setError(
           'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.'

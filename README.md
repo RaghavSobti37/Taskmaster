@@ -157,6 +157,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Server:** `server/utils/authSession.js` — `establishSession`, `refreshSessionIfDue`, `loginAt` preserved across slides; `authMiddleware` enforces the 30-day cap.
 * **Client:** `AuthContext` retries `/api/auth/me` before clearing state (Safari/iOS cookie races), 5-minute session heartbeat, tab-visibility refresh on return.
 * **Tests:** `server/tests/authSession.test.js` — sliding window, absolute expiry, cookie v3 legacy purge.
+* **Login cookie refresh (one-time):** `/login` shows a **Clear session cookies** control once per browser — calls `POST /api/auth/logout` to purge HttpOnly `coreknot_token_v3` and legacy cookies, then reloads. Hidden after use via `client/src/utils/loginCookieRefresh.js`.
 
 ### v1.0.0 stable polish
 
@@ -369,6 +370,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Tri-channel delivery:** In-app inbox, optional email, and Web Push (VAPID) via the service worker (`sw.js`).
 * **Single OS toast per event:** Push subscription pruning (`server/utils/pushSubscriptions.js`), send-time dedupe, service-worker tag guards, and client-side `localStorage` + `BroadcastChannel` dedupe prevent duplicate system notifications on phone and laptop.
 * **Polling fallback:** When push is unavailable, `NotificationBridge` shows OS toasts only after push init completes — never alongside an active push subscription.
+* **Attendance check-out reminder:** `notificationService.js` cron at **6:30 PM IST** (`Asia/Kolkata`) notifies all attendance-eligible users who have not checked out (skips weekends, on-leave, and excluded accounts). In-app + push only (`sendEmail: false`); tap opens `/attendance`. Redis daily lock prevents duplicate sends across instances.
 
 ### Department Stats (Admin Dashboard)
 

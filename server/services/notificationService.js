@@ -1,11 +1,14 @@
 const cron = require('node-cron');
 const Lead = require('../models/Lead');
+const User = require('../models/User');
+const Attendance = require('../models/Attendance');
 const { parse, addMinutes, isBefore, isAfter } = require('date-fns');
 const logger = require('../utils/logger');
 const { MODULE } = require('../../shared/systemLogContract');
 const { createNotification } = require('./notificationDispatcher');
 const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
-const { getISTDate } = require('../utils/attendanceDate');
+const { getISTDate, getDateKey, todayStart, isWeekend } = require('../utils/attendanceDate');
+const { isAttendanceExcluded } = require('../utils/attendanceUsers');
 const { getSharedRedis } = require('../utils/sharedRedis');
 const redis = getSharedRedis();
 
@@ -90,11 +93,75 @@ const checkFollowups = async () => {
   }
 };
 
+const hasRecordedCheckOut = (entry) =>
+  !!(entry?.outTimeRecord?.manualTimestamp || entry?.outTimeRecord?.systemTimestamp);
+
+const sendAttendanceCheckoutReminders = async () => {
+  const dateKey = getDateKey();
+  const lockKey = `notification-lock:attendance-checkout:${dateKey}`;
+  const hasLock = await acquireLock(lockKey, 120);
+  if (!hasLock) {
+    logger.debug('Lock', 'Skipping sendAttendanceCheckoutReminders (lock exists)');
+    return;
+  }
+
+  try {
+    if (isWeekend()) {
+      logger.debug('Attendance', 'Skipping checkout reminders on weekend');
+      return;
+    }
+
+    const today = todayStart();
+    const [users, attendanceRows] = await Promise.all([
+      User.find({}).populate('departmentId', 'slug').lean(),
+      Attendance.find({ date: today }).lean(),
+    ]);
+
+    const attendanceByUserId = new Map(
+      attendanceRows.map((row) => [String(row.userId), row])
+    );
+
+    let sent = 0;
+    for (const user of users) {
+      if (!user?._id || isAttendanceExcluded(user)) continue;
+
+      const entry = attendanceByUserId.get(String(user._id));
+      if (entry?.onLeave) continue;
+      if (hasRecordedCheckOut(entry)) continue;
+
+      await createNotification({
+        recipientId: user._id,
+        title: 'Mark your check-out',
+        message: 'It is 6:30 PM — please mark your attendance check-out for today.',
+        category: 'attendance',
+        type: 'reminder',
+        actionUrl: '/attendance',
+        iconType: 'system',
+        sendEmail: false,
+      });
+      sent += 1;
+    }
+
+    logger.info('Attendance', `Checkout reminders sent to ${sent} users`, { dateKey, sent });
+  } catch (err) {
+    logger.error('Attendance', 'Error in sendAttendanceCheckoutReminders', {
+      error: err.message,
+      persist: true,
+      module: MODULE.SYSTEM,
+    });
+  } finally {
+    await releaseLock(lockKey);
+  }
+};
+
 const init = () => {
   logger.info('System', 'Initializing Reminder Service...');
   cron.schedule('* * * * *', () => {
     checkFollowups();
   });
+  cron.schedule('30 18 * * *', () => {
+    sendAttendanceCheckoutReminders();
+  }, { timezone: 'Asia/Kolkata' });
 };
 
-module.exports = { init, checkFollowups };
+module.exports = { init, checkFollowups, sendAttendanceCheckoutReminders };

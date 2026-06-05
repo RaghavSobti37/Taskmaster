@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
@@ -8,6 +8,11 @@ import BrandLogo from '../../components/brand/BrandLogo';
 import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
+import { markForceLogout } from '../../utils/authSession';
+import {
+  hasUsedLoginCookieRefresh,
+  markLoginCookieRefreshUsed,
+} from '../../utils/loginCookieRefresh';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -19,6 +24,8 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showCookieRefresh, setShowCookieRefresh] = useState(() => !hasUsedLoginCookieRefresh());
+  const [clearingCookies, setClearingCookies] = useState(false);
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -42,6 +49,20 @@ const LoginPage = () => {
 
   const handleGoogleLogin = () => {
     window.location.href = apiPath('/api/auth/google');
+  };
+
+  const handleClearCookies = async () => {
+    setClearingCookies(true);
+    setError('');
+    markLoginCookieRefreshUsed();
+    setShowCookieRefresh(false);
+    markForceLogout();
+    try {
+      await axios.post('/api/auth/logout', null, AXIOS_SKIP_TOAST);
+    } catch {
+      // HttpOnly cookies are cleared server-side when logout succeeds
+    }
+    window.location.reload();
   };
 
   const handleSubmit = async (e) => {
@@ -81,6 +102,24 @@ const LoginPage = () => {
           <div className="mb-4 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl font-medium animate-pulse flex items-center gap-2">
             <AlertCircle size={16} />
             <span>{error}</span>
+          </div>
+        )}
+
+        {showCookieRefresh && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-100 text-amber-900 text-sm rounded-xl">
+            <p className="font-medium mb-2">Having trouble signing in?</p>
+            <p className="text-xs text-amber-800/90 mb-3 leading-relaxed">
+              Clear old session cookies once if login fails after an update.
+            </p>
+            <button
+              type="button"
+              onClick={handleClearCookies}
+              disabled={clearingCookies}
+              className="w-full min-h-[40px] bg-amber-100 text-amber-950 py-2.5 rounded-lg font-semibold border border-amber-200 hover:bg-amber-200 disabled:opacity-60 transition-all flex items-center justify-center gap-2 touch-manipulation"
+            >
+              <RefreshCw size={16} className={clearingCookies ? 'animate-spin' : ''} />
+              {clearingCookies ? 'Clearing cookies...' : 'Clear session cookies'}
+            </button>
           </div>
         )}
 

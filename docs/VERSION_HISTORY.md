@@ -19,6 +19,10 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 **Deploy:** Redeploy API + client together. Set on Render: `JWT_EXPIRES_IN=7d`, `JWT_ABSOLUTE_MAX_DAYS=30`, `JWT_REFRESH_MINUTES=60`. All users must sign in once after deploy.
 
+#### Post-v1.0.1 — Attendance reminder & login cookie refresh
+- **6:30 PM IST check-out reminder:** `sendAttendanceCheckoutReminders` in `notificationService.js` — in-app + push to users without check-out; `actionUrl: /attendance`; weekends skipped; Redis lock per IST date.
+- **Login one-time cookie clear:** `LoginPage.jsx` + `loginCookieRefresh.js` — single-use **Clear session cookies** button; `POST /api/auth/logout` + reload.
+
 ---
 
 ### [2026-06-04] v1.0.0 — First stable release

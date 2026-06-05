@@ -8,8 +8,10 @@ const { applyPriorityDueDate } = require('../../shared/taskPriorityDates');
 const { getProjectRoleForUser } = require('../../shared/projectRoles');
 const {
   requiresReviewForUser,
+  needsReviewOnComplete,
   getReviewQueueAssignmentFilter,
   canUserApproveReview,
+  canUserApproveOrRollback,
   filterReviewQueueTasks,
   normalizeAssigneeIds,
   getAssignmentForUser,
@@ -21,6 +23,7 @@ const {
   REVIEW_DEFAULT_HOURS,
   REVIEW_LOG_LABEL,
 } = require('../../shared/taskReviewRules');
+const { resolvePlatformOwnerUser } = require('../utils/platformOwner');
 const { formatTimeSpent, MIN_COMPLETION_MINUTES } = require('../../shared/timeSpent');
 const { refreshAttendanceMetricsForUserDay } = require('../utils/refreshAttendanceMetrics');
 const { clampXpHours } = require('../../shared/gamificationRules');
@@ -163,23 +166,29 @@ const mapTaskDTO = (taskDoc) => {
 
 exports.mapTaskDTO = mapTaskDTO;
 
-const buildAssignmentsForUser = (taskId, assigneeIds, actingUserId, creatorId) => {
+const buildAssignmentsForUser = (taskId, assigneeIds, actingUserId, creatorId, previousAssignments = []) => {
   const creator = rulesNormalizeId(creatorId || actingUserId);
   const actor = actingUserId.toString();
+  const prevAssignerByUser = new Map(
+    (previousAssignments || []).map((a) => [
+      rulesAssignmentUserId(a),
+      assignmentAssignerId(a),
+    ]).filter(([uid]) => uid)
+  );
   return assigneeIds.map((userId) => {
     const uid = rulesNormalizeId(userId);
+    const preservedAssigner = prevAssignerByUser.get(uid);
     return {
       taskId,
       userId: uid,
-      assignedBy: uid === creator ? uid : actor,
+      assignedBy: preservedAssigner || (uid === creator ? uid : actor),
     };
   });
 };
 
-const getRaghavUserId = async () => {
-  const User = require('../models/User');
-  const raghav = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).select('_id').lean();
-  return raghav?._id?.toString() || null;
+const getPlatformOwnerUserId = async (session = null) => {
+  const owner = await resolvePlatformOwnerUser({ session, select: '_id' });
+  return owner?._id?.toString() || null;
 };
 
 const othersExcludeActorAndRaghav = (assigneeIds, actorId, raghavId) =>
@@ -483,8 +492,8 @@ exports.createTask = async (taskData, user, session) => {
   );
 
   const actorId = user._id.toString();
-  const raghavId = await getRaghavUserId();
-  const others = othersExcludeActorAndRaghav(assigneeIds, actorId, raghavId);
+  const platformOwnerId = await getPlatformOwnerUserId(session);
+  const others = othersExcludeActorAndRaghav(assigneeIds, actorId, platformOwnerId);
   const mentionOnlyAssign = others.length > 0 && others.every((id) => scopedMentionSet.has(id));
 
   if (others.length && project && !canAssignTasks(project, user) && !mentionOnlyAssign) {
@@ -639,9 +648,10 @@ exports.updateTask = async (taskId, updates, user, session) => {
   }
   const isSourceProjectMember = sourceProject && userHasProjectAccess(sourceProject, user._id);
 
+  const platformOwnerId = await getPlatformOwnerUserId(session);
   let isReviewer = false;
   if (reviewAction === 'approve' || reviewAction === 'rollback') {
-    isReviewer = canUserApproveReview(user, assignments);
+    isReviewer = canUserApproveOrRollback(user, assignments, { platformOwnerId });
     if (!isReviewer) {
       throw new Error('Only the person who assigned this task can approve or rollback');
     }
@@ -701,6 +711,8 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   }
 
+  const hasDelegatedWork = getDelegatedAssignments(assignments).length > 0;
+
   if (
     coreUpdates.status === 'done'
     && !reviewAction
@@ -711,8 +723,23 @@ exports.updateTask = async (taskId, updates, user, session) => {
     );
   }
 
+  if (
+    coreUpdates.status === 'done'
+    && !reviewAction
+    && hasDelegatedWork
+    && isCreator
+    && !isAssignee
+  ) {
+    throw new Error(
+      'This task must be completed by the assignee first. Approve it from the review queue when ready.'
+    );
+  }
+
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
-    const needsReview = requiresReviewForUser(assignments, user._id) || mentionOnly;
+    const needsReview = needsReviewOnComplete(assignments, user._id, {
+      mentionOnly,
+      taskCreatedBy: existing.createdBy,
+    });
     if (coreUpdates.status === 'done' && !reviewAction && needsReview) {
       coreUpdates.status = 'in-review';
     }
@@ -807,11 +834,9 @@ exports.updateTask = async (taskId, updates, user, session) => {
     let addingOthers = newAssignees.some((id) => id !== user._id.toString());
 
     if (addingOthers) {
-      const User = require('../models/User');
-      const raghav = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).select('_id').lean();
-      if (raghav) {
-        const raghavId = raghav._id.toString();
-        addingOthers = newAssignees.some((id) => id !== user._id.toString() && id !== raghavId);
+      const ownerId = await getPlatformOwnerUserId(session);
+      if (ownerId) {
+        addingOthers = newAssignees.some((id) => id !== user._id.toString() && id !== ownerId);
       }
     }
 
@@ -826,7 +851,13 @@ exports.updateTask = async (taskId, updates, user, session) => {
       await TaskAssignment.deleteMany({ taskId: task._id }, { session });
       let insertedAssignments = [];
       if (newAssignees.length > 0) {
-        insertedAssignments = buildAssignmentsForUser(task._id, newAssignees, user._id, creatorId);
+        insertedAssignments = buildAssignmentsForUser(
+          task._id,
+          newAssignees,
+          user._id,
+          creatorId,
+          assignments
+        );
         await TaskAssignment.insertMany(insertedAssignments, { session });
       }
       const TaskActivityService = require('./TaskActivityService');
@@ -960,7 +991,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (coreUpdates.status === 'done' && !reviewAction) {
-      if (!requiresReviewForUser(assignments, user._id) && !mentionOnly) {
+      if (!needsReviewOnComplete(assignments, user._id, { mentionOnly, taskCreatedBy: existing.createdBy })) {
         await finalizeTaskCompletion(task, user, session);
         await queueTaskCompletedGamification(user._id, task);
       }
@@ -1072,12 +1103,21 @@ const populateTaskQuery = () => Task.find()
   .populate(TASK_ASSIGNEE_POPULATE);
 
 exports.getReviewQueue = async (user) => {
-  const filter = getReviewQueueAssignmentFilter(user._id);
-  const delegated = await TaskAssignment.find(filter)
-    .select('taskId userId assignedBy')
-    .lean();
+  const platformOwnerId = await getPlatformOwnerUserId();
+  const isPlatformOwner = platformOwnerId && user._id.toString() === platformOwnerId;
 
-  const taskIds = [...new Set(delegated.map((a) => a.taskId))];
+  let taskIds = [];
+  if (isPlatformOwner) {
+    const inReview = await Task.find({ status: 'in-review' }).select('_id').lean();
+    taskIds = inReview.map((t) => t._id);
+  } else {
+    const filter = getReviewQueueAssignmentFilter(user._id);
+    const delegated = await TaskAssignment.find(filter)
+      .select('taskId userId assignedBy')
+      .lean();
+    taskIds = [...new Set(delegated.map((a) => a.taskId))];
+  }
+
   if (!taskIds.length) return [];
 
   const tasks = await populateTaskQuery()
@@ -1085,7 +1125,7 @@ exports.getReviewQueue = async (user) => {
     .lean({ virtuals: true });
 
   const mapped = tasks.map(mapTaskDTO);
-  return filterReviewQueueTasks(mapped, user, (task) => task.assignments || []);
+  return filterReviewQueueTasks(mapped, user, (task) => task.assignments || [], { platformOwnerId });
 };
 
 exports.getProjectRole = getProjectRole;

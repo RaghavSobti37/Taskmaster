@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const TaskService = require('../services/TaskService');
+const TaskAssignment = require('../models/TaskAssignment');
+const { resolvePlatformOwnerUser } = require('../utils/platformOwner');
 const { createNotification } = require('../services/notificationDispatcher');
 const logger = require('../utils/logger');
 const { isAdminUser } = require('../utils/departmentPermissions');
@@ -450,8 +452,7 @@ exports.reportBug = async (req, res, next) => {
     await session.withTransaction(async () => {
       const details = description?.trim() || '(No details provided)';
 
-      const User = require('../models/User');
-      const raghavUser = await User.findOne({ email: 'REDACTED_ADMIN@example.com' }).session(session) || req.user;
+      const platformOwner = await resolvePlatformOwnerUser({ session }) || req.user;
 
       let techProject = await Project.findOne({ name: /tech|maintenance/i }).session(session);
       if (!techProject) {
@@ -460,14 +461,14 @@ exports.reportBug = async (req, res, next) => {
           description: 'Core application infrastructure, bug tracking, and continuous refactoring pipeline.',
           status: 'active',
           outletId: 'coreknot',
-          owner: raghavUser._id,
-          members: [raghavUser._id],
-          memberRoles: [{ user: raghavUser._id, role: 'manager' }]
+          owner: platformOwner._id,
+          members: [platformOwner._id],
+          memberRoles: [{ user: platformOwner._id, role: 'manager' }]
         }], { session });
         techProject = techProject[0];
       }
 
-      techProject = await syncTechProjectMembers(techProject, raghavUser._id, session);
+      techProject = await syncTechProjectMembers(techProject, platformOwner._id, session);
 
       const taskData = {
         title: `[BUG] ${title} (${page || 'General'})`,
@@ -475,7 +476,7 @@ exports.reportBug = async (req, res, next) => {
         status: 'todo',
         priority: mapSeverityToPriority(severity),
         projectId: techProject._id,
-        assignees: [raghavUser._id.toString()],
+        assignees: [platformOwner._id.toString()],
         createdBy: req.user._id,
         dueDate: calculateBugDueDate(severity),
         scheduleSlot: mapSeverityToScheduleSlot(severity)
@@ -484,6 +485,28 @@ exports.reportBug = async (req, res, next) => {
       const result = await TaskService.createTask(taskData, req.user, session);
       taskDto = result.taskDto;
       pendingNotifications = result.pendingNotifications;
+
+      // Platform owner fixes bugs directly — self-assigned so completion does not route to reporter.
+      await TaskAssignment.deleteMany({ taskId: taskDto._id }).session(session);
+      await TaskAssignment.create([{
+        taskId: taskDto._id,
+        userId: platformOwner._id,
+        assignedBy: platformOwner._id,
+      }], { session });
+
+      if (platformOwner._id.toString() !== req.user._id.toString()) {
+        pendingNotifications.push({
+          recipientId: platformOwner._id,
+          title: 'Bug Reported',
+          message: `${req.user.name} reported: "${title.trim()}"`,
+          category: 'task',
+          type: 'alert',
+          relatedTaskId: taskDto._id,
+          relatedProjectId: techProject._id,
+          actorId: req.user._id,
+          iconType: 'user',
+        });
+      }
     });
 
     dispatchTaskNotifications(pendingNotifications);

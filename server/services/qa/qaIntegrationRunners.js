@@ -156,6 +156,216 @@ async function runReviewRollback(def, ctx) {
   return { ...probePass(def, 'Rollback cleared review daily logs'), artifacts: ctx.artifacts };
 }
 
+async function runReviewResubmitAfterRollback(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const taskId = await createDelegatedTask(def, ctx, pair.assigner, pair.assignee, project._id, 'Resubmit');
+  if (!taskId) return probeFail(def, 'Task create failed');
+
+  const firstDone = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assignee,
+    data: { status: 'done', actualHours: 1 },
+  });
+  const firstStatus = firstDone.data?.status || firstDone.data?.data?.status;
+  if (firstStatus !== 'in-review') {
+    return { ...probeFail(def, `First completion should be in-review, got ${firstStatus || firstDone.status}`), artifacts: ctx.artifacts };
+  }
+
+  const rollbackRes = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assigner,
+    data: { reviewAction: 'rollback' },
+  });
+  const rolledStatus = rollbackRes.data?.status || rollbackRes.data?.data?.status;
+  if (rolledStatus !== 'in-progress') {
+    return { ...probeFail(def, `Rollback should be in-progress, got ${rolledStatus || rollbackRes.status}`), artifacts: ctx.artifacts };
+  }
+
+  const secondDone = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assignee,
+    data: { status: 'done', actualHours: 2 },
+  });
+  const secondStatus = secondDone.data?.status || secondDone.data?.data?.status;
+  if (secondStatus === 'in-review') {
+    return { ...probePass(def, 'Assignee re-submit after rollback returned to in-review'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, `Re-submit should be in-review, got ${secondStatus || secondDone.status}`), artifacts: ctx.artifacts };
+}
+
+async function runReviewCreatorBypassBlocked(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const taskId = await createDelegatedTask(def, ctx, pair.assigner, pair.assignee, project._id, 'CreatorBypass');
+  if (!taskId) return probeFail(def, 'Task create failed');
+
+  const res = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assigner,
+    data: { status: 'done' },
+  });
+  if (res.status === 400 || res.status === 403) {
+    return { ...probePass(def, 'Creator/assigner blocked from direct done on delegated task'), artifacts: ctx.artifacts };
+  }
+  const status = res.data?.status || res.data?.data?.status;
+  if (status === 'done') {
+    return { ...probeFail(def, 'Creator marked delegated task done without assignee/review'), artifacts: ctx.artifacts };
+  }
+  return { ...probePass(def, `Delegated task not directly completable by assigner (${res.status})`), artifacts: ctx.artifacts };
+}
+
+async function resolvePlatformOwnerProbeUser() {
+  const { resolvePlatformOwnerUser } = require('../../utils/platformOwner');
+  const owner = await resolvePlatformOwnerUser({ select: '_id email name' });
+  if (owner) return owner;
+  const users = await resolveTestUsers();
+  return users.adminUser;
+}
+
+async function runReviewPlatformOwnerRollback(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  const platformOwner = await resolvePlatformOwnerProbeUser();
+  if (!pair || !project || !platformOwner) return skipProbeResult(def, 'Need users + project + platform owner');
+
+  const taskId = await createDelegatedTask(def, ctx, pair.assigner, pair.assignee, project._id, 'OwnerRollback');
+  if (!taskId) return probeFail(def, 'Task create failed');
+
+  await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assignee,
+    data: { status: 'done', actualHours: 1 },
+  });
+
+  const rollbackRes = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: platformOwner,
+    data: { reviewAction: 'rollback' },
+  });
+  const status = rollbackRes.data?.status || rollbackRes.data?.data?.status;
+  if (status === 'in-progress') {
+    return { ...probePass(def, 'Platform owner rolled back in-review task they did not assign'), artifacts: ctx.artifacts };
+  }
+  if (rollbackRes.status === 403 || rollbackRes.status === 400) {
+    return { ...probeFail(def, `Platform owner rollback denied (${rollbackRes.status})`), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, `Expected in-progress after owner rollback, got ${status || rollbackRes.status}`), artifacts: ctx.artifacts };
+}
+
+async function runReviewPreserveAssigner(def, ctx) {
+  const pair = await distinctUsers();
+  const project = await pickProject();
+  if (!pair || !project) return skipProbeResult(def, 'Need users + project');
+
+  const taskId = await createDelegatedTask(def, ctx, pair.assigner, pair.assignee, project._id, 'PreserveAssigner');
+  if (!taskId) return probeFail(def, 'Task create failed');
+
+  const updateRes = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: pair.assignee,
+    data: {
+      title: `QA Preserve ${Date.now()}`,
+      assignees: [pair.assignee._id.toString()],
+    },
+  });
+  if (updateRes.status >= 400) {
+    return { ...probeFail(def, `Assignee update failed (${updateRes.status})`), artifacts: ctx.artifacts };
+  }
+
+  const row = await TaskAssignment.findOne({ taskId }).lean();
+  if (!row) return { ...probeFail(def, 'No TaskAssignment row after update'), artifacts: ctx.artifacts };
+  if (row.assignedBy.toString() === pair.assigner._id.toString()) {
+    return { ...probePass(def, 'Assignee edit preserved original assigner for review routing'), artifacts: ctx.artifacts };
+  }
+  return {
+    ...probeFail(def, `assignedBy changed to ${row.assignedBy} (expected ${pair.assigner._id})`),
+    artifacts: ctx.artifacts,
+  };
+}
+
+async function runBugPlatformOwnerAssign(def, ctx) {
+  const { adminUser } = await resolveTestUsers();
+  const platformOwner = await resolvePlatformOwnerProbeUser();
+  if (!adminUser || !platformOwner) return skipProbeResult(def, 'Need admin + platform owner users');
+
+  const res = await request(def, {
+    method: 'POST',
+    url: '/api/tasks/bug',
+    user: adminUser,
+    data: {
+      title: `QA owner assign ${Date.now()}`,
+      page: 'QATesting',
+      description: 'Automated probe',
+      severity: 'low',
+    },
+  });
+  const taskId = extractId(res);
+  if (!taskId) return probeFail(def, `Bug report failed (${res.status})`);
+  track(ctx, 'task', taskId);
+
+  const row = await TaskAssignment.findOne({ taskId }).lean();
+  if (!row) return { ...probeFail(def, 'Bug task missing TaskAssignment'), artifacts: ctx.artifacts };
+  const ownerId = platformOwner._id.toString();
+  if (
+    row.userId.toString() === ownerId
+    && row.assignedBy.toString() === ownerId
+  ) {
+    return { ...probePass(def, 'Bug auto-assigned to platform owner (self-work)'), artifacts: ctx.artifacts };
+  }
+  return {
+    ...probeFail(def, `Bug assignment user=${row.userId} assigner=${row.assignedBy} expected owner=${ownerId}`),
+    artifacts: ctx.artifacts,
+  };
+}
+
+async function runBugOwnerDirectComplete(def, ctx) {
+  const { adminUser } = await resolveTestUsers();
+  const platformOwner = await resolvePlatformOwnerProbeUser();
+  if (!adminUser || !platformOwner) return skipProbeResult(def, 'Need admin + platform owner users');
+
+  const res = await request(def, {
+    method: 'POST',
+    url: '/api/tasks/bug',
+    user: adminUser,
+    data: {
+      title: `QA owner complete ${Date.now()}`,
+      page: 'QATesting',
+      description: 'Automated probe',
+      severity: 'low',
+    },
+  });
+  const taskId = extractId(res);
+  if (!taskId) return probeFail(def, `Bug report failed (${res.status})`);
+  track(ctx, 'task', taskId);
+
+  const doneRes = await request(def, {
+    method: 'PUT',
+    url: `/api/tasks/${taskId}`,
+    user: platformOwner,
+    data: { status: 'done', actualHours: 0.5 },
+  });
+  const status = doneRes.data?.status || doneRes.data?.data?.status;
+  if (status === 'done') {
+    return { ...probePass(def, 'Platform owner marked bug done without reporter review'), artifacts: ctx.artifacts };
+  }
+  if (status === 'in-review') {
+    return { ...probeFail(def, 'Bug completion routed to review (expected direct done for owner)'), artifacts: ctx.artifacts };
+  }
+  return { ...probeFail(def, `Unexpected bug completion status ${status || doneRes.status}`), artifacts: ctx.artifacts };
+}
+
 async function runInvoiceSubmitPending(def, ctx) {
   const { opsUser } = await resolveTestUsers();
   const res = await request(def, {
@@ -1006,6 +1216,12 @@ async function runQaExcludedNoNotify(def, ctx) {
 
 const PLANNED_INTEGRATION_DEFS = [
   { id: 'sm-review-rollback', title: 'Assigner rolls back task from in-review', sev: 'high', category: 'business-logic' },
+  { id: 'sm-review-resubmit', title: 'Assignee re-submit after rollback returns to in-review', sev: 'critical', category: 'business-logic' },
+  { id: 'sm-review-creator-bypass-blocked', title: 'Creator blocked from direct done on delegated task', sev: 'high', category: 'business-logic' },
+  { id: 'sm-review-platform-owner-rollback', title: 'Platform owner can rollback in-review task', sev: 'high', category: 'business-logic' },
+  { id: 'sm-review-preserve-assigner', title: 'Assignee edit preserves original assigner', sev: 'high', category: 'business-logic' },
+  { id: 'int-bug-platform-owner-assign', title: 'Bug report auto-assigns platform owner', sev: 'high', category: 'business-logic' },
+  { id: 'int-bug-owner-direct-complete', title: 'Platform owner marks bug done without review', sev: 'high', category: 'business-logic' },
   { id: 'sm-invoice-submit-pending', title: 'Invoice submission sets approvalStatus=pending', sev: 'high', category: 'business-logic' },
   { id: 'sm-invoice-reject-reason', title: 'Invoice rejection stores reason field', sev: 'medium', category: 'business-logic' },
   { id: 'sm-project-complete-count', title: 'Task completion increments completedTaskCount', sev: 'high', category: 'business-logic' },
@@ -1048,6 +1264,12 @@ const PLANNED_INTEGRATION_DEFS = [
 
 const PLANNED_RUNNERS = {
   'sm-review-rollback': runReviewRollback,
+  'sm-review-resubmit': runReviewResubmitAfterRollback,
+  'sm-review-creator-bypass-blocked': runReviewCreatorBypassBlocked,
+  'sm-review-platform-owner-rollback': runReviewPlatformOwnerRollback,
+  'sm-review-preserve-assigner': runReviewPreserveAssigner,
+  'int-bug-platform-owner-assign': runBugPlatformOwnerAssign,
+  'int-bug-owner-direct-complete': runBugOwnerDirectComplete,
   'sm-invoice-submit-pending': runInvoiceSubmitPending,
   'sm-invoice-reject-reason': runInvoiceRejectReason,
   'sm-project-complete-count': runProjectCompleteCount,

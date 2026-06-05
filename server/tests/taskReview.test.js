@@ -1,0 +1,151 @@
+const Task = require('../models/Task');
+const TaskAssignment = require('../models/TaskAssignment');
+const User = require('../models/User');
+const TaskService = require('../services/TaskService');
+const {
+  needsReviewOnComplete,
+  canUserApproveOrRollback,
+} = require('../../shared/taskReviewRules');
+
+describe('task review workflow', () => {
+  let creator;
+  let assignee;
+  let platformOwner;
+
+  beforeEach(async () => {
+    creator = await User.create({ name: 'Creator', email: 'creator-review@test.com' });
+    assignee = await User.create({ name: 'Assignee', email: 'assignee-review@test.com' });
+    platformOwner = await User.create({
+      name: 'Platform Owner',
+      email: 'platform-owner-review@test.com',
+    });
+    process.env.PLATFORM_OWNER_USER_ID = platformOwner._id.toString();
+  });
+
+  test('delegated assignment requires review on complete', () => {
+    const assignments = [{ userId: assignee._id, assignedBy: creator._id }];
+    expect(
+      needsReviewOnComplete(assignments, assignee._id, { taskCreatedBy: creator._id })
+    ).toBe(true);
+  });
+
+  test('self-assigned bug assignee skips review even when reporter created task', () => {
+    const assignments = [{ userId: platformOwner._id, assignedBy: platformOwner._id }];
+    expect(
+      needsReviewOnComplete(assignments, platformOwner._id, { taskCreatedBy: creator._id })
+    ).toBe(false);
+  });
+
+  test('assignee re-submit after rollback routes back to in-review', async () => {
+    const task = await Task.create({
+      title: 'Delegated work',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(
+      task._id,
+      { status: 'done', actualHours: 1 },
+      assignee,
+      null
+    );
+
+    let updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-review');
+
+    await TaskService.updateTask(
+      task._id,
+      { reviewAction: 'rollback' },
+      creator,
+      null
+    );
+
+    updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-progress');
+
+    await TaskService.updateTask(
+      task._id,
+      { status: 'done', actualHours: 2 },
+      assignee,
+      null
+    );
+
+    updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-review');
+  });
+
+  test('creator cannot mark delegated task done directly', async () => {
+    const task = await Task.create({
+      title: 'Creator bypass',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await expect(
+      TaskService.updateTask(task._id, { status: 'done' }, creator, null)
+    ).rejects.toThrow(/assignee first/i);
+  });
+
+  test('assignee list edits preserve original assigner for review routing', async () => {
+    const task = await Task.create({
+      title: 'Preserve assigner',
+      createdBy: creator._id,
+      status: 'in-progress',
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(
+      task._id,
+      { assignees: [assignee._id.toString()], title: 'Preserve assigner v2' },
+      assignee,
+      null
+    );
+
+    const row = await TaskAssignment.findOne({ taskId: task._id }).lean();
+    expect(row.assignedBy.toString()).toBe(creator._id.toString());
+  });
+
+  test('platform owner can rollback in-review task they did not assign', async () => {
+    const task = await Task.create({
+      title: 'Owner rollback',
+      createdBy: creator._id,
+      status: 'in-review',
+    });
+    const assignments = [{
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    }];
+    await TaskAssignment.create(assignments);
+
+    expect(
+      canUserApproveOrRollback(platformOwner, assignments, {
+        platformOwnerId: platformOwner._id.toString(),
+      })
+    ).toBe(true);
+
+    await TaskService.updateTask(
+      task._id,
+      { reviewAction: 'rollback' },
+      platformOwner,
+      null
+    );
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-progress');
+  });
+});

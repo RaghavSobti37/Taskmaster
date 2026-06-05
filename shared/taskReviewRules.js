@@ -43,10 +43,15 @@ const getReviewQueueAssignmentFilter = (userId) => {
 };
 
 /** Drop self-review rows and tasks the viewer cannot approve. */
-const filterReviewQueueTasks = (tasks, user, getAssignments = (t) => t?.assignments || t?.assignees || []) =>
+const filterReviewQueueTasks = (
+  tasks,
+  user,
+  getAssignments = (t) => t?.assignments || t?.assignees || [],
+  { platformOwnerId } = {}
+) =>
   (tasks || []).filter((task) => {
     const assignments = getAssignments(task);
-    return canUserApproveReview(user, assignments);
+    return canUserApproveOrRollback(user, assignments, { platformOwnerId });
   });
 
 /** Reviewer may approve if they assigned at least one delegated assignee on an in-review task. */
@@ -56,6 +61,34 @@ const canUserApproveReview = (user, assignments) => {
   return getDelegatedAssignments(assignments).some(
     (a) => assignmentAssignerId(a) === uid
   );
+};
+
+/** Platform owner may approve/rollback any in-review delegated task. */
+const canUserApproveOrRollback = (user, assignments, { platformOwnerId } = {}) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return false;
+  if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  return canUserApproveReview(user, assignments);
+};
+
+/**
+ * True when this user's completion must route through review.
+ * Covers corrupted assignment rows (assigner reset on edit) when task still has delegated work.
+ */
+const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy = null } = {}) => {
+  if (mentionOnly) return true;
+  const uid = normalizeId(userId);
+  if (!uid) return false;
+  const mine = getAssignmentForUser(assignments, uid);
+  if (!mine) return false;
+  if (assignmentAssignerId(mine) === uid) {
+    return false;
+  }
+  if (requiresReviewForUser(assignments, uid)) return true;
+  const delegated = getDelegatedAssignments(assignments);
+  if (delegated.length > 0 && !canUserApproveReview({ _id: uid }, assignments)) return true;
+  if (taskCreatedBy && normalizeId(taskCreatedBy) !== uid) return true;
+  return false;
 };
 
 /** Task has no delegated assignees — self-work only; should never stay in-review. */
@@ -97,10 +130,12 @@ module.exports = {
   isDelegatedAssignment,
   getAssignmentForUser,
   requiresReviewForUser,
+  needsReviewOnComplete,
   getDelegatedAssignments,
   getReviewQueueAssignmentFilter,
   filterReviewQueueTasks,
   canUserApproveReview,
+  canUserApproveOrRollback,
   isSelfWorkOnlyTask,
   mergeAssigneeIdsWithCreator,
   normalizeAssigneeIds,

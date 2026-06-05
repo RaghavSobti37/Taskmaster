@@ -1081,8 +1081,14 @@ async function runBusinessLogicChecks() {
     makeCheck(
       'biz-task-review-flow',
       'business-logic',
-      'Task review workflow (in-review → done)',
-      taskSvc && taskSvc.includes("'in-review'") && taskSvc.includes('REVIEW_APPROVED') ? 'pass' : 'fail',
+      'Task review workflow (in-review → done, rollback re-submit)',
+      taskSvc &&
+        taskSvc.includes("'in-review'") &&
+        taskSvc.includes('REVIEW_APPROVED') &&
+        taskSvc.includes('needsReviewOnComplete') &&
+        taskSvc.includes('canUserApproveOrRollback')
+        ? 'pass'
+        : 'fail',
       'TaskService gates status transitions and review approval XP',
       'services/TaskService.js',
       'high'

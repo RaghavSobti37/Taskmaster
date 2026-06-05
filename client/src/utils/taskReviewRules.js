@@ -43,6 +43,27 @@ export const canUserApproveReview = (user, assignments) => {
   );
 };
 
+export const canUserApproveOrRollback = (user, assignments, { platformOwnerId } = {}) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return false;
+  if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  return canUserApproveReview(user, assignments);
+};
+
+export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy = null } = {}) => {
+  if (mentionOnly) return true;
+  const uid = normalizeId(userId);
+  if (!uid) return false;
+  const mine = getAssignmentForUser(assignments, uid);
+  if (!mine) return false;
+  if (assignmentAssignerId(mine) === uid) return false;
+  if (requiresReviewForUser(assignments, uid)) return true;
+  const delegated = getDelegatedAssignments(assignments);
+  if (delegated.length > 0 && !canUserApproveReview({ _id: uid }, assignments)) return true;
+  if (taskCreatedBy && normalizeId(taskCreatedBy) !== uid) return true;
+  return false;
+};
+
 export const normalizeAssigneeIds = (assigneeIds, creatorId) => {
   const creator = normalizeId(creatorId);
   return [...new Set((assigneeIds || []).map((id) => normalizeId(id)).filter(Boolean))]
@@ -52,7 +73,7 @@ export const normalizeAssigneeIds = (assigneeIds, creatorId) => {
 /** @deprecated Use normalizeAssigneeIds */
 export const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => normalizeAssigneeIds(assigneeIds, creatorId);
 
-export const filterReviewQueueTasks = (tasks, user, getAssignments) => {
+export const filterReviewQueueTasks = (tasks, user, getAssignments, { platformOwnerId } = {}) => {
   const uid = normalizeId(user?._id || user);
   if (!uid) return [];
   return (tasks || []).filter((task) => {
@@ -60,6 +81,6 @@ export const filterReviewQueueTasks = (tasks, user, getAssignments) => {
     const assignments = Array.isArray(raw)
       ? raw.map((a) => (typeof a === 'object' && a?.userId ? a : { userId: a, assignedBy: task?.assignedBy || task?.createdBy }))
       : [];
-    return canUserApproveReview(user, assignments);
+    return canUserApproveOrRollback(user, assignments, { platformOwnerId });
   });
 };

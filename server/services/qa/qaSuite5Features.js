@@ -6,6 +6,8 @@ const { makeCheck, readText, readRepoText } = require('./qaCheckUtils');
 async function runSuite5FeatureChecks() {
   const checks = [];
   const taskRoutes = await readText('routes/taskRoutes.js');
+  const taskSvc = await readText('services/TaskService.js');
+  const taskCtrl = await readText('controllers/taskController.js');
   const taskActivitySvc = await readText('services/TaskActivityService.js');
   const taskActivityModel = await readText('models/TaskActivity.js');
   const mentionReceipt = await readText('models/TaskMentionReceipt.js');
@@ -95,6 +97,45 @@ async function runSuite5FeatureChecks() {
       'Delegated completion uses shared review rules',
       'shared/taskReviewRules.js',
       'critical'
+    ),
+    makeCheck(
+      'feat-review-resubmit-routing',
+      'business-logic',
+      'needsReviewOnComplete + canUserApproveOrRollback in shared rules',
+      taskReviewShared &&
+        taskReviewShared.includes('needsReviewOnComplete') &&
+        taskReviewShared.includes('canUserApproveOrRollback')
+        ? 'pass'
+        : 'fail',
+      'Re-submit after rollback and platform-owner rollback use shared review helpers',
+      'shared/taskReviewRules.js',
+      'critical'
+    ),
+    makeCheck(
+      'feat-review-preserve-assigner',
+      'business-logic',
+      'TaskService buildAssignmentsForUser preserves assignedBy on edit',
+      taskSvc &&
+        taskSvc.includes('prevAssignerByUser') &&
+        taskSvc.includes('previousAssignments')
+        ? 'pass'
+        : 'fail',
+      'Assignee list edits keep original reviewer chain',
+      'services/TaskService.js',
+      'high'
+    ),
+    makeCheck(
+      'feat-bug-platform-owner',
+      'business-logic',
+      'Bug report resolves platform owner via resolvePlatformOwnerUser',
+      taskCtrl &&
+        taskCtrl.includes('resolvePlatformOwnerUser') &&
+        taskCtrl.includes('Bug Reported')
+        ? 'pass'
+        : 'fail',
+      'Bug tasks auto-assign to platform owner with notification',
+      'controllers/taskController.js',
+      'high'
     ),
     makeCheck(
       'feat-thread-mention-notify',

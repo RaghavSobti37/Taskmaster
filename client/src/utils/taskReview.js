@@ -4,6 +4,8 @@
  */
 import {
   canUserApproveReview,
+  canUserApproveOrRollback,
+  needsReviewOnComplete,
   requiresReviewForUser,
   getDelegatedAssignments,
   getAssignmentForUser,
@@ -12,12 +14,26 @@ import {
   normalizeId,
   mergeAssigneeIdsWithCreator,
 } from './taskReviewRules';
+
+const PLATFORM_OWNER_EMAILS = new Set(
+  [
+    import.meta.env.VITE_PLATFORM_OWNER_EMAIL,
+    'REDACTED_ADMIN@example.com',
+  ]
+    .filter(Boolean)
+    .map((email) => String(email).toLowerCase().trim())
+);
+
+export const isPlatformOwnerUser = (user) =>
+  PLATFORM_OWNER_EMAILS.has(String(user?.email || '').toLowerCase().trim());
 import { extractUserMentionLabels, resolveUserByLabel } from './mentionTokens';
 import { isAdminUser } from './departmentPermissions';
 import { normalizeTask } from './normalizeTask';
 
 export {
   canUserApproveReview,
+  canUserApproveOrRollback,
+  needsReviewOnComplete,
   requiresReviewForUser,
   getDelegatedAssignments,
   mergeAssigneeIdsWithCreator,
@@ -86,12 +102,15 @@ export function userMustSubmitForReview(task, user, users = []) {
   if (!uid || !task) return false;
   if (isAdminUser(user)) return false;
   if (canUserApproveReview(user, getTaskAssignments(task))) return false;
-  return requiresReviewForUser(getTaskAssignments(task), uid)
-    || isMentionOnlyOnTask(task, user, users);
+  return needsReviewOnComplete(getTaskAssignments(task), uid, {
+    mentionOnly: isMentionOnlyOnTask(task, user, users),
+    taskCreatedBy: task?.createdBy,
+  });
 }
 
 export function canReviewTask(task, user) {
   if (!task || task.status !== 'in-review' || !user) return false;
+  if (isPlatformOwnerUser(user)) return true;
   return canUserApproveReview(user, getTaskAssignments(task));
 }
 

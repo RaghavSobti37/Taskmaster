@@ -17,7 +17,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.render') });
 
 const API_BASE = 'https://api.render.com/v1';
-const DEFAULT_SERVICE_HOST = 'YOUR-RENDER-SERVICE.onrender.com';
+const DEFAULT_SERVICE_HOST = 'taskmaster' + '-jfw0' + '.onrender.com';
 
 const apiKey = (process.env.RENDER_API_KEY || '').trim();
 const shouldDeploy = process.argv.includes('--deploy');

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const logger = require('./logger');
-const { sessionMetaFromRequest } = require('./sessionRequestMeta');
+const { sessionMetaFromRequest, pickSessionIp, formatSessionIp } = require('./sessionRequestMeta');
 const { absoluteMaxMs, establishSession } = require('./authSession');
 
 const SESSION_PREFIX = 'sessions:user:';
@@ -111,7 +111,7 @@ const listUserSessions = async (userId, currentJti = null) => {
     .map((s) => ({
       jti: s.jti,
       label: s.label,
-      ip: s.ip,
+      ip: formatSessionIp(s.ip),
       createdAt: s.createdAt,
       lastSeenAt: s.lastSeenAt,
       current: currentJti ? s.jti === currentJti : false,
@@ -148,7 +148,7 @@ const ensureSession = async (req, userId, decoded) => {
   return true;
 };
 
-const touchSession = async (userId, jti) => {
+const touchSession = async (userId, jti, req = null) => {
   if (!userId || !jti) return;
   const touchKey = `${userId}:${jti}`;
   const now = Date.now();
@@ -161,6 +161,11 @@ const touchSession = async (userId, jti) => {
   const idx = list.findIndex((s) => s.jti === jti);
   if (idx < 0) return;
   list[idx].lastSeenAt = new Date().toISOString();
+  if (req) {
+    const meta = sessionMetaFromRequest(req);
+    list[idx].ip = pickSessionIp(list[idx].ip, meta.ip);
+    if (meta.label) list[idx].label = meta.label;
+  }
   const saved = await redisSave(userId, list[idx]);
   if (!saved) writeMemory(userId, list);
 };

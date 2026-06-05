@@ -25,6 +25,7 @@ const NAV_SLOTS = [
     to: '/dashboard',
     icon: LayoutDashboard,
     label: 'Home',
+    tourId: 'nav-home',
     match: (path) => path === '/dashboard' || path === '/',
   },
   {
@@ -33,18 +34,20 @@ const NAV_SLOTS = [
     to: '/todo',
     icon: ListTodo,
     label: 'Tasks',
+    tourId: 'nav-tasks',
     match: (path) => path.startsWith('/todo'),
   },
-  { key: 'add', type: 'action', action: 'add', icon: Plus, label: 'Add' },
+  { key: 'add', type: 'action', action: 'add', icon: Plus, label: 'Add', tourId: 'nav-add' },
   {
     key: 'inbox',
     type: 'route',
     to: '/inbox',
     icon: Inbox,
     label: 'Inbox',
+    tourId: 'nav-inbox',
     match: (path) => path.startsWith('/inbox'),
   },
-  { key: 'you', type: 'action', action: 'profile', label: 'You' },
+  { key: 'you', type: 'action', action: 'profile', label: 'You', tourId: 'nav-profile' },
 ];
 
 function resolveRouteSlotIndex(pathname) {
@@ -80,6 +83,7 @@ function BottomNavSlot({
       ref={slotRef}
       type="button"
       onClick={onSelect}
+      data-tour={slot.tourId || undefined}
       className="relative z-[1] flex flex-1 min-w-0 justify-center touch-manipulation"
       aria-label={slot.label}
       aria-current={slot.type === 'route' && isHighlighted ? 'page' : undefined}
@@ -216,6 +220,7 @@ const BottomNavigation = () => {
         className="fixed left-3 right-3 z-[55] mx-auto max-w-lg lg:hidden"
         style={{ bottom: NAV_FLOAT_BOTTOM }}
         aria-label="Primary"
+        data-tour="bottom-nav"
       >
         <div className="rounded-full border border-white/10 bg-[#1a1a1a]/95 px-1.5 py-[5px] shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
           <LayoutGroup id="bottom-nav">

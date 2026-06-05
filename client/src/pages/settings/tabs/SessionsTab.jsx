@@ -133,9 +133,11 @@ const SessionsTab = () => {
                   <p className="text-xs text-[var(--color-text-muted)] mt-1">
                     Last active <RelativeTimestamp value={session.lastSeenAt} />
                   </p>
-                  {session.ip && session.ip !== 'unknown' && (
+                  {session.ip ? (
                     <p className="text-xs text-[var(--color-text-muted)]">IP {session.ip}</p>
-                  )}
+                  ) : session.current ? (
+                    <p className="text-xs text-[var(--color-text-muted)]">Local device</p>
+                  ) : null}
                 </div>
               </div>
               <Button

@@ -1,0 +1,295 @@
+/** Spotlight tour steps — selectors use data-tour attributes in the shell. */
+
+export const TOUR_ATTR_BY_PATH = {
+  '/dashboard': 'nav-dashboard',
+  '/todo': 'nav-todo',
+  '/inbox': 'nav-inbox',
+  '/projects': 'nav-projects',
+  '/attendance': 'nav-attendance',
+  '/calendar': 'nav-calendar',
+  '/logs': 'nav-logs',
+  '/notes': 'nav-notes',
+  '/assets': 'nav-assets',
+  '/schedule': 'nav-schedule',
+  '/emails': 'nav-emails',
+  '/crm': 'nav-crm',
+  '/office': 'nav-office',
+  '/management': 'nav-management',
+  '/admin/console': 'nav-admin',
+};
+
+/** Drop steps whose DOM target is missing (permission-gated nav, etc.). */
+export function getVisibleOnboardingSteps(isMobile) {
+  const steps = getOnboardingSteps(isMobile);
+  if (typeof document === 'undefined') return steps;
+  return steps.filter((step) => !step.target || document.querySelector(step.target));
+}
+
+export function getOnboardingSteps(isMobile) {
+  if (isMobile) {
+    return [
+      {
+        id: 'welcome',
+        target: null,
+        title: 'Welcome to CoreKnot',
+        body: 'CoreKnot is TSC\'s work hub — projects, tasks, CRM, attendance, email campaigns, and team ops in one place. This tour walks through every major area.',
+        placement: 'center',
+      },
+      {
+        id: 'bottom-nav',
+        target: '[data-tour="bottom-nav"]',
+        title: 'Mobile navigation',
+        body: 'Five quick tabs: Home (dashboard), Tasks, Quick add (+), Inbox, and You (profile & more pages). Green badges show counts that need attention.',
+        placement: 'top',
+      },
+      {
+        id: 'home',
+        target: '[data-tour="nav-home"]',
+        title: 'Dashboard',
+        body: 'Your daily command center — today\'s tasks, overdue items, weekly XP leaderboard, pin board, announcements, and clock-in/out. Open Home anytime to reset context.',
+        placement: 'top',
+      },
+      {
+        id: 'tasks',
+        target: '[data-tour="nav-tasks"]',
+        title: 'Tasks & Todo',
+        body: 'Your personal task list with Today, Overdue, and In Review filters. TSC uses strict peer review — tasks move through assign → review → done. Badge shows open items.',
+        placement: 'top',
+      },
+      {
+        id: 'quick-add',
+        target: '[data-tour="nav-add"]',
+        title: 'Quick add (+)',
+        body: 'Create a task, daily log, note, calendar event, team pin, asset link, or bug report without leaving your screen. Fastest way to capture work on the go.',
+        placement: 'top',
+      },
+      {
+        id: 'inbox',
+        target: '[data-tour="nav-inbox"]',
+        title: 'Inbox & notifications',
+        body: 'Review requests, @mentions, assignment alerts, and system messages land here. Enable push notifications in Settings for alerts when the app is closed.',
+        placement: 'top',
+      },
+      {
+        id: 'profile',
+        target: '[data-tour="nav-profile"]',
+        title: 'You — profile & full menu',
+        body: 'Tap You to open your profile sheet — Settings, Projects, Attendance, Calendar, CRM, Management hubs, theme toggle, and sign out. Pages not in the bottom bar live here.',
+        placement: 'top',
+      },
+      {
+        id: 'workspace',
+        target: '[data-tour="main-content"]',
+        title: 'Page workspace',
+        body: 'Every page renders here — dashboards, project boards, CRM tables, finance uploads, and detail views. Scroll within widgets; the bottom bar stays fixed.',
+        placement: 'bottom',
+      },
+      {
+        id: 'more-pages',
+        target: null,
+        title: 'Projects, CRM & more',
+        body: 'Tap You → full menu for Projects, Attendance, Calendar, Daily Logs, Notes, Assets, Emails, CRM (leads & bookings), People & Office, and Management hubs. Items match your department access.',
+        placement: 'center',
+      },
+      {
+        id: 'attendance-mobile',
+        target: null,
+        title: 'Attendance',
+        body: 'Clock in/out for Office or WFH from Dashboard or Attendance page. Worked time syncs with daily logs. Green TIME IN button on the dashboard when you have not checked in today.',
+        placement: 'center',
+      },
+      {
+        id: 'emails-mobile',
+        target: null,
+        title: 'Email campaigns',
+        body: 'Open Emails from the You menu — build campaigns, use templates, and track opens/clicks. Best composed on desktop; stats and activity stream work on mobile.',
+        placement: 'center',
+      },
+      {
+        id: 'notifications',
+        target: null,
+        title: 'Stay in the loop',
+        body: 'Turn on browser or push notifications from Settings → Notifications. Inbox badges and the mobile install flow help you catch reviews and mentions quickly.',
+        placement: 'center',
+      },
+      {
+        id: 'install',
+        target: null,
+        title: 'Install the app',
+        body: 'Add CoreKnot to your home screen for full-screen mode and push alerts. Tap Install CoreKnot app on the login page for step-by-step instructions for your device.',
+        placement: 'center',
+      },
+    ];
+  }
+
+  return [
+    {
+      id: 'welcome',
+      target: null,
+      title: 'Welcome to CoreKnot',
+      body: 'CoreKnot is TSC\'s unified operations platform — project governance, CRM, attendance, finance docs, email campaigns, gamification, and admin tooling. This tour covers the full product map.',
+      placement: 'center',
+    },
+    {
+      id: 'sidebar',
+      target: '[data-tour="sidebar-nav"]',
+      title: 'Sidebar navigation',
+      body: 'Primary pages up top, Tools in the middle, and module hubs (CRM, Office, Management, Admin) below. Collapse with the arrow for more workspace width. Your layout respects department permissions.',
+      placement: 'right',
+    },
+    {
+      id: 'dashboard',
+      target: '[data-tour="nav-dashboard"]',
+      title: 'Dashboard',
+      body: 'Customizable widget grid — today\'s tasks, overdue queue, review backlog, weekly XP leaderboard, pin board, announcements, and attendance. Widgets adapt to your role preset.',
+      placement: 'right',
+    },
+    {
+      id: 'projects',
+      target: '[data-tour="nav-projects"]',
+      title: 'Projects & workspaces',
+      body: 'Organize work by workspace then project. Kanban, list, and detail views with strict peer-review governance, role ranks, and @mentions on tasks and assets.',
+      placement: 'right',
+    },
+    {
+      id: 'todo',
+      target: '[data-tour="nav-todo"]',
+      title: 'Todo & task reviews',
+      body: 'Your cross-project task inbox — filter by Today, Overdue, or In Review. Rose badges mean overdue; amber dots mean due today. Complete work only after reviewer approval when required.',
+      placement: 'right',
+    },
+    {
+      id: 'inbox',
+      target: '[data-tour="nav-inbox"]',
+      title: 'Inbox',
+      body: 'Central feed for review requests, mentions, assignments, and system alerts. Process inbox daily so nothing blocks a teammate\'s workflow.',
+      placement: 'right',
+    },
+    {
+      id: 'attendance',
+      target: '[data-tour="nav-attendance"]',
+      title: 'Attendance',
+      body: 'Clock in/out for Office or WFH with IP-aware office detection. Worked minutes reconcile against daily logs; admins audit team presence and unlogged time.',
+      placement: 'right',
+    },
+    {
+      id: 'calendar',
+      target: '[data-tour="nav-calendar"]',
+      title: 'Calendar',
+      body: 'Team and personal events — syncs with Google Calendar when linked. Create events from Quick add (+) or open Calendar for month/week views.',
+      placement: 'right',
+    },
+    {
+      id: 'logs',
+      target: '[data-tour="nav-logs"]',
+      title: 'Daily logs',
+      body: 'Log what you worked on each day — ties into attendance reconciliation and project reporting. Quick add → Daily Log captures entries in seconds.',
+      placement: 'right',
+    },
+    {
+      id: 'notes',
+      target: '[data-tour="nav-notes"]',
+      title: 'Notes',
+      body: 'Personal and shared rich-text notes — great for meeting minutes, specs, and scratch pads. Searchable from the command palette.',
+      placement: 'right',
+    },
+    {
+      id: 'assets',
+      target: '[data-tour="nav-assets"]',
+      title: 'Assets library',
+      body: 'Store links and files your team references — brand assets, docs, drive folders. Attach assets to tasks with #asset mentions.',
+      placement: 'right',
+    },
+    {
+      id: 'schedule',
+      target: '[data-tour="nav-schedule"]',
+      title: 'Schedule',
+      body: 'Production and team scheduling grid — see who is on what and when. Best on desktop; phone shows summary stats with full grid at larger breakpoints.',
+      placement: 'right',
+    },
+    {
+      id: 'emails',
+      target: '[data-tour="nav-emails"]',
+      title: 'Email campaigns',
+      body: 'Design campaigns, manage templates and sender profiles, track opens/clicks with geo resolution, and view per-recipient activity. Large sends route directly to the API.',
+      placement: 'right',
+    },
+    {
+      id: 'crm',
+      target: '[data-tour="nav-crm"]',
+      title: 'CRM hub',
+      body: 'Leads, follow-ups, and Exly bookings in one hub — pipeline stages, rep assignment, HolySheet sync, and enquiry inlets into the Data Hub contact graph.',
+      placement: 'right',
+    },
+    {
+      id: 'office',
+      target: '[data-tour="nav-office"]',
+      title: 'People & Office',
+      body: 'Equipment inventory, office contacts, and subscription renewals — operational stuff for studio and admin teams.',
+      placement: 'right',
+    },
+    {
+      id: 'management',
+      target: '[data-tour="nav-management"]',
+      title: 'Management',
+      body: 'Finance document OCR uploads, team announcements, ops logs, and artist analytics (Spotify, YouTube, Meta OAuth). Leadership and finance workflows live here.',
+      placement: 'right',
+    },
+    {
+      id: 'admin',
+      target: '[data-tour="nav-admin"]',
+      title: 'Admin console',
+      body: 'User/team management, Data Hub, Exly campaigns, script runner, gamification rules, project analytics, and QA probes — platform owner tooling.',
+      placement: 'right',
+    },
+    {
+      id: 'workspace',
+      target: '[data-tour="main-content"]',
+      title: 'Main workspace',
+      body: 'All page content renders in this area — tables, boards, forms, and detail drawers. Profile completion alerts appear at the top when action is needed.',
+      placement: 'left',
+    },
+    {
+      id: 'quick-add',
+      target: '[data-tour="quick-add-fab"]',
+      title: 'Quick add (+)',
+      body: 'Floating action button — create tasks, notes, pins, calendar events, daily logs, assets, or bug reports. Same actions as mobile + but always reachable on desktop.',
+      placement: 'left',
+    },
+    {
+      id: 'settings',
+      target: '[data-tour="sidebar-settings"]',
+      title: 'Settings',
+      body: 'Profile, password, avatar, notification preferences, active sessions (revoke devices), navbar customization, and dark/light theme.',
+      placement: 'right',
+    },
+    {
+      id: 'profile',
+      target: '[data-tour="sidebar-profile"]',
+      title: 'Profile & gamification',
+      body: 'Your avatar, name, level ring, and XP progress. Earn XP from daily streaks and completed actions — check the dashboard leaderboard.',
+      placement: 'right',
+    },
+    {
+      id: 'shortcuts',
+      target: null,
+      title: 'Command palette & shortcuts',
+      body: 'Press Ctrl+K (⌘K on Mac) to search pages, leads, tasks, and run actions instantly. Press G then a letter for quick navigation chords — hints appear at the bottom when active.',
+      placement: 'center',
+    },
+    {
+      id: 'data-hub',
+      target: null,
+      title: 'Data Hub (admin)',
+      body: 'Admins can open Data Hub from the Admin console — unified contacts across Exly, leads, bookings, enquiries, and mail inlets with merge and folder taxonomy.',
+      placement: 'center',
+    },
+    {
+      id: 'install',
+      target: null,
+      title: 'Install as desktop app',
+      body: 'Use Install in the browser address bar to run CoreKnot standalone with desktop notifications. The login page has a device-specific install guide for mobile too.',
+      placement: 'center',
+    },
+  ];
+}

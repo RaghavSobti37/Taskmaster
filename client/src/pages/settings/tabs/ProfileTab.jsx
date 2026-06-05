@@ -35,6 +35,7 @@ import {
 } from '../../../constants/avatarCatalog';
 import { useUnsavedChanges, stableJsonEqual } from '../../../hooks/useUnsavedChanges';
 import { useLoadingPhrase } from '../../../hooks/useLoadingPhrase';
+import { useNavigate } from 'react-router-dom';
 
 const formatDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '');
 const toDepartmentId = (dept) => {
@@ -64,6 +65,7 @@ const CATEGORY_ICONS = {
 
 export default function ProfileTab() {
   const departmentLoadingPhrase = useLoadingPhrase();
+  const navigate = useNavigate();
   const { user, login } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
@@ -391,6 +393,32 @@ export default function ProfileTab() {
           Cartoon avatars by Ashwinvalento · DiceBear styles under their respective licenses
         </footer>
       </ModalShell>
+
+      <section className="rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] p-5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-[#126d5e]/10 text-[#126d5e]">
+            <Compass size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Product tour</h3>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
+              Replay the guided walkthrough of navigation, inbox, tasks, and app install tips.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={() => {
+                if (!user?._id) return;
+                navigate('/dashboard');
+                window.dispatchEvent(new CustomEvent('coreknot:replay-onboarding'));
+              }}
+            >
+              Replay tutorial
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <NexusModal
         isOpen={modalConfig.isOpen}

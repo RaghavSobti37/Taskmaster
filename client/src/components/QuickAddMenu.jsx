@@ -24,7 +24,7 @@ const QuickAddMenu = () => {
         )}
       </AnimatePresence>
 
-      <div className="hidden lg:flex fixed bottom-6 right-6 z-50 flex-col items-end gap-2">
+      <div className="hidden lg:flex fixed bottom-6 right-6 z-50 flex-col items-end gap-2" data-tour="quick-add-fab">
         <AnimatePresence>
           {open && (
             <motion.div

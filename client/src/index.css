@@ -1340,3 +1340,9 @@ html[data-pwa-desktop] [data-page-root] {
 .logo-mark-gallery-detail {
   border-left: 4px solid #a8c4a4 !important;
 }
+
+/* Onboarding tour — highlighted targets stay sharp through the spotlight cutout */
+[data-tour-highlighted] {
+  filter: none !important;
+  opacity: 1 !important;
+}

@@ -13,6 +13,7 @@ import RouteErrorBoundary from './RouteErrorBoundary';
 import { useAuth } from '../contexts/AuthContext';
 import { scheduleIdlePrefetch } from '../lib/navPrefetch';
 import { KeyboardShortcutsProvider } from '../contexts/KeyboardShortcutsContext';
+import OnboardingTour from './onboarding/OnboardingTour';
 
 const AttendancePromptModal = lazy(() => import('./attendance/AttendancePromptModal'));
 
@@ -70,6 +71,7 @@ const MainLayout = () => {
         <KeyboardShortcutsOverlay />
         <GChordHint />
       </Suspense>
+      <OnboardingTour />
       <ForcePasswordChangeModal />
       {attendancePromptReady && (
         <Suspense fallback={null}>
@@ -86,6 +88,7 @@ const MainLayout = () => {
         <main
           id="main-content"
           data-page-root
+          data-tour="main-content"
           className="flex-1 w-full min-w-0 tm-page-shell lg:min-h-0 lg:flex lg:flex-col overflow-x-clip"
         >
           <div className="w-full lg:min-h-0">

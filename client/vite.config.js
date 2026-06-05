@@ -53,11 +53,29 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         cookieDomainRewrite: '',
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            const existing = req.headers['x-forwarded-for'];
+            const clientIp = req.socket?.remoteAddress;
+            if (clientIp && !existing) {
+              proxyReq.setHeader('X-Forwarded-For', clientIp);
+            }
+          });
+        },
       },
       '/socket.io': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         ws: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            const existing = req.headers['x-forwarded-for'];
+            const clientIp = req.socket?.remoteAddress;
+            if (clientIp && !existing) {
+              proxyReq.setHeader('X-Forwarded-For', clientIp);
+            }
+          });
+        },
       },
     },
   },

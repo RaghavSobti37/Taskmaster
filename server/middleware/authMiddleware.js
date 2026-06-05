@@ -115,7 +115,7 @@ const protect = async (req, res, next) => {
           await rotateSession(req, decoded.id, decoded.jti, refresh.newDecoded);
           if (decoded.jti) await revokeToken(decoded);
         } else if (decoded.jti) {
-          await touchSession(decoded.id, decoded.jti);
+          await touchSession(decoded.id, decoded.jti, req);
         }
       }
     }

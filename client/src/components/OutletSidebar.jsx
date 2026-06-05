@@ -41,6 +41,7 @@ import { isNavDesktopOnly } from '../utils/mobilePageSupport';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
 import BrandLogo from './brand/BrandLogo';
+import { TOUR_ATTR_BY_PATH } from '../constants/onboardingSteps';
 
 const LEGACY_PAGE_PATHS = {
   '/workspace/emails': '/emails',
@@ -123,7 +124,7 @@ const NAV_ICON_TONES = {
   '/admin/console': { chip: 'rgba(139, 92, 246, 0.16)', icon: '#a78bfa' },
 };
 
-const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, desktopOnly, iconTone }) => {
+const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVariant, collapsed, isMobile, onClick, onMouseEnter, end, matchPaths, desktopOnly, iconTone, tourId }) => {
   const displayBadge = badgeCount ?? totalNavBadge(count, todayCount);
   const pillVariant = badgeVariant ?? (count > 0 ? 'rose' : 'amber');
   const location = useLocation();
@@ -147,6 +148,7 @@ const NavItem = ({ to, icon: Icon, label, count, todayCount, badgeCount, badgeVa
       title={iconOnly ? label : undefined}
       aria-label={iconOnly ? label : undefined}
       aria-current={isActive ? 'page' : undefined}
+      data-tour={tourId || undefined}
       className={`tm-sidebar-nav-item ${iconOnly ? 'tm-sidebar-nav-item--icon-only' : ''} ${isActive ? 'is-active' : ''}`}
     >
       <div className="relative flex items-center justify-center shrink-0">
@@ -362,6 +364,7 @@ const OutletSidebar = () => {
           onClick={isMobile ? closeMobileSidebar : undefined}
           onMouseEnter={() => prefetchNavPage(page.path)}
           desktopOnly={isMobile && isNavDesktopOnly(page.path)}
+          tourId={TOUR_ATTR_BY_PATH[page.path]}
         />
       );
     });
@@ -391,6 +394,7 @@ const OutletSidebar = () => {
       <aside
         ref={asideRef}
         aria-label="Main navigation"
+        data-tour="sidebar-nav"
         className={shellClassName}
         style={{ width: shellWidth }}
       >
@@ -468,6 +472,7 @@ const OutletSidebar = () => {
                 type="button"
                 onClick={() => navigate('/settings')}
                 aria-label="Settings"
+                data-tour="sidebar-settings"
                 className="tm-sidebar-control flex-1 flex items-center justify-center gap-2 px-3 py-2 transition-all group overflow-hidden"
                 title="Settings"
               >
@@ -494,6 +499,7 @@ const OutletSidebar = () => {
                 type="button"
                 onClick={() => navigate('/settings')}
                 aria-label="Settings"
+                data-tour="sidebar-settings"
                 title="Settings"
                 className="w-full tm-sidebar-control flex items-center justify-center p-2 transition-colors"
               >
@@ -513,6 +519,7 @@ const OutletSidebar = () => {
 
           <div
             onClick={() => navigate('/settings')}
+            data-tour="sidebar-profile"
             className="w-full text-left group cursor-pointer"
             title={!showLabels ? user?.name : undefined}
           >

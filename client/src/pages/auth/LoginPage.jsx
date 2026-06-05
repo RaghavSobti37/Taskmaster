@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, RefreshCw } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, AlertCircle, RefreshCw, Smartphone } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
@@ -13,6 +13,8 @@ import {
   hasUsedLoginCookieRefresh,
   markLoginCookieRefreshUsed,
 } from '../../utils/loginCookieRefresh';
+import InstallGuideModal from '../../components/auth/InstallGuideModal';
+import { detectInstallPlatform } from '../../utils/installPlatform';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -26,6 +28,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showCookieRefresh, setShowCookieRefresh] = useState(() => !hasUsedLoginCookieRefresh());
   const [clearingCookies, setClearingCookies] = useState(false);
+  const [installGuideOpen, setInstallGuideOpen] = useState(false);
+  const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -216,6 +220,14 @@ const LoginPage = () => {
         </form>
 
         <div className="mt-4 text-center text-sm space-y-3">
+          <button
+            type="button"
+            onClick={() => setInstallGuideOpen(true)}
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--color-brand-teal)]/30 bg-[var(--color-brand-teal)]/5 px-4 py-2.5 text-sm font-semibold text-[var(--color-brand-teal)] hover:bg-[var(--color-brand-teal)]/10 transition-colors touch-manipulation"
+          >
+            <Smartphone size={16} />
+            {installPlatform.installed ? 'App install guide' : 'Install CoreKnot app'}
+          </button>
           <div className="flex items-center justify-center gap-2 text-[var(--color-text-muted)] font-medium">
             <span>New user?</span>
             <Link to="/register" className="text-[var(--color-brand-teal)] font-bold hover:underline inline-block">Register here</Link>
@@ -227,6 +239,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+      <InstallGuideModal isOpen={installGuideOpen} onClose={() => setInstallGuideOpen(false)} />
     </div>
   );
 };

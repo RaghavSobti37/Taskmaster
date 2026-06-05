@@ -82,10 +82,11 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | Area | What changed |
 | --- | --- |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
-| **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout |
+| **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
+| **Onboarding & install** | First-login product tour (24 desktop / 13 mobile steps); device-aware install guide on login; replay from Settings → Profile |
 | **Finance** | Document tables migrated to shared `DataTable`; OCR upload state badges; unsaved-changes bar on edits |
 | **Tasks & gamification** | `TaskReviewActions` component; in-review approve CTA; leaderboard shows XP gap to next rank |
-| **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard |
+| **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard; spotlight onboarding tour |
 | **E2E & CI** | Playwright public + auth smoke specs; Lighthouse a11y gate; ESLint + Vitest in GitHub Actions |
 
 Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) · UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
@@ -295,6 +296,19 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Generated assets:** `npm run generate-icons` (runs on `prebuild`) rasterizes PNGs for favicon, Apple touch (120–180), maskable 512, Windows tile, OG image; syncs `favicon.svg` and `safari-pinned-tab.svg`.
 * **Meta:** `client/index.html` + `manifest.json` + `client/src/constants/brandIcons.js` for notifications and SW.
 * **iOS home screen:** After deploy, remove old shortcut and re-add — Safari caches icons aggressively.
+
+### Onboarding tour & install guide (Jun 2026)
+
+* **Product tour:** `OnboardingTour.jsx` — spotlight walkthrough on first dashboard visit (~24 desktop / ~13 mobile steps). Covers sidebar zones, Dashboard, Projects, Todo, Inbox, Attendance, Calendar, Logs, Notes, Assets, Schedule, Emails, CRM/Office/Management hubs, Quick add (+), Settings, command palette, and PWA install. Skip anytime; progress persisted per user in `localStorage` (`onboardingStorage.js`).
+* **Replay:** Settings → Profile → **Replay tutorial** dispatches `coreknot:replay-onboarding`.
+* **Install guide:** Login page **Install CoreKnot app** opens `InstallGuideModal.jsx` with device detection (`installPlatform.js`) — iOS Safari, Android Chrome, Windows/Mac desktop steps.
+* **Tour targets:** `data-tour` attributes on sidebar nav, bottom nav, main content, Quick add FAB, settings, and profile footer. Steps without visible DOM targets (permission-gated nav) are auto-skipped via `getVisibleOnboardingSteps`.
+* **Layout:** Viewport-safe card positioning (flex center / mobile dock / anchored desktop) — no transform conflicts with Framer Motion.
+
+### Session IP detection (Jun 2026)
+
+* **Server:** `sessionRequestMeta.js` uses same IP chain as email geo (`X-Forwarded-For`, `X-Real-IP`, `CF-Connecting-IP`); normalizes IPv6-mapped addresses; upgrades stored loopback when real IP arrives on later requests.
+* **Client display:** Settings → Security shows public IP or **Local device** when loopback; Vite dev proxy forwards client IP to the API.
 
 ### Admin Script Runner (Jun 2026)
 

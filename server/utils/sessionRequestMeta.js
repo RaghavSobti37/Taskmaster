@@ -1,3 +1,13 @@
+const { extractClientIp, normalizeIp } = require('./geoLookup');
+
+const LOOPBACK_IPS = new Set(['127.0.0.1', '::1', '0:0:0:0:0:0:0:1', 'unknown', '']);
+
+const isLoopbackIp = (ip = '') => {
+  const normalized = normalizeIp(ip);
+  if (!normalized || LOOPBACK_IPS.has(normalized)) return true;
+  return normalized.startsWith('127.') || normalized.endsWith('.127.0.0.1');
+};
+
 const parseDeviceLabel = (userAgent = '') => {
   const ua = String(userAgent);
   let browser = 'Browser';
@@ -16,12 +26,14 @@ const parseDeviceLabel = (userAgent = '') => {
   return `${browser} on ${os}`;
 };
 
-const resolveClientIp = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.ip || req.socket?.remoteAddress || 'unknown';
+/** Best-effort client IP — same chain as email geo (X-Forwarded-For, X-Real-IP, CF). */
+const resolveClientIp = (req) => extractClientIp(req) || 'unknown';
+
+/** Human-readable IP for session lists; hides loopback noise. */
+const formatSessionIp = (ip = '') => {
+  const normalized = normalizeIp(ip);
+  if (!normalized || isLoopbackIp(normalized)) return null;
+  return normalized;
 };
 
 const sessionMetaFromRequest = (req) => ({
@@ -30,8 +42,19 @@ const sessionMetaFromRequest = (req) => ({
   label: parseDeviceLabel(req.headers['user-agent']),
 });
 
+/** Prefer a newly resolved IP when the stored value is loopback. */
+const pickSessionIp = (storedIp, freshIp) => {
+  const fresh = normalizeIp(freshIp);
+  if (!fresh || isLoopbackIp(fresh)) return storedIp;
+  if (!storedIp || isLoopbackIp(storedIp)) return fresh;
+  return storedIp;
+};
+
 module.exports = {
   parseDeviceLabel,
   resolveClientIp,
+  formatSessionIp,
+  isLoopbackIp,
+  pickSessionIp,
   sessionMetaFromRequest,
 };

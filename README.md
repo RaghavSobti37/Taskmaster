@@ -66,7 +66,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Command | Scope |
 | --- | --- |
-| `npm test` | Server Jest suite (`server/tests/`, **125** cases) |
+| `npm test` | Server Jest suite (`server/tests/`, **126** cases) |
 | `npm run ci` | Exposure audit + server tests + client production build |
 | Admin → QA Testing | Integration probes incl. task review rollback/re-submit, platform-owner rollback, bug auto-assign |
 
@@ -316,10 +316,10 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Institutional Task Review Workflow
 
-* **Governance Matrix:** Enforces strict code/task ownership logic (`shared/taskReviewRules.js`). Delegated assignees route to `in-review` on every completion — including after a reviewer rollback. Creators cannot mark delegated tasks `done` directly; platform owner (`PLATFORM_OWNER_USER_ID` / `PLATFORM_OWNER_EMAIL`) may approve any in-review task. **Rollback / reopen:** creator, assignee, assigner, or platform owner may roll back `in-review` tasks or reopen `done` tasks to `in-progress` from the task modal (`Reopen Task`). Assignee edits preserve `assignedBy` so the review chain does not break.
+* **Governance Matrix:** Enforces strict code/task ownership logic (`shared/taskReviewRules.js`). Delegated **assignees** route to `in-review` on completion (including after rollback). **Creators bypass review:** may mark delegated tasks `done` or approve `in-review` tasks without waiting on assignees. Platform owner (`PLATFORM_OWNER_USER_ID` / `PLATFORM_OWNER_EMAIL`) shares creator-level approve rights. **Rollback / status on done:** creator, assignee, assigner, or platform owner may roll back `in-review` tasks or change status on completed tasks (status picker + Save in task modal). Assignee edits preserve `assignedBy` so the review chain does not break.
 * **Role Enforcement:** Restricts execution bounds; only the explicit task creator retains roll-back, state manipulation, or permanent completion override permissions.
 * **Project moves:** Any project member (or creator, assignee, admin) may move a task to another project they can access via the Edit Task modal. Server validates source/target membership, syncs workspace, updates project task counts, and refreshes TanStack Query caches without a full page reload.
-* **In-review edits:** Save remains available on `in-review` tasks so fields like project, title, and description can be updated. **Approve** is assigner/platform-owner only; **Rollback** is any involved party (creator, assignee, assigner, platform owner). Completed tasks show **Reopen Task** for the same involved users.
+* **In-review edits:** Save remains available on `in-review` tasks so fields like project, title, and description can be updated. **Approve** — creator, assigner, or platform owner. **Rollback** — any involved party. **Completed tasks** — involved users edit status directly (e.g. `todo`, `in-progress`) and Save; no separate reopen step required.
 * **Bug reports:** `POST /api/tasks/bug` auto-assigns the platform owner on the Tech Stack project (self-assigned — owner fixes and marks done without reporter review). Set `PLATFORM_OWNER_USER_ID` or `PLATFORM_OWNER_EMAIL` in production.
 * **Daily log split on submit:** When a delegatee submits for review, the server writes two automatic daily logs — assignee `TASK_COMPLETION` (hours from the completion modal) and assigner `TASK_REVIEW` (default **15 minutes**, `REVIEW_DEFAULT_HOURS` in `shared/taskReviewRules.js`). Approving does not add a full-task completion log for the reviewer; rolling back removes both logs. Review entries show a **Review** badge on Daily Logs and are excluded from manual-log XP like task completions.
 

@@ -79,7 +79,7 @@ describe('task review workflow', () => {
     expect(updated.status).toBe('in-review');
   });
 
-  test('creator cannot mark delegated task done directly', async () => {
+  test('creator can mark delegated task done without assignee completing', async () => {
     const task = await Task.create({
       title: 'Creator bypass',
       createdBy: creator._id,
@@ -91,9 +91,36 @@ describe('task review workflow', () => {
       assignedBy: creator._id,
     });
 
-    await expect(
-      TaskService.updateTask(task._id, { status: 'done' }, creator, null)
-    ).rejects.toThrow(/assignee first/i);
+    await TaskService.updateTask(task._id, { status: 'done' }, creator, null);
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('done');
+  });
+
+  test('involved user can change status away from done', async () => {
+    const task = await Task.create({
+      title: 'Status reopen',
+      createdBy: creator._id,
+      status: 'done',
+      completedAt: new Date(),
+      progress: 100,
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(
+      task._id,
+      { status: 'todo', progress: 0 },
+      assignee,
+      null
+    );
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('todo');
+    expect(updated.completedAt).toBeFalsy();
   });
 
   test('assignee list edits preserve original assigner for review routing', async () => {

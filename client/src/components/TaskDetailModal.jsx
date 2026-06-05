@@ -47,7 +47,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const canReview = canReviewTask(task, user);
   const canRollback = canRollbackTask(task, user);
   const creatorId = task?.createdBy?._id || task?.createdBy;
-  const canEditTimeline = canReview || creatorId?.toString() === user?._id?.toString();
+  const isCreator = creatorId?.toString() === user?._id?.toString();
+  const canEditTimeline = canReview || isCreator;
+  const isDone = formValues.status === 'done';
+  const canEditDoneStatus = isDone && canRollback;
 
   React.useEffect(() => {
     if (task) {
@@ -163,8 +166,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     }
   };
 
-  const isDone = formValues.status === 'done';
   const isInReview = formValues.status === 'in-review';
+  const formLocked = isDone && !canEditDoneStatus;
 
   return (
     <>
@@ -195,12 +198,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
           onAssigneesChange={(assignees) => setFormValues((v) => ({ ...v, assignees }))}
           directoryUsers={directoryUsers}
           lockedAssigneeIds={creatorId ? [creatorId] : []}
-          teamEditable={!isDone}
+          teamEditable={!formLocked}
           dueDate={formValues.dueDate}
           scheduleDate={formValues.scheduleDate}
           taskStatus={formValues.status}
           onDueDateChange={(dueDate) => setFormValues((v) => ({ ...v, dueDate, dueDateManual: true }))}
-          dueDateDisabled={isDone || !canEditTimeline}
+          dueDateDisabled={formLocked || !canEditTimeline}
         />
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -214,7 +217,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 showAssignees={false}
                 showPriority={false}
                 showStatus={false}
-                disabled={isDone}
+                disabled={formLocked}
                 timelineDisabled={!canEditTimeline}
                 showTitle
                 showDescription={false}
@@ -229,12 +232,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                   <TaskMessageComposeSection
                     message={desc}
                     onMessageChange={setDesc}
-                    disabled={isDone}
+                    disabled={formLocked}
                     mentionSessionKey={isOpen ? task._id : undefined}
                     inlineEdit={false}
                     status={formValues.status}
                     onStatusChange={(status, progress) => setFormValues((v) => ({ ...v, status, progress }))}
-                    statusDisabled={isDone}
+                    statusDisabled={formLocked}
                   />
                 }
               />
@@ -254,15 +257,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 </div>
               )}
 
-              {isDone && canRollback && (
-                <div className="flex flex-wrap gap-3 py-3 border-t border-[var(--color-bg-border)]">
-                  <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
-                    <RotateCcw size={14} className="mr-1" /> {isSaving ? 'Reopening...' : 'Reopen Task'}
-                  </Button>
-                  <p className="text-xs text-[var(--color-text-muted)] w-full">
-                    Sends this task back to In Progress so you or the team can continue work.
-                  </p>
-                </div>
+              {canEditDoneStatus && (
+                <p className="text-xs text-[var(--color-text-muted)] py-2 border-t border-[var(--color-bg-border)]">
+                  Change status above to reopen or move this task — then Save. Creators may also mark tasks done without waiting for assignees.
+                </p>
               )}
             </div>
 
@@ -287,7 +285,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               <button type="button" onClick={onClose} disabled={isSaving || isDeleting} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)] disabled:opacity-50">
                 Close
               </button>
-              {!isDone && (
+              {(!isDone || canEditDoneStatus) && (
                 <button
                   type="submit"
                   disabled={!title || isSaving}
@@ -297,7 +295,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
               )}
-              {isDone && !canRollback && (
+              {isDone && !canEditDoneStatus && (
                 <span className="text-xs text-[var(--color-text-muted)]">Completed</span>
               )}
             </div>

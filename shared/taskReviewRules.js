@@ -63,11 +63,12 @@ const canUserApproveReview = (user, assignments) => {
   );
 };
 
-/** Platform owner may approve/rollback any in-review delegated task. */
-const canUserApproveOrRollback = (user, assignments, { platformOwnerId } = {}) => {
+/** Platform owner or task creator may approve; assigner may approve delegated work. */
+const canUserApproveOrRollback = (user, assignments, { platformOwnerId, taskCreatedBy } = {}) => {
   const uid = normalizeId(user?._id || user);
   if (!uid) return false;
   if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
   return canUserApproveReview(user, assignments);
 };
 

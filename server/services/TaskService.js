@@ -655,7 +655,10 @@ exports.updateTask = async (taskId, updates, user, session) => {
     if (String(existing.status || '').toLowerCase() !== 'in-review') {
       throw new Error('Only in-review tasks can be approved');
     }
-    isReviewer = canUserApproveOrRollback(user, assignments, { platformOwnerId });
+    isReviewer = canUserApproveOrRollback(user, assignments, {
+      platformOwnerId,
+      taskCreatedBy: existing.createdBy,
+    });
     if (!isReviewer) {
       throw new Error('Only the person who assigned this task can approve');
     }
@@ -734,6 +737,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
   if (
     coreUpdates.status === 'done'
     && !reviewAction
+    && !isCreator
     && isAssignerOnlyReviewer(assignments, user._id)
   ) {
     throw new Error(
@@ -741,20 +745,22 @@ exports.updateTask = async (taskId, updates, user, session) => {
     );
   }
 
-  if (
-    coreUpdates.status === 'done'
-    && !reviewAction
-    && hasDelegatedWork
-    && isCreator
-    && !isAssignee
-  ) {
-    throw new Error(
-      'This task must be completed by the assignee first. Approve it from the review queue when ready.'
-    );
+  const existingStatus = String(existing.status || '').toLowerCase();
+  const reopeningDone = existingStatus === 'done'
+    && coreUpdates.status
+    && String(coreUpdates.status).toLowerCase() !== 'done';
+  if (reopeningDone) {
+    const canReopen = canUserRollbackTask(user, existing, assignments, {
+      platformOwnerId,
+      taskCreatedBy: existing.createdBy,
+    });
+    if (!canReopen) {
+      throw new Error('You are not allowed to change the status of this completed task');
+    }
   }
 
   if (coreUpdates.status === 'done' || coreUpdates.status === 'in-review') {
-    const needsReview = needsReviewOnComplete(assignments, user._id, {
+    const needsReview = !isCreator && needsReviewOnComplete(assignments, user._id, {
       mentionOnly,
       taskCreatedBy: existing.createdBy,
     });
@@ -774,6 +780,22 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
   } else if (coreUpdates.status) {
     coreUpdates.completedAt = null;
+  }
+
+  if (reopeningDone && existing.projectId) {
+    await Project.findByIdAndUpdate(
+      existing.projectId?._id || existing.projectId,
+      { $inc: { completedTasksCount: -1 } },
+      { session }
+    );
+    const assigneeIdsToClear = assignments
+      .map((a) => rulesAssignmentUserId(a))
+      .filter(Boolean);
+    const reviewerIdsToClear = getDelegatedAssignments(assignments)
+      .map((a) => assignmentAssignerId(a))
+      .filter(Boolean);
+    const logUserIds = [...new Set([...assigneeIdsToClear, ...reviewerIdsToClear, user._id.toString()])];
+    await removeReviewLogsForTask(existing._id, logUserIds, null, session);
   }
 
   const oldDueDate = existing.dueDate;

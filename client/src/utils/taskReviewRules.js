@@ -43,10 +43,11 @@ export const canUserApproveReview = (user, assignments) => {
   );
 };
 
-export const canUserApproveOrRollback = (user, assignments, { platformOwnerId } = {}) => {
+export const canUserApproveOrRollback = (user, assignments, { platformOwnerId, taskCreatedBy } = {}) => {
   const uid = normalizeId(user?._id || user);
   if (!uid) return false;
   if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
   return canUserApproveReview(user, assignments);
 };
 

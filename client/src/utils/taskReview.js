@@ -113,7 +113,9 @@ export function userMustSubmitForReview(task, user, users = []) {
 export function canReviewTask(task, user) {
   if (!task || task.status !== 'in-review' || !user) return false;
   if (isPlatformOwnerUser(user)) return true;
-  return canUserApproveReview(user, getTaskAssignments(task));
+  return canUserApproveOrRollback(user, getTaskAssignments(task), {
+    taskCreatedBy: task?.createdBy,
+  });
 }
 
 export function canRollbackTask(task, user) {

@@ -31,7 +31,9 @@
     "qa:cleanup:prod": "node scripts/qaFullCleanup.js --prod",
     "repair:phones": "node scripts/repairCorruptPhones.js --local",
     "repair:phones:prod": "node scripts/repairCorruptPhones.js --prod",
-    "repair:phones:all": "node scripts/repairCorruptPhones.js --local && node scripts/repairCorruptPhones.js --prod"
+    "repair:phones:all": "node scripts/repairCorruptPhones.js --local && node scripts/repairCorruptPhones.js --prod",
+    "render:ops-fix": "node scripts/applyRenderOpsFixes.js",
+    "render:ops-fix:deploy": "node scripts/applyRenderOpsFixes.js --deploy"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",

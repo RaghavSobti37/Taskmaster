@@ -659,12 +659,13 @@ The server relies heavily on strict system environment mappings to guarantee sec
 | --- | --- | --- |
 | `MONGODB_URI` | **Required** | Unified database connection string specifying target authorization endpoints. |
 | `JWT_SECRET` | **Required** | Cryptographic key utilized to sign statelessly managed web token tokens. |
+| `ENCRYPTION_KEY` | **Production** | 64-char hex (`openssl rand -hex 32`) for AES-256-GCM encryption of OAuth/API tokens in `ConnectedProfile`. Keep stable across restarts — rotating invalidates stored tokens. |
 | `JWT_EXPIRES_IN` | Recommended | Sliding inactivity window before session expires (default: `7d`). Renewed on activity. |
 | `JWT_ABSOLUTE_MAX_DAYS` | Recommended | Hard re-login cap from first login in a session chain (default: `30`). |
 | `JWT_REFRESH_MINUTES` | Optional | Minimum minutes between `Set-Cookie` refreshes on activity (default: `60`; reduces mobile cookie churn). |
 | `FRONTEND_URL` | Production Only | The public consumer web location utilized to build structural email CTA references. |
 | `VITE_API_URL` | Highly Recommended | Direct endpoint address pointing to the static web API host, intentionally skipping standard middle-tier routing paths during massive data payload uploads. |
-| `REDIS_URL` | Optional | Direct connection reference used to drive active state machine queues (`BullMQ`). |
+| `REDIS_URL` | Optional | Render Key Value internal URL for BullMQ queues, follow-up cache, and notification locks. Instance **maxmemory policy must be `noeviction`** — `allkeys-lru` can silently drop queued jobs. |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Webhook Integrations | Google Sheets append credentials for public booking webhooks (`BookedCalls` tab). |
 | `GOOGLE_PRIVATE_KEY` | Webhook Integrations | PEM private key paired with the service account email (newline-escaped). |
 | `AISENSY_API_KEY` | Webhook Integrations | WhatsApp campaign dispatch for booked-call confirmations and rep alerts. |
@@ -693,6 +694,23 @@ The server relies heavily on strict system environment mappings to guarantee sec
 Local development should use **`taskmaster_local`**; production uses **`taskmaster_production`**. The server resolves the correct URI via `server/config/database.js` and throws on startup if a dev runtime targets a production-like database name unless explicitly allowed.
 
 See [`docs/LOCAL_DEV_DATABASE.md`](docs/LOCAL_DEV_DATABASE.md) for the full isolation checklist.
+
+### Render production ops
+
+Use [`docs/DEPLOY_ENV.md`](docs/DEPLOY_ENV.md) as the secret checklist (`server/.env.render` is gitignored — copy values into the Render Dashboard only).
+
+| Task | How |
+| --- | --- |
+| Set `ENCRYPTION_KEY` | Dashboard → API service → Environment, or `npm run render:ops-fix` with `RENDER_API_KEY` |
+| Fix Redis eviction policy | Render Key Value → **Info** → Maxmemory Policy → `noeviction`, or `npm run render:ops-fix -- --redis-only` |
+| Apply both + redeploy | `npm run render:ops-fix:deploy` |
+
+Script: `server/scripts/applyRenderOpsFixes.js` — resolves the Redis instance by internal hostname (`red-…`), patches via Render API (`/redis/{id}` or `/key-value/{id}`), and merges `ENCRYPTION_KEY` onto the API web service. Blueprint: `render.yaml` documents a `noeviction` Key Value for new infra.
+
+**Startup warnings to clear after fix:**
+
+- `[encryption] ENCRYPTION_KEY is not set` → set key + redeploy API
+- `IMPORTANT! Eviction policy is allkeys-lru` → switch Key Value to `noeviction`
 
 ### Production API Host
 

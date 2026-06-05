@@ -1,4 +1,11 @@
 services:
+  # BullMQ + cache — noeviction prevents silent job loss. Change existing instance in Dashboard if already provisioned.
+  - type: keyvalue
+    name: taskmaster-redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
   - type: cron
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"

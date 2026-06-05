@@ -13,6 +13,8 @@ Set on the **CoreKnot API** web service (not Vercel):
 |----------|---------|
 | `MONGODB_URI` / `MONGODB_URI_PROD` | Production database |
 | `JWT_SECRET` | Session signing |
+| `ENCRYPTION_KEY` | 64-char hex (`openssl rand -hex 32`) — OAuth/API token encryption; keep stable across restarts |
+| `REDIS_URL` | Render Key Value internal URL — instance **maxmemory policy must be `noeviction`** for BullMQ |
 | `ADMIN_EMAIL` | Domain bypass for signup (email, not user id) |
 | `ALLOWED_DOMAIN` | Allowed signup domain |
 | `APP_BASE_URL` / `SERVER_URL` / `TRACKING_BASE_URL` | `https://YOUR-RENDER-SERVICE.onrender.com` |

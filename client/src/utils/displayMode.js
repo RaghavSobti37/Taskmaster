@@ -9,9 +9,17 @@ export function isStandaloneDisplay() {
   );
 }
 
-/** iOS/Android home-screen app — use same-origin /api so auth cookies stay first-party. */
+/** Touch phone/tablet browser (Safari/Chrome), including iPad desktop UA. */
+export function isMobileBrowser() {
+  if (typeof window === 'undefined') return false;
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return true;
+  if (navigator.maxTouchPoints > 1 && /MacIntel/.test(navigator.platform)) return true;
+  return window.matchMedia('(pointer: coarse)').matches;
+}
+
+/** PWA + mobile browsers — same-origin /api keeps auth cookies first-party on iOS Safari. */
 export function shouldUseSameOriginApi() {
-  return isStandaloneDisplay();
+  return isStandaloneDisplay() || isMobileBrowser();
 }
 
 /** Mouse/trackpad primary — not phone/tablet touch UI */

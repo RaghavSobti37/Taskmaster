@@ -10,7 +10,7 @@ import {
   recordAttendanceSessionLogin,
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
-import { isStandaloneDisplay } from '../utils/displayMode';
+import { isStandaloneDisplay, shouldUseSameOriginApi } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { AXIOS_SKIP_TOAST } from '../lib/notifications';
@@ -55,7 +55,7 @@ const applyAxiosBaseURL = () => {
 applyAxiosBaseURL();
 axios.defaults.withCredentials = true;
 
-const defaultSessionRetries = () => (isStandaloneDisplay() ? 6 : 3);
+const defaultSessionRetries = () => (shouldUseSameOriginApi() ? 6 : 3);
 
 function userSessionChanged(prev, next) {
   if (!prev && !next) return false;

@@ -62,7 +62,7 @@ const LoginPage = () => {
     setShowCookieRefresh(false);
     markForceLogout();
     try {
-      await axios.post('/api/auth/logout', null, AXIOS_SKIP_TOAST);
+      await axios.post(apiPath('/api/auth/logout'), null, AXIOS_SKIP_TOAST);
     } catch {
       // HttpOnly cookies are cleared server-side when logout succeeds
     }
@@ -74,10 +74,16 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/login', { email, password }, AXIOS_SKIP_TOAST);
+      const res = await axios.post(apiPath('/api/auth/login'), { email, password }, AXIOS_SKIP_TOAST);
       await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {
+      if (!err.response) {
+        setError(
+          'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.'
+        );
+        return;
+      }
       const message =
         err.response?.data?.error ||
         err.response?.data?.message ||

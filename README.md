@@ -305,6 +305,12 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Tour targets:** `data-tour` attributes on sidebar nav, bottom nav, main content, Quick add FAB, settings, and profile footer. Steps without visible DOM targets (permission-gated nav) are auto-skipped via `getVisibleOnboardingSteps`.
 * **Layout:** Viewport-safe card positioning (flex center / mobile dock / anchored desktop) — no transform conflicts with Framer Motion.
 
+### Mobile browser login (Jun 2026)
+
+* **Same-origin API on mobile:** `displayMode.js` detects phone/tablet browsers (`isMobileBrowser`) and routes auth through the Vercel `/api` proxy instead of direct Render — iOS Safari blocks cross-site session cookies when `VITE_API_URL` points at Render.
+* **Login:** `LoginPage.jsx` uses `apiPath()` for login/logout; network failures show a connection/cookie-clear message instead of a misleading “wrong password” error.
+* **Session sync:** `AuthContext` uses extra `/me` retries (6) whenever `shouldUseSameOriginApi()` is true (PWA + mobile browser).
+
 ### Session IP detection (Jun 2026)
 
 * **Server:** `sessionRequestMeta.js` uses same IP chain as email geo (`X-Forwarded-For`, `X-Real-IP`, `CF-Connecting-IP`); normalizes IPv6-mapped addresses; upgrades stored loopback when real IP arrives on later requests.
@@ -499,7 +505,7 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 ### Security Hardening (v1.7.47)
 
 * **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v3` cookie — not `localStorage`. Sliding inactivity (`JWT_EXPIRES_IN`) + 30-day absolute cap (`JWT_ABSOLUTE_MAX_DAYS`). Legacy `coreknot_token_v2` / `coreknot_token` purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
-* **Cross-device login (v1.7.51):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the API origin when `VITE_API_URL` is set. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
+* **Cross-device login (v1.7.51 / Jun 2026):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. **Mobile browsers** (not just installed PWA) use same-origin `/api` via `shouldUseSameOriginApi()` so iOS Safari keeps first-party cookies. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the correct API origin. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
 * **Logout (v1.7.52 / v1.8.0):** Logout bumps an auth epoch so in-flight `/me` retries cannot re-set the user after sign-out. v1.8.0 adds `authSession.js` force-logout flag across redirect and treats 403 like 401 on session fetch.
 * **CRM lead updates (v1.7.55):** Lead modal uses country-code + national-number fields with strict per-country digit rules (no silent truncation). Invalid phones block save with clear errors; server validates via `phoneCountryValidation.js`. Lead table refreshes after save (`useUpdateLead` cache fix). Legacy overlong/concatenated phones repaired via `leadPhoneRepair.js` and QA audit/cleanup CLI scripts.
 * **CRM lead updates (v1.7.54):** Legacy `-DUP-{id}` / `EMPTY-{id}` corrupt phones (from old `dbPush.js` duplicate resolution) are auto-repaired on save, bulk-repairable via `npm run repair:lead-phones`, and cleaned during QA purge. Saving leads with unchanged corrupt phones no longer fails validation.

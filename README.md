@@ -175,7 +175,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Server:** `server/utils/authSession.js` — `establishSession`, `refreshSessionIfDue`, `loginAt` preserved across slides; `authMiddleware` enforces the 30-day cap.
 * **Client:** `AuthContext` retries `/api/auth/me` before clearing state (Safari/iOS cookie races), 5-minute session heartbeat, tab-visibility refresh on return.
 * **Tests:** `server/tests/authSession.test.js` — sliding window, absolute expiry, cookie v3 legacy purge.
-* **Login cookie refresh (one-time):** `/login` shows a **Clear session cookies** control once per browser — calls `POST /api/auth/logout` to purge HttpOnly `coreknot_token_v3` and legacy cookies, then reloads. Hidden after use via `client/src/utils/loginCookieRefresh.js`.
+* **Login cookie refresh:** `/login` always shows a **Clear session cookies** control — calls `POST /api/auth/logout` to purge HttpOnly `coreknot_token_v3` and legacy cookies, then reloads.
 
 ### v1.0.0 stable polish
 

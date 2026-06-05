@@ -9,10 +9,6 @@ import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
-import {
-  hasUsedLoginCookieRefresh,
-  markLoginCookieRefreshUsed,
-} from '../../utils/loginCookieRefresh';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 
@@ -26,7 +22,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showCookieRefresh, setShowCookieRefresh] = useState(() => !hasUsedLoginCookieRefresh());
   const [clearingCookies, setClearingCookies] = useState(false);
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const installPlatform = React.useMemo(() => detectInstallPlatform(), [installGuideOpen]);
@@ -58,8 +53,6 @@ const LoginPage = () => {
   const handleClearCookies = async () => {
     setClearingCookies(true);
     setError('');
-    markLoginCookieRefreshUsed();
-    setShowCookieRefresh(false);
     markForceLogout();
     try {
       await axios.post(apiPath('/api/auth/logout'), null, AXIOS_SKIP_TOAST);
@@ -115,23 +108,21 @@ const LoginPage = () => {
           </div>
         )}
 
-        {showCookieRefresh && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-100 text-amber-900 text-sm rounded-xl">
-            <p className="font-medium mb-2">Having trouble signing in?</p>
-            <p className="text-xs text-amber-800/90 mb-3 leading-relaxed">
-              Clear old session cookies once if login fails after an update.
-            </p>
-            <button
-              type="button"
-              onClick={handleClearCookies}
-              disabled={clearingCookies}
-              className="w-full min-h-[40px] bg-amber-100 text-amber-950 py-2.5 rounded-lg font-semibold border border-amber-200 hover:bg-amber-200 disabled:opacity-60 transition-all flex items-center justify-center gap-2 touch-manipulation"
-            >
-              <RefreshCw size={16} className={clearingCookies ? 'animate-spin' : ''} />
-              {clearingCookies ? 'Clearing cookies...' : 'Clear session cookies'}
-            </button>
-          </div>
-        )}
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-100 text-amber-900 text-sm rounded-xl">
+          <p className="font-medium mb-2">Having trouble signing in?</p>
+          <p className="text-xs text-amber-800/90 mb-3 leading-relaxed">
+            Clear old session cookies if login fails after an update or you see a stale session.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearCookies}
+            disabled={clearingCookies}
+            className="w-full min-h-[40px] bg-amber-100 text-amber-950 py-2.5 rounded-lg font-semibold border border-amber-200 hover:bg-amber-200 disabled:opacity-60 transition-all flex items-center justify-center gap-2 touch-manipulation"
+          >
+            <RefreshCw size={16} className={clearingCookies ? 'animate-spin' : ''} />
+            {clearingCookies ? 'Clearing cookies...' : 'Clear session cookies'}
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

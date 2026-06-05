@@ -6,7 +6,7 @@ import { NexusModal, ModalShell, ModalFooter } from './ui/modals';;
 import { useProjects, useUpdateTask, useUserDirectory } from '../hooks/useTaskmasterQueries';
 import { normalizeTaskCategory } from '../constants/taskOptions';
 import { useAuth } from '../contexts/AuthContext';
-import { canReviewTask } from '../utils/taskReview';
+import { canReviewTask, canRollbackTask } from '../utils/taskReview';
 import { resolveTaskId } from '../utils/taskCompletion';
 import TaskFormFields from './forms/TaskFormFields';
 import { AXIOS_SKIP_TOAST, suppressAutoToasts } from '../lib/notifications';
@@ -45,6 +45,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const isSaving = updateTaskMutation.isPending;
 
   const canReview = canReviewTask(task, user);
+  const canRollback = canRollbackTask(task, user);
   const creatorId = task?.createdBy?._id || task?.createdBy;
   const canEditTimeline = canReview || creatorId?.toString() === user?._id?.toString();
 
@@ -238,14 +239,29 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 }
               />
 
-              {isInReview && canReview && (
+              {isInReview && (canReview || canRollback) && (
                 <div className="flex flex-wrap gap-3 py-3 border-t border-amber-500/30">
-                  <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
-                    <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
-                  </Button>
+                  {canReview && (
+                    <Button type="button" variant="primary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'approve')}>
+                      <Check size={14} className="mr-1" /> {isSaving ? 'Saving...' : 'Approve & Close'}
+                    </Button>
+                  )}
+                  {canRollback && (
+                    <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
+                      <RotateCcw size={14} className="mr-1" /> Rollback
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {isDone && canRollback && (
+                <div className="flex flex-wrap gap-3 py-3 border-t border-[var(--color-bg-border)]">
                   <Button type="button" variant="secondary" size="sm" disabled={isSaving} onClick={(e) => handleSubmit(e, 'rollback')}>
-                    <RotateCcw size={14} className="mr-1" /> Rollback
+                    <RotateCcw size={14} className="mr-1" /> {isSaving ? 'Reopening...' : 'Reopen Task'}
                   </Button>
+                  <p className="text-xs text-[var(--color-text-muted)] w-full">
+                    Sends this task back to In Progress so you or the team can continue work.
+                  </p>
                 </div>
               )}
             </div>
@@ -280,6 +296,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                   {isSaving ? <Spinner size="sm" className="text-white" /> : <CheckCircle2 size={18} />}
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
+              )}
+              {isDone && !canRollback && (
+                <span className="text-xs text-[var(--color-text-muted)]">Completed</span>
               )}
             </div>
           </ModalFooter>

@@ -50,6 +50,17 @@ export const canUserApproveOrRollback = (user, assignments, { platformOwnerId } 
   return canUserApproveReview(user, assignments);
 };
 
+export const canUserRollbackTask = (user, task, assignments, { platformOwnerId, taskCreatedBy } = {}) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return false;
+  const status = String(task?.status || '').toLowerCase();
+  if (status !== 'in-review' && status !== 'done') return false;
+  if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
+  if (canUserApproveReview(user, assignments)) return true;
+  return (assignments || []).some((a) => assignmentUserId(a) === uid);
+};
+
 export const needsReviewOnComplete = (assignments, userId, { mentionOnly = false, taskCreatedBy = null } = {}) => {
   if (mentionOnly) return true;
   const uid = normalizeId(userId);

@@ -5,6 +5,7 @@
 import {
   canUserApproveReview,
   canUserApproveOrRollback,
+  canUserRollbackTask,
   needsReviewOnComplete,
   requiresReviewForUser,
   getDelegatedAssignments,
@@ -14,6 +15,9 @@ import {
   normalizeId,
   mergeAssigneeIdsWithCreator,
 } from './taskReviewRules';
+import { extractUserMentionLabels, resolveUserByLabel } from './mentionTokens';
+import { isAdminUser } from './departmentPermissions';
+import { normalizeTask } from './normalizeTask';
 
 const PLATFORM_OWNER_EMAILS = new Set(
   [
@@ -26,13 +30,11 @@ const PLATFORM_OWNER_EMAILS = new Set(
 
 export const isPlatformOwnerUser = (user) =>
   PLATFORM_OWNER_EMAILS.has(String(user?.email || '').toLowerCase().trim());
-import { extractUserMentionLabels, resolveUserByLabel } from './mentionTokens';
-import { isAdminUser } from './departmentPermissions';
-import { normalizeTask } from './normalizeTask';
 
 export {
   canUserApproveReview,
   canUserApproveOrRollback,
+  canUserRollbackTask,
   needsReviewOnComplete,
   requiresReviewForUser,
   getDelegatedAssignments,
@@ -112,6 +114,17 @@ export function canReviewTask(task, user) {
   if (!task || task.status !== 'in-review' || !user) return false;
   if (isPlatformOwnerUser(user)) return true;
   return canUserApproveReview(user, getTaskAssignments(task));
+}
+
+export function canRollbackTask(task, user) {
+  if (!task || !user) return false;
+  if (isPlatformOwnerUser(user)) {
+    const status = String(task.status || '').toLowerCase();
+    return status === 'in-review' || status === 'done';
+  }
+  return canUserRollbackTask(user, task, getTaskAssignments(task), {
+    taskCreatedBy: task?.createdBy,
+  });
 }
 
 export function countReviewTasksByProject(reviewTasks = []) {

@@ -12,6 +12,7 @@ const {
   getReviewQueueAssignmentFilter,
   canUserApproveReview,
   canUserApproveOrRollback,
+  canUserRollbackTask,
   filterReviewQueueTasks,
   normalizeAssigneeIds,
   getAssignmentForUser,
@@ -650,11 +651,28 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
   const platformOwnerId = await getPlatformOwnerUserId(session);
   let isReviewer = false;
-  if (reviewAction === 'approve' || reviewAction === 'rollback') {
+  if (reviewAction === 'approve') {
+    if (String(existing.status || '').toLowerCase() !== 'in-review') {
+      throw new Error('Only in-review tasks can be approved');
+    }
     isReviewer = canUserApproveOrRollback(user, assignments, { platformOwnerId });
     if (!isReviewer) {
-      throw new Error('Only the person who assigned this task can approve or rollback');
+      throw new Error('Only the person who assigned this task can approve');
     }
+  }
+  if (reviewAction === 'rollback') {
+    const rollbackableStatus = String(existing.status || '').toLowerCase();
+    if (rollbackableStatus !== 'in-review' && rollbackableStatus !== 'done') {
+      throw new Error('Only in-review or completed tasks can be rolled back');
+    }
+    const canRollback = canUserRollbackTask(user, existing, assignments, {
+      platformOwnerId,
+      taskCreatedBy: existing.createdBy,
+    });
+    if (!canRollback) {
+      throw new Error('You are not allowed to roll back this task');
+    }
+    isReviewer = true;
   }
 
   if (!isCreator && !isAssignee && !isAdminUser(user) && !isReviewer && !isSourceProjectMember && !isMentioned) {
@@ -966,19 +984,44 @@ exports.updateTask = async (taskId, updates, user, session) => {
     }
 
     if (reviewAction === 'rollback') {
-      const reviewerId = user._id.toString();
-      const assigneeIdsToClear = getDelegatedAssignments(assignments)
-        .filter((a) => assignmentAssignerId(a) === reviewerId)
+      const actorId = user._id.toString();
+      const wasDone = String(existing.status || '').toLowerCase() === 'done';
+      if (wasDone && task.projectId) {
+        await Project.findByIdAndUpdate(
+          task.projectId?._id || task.projectId,
+          { $inc: { completedTasksCount: -1 } },
+          { session }
+        );
+      }
+
+      const assigneeIdsToClear = assignments
         .map((a) => rulesAssignmentUserId(a))
         .filter(Boolean);
-      await removeReviewLogsForTask(task._id, assigneeIdsToClear, reviewerId, session);
-      for (const a of assignments) {
-        const assigneeId = assignmentUserId(a.userId);
-        if (!assigneeId) continue;
+      const reviewerIdsToClear = getDelegatedAssignments(assignments)
+        .map((a) => assignmentAssignerId(a))
+        .filter(Boolean);
+      const logUserIds = [...new Set([...assigneeIdsToClear, ...reviewerIdsToClear, actorId])];
+      await removeReviewLogsForTask(task._id, logUserIds, null, session);
+
+      const reopenTitle = wasDone ? 'Task Reopened' : 'Revision Required';
+      const reopenMessage = wasDone
+        ? `${user.name} reopened "${task.title}" for more work.`
+        : `${user.name} sent "${task.title}" back to In Progress.`;
+      const notifyIds = new Set(assigneeIdsToClear);
+      for (const a of getDelegatedAssignments(assignments)) {
+        const assignerId = assignmentAssignerId(a);
+        if (assignerId && assignerId !== actorId) notifyIds.add(assignerId);
+      }
+      if (existing.createdBy) {
+        const creatorId = (existing.createdBy?._id || existing.createdBy)?.toString();
+        if (creatorId && creatorId !== actorId) notifyIds.add(creatorId);
+      }
+      for (const recipientId of notifyIds) {
+        if (recipientId === actorId) continue;
         pendingNotifications.push({
-          recipientId: assigneeId,
-          title: 'Revision Required',
-          message: `${user.name} sent "${task.title}" back to In Progress.`,
+          recipientId,
+          title: reopenTitle,
+          message: reopenMessage,
           category: 'review',
           type: 'alert',
           relatedTaskId: task._id,

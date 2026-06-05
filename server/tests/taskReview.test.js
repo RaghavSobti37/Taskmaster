@@ -119,6 +119,32 @@ describe('task review workflow', () => {
     expect(row.assignedBy.toString()).toBe(creator._id.toString());
   });
 
+  test('assignee can reopen completed task', async () => {
+    const task = await Task.create({
+      title: 'Done reopen',
+      createdBy: creator._id,
+      status: 'done',
+      completedAt: new Date(),
+      progress: 100,
+    });
+    await TaskAssignment.create({
+      taskId: task._id,
+      userId: assignee._id,
+      assignedBy: creator._id,
+    });
+
+    await TaskService.updateTask(
+      task._id,
+      { reviewAction: 'rollback' },
+      assignee,
+      null
+    );
+
+    const updated = await Task.findById(task._id).lean();
+    expect(updated.status).toBe('in-progress');
+    expect(updated.completedAt).toBeFalsy();
+  });
+
   test('platform owner can rollback in-review task they did not assign', async () => {
     const task = await Task.create({
       title: 'Owner rollback',

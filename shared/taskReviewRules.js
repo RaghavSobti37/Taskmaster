@@ -71,6 +71,18 @@ const canUserApproveOrRollback = (user, assignments, { platformOwnerId } = {}) =
   return canUserApproveReview(user, assignments);
 };
 
+/** Creator, assignee, assigner, or platform owner may rollback in-review or reopen done tasks. */
+const canUserRollbackTask = (user, task, assignments, { platformOwnerId, taskCreatedBy } = {}) => {
+  const uid = normalizeId(user?._id || user);
+  if (!uid) return false;
+  const status = String(task?.status || '').toLowerCase();
+  if (status !== 'in-review' && status !== 'done') return false;
+  if (platformOwnerId && uid === normalizeId(platformOwnerId)) return true;
+  if (taskCreatedBy && uid === normalizeId(taskCreatedBy)) return true;
+  if (canUserApproveReview(user, assignments)) return true;
+  return (assignments || []).some((a) => assignmentUserId(a) === uid);
+};
+
 /**
  * True when this user's completion must route through review.
  * Covers corrupted assignment rows (assigner reset on edit) when task still has delegated work.
@@ -136,6 +148,7 @@ module.exports = {
   filterReviewQueueTasks,
   canUserApproveReview,
   canUserApproveOrRollback,
+  canUserRollbackTask,
   isSelfWorkOnlyTask,
   mergeAssigneeIdsWithCreator,
   normalizeAssigneeIds,

@@ -13,4 +13,4 @@
 # Known Gotchas
 - Never use CoreKnot-jfw0.onrender.com — suspended/wrong host.
 - `client/.env` with production `VITE_API_URL` no longer breaks local login — axios uses Vite proxy; still set localhost in `.env` for OAuth/upload helpers.
-- Users upgrading from v1.0.6 may need **Clear session cookies** once on /login.
+- Users upgrading from pre-v1.0.7 login builds may need **Clear session cookies** once on /login.

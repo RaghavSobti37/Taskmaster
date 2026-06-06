@@ -4,11 +4,11 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ## Versioning
 
-**v1.0.0** is the first **stable** release. All prior **v1.7.x–v1.9.x** entries were **beta** builds during private deployment (Git commit messages may still show `v1.9.x` tags from that period).
+**v1.0.7** is the current stable release (unified login). Tags **v1.0.5** and **v1.0.6** were retired — superseded by v1.0.7. All prior **v1.7.x–v1.9.x** entries were **beta** builds during private deployment.
 
 ---
 
-### [2026-06-06] v1.0.7 — Unified device-agnostic login
+### [2026-06-06] v1.0.7 — Unified device-agnostic login (current)
 
 #### Authentication
 - **Single API path:** Desktop and mobile both use same-origin `/api` in production (`apiBase.js`); removed device-based routing via `shouldUseSameOriginApi()` and deleted `apiProxyHealth.js` direct-API fallback.
@@ -17,34 +17,7 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 - **Realtime proxy:** Vercel rewrite for `/socket.io/*` so Socket.IO shares the frontend-domain session cookie.
 - **Dev routing:** `npm run dev` always uses relative `/api` via Vite proxy (ignores production `VITE_API_URL` in `client/.env` for axios); fixes localhost login 401 when `.env` pointed at Render.
 
-**Deploy:** Redeploy Vercel (frontend) and Render (API) together. Run `node scripts/generateVercelConfig.js` locally to refresh `vercel.json` if `RENDER_API_PROXY_URL` changed.
-
----
-
-### [2026-06-06] v1.0.6 — Mobile login hardening & production proxy repair
-
-#### Authentication
-- **Production proxy fix:** Vercel `RENDER_API_PROXY_URL` must target the live Render API (`taskmaster-jfw0`); stale `CoreKnot-jfw0` caused `/api/*` 404 on phone while desktop direct API still worked.
-- **Cookie hardening:** `authCookie.js` detects first-party traffic via `X-Forwarded-Host`, `Origin`, and `Referer`; `replaceAuthCookie` clears stale SameSite/Partitioned variants before issuing `coreknot_token_v3`.
-- **Login UX:** `LoginPage` purges HttpOnly cookies on mount and before submit; trims email; `formatLoginError` distinguishes proxy failures from credential errors.
-- **Build:** `generateVercelConfig.js` runs on `postinstall`, `prebuild`, and `build`; rejects banned hosts (`CoreKnot-jfw0`); `client/vercel.json` commits the live `/api` rewrite so **git-triggered deploys** keep the proxy working.
-- **Fallback:** `loginRequest.js` + `apiProxyHealth.js` probe `/api/health` and fall back to direct Render API when the Vercel proxy is down.
-- **Ops:** `npm run verify:mobile-proxy` smoke-tests `GET /api/health` on the frontend domain; `render.yaml` / `keepWarm.js` no longer default to legacy Render host.
-- **Tests:** `authMobileLogin.test.js`, `loginError.test.js`, `e2e/mobile-login.spec.js`.
-
-**Deploy:** Set `RENDER_API_PROXY_URL` on Vercel Production + Preview to your live Render API. After upgrade, users tap **Clear session cookies** on `/login` once; reinstall iOS home-screen shortcut if sessions feel sticky.
-
----
-
-### [2026-06-06] v1.0.5 — Mobile login fix (iOS Safari / Vercel proxy)
-
-#### Authentication
-- **Vercel `/api` rewrite:** Committed placeholder rewrite in `vercel.json`; `installCommand` runs `generateVercelConfig.js` before install so `RENDER_API_PROXY_URL` is injected at deploy time (fixes 404 on phone when rewrite was missing from deployed config).
-- **First-party session cookies:** API emits `SameSite=Lax` (no `Partitioned`) when `X-Forwarded-Host` matches the frontend host; skips global legacy cookie purge on proxied traffic so iOS Safari retains the session after login.
-- **Client:** `AuthContext` sets `sessionReady` immediately after login response; mobile/PWA routes auth through same-origin `/api` via `shouldUseSameOriginApi()`.
-- **Removed:** Edge `middleware.js` proxy — native Vercel rewrites handle all HTTP methods reliably.
-
-**Deploy:** Set `RENDER_API_PROXY_URL` on Vercel Production + Preview. Redeploy API (Render) and frontend (Vercel) together.
+**Deploy:** Redeploy Vercel (frontend) and Render (API) together. Users on older login builds: tap **Clear session cookies** on `/login` once.
 
 ---
 

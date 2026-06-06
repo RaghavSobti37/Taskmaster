@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.6-126d5e?style=flat-square" alt="Version 1.0.6" />
+  <img src="https://img.shields.io/badge/version-1.0.7-126d5e?style=flat-square" alt="Version 1.0.7" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -89,8 +89,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
-| **Unified login (v1.0.7)** | All devices use same-origin `/api` → Vercel rewrite → Render; login gated on `/api/auth/me` 200; removed device-specific API routing, proxy health fallback, and sliding JWT rotation in `protect` |
-| **Mobile login (v1.0.6)** | Committed `client/vercel.json` + `RENDER_API_PROXY_URL`; `generateVercelConfig.js` on install/build; `npm run verify:mobile-proxy` |
+| **Unified login (v1.0.7)** | Same-origin `/api` on every device (Vercel + Vite proxy); login gated on `/api/auth/me`; simplified JWT `protect`; `/socket.io` Vercel rewrite; local dev always uses Vite proxy |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |

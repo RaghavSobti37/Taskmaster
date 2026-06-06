@@ -1,6 +1,6 @@
 {
   "name": "coreknot-server",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Enterprise Work Management API",
   "main": "server.js",
   "scripts": {

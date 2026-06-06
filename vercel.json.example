@@ -1,14 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://YOUR-RENDER-SERVICE.onrender.com/api/$1"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
+  "buildCommand": "npm run vercel-build",
   "env": {
     "preview": {
       "MONGODB_URI": "@local-mongodb-uri",

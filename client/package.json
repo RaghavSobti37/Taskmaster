@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/generate-pwa-icons.mjs",
+    "prevercel-build": "node ../scripts/generateVercelConfig.js",
+    "vercel-build": "npm run build",
     "build": "vite build",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "lint": "eslint .",

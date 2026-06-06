@@ -9,7 +9,10 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.render') });
 
 const API_BASE = 'https://api.render.com/v1';
-const DEFAULT_SERVICE_HOST = 'taskmaster-jfw0.onrender.com';
+const DEFAULT_SERVICE_HOST = String(process.env.RENDER_API_PROXY_URL || process.env.SERVER_URL || '')
+  .trim()
+  .replace(/^https?:\/\//, '')
+  .replace(/\/$/, '') || 'YOUR-RENDER-SERVICE.onrender.com';
 const apiKey = (process.env.RENDER_API_KEY || '').trim();
 const sharedSecret = (process.env.TSC_WEBHOOK_SHARED_SECRET || process.env.BOOK_CALL_WEBHOOK_SECRET || 'change-me-to-a-long-random-string').trim();
 

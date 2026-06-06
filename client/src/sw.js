@@ -7,6 +7,14 @@ import { ExpirationPlugin } from 'workbox-expiration';
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 /** Cache GET /api/* reads for offline fallback (excludes auth + live notification feeds). */
 registerRoute(
   ({ request, url }) =>

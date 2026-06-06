@@ -17,6 +17,7 @@ export const INLET_META = {
   leads: { key: 'leads', label: 'Leads', icon: 'UserPlus' },
   outsourced: { key: 'outsourced', label: 'Outsourced Data', icon: 'FileSpreadsheet' },
   newsletter: { key: 'newsletter', label: 'Newsletter', icon: 'Mail' },
+  artist_path: { key: 'artist_path', label: 'Artist Path', icon: 'Music' },
   tsc: { key: 'outsourced', label: 'Outsourced Data', icon: 'FileSpreadsheet' },
   booked_calls: { key: 'booked_calls', label: 'Booked Calls', icon: 'Phone' },
   enquiries: { key: 'enquiries', label: 'Enquiries', icon: 'MessageSquare' },

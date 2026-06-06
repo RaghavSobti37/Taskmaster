@@ -28,6 +28,23 @@ watchDisplayModeFlags();
 purgeExpiredNoteDrafts();
 warnIfDevPointsAtProduction();
 
+const CHUNK_RETRY_KEY = 'chunk-retry';
+
+const reloadOnceForStaleAssets = () => {
+  if (window.sessionStorage.getItem(CHUNK_RETRY_KEY)) return;
+  window.sessionStorage.setItem(CHUNK_RETRY_KEY, 'true');
+  window.location.reload();
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target?.tagName !== 'SCRIPT' || !target.src) return;
+    if (!/\.(js|mjs)(\?|$)/i.test(target.src)) return;
+    reloadOnceForStaleAssets();
+  }, true);
+}
+
 const loadAppFont = () => {
   import('@fontsource-variable/geist/wght.css').catch(() => {});
 };

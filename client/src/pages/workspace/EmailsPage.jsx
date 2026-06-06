@@ -1,10 +1,12 @@
 import React from 'react';
-import { ListPageLayout, DesktopRecommendedBanner } from '../../components/ui';
+import { useNavigate } from 'react-router-dom';
+import { ListPageLayout, DesktopRecommendedBanner, Button } from '../../components/ui';
 import AdminMailContent from '../../components/admin/AdminMailContent';
-import { Mail, Send, Play, Pause } from 'lucide-react';
+import { Mail, Send, Play, Pause, Newspaper } from 'lucide-react';
 import { useMailStats, useMailCampaigns } from '../../hooks/useTaskmasterQueries';
 
 const EmailsPage = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useMailStats();
   const { data: campaigns = [], isLoading: campaignsLoading } = useMailCampaigns();
   const overviewLoading = statsLoading || campaignsLoading;
@@ -57,6 +59,11 @@ const EmailsPage = () => {
       }}
     >
       <DesktopRecommendedBanner message="Email campaign editor and analytics are optimized for desktop." />
+      <div className="flex justify-end mb-3">
+        <Button variant="secondary" size="sm" onClick={() => navigate('/emails/newsletter')}>
+          <Newspaper size={14} /> Weekly Newsletter
+        </Button>
+      </div>
       <div className="w-full">
         <AdminMailContent />
       </div>

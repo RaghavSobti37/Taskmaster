@@ -2,9 +2,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Mail, Plus, Play, FileCode, Trash2, Zap, BarChart2, RefreshCw,
+  Mail, Plus, Play, FileCode, Trash2, Zap, BarChart2, RefreshCw, Newspaper,
 } from 'lucide-react';
-import { Card, Button, DataTable, PageSkeleton } from '../ui';
+import { Card, Button, Badge, DataTable, PageSkeleton } from '../ui';
 import {
   useMailProfiles, useMailCampaigns, useMailStats,
   useSendCampaign, useDeleteCampaign, useScanBounces, useCumulativeAnalytics,
@@ -375,6 +375,13 @@ export default function AdminMailContent({ initialMode = null, hideModeBar = fal
               onClick={() => navigate('/emails/create')}
             >
               <Plus size={14} /> Create Campaign
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/emails/newsletter')}
+            >
+              <Newspaper size={14} /> Weekly Newsletter
             </Button>
             <Button
               variant={mode === 'templates' ? 'primary' : 'secondary'}

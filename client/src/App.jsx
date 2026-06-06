@@ -6,16 +6,28 @@ import AppBootFallback from './components/AppBootFallback';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 
 // Helper to retry dynamic imports when a redeploy changes chunk hashes
+const CHUNK_RETRY_KEY = 'chunk-retry';
+
+const isStaleChunkError = (error) => {
+  const message = String(error?.message || error || '');
+  return (
+    /Failed to fetch dynamically imported module/i.test(message)
+    || /Importing a module script failed/i.test(message)
+    || /error loading dynamically imported module/i.test(message)
+    || /ChunkLoadError/i.test(message)
+  );
+};
+
 const lazyWithRetry = (componentImport) => 
   lazy(async () => {
-    const hasRetried = window.sessionStorage.getItem('chunk-retry');
+    const hasRetried = window.sessionStorage.getItem(CHUNK_RETRY_KEY);
     try {
       const component = await componentImport();
-      window.sessionStorage.removeItem('chunk-retry');
+      window.sessionStorage.removeItem(CHUNK_RETRY_KEY);
       return component;
     } catch (error) {
-      if (!hasRetried) {
-        window.sessionStorage.setItem('chunk-retry', 'true');
+      if (!hasRetried && isStaleChunkError(error)) {
+        window.sessionStorage.setItem(CHUNK_RETRY_KEY, 'true');
         window.location.reload();
         return new Promise(() => {}); // Keep loading state until reload
       }
@@ -66,6 +78,9 @@ const FinancePage = lazyWithRetry(() => import('./pages/finance/FinancePage'));
 const ExlyCampaignsPage = lazyWithRetry(() => import('./pages/admin/ExlyCampaignsPage'));
 const ExlyBookingsPage = lazyWithRetry(() => import('./pages/crm/ExlyBookingsPage'));
 const EmailsPage = lazyWithRetry(() => import('./pages/workspace/EmailsPage'));
+const NewsletterPage = lazyWithRetry(() => import('./pages/workspace/NewsletterPage'));
+const NewsletterCuratePage = lazyWithRetry(() => import('./pages/workspace/NewsletterCuratePage'));
+const NewsletterSendPage = lazyWithRetry(() => import('./pages/workspace/NewsletterSendPage'));
 const CreateCampaignPage = lazyWithRetry(() => import('./pages/workspace/CreateCampaignPage'));
 const OTPVerificationPage = lazyWithRetry(() => import('./pages/auth/OTPVerificationPage'));
 const AttendancePage = lazyWithRetry(() => import('./pages/management/AttendancePage'));
@@ -229,6 +244,9 @@ function App() {
               </Route>
               <Route element={<PageRoute page="emails" />}>
                 <Route path="/emails" element={<EmailsPage />} />
+                <Route path="/emails/newsletter" element={<NewsletterPage />} />
+                <Route path="/emails/newsletter/curate" element={<NewsletterCuratePage />} />
+                <Route path="/emails/newsletter/send/:issueId" element={<NewsletterSendPage />} />
                 <Route path="/emails/create" element={<CreateCampaignPage />} />
               </Route>
               <Route path="/workspace/emails" element={<Navigate to="/emails" replace />} />

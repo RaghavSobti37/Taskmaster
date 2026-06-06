@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "postinstall": "node ../scripts/generateVercelConfig.js",
     "prebuild": "node ../scripts/generateVercelConfig.js && node scripts/generate-pwa-icons.mjs",
+    "build": "node ../scripts/generateVercelConfig.js && vite build",
     "prevercel-build": "node ../scripts/generateVercelConfig.js",
     "vercel-build": "npm run build",
-    "build": "vite build",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "lint": "eslint .",
     "test": "vitest run",

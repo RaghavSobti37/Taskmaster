@@ -52,6 +52,9 @@
     "bookCall": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call",
     "artistPath": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-path",
     "artistEnquiry": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-enquiry",
+    "newsletter": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/newsletter",
+    "masterclassReview": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/masterclass-review",
+    "masterclassReviewsPublic": "https://YOUR-RENDER-SERVICE.onrender.com/api/public/masterclass-reviews",
     "instagramMetaVerify": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
     "instagramMetaEvents": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
     "metaDataDeletion": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/meta-data-deletion",
@@ -68,6 +71,9 @@
   "externalWebhooksToConfigure": {
     "tscWebsiteBookCall": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call",
     "tscWebsiteArtistEnquiry": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-enquiry",
+    "tscWebsiteArtistPath": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-path",
+    "tscWebsiteNewsletter": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/newsletter",
+    "tscWebsiteMasterclassReview": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/masterclass-review",
     "metaAppWebhook": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
     "metaDataDeletionUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/meta-data-deletion"
   },

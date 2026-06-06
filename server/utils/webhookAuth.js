@@ -110,6 +110,38 @@ const rejectUnlessArtistPathAuthorized = (req, res) => {
   return rejectUnlessWebhookSignature(req, res, 'ARTIST_PATH_WEBHOOK_SECRET');
 };
 
+const verifySecretHeader = (req, secretEnvKey) => {
+  const secret = process.env[secretEnvKey];
+  if (!secret) {
+    return process.env.NODE_ENV !== 'production';
+  }
+  const received = req.headers['x-webhook-secret'];
+  if (!received || typeof received !== 'string') return false;
+  try {
+    const a = Buffer.from(received.trim());
+    const b = Buffer.from(secret.trim());
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+};
+
+const verifyNewsletterWebhookSecret = (req) => verifySecretHeader(req, 'NEWSLETTER_WEBHOOK_SECRET');
+const verifyMasterclassReviewWebhookSecret = (req) => verifySecretHeader(req, 'MASTERCLASS_REVIEW_WEBHOOK_SECRET');
+
+const rejectUnlessNewsletterAuthorized = (req, res) => {
+  if (verifyNewsletterWebhookSecret(req)) return true;
+  res.status(401).json({ success: false, error: 'Unauthorized' });
+  return false;
+};
+
+const rejectUnlessMasterclassReviewAuthorized = (req, res) => {
+  if (verifyMasterclassReviewWebhookSecret(req)) return true;
+  res.status(401).json({ success: false, error: 'Unauthorized' });
+  return false;
+};
+
 module.exports = {
   computeWebhookSignature,
   verifyWebhookSignature,
@@ -117,6 +149,10 @@ module.exports = {
   verifyArtistEnquirySecret,
   verifyBookCallWebhookSecret,
   verifyArtistPathWebhookSecret,
+  verifyNewsletterWebhookSecret,
+  verifyMasterclassReviewWebhookSecret,
   rejectUnlessBookCallAuthorized,
   rejectUnlessArtistPathAuthorized,
+  rejectUnlessNewsletterAuthorized,
+  rejectUnlessMasterclassReviewAuthorized,
 };

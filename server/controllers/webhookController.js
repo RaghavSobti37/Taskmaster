@@ -8,7 +8,16 @@ const LeadService = require('../services/LeadService');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
 const { processArtistPathWebhook } = require('../services/artistPathImportService');
-const { rejectUnlessBookCallAuthorized, verifyArtistEnquirySecret, rejectUnlessArtistPathAuthorized } = require('../utils/webhookAuth');
+const {
+  rejectUnlessBookCallAuthorized,
+  verifyArtistEnquirySecret,
+  rejectUnlessArtistPathAuthorized,
+  rejectUnlessNewsletterAuthorized,
+  rejectUnlessMasterclassReviewAuthorized,
+} = require('../utils/webhookAuth');
+const { processNewsletterWebhook } = require('../services/newsletterWebhookService');
+const { processMasterclassReviewWebhook } = require('../services/masterclassReviewService');
+const { sendAiSensyMessage } = require('../utils/aisensyClient');
 /** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 
@@ -173,7 +182,6 @@ exports.processBookedCallLogic = async (data) => {
       });
     }
 
-    // 4. Send AiSensy to Customer
     await sendAiSensyMessage(
       whatsapp || phone,
       'final_book_call_confirmation',
@@ -216,6 +224,8 @@ exports.processBookedCallLogic = async (data) => {
 
 exports.processArtistEnquiryLogic = processArtistEnquiryLogic;
 exports.processArtistPathLogic = processArtistPathWebhook;
+exports.processNewsletterLogic = processNewsletterWebhook;
+exports.processMasterclassReviewLogic = processMasterclassReviewWebhook;
 
 exports.handleArtistPath = async (req, res) => {
   if (!rejectUnlessArtistPathAuthorized(req, res)) {
@@ -282,6 +292,44 @@ exports.handleArtistEnquiry = async (req, res) => {
   }
 };
 
+async function enqueueOrProcess(req, res, jobName, processor) {
+  try {
+    if (connection.status === 'ready') {
+      await webhookQueue.add(jobName, req.body, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      });
+      return res.status(202).json({ success: true, message: `${jobName} received and queued` });
+    }
+    console.warn(`Redis is not ready, falling back to synchronous ${jobName} processing`);
+    const result = await processor(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(`${jobName} queue error:`, error);
+    try {
+      const result = await processor(req.body);
+      return res.status(200).json(result);
+    } catch (syncError) {
+      console.error(`${jobName} sync fallback error:`, syncError);
+      const isValidation = syncError.message?.includes('Missing required');
+      return res.status(isValidation ? 400 : 500).json({
+        success: false,
+        error: syncError.message || `Failed to process ${jobName}`,
+      });
+    }
+  }
+}
+
+exports.handleNewsletter = async (req, res) => {
+  if (!rejectUnlessNewsletterAuthorized(req, res)) return;
+  return enqueueOrProcess(req, res, 'newsletter', processNewsletterWebhook);
+};
+
+exports.handleMasterclassReview = async (req, res) => {
+  if (!rejectUnlessMasterclassReviewAuthorized(req, res)) return;
+  return enqueueOrProcess(req, res, 'masterclass-review', processMasterclassReviewWebhook);
+};
+
 exports.handleBookedCall = async (req, res) => {
   if (!rejectUnlessBookCallAuthorized(req, res)) {
     return;
@@ -311,35 +359,3 @@ exports.handleBookedCall = async (req, res) => {
     }
   }
 };
-
-async function sendAiSensyMessage(destination, campaign, params, attributes, userName) {
-  const cleanDestination = destination.replace(/\D/g, '');
-  const body = {
-    apiKey: process.env.AISENSY_API_KEY,
-    campaignName: campaign,
-    destination: cleanDestination,
-    templateParams: params,
-    userName: userName || 'User'
-  };
-  if (attributes) {
-    body.attributes = attributes;
-  }
-
-  if (!process.env.AISENSY_API_KEY) {
-    console.warn('[Warning] AISENSY_API_KEY not found in environment, skipping fetch');
-    return;
-  }
-
-  try {
-    const res = await fetch('https://backend.aisensy.com/campaign/t1/api/v2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const json = await res.json();
-    console.log(`[AiSensy Webhook Response for ${campaign}]:`, json);
-  } catch (e) {
-    console.error('[AiSensy] Fetch Error:', e);
-  }
-}
-

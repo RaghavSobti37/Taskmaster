@@ -146,6 +146,8 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+app.use('/api/public', require('./routes/publicRoutes'));
+
 /** Integration probes: sync gamification scoped to request via AsyncLocalStorage. */
 app.use('/api', (req, res, next) => {
   if (req.headers['x-qa-integration-probe'] !== 'true') return next();
@@ -334,11 +336,13 @@ app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
 app.use('/api/exly', require('./routes/exlyRoutes'));
+app.use('/api/newsletter', require('./routes/newsletterRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/admin/scripts', require('./routes/adminScriptsRoutes'));
 app.use('/api/admin/queues', require('./routes/queueAdminRoutes'));
+app.use('/api/admin', require('./routes/masterclassReviewAdminRoutes'));
 
 const { createRouteHandler } = require("uploadthing/express");
 const { uploadRouter } = require("./config/uploadthing");

@@ -6,6 +6,7 @@ const PersonHubBuilder = require('./PersonHubBuilder');
 const ContactService = require('./ContactService');
 const { mapRowToArtistPath, ARTIST_PATH_SHEET_ID, displayArtistLabel } = require('../../shared/artistPathSchema.cjs');
 const logger = require('../utils/logger');
+const { sendAiSensyMessage } = require('../utils/aisensyClient');
 
 const HOLYSHEET_BASE = 'https://holysheet.soneshjain.com/api/v1';
 
@@ -30,9 +31,29 @@ function normalizeWebhookPayload(data = {}) {
     instagram: 'Instagram',
     spotify: 'Spotify',
     youtube: 'Youtube',
+    trainingDetails: 'TrainingDetails',
+    coreSkills: 'CoreSkills',
+    strengthsUniqueness: 'StrengthsUniqueness',
+    dailyTime: 'DailyTime',
+    mentorName: 'MentorName',
+    songsReleased: 'SongsReleased',
+    showsPerformed: 'ShowsPerformed',
+    currentFans: 'CurrentFans',
+    currentSetup: 'CurrentSetup',
+    currentlyWorkingOn: 'CurrentlyWorkingOn',
+    dailyRituals: 'DailyRituals',
+    learningNeeds: 'LearningNeeds',
+    mentorshipNeeds: 'MentorshipNeeds',
+    curationNeeds: 'CurationNeeds',
+    fandomNeeds: 'FandomNeeds',
+    aspirationalGoal: 'AspirationalGoal',
+    anythingElse: 'AnythingElse',
   };
   for (const [from, to] of Object.entries(aliases)) {
     if (row[from] != null && row[from] !== '' && !row[to]) row[to] = row[from];
+  }
+  if (!row.FullName && (row.firstName || row.lastName)) {
+    row.FullName = `${row.firstName || ''} ${row.lastName || ''}`.trim();
   }
   return row;
 }
@@ -133,6 +154,25 @@ async function processArtistPathWebhook(data) {
   if (!result) {
     throw new Error('Missing required identity: email or phone');
   }
+
+  const normalized = normalizeWebhookPayload(payload);
+  const firstName = String(payload.firstName || normalized.FullName || result.name || '').trim().split(' ')[0];
+  const formattedFirstName = firstName
+    ? firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase()
+    : 'Artist';
+  const mobile = payload.mobile || normalized.Mobile || result.phone;
+
+  if (mobile) {
+    const campaignName = process.env.AISENSY_ARTIST_PATH_CAMPAIGN || 'Confirmation TSC';
+    await sendAiSensyMessage(
+      mobile,
+      campaignName,
+      [formattedFirstName],
+      undefined,
+      result.name || formattedFirstName
+    );
+  }
+
   return { success: true, message: 'Artist Path response recorded', ...result };
 }
 

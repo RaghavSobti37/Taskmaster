@@ -151,3 +151,30 @@ flowchart LR
 See **`docs/EMAIL_ENGINE_LOCKED.md`** and **`.cursor/rules/email-engine-locked.mdc`** for the full frozen spec (open/click tracking, ip-api geo, Gmail proxy handling, HolySheet deselect defaults, raw HTML templates).
 
 Campaign cleanup script: `node server/scripts/keepOnlyCampaign.js "Artist Path Delay Email"`
+
+---
+
+## 8. TSC Website → Taskmaster webhooks (v1.0.5+)
+
+Public marketing site **theshakticollective.in** (TSC-Website repo) forwards all form POSTs to Taskmaster on Render — no Google Sheets / HolySheet / site-side AiSensy on TSC after cutover.
+
+| TSC route | Taskmaster endpoint |
+| --- | --- |
+| `POST /api/book-call` | `POST /api/webhooks/book-call` |
+| `POST /api/query` | `POST /api/webhooks/artist-enquiry` |
+| `POST /api/artist-path` | `POST /api/webhooks/artist-path` |
+| `POST /api/newsletter` | `POST /api/webhooks/newsletter` |
+| `POST /api/reviews`, `/api/reviews02` | `POST /api/webhooks/masterclass-review` |
+| `GET /api/reviews`, `/api/reviews02` | `GET /api/public/masterclass-reviews?campaign=review01\|review02` |
+
+**Production API:** see `.cursor/production-hosts.local.json` → `productionApiUrl` (gitignored).
+
+**Auth:** Five shared secrets (`BOOK_CALL`, `ARTIST_ENQUIRY`, `ARTIST_PATH`, `NEWSLETTER`, `MASTERCLASS_REVIEW` `_WEBHOOK_SECRET`) on Render + Vercel. Enquiry/newsletter/review = `X-Webhook-Secret` only; book-call + artist-path also accept HMAC.
+
+**Docs:** `docs/TSC_TASKMASTER_INTEGRATION.md`, `docs/tsc-integration.env.example`
+
+**Smoke:** `node server/scripts/smoke-tsc-webhooks.js` (direct Taskmaster); TSC repo `node scripts/test-tsc-webhooks.mjs` (via Vercel routes).
+
+**Deploy order:** Taskmaster first → direct webhook smoke → TSC → proxy smoke → remove legacy `GOOGLE_*` / `HOLYSHEET_*` / `AISENSY_*` from Vercel.
+
+**Review approval:** `PATCH /api/admin/masterclass-reviews/:id/approve` (admin JWT) before reviews appear on site GET.

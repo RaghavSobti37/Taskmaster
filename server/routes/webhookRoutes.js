@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { handleBookedCall, handleArtistEnquiry, handleArtistPath } = require('../controllers/webhookController');
+const { handleBookedCall, handleArtistEnquiry, handleArtistPath, handleNewsletter, handleMasterclassReview } = require('../controllers/webhookController');
 const metaDataDeletion = require('../controllers/metaDataDeletionController');
 
 router.post('/book-call', handleBookedCall);
 router.post('/artist-path', handleArtistPath);
 router.post('/artist-enquiry', handleArtistEnquiry);
+router.post('/newsletter', handleNewsletter);
+router.post('/masterclass-review', handleMasterclassReview);
 
 // Meta Platform — data deletion callback (App Dashboard → Data Deletion Request URL)
 router.post('/meta-data-deletion', metaDataDeletion.handleDataDeletionCallback);

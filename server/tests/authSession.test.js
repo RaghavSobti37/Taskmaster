@@ -5,6 +5,7 @@ const {
   getCookieOptions,
   isFirstPartyProxiedRequest,
 } = require('../utils/authCookie');
+// isFirstPartyProxiedRequest used in mobile proxy detection tests below
 const {
   generateSessionToken,
   verifySessionToken,
@@ -30,6 +31,26 @@ describe('authCookie session reset', () => {
     const opts = getCookieOptions(req);
     expect(opts.sameSite).toBe('lax');
     expect(opts.partitioned).toBeUndefined();
+  });
+
+  it('treats www host as first-party when bare domain is allowlisted', () => {
+    process.env.NODE_ENV = 'production';
+    const req = { get: (h) => (h === 'x-forwarded-host' ? 'www.tsccoreknot.com' : undefined) };
+    expect(isFirstPartyProxiedRequest(req)).toBe(true);
+    expect(getCookieOptions(req).sameSite).toBe('lax');
+  });
+
+  it('detects first-party via Origin when X-Forwarded-Host missing (Render proxy)', () => {
+    process.env.NODE_ENV = 'production';
+    const req = {
+      get: (h) => {
+        if (h === 'host') return 'taskmaster-jfw0.onrender.com';
+        if (h === 'origin') return 'https://tsccoreknot.com';
+        return undefined;
+      },
+    };
+    expect(isFirstPartyProxiedRequest(req)).toBe(true);
+    expect(getCookieOptions(req).sameSite).toBe('lax');
   });
 });
 

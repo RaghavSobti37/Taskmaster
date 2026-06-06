@@ -247,6 +247,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || loggingOutRef.current) return;
+      applyAxiosBaseURL();
       if (isStandaloneDisplay()) {
         resumePwaSession();
         return;
@@ -262,6 +263,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const onPageShow = (event) => {
       if (loggingOutRef.current) return;
+      applyAxiosBaseURL();
       if (isStandaloneDisplay()) {
         resumePwaSession();
         return;

@@ -9,6 +9,8 @@ import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
+import { formatLoginError } from '../../utils/loginError';
+import { purgeAuthCookies } from '../../utils/purgeAuthCookies';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 
@@ -31,6 +33,11 @@ const LoginPage = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [authLoading, user, navigate]);
+
+  React.useEffect(() => {
+    if (authLoading || user) return;
+    purgeAuthCookies();
+  }, [authLoading, user]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -66,24 +73,18 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    const trimmedEmail = email.trim();
     try {
-      const res = await axios.post(apiPath('/api/auth/login'), { email, password }, AXIOS_SKIP_TOAST);
+      await purgeAuthCookies();
+      const res = await axios.post(
+        apiPath('/api/auth/login'),
+        { email: trimmedEmail, password },
+        AXIOS_SKIP_TOAST,
+      );
       await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      if (!err.response) {
-        setError(
-          'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.'
-        );
-        return;
-      }
-      const message =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        (err.response?.status === 429
-          ? 'Too many login attempts. Please try again later.'
-          : 'Authentication failed. Please check your credentials.');
-      setError(message);
+      setError(formatLoginError(err).message);
     } finally {
       setLoading(false);
     }

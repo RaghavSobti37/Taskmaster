@@ -5,7 +5,11 @@
 const https = require('https');
 const http = require('http');
 
-const url = process.env.KEEP_WARM_URL || process.env.API_HEALTH_URL || 'https://CoreKnot-jfw0.onrender.com/api/health';
+const url = process.env.KEEP_WARM_URL || process.env.API_HEALTH_URL;
+if (!url) {
+  console.error('[keep-warm] KEEP_WARM_URL or API_HEALTH_URL required');
+  process.exit(1);
+}
 const client = url.startsWith('https') ? https : http;
 
 client

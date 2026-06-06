@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from "../../contexts/AuthContext";
 import AppBootFallback from '../../components/AppBootFallback';
 import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
+import { apiPath } from '../../utils/apiBase';
 
 const GoogleSuccessPage = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const GoogleSuccessPage = () => {
       processedKeyRef.current = authKey;
       (async () => {
         try {
-          const res = await axios.post('/api/auth/oauth-establish', { ticket }, AXIOS_SKIP_TOAST);
+          const res = await axios.post(apiPath('/api/auth/oauth-establish'), { ticket }, AXIOS_SKIP_TOAST);
           await finishLogin(res.data);
         } catch (error) {
           console.error('OAuth session establish failed:', error);

@@ -1,11 +1,11 @@
 {
   "name": "CoreKnot-client",
   "private": true,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/generate-pwa-icons.mjs",
+    "prebuild": "node ../scripts/generateVercelConfig.js && node scripts/generate-pwa-icons.mjs",
     "prevercel-build": "node ../scripts/generateVercelConfig.js",
     "vercel-build": "npm run build",
     "build": "vite build",

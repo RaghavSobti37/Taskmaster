@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.4-126d5e?style=flat-square" alt="Version 1.0.4" />
+  <img src="https://img.shields.io/badge/version-1.0.6-126d5e?style=flat-square" alt="Version 1.0.6" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -89,7 +89,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
-| **Mobile login** | Vercel `/api` proxy targets live Render API (`RENDER_API_PROXY_URL` at build); mobile browsers use same-origin auth so iOS Safari keeps session cookies |
+| **Mobile login** | Vercel `/api` proxy → live Render API (`RENDER_API_PROXY_URL`); same-origin auth on phone/PWA; stale-cookie purge on login; `npm run verify:mobile-proxy` smoke test |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
@@ -317,9 +317,12 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 
 ### Mobile browser login (Jun 2026)
 
-* **Same-origin API on mobile:** `displayMode.js` detects phone/tablet browsers (`isMobileBrowser`) and routes auth through the Vercel `/api` proxy instead of direct Render — iOS Safari blocks cross-site session cookies when `VITE_API_URL` points at Render.
-* **Login:** `LoginPage.jsx` uses `apiPath()` for login/logout; network failures show a connection/cookie-clear message instead of a misleading “wrong password” error.
-* **Session sync:** `AuthContext` uses extra `/me` retries (6) whenever `shouldUseSameOriginApi()` is true (PWA + mobile browser).
+* **Same-origin API on mobile:** `displayMode.js` routes phone/tablet/PWA auth through the Vercel `/api` proxy — iOS Safari blocks cross-site cookies when the client talks directly to Render.
+* **Proxy health:** `npm run verify:mobile-proxy` checks `GET /api/health` on your frontend domain. A 404 usually means `RENDER_API_PROXY_URL` on Vercel points at a suspended or wrong Render host.
+* **Login:** `LoginPage.jsx` purges stale HttpOnly cookies on mount and before submit; `apiPath()` for login/logout/OAuth; `formatLoginError` separates proxy outages from wrong credentials.
+* **Cookies:** Server emits `SameSite=Lax` (not `Partitioned`) when the request is first-party proxied; `replaceAuthCookie` clears legacy `coreknot_token` variants before issuing `coreknot_token_v3`.
+* **Session sync:** `AuthContext` re-applies mobile API base URL on tab resume and uses extra `/me` retries (6) on mobile/PWA.
+* **After deploy:** Tap **Clear session cookies** on `/login` once; on iOS home screen, remove and re-add the shortcut if sessions feel sticky.
 
 ### Session IP detection (Jun 2026)
 

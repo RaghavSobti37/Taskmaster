@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { setAuthCookie } = require('./authCookie');
+const { setAuthCookie, replaceAuthCookie } = require('./authCookie');
 const { newJti } = require('./tokenRevocation');
 
 /** Sliding inactivity window — renewed on activity (default 7 days). */
@@ -78,7 +78,7 @@ const refreshSessionIfDue = (res, decoded, req) => {
 /** Fresh login / register / OAuth — new absolute window + inactivity clock. */
 const establishSession = (res, userId, req) => {
   const token = generateSessionToken(userId);
-  setAuthCookie(res, token, req);
+  replaceAuthCookie(res, token, req);
   return token;
 };
 

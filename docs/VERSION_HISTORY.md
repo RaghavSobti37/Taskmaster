@@ -8,6 +8,20 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.6 — Mobile login hardening & production proxy repair
+
+#### Authentication
+- **Production proxy fix:** Vercel `RENDER_API_PROXY_URL` must target the live Render API (`taskmaster-jfw0`); stale `CoreKnot-jfw0` caused `/api/*` 404 on phone while desktop direct API still worked.
+- **Cookie hardening:** `authCookie.js` detects first-party traffic via `X-Forwarded-Host`, `Origin`, and `Referer`; `replaceAuthCookie` clears stale SameSite/Partitioned variants before issuing `coreknot_token_v3`.
+- **Login UX:** `LoginPage` purges HttpOnly cookies on mount and before submit; trims email; `formatLoginError` distinguishes proxy failures from credential errors.
+- **Build:** `generateVercelConfig.js` runs on every `prebuild`; falls back to gitignored `production-hosts.local.json` locally.
+- **Ops:** `npm run verify:mobile-proxy` smoke-tests `GET /api/health` on the frontend domain; `render.yaml` / `keepWarm.js` no longer default to legacy Render host.
+- **Tests:** `authMobileLogin.test.js`, `loginError.test.js`, `e2e/mobile-login.spec.js`.
+
+**Deploy:** Set `RENDER_API_PROXY_URL` on Vercel Production + Preview to your live Render API. Redeploy frontend after env change. Users: tap **Clear session cookies** on `/login` once after upgrade.
+
+---
+
 ### [2026-06-06] v1.0.5 — Mobile login fix (iOS Safari / Vercel proxy)
 
 #### Authentication

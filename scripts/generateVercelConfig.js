@@ -7,7 +7,28 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const proxyUrl = String(process.env.RENDER_API_PROXY_URL || process.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+
+const readLocalProductionApiUrl = () => {
+  const localHosts = path.join(ROOT, '.cursor', 'production-hosts.local.json');
+  if (!fs.existsSync(localHosts)) return '';
+  try {
+    const json = JSON.parse(fs.readFileSync(localHosts, 'utf8'));
+    return String(
+      json.derived?.renderApiProxyUrl
+      || json.productionApiUrl
+      || '',
+    ).trim().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+};
+
+const proxyUrl = String(
+  process.env.RENDER_API_PROXY_URL
+  || process.env.VITE_API_URL
+  || readLocalProductionApiUrl()
+  || '',
+).trim().replace(/\/$/, '');
 const onVercel = process.env.VERCEL === '1';
 
 if (onVercel && !proxyUrl) {

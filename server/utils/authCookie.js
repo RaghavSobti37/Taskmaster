@@ -9,8 +9,45 @@ const LEGACY_COOKIE_NAMES = ['coreknot_token_v2', 'coreknot_token'];
 const BUILTIN_FRONTEND_HOSTS = [
   'tsccoreknot.com',
   'www.tsccoreknot.com',
+  'theshakticollective.in',
+  'www.theshakticollective.in',
   'taskmaster-sand.vercel.app',
 ];
+
+/** Normalize host: strip port, lowercase, drop leading www for allowlist match. */
+const normalizeHost = (raw) => {
+  const value = String(raw || '').split(',')[0].trim().toLowerCase();
+  if (!value) return '';
+  const withoutPort = value.replace(/:\d+$/, '');
+  try {
+    if (withoutPort.includes('://')) {
+      return new URL(withoutPort).host.toLowerCase();
+    }
+  } catch {
+    /* fall through */
+  }
+  return withoutPort;
+};
+
+const hostFromHeaderUrl = (raw) => {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return '';
+  try {
+    return new URL(trimmed).host.toLowerCase();
+  } catch {
+    return normalizeHost(trimmed);
+  }
+};
+
+const hostsMatchFrontend = (host, allowed) => {
+  const normalized = normalizeHost(host);
+  if (!normalized) return false;
+  if (allowed.has(normalized)) return true;
+  if (normalized.startsWith('www.')) {
+    return allowed.has(normalized.slice(4));
+  }
+  return allowed.has(`www.${normalized}`);
+};
 
 const parseJwtExpiryMs = () => {
   const raw = process.env.JWT_EXPIRES_IN || '7d';
@@ -32,19 +69,46 @@ const frontendHosts = () => {
       /* ignore */
     }
   }
+  for (const raw of (process.env.CORS_ALLOWED_ORIGINS || '').split(',')) {
+    if (!raw.trim()) continue;
+    try {
+      hosts.add(new URL(raw.trim()).host.toLowerCase());
+    } catch {
+      /* ignore */
+    }
+  }
   return hosts;
+};
+
+const readHeader = (req, name) => {
+  if (!req) return '';
+  if (typeof req.get === 'function') return req.get(name) || '';
+  const key = name.toLowerCase();
+  return req.headers?.[key] || req.headers?.[name] || '';
 };
 
 /** Vercel /api rewrite sets X-Forwarded-Host — use Lax cookies (not None+Partitioned). */
 const isFirstPartyProxiedRequest = (req) => {
   if (!req) return false;
-  const forwarded = String(
-    (typeof req.get === 'function' && req.get('x-forwarded-host'))
-    || req.headers?.['x-forwarded-host']
-    || '',
-  ).split(',')[0].trim().toLowerCase();
-  if (!forwarded) return false;
-  return frontendHosts().has(forwarded);
+  const allowed = frontendHosts();
+
+  const forwardedHost = normalizeHost(readHeader(req, 'x-forwarded-host'));
+  if (forwardedHost && hostsMatchFrontend(forwardedHost, allowed)) {
+    return true;
+  }
+
+  const apiHost = normalizeHost(readHeader(req, 'host'));
+  const proxiedViaRender = apiHost.endsWith('.onrender.com');
+  if (proxiedViaRender) {
+    for (const headerName of ['origin', 'referer']) {
+      const headerHost = hostFromHeaderUrl(readHeader(req, headerName));
+      if (headerHost && hostsMatchFrontend(headerHost, allowed)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 const getCookieOptions = (req) => {
@@ -95,6 +159,13 @@ const setAuthCookie = (res, token, req) => {
   res.cookie(COOKIE_NAME, token, getCookieOptions(req));
 };
 
+/** Wipe all cookie variants before issuing a fresh session (fixes iOS stale SameSite conflicts). */
+const replaceAuthCookie = (res, token, req) => {
+  clearCookieVariants(res, COOKIE_NAME, req);
+  purgeLegacyAuthCookies(res, req);
+  setAuthCookie(res, token, req);
+};
+
 const clearAuthCookie = (res, req) => {
   clearCookieVariants(res, COOKIE_NAME, req);
   purgeLegacyAuthCookies(res, req);
@@ -128,8 +199,11 @@ const getUserIdFromToken = (token) => {
 module.exports = {
   COOKIE_NAME,
   LEGACY_COOKIE_NAMES,
+  normalizeHost,
+  frontendHosts,
   isFirstPartyProxiedRequest,
   setAuthCookie,
+  replaceAuthCookie,
   clearAuthCookie,
   purgeLegacyAuthCookies,
   hadAuthCookie,

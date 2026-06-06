@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.3-126d5e?style=flat-square" alt="Version 1.0.3" />
+  <img src="https://img.shields.io/badge/version-1.0.4-126d5e?style=flat-square" alt="Version 1.0.4" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -54,7 +54,9 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 **Do not commit:** `server/.env.render`, live `vercel.json`, API keys, or MongoDB Atlas URIs. Use `*.example` templates and set secrets on Render/Vercel.
 
-**Git history:** If the repo ever contained personal emails or credentials in old commits, follow [`docs/GIT_HISTORY_REDACTION.md`](docs/GIT_HISTORY_REDACTION.md) (`scripts/runHistoryRedact.sh`, `replacements.txt`). Jun 2026 rewrite completed on `main` and `testing`; collaborators must re-clone or `git fetch && git reset --hard origin/main`.
+**Git history:** If the repo ever contained personal emails or credentials in old commits, follow [`docs/GIT_HISTORY_REDACTION.md`](docs/GIT_HISTORY_REDACTION.md) (`scripts/runHistoryRedact.sh`, `replacements.txt`). Jun 2026 rewrite completed on `main` and `testing`; collaborators must re-clone or `git fetch && git reset --hard origin/main`. Post-rewrite audit tooling (`npm run audit:history`) and mailmap flow are documented in that runbook.
+
+**Production hosts (local truth):** Real Render API and Vercel frontend URLs live in **gitignored** `.cursor/production-hosts.local.json`. Copy from [`.cursor/production-hosts.local.example.json`](.cursor/production-hosts.local.example.json) and fill values — never commit the local file. Cursor agents read this via the locked rule [`.cursor/rules/production-hosts-locked.mdc`](.cursor/rules/production-hosts-locked.mdc). Committed docs use `YOUR-RENDER-SERVICE` placeholders; do not reuse legacy `CoreKnot-jfw0` hosts from old snapshots.
 
 **Platform admin:** Root access uses `ROOT_ADMIN_USER_IDS` / `PLATFORM_OWNER_USER_ID` env vars and Admin → Platform roles (`PlatformSettings` in MongoDB). See [`docs/DEPLOY_ENV.md`](docs/DEPLOY_ENV.md) and [`security-context.md`](security-context.md).
 
@@ -81,6 +83,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Area | What changed |
 | --- | --- |
+| **Security & ops** | Git history redaction completed (`main` + `testing`); `npm run audit:history` clean; production URL map locked in `.cursor/production-hosts.local.json` (gitignored) with committed example + Cursor rule |
 | **Data Master** | Person golden-record spine (`Person`, `PersonIdentifier`, `PersonHubView`); source facts stay in domain collections (`Lead`, `ArtistPathResponse`, `ExlyBooking`, etc.); bootstrap via `backfillPersonIds.js` — see [`docs/DATA_MASTER_ARCHITECTURE.md`](docs/DATA_MASTER_ARCHITECTURE.md) |
 | **Artist Path** | Admin page at `/admin/artist-path` — HolySheet sync, card grid, profile slider with lazy Q&A + Data Hub cross-link; shared column map in `shared/artistPathSchema.cjs` |
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |

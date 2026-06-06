@@ -8,6 +8,22 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.4 — Git history redaction complete & production hosts locked
+
+#### Security & compliance
+- **History rewrite:** `main` and `testing` force-pushed after `git filter-repo` blob redaction, mailmap, and commit-message callbacks. `npm run audit:history` passes — no original PII needles outside tooling paths.
+- **Audit tooling:** `scripts/auditGitHistoryExposure.js` and `scripts/restoreAuditNeedles.js` hardened post-rewrite; mailmap flow documented in [`GIT_HISTORY_REDACTION.md`](GIT_HISTORY_REDACTION.md).
+- **Exposure gate:** `npm run audit:exposure` remains required before every commit.
+
+#### Production hosts
+- **Local truth file:** `.cursor/production-hosts.local.json` (gitignored) — canonical Render API, Vercel frontend, OAuth redirects, webhooks, and derived env var names.
+- **Committed template:** `.cursor/production-hosts.local.example.json` with `YOUR-*` placeholders only.
+- **Cursor rule:** `.cursor/rules/production-hosts-locked.mdc` — agents must read local JSON; never guess or reuse legacy `CoreKnot-jfw0` hosts from old docs.
+
+**Collaborators:** Re-clone or `git fetch && git reset --hard origin/main` after the rewrite. Rotate any credentials that ever appeared in old history.
+
+---
+
 ### [2026-06-06] v1.0.3 — Data Master identity spine & Artist Path admin
 
 #### Data Master

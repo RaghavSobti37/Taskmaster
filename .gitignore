@@ -1,6 +1,8 @@
 .env
 .env.local
 .env.*.local
+.cursor/production-hosts.local.json
+.local/
 !.env.example
 !.env.*.example
 server/.env

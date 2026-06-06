@@ -1,0 +1,43 @@
+---
+description: Production API + frontend URLs — read gitignored local truth file; never guess or use legacy CoreKnot-jfw0 host
+alwaysApply: true
+---
+
+# Production hosts — LOCKED (Jun 2026)
+
+**Do not invent or reuse hosts from old docs.** Some committed docs still say `CoreKnot-jfw0.onrender.com` — that is **wrong**.
+
+## Read first (gitignored — not on GitHub)
+
+**`.cursor/production-hosts.local.json`**
+
+If missing on this machine: copy from `.cursor/production-hosts.local.example.json` and ask the user for values — **do not guess**.
+
+## Locked fields
+
+| Key | Use for |
+|-----|---------|
+| `productionApiUrl` | Render API, `VITE_API_URL`, `SERVER_URL`, `TRACKING_BASE_URL`, OAuth callbacks, synthetics |
+| `productionFrontendUrl` | Vercel prod, `FRONTEND_URL`, `CLIENT_URL` |
+| `productionApiHealthUrl` | Keep-warm cron, uptime checks, `curl` smoke |
+| `stagingApiUrl` | Vercel Preview + staging Render only — never prod |
+| `derived.*` | Same URLs under env var names — copy from local JSON |
+| `oauthRedirects.*` | Register in Google Cloud / Meta / Spotify / YouTube developer consoles |
+| `webhooks.*` | Register in Meta, Resend, TSC website integrations |
+| `frontendPages.*` | Meta privacy / data deletion URLs |
+| `monitoring.*` | Datadog synthetics + keep-warm cron |
+
+## Rules
+
+1. **Never** use `CoreKnot-jfw0.onrender.com` in new code, env guidance, or deploy steps.
+2. **Never** commit `production-hosts.local.json` — it is gitignored.
+3. Committed files use placeholders (`YOUR-PRODUCTION-API`) or point to this local file.
+4. Email tracking on Render must use `derived.trackingBaseUrl` from local JSON (same as production API).
+5. Setup checklist (gitignored): `.local/TEMP_PRODUCTION_VALUES_CHECKLIST.md`
+
+## Verify
+
+```bash
+# Read local truth (PowerShell)
+Get-Content .cursor/production-hosts.local.json
+```

@@ -26,6 +26,7 @@ Read **one** primary doc for your task; avoid conflicting older guides.
 | Security | [`SECURITY.md`](./SECURITY.md), [`TENANT_SECURITY_PHASE.md`](./TENANT_SECURITY_PHASE.md) |
 | Git history PII redaction | [`GIT_HISTORY_REDACTION.md`](./GIT_HISTORY_REDACTION.md) |
 | Deploy env (no secrets in repo) | [`DEPLOY_ENV.md`](./DEPLOY_ENV.md) |
+| Production hosts (local JSON, gitignored) | `.cursor/production-hosts.local.example.json` + `.cursor/rules/production-hosts-locked.mdc` |
 | Scripts safety tiers | [`SCRIPTS_RUNBOOK.md`](./SCRIPTS_RUNBOOK.md) |
 | Transactions | [`transaction_architecture.md`](./transaction_architecture.md) |
 | Changelog | [`VERSION_HISTORY.md`](./VERSION_HISTORY.md) (historical; URLs may be outdated) |

@@ -1,0 +1,101 @@
+{
+  "_comment": "Canonical production URL map for CoreKnot. Copy to production-hosts.local.json and fill real values. Never commit production-hosts.local.json.",
+  "lockedAt": "2026-06-06",
+  "note": "Copy to production-hosts.local.json (gitignored). Use YOUR-* placeholders here only.",
+
+  "productionApiUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+  "productionFrontendUrl": "https://YOUR-FRONTEND-DOMAIN.com",
+  "productionApiHealthUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/health",
+  "stagingApiUrl": "https://YOUR-STAGING-SERVICE.onrender.com",
+
+  "derived": {
+    "viteApiUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "renderApiProxyUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "serverUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "appBaseUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "trackingBaseUrl": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "frontendUrl": "https://YOUR-FRONTEND-DOMAIN.com",
+    "clientUrl": "https://YOUR-FRONTEND-DOMAIN.com",
+    "keepWarmUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/health",
+    "corsAllowedOrigins": [
+      "https://YOUR-FRONTEND-DOMAIN.com",
+      "https://YOUR-PREVIEW-APP.vercel.app"
+    ]
+  },
+
+  "vercel": {
+    "productionDomain": "https://YOUR-FRONTEND-DOMAIN.com",
+    "apiProxyRewrite": "https://YOUR-RENDER-SERVICE.onrender.com/api/$1",
+    "note": "Browser /api/* on frontend proxies to Render (see vercel.json.example + generateVercelConfig.js)"
+  },
+
+  "frontendPages": {
+    "home": "https://YOUR-FRONTEND-DOMAIN.com/",
+    "login": "https://YOUR-FRONTEND-DOMAIN.com/login",
+    "dashboard": "https://YOUR-FRONTEND-DOMAIN.com/dashboard",
+    "privacy": "https://YOUR-FRONTEND-DOMAIN.com/privacy",
+    "userdata": "https://YOUR-FRONTEND-DOMAIN.com/userdata",
+    "userdataDeletionStatus": "https://YOUR-FRONTEND-DOMAIN.com/userdata?code=CONFIRMATION_CODE",
+    "unsubscribe": "https://YOUR-FRONTEND-DOMAIN.com/unsubscribe"
+  },
+
+  "oauthRedirects": {
+    "googleLogin": "https://YOUR-RENDER-SERVICE.onrender.com/api/auth/google/callback",
+    "googleAccountsLink": "https://YOUR-RENDER-SERVICE.onrender.com/api/google/accounts/callback",
+    "youtubeArtist": "https://YOUR-FRONTEND-DOMAIN.com/api/artists/auth/callback/youtube",
+    "spotifyArtist": "https://YOUR-FRONTEND-DOMAIN.com/api/artists/auth/callback/spotify",
+    "metaOAuth": "https://YOUR-FRONTEND-DOMAIN.com/oauth/meta/callback",
+    "note": "Artist YouTube/Spotify use frontend domain (Vercel /api proxy). Google login uses Render API directly."
+  },
+
+  "webhooks": {
+    "bookCall": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call",
+    "artistPath": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-path",
+    "artistEnquiry": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-enquiry",
+    "instagramMetaVerify": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
+    "instagramMetaEvents": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
+    "metaDataDeletion": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/meta-data-deletion",
+    "metaDataDeletionStatus": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/meta-data-deletion/:code",
+    "resend": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/resend"
+  },
+
+  "emailTracking": {
+    "openPixelBase": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "clickRedirectBase": "https://YOUR-RENDER-SERVICE.onrender.com",
+    "note": "TRACKING_BASE_URL on Render must match productionApiUrl (email engine locked)"
+  },
+
+  "externalWebhooksToConfigure": {
+    "tscWebsiteBookCall": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/book-call",
+    "tscWebsiteArtistEnquiry": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/artist-enquiry",
+    "metaAppWebhook": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/instagram",
+    "metaDataDeletionUrl": "https://YOUR-RENDER-SERVICE.onrender.com/api/webhooks/meta-data-deletion"
+  },
+
+  "monitoring": {
+    "healthCheck": "https://YOUR-RENDER-SERVICE.onrender.com/api/health",
+    "openapi": "https://YOUR-RENDER-SERVICE.onrender.com/api/openapi.json",
+    "syntheticLanding": "https://YOUR-FRONTEND-DOMAIN.com/",
+    "keepWarmCronTarget": "https://YOUR-RENDER-SERVICE.onrender.com/api/health"
+  },
+
+  "renderServices": {
+    "productionApi": "YOUR-RENDER-SERVICE (Web Service on Render)",
+    "redis": "YOUR-REDIS-INSTANCE (Key Value)",
+    "crons": ["daily-backup", "subscription-reminders", "keep-warm"]
+  },
+
+  "manualSetupStillRequired": [
+    {
+      "item": "KEEP_WARM_URL on Render keep-warm cron",
+      "value": "https://YOUR-RENDER-SERVICE.onrender.com/api/health"
+    },
+    {
+      "item": "Datadog (when ready — setup paused)",
+      "command": "npx @datadog/ai-setup-cli --site ap1.datadoghq.com",
+      "guide": "docs/datadog/README.md",
+      "site": "ap1.datadoghq.com"
+    }
+  ],
+  "observabilityNote": "Sentry not used. Datadog setup paused — run ai-setup-cli when ready."
+}

@@ -1,5 +1,17 @@
-# git-filter-repo --replace-text (regex only — no live secrets in this file)
+***REMOVED***
 regex:whsec_[A-Za-z0-9]+==>whsec_REDACTED
 regex:AIzaSy[A-Za-z0-9_\-]{30,40}==>AIzaSyREDACTED
 regex:mongodb\+srv://[^ \t\r\n'"`]+==>mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/
 regex:REDACTED_DB_USER==>REDACTED_DB_USER
+literal:YOUR-RENDER-SERVICE.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:YOUR-RENDER-SERVICE.onrender.com==>YOUR-RENDER-SERVICE.onrender.com
+literal:REDACTED_ADMIN@example.com==>REDACTED_ADMIN@example.com
+literal:redacted@example.com==>redacted@example.com
+literal:redacted@example.com==>redacted@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:redacted-staff@example.com==>redacted-staff@example.com
+literal:github.com/YOUR_ORG==>github.com/YOUR_ORG
+literal:YOUR_ORG/CoreKnot==>YOUR_ORG/CoreKnot
+literal:YOUR_ORG/Taskmaster==>YOUR_ORG/Taskmaster

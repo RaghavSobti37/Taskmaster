@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isMobileBrowser, shouldUseSameOriginApi } from './displayMode';
 
-describe('displayMode mobile API routing', () => {
+describe('displayMode', () => {
   const originalNavigator = global.navigator;
   const originalWindow = global.window;
 
@@ -32,7 +32,7 @@ describe('displayMode mobile API routing', () => {
     expect(shouldUseSameOriginApi()).toBe(true);
   });
 
-  it('keeps desktop fine pointer on direct API', () => {
+  it('detects desktop fine pointer as non-mobile', () => {
     window.navigator.userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0';
     window.matchMedia = vi.fn((query) => ({

@@ -17,7 +17,7 @@ export function isMobileBrowser() {
   return window.matchMedia('(pointer: coarse)').matches;
 }
 
-/** PWA + mobile browsers — same-origin /api keeps auth cookies first-party on iOS Safari. */
+/** PWA + mobile browsers — used for UI/layout hints only. */
 export function shouldUseSameOriginApi() {
   return isStandaloneDisplay() || isMobileBrowser();
 }

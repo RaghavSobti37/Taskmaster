@@ -3,8 +3,9 @@ export function formatLoginError(err) {
   if (!err?.response) {
     return {
       message:
-        'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.',
-      isNetwork: true,
+        err?.message
+        || 'Could not reach the server. Check your connection, or tap Clear session cookies below and try again.',
+      isNetwork: !err?.message,
     };
   }
 

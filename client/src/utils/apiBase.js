@@ -1,9 +1,6 @@
-import { shouldUseSameOriginApi } from './displayMode';
-import { isApiProxyHealthy, shouldFallbackToDirectApi } from './apiProxyHealth';
-
 const LOCAL_API_RE = /^https?:\/\/(localhost|127\.0\.0\.1):5000\/?$/i;
 
-/** API origin for auth redirects (OAuth) and absolute URLs. Empty = same-origin / Vite proxy. */
+/** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
 }
@@ -13,19 +10,15 @@ export function isViteProxyDev() {
   return import.meta.env.DEV && LOCAL_API_RE.test(getApiBaseUrl());
 }
 
-/** Direct Render API — large payloads that exceed Vercel's ~4.5MB proxy limit. */
+/** Direct API origin — local dev only when not using the Vite proxy. */
 export function getDirectApiBaseUrl() {
   if (isViteProxyDev()) return undefined;
+  if (import.meta.env.PROD) return undefined;
   return getApiBaseUrl() || undefined;
 }
 
-const routeViaSameOriginApi = () => {
-  if (isViteProxyDev()) return true;
-  if (!shouldUseSameOriginApi()) return false;
-  if (shouldFallbackToDirectApi()) return false;
-  if (isApiProxyHealthy() === false) return false;
-  return true;
-};
+/** Production + Vite dev use same-origin /api so auth cookies stay on the frontend domain. */
+const routeViaSameOriginApi = () => isViteProxyDev() || import.meta.env.PROD;
 
 /** Axios base URL: undefined = relative paths via Vite/Vercel proxy. */
 export function getAxiosBaseURL() {
@@ -33,14 +26,14 @@ export function getAxiosBaseURL() {
   return getDirectApiBaseUrl();
 }
 
-/** Socket.io origin (Vite proxy supports ws in dev). */
+/** Socket.io origin — same host as REST in production so cookies match. */
 export function getRealtimeOrigin() {
   if (typeof window === 'undefined') return '';
-  if (isViteProxyDev()) return window.location.origin;
+  if (routeViaSameOriginApi()) return window.location.origin;
   return getDirectApiBaseUrl() || window.location.origin;
 }
 
-/** Build API path; mobile/PWA prefer same-origin /api when proxy is healthy. */
+/** Build API path — always same-origin /api in production. */
 export function apiPath(path) {
   const normalized = path.startsWith('/') ? path : `/${path}`;
   if (routeViaSameOriginApi()) return normalized;

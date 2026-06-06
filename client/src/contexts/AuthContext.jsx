@@ -10,8 +10,7 @@ import {
   recordAttendanceSessionLogin,
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
-import { probeApiProxyHealth } from '../utils/apiProxyHealth';
-import { isStandaloneDisplay, shouldUseSameOriginApi } from '../utils/displayMode';
+import { isStandaloneDisplay } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { AXIOS_SKIP_TOAST } from '../lib/notifications';
@@ -50,6 +49,8 @@ const IMMEDIATE_SESSION_PROBE_PATHS = new Set([
   '/reset-password',
 ]);
 
+const SESSION_RETRIES = 3;
+
 const applyAxiosBaseURL = () => {
   const axiosBase = getAxiosBaseURL();
   axios.defaults.baseURL = axiosBase || undefined;
@@ -57,8 +58,6 @@ const applyAxiosBaseURL = () => {
 
 applyAxiosBaseURL();
 axios.defaults.withCredentials = true;
-
-const defaultSessionRetries = () => (shouldUseSameOriginApi() ? 6 : 3);
 
 function userSessionChanged(prev, next) {
   if (!prev && !next) return false;
@@ -101,13 +100,7 @@ export const AuthProvider = ({ children }) => {
   }, [sessionReady]);
 
   useEffect(() => {
-    const boot = async () => {
-      if (shouldUseSameOriginApi()) {
-        await probeApiProxyHealth();
-      }
-      applyAxiosBaseURL();
-    };
-    boot();
+    applyAxiosBaseURL();
   }, []);
 
   const queryClient = useQueryClient();
@@ -134,7 +127,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = useCallback(async (options = {}) => {
     if (loggingOutRef.current) return null;
     const epoch = authEpochRef.current;
-    const { clearOn401 = true, retries = defaultSessionRetries() } = options;
+    const { clearOn401 = true, retries = SESSION_RETRIES } = options;
 
     for (let attempt = 0; attempt < retries; attempt += 1) {
       if (epoch !== authEpochRef.current) return null;
@@ -186,19 +179,6 @@ export const AuthProvider = ({ children }) => {
     return null;
   }, []);
 
-  const syncSessionAfterLogin = useCallback(async () => {
-    const epoch = authEpochRef.current;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (epoch !== authEpochRef.current) return;
-      if (attempt > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
-        if (epoch !== authEpochRef.current) return;
-      }
-      const sessionUser = await fetchUser({ clearOn401: false });
-      if (sessionUser) return;
-    }
-  }, [fetchUser]);
-
   useEffect(() => {
     if (consumeForceLogout()) {
       loggingOutRef.current = true;
@@ -243,44 +223,32 @@ export const AuthProvider = ({ children }) => {
     return undefined;
   }, [user?._id, fetchUser]);
 
-  const resumePwaSession = useCallback(async () => {
-    if (loggingOutRef.current) return;
-    const sessionUser = await fetchUser({ clearOn401: true, retries: defaultSessionRetries() });
-    if (sessionUser) {
-      refetchUserScopedQueries(queryClient);
-    }
-  }, [fetchUser, queryClient]);
-
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || loggingOutRef.current) return;
       applyAxiosBaseURL();
-      if (isStandaloneDisplay()) {
-        resumePwaSession();
-        return;
-      }
       if (userRef.current?._id) {
-        fetchUser({ clearOn401: true, retries: defaultSessionRetries() });
+        fetchUser({ clearOn401: true, retries: SESSION_RETRIES }).then((sessionUser) => {
+          if (sessionUser && isStandaloneDisplay()) {
+            refetchUserScopedQueries(queryClient);
+          }
+        });
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [fetchUser, resumePwaSession]);
+  }, [fetchUser, queryClient]);
 
   useEffect(() => {
     const onPageShow = (event) => {
       if (loggingOutRef.current) return;
       applyAxiosBaseURL();
-      if (isStandaloneDisplay()) {
-        resumePwaSession();
-        return;
-      }
       if (!event.persisted || !userRef.current?._id || !sessionReadyRef.current) return;
       refetchUserScopedQueries(queryClient);
     };
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
-  }, [resumePwaSession, queryClient]);
+  }, [queryClient]);
 
   useAuthenticatedRealtime({
     userId: user?._id,
@@ -288,19 +256,18 @@ export const AuthProvider = ({ children }) => {
     setUser,
   });
 
-  const login = useCallback(async (userData) => {
+  const login = useCallback(async () => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
     queryClient.clear();
-    recordAttendanceSessionLogin();
-    setUser(userData);
-    setSentryUser(userData);
-    setDatadogUser(userData);
-    setLoading(false);
-    setSessionReady(true);
+
+    const sessionUser = await fetchUser({ clearOn401: true, retries: SESSION_RETRIES });
+    if (!sessionUser) {
+      throw new Error('Session could not be established. Please try again.');
+    }
+
     refetchUserScopedQueries(queryClient);
-    await syncSessionAfterLogin();
-  }, [syncSessionAfterLogin, queryClient]);
+  }, [fetchUser, queryClient]);
 
   const value = useMemo(() => ({
     user,

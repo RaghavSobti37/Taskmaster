@@ -27,8 +27,8 @@ const GoogleSuccessPage = () => {
       return;
     }
 
-    const finishLogin = async (user) => {
-      await login(user);
+    const finishLogin = async () => {
+      await login();
       navigate('/dashboard', { replace: true });
     };
 
@@ -37,7 +37,7 @@ const GoogleSuccessPage = () => {
       (async () => {
         try {
           const res = await axios.post(apiPath('/api/auth/oauth-establish'), { ticket }, AXIOS_SKIP_TOAST);
-          await finishLogin(res.data);
+          await finishLogin();
         } catch (error) {
           console.error('OAuth session establish failed:', error);
           navigate('/login?error=auth_failed', { replace: true });
@@ -51,7 +51,7 @@ const GoogleSuccessPage = () => {
       (async () => {
         try {
           const user = JSON.parse(decodeURIComponent(userStr));
-          await finishLogin(user);
+          await finishLogin();
         } catch (error) {
           console.error('Error parsing user data:', error);
           navigate('/login?error=auth_failed', { replace: true });

@@ -8,6 +8,19 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.7 — Unified device-agnostic login
+
+#### Authentication
+- **Single API path:** Desktop and mobile both use same-origin `/api` in production (`apiBase.js`); removed device-based routing via `shouldUseSameOriginApi()` and deleted `apiProxyHealth.js` direct-API fallback.
+- **Login gate:** `AuthContext.login()` requires successful `GET /api/auth/me` before `sessionReady`; fixes “logged in but no data” when cookie landed on wrong origin.
+- **Simpler server session:** Removed sliding JWT refresh, token rotation, and Clerk dual-auth from `protect`; removed global legacy cookie purge middleware.
+- **Realtime proxy:** Vercel rewrite for `/socket.io/*` so Socket.IO shares the frontend-domain session cookie.
+- **Login UX:** Removed automatic cookie purge on login page mount; **Clear session cookies** button only.
+
+**Deploy:** Redeploy Vercel (frontend) and Render (API) together. Run `node scripts/generateVercelConfig.js` locally to refresh `vercel.json` if `RENDER_API_PROXY_URL` changed.
+
+---
+
 ### [2026-06-06] v1.0.6 — Mobile login hardening & production proxy repair
 
 #### Authentication

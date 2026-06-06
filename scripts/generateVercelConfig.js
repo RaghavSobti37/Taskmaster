@@ -64,6 +64,7 @@ const templatePath = path.join(ROOT, 'client', 'vercel.json.example');
 const template = JSON.parse(fs.readFileSync(templatePath, 'utf8'));
 
 let apiDestination = 'https://YOUR-RENDER-SERVICE.onrender.com/api/$1';
+let socketDestination = 'https://YOUR-RENDER-SERVICE.onrender.com/socket.io/$1';
 if (proxyUrl) {
   let parsed;
   try {
@@ -81,6 +82,7 @@ if (proxyUrl) {
     process.exit(1);
   }
   apiDestination = `${parsed.origin}/api/$1`;
+  socketDestination = `${parsed.origin}/socket.io/$1`;
 }
 
 if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
@@ -89,11 +91,15 @@ if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
 }
 
 const payload = {
-  rewrites: template.rewrites.map((rule) =>
-    rule.source === '/api/(.*)'
-      ? { ...rule, destination: apiDestination }
-      : rule
-  ),
+  rewrites: template.rewrites.map((rule) => {
+    if (rule.source === '/api/(.*)') {
+      return { ...rule, destination: apiDestination };
+    }
+    if (rule.source === '/socket.io/(.*)') {
+      return { ...rule, destination: socketDestination };
+    }
+    return rule;
+  }),
   ...(template.buildCommand ? { buildCommand: template.buildCommand } : {}),
   ...(template.installCommand ? { installCommand: template.installCommand } : {}),
 };
@@ -106,4 +112,5 @@ for (const file of targets) {
 
 if (proxyUrl) {
   console.log(`[generateVercelConfig] /api rewrite → ${apiDestination.replace('/$1', '')}`);
+  console.log(`[generateVercelConfig] /socket.io rewrite → ${socketDestination.replace('/$1', '')}`);
 }

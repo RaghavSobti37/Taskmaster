@@ -32,8 +32,8 @@ const RegisterPage = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
-      await login(res.data);
+      await axios.post('/api/auth/register', { name, email, password, gender, departmentId: departmentId || undefined });
+      await login();
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');

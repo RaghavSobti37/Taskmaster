@@ -5,6 +5,10 @@
       "destination": "https://taskmaster-jfw0.onrender.com/api/$1"
     },
     {
+      "source": "/socket.io/(.*)",
+      "destination": "https://taskmaster-jfw0.onrender.com/socket.io/$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

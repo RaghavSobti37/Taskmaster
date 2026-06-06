@@ -89,7 +89,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
-| **Mobile login** | Vercel `/api` proxy → live Render API (committed `client/vercel.json` + `RENDER_API_PROXY_URL`); proxy health probe + direct-API login fallback; `npm run verify:mobile-proxy` |
+| **Unified login (v1.0.7)** | All devices use same-origin `/api` → Vercel rewrite → Render; login gated on `/api/auth/me` 200; removed device-specific API routing, proxy health fallback, and sliding JWT rotation in `protect` |
+| **Mobile login (v1.0.6)** | Committed `client/vercel.json` + `RENDER_API_PROXY_URL`; `generateVercelConfig.js` on install/build; `npm run verify:mobile-proxy` |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
@@ -518,7 +519,7 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 ### Security Hardening (v1.7.47)
 
 * **Auth cookies:** JWT stored in HttpOnly `coreknot_token_v3` cookie — not `localStorage`. Sliding inactivity (`JWT_EXPIRES_IN`) + 30-day absolute cap (`JWT_ABSOLUTE_MAX_DAYS`). Legacy `coreknot_token_v2` / `coreknot_token` purged on every response after deploy. `POST /api/auth/logout` clears all cookie variants. Client uses `axios.defaults.withCredentials = true`.
-* **Cross-device login (v1.7.51 / Jun 2026):** Fixed Safari/iPhone login loop — session is set from login response without an immediate `/me` wipe on cookie timing races. Production cookies use `SameSite=None; Secure; Partitioned` for Vercel frontend + Render API. **Mobile browsers** (not just installed PWA) use same-origin `/api` via `shouldUseSameOriginApi()` so iOS Safari keeps first-party cookies. Post-login session sync retries in the background. OAuth redirects use `apiPath()` so Google sign-in hits the correct API origin. Login UI uses `100dvh`, safe-area padding, 16px inputs (no iOS zoom), and 48px touch targets.
+* **Cross-device login (v1.0.7 / Jun 2026):** **All browsers** (desktop + mobile + PWA) route API traffic through same-origin `/api` on the frontend domain — Vercel rewrites `/api/*` and `/socket.io/*` to Render. Session cookie `coreknot_token_v3` is always `SameSite=Lax` on proxied traffic. `login()` confirms `GET /api/auth/me` before setting `sessionReady`; no direct-Render fallback on login. OAuth uses `apiPath()`. Tap **Clear session cookies** on `/login` if upgrading from an older build.
 * **Logout (v1.7.52 / v1.8.0):** Logout bumps an auth epoch so in-flight `/me` retries cannot re-set the user after sign-out. v1.8.0 adds `authSession.js` force-logout flag across redirect and treats 403 like 401 on session fetch.
 * **CRM lead updates (v1.7.55):** Lead modal uses country-code + national-number fields with strict per-country digit rules (no silent truncation). Invalid phones block save with clear errors; server validates via `phoneCountryValidation.js`. Lead table refreshes after save (`useUpdateLead` cache fix). Legacy overlong/concatenated phones repaired via `leadPhoneRepair.js` and QA audit/cleanup CLI scripts.
 * **CRM lead updates (v1.7.54):** Legacy `-DUP-{id}` / `EMPTY-{id}` corrupt phones (from old `dbPush.js` duplicate resolution) are auto-repaired on save, bulk-repairable via `npm run repair:lead-phones`, and cleaned during QA purge. Saving leads with unchanged corrupt phones no longer fails validation.
@@ -782,6 +783,8 @@ Artist enquiries from `/query` should forward to the artist-enquiry webhook afte
 ## API Architecture & Routing
 
 All application endpoints are structured beneath an explicit global `/api` gateway context pattern.
+
+**Production browser routing (v1.0.7):** The React client always calls relative `/api/...` on the frontend origin. Vercel rewrites proxy `/api/*` and `/socket.io/*` to the live Render API (`RENDER_API_PROXY_URL` / `generateVercelConfig.js`). This keeps HttpOnly auth cookies first-party on every device. Local dev uses the Vite proxy to `localhost:5000` when `VITE_API_URL` points at `http://localhost:5000`.
 
 ```
 /api

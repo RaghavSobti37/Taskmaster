@@ -1,9 +1,3 @@
-const { verifyToken, clerkClient } = require('@clerk/clerk-sdk-node');
-const {
-  verifySessionToken,
-  isAbsoluteSessionExpired,
-  refreshSessionIfDue,
-} = require('../utils/authSession');
 const User = require('../models/User');
 const Department = require('../models/Department');
 const { runWithContext, getTraceId } = require('../utils/tenantContext');
@@ -20,6 +14,7 @@ const {
   isArtistManagerUser,
   ADMIN_SLUG,
 } = require('../utils/departmentPermissions');
+const { verifySessionToken, isAbsoluteSessionExpired } = require('../utils/authSession');
 
 const populateDepartment = (query) =>
   query.populate('departmentId', 'name slug signupAllowed permissionPreset pagePermissions');
@@ -65,59 +60,22 @@ const protect = async (req, res, next) => {
       return res.status(503).json({ error: 'No admin user available for bypass' });
     }
 
-    let email = null;
-
-    if (process.env.CLERK_SECRET_KEY && process.env.CLERK_SECRET_KEY !== 'mock_clerk_secret') {
-      try {
-        const verified = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
-        if (verified && verified.sub) {
-          const clerkUser = await clerkClient.users.getUser(verified.sub);
-          email = clerkUser.emailAddresses?.[0]?.emailAddress?.toLowerCase().trim();
-        }
-      } catch (clerkErr) {
-        // Fallthrough to standard JWT
-      }
+    const decoded = verifySessionToken(token);
+    if (decoded.purpose) {
+      return res.status(401).json({ error: 'Not authorized, token failed' });
+    }
+    const { isTokenRevoked } = require('../utils/tokenRevocation');
+    if (await isTokenRevoked(decoded)) {
+      return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
+    }
+    if (isAbsoluteSessionExpired(decoded)) {
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
     }
 
-    if (email) {
-      let dbUser = await populateDepartment(User.findOne({ email }));
-      if (!dbUser) {
-        dbUser = await User.create({
-          name: email.split('@')[0],
-          email,
-          password: getDefaultSeedPassword(),
-          mustChangePassword: true,
-        });
-        dbUser = await populateDepartment(User.findById(dbUser._id).select('-password'));
-      }
-      req.user = dbUser;
-    } else {
-      const decoded = verifySessionToken(token);
-      if (decoded.purpose) {
-        return res.status(401).json({ error: 'Not authorized, token failed' });
-      }
-      const { isTokenRevoked } = require('../utils/tokenRevocation');
-      if (await isTokenRevoked(decoded)) {
-        return res.status(401).json({ error: 'Session revoked. Please sign in again.' });
-      }
-      if (isAbsoluteSessionExpired(decoded)) {
-        return res.status(401).json({ error: 'Session expired. Please sign in again.' });
-      }
-      req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
-      if (req.user) {
-        const refresh = refreshSessionIfDue(res, decoded, req);
-        const { ensureSession, touchSession, rotateSession } = require('../utils/sessionRegistry');
-        const { revokeToken } = require('../utils/tokenRevocation');
-        if (decoded.jti) {
-          await ensureSession(req, decoded.id, decoded);
-        }
-        if (refresh.refreshed && refresh.newDecoded) {
-          await rotateSession(req, decoded.id, decoded.jti, refresh.newDecoded);
-          if (decoded.jti) await revokeToken(decoded);
-        } else if (decoded.jti) {
-          await touchSession(decoded.id, decoded.jti, req);
-        }
-      }
+    req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
+    if (req.user && decoded.jti) {
+      const { touchSession } = require('../utils/sessionRegistry');
+      await touchSession(decoded.id, decoded.jti, req);
     }
 
     if (!req.user) {

@@ -124,14 +124,6 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(cookieParser());
 
-const { purgeLegacyAuthCookies, isFirstPartyProxiedRequest } = require('./utils/authCookie');
-app.use((req, res, next) => {
-  if (!isFirstPartyProxiedRequest(req)) {
-    purgeLegacyAuthCookies(res, req);
-  }
-  next();
-});
-
 app.use(express.json({ 
   limit: '50mb',
   verify: (req, res, buf) => {

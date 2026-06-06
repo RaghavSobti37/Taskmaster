@@ -46,11 +46,11 @@ const ForcePasswordChangeModal = () => {
 
     setLoading(true);
     try {
-      const { data } = await axios.post('/api/auth/change-required-password', {
+      await axios.post('/api/auth/change-required-password', {
         newPassword,
         confirmPassword,
       });
-      await login(data);
+      await login();
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {

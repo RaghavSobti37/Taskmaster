@@ -89,7 +89,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
-| **Mobile login** | Vercel `/api` proxy → live Render API (`RENDER_API_PROXY_URL`); same-origin auth on phone/PWA; stale-cookie purge on login; `npm run verify:mobile-proxy` smoke test |
+| **Mobile login** | Vercel `/api` proxy → live Render API (committed `client/vercel.json` + `RENDER_API_PROXY_URL`); proxy health probe + direct-API login fallback; `npm run verify:mobile-proxy` |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |
 | **Sessions** | Device session list + revoke in Settings → Security; JWT `jti` revocation on logout; client IP from proxy headers (no loopback `::1` in prod) |
@@ -318,8 +318,8 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 ### Mobile browser login (Jun 2026)
 
 * **Same-origin API on mobile:** `displayMode.js` routes phone/tablet/PWA auth through the Vercel `/api` proxy — iOS Safari blocks cross-site cookies when the client talks directly to Render.
-* **Proxy health:** `npm run verify:mobile-proxy` checks `GET /api/health` on your frontend domain. A 404 usually means `RENDER_API_PROXY_URL` on Vercel points at a suspended or wrong Render host.
-* **Login:** `LoginPage.jsx` purges stale HttpOnly cookies on mount and before submit; `apiPath()` for login/logout/OAuth; `formatLoginError` separates proxy outages from wrong credentials.
+* **Proxy health:** `npm run verify:mobile-proxy` checks `GET /api/health` on your frontend domain. `client/vercel.json` must rewrite `/api/*` to the live Render host — git deploys use the committed file, not build-time placeholders.
+* **Login:** `loginRequest.js` tries same-origin `/api` first, then direct Render API if proxy is down; stale cookies purged on mount/submit; `formatLoginError` separates outages from wrong credentials.
 * **Cookies:** Server emits `SameSite=Lax` (not `Partitioned`) when the request is first-party proxied; `replaceAuthCookie` clears legacy `coreknot_token` variants before issuing `coreknot_token_v3`.
 * **Session sync:** `AuthContext` re-applies mobile API base URL on tab resume and uses extra `/me` retries (6) on mobile/PWA.
 * **After deploy:** Tap **Clear session cookies** on `/login` once; on iOS home screen, remove and re-add the shortcut if sessions feel sticky.

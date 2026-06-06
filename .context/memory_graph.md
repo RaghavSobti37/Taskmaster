@@ -1,22 +1,15 @@
 # Active State & Milestones
-- [Current Focus]: v1.0.6 mobile login hardening — Vercel /api proxy repair, first-party Lax cookies, stale-session purge on login, production proxy smoke test.
+- [Current Focus]: v1.0.6 mobile login — committed client/vercel.json live rewrite, proxy health probe, direct-API login fallback.
 - [Last Modified]: June 6, 2026
 
-# Node Graph (Entities & Components)
-- [Node: authCookie.js] -> (isFirstPartyProxiedRequest via X-Forwarded-Host/Origin/Referer; replaceAuthCookie clears legacy SameSite variants)
-- [Node: LoginPage.jsx] -> (purgeAuthCookies on mount + pre-submit; formatLoginError; apiPath for login/logout)
-- [Node: AuthContext.jsx] -> (applyAxiosBaseURL on visibility/pageshow resume for mobile/PWA)
-- [Node: generateVercelConfig.js] -> (RENDER_API_PROXY_URL / VITE_API_URL / production-hosts.local.json → client/vercel.json rewrites)
-- [Node: verifyMobileApiProxy.js] -> (GET /api/health on frontend domain; npm run verify:mobile-proxy)
-- [Node: displayMode.js] -> (shouldUseSameOriginApi for phone/tablet/PWA → Vercel /api proxy)
+# Node Graph
+- [Node: client/vercel.json] -> (committed /api rewrite to taskmaster-jfw0 — required for git deploys)
+- [Node: loginRequest.js] -> (same-origin login, fallback to VITE_API_URL on proxy 404)
+- [Node: apiProxyHealth.js] -> (GET /api/health probe; drives apiBase routing)
+- [Node: generateVercelConfig.js] -> (postinstall/build; bans CoreKnot-jfw0)
+- [Node: verifyMobileApiProxy.js] -> (npm run verify:mobile-proxy)
 
-# Edge Graph (Dependencies & Data Flow)
-- [Mobile browser] --(same-origin)--> [Vercel /api rewrite] --(proxy)--> [Render API taskmaster-jfw0]
-- [Desktop browser] --(cross-origin)--> [Render API via VITE_API_URL]
-- [LoginPage] --(POST)--> [/api/auth/login] --(Set-Cookie)--> [coreknot_token_v3 Lax when proxied]
-
-# Known Gotchas & Constraints
-- RENDER_API_PROXY_URL pointing at CoreKnot-jfw0 causes /api 404 on mobile; desktop direct API may still work.
-- Never commit production-hosts.local.json or .vercel env pulls; vercel.json uses YOUR-RENDER-SERVICE placeholder in git.
-- iOS PWA: users should Clear session cookies after auth deploys; re-add home-screen shortcut if sessions stick.
-- KEEP_WARM_URL on Render cron must be set manually in Dashboard to live /api/health URL.
+# Known Gotchas
+- Git push with YOUR-RENDER-SERVICE placeholder in vercel.json breaks mobile login until fixed.
+- Never use CoreKnot-jfw0.onrender.com — suspended/wrong host.
+- Desktop may work when mobile fails (direct API vs broken /api proxy).

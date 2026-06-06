@@ -1,12 +1,12 @@
 #!/bin/sh
 case "$GIT_AUTHOR_EMAIL" in
-  redacted@example.com|REDACTED_ADMIN@example.com|redacted@example.com)
+  redacted@example.com|REDACTED_ADMIN@example.com|redacted@example.com|redacted-staff@example.com|redacted-staff@example.com|redacted-staff@example.com|redacted-staff@example.com)
     export GIT_AUTHOR_EMAIL="redacted@example.com"
     export GIT_AUTHOR_NAME="Redacted User"
     ;;
 esac
 case "$GIT_COMMITTER_EMAIL" in
-  redacted@example.com|REDACTED_ADMIN@example.com|redacted@example.com)
+  redacted@example.com|REDACTED_ADMIN@example.com|redacted@example.com|redacted-staff@example.com|redacted-staff@example.com|redacted-staff@example.com|redacted-staff@example.com)
     export GIT_COMMITTER_EMAIL="redacted@example.com"
     export GIT_COMMITTER_NAME="Redacted User"
     ;;

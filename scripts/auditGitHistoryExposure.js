@@ -27,11 +27,28 @@ const NEEDLES = [
   'AIzaSyBT6YIo',
 ];
 
+/** Paths that intentionally list needles for detection — exclude from pickaxe scan. */
+const EXCLUDE_PATHS = [
+  'scripts/auditGitHistoryExposure.js',
+  'scripts/checkCommittedExposure.js',
+  'scripts/gitMsgFilter.sh',
+  'scripts/gitCommitMessageRedact.py',
+  'scripts/gitFilterCommitMsg.py',
+  'scripts/gitEmailRedact.py',
+  'scripts/gitNameRedact.py',
+  'scripts/runHistoryRedact.sh',
+  'docs/GIT_HISTORY_REDACTION.md',
+  'replacements.txt',
+  'security-context.md',
+];
+
+const pathExcludes = EXCLUDE_PATHS.map((p) => `":(exclude)${p}"`).join(' ');
+
 const hits = [];
 
 for (const needle of NEEDLES) {
   try {
-    const out = execSync(`git log --all -S "${needle}" --oneline`, {
+    const out = execSync(`git log --all -S "${needle}" --oneline -- . ${pathExcludes}`, {
       cwd: ROOT,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,

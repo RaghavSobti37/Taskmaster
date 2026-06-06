@@ -24,12 +24,10 @@ git reflog expire --expire=now --all
 git gc --prune=now --aggressive
 
 echo "==> verify"
-for needle in redacted@example.com whsec_REDACTED AIzaSyBT6YIo REDACTED_DB_USER; do
-  if git log --all -S "$needle" --oneline 2>/dev/null | head -1 | grep -q .; then
-    echo "FAIL: $needle still in history" >&2
-    exit 1
-  fi
-done
+if ! node scripts/auditGitHistoryExposure.js; then
+  echo "FAIL: audit:history still reports needles" >&2
+  exit 1
+fi
 if git log --all --oneline | grep -iE 'raghavsobti37|RaghavSobti37' | head -1 | grep -q .; then
   echo "FAIL: PII still in commit subjects" >&2
   git log --all --oneline | grep -iE 'raghavsobti37|RaghavSobti37' | head -5 >&2

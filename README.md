@@ -784,7 +784,7 @@ Artist enquiries from `/query` should forward to the artist-enquiry webhook afte
 
 All application endpoints are structured beneath an explicit global `/api` gateway context pattern.
 
-**Production browser routing (v1.0.7):** The React client always calls relative `/api/...` on the frontend origin. Vercel rewrites proxy `/api/*` and `/socket.io/*` to the live Render API (`RENDER_API_PROXY_URL` / `generateVercelConfig.js`). This keeps HttpOnly auth cookies first-party on every device. Local dev uses the Vite proxy to `localhost:5000` when `VITE_API_URL` points at `http://localhost:5000`.
+**Production browser routing (v1.0.7):** The React client always calls relative `/api/...` on the page origin. Vercel rewrites proxy `/api/*` and `/socket.io/*` to the live Render API (`RENDER_API_PROXY_URL` / `generateVercelConfig.js`). This keeps HttpOnly auth cookies first-party on every device. **`npm run dev` always routes through the Vite proxy to `localhost:5000`** — even if `client/.env` still lists a production `VITE_API_URL` (set `VITE_API_URL=http://localhost:5000` anyway so OAuth/upload helpers stay local).
 
 ```
 /api

@@ -15,7 +15,7 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 - **Login gate:** `AuthContext.login()` requires successful `GET /api/auth/me` before `sessionReady`; fixes “logged in but no data” when cookie landed on wrong origin.
 - **Simpler server session:** Removed sliding JWT refresh, token rotation, and Clerk dual-auth from `protect`; removed global legacy cookie purge middleware.
 - **Realtime proxy:** Vercel rewrite for `/socket.io/*` so Socket.IO shares the frontend-domain session cookie.
-- **Login UX:** Removed automatic cookie purge on login page mount; **Clear session cookies** button only.
+- **Dev routing:** `npm run dev` always uses relative `/api` via Vite proxy (ignores production `VITE_API_URL` in `client/.env` for axios); fixes localhost login 401 when `.env` pointed at Render.
 
 **Deploy:** Redeploy Vercel (frontend) and Render (API) together. Run `node scripts/generateVercelConfig.js` locally to refresh `vercel.json` if `RENDER_API_PROXY_URL` changed.
 

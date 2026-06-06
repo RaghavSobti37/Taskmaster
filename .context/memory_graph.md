@@ -4,7 +4,7 @@
 
 # Node Graph
 - [Node: client/vercel.json] -> (committed /api + /socket.io rewrites to live Render API)
-- [Node: apiBase.js] -> (production always relative /api; no device split)
+- [Node: apiBase.js] -> (dev + production always relative /api via Vite/Vercel proxy)
 - [Node: AuthContext.jsx] -> (login() requires /api/auth/me 200 before sessionReady)
 - [Node: authMiddleware.js] -> (verify JWT only; no sliding refresh or Clerk path)
 - [Node: generateVercelConfig.js] -> (postinstall/build; injects /api and /socket.io destinations)
@@ -12,5 +12,5 @@
 
 # Known Gotchas
 - Never use CoreKnot-jfw0.onrender.com — suspended/wrong host.
-- Do not reintroduce direct Render API routing for desktop auth — breaks cookie domain parity.
+- `client/.env` with production `VITE_API_URL` no longer breaks local login — axios uses Vite proxy; still set localhost in `.env` for OAuth/upload helpers.
 - Users upgrading from v1.0.6 may need **Clear session cookies** once on /login.

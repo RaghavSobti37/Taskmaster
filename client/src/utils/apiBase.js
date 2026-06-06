@@ -1,24 +1,22 @@
-const LOCAL_API_RE = /^https?:\/\/(localhost|127\.0\.0\.1):5000\/?$/i;
-
 /** API origin for OAuth redirects and absolute URLs. Empty = same-origin / Vite proxy. */
 export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
 }
 
-/** In dev, localhost:5000 in .env still uses Vite proxy (/api, /socket.io) to avoid CORS and port races. */
+/** Vite dev server always proxies /api and /socket.io to localhost:5000. */
 export function isViteProxyDev() {
-  return import.meta.env.DEV && LOCAL_API_RE.test(getApiBaseUrl());
+  return import.meta.env.DEV;
 }
 
-/** Direct API origin — local dev only when not using the Vite proxy. */
+/** Direct API origin — unused for axios routing; kept for absolute URL helpers. */
 export function getDirectApiBaseUrl() {
-  if (isViteProxyDev()) return undefined;
   if (import.meta.env.PROD) return undefined;
+  if (isViteProxyDev()) return undefined;
   return getApiBaseUrl() || undefined;
 }
 
-/** Production + Vite dev use same-origin /api so auth cookies stay on the frontend domain. */
-const routeViaSameOriginApi = () => isViteProxyDev() || import.meta.env.PROD;
+/** Dev + production: relative /api so cookies stay on the page origin (Vite or Vercel proxy). */
+const routeViaSameOriginApi = () => import.meta.env.DEV || import.meta.env.PROD;
 
 /** Axios base URL: undefined = relative paths via Vite/Vercel proxy. */
 export function getAxiosBaseURL() {

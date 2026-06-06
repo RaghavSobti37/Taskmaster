@@ -6,6 +6,12 @@ const COOKIE_NAME = 'coreknot_token_v3';
 /** Prior cookie names — purged on every response so deploy forces fresh login on all devices. */
 const LEGACY_COOKIE_NAMES = ['coreknot_token_v2', 'coreknot_token'];
 
+const BUILTIN_FRONTEND_HOSTS = [
+  'tsccoreknot.com',
+  'www.tsccoreknot.com',
+  'taskmaster-sand.vercel.app',
+];
+
 const parseJwtExpiryMs = () => {
   const raw = process.env.JWT_EXPIRES_IN || '7d';
   const match = String(raw).trim().match(/^(\d+)([smhd])$/i);
@@ -16,24 +22,50 @@ const parseJwtExpiryMs = () => {
   return n * (multipliers[unit] || multipliers.d);
 };
 
-const getCookieOptions = () => {
+const frontendHosts = () => {
+  const hosts = new Set(BUILTIN_FRONTEND_HOSTS.map((h) => h.toLowerCase()));
+  for (const raw of [process.env.FRONTEND_URL, process.env.CLIENT_URL]) {
+    if (!raw) continue;
+    try {
+      hosts.add(new URL(raw).host.toLowerCase());
+    } catch {
+      /* ignore */
+    }
+  }
+  return hosts;
+};
+
+/** Vercel /api rewrite sets X-Forwarded-Host — use Lax cookies (not None+Partitioned). */
+const isFirstPartyProxiedRequest = (req) => {
+  if (!req) return false;
+  const forwarded = String(
+    (typeof req.get === 'function' && req.get('x-forwarded-host'))
+    || req.headers?.['x-forwarded-host']
+    || '',
+  ).split(',')[0].trim().toLowerCase();
+  if (!forwarded) return false;
+  return frontendHosts().has(forwarded);
+};
+
+const getCookieOptions = (req) => {
   const isProd = process.env.NODE_ENV === 'production';
+  const firstParty = isFirstPartyProxiedRequest(req);
   const options = {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    sameSite: isProd && !firstParty ? 'none' : 'lax',
     maxAge: parseJwtExpiryMs(),
     path: '/',
   };
-  if (isProd) {
+  if (isProd && !firstParty) {
     options.partitioned = true;
   }
   return options;
 };
 
-const clearCookieVariants = (res, name) => {
+const clearCookieVariants = (res, name, req) => {
   const variants = [
-    { ...getCookieOptions(), maxAge: 0 },
+    { ...getCookieOptions(req), maxAge: 0 },
     { path: '/', httpOnly: true, secure: false, sameSite: 'lax', maxAge: 0 },
     { path: '/', httpOnly: true, secure: true, sameSite: 'none', maxAge: 0 },
     {
@@ -50,21 +82,22 @@ const clearCookieVariants = (res, name) => {
   }
 };
 
-/** Strip legacy cookies on every response (one deploy clears all stuck sessions). */
-const purgeLegacyAuthCookies = (res) => {
+const purgeLegacyAuthCookies = (res, req) => {
   for (const name of LEGACY_COOKIE_NAMES) {
-    clearCookieVariants(res, name);
+    clearCookieVariants(res, name, req);
   }
 };
 
-const setAuthCookie = (res, token) => {
-  purgeLegacyAuthCookies(res);
-  res.cookie(COOKIE_NAME, token, getCookieOptions());
+const setAuthCookie = (res, token, req) => {
+  if (!isFirstPartyProxiedRequest(req)) {
+    purgeLegacyAuthCookies(res, req);
+  }
+  res.cookie(COOKIE_NAME, token, getCookieOptions(req));
 };
 
-const clearAuthCookie = (res) => {
-  clearCookieVariants(res, COOKIE_NAME);
-  purgeLegacyAuthCookies(res);
+const clearAuthCookie = (res, req) => {
+  clearCookieVariants(res, COOKIE_NAME, req);
+  purgeLegacyAuthCookies(res, req);
 };
 
 const hadAuthCookie = (req) =>
@@ -95,6 +128,7 @@ const getUserIdFromToken = (token) => {
 module.exports = {
   COOKIE_NAME,
   LEGACY_COOKIE_NAMES,
+  isFirstPartyProxiedRequest,
   setAuthCookie,
   clearAuthCookie,
   purgeLegacyAuthCookies,

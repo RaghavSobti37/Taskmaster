@@ -124,9 +124,11 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(cookieParser());
 
-const { purgeLegacyAuthCookies } = require('./utils/authCookie');
-app.use((_req, res, next) => {
-  purgeLegacyAuthCookies(res);
+const { purgeLegacyAuthCookies, isFirstPartyProxiedRequest } = require('./utils/authCookie');
+app.use((req, res, next) => {
+  if (!isFirstPartyProxiedRequest(req)) {
+    purgeLegacyAuthCookies(res, req);
+  }
   next();
 });
 

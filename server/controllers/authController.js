@@ -260,7 +260,7 @@ exports.logout = async (req, res) => {
   } catch {
     /* revocation is best-effort */
   }
-  clearAuthCookie(res);
+  clearAuthCookie(res, req);
   res.json({ success: true, hadCookie: hadAuthCookie(req) });
 };
 
@@ -457,7 +457,7 @@ const resolveSessionDecoded = (req, res) => {
   if (!decoded?.id) return null;
   if (!decoded.jti) {
     const token = generateSessionToken(decoded.id, resolveLoginAt(decoded));
-    setAuthCookie(res, token);
+    setAuthCookie(res, token, req);
     decoded = verifySessionToken(token);
   }
   return decoded;
@@ -499,7 +499,7 @@ exports.revokeSession = async (req, res) => {
     await removeSession(decoded.id, targetJti);
 
     const isCurrent = targetJti === decoded.jti;
-    if (isCurrent) clearAuthCookie(res);
+    if (isCurrent) clearAuthCookie(res, req);
     return res.json({ success: true, revokedCurrent: isCurrent });
   } catch (error) {
     logger.error('authController', 'revokeSession failed', { error: error.message || error });

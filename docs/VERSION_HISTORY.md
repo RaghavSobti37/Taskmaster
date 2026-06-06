@@ -8,6 +8,18 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.5 — Mobile login fix (iOS Safari / Vercel proxy)
+
+#### Authentication
+- **Vercel `/api` rewrite:** Committed placeholder rewrite in `vercel.json`; `installCommand` runs `generateVercelConfig.js` before install so `RENDER_API_PROXY_URL` is injected at deploy time (fixes 404 on phone when rewrite was missing from deployed config).
+- **First-party session cookies:** API emits `SameSite=Lax` (no `Partitioned`) when `X-Forwarded-Host` matches the frontend host; skips global legacy cookie purge on proxied traffic so iOS Safari retains the session after login.
+- **Client:** `AuthContext` sets `sessionReady` immediately after login response; mobile/PWA routes auth through same-origin `/api` via `shouldUseSameOriginApi()`.
+- **Removed:** Edge `middleware.js` proxy — native Vercel rewrites handle all HTTP methods reliably.
+
+**Deploy:** Set `RENDER_API_PROXY_URL` on Vercel Production + Preview. Redeploy API (Render) and frontend (Vercel) together.
+
+---
+
 ### [2026-06-06] v1.0.4 — Git history redaction complete & production hosts locked
 
 #### Security & compliance

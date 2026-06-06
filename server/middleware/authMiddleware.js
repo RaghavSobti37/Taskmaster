@@ -105,7 +105,7 @@ const protect = async (req, res, next) => {
       }
       req.user = await populateDepartment(User.findById(decoded.id).select('-password'));
       if (req.user) {
-        const refresh = refreshSessionIfDue(res, decoded);
+        const refresh = refreshSessionIfDue(res, decoded, req);
         const { ensureSession, touchSession, rotateSession } = require('../utils/sessionRegistry');
         const { revokeToken } = require('../utils/tokenRevocation');
         if (decoded.jti) {

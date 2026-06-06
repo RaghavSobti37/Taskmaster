@@ -62,7 +62,7 @@ const shouldRefreshSession = (decoded) => {
  * Re-issue cookie when due so active users stay signed in (sliding inactivity).
  * Returns absoluteExpired=true when the 30-day cap is reached.
  */
-const refreshSessionIfDue = (res, decoded) => {
+const refreshSessionIfDue = (res, decoded, req) => {
   if (isAbsoluteSessionExpired(decoded)) {
     return { refreshed: false, absoluteExpired: true };
   }
@@ -70,15 +70,15 @@ const refreshSessionIfDue = (res, decoded) => {
     return { refreshed: false, absoluteExpired: false };
   }
   const token = generateSessionToken(decoded.id, resolveLoginAt(decoded));
-  setAuthCookie(res, token);
+  setAuthCookie(res, token, req);
   const newDecoded = verifySessionToken(token);
   return { refreshed: true, absoluteExpired: false, newDecoded };
 };
 
 /** Fresh login / register / OAuth — new absolute window + inactivity clock. */
-const establishSession = (res, userId) => {
+const establishSession = (res, userId, req) => {
   const token = generateSessionToken(userId);
-  setAuthCookie(res, token);
+  setAuthCookie(res, token, req);
   return token;
 };
 

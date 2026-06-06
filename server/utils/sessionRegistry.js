@@ -190,7 +190,7 @@ const decodeToken = (token) => {
 };
 
 const finishAuthSession = async (req, res, userId) => {
-  const token = establishSession(res, userId);
+  const token = establishSession(res, userId, req);
   const decoded = decodeToken(token);
   if (decoded) await registerSession(req, userId, decoded);
   return token;

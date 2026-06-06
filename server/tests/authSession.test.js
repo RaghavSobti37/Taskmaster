@@ -1,5 +1,10 @@
 const jwt = require('jsonwebtoken');
-const { COOKIE_NAME, LEGACY_COOKIE_NAMES } = require('../utils/authCookie');
+const {
+  COOKIE_NAME,
+  LEGACY_COOKIE_NAMES,
+  getCookieOptions,
+  isFirstPartyProxiedRequest,
+} = require('../utils/authCookie');
 const {
   generateSessionToken,
   verifySessionToken,
@@ -12,6 +17,19 @@ describe('authCookie session reset', () => {
   it('uses v3 cookie and purges v1/v2 legacy names', () => {
     expect(COOKIE_NAME).toBe('coreknot_token_v3');
     expect(LEGACY_COOKIE_NAMES).toEqual(expect.arrayContaining(['coreknot_token_v2', 'coreknot_token']));
+  });
+
+  it('detects Vercel rewrite proxy via X-Forwarded-Host', () => {
+    const req = { get: (h) => (h === 'x-forwarded-host' ? 'tsccoreknot.com' : undefined) };
+    expect(isFirstPartyProxiedRequest(req)).toBe(true);
+  });
+
+  it('uses Lax session cookies for proxied mobile logins', () => {
+    process.env.NODE_ENV = 'production';
+    const req = { get: (h) => (h === 'x-forwarded-host' ? 'tsccoreknot.com' : undefined) };
+    const opts = getCookieOptions(req);
+    expect(opts.sameSite).toBe('lax');
+    expect(opts.partitioned).toBeUndefined();
   });
 });
 

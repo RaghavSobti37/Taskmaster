@@ -282,16 +282,15 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (userData) => {
     loggingOutRef.current = false;
     authEpochRef.current += 1;
-    setSessionReady(false);
     queryClient.clear();
     recordAttendanceSessionLogin();
     setUser(userData);
     setSentryUser(userData);
     setDatadogUser(userData);
     setLoading(false);
-    await syncSessionAfterLogin();
     setSessionReady(true);
     refetchUserScopedQueries(queryClient);
+    await syncSessionAfterLogin();
   }, [syncSessionAfterLogin, queryClient]);
 
   const value = useMemo(() => ({

@@ -181,7 +181,7 @@ const LeaderboardBreakdownModal = ({
                   <h4 className="text-xs font-black uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
                     Recent actions
                   </h4>
-                  {!!breakdown.recentLogs?.length ? (
+                  {breakdown.recentLogs?.length ? (
                     <div className="border-t border-[var(--color-bg-border)]">
                       {breakdown.recentLogs.map((log) => (
                         <DataListRow

@@ -126,6 +126,11 @@ export function getUserPagePermissions(user) {
 export function hasPageAccess(user, pageKey) {
   if (!pageKey) return true;
   if (pageKey === 'emails' && user) return true;
+  if (pageKey === 'admin_artist_path') {
+    if (isDepartmentAdmin(user?.departmentId)) return true;
+    const perms = getUserPagePermissions(user);
+    return perms.includes('admin_artist_path') || perms.includes('admin_data');
+  }
   if (isDepartmentAdmin(user?.departmentId)) return ALL_PAGE_KEYS.includes(pageKey);
   return getUserPagePermissions(user).includes(pageKey);
 }

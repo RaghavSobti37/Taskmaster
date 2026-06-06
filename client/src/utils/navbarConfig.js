@@ -53,7 +53,7 @@ export const HUB_CONFIG = {
       { id: 'users', label: 'Users', path: '/admin/users', key: 'admin_users', icon: 'Users' },
       { id: 'teams', label: 'Teams', path: '/admin/teams', key: 'admin_users', icon: 'Building2' },
       { id: 'data-hub', label: 'Data Hub', path: '/admin', key: 'admin_data', icon: 'Database' },
-      { id: 'artist-path', label: 'Artist Path', path: '/admin/artist-path', key: 'admin_artist_path', icon: 'Music' },
+      { id: 'artist-path', label: 'Artist Path', path: '/admin/artist-path', key: 'admin_data', icon: 'Music' },
       { id: 'exly', label: 'Exly Data', path: '/admin/exly-campaigns', key: 'admin_exly', icon: 'BarChart2' },
       { id: 'scripts', label: 'Script Runner', path: '/admin/scripts', key: 'admin_scripts', icon: 'Brackets' },
       { id: 'gamification', label: 'Gamification', path: '/admin/gamification', key: 'admin_gamification', icon: 'Trophy' },

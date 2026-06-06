@@ -17,6 +17,7 @@ export const FullScreenWorkspace = ({
   isSaving = false,
   extraActions,
   mainClassName = 'max-w-4xl',
+  centerMain = true,
 }) => {
   const dirty = isOpen && hasChanges && !!onSave;
   const workspaceRef = useRef(null);
@@ -71,18 +72,20 @@ export const FullScreenWorkspace = ({
             ) : null}
           </div>
 
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          <div className={`flex-1 flex overflow-hidden ${sidebar ? 'flex-col lg:flex-row' : 'flex-col'}`}>
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar bg-[var(--color-bg-surface)]">
-              <div className={`${mainClassName} mx-auto space-y-6`}>
+              <div className={`${mainClassName} ${centerMain ? 'mx-auto' : 'w-full'} space-y-6`}>
                 {children}
               </div>
             </div>
 
-            <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 bg-[var(--color-bg-workspace-sidebar)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
-              <div className="space-y-6">
-                {sidebar}
-              </div>
-            </aside>
+            {sidebar ? (
+              <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-[var(--color-bg-border)] bg-[var(--color-bg-workspace-sidebar)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
+                <div className="space-y-6">
+                  {sidebar}
+                </div>
+              </aside>
+            ) : null}
           </div>
         </div>
       )}

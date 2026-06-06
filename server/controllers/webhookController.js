@@ -7,7 +7,8 @@ const { assignNextBookedCallRep } = require('../utils/bookedCallRepAssignment');
 const LeadService = require('../services/LeadService');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const { processArtistEnquiryLogic } = require('../services/artistEnquiryService');
-const { rejectUnlessBookCallAuthorized, verifyArtistEnquirySecret } = require('../utils/webhookAuth');
+const { processArtistPathWebhook } = require('../services/artistPathImportService');
+const { rejectUnlessBookCallAuthorized, verifyArtistEnquirySecret, rejectUnlessArtistPathAuthorized } = require('../utils/webhookAuth');
 /** BOOK_CALL_WEBHOOK_SECRET: x-webhook-secret or HMAC via rejectUnlessWebhookSignature */
 const { formatIstFollowupDate, formatIstFollowupTime24 } = require('../utils/istFollowupFormat');
 
@@ -214,6 +215,39 @@ exports.processBookedCallLogic = async (data) => {
 };
 
 exports.processArtistEnquiryLogic = processArtistEnquiryLogic;
+exports.processArtistPathLogic = processArtistPathWebhook;
+
+exports.handleArtistPath = async (req, res) => {
+  if (!rejectUnlessArtistPathAuthorized(req, res)) {
+    return;
+  }
+
+  try {
+    if (connection.status === 'ready') {
+      await webhookQueue.add('artist-path', req.body, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      });
+      return res.status(202).json({ success: true, message: 'Artist Path submission received and queued' });
+    }
+    console.warn('Redis is not ready, falling back to synchronous artist-path processing');
+    const result = await processArtistPathWebhook(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Artist Path queue error:', error);
+    try {
+      const result = await processArtistPathWebhook(req.body);
+      return res.status(200).json(result);
+    } catch (syncError) {
+      console.error('Artist Path sync fallback error:', syncError);
+      const isValidation = syncError.message?.includes('Missing required');
+      return res.status(isValidation ? 400 : 500).json({
+        success: false,
+        error: syncError.message || 'Failed to process Artist Path submission',
+      });
+    }
+  }
+};
 
 exports.handleArtistEnquiry = async (req, res) => {
   if (!verifyArtistEnquirySecret(req)) {

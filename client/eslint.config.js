@@ -11,7 +11,11 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        Intl: 'readonly',
+        process: 'readonly',
+      },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     settings: { react: { version: 'detect' } },
@@ -26,6 +30,17 @@ export default [
       'react/jsx-uses-vars': 'error',
       'react-refresh/only-export-components': 'warn',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-empty': 'warn',
+      'no-control-regex': 'off',
+    },
+  },
+  {
+    files: ['src/sw.js'],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker,
+        clients: 'readonly',
+      },
     },
   },
 ]

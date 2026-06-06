@@ -2,9 +2,7 @@ const PersonHubView = require('../models/PersonHubView');
 const Person = require('../models/Person');
 const PersonIdentifier = require('../models/PersonIdentifier');
 const ArtistPathResponse = require('../models/ArtistPathResponse');
-const { syncFromSheet, importRows } = require('../services/artistPathImportService');
-const csv = require('csv-parser');
-const fs = require('fs');
+const { syncFromSheet } = require('../services/artistPathImportService');
 
 exports.listPeople = async (req, res) => {
   try {
@@ -66,21 +64,4 @@ exports.sync = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-};
-
-exports.upload = async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const rows = [];
-  fs.createReadStream(req.file.path)
-    .pipe(csv())
-    .on('data', (row) => rows.push(row))
-    .on('end', async () => {
-      try {
-        const result = await importRows(rows, { userId: req.user._id, filename: req.file.originalname });
-        try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
-        res.json(result);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
 };

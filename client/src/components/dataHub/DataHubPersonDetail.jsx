@@ -8,6 +8,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { Badge, Card, FullScreenWorkspace, Spinner } from '../ui';
 import { useDataHubPerson, useDataHubPersonSection } from '../../hooks/useTaskmasterQueries';
 import { dedupeInletEntries } from '../../utils/dataHubInlets';
+import ArtistPathAnswerSections from '../artistPath/ArtistPathAnswerSections';
+import { displayStageBadge } from '../../utils/artistPathDisplay';
 
 const INLET_COLORS = {
   exly: 'info',
@@ -412,21 +414,16 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
           )}
 
           {tab === 'artist_path' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {(person.artistPath?.responses || []).map((resp) => (
-                <Card key={resp._id} className="p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
+                <Card key={resp._id} className="p-5 sm:p-6 space-y-5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[var(--color-bg-border)] pb-3">
                     <span className="text-xs text-[var(--color-text-muted)]">{formatDate(resp.submittedAt)}</span>
-                    {resp.answers?.artistType && <Badge variant="mint">{resp.answers.artistType}</Badge>}
+                    {displayStageBadge({ stageName: resp.answers?.stageName, latestArtistType: resp.answers?.artistType }) && (
+                      <Badge variant="mint">{resp.answers.stageName || resp.answers.artistType}</Badge>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(resp.answers || {}).map(([k, v]) => v && k !== 'name' && k !== 'email' && k !== 'phone' && (
-                      <div key={k}>
-                        <span className="text-[var(--color-text-muted)] uppercase text-[9px] font-semibold">{k}</span>
-                        <p className="mt-0.5">{String(v)}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <ArtistPathAnswerSections answers={resp.answers} />
                 </Card>
               ))}
               {!person.artistPath?.responses?.length && (

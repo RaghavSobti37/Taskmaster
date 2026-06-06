@@ -23,6 +23,19 @@ const INLET_FLAG_MAP = {
   enquiry: 'inEnquiries',
 };
 
+function isLikelyEssayName(value) {
+  if (!value || typeof value !== 'string') return false;
+  const t = value.trim();
+  return t.length > 55 || /^I (AM|WAS|'M)\b/i.test(t) || /^I WANT TO\b/i.test(t);
+}
+
+function resolveHubDisplayName(person, latestArtistPath) {
+  const fromAnswers = latestArtistPath?.answers?.name;
+  if (fromAnswers && !isLikelyEssayName(fromAnswers)) return fromAnswers;
+  if (person.canonicalName && !isLikelyEssayName(person.canonicalName)) return person.canonicalName;
+  return fromAnswers || person.canonicalName || 'Respondent';
+}
+
 class PersonHubBuilder {
   async rebuildPerson(personId) {
     if (!personId) return null;
@@ -53,10 +66,10 @@ class PersonHubBuilder {
 
     const hubDoc = {
       personId,
-      name: person.canonicalName,
+      name: resolveHubDisplayName(person, latestArtistPath),
       email: email || undefined,
       phone: phone || undefined,
-      city: person.city,
+      city: person.city || latestArtistPath?.answers?.city,
       inletKeys,
       inletCount: inletKeys.length,
       isMultiInlet: inletKeys.length >= 2,
@@ -66,7 +79,7 @@ class PersonHubBuilder {
       inArtistPath: inletKeys.includes('artist_path') || artistPathCount > 0,
       latestArtistType: latestArtistPath?.answers?.stageName
         || latestArtistPath?.answers?.artistType
-        || latestArtistPath?.answers?.artistIdentity?.slice?.(0, 48),
+        || undefined,
       artistPathResponseCount: artistPathCount,
       ...flags,
     };

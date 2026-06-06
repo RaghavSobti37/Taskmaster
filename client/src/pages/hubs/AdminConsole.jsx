@@ -9,6 +9,7 @@ import {
   BarChart3,
   Activity,
   Shield,
+  Music,
 } from 'lucide-react';
 import { PageContainer } from '../../components/ui/primitives';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,6 +24,7 @@ const ICON_MAP = {
   Trophy,
   BarChart3,
   Activity,
+  Music,
 };
 
 export default function AdminConsole() {

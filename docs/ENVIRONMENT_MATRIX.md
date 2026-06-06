@@ -20,6 +20,7 @@ Public frontend (`FRONTEND_URL` / `CLIENT_URL`): your Vercel custom domain (e.g.
 |-------------|-------------------|-----------------|-----------------|
 | **Local dev** | `development`, localhost | `MONGODB_URI` | `taskmaster_local` |
 | **Vercel preview** | `production` + `VERCEL_ENV=preview` | `MONGODB_URI` (preview env) | `taskmaster_local` (isolated) |
+| **Staging API** | Render `coreknot-api-staging` | `MONGODB_URI` | `taskmaster_staging` |
 | **Production API** | `production` on Render | `MONGODB_URI_PROD` | `taskmaster_production` |
 
 See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
@@ -30,6 +31,7 @@ See [`LOCAL_DEV_DATABASE.md`](./LOCAL_DEV_DATABASE.md).
 |-------------|----------------|-----|
 | **Local** | `http://localhost:5000` | Direct to Express (`client/.env.development`) |
 | **Production (Vercel)** | Your Render `SERVER_URL` value | Bypasses Vercel ~4.5MB proxy for large campaigns |
+| **Preview (Vercel)** | Staging API URL — see [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Never prod API on preview builds |
 | **Unset local** | (proxy) | Vite proxies `/api` → `localhost:5000` |
 
 `client/vercel.json` proxies `/api/*` to Render — configured at deploy time, not duplicated in docs.
@@ -81,3 +83,7 @@ npm run audit:exposure      # scan committed files for leaked hosts
 | [`STARTUP_GUIDE.md`](./STARTUP_GUIDE.md) | Local setup |
 | [`EMAIL_ENGINE_LOCKED.md`](./EMAIL_ENGINE_LOCKED.md) | Mail tracking |
 | [`LEGACY_FREEZE.md`](./LEGACY_FREEZE.md) | APIs not to extend |
+| [`STAGING_SETUP.md`](./STAGING_SETUP.md) | Staging API + preview wiring |
+| [`DEPLOY_ROLLBACK.md`](./DEPLOY_ROLLBACK.md) | App rollback runbook |
+| [`MONITORING_ALERTS.md`](./MONITORING_ALERTS.md) | Datadog + Sentry alerts |
+| [`GLOBAL_SCALE.md`](./GLOBAL_SCALE.md) | Global users + compliance |

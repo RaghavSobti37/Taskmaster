@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
-import { RefreshCw, Upload, Music, Search } from 'lucide-react';
+import React, { useState, lazy, Suspense } from 'react';
+import { RefreshCw, Music } from 'lucide-react';
 import { PageContainer, Button } from '../../components/ui/primitives';
 import SearchInput from '../../components/ui/SearchInput';
 import PageToolbar from '../../components/ui/PageToolbar';
 import ArtistPathCardGrid from '../../components/artistPath/ArtistPathCardGrid';
-import ArtistPathProfileSlider from '../../components/artistPath/ArtistPathProfileSlider';
-import {
-  useArtistPathPeople,
-  useArtistPathSync,
-  useArtistPathUpload,
-} from '../../hooks/queries/artistPath';
+import { useArtistPathPeople, useArtistPathSync } from '../../hooks/queries/artistPath';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../contexts/ToastContext';
+
+const ArtistPathProfileSlider = lazy(() => import('../../components/artistPath/ArtistPathProfileSlider'));
 
 export default function ArtistPathPage() {
   const toast = useToast();
@@ -19,79 +16,61 @@ export default function ArtistPathPage() {
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
-  const fileRef = React.useRef(null);
 
-  const { data, isLoading, refetch, isFetching } = useArtistPathPeople({
+  const { data, isLoading, refetch, isFetching, isError, error } = useArtistPathPeople({
     page,
     limit: 24,
     search: debouncedSearch || undefined,
   });
   const syncMutation = useArtistPathSync();
-  const uploadMutation = useArtistPathUpload();
 
   const handleSync = async () => {
     try {
       const res = await syncMutation.mutateAsync();
-      toast.success(`Synced ${res.data?.imported ?? 0} responses`);
+      toast.success(`Synced ${res.data?.imported ?? 0} responses from sheet`);
       refetch();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Sync failed');
     }
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const res = await uploadMutation.mutateAsync(file);
-      toast.success(`Imported ${res.data?.imported ?? 0} rows`);
-      refetch();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Upload failed');
-    } finally {
-      e.target.value = '';
-    }
-  };
-
   const totalPages = data?.pages || 0;
 
   return (
-    <PageContainer>
+    <PageContainer className="!py-4 !space-y-6">
       <PageToolbar
-        title="Artist Path"
-        subtitle="Questionnaire respondents from the Artist Path Google Sheet"
         icon={Music}
+        title="Artist Path"
         actions={(
-          <>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleUpload} />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploadMutation.isPending}
-            >
-              <Upload size={14} /> Upload CSV
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleSync}
-              disabled={syncMutation.isPending}
-            >
-              <RefreshCw size={14} className={syncMutation.isPending ? 'animate-spin' : ''} /> Sync Sheet
-            </Button>
-          </>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncMutation.isPending}
+            title="Pull latest rows from HolySheet (backfill / repair)"
+          >
+            <RefreshCw size={14} className={syncMutation.isPending ? 'animate-spin' : ''} /> Sync from Sheet
+          </Button>
         )}
       />
 
-      <div className="mb-4 max-w-md">
+      <p className="text-xs text-[var(--color-text-muted)] -mt-2">
+        Live submissions arrive via website webhook. HolySheet remains the source of truth; use sync only to backfill.
+      </p>
+
+      <div className="max-w-md">
         <SearchInput
           value={search}
-          onChange={setSearch}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search name, email, phone…"
-          icon={Search}
         />
       </div>
+
+      {isError && (
+        <p className="text-sm text-rose-500">
+          {error?.response?.data?.error || 'Failed to load Artist Path data'}
+        </p>
+      )}
 
       <ArtistPathCardGrid
         people={data?.data || []}
@@ -100,7 +79,7 @@ export default function ArtistPathPage() {
       />
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-6">
+        <div className="flex items-center justify-center gap-3">
           <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             Previous
           </Button>
@@ -113,7 +92,9 @@ export default function ArtistPathPage() {
         </div>
       )}
 
-      <ArtistPathProfileSlider personId={selectedId} onClose={() => setSelectedId(null)} />
+      <Suspense fallback={null}>
+        <ArtistPathProfileSlider personId={selectedId} onClose={() => setSelectedId(null)} />
+      </Suspense>
     </PageContainer>
   );
 }

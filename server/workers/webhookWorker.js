@@ -1,7 +1,7 @@
 const { Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const logger = require('../utils/logger');
-const { processBookedCallLogic, processArtistEnquiryLogic } = require('../controllers/webhookController');
+const { processBookedCallLogic, processArtistEnquiryLogic, processArtistPathLogic } = require('../controllers/webhookController');
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: null,
@@ -21,6 +21,8 @@ const initWebhookWorker = () => {
       await processBookedCallLogic(job.data);
     } else if (job.name === 'artist-enquiry') {
       await processArtistEnquiryLogic(job.data);
+    } else if (job.name === 'artist-path') {
+      await processArtistPathLogic(job.data);
     }
   }, { connection });
 

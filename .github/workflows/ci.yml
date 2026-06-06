@@ -22,7 +22,7 @@ jobs:
         run: npm ci
         working-directory: server
       - name: Jest
-        run: npm test
+        run: npm test -- --coverage
         working-directory: server
         env:
           NODE_ENV: test
@@ -43,8 +43,10 @@ jobs:
         run: node ../scripts/checkCommittedExposure.js
       - name: Install client deps
         run: npm ci
+      - name: Lint
+        run: npm run lint -- --quiet
       - name: Unit tests
-        run: npm test
+        run: npm test -- --coverage
       - name: Production build
         run: npm run build
 

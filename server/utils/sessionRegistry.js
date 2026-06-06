@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const logger = require('./logger');
+const { getSharedRedis } = require('./sharedRedis');
 const { sessionMetaFromRequest, pickSessionIp, formatSessionIp } = require('./sessionRequestMeta');
 const { absoluteMaxMs, establishSession } = require('./authSession');
 
@@ -8,28 +9,9 @@ const memorySessions = new Map();
 const lastTouchWrites = new Map();
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 
-let redisClient = null;
-let redisReady = false;
-
-const getRedis = () => {
-  if (redisClient !== null) return redisClient;
-  try {
-    const Redis = require('ioredis');
-    const { getRedisUrl } = require('./wslRedis');
-    redisClient = new Redis(getRedisUrl(), {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 2000,
-      lazyConnect: true,
-      retryStrategy: () => null,
-    });
-    redisClient.connect()
-      .then(() => { redisReady = true; })
-      .catch(() => { redisReady = false; });
-    redisClient.on('error', () => { redisReady = false; });
-  } catch {
-    redisClient = false;
-  }
-  return redisClient;
+const isRedisReady = () => {
+  const redis = getSharedRedis();
+  return redis?.status === 'ready';
 };
 
 const userKey = (userId) => `${SESSION_PREFIX}${userId}`;
@@ -51,8 +33,8 @@ const writeMemory = (userId, sessions) => {
 };
 
 const redisGetAll = async (userId) => {
-  const redis = getRedis();
-  if (!redis || !redisReady) return null;
+  if (!isRedisReady()) return null;
+  const redis = getSharedRedis();
   try {
     const raw = await redis.hgetall(userKey(userId));
     if (!raw || !Object.keys(raw).length) return [];
@@ -64,8 +46,8 @@ const redisGetAll = async (userId) => {
 };
 
 const redisSave = async (userId, session) => {
-  const redis = getRedis();
-  if (!redis || !redisReady) return false;
+  if (!isRedisReady()) return false;
+  const redis = getSharedRedis();
   try {
     const key = userKey(userId);
     await redis.hset(key, session.jti, JSON.stringify(session));
@@ -78,8 +60,8 @@ const redisSave = async (userId, session) => {
 };
 
 const redisDelete = async (userId, jti) => {
-  const redis = getRedis();
-  if (!redis || !redisReady) return false;
+  if (!isRedisReady()) return false;
+  const redis = getSharedRedis();
   try {
     await redis.hdel(userKey(userId), jti);
     return true;
@@ -226,7 +208,5 @@ module.exports = {
   _resetForTests: () => {
     memorySessions.clear();
     lastTouchWrites.clear();
-    redisReady = false;
-    redisClient = null;
   },
 };

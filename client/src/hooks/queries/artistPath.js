@@ -27,20 +27,3 @@ export const useArtistPathSync = () => {
     },
   });
 };
-
-export const useArtistPathUpload = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (file) => {
-      const form = new FormData();
-      form.append('file', file);
-      return axios.post('/api/artist-path/upload', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['artistPath'] });
-      queryClient.invalidateQueries({ queryKey: ['dataHub'] });
-    },
-  });
-};

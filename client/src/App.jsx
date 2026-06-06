@@ -78,7 +78,7 @@ const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const NotesPage = lazyWithRetry(() => import('./pages/notes/NotesPage'));
 const NoteEditorPage = lazyWithRetry(() => import('./pages/notes/NoteEditorPage'));
-const ArtistPathPage = lazyWithRetry(() => import('./pages/admin/ArtistPathPage'));
+import ArtistPathPage from './pages/admin/ArtistPathPage';
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
@@ -199,7 +199,7 @@ function App() {
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
 
-              <Route element={<PageRoute page="admin_artist_path" />}>
+              <Route element={<PageRoute pages={['admin_data', 'admin_artist_path']} />}>
                 <Route path="/admin/artist-path" element={<ArtistPathPage />} />
               </Route>
               <Route element={<PageRoute page="admin_data" />}>

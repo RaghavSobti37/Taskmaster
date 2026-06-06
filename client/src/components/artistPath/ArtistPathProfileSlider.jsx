@@ -2,14 +2,12 @@ import React, { useState, lazy, Suspense } from 'react';
 import { Mail, Phone, MapPin, Music } from 'lucide-react';
 import { FullScreenWorkspace, Badge, Card, Spinner } from '../ui';
 import { useArtistPathPerson } from '../../hooks/queries/artistPath';
-import { useDataHubPersonSection } from '../../hooks/useTaskmasterQueries';
-import { ANSWER_LABELS } from '@shared/artistPathSchema';
+import { useDataHubPersonSection } from '../../hooks/queries/dataHub';
+import { displayRespondentName, displayStageBadge } from '../../utils/artistPathDisplay';
+import ArtistPathAnswerSections from './ArtistPathAnswerSections';
+import ArtistPathSocialLinks from './ArtistPathSocialLinks';
 
 const DataHubPersonDetail = lazy(() => import('../dataHub/DataHubPersonDetail'));
-
-function answerLabel(key) {
-  return ANSWER_LABELS[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
-}
 
 function formatDate(d) {
   if (!d) return '—';
@@ -29,20 +27,41 @@ export default function ArtistPathProfileSlider({ personId, onClose }) {
   const { data: crmData, isLoading: crmLoading } = useDataHubPersonSection(crmTab ? personId : null, 'crm');
 
   const hub = data?.hub;
-  const name = hub?.name || data?.person?.canonicalName || 'Artist Path Respondent';
+  const responses = data?.responses || [];
+  const latestAnswers = responses[0]?.answers || {};
+
   const email = data?.email || hub?.email;
   const phone = data?.phone || hub?.phone;
-  const city = hub?.city || data?.person?.city;
-  const responses = data?.responses || [];
+  const city = hub?.city || data?.person?.city || latestAnswers.city;
+
+  const displayName = displayRespondentName({
+    name: hub?.name || data?.person?.canonicalName || latestAnswers.name,
+    email,
+    stageName: latestAnswers.stageName,
+    latestArtistType: hub?.latestArtistType,
+  });
+  const stageBadge = displayStageBadge({
+    stageName: latestAnswers.stageName,
+    latestArtistType: hub?.latestArtistType,
+  });
+  const latestSubmittedAt = responses[0]?.submittedAt;
+
+  const MetaItem = ({ icon: Icon, children }) => (
+    <span className="inline-flex items-center gap-1.5 text-[var(--color-text-muted)] whitespace-nowrap">
+      <Icon size={14} className="shrink-0 opacity-80" />
+      <span className="truncate max-w-[14rem] sm:max-w-none">{children}</span>
+    </span>
+  );
 
   return (
     <>
       <FullScreenWorkspace
         isOpen={!!personId}
         onClose={onClose}
-        title={name}
-        subtitle="Artist Path questionnaire responses"
-        mainClassName="max-w-3xl"
+        title={displayName}
+        subtitle={stageBadge ? `@ ${stageBadge}` : 'Artist Path questionnaire'}
+        centerMain={false}
+        mainClassName="w-full"
         extraActions={(
           <button
             type="button"
@@ -61,76 +80,58 @@ export default function ArtistPathProfileSlider({ personId, onClose }) {
 
         {!isLoading && (
           <>
-            <Card className="p-4 mb-6">
-              <div className="flex flex-wrap gap-3 text-sm">
-                {email && (
-                  <span className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-                    <Mail size={14} /> {email}
-                  </span>
+            <ArtistPathSocialLinks answers={latestAnswers} />
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 py-3 mb-5 border-b border-[var(--color-bg-border)]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm flex-1 min-w-0">
+                {email && <MetaItem icon={Mail}>{email}</MetaItem>}
+                {phone && <MetaItem icon={Phone}>{phone}</MetaItem>}
+                {city && <MetaItem icon={MapPin}>{city}</MetaItem>}
+                {!crmTab && latestSubmittedAt && (
+                  <MetaItem icon={Music}>{formatDate(latestSubmittedAt)}</MetaItem>
                 )}
-                {phone && (
-                  <span className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-                    <Phone size={14} /> {phone}
-                  </span>
-                )}
-                {city && (
-                  <span className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-                    <MapPin size={14} /> {city}
-                  </span>
+                {stageBadge && (
+                  <Badge variant="mint" className="shrink-0">{stageBadge}</Badge>
                 )}
               </div>
-            </Card>
 
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setCrmTab(false)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
-                  !crmTab ? 'bg-[var(--color-action-primary)] text-white' : 'text-[var(--color-text-muted)]'
-                }`}
-              >
-                Q&amp;A ({responses.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setCrmTab(true)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
-                  crmTab ? 'bg-[var(--color-action-primary)] text-white' : 'text-[var(--color-text-muted)]'
-                }`}
-              >
-                CRM summary
-              </button>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCrmTab(false)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
+                    !crmTab ? 'bg-[var(--color-action-primary)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]'
+                  }`}
+                >
+                  Questionnaire ({responses.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCrmTab(true)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide ${
+                    crmTab ? 'bg-[var(--color-action-primary)] text-white' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]'
+                  }`}
+                >
+                  CRM summary
+                </button>
+              </div>
             </div>
 
             {!crmTab && (
-              <div className="space-y-4">
+              <div className="space-y-8">
                 {responses.map((resp) => (
-                  <Card key={resp._id} className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                  <div key={resp._id} className="space-y-4">
+                    {responses.length > 1 && (
+                      <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                         <Music size={14} className="text-[var(--color-action-primary)]" />
-                        <span className="text-xs font-bold text-[var(--color-text-muted)]">
-                          {formatDate(resp.submittedAt)}
-                        </span>
+                        <span className="text-xs font-bold">{formatDate(resp.submittedAt)}</span>
+                        {displayStageBadge({ stageName: resp.answers?.stageName }) && (
+                          <Badge variant="mint">{resp.answers.stageName}</Badge>
+                        )}
                       </div>
-                      {resp.answers?.artistType && (
-                        <Badge variant="mint">{resp.answers.artistType}</Badge>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {Object.entries(resp.answers || {}).map(([key, value]) => {
-                        if (!value || key === 'name' || key === 'email' || key === 'phone' || key === 'city') return null;
-                        return (
-                          <div key={key}>
-                            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--color-text-muted)]">
-                              {answerLabel(key)}
-                            </p>
-                            <p className="text-sm mt-0.5">{String(value)}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
+                    )}
+                    <ArtistPathAnswerSections answers={resp.answers} />
+                  </div>
                 ))}
                 {!responses.length && (
                   <p className="text-sm text-[var(--color-text-muted)] text-center py-8">No questionnaire responses</p>

@@ -20,12 +20,22 @@ npm run dev                        # or separate server/client terminals
 CI runs on push/PR (`.github/workflows/ci.yml`):
 
 - `npm run audit:exposure`
-- `cd server && npm test`
+- `cd server && npm test -- --coverage` (Jest + integration smoke)
+- `cd client && npm run lint`
+- `cd client && npm test -- --coverage` (Vitest)
 - `cd client && npm run build`
+- Lighthouse public a11y gate (≥90)
+- Playwright public E2E smoke
+- Authenticated E2E when `E2E_EMAIL` + `E2E_PASSWORD` secrets set
 
-Use the PR template checklist in [`.github/pull_request_template.md`](.github/pull_request_template.md).
+**Never push directly to `main`.** Use PRs with at least one review.
 
-Before commit locally: `npm run audit:exposure` — blocks Render URLs, personal emails, and PII literals in all tracked files. Deploy rewrites: `vercel.json.example` + `RENDER_API_PROXY_URL` at Vercel build.
+### GitHub branch protection (repo admin)
+
+On `main`: require PR, 1 approval, status checks `server-test`, `client-check`, `e2e-public`, `lighthouse-public`.
+
+See [`docs/DEPLOY_ENV.md`](docs/DEPLOY_ENV.md) and [`docs/DEPLOY_ROLLBACK.md`](docs/DEPLOY_ROLLBACK.md).
+
 
 ## Scripts
 

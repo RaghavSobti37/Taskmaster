@@ -1,4 +1,4 @@
-import { useViteProxyInDev } from './apiBase';
+import { isViteProxyDev } from './apiBase';
 
 const PROD_API_PATTERNS = [/render\.com/i, /onrender\.com/i, /tsccoreknot\.com/i];
 
@@ -25,7 +25,7 @@ export function warnIfDevPointsAtProduction() {
     return;
   }
 
-  if (useViteProxyInDev()) {
+  if (isViteProxyDev()) {
     console.info(`[DEV] API: Vite proxy /api → http://localhost:5000 (${apiUrl} in .env ignored for axios/socket)`);
     return;
   }

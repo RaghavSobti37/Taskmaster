@@ -10,7 +10,9 @@ import { AXIOS_SKIP_TOAST } from '../../lib/notifications';
 import { apiPath } from '../../utils/apiBase';
 import { markForceLogout } from '../../utils/authSession';
 import { formatLoginError } from '../../utils/loginError';
+import { postLogin } from '../../utils/loginRequest';
 import { purgeAuthCookies } from '../../utils/purgeAuthCookies';
+import { probeApiProxyHealth } from '../../utils/apiProxyHealth';
 import InstallGuideModal from '../../components/auth/InstallGuideModal';
 import { detectInstallPlatform } from '../../utils/installPlatform';
 
@@ -37,6 +39,7 @@ const LoginPage = () => {
   React.useEffect(() => {
     if (authLoading || user) return;
     purgeAuthCookies();
+    probeApiProxyHealth();
   }, [authLoading, user]);
 
   React.useEffect(() => {
@@ -76,11 +79,7 @@ const LoginPage = () => {
     const trimmedEmail = email.trim();
     try {
       await purgeAuthCookies();
-      const res = await axios.post(
-        apiPath('/api/auth/login'),
-        { email: trimmedEmail, password },
-        AXIOS_SKIP_TOAST,
-      );
+      const res = await postLogin(trimmedEmail, password);
       await login(res.data);
       navigate('/dashboard', { replace: true });
     } catch (err) {

@@ -10,6 +10,7 @@ import {
   recordAttendanceSessionLogin,
 } from '../utils/attendancePrompt';
 import { getAxiosBaseURL } from '../utils/apiBase';
+import { probeApiProxyHealth } from '../utils/apiProxyHealth';
 import { isStandaloneDisplay, shouldUseSameOriginApi } from '../utils/displayMode';
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
@@ -100,7 +101,13 @@ export const AuthProvider = ({ children }) => {
   }, [sessionReady]);
 
   useEffect(() => {
-    applyAxiosBaseURL();
+    const boot = async () => {
+      if (shouldUseSameOriginApi()) {
+        await probeApiProxyHealth();
+      }
+      applyAxiosBaseURL();
+    };
+    boot();
   }, []);
 
   const queryClient = useQueryClient();

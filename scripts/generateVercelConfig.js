@@ -23,12 +23,34 @@ const readLocalProductionApiUrl = () => {
   }
 };
 
-const proxyUrl = String(
-  process.env.RENDER_API_PROXY_URL
-  || process.env.VITE_API_URL
-  || readLocalProductionApiUrl()
-  || '',
-).trim().replace(/\/$/, '');
+/** Suspended / wrong hosts — never proxy mobile /api traffic here. */
+const BANNED_PROXY_HOSTS = new Set([
+  'coreknot-jfw0.onrender.com',
+  'your-render-service.onrender.com',
+]);
+
+const normalizeProxyUrl = (raw) => String(raw || '').trim().replace(/\/$/, '');
+
+const pickProxyUrl = () => {
+  const candidates = [
+    process.env.RENDER_API_PROXY_URL,
+    process.env.VITE_API_URL,
+    readLocalProductionApiUrl(),
+  ].map(normalizeProxyUrl).filter(Boolean);
+
+  for (const url of candidates) {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (!BANNED_PROXY_HOSTS.has(host)) return url;
+      console.warn(`[generateVercelConfig] skipping banned proxy host: ${host}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+};
+
+const proxyUrl = pickProxyUrl();
 const onVercel = process.env.VERCEL === '1';
 
 if (onVercel && !proxyUrl) {
@@ -54,7 +76,16 @@ if (proxyUrl) {
     console.error('[generateVercelConfig] Host must be *.onrender.com');
     process.exit(1);
   }
+  if (BANNED_PROXY_HOSTS.has(parsed.hostname.toLowerCase())) {
+    console.error('[generateVercelConfig] Refusing banned proxy host:', parsed.hostname);
+    process.exit(1);
+  }
   apiDestination = `${parsed.origin}/api/$1`;
+}
+
+if (onVercel && apiDestination.includes('YOUR-RENDER-SERVICE')) {
+  console.error('[generateVercelConfig] Refusing placeholder proxy destination on Vercel');
+  process.exit(1);
 }
 
 const payload = {

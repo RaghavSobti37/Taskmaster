@@ -20,7 +20,7 @@ describe('formatLoginError', () => {
       response: { status: 502, data: '<html>Bad Gateway</html>' },
     });
     expect(result.isNetwork).toBe(true);
-    expect(result.message).toMatch(/proxy error/i);
+    expect(result.message).toMatch(/could not reach the login api/i);
   });
 
   it('maps 429 to rate limit copy', () => {

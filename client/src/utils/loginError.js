@@ -23,7 +23,7 @@ export function formatLoginError(err) {
   if (status === 404 || status === 502 || status === 503 || status === 504) {
     return {
       message:
-        'Login service unavailable (server proxy error). Try Clear session cookies, then sign in again. If this persists, reinstall the app shortcut.',
+        'Could not reach the login API. Check your connection and try again in a minute. If it still fails, contact your admin — the server proxy may need redeploying.',
       isNetwork: true,
     };
   }

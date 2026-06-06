@@ -1,4 +1,5 @@
 import { shouldUseSameOriginApi } from './displayMode';
+import { isApiProxyHealthy, shouldFallbackToDirectApi } from './apiProxyHealth';
 
 const LOCAL_API_RE = /^https?:\/\/(localhost|127\.0\.0\.1):5000\/?$/i;
 
@@ -18,9 +19,17 @@ export function getDirectApiBaseUrl() {
   return getApiBaseUrl() || undefined;
 }
 
+const routeViaSameOriginApi = () => {
+  if (isViteProxyDev()) return true;
+  if (!shouldUseSameOriginApi()) return false;
+  if (shouldFallbackToDirectApi()) return false;
+  if (isApiProxyHealthy() === false) return false;
+  return true;
+};
+
 /** Axios base URL: undefined = relative paths via Vite/Vercel proxy. */
 export function getAxiosBaseURL() {
-  if (isViteProxyDev() || shouldUseSameOriginApi()) return undefined;
+  if (routeViaSameOriginApi()) return undefined;
   return getDirectApiBaseUrl();
 }
 
@@ -31,10 +40,10 @@ export function getRealtimeOrigin() {
   return getDirectApiBaseUrl() || window.location.origin;
 }
 
-/** Build API path; home-screen PWAs use same-origin /api for reliable iOS cookies. */
+/** Build API path; mobile/PWA prefer same-origin /api when proxy is healthy. */
 export function apiPath(path) {
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  if (isViteProxyDev() || shouldUseSameOriginApi()) return normalized;
+  if (routeViaSameOriginApi()) return normalized;
   const base = getDirectApiBaseUrl();
   return base ? `${base}${normalized}` : normalized;
 }

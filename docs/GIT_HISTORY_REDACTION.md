@@ -35,11 +35,13 @@ git push --force origin testing   # if applicable
 
 | Step | Tool | What it redacts |
 |------|------|-----------------|
-| 1 | `git filter-repo --replace-text replacements.txt` | File blobs: Render URLs, emails, GitHub org paths, names, `mongodb+srv://REDACTED:REDACTED@REDACTED.example.com/` |
-| 2 | `git filter-branch` | Commit **messages** via `scripts/gitMsgFilter.sh` (`cat \| sed`) |
-| 2 | `git filter-branch` | Author/committer **email & name** via `scripts/gitEnvRedact.sh` |
+| 1 | `git filter-repo --replace-text replacements.txt` | File blobs: Render URLs, emails, GitHub org paths, secrets |
+| 1 | `git filter-repo --mailmap mailmap.txt` | Author names/emails |
+| 1 | `git filter-repo --message-callback` | Commit messages (`scripts/historyMessageCallback.py`) |
+| 1 | `git filter-repo --commit-callback` | Committer metadata (`scripts/historyCommitCallback.py`) |
+| 2 | `node scripts/restoreAuditNeedles.js` | Restore needles in audit scripts (filter-repo redacts them too) |
 | 3 | `git reflog expire` + `git gc` | Drop old objects |
-| 4 | Built-in checks | Fails if original personal-email or GitHub-org needles still appear in history |
+| 4 | `npm run audit:history` | Fails if original needles still appear outside tooling paths |
 
 After `filter-repo`, re-add `origin` if removed:
 

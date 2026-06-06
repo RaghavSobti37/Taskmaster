@@ -39,6 +39,10 @@ const SKIP_FILES = new Set([
   'scripts/gitEmailRedact.py',
   'scripts/gitFilterCommitMsg.py',
   'scripts/gitNameRedact.py',
+  'scripts/restoreAuditNeedles.js',
+  'scripts/historyMessageCallback.py',
+  'scripts/historyCommitCallback.py',
+  'mailmap.txt',
   'server/.env.render.example',
 ]);
 
@@ -46,17 +50,17 @@ const SKIP_PATH_PREFIXES = ['server/tests/'];
 
 /** Original PII / hosts only — placeholders (redacted@example.com, YOUR-RENDER-SERVICE) are OK. */
 const BLOCKED_LITERALS = [
-  'YOUR-RENDER-SERVICE.onrender.com',
-  'REDACTED_ADMIN@example.com',
-  'redacted@example.com',
-  'redacted@example.com',
-  'redacted-staff@example.com',
-  'redacted-staff@example.com',
-  'redacted-staff@example.com',
-  'redacted-staff@example.com',
-  'github.com/YOUR_ORG',
-  'YOUR_ORG/CoreKnot',
-  'YOUR_ORG/Taskmaster',
+  'taskmaster-jfw0.onrender.com',
+  'raghavraj@theshakticollective.in',
+  'raghavsobti37@gmail.com',
+  'raghav@gmail.com',
+  'harshika@theshakticollective.in',
+  'deepank@theshakticollective.in',
+  'aryaman@theshakticollective.in',
+  'rohith@theshakticollective.in',
+  'github.com/RaghavSobti37',
+  'RaghavSobti37/CoreKnot',
+  'RaghavSobti37/Taskmaster',
 ];
 
 const PATTERNS = [

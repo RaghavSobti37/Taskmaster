@@ -37,8 +37,12 @@ const EXCLUDE_PATHS = [
   'scripts/gitEmailRedact.py',
   'scripts/gitNameRedact.py',
   'scripts/runHistoryRedact.sh',
+  'scripts/historyMessageCallback.py',
+  'scripts/historyCommitCallback.py',
+  'scripts/restoreAuditNeedles.js',
   'docs/GIT_HISTORY_REDACTION.md',
   'replacements.txt',
+  'mailmap.txt',
   'security-context.md',
 ];
 

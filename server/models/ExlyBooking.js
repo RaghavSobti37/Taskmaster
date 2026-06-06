@@ -4,6 +4,7 @@ const { applyPersonIdentityToDoc } = require('../utils/personNormalization');
 
 
 const ExlyBookingSchema = new mongoose.Schema({
+  personId: { type: mongoose.Schema.Types.ObjectId, ref: 'Person', index: true },
   name: { type: String, required: true },
   nameKey: { type: String, index: true },
   email: { type: String, index: true },

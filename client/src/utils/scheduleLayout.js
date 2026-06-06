@@ -1,6 +1,5 @@
 import { resolveTaskSpan, spanCoversDateKey } from './scheduleTaskDates';
 
-export { resolveTaskSpan, spanCoversDateKey };
 
 /** Tasks visible on a schedule day (matches desktop span placement). */
 export function tasksForScheduleDay(tasks, dayKey) {
@@ -65,7 +64,7 @@ function assignPlacedLanes(placed) {
   return lanes;
 }
 
-export function assignTaskLanes(tasks, dateKeys) {
+function assignTaskLanes(tasks, dateKeys) {
   const placed = (tasks || [])
     .map((task) => {
       const placement = getTaskPlacement(task, dateKeys);
@@ -88,7 +87,7 @@ export function assignEntryLanes(entries, dateKeys) {
 }
 
 /** Shared tasks render on one row: current user, else first in cluster order, else lowest id. */
-export function pickPrimaryAssignee(assigneesInCluster, memberOrderIds, currentUserId) {
+function pickPrimaryAssignee(assigneesInCluster, memberOrderIds, currentUserId) {
   if (!assigneesInCluster?.length) return null;
   if (assigneesInCluster.length === 1) return assigneesInCluster[0];
 
@@ -329,7 +328,7 @@ export function buildClusterLayout(clusterMembers, tasks, dateKeys, memberById =
   return { soloPlacements };
 }
 
-export function partitionDepartmentsForUser(departments, currentUserId) {
+function partitionDepartmentsForUser(departments, currentUserId) {
   if (!departments?.length) {
     return { ownMember: null, ownDepartment: null, otherDepartments: [] };
   }

@@ -12,6 +12,7 @@ const auditPlugin = require('./plugins/auditPlugin');
 const LeadSchema = new mongoose.Schema({
   // Core Identifiers
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
+  personId: { type: mongoose.Schema.Types.ObjectId, ref: 'Person', index: true },
   rowId: { type: String, unique: true, sparse: true }, // Legacy identifier from CSV
   customerIdExly: { type: String, index: true },
   transactionIdExly: { type: String, index: true },

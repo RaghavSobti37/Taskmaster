@@ -176,7 +176,7 @@ const processEmailJob = async ({ campaignId, recipientId, email, subject, conten
   const Campaign = require('../models/Campaign');
   const MailCampaign = require('../models/MailCampaign');
   const MailEvent = require('../models/MailEvent');
-  const { isCampaignStopped } = require('./queueService');
+  const { isCampaignStopped } = require('./campaignQueueState');
 
   let Model = Campaign;
   let campaign = await Campaign.findById(campaignId).populate('senderProfileId').populate('senderProfileIds');

@@ -45,7 +45,7 @@ export const getProfileCompletionIssues = (user) => {
   return issues;
 };
 
-export const getProfileCompletion = (user) => {
+const getProfileCompletion = (user) => {
   const issues = getProfileCompletionIssues(user);
   return {
     complete: issues.length === 0,

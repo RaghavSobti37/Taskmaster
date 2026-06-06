@@ -23,4 +23,3 @@ const ArtistConnectionSchema = new mongoose.Schema({
 ArtistConnectionSchema.index({ artistId: 1, provider: 1, accountHandle: 1 }, { unique: true });
 
 module.exports = mongoose.model('ArtistConnection', ArtistConnectionSchema);
-module.exports.CONNECTION_STATUS = STATUS;

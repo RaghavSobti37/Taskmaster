@@ -21,7 +21,7 @@ export function distributionFromField(rows, field, { topN = DEFAULT_TOP_N, label
   return [...head, { label: 'Other', value: rest }];
 }
 
-export function timeBucketsFromDate(rows, dateKey, { days = 7 } = {}) {
+function timeBucketsFromDate(rows, dateKey, { days = 7 } = {}) {
   if (!Array.isArray(rows) || !dateKey) return [];
   const now = new Date();
   const buckets = [];

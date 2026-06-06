@@ -18,7 +18,7 @@ export const useSchedule = ({ start, end, projectId, departmentId } = {}, enable
   });
 };
 
-export const useProjectWorkload = (projectId, start, end, enabled = true) => {
+const useProjectWorkload = (projectId, start, end, enabled = true) => {
   return useQuery({
     queryKey: ['projects', projectId, 'workload', start, end],
     queryFn: async () =>

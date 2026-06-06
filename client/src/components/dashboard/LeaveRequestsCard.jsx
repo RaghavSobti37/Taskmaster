@@ -22,7 +22,7 @@ const formatDateRange = (from, to) => {
   return f === t ? f : `${f} → ${t}`;
 };
 
-export default function LeaveRequestsCard() {
+function LeaveRequestsCard() {
   const { user } = useAuth();
   const opsView = isOpsUser(user);
   const { data = [], isLoading } = useLeaveRequests(
@@ -110,3 +110,5 @@ export default function LeaveRequestsCard() {
     </DashboardWidgetShell>
   );
 }
+
+export default LeaveRequestsCard;

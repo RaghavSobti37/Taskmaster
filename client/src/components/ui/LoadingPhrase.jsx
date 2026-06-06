@@ -11,5 +11,3 @@ export function LoadingPhrase({ phrase: phraseProp, className = '' }) {
     </p>
   );
 }
-
-export default LoadingPhrase;

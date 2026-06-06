@@ -18,7 +18,7 @@ export const MODAL_WIDTH_PX = {
 export const MODAL_PANEL_CLASS = 'tm-modal-panel';
 export const MODAL_OVERLAY_CLASS = 'tm-modal-overlay';
 
-export const getModalPanelClassName = (size = 'lg', extra = '') => {
+const getModalPanelClassName = (size = 'lg', extra = '') => {
   const sizeClass = typeof size === 'number' ? '' : `tm-modal-${size}`;
   return [MODAL_PANEL_CLASS, sizeClass, extra].filter(Boolean).join(' ');
 };
@@ -37,7 +37,7 @@ export const getModalPanelStyle = (sizeOrPx = 'lg') => {
 };
 
 /** Composable modal shell — prefer NexusModal first; use ModalShell directly when layout is custom */
-export const ModalOverlay = ({
+const ModalOverlay = ({
   children,
   className = '',
   zIndex = 1000,

@@ -2,7 +2,7 @@ export const ADMIN_SLUG = 'admin';
 export const SALES_SLUG = 'sales';
 export const OPS_SLUG = 'operations';
 export const ARTIST_SLUG = 'artist-management';
-export const STANDARD_PRESET = 'standard';
+const STANDARD_PRESET = 'standard';
 
 export {
   PAGE_GROUPS,
@@ -36,7 +36,7 @@ export function getDepartmentName(user) {
   return 'Unassigned';
 }
 
-export function getPermissionPreset(user) {
+function getPermissionPreset(user) {
   const dept = user?.departmentId;
   if (!dept || typeof dept !== 'object') return null;
   if (dept.permissionPreset) return dept.permissionPreset;
@@ -44,4 +44,4 @@ export function getPermissionPreset(user) {
 }
 
 /** @deprecated use OPS_SLUG checks via isOpsUser */
-export const OPS_ROLES = new Set([ADMIN_SLUG, OPS_SLUG]);
+const OPS_ROLES = new Set([ADMIN_SLUG, OPS_SLUG]);

@@ -12,7 +12,7 @@ const SORT_OPTIONS = [
   { value: 'project-asc', label: 'Project A–Z' },
 ];
 
-export const DailyLogsTable = ({ entries = [], showMember = false }) => {
+const DailyLogsTable = ({ entries = [], showMember = false }) => {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('date-desc');
   const [projectFilter, setProjectFilter] = useState('all');

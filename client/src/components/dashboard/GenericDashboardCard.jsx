@@ -16,7 +16,7 @@ const formatBarMetric = (value, _name, item) => {
   return [String(value), metric];
 };
 
-export default function GenericDashboardCard({ componentId }) {
+function GenericDashboardCard({ componentId }) {
   const [timeframe, setTimeframe] = useState('7d');
   const { user } = useAuth();
 
@@ -180,3 +180,5 @@ export default function GenericDashboardCard({ componentId }) {
     </DashboardWidgetShell>
   );
 }
+
+export default GenericDashboardCard;

@@ -54,7 +54,7 @@ export const useWorkspaces = (enabled = true) => {
   });
 };
 
-export const useWorkspace = (name) => {
+const useWorkspace = (name) => {
   return useQuery({
     queryKey: ['workspaces', name],
     queryFn: () => fetchWorkspaceByName(name),
@@ -96,7 +96,7 @@ export const useProjectsAnalyticsSummary = (queryParams, queryEnabled = true) =>
   });
 };
 
-export const useUpdateProject = () => {
+const useUpdateProject = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/projects/${id}`, data),
@@ -128,7 +128,7 @@ export const useUpdateProject = () => {
   });
 };
 
-export const invalidateProjectAnalytics = (queryClient, projectId) => {
+const invalidateProjectAnalytics = (queryClient, projectId) => {
   queryClient.invalidateQueries({ queryKey: ['projects', 'analytics-summary'] });
   if (projectId) {
     queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'analytics'] });

@@ -5,7 +5,7 @@ import { DashboardWidgetShell, TimeframeFilter, Spinner } from '../ui';
 import { Filter, TrendingUp, Users, Target, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function PipelineSummaryCard() {
+function PipelineSummaryCard() {
   const [timeframe, setTimeframe] = React.useState('7d');
 
   const { data: stats, isLoading } = useQuery({
@@ -77,3 +77,5 @@ export default function PipelineSummaryCard() {
     </DashboardWidgetShell>
   );
 }
+
+export default PipelineSummaryCard;

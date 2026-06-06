@@ -41,7 +41,7 @@ export const useCalendarEvents = () => useQuery({
   staleTime: 1000 * 60,
 });
 
-export const useCreateCalendarEvent = () => {
+const useCreateCalendarEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (event) => axios.post('/api/calendar', event),
@@ -53,7 +53,7 @@ export const useCreateCalendarEvent = () => {
   });
 };
 
-export const useUpdateCalendarEvent = () => {
+const useUpdateCalendarEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/calendar/${id}`, data),
@@ -65,7 +65,7 @@ export const useUpdateCalendarEvent = () => {
   });
 };
 
-export const useDeleteCalendarEvent = () => {
+const useDeleteCalendarEvent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => axios.delete(`/api/calendar/${id}`),

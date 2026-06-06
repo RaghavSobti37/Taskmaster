@@ -1,0 +1,32 @@
+{
+  "description": "Import via Datadog UI → Monitors → New Monitor, or use Terraform datadog_monitor resource. Adjust URLs and @handles.",
+  "monitors": [
+    {
+      "name": "[CoreKnot] API health synthetic failed",
+      "type": "synthetics alert",
+      "message": "@slack-ops-alerts API health check failed. Check Render service and MongoDB.\nRunbook: docs/DEPLOY_ROLLBACK.md",
+      "tags": ["service:coreknot-api", "env:production"]
+    },
+    {
+      "name": "[CoreKnot] API p95 latency > 2s",
+      "type": "query alert",
+      "query": "avg(last_5m):p95:trace.express.request{service:coreknot-api,env:production} > 2",
+      "message": "@slack-ops-alerts API latency degraded.",
+      "tags": ["service:coreknot-api"]
+    },
+    {
+      "name": "[CoreKnot] 5xx error rate > 1%",
+      "type": "query alert",
+      "query": "sum(last_5m):sum:trace.express.request.errors{service:coreknot-api,env:production}.as_count() / sum:trace.express.request.hits{service:coreknot-api,env:production}.as_count() > 0.01",
+      "message": "@slack-ops-alerts Elevated 5xx rate on API.",
+      "tags": ["service:coreknot-api"]
+    },
+    {
+      "name": "[CoreKnot] Keep-warm cron failed",
+      "type": "event alert",
+      "query": "source:render service:CoreKnot-keep-warm status:error",
+      "message": "@slack-ops-alerts Keep-warm cron failed — cold starts likely.",
+      "tags": ["service:coreknot-api"]
+    }
+  ]
+}

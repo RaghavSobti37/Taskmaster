@@ -6,15 +6,17 @@ const Lead = require('../models/Lead');
 const MailEvent = require('../models/MailEvent');
 const { prepareCampaignHTML } = require('../utils/emailTracker');
 const logger = require('../utils/logger');
-const { processEmailJob } = require('./emailProcessor');
 const { resolveCampaignByParam } = require('../utils/resolveCampaign');
 const { isValidEmail } = require('../utils/emailValidation');
 
-const memoryQueue = [];
-const stoppedCampaignIds = new Set();
-let isProcessingMemoryQueue = false;
+const {
+  isCampaignStopped,
+  markCampaignStopped,
+  clearCampaignStopped,
+} = require('./campaignQueueState');
 
-const isCampaignStopped = (campaignId) => stoppedCampaignIds.has(String(campaignId));
+const memoryQueue = [];
+let isProcessingMemoryQueue = false;
 
 const removeCampaignJobsFromMemoryQueue = (campaignId) => {
   const id = String(campaignId);
@@ -35,6 +37,7 @@ const processMemoryQueue = async () => {
   while (memoryQueue.length > 0) {
     const jobData = memoryQueue.shift();
     try {
+      const { processEmailJob } = require('./emailProcessor');
       await processEmailJob(jobData);
     } catch (err) {
       logger.error('Memory Queue', 'Job failed', { error: err.message });
@@ -54,7 +57,7 @@ const stopCampaign = async (campaignId) => {
   }
 
   const id = campaign._id.toString();
-  stoppedCampaignIds.add(id);
+  markCampaignStopped(id);
 
   let cancelledCount = 0;
   for (const rec of campaign.recipients || []) {
@@ -94,7 +97,7 @@ const dispatchCampaignJobs = async (campaignId) => {
 
   campaign.status = 'Sending';
   await campaign.save();
-  stoppedCampaignIds.delete(campaign._id.toString());
+  clearCampaignStopped(campaign._id.toString());
 
   let recipients = (campaign.recipients || []).filter(r => r.status === 'Pending' || r.status === 'Queued');
   if (recipients.length === 0) {
@@ -153,4 +156,9 @@ const dispatchCampaignJobs = async (campaignId) => {
   return { success: true, queuedCount: recipients.length };
 };
 
-module.exports = { dispatchCampaignJobs, stopCampaign, processEmailJob, isCampaignStopped };
+module.exports = {
+  dispatchCampaignJobs,
+  stopCampaign,
+  processEmailJob: (...args) => require('./emailProcessor').processEmailJob(...args),
+  isCampaignStopped,
+};

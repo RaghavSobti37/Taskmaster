@@ -415,7 +415,34 @@ exports.createLead = async (req, res) => {
     if (!leadData.assignedRepId) {
       leadData.assignedRepId = await assignLeadToRep();
     }
+
+    const PersonIdentityService = require('../services/PersonIdentityService');
+    const PersonHubBuilder = require('../services/PersonHubBuilder');
+    const ContactService = require('../services/ContactService');
+    const resolved = await PersonIdentityService.resolvePerson(
+      { name: leadData.name, email: leadData.email, phone: leadData.phone, city: leadData.city },
+      { source: 'lead' }
+    );
+    if (resolved?.personId) {
+      leadData.personId = resolved.personId;
+    }
+
     const lead = await Lead.create(leadData);
+    if (resolved?.personId) {
+      await PersonIdentityService.linkSource(resolved.personId, 'lead', lead._id, {
+        leadStatus: lead.leadStatus,
+        source: lead.source,
+      });
+      await PersonHubBuilder.rebuildPerson(resolved.personId);
+    }
+    await ContactService.mergeContact({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      city: lead.city,
+      recordId: lead._id,
+      summary: { leadStatus: lead.leadStatus, source: lead.source },
+    }, 'crm');
     broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
     const xpJob = queueGamificationEvent('LEAD_CAPTURED', {
       userId: req.user._id,

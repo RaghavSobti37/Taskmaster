@@ -53,7 +53,7 @@ export const useDeleteTeam = () => {
   });
 };
 
-export const useUpdateUserDepartment = () => {
+const useUpdateUserDepartment = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ userId, departmentId }) => axios.patch(`/api/departments/users/${userId}`, { departmentId }),

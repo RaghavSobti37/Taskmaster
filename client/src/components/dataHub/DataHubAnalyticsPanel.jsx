@@ -156,7 +156,7 @@ export default function DataHubAnalyticsPanel({ analytics, folder, showPanel, on
         </>
       )}
 
-      {folder === 'tsc' && (
+      {(folder === 'tsc' || folder === 'outsourced') && (
         <>
           <Section title="Top Campaigns" icon={PieChart}>
             <BarList items={analytics.topCampaigns} labelKey="_id" countKey="count" />

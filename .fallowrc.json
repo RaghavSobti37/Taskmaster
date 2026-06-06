@@ -1,0 +1,345 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "client/src/main.jsx",
+    "client/src/sw.js",
+    "client/src/lib/dashboardWidgetLoaders.js",
+    "client/src/components/dashboard/**/*.{jsx,js}",
+    "server/server.js",
+    "server/scripts/resolveScriptAdminUserId.js",
+    "server/scripts/runSubscriptionReminders.js",
+    "server/tests/**/*.test.js",
+    "client/src/**/*.test.js"
+  ],
+  "ignorePatterns": [
+    "scripts/**",
+    "server/scripts/**",
+    "server/models/PlatformSettings.js",
+    "server/services/platformSettingsService.js",
+    "server/services/subscriptionReminderService.js",
+    "shared/platformRoleDefinitions.js",
+    "server/migrate*.js",
+    "server/test*.js",
+    "server/ut7test/**",
+    "server/get_projects.js",
+    "server/query_tech.js",
+    "server/print_attachments.js",
+    "server/scan_*.js",
+    "server/summarize_dirs.js",
+    "client/scripts/split-ui-imports.mjs",
+    "e2e/**",
+    "server/jest.config.js"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    "patterns": ["client", "server", "shared"]
+  },
+  "ignoreExports": [
+    {
+      "file": "client/src/components/brand/logoHarmonicGeometry.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/components/brand/logoBrandTokens.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/components/brand/fluidRibbonLoaderCatalog.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/components/brand/FluidRibbonLoader.jsx",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/mailEventLocation.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/departmentPermissions.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/taskReview.js",
+      "exports": ["canUserApproveReview"]
+    },
+    {
+      "file": "client/src/utils/uploadthing.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/pagePermissions.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/taskReviewRules.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/projectReportRange.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/scheduleLayout.js",
+      "exports": ["tasksForScheduleDay"]
+    },
+    {
+      "file": "server/utils/departmentPermissions.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/pagePermissions.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/defaultNavbarGroups.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/utils/navbarConfig.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/defaultPassword.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/defaultPassword.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/attendanceMetrics.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/attendanceMetrics.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/qa/qaIntegrationRunners.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/qa/qaIntegrationTests.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/qa/lighthouseRoutes.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/qa/qaLighthouseRunner.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/qaExcludedUsers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/qaExcludedUsers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/attendanceXp.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/sessionRegistry.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/tokenRevocation.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/monthlyReportService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/monthlyReportTimeframe.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/dateValidation.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/dateValidation.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/lib/notifications.jsx",
+      "exports": ["*"]
+    },
+    {
+      "file": "client/src/lib/systemLogContract.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/projectAnalyticsService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/projectAccess.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/validation/schemas/campaigns.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/validation/schemas/mail.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/controllers/taskController.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/TaskService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/controllers/dataHubController.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/databaseBackupService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/indexedTemplateVariables.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/mailTemplateHelpers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/controllers/crmController.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/followupCache.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/dashboardComponents.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/platformOwner.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/platformUserIds.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/profileSendStats.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/smtpPresets.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/taskAccess.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/projectRoles.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/controllers/subscriptionController.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/usdInrRateService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/systemLogService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/systemLogContract.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/notificationService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/workers/taskActivityPurgeWorker.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/middleware/authMiddleware.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/attendanceUsers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/attendanceExcludedUsers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/leadPhoneRepair.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/sanitizer.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/mailTemplateApprovers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/mailTemplateApprovers.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "shared/taskReviewRules.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/leadValidation.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/utils/personNormalization.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/controllers/webhookController.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/artistEnquiryService.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/emailProcessor.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "server/services/queueService.js",
+      "exports": ["*"]
+    }
+  ],
+  "duplicates": {
+    "minOccurrences": 3
+  },
+  "rules": {
+    "unused-dependencies": "warn",
+    "circular-dependency": "off"
+  },
+  "ignoreDependencies": [
+    "socket.io-client"
+  ]
+}

@@ -84,5 +84,3 @@ export function UserLabel({
     </div>
   );
 }
-
-export default UserAvatar;

@@ -26,7 +26,7 @@ export function compareSortValues(a, b) {
  * @param {Array} options.data
  * @param {Array} options.columns - DataTable columns with sortKey/sortFn
  */
-export function useColumnSort({
+function useColumnSort({
   controlledState,
   onSortChange,
   data = [],

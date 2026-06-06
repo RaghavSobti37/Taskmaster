@@ -6,6 +6,81 @@ services:
     region: oregon
     maxmemoryPolicy: noeviction
     ipAllowList: []
+
+  # Production API — sync env vars from Dashboard if service already exists manually
+  - type: web
+    name: CoreKnot-api
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DD_SERVICE
+        value: coreknot-api
+      - key: DD_ENV
+        value: production
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: MONGODB_URI_PROD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: taskmaster-redis
+          type: keyvalue
+          property: connectionString
+      - key: SENTRY_DSN
+        sync: false
+      - key: DD_API_KEY
+        sync: false
+
+  # Staging API — PR/preview testing; never points at production DB
+  - type: web
+    name: coreknot-api-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DD_SERVICE
+        value: coreknot-api
+      - key: DD_ENV
+        value: staging
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: taskmaster-redis
+          type: keyvalue
+          property: connectionString
+      - key: SENTRY_DSN
+        sync: false
+      - key: DD_API_KEY
+        sync: false
+
   - type: cron
     name: CoreKnot-daily-backup
     schedule: "31 18 * * *"
@@ -51,4 +126,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: KEEP_WARM_URL
-        value: https://YOUR-RENDER-SERVICE.onrender.com/api/health
+        value: https://CoreKnot-jfw0.onrender.com/api/health

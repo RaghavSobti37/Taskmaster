@@ -49,6 +49,6 @@ export function formatTimestampWithTz(date, pattern = 'MMM dd, yyyy · HH:mm:ss'
   }
 }
 
-export function formatShortTimestampWithTz(date, pattern = 'MMM dd, HH:mm:ss') {
+function formatShortTimestampWithTz(date, pattern = 'MMM dd, HH:mm:ss') {
   return formatTimestampWithTz(date, pattern);
 }

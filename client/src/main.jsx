@@ -18,9 +18,11 @@ import { registerSW } from 'virtual:pwa-register';
 import { warnIfDevPointsAtProduction } from './utils/devEnvGuard';
 import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/displayMode';
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
-import { initSentry } from './lib/sentry';
+import { initSentry, setSentryUser, clearSentryUser } from './lib/sentry';
+import { initDatadogRum, setDatadogUser, clearDatadogUser } from './lib/datadog';
 
 initSentry();
+initDatadogRum();
 applyPwaDesktopDocumentFlag();
 watchDisplayModeFlags();
 purgeExpiredNoteDrafts();

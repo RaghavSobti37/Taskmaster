@@ -20,4 +20,3 @@ export function useLoadingPhrase() {
   return phrase;
 }
 
-export { MIN_LOADING_PHRASE_MS };

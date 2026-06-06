@@ -129,5 +129,4 @@ const SystemLogsPanel = ({ severityFilter = '', search = '' }) => {
   );
 };
 
-export default SystemLogsPanel;
 export { SystemLogsPanel as SystemLogsContent };

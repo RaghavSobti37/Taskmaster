@@ -6,7 +6,7 @@ import { logoDot, logoThin } from './logoMarkStyles';
 const markTransform = `translate(${HUB_X} ${HUB_Y}) scale(${LOGO_MARK_SCALE}) translate(${-HUB_X} ${-HUB_Y})`;
 
 /** #99 — The Harmonic Frequency (locked geometry + white-on-green colors) */
-export function HarmonicLogo({ className, ...rest }) {
+function HarmonicLogo({ className, ...rest }) {
   return (
     <svg viewBox="0 0 64 64" className={className} xmlns="http://www.w3.org/2000/svg" aria-hidden {...rest}>
       <g transform={markTransform}>

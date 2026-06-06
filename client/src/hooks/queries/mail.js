@@ -183,7 +183,7 @@ export const useScanBounces = () => {
   });
 };
 
-export const useSyncUnsubscribed = () => {
+const useSyncUnsubscribed = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => axios.post('/api/crm/sync-unsubscribed'),

@@ -34,7 +34,7 @@ export const useDeleteDepartment = () => {
   });
 };
 
-export const useDepartmentMonthlyReport = (departmentId, month, rangeParams = {}, enabled = true) => {
+const useDepartmentMonthlyReport = (departmentId, month, rangeParams = {}, enabled = true) => {
   const { timeframe = '30d', startDate, endDate } = rangeParams;
   return useQuery({
     queryKey: ['departmentMonthlyReport', departmentId, month, timeframe, startDate, endDate],
@@ -45,7 +45,7 @@ export const useDepartmentMonthlyReport = (departmentId, month, rangeParams = {}
   });
 };
 
-export const useTeamMonthlyReport = (month, rangeParams = {}, enabled = true) => {
+const useTeamMonthlyReport = (month, rangeParams = {}, enabled = true) => {
   const { timeframe = '30d', startDate, endDate } = rangeParams;
   return useQuery({
     queryKey: ['teamMonthlyReport', month, timeframe, startDate, endDate],

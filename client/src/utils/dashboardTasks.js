@@ -97,7 +97,7 @@ export function sortTasksByDate(tasks, direction = 'asc', prefer = 'schedule') {
 }
 
 /** Todo page: due date sort (no due date always last). */
-export function sortTasksByDueDate(tasks, direction = 'asc') {
+function sortTasksByDueDate(tasks, direction = 'asc') {
   return sortTasksByDate(tasks, direction, 'due');
 }
 
@@ -111,7 +111,7 @@ export function sortDashboardFocusTasks(a, b, today = startOfDay(new Date())) {
   return aTime - bTime;
 }
 
-export function filterDashboardFocusTasks(tasks = []) {
+function filterDashboardFocusTasks(tasks = []) {
   const today = startOfDay(new Date());
   return tasks
     .filter((t) => isDashboardFocusTask(t, today))

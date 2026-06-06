@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-export const sanitizeValue = (value, suffix = '') => {
+const sanitizeValue = (value, suffix = '') => {
   if (value === undefined || value === null || value === '' || value === 'Unavailable' || Number.isNaN(value)) {
     return 'N/A';
   }
   return `${value}${suffix}`;
 };
 
-export const useContacts = (enabled = true) => useQuery({
+const useContacts = (enabled = true) => useQuery({
   queryKey: ['contacts'],
   queryFn: async () => (await axios.get('/api/contacts')).data,
   enabled,
@@ -16,7 +16,7 @@ export const useContacts = (enabled = true) => useQuery({
 });
 
 /** @deprecated Prefer TASK_CATEGORY_OPTIONS — returns general task categories. */
-export const useTaskTypes = () => {
+const useTaskTypes = () => {
   const categories = [
     { name: 'bug', label: 'Bug' },
     { name: 'feature', label: 'Feature' },

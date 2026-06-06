@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-require('./User');
-require('./Lead');
-
 /**
  * Audit Log Schema
  */
@@ -15,7 +12,7 @@ const AuditSchema = new mongoose.Schema({
   fieldChanged: { type: String, required: true },
   oldValue: { type: String },
   newValue: { type: String },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now, expires: '7d' },
 });
 
 AuditSchema.index({ leadId: 1, timestamp: -1 });

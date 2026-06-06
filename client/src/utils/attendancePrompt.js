@@ -26,7 +26,7 @@ export const markAttendancePromptedToday = (userId) => {
   localStorage.setItem(getAttendancePromptedStorageKey(userId), '1');
 };
 
-export const clearAttendancePromptedToday = (userId) => {
+const clearAttendancePromptedToday = (userId) => {
   if (!userId || typeof localStorage === 'undefined') return;
   localStorage.removeItem(getAttendancePromptedStorageKey(userId));
 };

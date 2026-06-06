@@ -54,7 +54,7 @@ export const useCreateLead = () => {
   });
 };
 
-export const useCRMImports = (enabled = true) => useQuery({
+const useCRMImports = (enabled = true) => useQuery({
   queryKey: ['crm', 'imports'],
   queryFn: async () => (await axios.get('/api/crm/imports')).data,
   enabled,
@@ -76,7 +76,7 @@ export const useCRMStats = (enabled = true, options = {}) => useQuery({
   refetchOnMount: options.refetchOnMount,
 });
 
-export const useRepSummary = (enabled = true, options = {}) => useQuery({
+const useRepSummary = (enabled = true, options = {}) => useQuery({
   queryKey: ['crm', 'repSummary'],
   queryFn: async () => {
     const { data } = await axios.get('/api/crm/rep-summary');

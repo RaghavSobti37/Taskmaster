@@ -59,6 +59,7 @@ export const PAGE_GROUPS = [
       { key: 'admin_users', label: 'Users', path: '/admin/users' },
       { key: 'admin_teams', label: 'Teams', path: '/admin/teams' },
       { key: 'admin_data', label: 'Data Hub', path: '/admin' },
+      { key: 'admin_artist_path', label: 'Artist Path', path: '/admin/artist-path' },
       { key: 'admin_exly', label: 'Exly Data', path: '/admin/exly-campaigns' },
       { key: 'admin_scripts', label: 'Script Runner', path: '/admin/scripts' },
       { key: 'admin_gamification', label: 'Gamification', path: '/admin/gamification' },
@@ -153,7 +154,7 @@ export function groupHasVisiblePages(user, pageKeys) {
   return pageKeys.some((k) => hasPageAccess(user, k));
 }
 
-export function hasHubAccess(user, hubPath) {
+function hasHubAccess(user, hubPath) {
   const hub = HUB_CONFIG[hubPath];
   if (!hub) return false;
   return hasAnyPageAccess(user, hub.childKeys);

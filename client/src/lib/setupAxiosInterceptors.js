@@ -6,6 +6,7 @@ import {
   shouldShowApiErrorToast,
 } from './notifications';
 import { emitSystemEvent, getClientTraceId, startClientTrace } from './systemLogBridge';
+import { captureException } from './sentry';
 import { inferModuleFromRoute, SEVERITY } from './systemLogContract';
 import { normalizeProject, normalizeProjects, normalizePopulatedProjectList } from '../utils/projectUtils';
 import { normalizeTasks, normalizeSchedulePayload } from '../utils/normalizeTask';
@@ -78,6 +79,15 @@ export function setupAxiosInterceptors() {
           module: inferModuleFromRoute(url),
           timestamp: error.response?.data?.timestamp || new Date().toISOString(),
           id: slugId('api-err', method, url),
+        });
+      }
+      const status = error.response?.status;
+      if (status >= 500) {
+        captureException(error, {
+          url: (error.config?.url || '').split('?')[0],
+          method,
+          status,
+          traceId: error.response?.data?.traceId,
         });
       }
       return Promise.reject(error);

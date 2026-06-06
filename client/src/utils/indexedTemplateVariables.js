@@ -42,7 +42,7 @@ export const parseIndexedVariablesFromHtml = (html) => {
   return Array.from(indices).sort((a, b) => Number(a) - Number(b));
 };
 
-export const applyIndexedVariables = (text, values = {}) => {
+const applyIndexedVariables = (text, values = {}) => {
   if (!text) return text;
   const decoded = decodeVariableEntities(coalesceSplitVariableMarkup(text));
   return decoded.replace(/\{(\d+)\}/g, (match, idx) => {
@@ -62,7 +62,7 @@ export const previewWithDummyValues = (text, dummyValues = {}) => {
   });
 };
 
-export const validateVariableMapping = (texts, mapping = {}) => {
+const validateVariableMapping = (texts, mapping = {}) => {
   const indices = new Set();
   for (const t of texts) {
     parseIndexedVariablesFromHtml(t).forEach((i) => indices.add(i));

@@ -1,6 +1,10 @@
-const Contact = require('../models/Contact');
+const PersonIndex = require('../models/PersonIndex');
+const PersonHubView = require('../models/PersonHubView');
+const ArtistPathResponse = require('../models/ArtistPathResponse');
 const Lead = require('../models/Lead');
-const TscData = require('../models/TscData');
+const OutsourcedRecord = require('../models/OutsourcedRecord');
+const BookedCall = require('../models/BookedCall');
+const NewsletterSubscriber = require('../models/NewsletterSubscriber');
 const ExlyBooking = require('../models/ExlyBooking');
 const Task = require('../models/Task');
 const MailEvent = require('../models/MailEvent');
@@ -23,9 +27,34 @@ const {
 const FOLDER_CACHE_TTL_MS = 5 * 60 * 1000;
 const INCREMENTAL_BOOTSTRAP_MS = 24 * 60 * 60 * 1000; // first run: last 24h only
 const CONTACT_BYPASS = { bypassTenant: true };
-const CUSTOMER_ROLE_MATCH = { role: { $in: ['Customer', 'customer', null] } };
+const PERSON_INDEX_MATCH = {};
 const WEEKLY_DATE_FORMAT = '%Y-%U';
 let folderCache = { data: null, expiresAt: 0 };
+let hubViewActive = null;
+
+async function resolveHubModel() {
+  if (hubViewActive === null) {
+    const count = await PersonHubView.countDocuments({}).setOptions(CONTACT_BYPASS);
+    hubViewActive = count > 0;
+  }
+  return hubViewActive ? PersonHubView : PersonIndex;
+}
+
+function mapHubRow(c) {
+  if (!c) return c;
+  const inlets = c.inlets?.length
+    ? dedupeInletEntries(c.inlets)
+    : (c.inletKeys || []).map((key) => ({ key, recordIds: [] }));
+  return {
+    ...c,
+    _id: c.personId || c._id,
+    personId: c.personId || c._id,
+    inlets,
+    inletCount: c.inletCount ?? inlets.length,
+    isMultiInlet: c.isMultiInlet ?? inlets.length >= 2,
+    inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
+  };
+}
 
 const changedSince = (since) => {
   if (!since) return {};
@@ -45,8 +74,7 @@ const identityMatch = (email, phone) => {
 };
 
 const buildFolderQuery = (folder, extra = {}) => {
-  const base = { role: { $in: ['Customer', 'customer', null] } };
-  const q = { ...base, ...extra };
+  const q = { ...extra };
 
   switch (folder) {
     case 'all':
@@ -58,7 +86,14 @@ const buildFolderQuery = (folder, extra = {}) => {
       q.inCRM = true;
       break;
     case 'tsc':
-      q.inTsc = true;
+    case 'outsourced':
+      q.$or = [{ inOutsourced: true }, { inTsc: true }];
+      break;
+    case 'newsletter':
+      q.inNewsletter = true;
+      break;
+    case 'artist_path':
+      q.inArtistPath = true;
       break;
     case 'booked_calls':
       q.inBookedCalls = true;
@@ -117,20 +152,31 @@ function parseEnquiryDescription(description = '') {
   return fields;
 }
 
+async function loadFragmentedSources(match, since) {
+  const timeFilter = since ? changedSince(since) : {};
+  const [outsourced, bookedCalls, newsletter] = await Promise.all([
+    OutsourcedRecord.find({ ...match, ...timeFilter }).lean(),
+    BookedCall.find({ ...match, ...timeFilter }).lean(),
+    NewsletterSubscriber.find({ ...match, ...timeFilter }).lean(),
+  ]);
+  return { outsourced, bookedCalls, newsletter };
+}
+
 class DataHubService {
   async reconcilePerson(email, phone) {
     const match = identityMatch(email, phone);
     if (!match) return null;
 
-    const [leads, tscRows, exlyBookings, enquiryTasks] = await Promise.all([
+    const [leads, fragmented, exlyBookings, enquiryTasks] = await Promise.all([
       Lead.find(match).lean(),
-      TscData.find(match).lean(),
+      loadFragmentedSources(match),
       ExlyBooking.find(match).lean(),
       Task.find({ type: 'enquiry', description: { $regex: escapeRegExp(email || phone), $options: 'i' } }).lean(),
     ]);
+    const { outsourced, bookedCalls: bookedCallRecords, newsletter } = fragmented;
 
     let contact = null;
-    const primaryName = leads[0]?.name || tscRows[0]?.name || exlyBookings[0]?.name || 'Anonymous';
+    const primaryName = leads[0]?.name || outsourced[0]?.name || bookedCallRecords[0]?.name || newsletter[0]?.name || exlyBookings[0]?.name || 'Anonymous';
 
     for (const lead of leads) {
       const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
@@ -149,7 +195,7 @@ class DataHubService {
       }, inletKey === 'booked_calls' ? 'booked_calls' : 'crm');
     }
 
-    for (const row of tscRows) {
+    for (const row of outsourced) {
       const isCommunity = isCommunityText(row.campaign) || isCommunityText(row.originSource);
       contact = await ContactService.mergeContact({
         name: row.name || primaryName,
@@ -160,8 +206,35 @@ class DataHubService {
         emailStatus: row.emailStatus,
         recordId: row._id,
         summary: { campaign: row.campaign, originSource: row.originSource, role: row.role },
-        inletKey: isCommunity ? 'community' : 'tsc',
-      }, isCommunity ? 'community' : 'tsc');
+        inletKey: isCommunity ? 'community' : 'outsourced',
+      }, isCommunity ? 'community' : 'outsourced');
+    }
+
+    for (const row of bookedCallRecords) {
+      contact = await ContactService.mergeContact({
+        name: row.name || primaryName,
+        email: row.email || email,
+        phone: row.phone || phone,
+        city: row.city,
+        emailStatus: row.emailStatus,
+        recordId: row._id,
+        summary: { source: row.source, callStatus: row.callStatus, bookedAt: row.bookedAt },
+        inletKey: 'booked_calls',
+      }, 'booked_calls');
+    }
+
+    for (const row of newsletter) {
+      contact = await ContactService.mergeContact({
+        name: row.name || primaryName,
+        email: row.email || email,
+        phone: row.phone || phone,
+        city: row.city,
+        emailStatus: row.emailStatus,
+        unsubscribed: row.unsubscribed,
+        recordId: row._id,
+        summary: { source: row.source, subscribedAt: row.subscribedAt },
+        inletKey: 'newsletter',
+      }, 'newsletter');
     }
 
     for (const booking of exlyBookings) {
@@ -210,6 +283,7 @@ class DataHubService {
 
   async listPeople({ folder = 'all', search = '', page = 1, limit = 25, campaign, originSource, emailStatus }) {
     const query = buildFolderQuery(folder);
+    const HubModel = await resolveHubModel();
 
     if (search) {
       const escaped = escapeRegExp(search);
@@ -227,14 +301,14 @@ class DataHubService {
       query.emailStatus = emailStatus;
     }
 
-    // TSC sub-folder filters require matching TscData then filtering contacts
+    // Outsourced sub-folder filters
     if ((campaign && campaign !== 'all') || (originSource && originSource !== 'all')) {
-      const tscFilter = {};
-      if (campaign && campaign !== 'all') tscFilter.campaign = campaign;
-      if (originSource && originSource !== 'all') tscFilter.originSource = originSource;
-      const tscRows = await TscData.find(tscFilter).select('email phone').lean();
-      const emails = tscRows.map((r) => r.email).filter(Boolean);
-      const phones = tscRows.map((r) => r.phone).filter(Boolean);
+      const outFilter = {};
+      if (campaign && campaign !== 'all') outFilter.campaign = campaign;
+      if (originSource && originSource !== 'all') outFilter.originSource = originSource;
+      const outRows = await OutsourcedRecord.find(outFilter).select('email phone').lean();
+      const emails = outRows.map((r) => r.email).filter(Boolean);
+      const phones = outRows.map((r) => r.phone).filter(Boolean);
       query.$and = query.$and || [];
       query.$and.push({
         $or: [
@@ -248,35 +322,39 @@ class DataHubService {
     }
 
     const skip = (page - 1) * limit;
+    const sortField = hubViewActive ? { lastActivityAt: -1 } : { updatedAt: -1 };
     const [total, data] = await Promise.all([
-      Contact.countDocuments(query).setOptions(CONTACT_BYPASS),
-      Contact.find(query)
+      HubModel.countDocuments(query).setOptions(CONTACT_BYPASS),
+      HubModel.find(query)
         .setOptions(CONTACT_BYPASS)
-        .sort({ updatedAt: -1 })
+        .sort(sortField)
         .skip(skip)
         .limit(limit)
         .lean(),
     ]);
 
     return {
-      data: data.map((c) => {
-        const inlets = dedupeInletEntries(c.inlets || []);
-        return {
-          ...c,
-          inlets,
-          inletCount: inlets.length,
-          isMultiInlet: inlets.length >= 2,
-          inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
-        };
-      }),
+      data: data.map(mapHubRow),
       total,
       page,
       pages: Math.ceil(total / limit) || 0,
     };
   }
 
+  async _findHubContact(contactId) {
+    if (!contactId) return null;
+    const HubModel = await resolveHubModel();
+    if (hubViewActive) {
+      let contact = await PersonHubView.findOne({ personId: contactId }).setOptions(CONTACT_BYPASS).lean();
+      if (!contact) contact = await PersonHubView.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+      return contact ? mapHubRow(contact) : null;
+    }
+    const contact = await PersonIndex.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    return contact ? mapHubRow(contact) : null;
+  }
+
   async getPersonBase(contactId) {
-    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    const contact = await this._findHubContact(contactId);
     if (!contact) return null;
     contact.inlets = dedupeInletEntries(contact.inlets || []);
     return {
@@ -299,9 +377,8 @@ class DataHubService {
   }
 
   async getPersonSection(contactId, section) {
-    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    const contact = await this._findHubContact(contactId);
     if (!contact) return null;
-    contact.inlets = dedupeInletEntries(contact.inlets || []);
     const match = identityMatch(contact.email, contact.phone);
     if (!match) {
       return { section, contact, overview: { inlets: contact.inlets || [] } };
@@ -336,14 +413,36 @@ class DataHubService {
       };
     }
 
-    if (section === 'tsc') {
-      const rows = await TscData.find(match).sort({ createdAt: -1 }).lean();
-      return { section, tsc: { rows } };
+    if (section === 'tsc' || section === 'outsourced') {
+      const rows = await OutsourcedRecord.find(match).sort({ createdAt: -1 }).lean();
+      return { section: 'outsourced', outsourced: { rows } };
+    }
+
+    if (section === 'newsletter') {
+      const rows = await NewsletterSubscriber.find(match).sort({ subscribedAt: -1 }).lean();
+      return { section, newsletter: { rows } };
+    }
+
+    if (section === 'artist_path') {
+      const personId = contact.personId || contact._id;
+      const responses = personId
+        ? await ArtistPathResponse.find({ personId }).sort({ submittedAt: -1 }).lean()
+        : [];
+      return { section, artistPath: { responses } };
     }
 
     if (section === 'booked') {
-      const leads = await Lead.find(match).sort({ updatedAt: -1 }).lean();
-      return { section, bookedCalls: { leads: leads.filter((l) => isBookedCallSource(l.source)) } };
+      const [leadBooked, callRows] = await Promise.all([
+        Lead.find(match).sort({ updatedAt: -1 }).lean(),
+        BookedCall.find(match).sort({ bookedAt: -1 }).lean(),
+      ]);
+      return {
+        section,
+        bookedCalls: {
+          leads: leadBooked.filter((l) => isBookedCallSource(l.source)),
+          calls: callRows,
+        },
+      };
     }
 
     if (section === 'enquiries') {
@@ -369,9 +468,9 @@ class DataHubService {
     }
 
     if (section === 'timeline') {
-      const [leads, tscRows, exlyBookings, enquiryTasks, mailEvents] = await Promise.all([
+      const [leads, fragmented, exlyBookings, enquiryTasks, mailEvents] = await Promise.all([
         Lead.find(match).sort({ updatedAt: -1 }).lean(),
-        TscData.find(match).sort({ createdAt: -1 }).lean(),
+        loadFragmentedSources(match),
         ExlyBooking.find(match).sort({ bookedOn: -1 }).lean(),
         Task.find({ type: 'enquiry' }).sort({ createdAt: -1 }).limit(200).lean(),
         contact.email
@@ -379,6 +478,7 @@ class DataHubService {
             .sort({ timestamp: -1 }).limit(100).lean()
           : [],
       ]);
+      const { outsourced, bookedCalls: bookedCallRecords, newsletter } = fragmented;
       const filteredEnquiries = enquiryTasks.filter((t) => {
         const parsed = parseEnquiryDescription(t.description);
         const eMatch = contact.email && parsed.email?.toLowerCase() === contact.email.toLowerCase();
@@ -389,8 +489,14 @@ class DataHubService {
       for (const lead of leads) {
         timeline.push({ type: 'lead', date: lead.updatedAt || lead.createdAt, label: `Lead: ${lead.leadStatus}`, data: lead });
       }
-      for (const row of tscRows) {
-        timeline.push({ type: 'tsc', date: row.createdAt, label: `TSC: ${row.campaign || row.originSource || 'import'}`, data: row });
+      for (const row of outsourced) {
+        timeline.push({ type: 'outsourced', date: row.createdAt, label: `Outsourced: ${row.campaign || row.originSource || 'import'}`, data: row });
+      }
+      for (const row of bookedCallRecords) {
+        timeline.push({ type: 'booked_call', date: row.bookedAt || row.createdAt, label: `Booked call: ${row.source || 'call'}`, data: row });
+      }
+      for (const row of newsletter) {
+        timeline.push({ type: 'newsletter', date: row.subscribedAt || row.createdAt, label: `Newsletter: ${row.source || 'signup'}`, data: row });
       }
       for (const b of exlyBookings) {
         timeline.push({ type: 'exly', date: b.bookedOn || b.createdAt, label: `Exly: ${b.offeringTitle}`, data: b });
@@ -424,16 +530,16 @@ class DataHubService {
   }
 
   async getPerson360(contactId) {
-    const contact = await Contact.findById(contactId).setOptions(CONTACT_BYPASS).lean();
+    const contact = await this._findHubContact(contactId);
     if (!contact) return null;
     contact.inlets = dedupeInletEntries(contact.inlets || []);
 
     const match = identityMatch(contact.email, contact.phone);
     if (!match) return { contact, overview: contact };
 
-    const [leads, tscRows, exlyBookings, enquiryTasks, mailEvents] = await Promise.all([
+    const [leads, fragmented, exlyBookings, enquiryTasks, mailEvents] = await Promise.all([
       Lead.find(match).sort({ updatedAt: -1 }).lean(),
-      TscData.find(match).sort({ createdAt: -1 }).lean(),
+      loadFragmentedSources(match),
       ExlyBooking.find(match).sort({ bookedOn: -1 }).lean(),
       Task.find({ type: 'enquiry' }).sort({ createdAt: -1 }).limit(200).lean(),
       contact.email
@@ -441,6 +547,7 @@ class DataHubService {
           .sort({ timestamp: -1 }).limit(100).lean()
         : [],
     ]);
+    const { outsourced, bookedCalls: bookedCallRecords, newsletter } = fragmented;
 
     const filteredEnquiries = enquiryTasks.filter((t) => {
       const parsed = parseEnquiryDescription(t.description);
@@ -461,14 +568,20 @@ class DataHubService {
       })(),
     ]);
 
-    const bookedCalls = leads.filter((l) => isBookedCallSource(l.source));
+    const bookedCallLeads = leads.filter((l) => isBookedCallSource(l.source));
 
     const timeline = [];
     for (const lead of leads) {
       timeline.push({ type: 'lead', date: lead.updatedAt || lead.createdAt, label: `Lead: ${lead.leadStatus}`, data: lead });
     }
-    for (const row of tscRows) {
-      timeline.push({ type: 'tsc', date: row.createdAt, label: `TSC: ${row.campaign || row.originSource || 'import'}`, data: row });
+    for (const row of outsourced) {
+      timeline.push({ type: 'outsourced', date: row.createdAt, label: `Outsourced: ${row.campaign || row.originSource || 'import'}`, data: row });
+    }
+    for (const row of bookedCallRecords) {
+      timeline.push({ type: 'booked_call', date: row.bookedAt || row.createdAt, label: `Booked call: ${row.source || 'call'}`, data: row });
+    }
+    for (const row of newsletter) {
+      timeline.push({ type: 'newsletter', date: row.subscribedAt || row.createdAt, label: `Newsletter: ${row.source || 'signup'}`, data: row });
     }
     for (const b of exlyBookings) {
       timeline.push({ type: 'exly', date: b.bookedOn || b.createdAt, label: `Exly: ${b.offeringTitle}`, data: b });
@@ -501,8 +614,9 @@ class DataHubService {
       },
       crm: { leads, audits, emis, reps },
       exly: { bookings: exlyBookings, revenue: exlyRevenue, offerings: [...new Set(exlyBookings.map((b) => b.offeringTitle))] },
-      tsc: { rows: tscRows },
-      bookedCalls: { leads: bookedCalls },
+      outsourced: { rows: outsourced },
+      newsletter: { rows: newsletter },
+      bookedCalls: { leads: bookedCallLeads, calls: bookedCallRecords },
       enquiries: filteredEnquiries.map((t) => ({ ...t, parsed: parseEnquiryDescription(t.description) })),
       mail: { events: mailEvents },
       timeline,
@@ -515,22 +629,23 @@ class DataHubService {
       return folderCache.data;
     }
 
+    const HubModel = await resolveHubModel();
     const folderKeys = ['all', ...INLET_KEYS, 'loyal'];
     const counts = {};
     await Promise.all(
       folderKeys.map(async (key) => {
-        counts[key] = await Contact.countDocuments(buildFolderQuery(key)).setOptions(CONTACT_BYPASS);
+        counts[key] = await HubModel.countDocuments(buildFolderQuery(key)).setOptions(CONTACT_BYPASS);
       })
     );
 
     const [campaigns, sources] = await Promise.all([
-      TscData.aggregate([
+      OutsourcedRecord.aggregate([
         { $match: { campaign: { $nin: [null, ''] } } },
         { $group: { _id: '$campaign', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 15 },
       ]),
-      TscData.aggregate([
+      OutsourcedRecord.aggregate([
         { $match: { originSource: { $nin: [null, ''] } } },
         { $group: { _id: '$originSource', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
@@ -542,10 +657,10 @@ class DataHubService {
       key,
       label: DATA_INLETS[key]?.label || key,
       count: counts[key] || 0,
-      children: key === 'tsc'
+      children: (key === 'outsourced' || key === 'tsc')
         ? [
-          ...campaigns.map((c) => ({ key: `tsc:campaign:${c._id}`, label: c._id, count: c.count, filter: { campaign: c._id } })),
-          ...sources.map((s) => ({ key: `tsc:source:${s._id}`, label: s._id, count: s.count, filter: { originSource: s._id } })),
+          ...campaigns.map((c) => ({ key: `outsourced:campaign:${c._id}`, label: c._id, count: c.count, filter: { campaign: c._id } })),
+          ...sources.map((s) => ({ key: `outsourced:source:${s._id}`, label: s._id, count: s.count, filter: { originSource: s._id } })),
         ]
         : undefined,
     }));
@@ -570,34 +685,34 @@ class DataHubService {
 
   async getGlobalAnalytics() {
     const [
-      totalContacts,
+      totalPersonIndexs,
       emailHealth,
       inletBreakdown,
       newThisWeek,
       overlapPairs,
     ] = await Promise.all([
-      Contact.countDocuments(CUSTOMER_ROLE_MATCH).setOptions(CONTACT_BYPASS),
-      Contact.aggregate([
-        { $match: CUSTOMER_ROLE_MATCH },
+      PersonIndex.countDocuments(PERSON_INDEX_MATCH).setOptions(CONTACT_BYPASS),
+      PersonIndex.aggregate([
+        { $match: PERSON_INDEX_MATCH },
         { $group: { _id: '$emailStatus', count: { $sum: 1 } } },
       ]),
-      Contact.aggregate([
-        { $match: CUSTOMER_ROLE_MATCH },
+      PersonIndex.aggregate([
+        { $match: PERSON_INDEX_MATCH },
         { $unwind: { path: '$inlets', preserveNullAndEmptyArrays: false } },
         { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]),
-      Contact.countDocuments({
-        ...CUSTOMER_ROLE_MATCH,
+      PersonIndex.countDocuments({
+        ...PERSON_INDEX_MATCH,
         createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
       }).setOptions(CONTACT_BYPASS),
       this.getOverlapMatrix(),
     ]);
 
-    const growth = await Contact.aggregate([
+    const growth = await PersonIndex.aggregate([
       {
         $match: {
-          ...CUSTOMER_ROLE_MATCH,
+          ...PERSON_INDEX_MATCH,
           createdAt: {
             $gte: new Date(Date.now() - 8 * 7 * 24 * 60 * 60 * 1000),
             $type: 'date',
@@ -616,17 +731,17 @@ class DataHubService {
     return {
       folder: 'all',
       label: DATA_INLETS.all.label,
-      totalContacts,
+      totalPersonIndexs,
       newThisWeek,
       kpis: [
-        { key: 'total', label: 'Unique People', value: totalContacts },
+        { key: 'total', label: 'Unique People', value: totalPersonIndexs },
         { key: 'newWeek', label: 'New This Week', value: newThisWeek },
-        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS) },
+        { key: 'loyal', label: 'Loyal (2+ Inlets)', value: await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS) },
         {
           key: 'unsubRate',
           label: 'Unsub Rate',
-          value: totalContacts
-            ? Math.round(((emailHealth.find((e) => e._id === 'Unsubscribed')?.count || 0) / totalContacts) * 100)
+          value: totalPersonIndexs
+            ? Math.round(((emailHealth.find((e) => e._id === 'Unsubscribed')?.count || 0) / totalPersonIndexs) * 100)
             : 0,
           format: 'percent',
         },
@@ -639,21 +754,21 @@ class DataHubService {
       })),
       growth,
       overlap: overlapPairs,
-      loyalCount: await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS),
+      loyalCount: await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS),
     };
   }
 
   async getLoyalAnalytics() {
-    const total = await Contact.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS);
+    const total = await PersonIndex.countDocuments({ isMultiInlet: true }).setOptions(CONTACT_BYPASS);
     const overlap = await this.getOverlapMatrix();
 
-    const inletDistribution = await Contact.aggregate([
+    const inletDistribution = await PersonIndex.aggregate([
       { $match: { isMultiInlet: true } },
       { $group: { _id: '$inletCount', count: { $sum: 1 } } },
       { $sort: { _id: 1 } },
     ]);
 
-    const topInletsAmongLoyal = await Contact.aggregate([
+    const topInletsAmongLoyal = await PersonIndex.aggregate([
       { $match: { isMultiInlet: true } },
       { $unwind: '$inlets' },
       { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
@@ -662,13 +777,13 @@ class DataHubService {
     ]);
 
     const avgInlets = total
-      ? (await Contact.aggregate([
+      ? (await PersonIndex.aggregate([
         { $match: { isMultiInlet: true } },
         { $group: { _id: null, avg: { $avg: '$inletCount' } } },
       ]))[0]?.avg || 0
       : 0;
 
-    const newLoyalThisWeek = await Contact.countDocuments({
+    const newLoyalThisWeek = await PersonIndex.countDocuments({
       isMultiInlet: true,
       updatedAt: { $gte: this._weekAgo() },
     }).setOptions(CONTACT_BYPASS);
@@ -697,7 +812,7 @@ class DataHubService {
 
   async getInletAnalytics(folder) {
     const query = buildFolderQuery(folder);
-    const total = await Contact.countDocuments(query).setOptions(CONTACT_BYPASS);
+    const total = await PersonIndex.countDocuments(query).setOptions(CONTACT_BYPASS);
     const weekAgo = this._weekAgo();
     const monthAgo = this._monthAgo();
 
@@ -766,29 +881,29 @@ class DataHubService {
       ];
     }
 
-    if (folder === 'tsc') {
-      const [topCampaigns, topSources, roles, emailBreakdown, tscTotal, withEmail, withPhone, crmLinked] = await Promise.all([
-        TscData.aggregate([{ $group: { _id: '$campaign', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-        TscData.aggregate([{ $group: { _id: '$originSource', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-        TscData.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-        TscData.aggregate([{ $group: { _id: '$emailStatus', count: { $sum: 1 } } }]),
-        TscData.countDocuments({}),
-        TscData.countDocuments({ email: { $nin: [null, ''] } }),
-        TscData.countDocuments({ phone: { $nin: [null, ''] } }),
-        Contact.countDocuments({ inTsc: true, inCRM: true }).setOptions(CONTACT_BYPASS),
+    if (folder === 'tsc' || folder === 'outsourced') {
+      const [topCampaigns, topSources, roles, emailBreakdown, outTotal, withEmail, withPhone, crmLinked] = await Promise.all([
+        OutsourcedRecord.aggregate([{ $group: { _id: '$campaign', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+        OutsourcedRecord.aggregate([{ $group: { _id: '$originSource', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+        OutsourcedRecord.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+        OutsourcedRecord.aggregate([{ $group: { _id: '$emailStatus', count: { $sum: 1 } } }]),
+        OutsourcedRecord.countDocuments({}),
+        OutsourcedRecord.countDocuments({ email: { $nin: [null, ''] } }),
+        OutsourcedRecord.countDocuments({ phone: { $nin: [null, ''] } }),
+        PersonIndex.countDocuments({ $or: [{ inOutsourced: true }, { inTsc: true }], inCRM: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.topCampaigns = topCampaigns;
       result.topSources = topSources;
       result.roles = roles;
       result.emailBreakdown = emailBreakdown;
       result.kpis = [
-        { key: 'records', label: 'TSC Records', value: tscTotal },
+        { key: 'records', label: 'Outsourced Records', value: outTotal },
         { key: 'withEmail', label: 'Has Email', value: withEmail },
         { key: 'withPhone', label: 'Has Phone', value: withPhone },
         {
           key: 'crmLinked',
           label: 'Also in CRM',
-          value: tscTotal ? Math.round((crmLinked / Math.max(total, 1)) * 100) : 0,
+          value: outTotal ? Math.round((crmLinked / Math.max(total, 1)) * 100) : 0,
           format: 'percent',
         },
       ];
@@ -842,16 +957,16 @@ class DataHubService {
     }
 
     if (folder === 'unsubscribed') {
-      const allPeople = await Contact.countDocuments(CUSTOMER_ROLE_MATCH).setOptions(CONTACT_BYPASS);
+      const allPeople = await PersonIndex.countDocuments(PERSON_INDEX_MATCH).setOptions(CONTACT_BYPASS);
       const [byReason, byInlet, recentUnsubs] = await Promise.all([
-        Contact.aggregate([{ $match: query }, { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
-        Contact.aggregate([
+        PersonIndex.aggregate([{ $match: query }, { $group: { _id: '$unsubscribeReason', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+        PersonIndex.aggregate([
           { $match: query },
           { $unwind: '$inlets' },
           { $group: { _id: '$inlets.key', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
         ]),
-        Contact.countDocuments({ ...query, updatedAt: { $gte: weekAgo } }).setOptions(CONTACT_BYPASS),
+        PersonIndex.countDocuments({ ...query, updatedAt: { $gte: weekAgo } }).setOptions(CONTACT_BYPASS),
       ]);
       result.byReason = byReason;
       result.byInlet = byInlet.map((r) => ({ label: DATA_INLETS[r._id]?.label || r._id, count: r.count }));
@@ -888,9 +1003,9 @@ class DataHubService {
     }
 
     if (folder === 'community') {
-      const [exlyCommunity, tscCommunity] = await Promise.all([
+      const [exlyCommunity, outCommunity] = await Promise.all([
         ExlyBooking.countDocuments({ offeringTitle: { $regex: /community/i } }),
-        TscData.countDocuments({
+        OutsourcedRecord.countDocuments({
           $or: [
             { campaign: { $regex: /community/i } },
             { originSource: { $regex: /community/i } },
@@ -900,8 +1015,8 @@ class DataHubService {
       result.kpis = [
         { key: 'people', label: 'Community People', value: total },
         { key: 'exly', label: 'Exly Community Bookings', value: exlyCommunity },
-        { key: 'tsc', label: 'TSC Community Rows', value: tscCommunity },
-        { key: 'combined', label: 'Combined Records', value: exlyCommunity + tscCommunity },
+        { key: 'outsourced', label: 'Outsourced Community Rows', value: outCommunity },
+        { key: 'combined', label: 'Combined Records', value: exlyCommunity + outCommunity },
       ];
       result.topOfferings = await ExlyBooking.aggregate([
         { $match: { offeringTitle: { $regex: /community/i } } },
@@ -913,10 +1028,10 @@ class DataHubService {
 
     if (folder === 'active') {
       const [inMailer, inExly, inCRM, multiInlet] = await Promise.all([
-        Contact.countDocuments({ ...query, inMailer: true }).setOptions(CONTACT_BYPASS),
-        Contact.countDocuments({ ...query, inExly: true }).setOptions(CONTACT_BYPASS),
-        Contact.countDocuments({ ...query, inCRM: true }).setOptions(CONTACT_BYPASS),
-        Contact.countDocuments({ ...query, isMultiInlet: true }).setOptions(CONTACT_BYPASS),
+        PersonIndex.countDocuments({ ...query, inMailer: true }).setOptions(CONTACT_BYPASS),
+        PersonIndex.countDocuments({ ...query, inExly: true }).setOptions(CONTACT_BYPASS),
+        PersonIndex.countDocuments({ ...query, inCRM: true }).setOptions(CONTACT_BYPASS),
+        PersonIndex.countDocuments({ ...query, isMultiInlet: true }).setOptions(CONTACT_BYPASS),
       ]);
       result.engagementFlags = [
         { label: 'Mail Engagement', count: inMailer },
@@ -941,7 +1056,7 @@ class DataHubService {
   }
 
   async getOverlapMatrix() {
-    const multi = await Contact.find({ isMultiInlet: true }).setOptions(CONTACT_BYPASS).select('inlets').lean();
+    const multi = await PersonIndex.find({ isMultiInlet: true }).setOptions(CONTACT_BYPASS).select('inlets').lean();
     const pairCounts = {};
 
     for (const c of multi) {
@@ -977,7 +1092,7 @@ class DataHubService {
   }
 
   /**
-   * Sync only new/changed records into Contact hub (default).
+   * Sync only new/changed records into PersonIndex hub (default).
    * Pass { full: true } to re-merge everything (one-off / script).
    */
   async syncAllInlets({ incremental = true, onProgress, full = false } = {}) {
@@ -1017,7 +1132,7 @@ class DataHubService {
   }
 
   async _runInletMerge({ since, onProgress, full = false }) {
-    const stats = { leads: 0, tsc: 0, exly: 0, enquiries: 0, mail: 0, bookedCalls: 0, errors: 0 };
+    const stats = { leads: 0, outsourced: 0, bookedCalls: 0, newsletter: 0, exly: 0, enquiries: 0, mail: 0, errors: 0 };
     const BATCH = 100;
     const log = (msg) => {
       if (onProgress) onProgress(msg);
@@ -1073,12 +1188,16 @@ class DataHubService {
       stats.leads += 1;
     });
 
-    const tscRows = await TscData.find(since ? changedSince(since) : {}).lean();
-    log(`tsc: loaded ${tscRows.length} for merge`);
-    await runBatch(tscRows, 'tsc', async (row) => {
+    const timeFilter = since ? changedSince(since) : {};
+    const [outsourcedRows, bookedCallRows, newsletterRows] = await Promise.all([
+      OutsourcedRecord.find(timeFilter).lean(),
+      BookedCall.find(timeFilter).lean(),
+      NewsletterSubscriber.find(timeFilter).lean(),
+    ]);
+
+    await runBatch(outsourcedRows, 'outsourced', async (row) => {
       if (!row.email && !row.phone) return;
       const isCommunity = isCommunityText(row.campaign) || isCommunityText(row.originSource);
-      const inletKey = isCommunity ? 'community' : 'tsc';
       await ContactService.mergeContact({
         name: row.name,
         email: row.email,
@@ -1088,10 +1207,43 @@ class DataHubService {
         emailStatus: row.emailStatus,
         recordId: row._id,
         summary: { campaign: row.campaign, originSource: row.originSource, role: row.role },
-        inletKey,
-      }, inletKey);
-      stats.tsc += 1;
+        inletKey: isCommunity ? 'community' : 'outsourced',
+      }, isCommunity ? 'community' : 'outsourced');
+      stats.outsourced += 1;
     });
+
+    await runBatch(bookedCallRows, 'booked_calls', async (row) => {
+      if (!row.email && !row.phone) return;
+      await ContactService.mergeContact({
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        emailStatus: row.emailStatus,
+        recordId: row._id,
+        summary: { source: row.source, callStatus: row.callStatus, bookedAt: row.bookedAt },
+        inletKey: 'booked_calls',
+      }, 'booked_calls');
+      stats.bookedCalls += 1;
+    });
+
+    await runBatch(newsletterRows, 'newsletter', async (row) => {
+      if (!row.email && !row.phone) return;
+      await ContactService.mergeContact({
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        city: row.city,
+        emailStatus: row.emailStatus,
+        unsubscribed: row.unsubscribed,
+        recordId: row._id,
+        summary: { source: row.source, subscribedAt: row.subscribedAt },
+        inletKey: 'newsletter',
+      }, 'newsletter');
+      stats.newsletter += 1;
+    });
+
+    log(`outsourced: ${outsourcedRows.length}, booked_calls: ${bookedCallRows.length}, newsletter: ${newsletterRows.length}`);
 
     const bookings = await ExlyBooking.find(since ? changedSince(since) : {}).lean();
     await runBatch(bookings, 'exly', async (booking) => {
@@ -1153,7 +1305,7 @@ class DataHubService {
   }
 
   async repairDuplicateInlets({ onProgress } = {}) {
-    const contacts = await Contact.find({ inlets: { $exists: true, $not: { $size: 0 } } })
+    const contacts = await PersonIndex.find({ inlets: { $exists: true, $not: { $size: 0 } } })
       .setOptions(CONTACT_BYPASS)
       .select('inlets')
       .lean();
@@ -1161,7 +1313,7 @@ class DataHubService {
     for (const contact of contacts) {
       const deduped = dedupeInletEntries(contact.inlets || []);
       if (deduped.length === (contact.inlets || []).length) continue;
-      await Contact.updateOne(
+      await PersonIndex.updateOne(
         { _id: contact._id },
         {
           $set: {
@@ -1176,14 +1328,6 @@ class DataHubService {
     if (fixed && onProgress) onProgress(`repaired duplicate inlets on ${fixed} contacts`);
     return fixed;
   }
-
-  clearFolderCache() {
-    folderCache = { data: null, expiresAt: 0 };
-  }
-}
-
-function identityMatchFromContacts(_query) {
-  return null;
 }
 
 module.exports = new DataHubService();

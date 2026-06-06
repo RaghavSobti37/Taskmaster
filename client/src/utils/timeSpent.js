@@ -30,7 +30,7 @@ export function parseTimeSpentToMinutes(raw = '') {
 }
 
 /** Parse timeSpent string to decimal hours. */
-export function parseTimeSpentToHours(raw = '') {
+function parseTimeSpentToHours(raw = '') {
   return parseTimeSpentToMinutes(raw) / 60;
 }
 

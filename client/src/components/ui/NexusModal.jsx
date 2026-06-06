@@ -3,7 +3,7 @@ import { CheckCircle2, Info, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from './primitives';
 import { ModalShell, ModalHeader, ModalBody, ModalFooter, MODAL_WIDTH_PX } from './ModalShell';
 
-export const MODAL_SIZES = {
+const MODAL_SIZES = {
   sm: 'sm',
   md: 'md',
   lg: 'lg',

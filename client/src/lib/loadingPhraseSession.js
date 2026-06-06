@@ -19,6 +19,6 @@ export function acquireLoadingPhrase() {
 }
 
 /** For tests / dev only */
-export function resetLoadingPhraseSession() {
+function resetLoadingPhraseSession() {
   session = { phrase: null, lockedUntil: 0 };
 }

@@ -39,14 +39,14 @@ export function spanCoversDateKey(span, dateKey) {
   return span.start <= dateKey && span.end >= dateKey;
 }
 
-export function taskOverlapsRange(task, rangeStartKey, rangeEndKey) {
+function taskOverlapsRange(task, rangeStartKey, rangeEndKey) {
   const span = resolveTaskSpan(task);
   if (!span) return false;
   return span.start <= rangeEndKey && span.end >= rangeStartKey;
 }
 
 /** Single-day anchor for workload (prefers explicit scheduleDate). */
-export function getScheduleAnchorKey(task) {
+function getScheduleAnchorKey(task) {
   return (
     toDateKey(task?.scheduleDate) ||
     toDateKey(task?.startDate) ||
@@ -55,7 +55,7 @@ export function getScheduleAnchorKey(task) {
   );
 }
 
-export function totalSpanDaysInRange(task, rangeStartKey, rangeEndKey) {
+function totalSpanDaysInRange(task, rangeStartKey, rangeEndKey) {
   const span = resolveTaskSpan(task);
   if (!span) return 0;
   let count = 0;

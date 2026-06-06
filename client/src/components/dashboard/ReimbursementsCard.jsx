@@ -13,7 +13,7 @@ const STATUS_STYLES = {
   rejected: { label: 'Rejected', className: 'text-rose-600 bg-rose-500/10', icon: XCircle },
 };
 
-export default function ReimbursementsCard() {
+function ReimbursementsCard() {
   const { data: items = [], isLoading } = useMyReimbursements();
   const rows = useMemo(() => items.slice(0, 8), [items]);
 
@@ -93,3 +93,5 @@ export default function ReimbursementsCard() {
     </DashboardWidgetShell>
   );
 }
+
+export default ReimbursementsCard;

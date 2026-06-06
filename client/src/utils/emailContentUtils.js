@@ -62,7 +62,7 @@ export const syncUnsubscribeInContent = (html, include) => {
 };
 
 /** Parse {{var}} and {{var|fallback}} — skips unsubscribe_url */
-export const parseTemplateVariables = (html) => {
+const parseTemplateVariables = (html) => {
   const regex = /\{\{(\w+)(?:\|([^}]*))?\}\}/g;
   const vars = new Map();
   let match;
@@ -77,18 +77,18 @@ export const parseTemplateVariables = (html) => {
   return Array.from(vars.values());
 };
 
-export const insertVariable = (html, varName) => {
+const insertVariable = (html, varName) => {
   const token = `{{${varName}}}`;
   if ((html || '').includes(token)) return html;
   return `${html || ''}${token}`;
 };
 
-export const setVariableFallbackInContent = (html, varName, fallback) => {
+const setVariableFallbackInContent = (html, varName, fallback) => {
   const regex = new RegExp(`\\{\\{${varName}(\\|[^}]*)?\\}\\}`, 'gi');
   return (html || '').replace(regex, `{{${varName}|${fallback}}}`);
 };
 
-export const previewMergeTags = (html, sampleValues = { firstname: 'Alex' }) => {
+const previewMergeTags = (html, sampleValues = { firstname: 'Alex' }) => {
   return (html || '').replace(/\{\{(\w+)(?:\|([^}]*))?\}\}/g, (match, key, inlineFallback) => {
     const k = key.toLowerCase();
     if (k === 'unsubscribe_url') return '/unsubscribe';

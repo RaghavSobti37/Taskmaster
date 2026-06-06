@@ -6,7 +6,10 @@ const DATA_INLETS = {
   all: { key: 'all', label: 'All People', icon: 'database' },
   exly: { key: 'exly', label: 'Exly', icon: 'shopping-bag' },
   leads: { key: 'leads', label: 'Leads', icon: 'users' },
-  tsc: { key: 'tsc', label: 'TSC / HolySheet', icon: 'sheet' },
+  outsourced: { key: 'outsourced', label: 'Outsourced Data', icon: 'sheet' },
+  tsc: { key: 'outsourced', label: 'Outsourced Data', icon: 'sheet' },
+  newsletter: { key: 'newsletter', label: 'Newsletter', icon: 'mail' },
+  artist_path: { key: 'artist_path', label: 'Artist Path', icon: 'music' },
   booked_calls: { key: 'booked_calls', label: 'Booked Calls', icon: 'phone' },
   enquiries: { key: 'enquiries', label: 'Enquiries', icon: 'message-square' },
   unsubscribed: { key: 'unsubscribed', label: 'Unsubscribed', icon: 'user-x' },
@@ -16,7 +19,7 @@ const DATA_INLETS = {
   loyal: { key: 'loyal', label: 'Loyal Customers', icon: 'star' },
 };
 
-const INLET_KEYS = Object.keys(DATA_INLETS).filter((k) => k !== 'all' && k !== 'loyal');
+const INLET_KEYS = Object.keys(DATA_INLETS).filter((k) => k !== 'all' && k !== 'loyal' && k !== 'tsc');
 
 const BOOKED_CALL_SOURCE_RE = /website booking|booked call|discovery call|booked discovery/i;
 
@@ -27,7 +30,10 @@ const SOURCE_TO_INLET = {
   crm: 'leads',
   exly: 'exly',
   mailer: 'mail',
-  tsc: 'tsc',
+  tsc: 'outsourced',
+  outsourced: 'outsourced',
+  newsletter: 'newsletter',
+  artist_path: 'artist_path',
   booked_calls: 'booked_calls',
   enquiries: 'enquiries',
 };

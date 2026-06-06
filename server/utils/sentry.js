@@ -1,5 +1,14 @@
 let initialized = false;
 
+const getSentry = () => {
+  if (!initialized) return null;
+  try {
+    return require('@sentry/node');
+  } catch {
+    return null;
+  }
+};
+
 const initSentry = () => {
   const dsn = process.env.SENTRY_DSN?.trim();
   if (!dsn || initialized) return false;
@@ -8,7 +17,7 @@ const initSentry = () => {
     const Sentry = require('@sentry/node');
     Sentry.init({
       dsn,
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
       release: process.env.SENTRY_RELEASE || process.env.RENDER_GIT_COMMIT || undefined,
       tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE) || 0.1,
     });
@@ -22,9 +31,9 @@ const initSentry = () => {
 };
 
 const setupSentryExpress = (app) => {
-  if (!initialized || !app) return;
+  const Sentry = getSentry();
+  if (!Sentry || !app) return;
   try {
-    const Sentry = require('@sentry/node');
     Sentry.setupExpressErrorHandler(app);
   } catch {
     /* optional */
@@ -32,10 +41,34 @@ const setupSentryExpress = (app) => {
 };
 
 const captureException = (error, context = {}) => {
-  if (!initialized) return;
+  const Sentry = getSentry();
+  if (!Sentry) return;
   try {
-    const Sentry = require('@sentry/node');
     Sentry.captureException(error, { extra: context });
+  } catch {
+    /* optional */
+  }
+};
+
+const setSentryUser = (user) => {
+  const Sentry = getSentry();
+  if (!Sentry || !user) return;
+  try {
+    Sentry.setUser({
+      id: String(user._id || user.id || ''),
+      email: user.email || undefined,
+      username: user.name || user.username || undefined,
+    });
+  } catch {
+    /* optional */
+  }
+};
+
+const clearSentryUser = () => {
+  const Sentry = getSentry();
+  if (!Sentry) return;
+  try {
+    Sentry.setUser(null);
   } catch {
     /* optional */
   }
@@ -45,5 +78,7 @@ module.exports = {
   initSentry,
   setupSentryExpress,
   captureException,
-  isEnabled: () => initialized,
+  setSentryUser,
+  clearSentryUser,
+  isSentryEnabled: () => initialized,
 };

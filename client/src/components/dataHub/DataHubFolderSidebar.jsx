@@ -9,6 +9,8 @@ const ICONS = {
   all: Database,
   exly: ShoppingBag,
   leads: Users,
+  outsourced: Sheet,
+  newsletter: Mail,
   tsc: Sheet,
   booked_calls: Phone,
   enquiries: MessageSquare,
@@ -48,15 +50,15 @@ export default function DataHubFolderSidebar({ folders = [], activeFolder, onSel
     );
   };
 
-  const tscFolder = folders.find((f) => f.key === 'tsc');
-  const otherFolders = folders.filter((f) => f.key !== 'tsc');
+  const outFolder = folders.find((f) => f.key === 'outsourced' || f.key === 'tsc');
+  const otherFolders = folders.filter((f) => f.key !== 'outsourced' && f.key !== 'tsc');
 
   return (
     <div className="w-56 shrink-0 border-r border-[var(--color-bg-border)] pr-3 space-y-1">
       <h3 className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 mb-2">Data Folders</h3>
       {otherFolders.map(renderFolder)}
 
-      {tscFolder && (
+      {outFolder && (
         <div>
           <button
             type="button"
@@ -65,21 +67,21 @@ export default function DataHubFolderSidebar({ folders = [], activeFolder, onSel
           >
             {tscExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             <Sheet size={14} />
-            <span className="text-[10px] font-black uppercase flex-1 text-left">{tscFolder.label}</span>
-            <Badge variant="neutral">{tscFolder.count ?? 0}</Badge>
+            <span className="text-[10px] font-black uppercase flex-1 text-left">{outFolder.label}</span>
+            <Badge variant="neutral">{outFolder.count ?? 0}</Badge>
           </button>
-          {tscExpanded && tscFolder.children?.length > 0 && (
+          {tscExpanded && outFolder.children?.length > 0 && (
             <div className="ml-4 space-y-0.5 max-h-48 overflow-y-auto">
               <button
                 type="button"
-                onClick={() => { onTscSubFilter?.(null); onSelect('tsc'); }}
+                onClick={() => { onTscSubFilter?.(null); onSelect('outsourced'); }}
                 className={`w-full text-left px-2 py-1 text-[9px] font-bold uppercase rounded ${
-                  activeFolder === 'tsc' && !tscSubFilter ? 'text-[var(--color-action-primary)]' : 'text-[var(--color-text-muted)]'
+                  (activeFolder === 'outsourced' || activeFolder === 'tsc') && !tscSubFilter ? 'text-[var(--color-action-primary)]' : 'text-[var(--color-text-muted)]'
                 }`}
               >
-                All TSC
+                All Outsourced
               </button>
-              {tscFolder.children.map((child) => {
+              {outFolder.children.map((child) => {
                 const filterKey = child.filter?.campaign
                   ? `campaign:${child.filter.campaign}`
                   : `source:${child.filter?.originSource}`;
@@ -89,7 +91,7 @@ export default function DataHubFolderSidebar({ folders = [], activeFolder, onSel
                     key={child.key}
                     type="button"
                     onClick={() => {
-                      onSelect('tsc');
+                      onSelect('outsourced');
                       onTscSubFilter?.(filterKey, child.filter);
                     }}
                     className={`w-full flex items-center justify-between px-2 py-1 rounded text-[9px] font-bold uppercase truncate ${

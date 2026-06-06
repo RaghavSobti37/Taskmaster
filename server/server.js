@@ -1,3 +1,4 @@
+require('./datadog-init');
 require('dotenv').config();
 const { initSentry, setupSentryExpress, captureException } = require('./utils/sentry');
 initSentry();
@@ -231,7 +232,8 @@ if (process.env.NODE_ENV !== 'test') {
       const trackingWarn = getTrackingDbMismatchWarning();
       if (trackingWarn) console.warn('[MAIL] ⚠ ' + trackingWarn);
 
-      // Artist analytics repair moved to scripts/repairArtistAnalytics.js (run via admin scripts / cron)
+      const { ensureDataHubBootstrap } = require('./utils/ensureDataHubBootstrap');
+      ensureDataHubBootstrap().catch(() => {});
     })
     .catch(err => {
       console.error('[ERROR] Initial MongoDB connection failed:', err.message);
@@ -322,6 +324,7 @@ app.use('/api/mail', require('./routes/mailRoutes'));
 app.use('/api/ses', require('./routes/sesRoutes'));
 app.use('/api/tsc', require('./routes/tscRoutes'));
 app.use('/api/data-hub', require('./routes/dataHubRoutes'));
+app.use('/api/artist-path', require('./routes/artistPathRoutes'));
 app.use('/api/track', require('./routes/track'));
 app.use('/api/campaigns', require('./routes/campaignRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
@@ -405,12 +408,6 @@ process.on('unhandledRejection', (reason) => {
   captureException(err, { label: 'unhandledRejection' });
   logProcessCrash('unhandledRejection', err);
 });
-
-const backupJob = require('./jobs/backupJob');
-
-// Note: Disabled inline backup job to prevent multi-instance collisions.
-// Use dedicated worker or Atlas Snapshots instead.
-// backupJob.start();
 
 const http = require('http');
 const PORT = process.env.PORT || 5000;

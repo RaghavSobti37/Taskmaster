@@ -14,6 +14,8 @@ import { isStandaloneDisplay, shouldUseSameOriginApi } from '../utils/displayMod
 import { markForceLogout, consumeForceLogout } from '../utils/authSession';
 import { refetchUserScopedQueries } from '../lib/queryInvalidation';
 import { AXIOS_SKIP_TOAST } from '../lib/notifications';
+import { setSentryUser, clearSentryUser } from '../lib/sentry';
+import { setDatadogUser, clearDatadogUser } from '../lib/datadog';
 
 const defaultAuthContext = {
   user: null,
@@ -117,6 +119,8 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     setSessionReady(false);
     setUser(null);
+    clearSentryUser();
+    clearDatadogUser();
     setLoading(false);
   }, [queryClient]);
 
@@ -160,6 +164,8 @@ export const AuthProvider = ({ children }) => {
       const newData = res.data;
       if (userSessionChanged(userRef.current, newData)) {
         setUser(newData);
+        setSentryUser(newData);
+        setDatadogUser(newData);
       }
       if (newData && !userRef.current) {
         recordAttendanceSessionLogin();
@@ -280,6 +286,8 @@ export const AuthProvider = ({ children }) => {
     queryClient.clear();
     recordAttendanceSessionLogin();
     setUser(userData);
+    setSentryUser(userData);
+    setDatadogUser(userData);
     setLoading(false);
     await syncSessionAfterLogin();
     setSessionReady(true);

@@ -2,11 +2,11 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const User = require('../models/User');
-const logger = require('../utils/logger');
 const { isAdminUser, isOpsUser } = require('../utils/departmentPermissions');
 const { COOKIE_NAME } = require('../utils/authCookie');
 
 let io = null;
+const log = () => require('../utils/logger');
 
 const initRealtime = (httpServer, corsAllowlist = new Set()) => {
   if (io) return io;
@@ -49,7 +49,7 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
   });
 
   io.on('connection', (socket) => {
-    logger.info('Realtime', 'Client connected', { userId: socket.userId });
+    log().info('Realtime', 'Client connected', { userId: socket.userId });
 
     socket.join(`user-${socket.userId}`);
 
@@ -71,11 +71,11 @@ const initRealtime = (httpServer, corsAllowlist = new Set()) => {
     });
 
     socket.on('disconnect', () => {
-      logger.info('Realtime', 'Client disconnected', { userId: socket.userId });
+      log().info('Realtime', 'Client disconnected', { userId: socket.userId });
     });
   });
 
-  logger.info('Realtime', 'Socket.io initialized');
+  log().info('Realtime', 'Socket.io initialized');
   return io;
 };
 
@@ -84,7 +84,7 @@ const broadcastRealtimeEvent = (channelName, event, payload = {}) => {
   try {
     io.to(channelName).emit(event, payload);
   } catch (err) {
-    logger.warn('Realtime', 'Broadcast failed', { channelName, event, error: err.message });
+    log().warn('Realtime', 'Broadcast failed', { channelName, event, error: err.message });
   }
 };
 
@@ -100,6 +100,5 @@ const closeRealtime = () =>
 module.exports = {
   initRealtime,
   broadcastRealtimeEvent,
-  getIO: () => io,
   closeRealtime,
 };

@@ -25,7 +25,7 @@ const systemLogSchema = new mongoose.Schema({
   errorCode: { type: String },
   payload: { type: mongoose.Schema.Types.Mixed },
   relatedEntities: [relatedEntitySchema],
-  createdAt: { type: Date, default: Date.now, expires: '180d' },
+  createdAt: { type: Date, default: Date.now, expires: '7d' },
 });
 
 systemLogSchema.index({ module: 1, severity: 1, timestamp: -1 });

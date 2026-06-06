@@ -26,6 +26,8 @@ const uploadFetch = (input, init = {}) => {
   return fetch(input, { ...init, ...(includeCredentials ? { credentials: 'include' } : {}) });
 };
 
-export const UploadButton = generateUploadButton({ url: uploadthingUrl });
-export const UploadDropzone = generateUploadDropzone({ url: uploadthingUrl });
-export const { useUploadThing, uploadFiles } = generateReactHelpers({ url: uploadthingUrl, fetch: uploadFetch });
+const UploadButton = generateUploadButton({ url: uploadthingUrl });
+const UploadDropzone = generateUploadDropzone({ url: uploadthingUrl });
+const { useUploadThing, uploadFiles } = generateReactHelpers({ url: uploadthingUrl, fetch: uploadFetch });
+
+export { UploadButton, UploadDropzone, useUploadThing, uploadFiles };

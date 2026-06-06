@@ -104,7 +104,7 @@ export function noteDraftTimeRemaining(draft) {
   return Math.max(0, DRAFT_TTL_MS - (Date.now() - draft.updatedAt));
 }
 
-export function formatDraftExpiry(draft) {
+function formatDraftExpiry(draft) {
   const ms = noteDraftTimeRemaining(draft);
   if (ms <= 0) return 'Expired';
   const hours = Math.floor(ms / (60 * 60 * 1000));

@@ -8,6 +8,28 @@ Release notes for CoreKnot (CoreKnot). For setup and architecture, see [README.m
 
 ---
 
+### [2026-06-06] v1.0.3 — Data Master identity spine & Artist Path admin
+
+#### Data Master
+- **Person golden record:** `Person`, `PersonIdentifier`, `PersonCommunicationProfile`, `PersonSourceLink`, materialized `PersonHubView` for Data Hub list/counts.
+- **Source facts:** Domain collections (`Lead`, `ArtistPathResponse`, `ExlyBooking`, `OutsourcedRecord`, `BookedCall`, `NewsletterSubscriber`) hold business data; identity fields deduped via `PersonIdentityService`.
+- **Bootstrap:** `server/scripts/backfillPersonIds.js` on empty Person collection; optional `dedupePersonIdentities.js`.
+- **Docs:** [`docs/DATA_MASTER_ARCHITECTURE.md`](DATA_MASTER_ARCHITECTURE.md), [`docs/INTEGRATION_DATA_CATALOG.md`](INTEGRATION_DATA_CATALOG.md).
+
+#### Artist Path
+- **Admin UI:** `/admin/artist-path` — card grid, HolySheet sync (`POST /api/artist-path/sync`), CSV import, profile slider with lazy Q&A.
+- **Shared schema:** `shared/artistPathSchema.cjs` (Node) + `shared/artistPathSchema.js` ESM facade (Vite client).
+
+#### Codebase hygiene
+- Removed unused platform-settings routes, legacy OAuth controllers, dead dashboard widgets, duplicate utils, and orphaned models.
+- `FullScreenWorkspace` component for immersive admin sliders.
+
+#### Deploy
+- **MCP:** `.cursor/mcp.json` — Render (`RENDER_API_KEY`) + Vercel OAuth via Cursor Settings.
+- **CI:** `npm run ci` passes (199 server + 18 client tests, production build).
+
+---
+
 ### [2026-06-06] v1.0.2 — Mobile login proxy fix & public-page theming
 
 #### Authentication

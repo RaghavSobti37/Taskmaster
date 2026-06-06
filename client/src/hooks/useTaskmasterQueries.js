@@ -5,4 +5,3 @@
 export * from './queries';
 export { useStatusCounts } from './useStatusCounts';
 export { useNavbarPreferences } from './useNavbarPreferences';
-export { useUnifiedSearch } from './useUnifiedSearch';

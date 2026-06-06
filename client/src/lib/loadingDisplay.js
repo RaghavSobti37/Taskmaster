@@ -4,6 +4,6 @@
  * Heavy pages: opt in via showPhrase on LoadingState / DataLoading.
  */
 
-export const LOADING_SHOW_PHRASE_BOOT = true;
+const LOADING_SHOW_PHRASE_BOOT = true;
 export const LOADING_SHOW_PHRASE_DASHBOARD = true;
-export const LOADING_SHOW_PHRASE_HEAVY_PAGE = true;
+const LOADING_SHOW_PHRASE_HEAVY_PAGE = true;

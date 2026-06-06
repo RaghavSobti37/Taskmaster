@@ -11,5 +11,3 @@ export const DataLoading = ({ className = '', showPhrase = false }) => (
     />
   </div>
 );
-
-export default DataLoading;

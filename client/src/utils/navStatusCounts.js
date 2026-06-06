@@ -51,7 +51,7 @@ export function getNavCountsForPath(path, statusCounts = {}) {
 }
 
 /** Total attention items for a nav group (sum of child paths). */
-export function sumNavCountsForPaths(paths, statusCounts) {
+function sumNavCountsForPaths(paths, statusCounts) {
   let urgent = 0;
   let today = 0;
   for (const path of paths) {

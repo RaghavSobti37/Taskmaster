@@ -30,7 +30,7 @@ export const PASSWORD_REQUIREMENT_CHECKS = [
   },
 ];
 
-export const PASSWORD_REQUIREMENTS = PASSWORD_REQUIREMENT_CHECKS.map((rule) => rule.label);
+const PASSWORD_REQUIREMENTS = PASSWORD_REQUIREMENT_CHECKS.map((rule) => rule.label);
 
 export const getPasswordRequirementChecks = (password = '') =>
   PASSWORD_REQUIREMENT_CHECKS.map(({ id, label, test }) => ({

@@ -7,7 +7,6 @@ const NOTIF_BC_CHANNEL = 'coreknot-notif';
 
 let notifBroadcastChannel = null;
 
-export { getNotificationIconUrl };
 
 const readDedupeMap = () => {
   try {
@@ -215,7 +214,7 @@ export const subscribeToPush = async () => {
   }
 };
 
-export const unsubscribeFromPush = async () => {
+const unsubscribeFromPush = async () => {
   const registration = await navigator.serviceWorker?.ready;
   const subscription = await registration?.pushManager?.getSubscription();
   if (subscription) {
@@ -230,7 +229,7 @@ export const unsubscribeFromPush = async () => {
   setPushPreferenceEnabled(false);
 };
 
-export const getNotificationPushStatus = async () => {
+const getNotificationPushStatus = async () => {
   const permission = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
   const prefEnabled = isPushPreferenceEnabled();
   const subscribed = await hasActivePushSubscription();

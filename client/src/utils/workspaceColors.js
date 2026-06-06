@@ -31,7 +31,7 @@ export function normalizeWorkspaceKey(name) {
     .replace(/\s+/g, ' ');
 }
 
-export function buildWorkspaceColorMap(workspaces = []) {
+function buildWorkspaceColorMap(workspaces = []) {
   const map = {};
   workspaces.forEach((w) => {
     if (w?.name) map[normalizeWorkspaceKey(w.name)] = w.color || DEFAULT_WORKSPACE_COLOR;

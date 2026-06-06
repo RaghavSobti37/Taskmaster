@@ -38,7 +38,7 @@ export function useIsDesktop() {
 }
 
 /** Dev helper: warn when elements exceed viewport width */
-export function auditHorizontalOverflow() {
+function auditHorizontalOverflow() {
   if (import.meta.env.PROD) return;
   const vw = window.innerWidth;
   const offenders = [];

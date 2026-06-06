@@ -67,7 +67,7 @@ export const useTopPages = (days = 7, enabled = true) => {
   });
 };
 
-export const useSystemLogTrail = (traceId, enabled = true) => {
+const useSystemLogTrail = (traceId, enabled = true) => {
   return useQuery({
     queryKey: ['systemLogTrail', traceId],
     queryFn: async () => {

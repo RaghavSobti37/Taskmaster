@@ -51,5 +51,3 @@ export const LoadingState = ({
     />
   </div>
 );
-
-export default Spinner;

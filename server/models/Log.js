@@ -20,7 +20,7 @@ const logSchema = new mongoose.Schema({
   details: { type: mongoose.Schema.Types.Mixed },
   targetId: { type: mongoose.Schema.Types.ObjectId },
   targetType: { type: String },
-  createdAt: { type: Date, default: Date.now, expires: '90d' } // Auto-purge after 90 days
+  createdAt: { type: Date, default: Date.now, expires: '7d' }
 });
 
 // Middleware for backward compatibility (map old fields to new fields and vice versa)

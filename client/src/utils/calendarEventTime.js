@@ -6,7 +6,7 @@ export const DEFAULT_EVENT_TIME = '09:00';
 const DEFAULT_EVENT_TIME_UTC = '03:30';
 
 /** Combine YYYY-MM-DD + HH:mm into UTC Date (matches server storage). */
-export function combineDateAndTime(dateStr, timeStr = DEFAULT_EVENT_TIME) {
+function combineDateAndTime(dateStr, timeStr = DEFAULT_EVENT_TIME) {
   if (!dateStr) return null;
   const [y, m, d] = dateStr.split('-').map(Number);
   const [hh = 9, mm = 0] = (timeStr || DEFAULT_EVENT_TIME).split(':').map(Number);
@@ -46,7 +46,7 @@ function formatTimeFromParts(timeStr) {
   return format(d, 'h:mma').toUpperCase();
 }
 
-export function formatEventTimeLabel(raw) {
+function formatEventTimeLabel(raw) {
   return formatEventRangeLabel(raw, null);
 }
 

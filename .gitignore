@@ -36,3 +36,4 @@ server/reports/
 server/scripts/ocr-benchmark/
 eng.traineddata
 docs/workspaces_projects.txt
+.fallow/

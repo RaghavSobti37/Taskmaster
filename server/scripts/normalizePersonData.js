@@ -201,25 +201,35 @@ async function main() {
   console.log(`${dryRun ? '[DRY RUN] ' : '[EXECUTE] '}Connected (${useProd ? 'production' : 'local'})`);
 
   const Lead = require('../models/Lead');
-  const TscData = require('../models/TscData');
+  const OutsourcedRecord = require('../models/OutsourcedRecord');
+  const BookedCall = require('../models/BookedCall');
+  const NewsletterSubscriber = require('../models/NewsletterSubscriber');
   const ExlyBooking = require('../models/ExlyBooking');
-  const Contact = require('../models/Contact');
+  const PersonIndex = require('../models/PersonIndex');
 
   console.log('\n--- Leads ---');
   await processCollection(Lead, 'leads', { phoneRequired: false });
   console.log(JSON.stringify(stats.leads, null, 2));
 
-  console.log('\n--- TscData ---');
-  await processCollection(TscData, 'tsc');
-  console.log(JSON.stringify(stats.tsc, null, 2));
+  console.log('\n--- OutsourcedRecord ---');
+  await processCollection(OutsourcedRecord, 'outsourced');
+  console.log(JSON.stringify(stats.outsourced, null, 2));
+
+  console.log('\n--- BookedCall ---');
+  await processCollection(BookedCall, 'booked_calls');
+  console.log(JSON.stringify(stats.booked_calls, null, 2));
+
+  console.log('\n--- NewsletterSubscriber ---');
+  await processCollection(NewsletterSubscriber, 'newsletter');
+  console.log(JSON.stringify(stats.newsletter, null, 2));
 
   console.log('\n--- ExlyBooking ---');
   await processCollection(ExlyBooking, 'exly', { phoneRequired: true });
   console.log(JSON.stringify(stats.exly, null, 2));
 
-  console.log('\n--- Contact ---');
-  await processCollection(Contact, 'contacts');
-  console.log(JSON.stringify(stats.contacts, null, 2));
+  console.log('\n--- PersonIndex ---');
+  await processCollection(PersonIndex, 'personindexes');
+  console.log(JSON.stringify(stats.personindexes, null, 2));
 
   if (!dryRun) {
     console.log('\n--- repairCorruptLeadPhones ---');

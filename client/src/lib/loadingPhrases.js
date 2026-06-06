@@ -465,7 +465,7 @@ const PHRASES = [
   'Zooming with enthusiasm',
 ];
 
-export const LOADING_PHRASE_COUNT = PHRASES.length;
+const LOADING_PHRASE_COUNT = PHRASES.length;
 
 export function pickRandomLoadingPhrase() {
   return PHRASES[Math.floor(Math.random() * PHRASES.length)];

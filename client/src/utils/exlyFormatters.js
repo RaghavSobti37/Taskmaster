@@ -24,7 +24,7 @@ export const formatPercent = (value) => {
   return `${num.toFixed(1)}%`;
 };
 
-export const isPaidBooking = (booking) => Number(booking?.pricePaid || 0) > 0;
+const isPaidBooking = (booking) => Number(booking?.pricePaid || 0) > 0;
 
 export const computeOfferingTotals = (offerings = []) =>
   offerings.reduce(

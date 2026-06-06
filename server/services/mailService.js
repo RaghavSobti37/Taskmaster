@@ -7,7 +7,8 @@ const MailCampaign = require('../models/MailCampaign');
 const EmailProfile = require('../models/EmailProfile');
 const MailEvent = require('../models/MailEvent');
 const Lead = require('../models/Lead');
-const TscData = require('../models/TscData');
+const OutsourcedRecord = require('../models/OutsourcedRecord');
+const NewsletterSubscriber = require('../models/NewsletterSubscriber');
 const logger = require('../utils/logger');
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -19,11 +20,32 @@ const redis = getSharedRedis();
 const updateEmailTags = async (email, tag, status) => {
   if (!email) return;
   const cleanEmail = email.toLowerCase().trim();
-  let foundInLead = false;
+  const PersonIdentityService = require('./PersonIdentityService');
+  const PersonHubBuilder = require('./PersonHubBuilder');
 
-  // 0. Update Unified Contacts
-  const Contact = require('../models/Contact');
-  const contacts = await Contact.find({ email: cleanEmail });
+  const resolved = await PersonIdentityService.resolvePerson({ email: cleanEmail }, { source: 'mail' });
+  const personId = resolved?.personId;
+  if (personId) {
+    const patch = { emailStatus: status };
+    if (status === 'Unsubscribed') {
+      patch.unsubscribed = true;
+      patch.unsubscribeReason = tag || 'mail_webhook';
+    }
+    if (status === 'Active') patch.unsubscribed = false;
+    await PersonIdentityService.updateCommunicationProfile(personId, patch);
+    if (status === 'Invalid' || status === 'Bounced') {
+      await require('../models/PersonCommunicationProfile').findOneAndUpdate(
+        { personId },
+        { $inc: { bounceCount: 1 } },
+        { upsert: true }
+      );
+    }
+    await PersonHubBuilder.rebuildPerson(personId);
+  }
+
+  // Legacy PersonIndex sync during migration
+  const PersonIndex = require('../models/PersonIndex');
+  const contacts = await PersonIndex.find({ email: cleanEmail });
   for (const contact of contacts) {
     contact.emailStatus = status;
     if (status === 'Unsubscribed') contact.unsubscribed = true;
@@ -32,59 +54,13 @@ const updateEmailTags = async (email, tag, status) => {
     await contact.save();
   }
 
-  // 0.5. Update Exly Bookings
-  const ExlyBooking = require('../models/ExlyBooking');
-  const exlyBookings = await ExlyBooking.find({ email: cleanEmail });
-  for (const booking of exlyBookings) {
-    booking.emailStatus = status;
-    if (status === 'Unsubscribed') booking.unsubscribed = true;
-    if (status === 'Invalid' || status === 'Bounced') booking.bounceCount = (booking.bounceCount || 0) + 1;
-    await booking.save();
-  }
-
-  // 1. Update Leads
+  // Lead tags only (CRM metadata — not comms state owner)
   const leads = await Lead.find({ email: cleanEmail });
   for (const lead of leads) {
-    foundInLead = true;
     if (!lead.tags) lead.tags = [];
-    if (!lead.tags.includes(tag)) lead.tags.push(tag);
-    lead.emailStatus = status;
+    if (tag && !lead.tags.includes(tag)) lead.tags.push(tag);
     lead.metadata = { ...lead.metadata, lastEmailAction: tag, lastEmailActionDate: new Date() };
     await lead.save();
-  }
-
-  // 2. Update TscData
-  const tscRecords = await TscData.find({ email: cleanEmail });
-  for (const tsc of tscRecords) {
-    if (!tsc.tags) tsc.tags = [];
-    if (!tsc.tags.includes(tag)) tsc.tags.push(tag);
-    tsc.emailStatus = status;
-    await tsc.save();
-
-    // If not found in Lead but found in TscData (sheet uploaded), create a Lead!
-    if (!foundInLead) {
-      // DISABLED: User requested to stop adding auto mailer entries into leads directly
-      /*
-      try {
-        const newLead = new Lead({
-          name: tsc.name || 'Unknown from Sheet',
-          email: cleanEmail,
-          phone: tsc.phone || '0000000000',
-          city: tsc.city,
-          primaryRole: tsc.role,
-          leadStatus: status === 'Invalid' || status === 'Bounced' ? 'DNP' : 'New',
-          tags: [tag],
-          emailStatus: status,
-          source: tsc.originSource || tsc.campaign || 'Sheet Upload',
-          metadata: { fromTscImport: true, importTimestamp: new Date() }
-        });
-        await newLead.save();
-        foundInLead = true;
-      } catch (err) {
-        logger.error('Mail Service', 'Error auto-creating lead from TSC sheet', { error: err.message });
-      }
-      */
-    }
   }
 };
 

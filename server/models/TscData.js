@@ -1,3 +1,4 @@
+/** @deprecated Migrated to OutsourcedRecord, BookedCall, NewsletterSubscriber — collection kept for rollback only. */
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 

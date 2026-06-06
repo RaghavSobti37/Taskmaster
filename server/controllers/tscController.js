@@ -1,4 +1,6 @@
-const TscData = require('../models/TscData');
+const OutsourcedRecord = require('../models/OutsourcedRecord');
+const BookedCall = require('../models/BookedCall');
+const NewsletterSubscriber = require('../models/NewsletterSubscriber');
 const Lead = require('../models/Lead');
 const CRMImport = require('../models/CRMImport');
 const csv = require('csv-parser');
@@ -6,8 +8,7 @@ const fs = require('fs');
 const { escapeRegExp, sanitizeEmail, sanitizeName, normalizePhone } = require('../utils/sanitizer');
 const { normalizePersonRecord } = require('../utils/personNormalization');
 const logger = require('../utils/logger');
-const ContactService = require('../services/ContactService');
-const { isCommunityText } = require('../../shared/dataInlets');
+const { bulkUpsertClassifiedRows } = require('../services/sourceRecordService');
 
 exports.getTscData = async (req, res) => {
   try {
@@ -23,40 +24,36 @@ exports.getTscData = async (req, res) => {
         { name: { $regex: escaped, $options: 'i' } },
         { email: { $regex: escaped, $options: 'i' } },
         { phone: { $regex: escaped, $options: 'i' } },
-        { campaign: { $regex: escaped, $options: 'i' } }
+        { campaign: { $regex: escaped, $options: 'i' } },
       ];
     }
 
-    // Dynamic Filters
     if (req.query.campaign && req.query.campaign !== 'all') query.campaign = req.query.campaign;
     if (req.query.originSource && req.query.originSource !== 'all') query.originSource = req.query.originSource;
     if (req.query.role && req.query.role !== 'all') {
       if (req.query.role === 'OTHERS') {
         const musicKeywords = [
-          'pop', 'rock', 'indie', 'jazz', 'blues', 'metal', 'hiphop', 'rap', 'singer', 
-          'musician', 'artist', 'producer', 'composer', 'dj', 'vocalist', 'guitarist', 
-          'drummer', 'pianist', 'bollywood', 'classical', 'edm', 'techno', 'folk', 
-          'country', 'soul', 'rnb', 'reggae', 'punk', 'orchestra', 'ballads', 
-          'romantic', 'alternative', 'acoustic', 'instrumental', 'remix', 'lofi'
+          'pop', 'rock', 'indie', 'jazz', 'blues', 'metal', 'hiphop', 'rap', 'singer',
+          'musician', 'artist', 'producer', 'composer', 'dj', 'vocalist', 'guitarist',
+          'drummer', 'pianist', 'bollywood', 'classical', 'edm', 'techno', 'folk',
+          'country', 'soul', 'rnb', 'reggae', 'punk', 'orchestra', 'ballads',
+          'romantic', 'alternative', 'acoustic', 'instrumental', 'remix', 'lofi',
         ];
-        // Match everything that isn't a simple music keyword match
         query.role = { $not: { $regex: musicKeywords.join('|'), $options: 'i' } };
       } else {
-        // Handle comma separated roles in DB
         query.role = { $regex: `(^|,)\\s*${req.query.role}\\s*(,|$)`, $options: 'i' };
       }
     }
     if (req.query.emailStatus && req.query.emailStatus !== 'all') query.emailStatus = req.query.emailStatus;
     if (req.query.tag && req.query.tag !== 'all') query.tags = req.query.tag;
 
-    const total = await TscData.countDocuments(query);
-    const data = await TscData.find(query)
+    const total = await OutsourcedRecord.countDocuments(query);
+    const data = await OutsourcedRecord.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    // Aggregation pipeline for dynamic linking
     const pipeline = [
       { $match: query },
       { $sort: { createdAt: -1 } },
@@ -72,119 +69,72 @@ exports.getTscData = async (req, res) => {
                 $expr: {
                   $or: [
                     { $and: [{ $ne: ['$email', ''] }, { $eq: ['$email', '$$tscEmail'] }] },
-                    { $and: [{ $ne: ['$phone', ''] }, { $eq: ['$phone', '$$tscPhone'] }] }
-                  ]
-                }
-              }
+                    { $and: [{ $ne: ['$phone', ''] }, { $eq: ['$phone', '$$tscPhone'] }] },
+                  ],
+                },
+              },
             },
             { $limit: 1 },
             {
               $project: {
-                name: 1, email: 1, phone: 1, leadStatus: 1, callStatus: 1, assignedRepId: 1
-              }
-            }
+                name: 1, email: 1, phone: 1, leadStatus: 1, callStatus: 1, assignedRepId: 1,
+              },
+            },
           ],
-          as: 'leadData'
-        }
+          as: 'leadData',
+        },
       },
       {
         $unwind: {
           path: '$leadData',
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'leadData.assignedRepId',
-          foreignField: '_id',
-          as: 'leadData.assignedRep'
-        }
-      },
-      {
-        $unwind: {
-          path: '$leadData.assignedRep',
-          preserveNullAndEmptyArrays: true
-        }
-      }
     ];
 
-    // Filter by sync status if requested
-    if (req.query.syncStatus === 'synced') {
-      pipeline.push({ $match: { leadData: { $exists: true } } });
-    } else if (req.query.syncStatus === 'unsynced') {
-      pipeline.push({ $match: { leadData: { $exists: false } } });
-    }
-
-    const finalData = await TscData.aggregate(pipeline);
-
-    res.json({
-      data: finalData,
-      total,
-      page,
-      pages: Math.ceil(total / limit)
-    });
+    const finalData = await OutsourcedRecord.aggregate(pipeline);
+    res.json({ data: finalData.length ? finalData : data, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
-    logger.error('tscController', 'fetching TscData:', { error: error.message || error });
-    res.status(500).json({ error: 'Failed to fetch TSC data' });
+    logger.error('tscController', 'fetching outsourced data:', { error: error.message || error });
+    res.status(500).json({ error: 'Failed to fetch outsourced data' });
   }
 };
 
 exports.getTscStats = async (req, res) => {
   try {
-    const stats = await TscData.aggregate([
+    const stats = await OutsourcedRecord.aggregate([
       {
         $facet: {
-          total: [{ $count: "count" }],
-          campaigns: [
-            { $group: { _id: "$campaign", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-          ],
-          sources: [
-            { $group: { _id: "$originSource", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-          ],
-          roles: [
-            { $group: { _id: "$role", count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
-          ]
-        }
-      }
+          total: [{ $count: 'count' }],
+          byStatus: [{ $group: { _id: '$emailStatus', count: { $sum: 1 } } }],
+          byCampaign: [{ $group: { _id: '$campaign', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 }],
+        },
+      },
     ]);
 
-    // Distinct values for filters
     const [campaigns, sources, roles] = await Promise.all([
-      TscData.distinct('campaign'),
-      TscData.distinct('originSource'),
-      TscData.distinct('role')
+      OutsourcedRecord.distinct('campaign'),
+      OutsourcedRecord.distinct('originSource'),
+      OutsourcedRecord.distinct('role'),
     ]);
 
-    // Process roles to split by comma and deduplicate
     const uniqueRoles = new Set();
     const otherRoles = new Set();
-    
     const musicKeywords = [
-      'pop', 'rock', 'indie', 'jazz', 'blues', 'metal', 'hiphop', 'rap', 'singer', 
-      'musician', 'artist', 'producer', 'composer', 'dj', 'vocalist', 'guitarist', 
-      'drummer', 'pianist', 'bollywood', 'classical', 'edm', 'techno', 'folk', 
-      'country', 'soul', 'rnb', 'reggae', 'punk', 'orchestra', 'ballads', 
-      'romantic', 'alternative', 'acoustic', 'instrumental', 'remix', 'lofi'
+      'pop', 'rock', 'indie', 'jazz', 'blues', 'metal', 'hiphop', 'rap', 'singer',
+      'musician', 'artist', 'producer', 'composer', 'dj', 'vocalist', 'guitarist',
+      'drummer', 'pianist', 'bollywood', 'classical', 'edm', 'techno', 'folk',
+      'country', 'soul', 'rnb', 'reggae', 'punk', 'orchestra', 'ballads',
+      'romantic', 'alternative', 'acoustic', 'instrumental', 'remix', 'lofi',
     ];
 
-    roles.forEach(r => {
+    roles.forEach((r) => {
       if (r) {
-        r.split(',').forEach(part => {
+        r.split(',').forEach((part) => {
           const clean = part.trim().toLowerCase();
-          
-          // Validation: No special chars, mostly one word, must be in music keywords
-          // We allow some flexibility but strip sentences and junk
           const isSingleWord = !clean.includes(' ');
           const hasNoSpecialChars = /^[a-z]+$/.test(clean.replace('-', ''));
-          const isMusicRelated = musicKeywords.some(k => clean.includes(k));
-
+          const isMusicRelated = musicKeywords.some((k) => clean.includes(k));
           if (isSingleWord && hasNoSpecialChars && isMusicRelated) {
             uniqueRoles.add(clean.toUpperCase());
           } else if (clean) {
@@ -202,11 +152,11 @@ exports.getTscStats = async (req, res) => {
       filters: {
         campaigns: campaigns.filter(Boolean),
         sources: sources.filter(Boolean),
-        roles: finalRoles
-      }
+        roles: finalRoles,
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch TSC stats' });
+    res.status(500).json({ error: 'Failed to fetch outsourced stats' });
   }
 };
 
@@ -216,7 +166,7 @@ exports.uploadTscFile = async (req, res) => {
   const headers = [];
   const sample = [];
   let rowCount = 0;
-  
+
   fs.createReadStream(req.file.path)
     .pipe(csv())
     .on('headers', (h) => headers.push(...h))
@@ -225,12 +175,12 @@ exports.uploadTscFile = async (req, res) => {
       if (sample.length < 5) sample.push(row);
     })
     .on('end', () => {
-      res.json({ 
-        headers, 
-        sample, 
+      res.json({
+        headers,
+        sample,
         rowCount,
-        filename: req.file.originalname, 
-        tempPath: req.file.path 
+        filename: req.file.originalname,
+        tempPath: req.file.path,
       });
     })
     .on('error', (err) => {
@@ -251,23 +201,17 @@ exports.importTscData = async (req, res) => {
     .on('end', async () => {
       try {
         const importSession = await CRMImport.create({
-          filename: filename || 'tsc_import.csv',
+          filename: filename || 'data_import.csv',
           leadCount: results.length,
-          createdBy: req.user._id
+          createdBy: req.user._id,
         });
 
-        const tscDocs = results.map(row => {
-          const doc = {
-            importId: importSession._id,
-            metadata: {}
-          };
-
+        const docs = results.map((row) => {
+          const doc = { importId: importSession._id, metadata: {} };
           for (const [csvCol, dbField] of Object.entries(mapping)) {
             const value = row[csvCol];
             if (value === undefined || value === null) continue;
-
             if (dbField === 'IGNORE') continue;
-            
             if (dbField === 'metadata') {
               doc.metadata[csvCol] = value;
             } else {
@@ -291,53 +235,15 @@ exports.importTscData = async (req, res) => {
             const { sanitizeLocation } = require('../utils/sanitizer');
             doc.state = sanitizeLocation(doc.state);
           }
-
           return doc;
         }).filter(Boolean);
 
-        const bulkOps = tscDocs.map(doc => {
-          const filter = { $or: [] };
-          if (doc.email) filter.$or.push({ email: doc.email.toLowerCase() });
-          if (doc.phone) filter.$or.push({ phone: doc.phone });
-
-          if (filter.$or.length === 0) {
-            return { insertOne: { document: doc } };
-          }
-
-          return {
-            updateOne: {
-              filter,
-              update: { $set: doc },
-              upsert: true
-            }
-          };
-        });
-
-        const writeResult = await TscData.bulkWrite(bulkOps);
-        for (const doc of tscDocs) {
-          if (!doc.email && !doc.phone) continue;
-          const isCommunity = isCommunityText(doc.campaign) || isCommunityText(doc.originSource);
-          const filter = { $or: [] };
-          if (doc.email) filter.$or.push({ email: doc.email });
-          if (doc.phone) filter.$or.push({ phone: doc.phone });
-          const saved = filter.$or.length ? await TscData.findOne(filter).select('_id').lean() : null;
-          await ContactService.mergeContact({
-            name: doc.name,
-            email: doc.email,
-            phone: doc.phone,
-            city: doc.city,
-            sourceFilename: doc.sourceFilename,
-            emailStatus: doc.emailStatus,
-            recordId: saved?._id,
-            summary: { campaign: doc.campaign, originSource: doc.originSource, role: doc.role },
-            inletKey: isCommunity ? 'community' : 'tsc',
-          }, isCommunity ? 'community' : 'tsc').catch(() => {});
-        }
-        try { fs.unlinkSync(tempPath); } catch(e) {}
-        res.status(201).json({ message: `${tscDocs.length} records processed.`, writeResult: writeResult?.nUpserted });
+        const imported = await bulkUpsertClassifiedRows(docs);
+        try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+        res.status(201).json({ message: `${imported.length} records classified and processed.`, count: imported.length });
       } catch (error) {
         logger.error('tscController', 'Import ', { error: error.message || error });
-        res.status(500).json({ error: 'Failed to import TSC data' });
+        res.status(500).json({ error: 'Failed to import data' });
       }
     });
 };
@@ -356,33 +262,24 @@ exports.bulkDeleteTscData = async (req, res) => {
           { name: { $regex: escaped, $options: 'i' } },
           { email: { $regex: escaped, $options: 'i' } },
           { phone: { $regex: escaped, $options: 'i' } },
-          { campaign: { $regex: escaped, $options: 'i' } }
+          { campaign: { $regex: escaped, $options: 'i' } },
         ];
       }
       if (filter) {
         if (filter.campaign && filter.campaign !== 'all') query.campaign = filter.campaign;
         if (filter.originSource && filter.originSource !== 'all') query.originSource = filter.originSource;
-        if (filter.role && filter.role !== 'all') {
-          if (filter.role === 'OTHERS') {
-            const musicKeywords = [
-              'pop', 'rock', 'indie', 'jazz', 'blues', 'metal', 'hiphop', 'rap', 'singer', 
-              'musician', 'artist', 'producer', 'composer', 'dj', 'vocalist', 'guitarist', 
-              'drummer', 'pianist', 'bollywood', 'classical', 'edm', 'techno', 'folk', 
-              'country', 'soul', 'rnb', 'reggae', 'punk', 'orchestra', 'ballads', 
-              'romantic', 'alternative', 'acoustic', 'instrumental', 'remix', 'lofi'
-            ];
-            query.role = { $not: { $regex: musicKeywords.join('|'), $options: 'i' } };
-          } else {
-            query.role = { $regex: `(^|,)\\s*${filter.role}\\s*(,|$)`, $options: 'i' };
-          }
-        }
       }
     } else {
       return res.status(400).json({ error: 'No deletion criteria provided' });
     }
 
-    const result = await TscData.deleteMany(query);
-    res.json({ message: `${result.deletedCount} records purged successfully.` });
+    const [out, booked, news] = await Promise.all([
+      OutsourcedRecord.deleteMany(query),
+      BookedCall.deleteMany(query),
+      NewsletterSubscriber.deleteMany(query),
+    ]);
+    const deletedCount = (out.deletedCount || 0) + (booked.deletedCount || 0) + (news.deletedCount || 0);
+    res.json({ message: `${deletedCount} records purged successfully.` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to purge data' });
   }
@@ -391,7 +288,11 @@ exports.bulkDeleteTscData = async (req, res) => {
 exports.deleteTscImport = async (req, res) => {
   try {
     const { id } = req.params;
-    await TscData.deleteMany({ importId: id });
+    await Promise.all([
+      OutsourcedRecord.deleteMany({ importId: id }),
+      BookedCall.deleteMany({ importId: id }),
+      NewsletterSubscriber.deleteMany({ importId: id }),
+    ]);
     await CRMImport.findByIdAndDelete(id);
     res.json({ message: 'Import deleted successfully' });
   } catch (error) {

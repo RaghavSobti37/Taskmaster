@@ -31,4 +31,4 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-export { useSystemToast, useToast, globalToast, emitSystemEvent, emitFromLegacy } from '../lib/systemLogBridge';
+export { useToast } from '../lib/systemLogBridge';

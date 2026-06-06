@@ -1,7 +1,6 @@
 import { addDays, format } from 'date-fns';
 import { isOfficeHoliday, getHolidayLabel } from './officeHolidays';
 
-export { getHolidayLabel, isOfficeHoliday };
 
 const APP_TIMEZONE = 'Asia/Kolkata';
 

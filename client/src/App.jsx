@@ -78,6 +78,7 @@ const InboxPage = lazyWithRetry(() => import('./pages/inbox/InboxPage'));
 const TodoPage = lazyWithRetry(() => import('./pages/todo/TodoPage'));
 const NotesPage = lazyWithRetry(() => import('./pages/notes/NotesPage'));
 const NoteEditorPage = lazyWithRetry(() => import('./pages/notes/NoteEditorPage'));
+const ArtistPathPage = lazyWithRetry(() => import('./pages/admin/ArtistPathPage'));
 const AdminGamification = lazyWithRetry(() => import('./pages/admin/AdminGamification'));
 const AdminProjectAnalyticsPage = lazyWithRetry(() => import('./pages/admin/AdminProjectAnalyticsPage'));
 const ComponentsShowcase = lazyWithRetry(() => import('./pages/dev/ComponentsShowcase'));
@@ -175,7 +176,7 @@ function App() {
               <Route element={<PageRoute pages={['finance', 'announcements', 'ops_logs', 'artists']} />}>
                 <Route path="/management" element={<ManagementHub />} />
               </Route>
-              <Route element={<PageRoute pages={['admin_users', 'admin_data', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics']} />}>
+              <Route element={<PageRoute pages={['admin_users', 'admin_data', 'admin_artist_path', 'admin_exly', 'admin_scripts', 'admin_gamification', 'admin_project_analytics']} />}>
                 <Route path="/admin/console" element={<AdminConsole />} />
               </Route>
               <Route path="/leads" element={<Navigate to="/crm?tab=leads" replace />} />
@@ -198,10 +199,14 @@ function App() {
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/workflows" element={<WorkflowCanvas />} />
 
+              <Route element={<PageRoute page="admin_artist_path" />}>
+                <Route path="/admin/artist-path" element={<ArtistPathPage />} />
+              </Route>
               <Route element={<PageRoute page="admin_data" />}>
                 <Route path="/admin" element={<AdminCRM />} />
                 <Route path="/admin/control" element={<AdminPanel />} />
                 <Route path="/admin/qa" element={<QATestingPage />} />
+                <Route path="/admin/audits" element={<Navigate to="/logs?view=lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_users" />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
@@ -209,9 +214,6 @@ function App() {
               </Route>
               <Route element={<PageRoute page="admin_exly" />}>
                 <Route path="/admin/exly-campaigns" element={<ExlyCampaignsPage />} />
-              </Route>
-              <Route element={<PageRoute page="admin_data" />}>
-                <Route path="/admin/audits" element={<Navigate to="/logs?view=lead-audits" replace />} />
               </Route>
               <Route element={<PageRoute page="admin_scripts" />}>
                 <Route path="/admin/scripts" element={<AdminScriptsPage />} />

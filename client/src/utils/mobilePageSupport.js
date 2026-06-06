@@ -160,7 +160,7 @@ export function getMobilePageSupport(pathname, search = '') {
 }
 
 /** Whether mobile should hard-block this route (desktop-only gate). */
-export function isDesktopRequiredOnMobile(pathname, search = '') {
+function isDesktopRequiredOnMobile(pathname, search = '') {
   return getMobilePageSupport(pathname, search).level === MOBILE_PAGE_LEVEL.DESKTOP;
 }
 
@@ -170,7 +170,7 @@ export function isNavDesktopOnly(path) {
 }
 
 /** Mobile-friendly pages for bottom nav / quick links */
-export const MOBILE_PRIMARY_PATHS = [
+const MOBILE_PRIMARY_PATHS = [
   '/dashboard',
   '/todo',
   '/projects',

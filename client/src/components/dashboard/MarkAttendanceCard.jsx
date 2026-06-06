@@ -4,7 +4,7 @@ import { Clock } from 'lucide-react';
 import { DashboardWidgetShell } from '../ui';
 import UnifiedTimeCard from '../attendance/UnifiedTimeCard';
 
-export default function MarkAttendanceCard({
+function MarkAttendanceCard({
   entry,
   onCheckIn,
   onCheckOut,
@@ -37,3 +37,5 @@ export default function MarkAttendanceCard({
     </DashboardWidgetShell>
   );
 }
+
+export default MarkAttendanceCard;

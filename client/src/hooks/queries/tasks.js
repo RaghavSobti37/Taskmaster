@@ -181,7 +181,7 @@ export const useDeleteTask = () => {
   });
 };
 
-export const useTask = (taskId, { enabled = true } = {}) => {
+const useTask = (taskId, { enabled = true } = {}) => {
   return useQuery({
     queryKey: ['task', taskId],
     queryFn: async () => {
@@ -206,7 +206,7 @@ export const useTaskActivity = (taskId, { enabled = true, markRead = true } = {}
   });
 };
 
-export const usePostTaskMessage = (taskId) => {
+const usePostTaskMessage = (taskId) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body) => {

@@ -30,7 +30,7 @@ export function applyFlashHighlight(highlightId) {
   window.setTimeout(run, 800);
 }
 
-export function useHighlightFromUrl() {
+function useHighlightFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const highlightId = params.get(HIGHLIGHT_PARAM);
   if (highlightId) {

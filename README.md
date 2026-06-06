@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.2-126d5e?style=flat-square" alt="Version 1.0.2" />
+  <img src="https://img.shields.io/badge/version-1.0.3-126d5e?style=flat-square" alt="Version 1.0.3" />
   <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 18+" />
   <img src="https://img.shields.io/badge/react-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/mongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -81,6 +81,11 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 
 | Area | What changed |
 | --- | --- |
+| **Data Master** | Person golden-record spine (`Person`, `PersonIdentifier`, `PersonHubView`); source facts stay in domain collections (`Lead`, `ArtistPathResponse`, `ExlyBooking`, etc.); bootstrap via `backfillPersonIds.js` — see [`docs/DATA_MASTER_ARCHITECTURE.md`](docs/DATA_MASTER_ARCHITECTURE.md) |
+| **Artist Path** | Admin page at `/admin/artist-path` — HolySheet sync, card grid, profile slider with lazy Q&A + Data Hub cross-link; shared column map in `shared/artistPathSchema.cjs` |
+| **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
+| **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
+| **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
 | **Mobile login** | Vercel `/api` proxy targets live Render API (`RENDER_API_PROXY_URL` at build); mobile browsers use same-origin auth so iOS Safari keeps session cookies |
 | **Public pages** | Home, Privacy Policy, and User Data Deletion use theme tokens + `MarketingThemeToggle` (light/dark) |
 | **Security & API** | Zod body/query validation on campaigns, projects, data-hub, finance, mail, attendance, notes, gamification, artist, and admin script routes; OpenAPI stub at `GET /api/openapi.json` |

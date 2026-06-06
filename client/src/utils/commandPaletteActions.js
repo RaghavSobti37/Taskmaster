@@ -35,7 +35,7 @@ const DEPARTMENT_PRESETS = {
 /**
  * @deprecated Use GLOBAL_G_CHORD_ROUTES from lib/keyboardShortcuts.js — kept for legacy imports.
  */
-export const G_CHORD_MAP = {
+const G_CHORD_MAP = {
   d: 'dash',
   t: 'todo',
   p: 'proj',
@@ -60,7 +60,7 @@ export function getDepartmentPaletteActions(departmentSlug) {
   return DEPARTMENT_PRESETS[slug] || FALLBACK_ACTIONS;
 }
 
-export function findPaletteActionById(actions, id) {
+function findPaletteActionById(actions, id) {
   return actions.find((a) => a.id === id);
 }
 

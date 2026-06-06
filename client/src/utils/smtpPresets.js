@@ -21,7 +21,7 @@ export const SMTP_PRESETS = {
   custom: { label: 'Custom SMTP', smtpHost: '', smtpPort: 587, dailyLimit: 500 },
 };
 
-export const FREE_ROTATION_PROVIDER_KEYS = Object.keys(SMTP_PRESETS).filter(
+const FREE_ROTATION_PROVIDER_KEYS = Object.keys(SMTP_PRESETS).filter(
   (key) => key !== 'custom' && key !== 'resend' && SMTP_PRESETS[key].smtpHost
 );
 
@@ -92,7 +92,7 @@ export const emptyProviderCredentials = () =>
 export const SIGNATURE_START = '<!-- TASKMASTER_SIGNATURE_START -->';
 export const SIGNATURE_END = '<!-- TASKMASTER_SIGNATURE_END -->';
 
-export const applySmtpPreset = (presetKey) => {
+const applySmtpPreset = (presetKey) => {
   const preset = SMTP_PRESETS[presetKey] || SMTP_PRESETS.custom;
   return {
     providerType: presetKey,

@@ -252,4 +252,3 @@ export const TeamMonthlyReportPanel = ({ isOpen }) => {
   );
 };
 
-export default DepartmentMonthlyReportPanel;

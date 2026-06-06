@@ -14,7 +14,7 @@ export function taskDescriptionPlainText(description) {
     .trim();
 }
 
-export function taskDescriptionPreview(description, maxLength = 140) {
+function taskDescriptionPreview(description, maxLength = 140) {
   const plain = taskDescriptionPlainText(description)
     .split('\n')
     .map((line) => line.trim())

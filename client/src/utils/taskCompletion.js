@@ -1,6 +1,6 @@
 import { formatTimeSpent } from './timeSpent';
 
-export function buildTaskCompletionLogPayload(task, hours, projects = []) {
+function buildTaskCompletionLogPayload(task, hours, projects = []) {
   const projectId = task.projectId?._id || task.projectId;
   const project = projects.find(
     (p) => p._id === projectId || p._id?.toString() === projectId?.toString()
@@ -58,7 +58,7 @@ export function awaitingAssigneeToast(taskTitle) {
 }
 
 /** Server writes daily logs for done and in-review (assignee + reviewer). */
-export function shouldClientCreateCompletionLog(status) {
+function shouldClientCreateCompletionLog(status) {
   return false;
 }
 

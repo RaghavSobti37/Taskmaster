@@ -104,7 +104,7 @@ export function normalizeTaskCategory(type) {
   return 'general';
 }
 
-export function taskCategoryLabel(value) {
+function taskCategoryLabel(value) {
   const normalized = normalizeTaskCategory(value);
   return TASK_CATEGORY_OPTIONS.find((c) => c.value === normalized)?.label || 'General';
 }

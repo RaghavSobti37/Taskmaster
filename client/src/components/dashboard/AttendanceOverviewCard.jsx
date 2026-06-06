@@ -39,7 +39,7 @@ const AttendanceTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function AttendanceOverviewCard() {
+function AttendanceOverviewCard() {
   const [timeframe, setTimeframe] = useState('7d');
   const { data, isLoading } = useAttendanceOverview(timeframe);
 
@@ -111,3 +111,5 @@ export default function AttendanceOverviewCard() {
     </DashboardWidgetShell>
   );
 }
+
+export default AttendanceOverviewCard;

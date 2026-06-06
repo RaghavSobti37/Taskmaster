@@ -343,7 +343,7 @@ export function dismissSystemToast(id) {
   toast.dismiss(id);
 }
 
-export function dismissAllSystemToasts() {
+function dismissAllSystemToasts() {
   toast.dismiss();
 }
 

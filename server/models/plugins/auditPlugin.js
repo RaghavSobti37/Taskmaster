@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const CRMAudit = require('../CRMAudit');
 
 /**
  * Audit Plugin for Mongoose
@@ -38,6 +37,7 @@ const auditPlugin = (schema, options = {}) => {
 
     if (auditLogs.length > 0) {
       try {
+        const CRMAudit = require('../CRMAudit');
         await CRMAudit.insertMany(auditLogs);
       } catch (err) {
         console.error('Audit Log Error:', err);
@@ -91,6 +91,7 @@ const auditPlugin = (schema, options = {}) => {
       }
 
       if (auditLogs.length > 0) {
+        const CRMAudit = require('../CRMAudit');
         await CRMAudit.insertMany(auditLogs);
       }
     } catch (err) {

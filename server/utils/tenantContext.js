@@ -15,7 +15,6 @@ module.exports = {
     const store = tenantStorage.getStore();
     return store ? store.traceId : null;
   },
-  getContext: () => tenantStorage.getStore() || {},
   runWithContext: (context, fn) => {
     return tenantStorage.run(context, fn);
   },

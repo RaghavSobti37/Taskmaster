@@ -3,7 +3,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import { X, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Spinner } from './Spinner';
-import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
@@ -133,7 +132,7 @@ export const TabSwitcher = ({ tabs, activeTab, onChange, className = '' }) => (
 );
 
 /** Wraps a single form control so it sizes correctly in flex/grid layouts. */
-export const FormField = ({ children, className = '' }) => (
+const FormField = ({ children, className = '' }) => (
   <div className={`w-full min-w-0 shrink-0 ${className}`}>{children}</div>
 );
 
@@ -714,97 +713,6 @@ export const DataTable = ({
         />
       )}
     </div>
-  );
-};
-
-export const FullScreenWorkspace = ({
-  isOpen,
-  onClose,
-  title,
-  subtitle,
-  children,
-  sidebar,
-  onSave,
-  onCancel,
-  hasChanges = false,
-  saveDisabled = false,
-  isSaving = false,
-  extraActions,
-  mainClassName = 'max-w-4xl',
-}) => {
-  const dirty = isOpen && hasChanges && !!onSave;
-  const workspaceRef = useRef(null);
-  const titleId = React.useId();
-  useFocusTrap(isOpen, workspaceRef);
-
-  useUnsavedChanges({
-    hasChanges: dirty && !saveDisabled,
-    onSave,
-    onCancel: onCancel || onClose,
-    isSaving,
-    enabled: dirty,
-    elevated: true,
-  });
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown, true);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
-
-  return (
-    <>
-      {isOpen && (
-        <div
-          ref={workspaceRef}
-          className="fixed inset-0 z-[500] bg-[var(--color-bg-primary)] flex flex-col animate-in fade-in zoom-in-95 duration-200"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-        >
-          {/* Top Bar Navigation */}
-          <div className="h-14 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-surface)] flex items-center justify-between px-4 sm:px-6 shrink-0">
-             <div className="flex items-center gap-2 sm:gap-4 min-w-0 pr-2">
-                <button type="button" onClick={onClose} aria-label="Close workspace" className="p-1.5 sm:p-2 hover:bg-[var(--color-bg-secondary)] rounded-[var(--radius-atomic)] transition-colors shrink-0">
-                   <X size={20} />
-                </button>
-                <div className="min-w-0">
-                   <h2 id={titleId} className="tm-data-primary text-sm font-medium leading-none truncate">{title}</h2>
-                   {subtitle && <p className="tm-data-meta text-xs mt-1 truncate">{subtitle}</p>}
-                </div>
-             </div>
-             {extraActions ? (
-               <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-                 {extraActions}
-               </div>
-             ) : null}
-          </div>
-
-          {/* Main Layout Partition */}
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-             {/* Left Column: Canvas */}
-             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar bg-[var(--color-bg-surface)]">
-             <div className={`${mainClassName} mx-auto space-y-6`}>
-                   {children}
-                </div>
-             </div>
-
-             {/* Right Column: Utility Drawer */}
-             <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 border-t lg:border-t-0 bg-[var(--color-bg-workspace-sidebar)] overflow-y-auto px-4 sm:px-6 py-4 custom-scrollbar">
-                <div className="space-y-6">
-                   {sidebar}
-                </div>
-             </aside>
-          </div>
-        </div>
-      )}
-    </>
   );
 };
 

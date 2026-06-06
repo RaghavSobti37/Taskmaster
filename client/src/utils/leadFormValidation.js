@@ -81,4 +81,4 @@ export function validateLeadFormFields(data) {
   };
 }
 
-export { splitPhoneNumber, validatePhoneParts, composePhoneNumber };
+export { splitPhoneNumber };

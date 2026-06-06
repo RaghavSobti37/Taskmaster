@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const Contact = require('../models/Contact');
+const OfficeContact = require('../models/OfficeContact');
 const { protect, opsOrAdmin } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
 router.get('/', async (req, res) => {
   try {
-    const contacts = await Contact.find({ role: { $nin: ['customer', 'Customer'] } })
+    const contacts = await OfficeContact.find()
       .populate('addedBy', 'name email')
       .sort('name');
     res.json(contacts);
@@ -18,12 +18,12 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const contact = new Contact({
+    const contact = new OfficeContact({
       ...req.body,
-      addedBy: req.user._id
+      addedBy: req.user._id,
     });
     const saved = await contact.save();
-    const populated = await Contact.findById(saved._id).populate('addedBy', 'name email');
+    const populated = await OfficeContact.findById(saved._id).populate('addedBy', 'name email');
     res.status(201).json(populated);
   } catch (error) {
     res.status(400).json({ error: 'Failed to create contact' });
@@ -32,7 +32,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const updated = await Contact.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('addedBy', 'name email');
+    const updated = await OfficeContact.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('addedBy', 'name email');
     if (!updated) return res.status(404).json({ error: 'Contact not found' });
     res.json(updated);
   } catch (error) {
@@ -42,7 +42,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', opsOrAdmin, async (req, res) => {
   try {
-    await Contact.findByIdAndDelete(req.params.id);
+    await OfficeContact.findByIdAndDelete(req.params.id);
     res.json({ message: 'Contact removed' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete contact' });

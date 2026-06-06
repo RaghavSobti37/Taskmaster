@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/primitives';
+import { captureException } from '../lib/sentry';
 
 export default class RouteErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export default class RouteErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('[RouteErrorBoundary]', error, info?.componentStack);
+    captureException(error, { componentStack: info?.componentStack });
   }
 
   handleReload = () => {

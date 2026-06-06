@@ -28,5 +28,3 @@ export const TaskKanbanCardSkeleton = () => (
     <Skeleton variant="text" className="!h-3 !w-2/3" />
   </div>
 );
-
-export default TaskTableRowSkeleton;

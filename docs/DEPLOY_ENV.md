@@ -47,3 +47,61 @@ Preview/local dev does not need this — Vite proxies `/api` to `localhost:5000`
 Browser → Vercel (static) → /api/* rewrite → Render API → MongoDB
                 ↑ RENDER_API_PROXY_URL (Vercel env only)
 ```
+
+## Observability (Sentry + Datadog)
+
+Set on **Render API** (production + staging):
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | Server error tracking |
+| `SENTRY_ENVIRONMENT` | `production` / `staging` |
+| `SENTRY_RELEASE` | Release tag (defaults to `RENDER_GIT_COMMIT`) |
+| `SENTRY_TRACES_SAMPLE_RATE` | APM sample rate (default `0.1`) |
+| `DD_API_KEY` | Datadog APM |
+| `DD_SITE` | `datadoghq.com` |
+| `DD_ENV` | `production` / `staging` |
+| `DD_SERVICE` | `coreknot-api` |
+
+Set on **Vercel** (Production + Preview):
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_SENTRY_DSN` | Browser error tracking |
+| `VITE_SENTRY_ENVIRONMENT` | Match deploy tier |
+| `VITE_SENTRY_RELEASE` | Release tag |
+| `VITE_DD_APPLICATION_ID` | Datadog RUM |
+| `VITE_DD_CLIENT_TOKEN` | Datadog RUM |
+| `VITE_DD_SITE` | `datadoghq.com` |
+| `VITE_DD_ENV` | `production` / `staging` / `preview` |
+| `VITE_DD_SERVICE` | `coreknot-web` |
+
+Alert setup: [`SENTRY_ALERTS.md`](./SENTRY_ALERTS.md), [`MONITORING_ALERTS.md`](./MONITORING_ALERTS.md), [`datadog/README.md`](./datadog/README.md).
+
+## Staging environment
+
+| Component | Production | Staging |
+|-----------|------------|---------|
+| API | Render `CoreKnot-jfw0` | Render `coreknot-api-staging` (provision in Dashboard) |
+| Frontend | Vercel Production | Vercel Preview (PR builds) |
+| Database | `taskmaster_production` | `taskmaster_staging` |
+| `VITE_API_URL` (Preview) | — | Staging API URL (never prod) |
+| `MONGODB_URI` (staging API) | — | Atlas `taskmaster_staging` URI |
+
+See [`ENVIRONMENT_MATRIX.md`](./ENVIRONMENT_MATRIX.md) and [`render.yaml`](../render.yaml) staging service block.
+
+## Branch protection (GitHub Settings)
+
+Configure on `main`:
+
+1. Require pull request before merging
+2. Require 1 approval
+3. Require status checks: `server-test`, `client-check`, `e2e-public`, `lighthouse-public`
+4. Do not allow bypassing for non-admins
+
+Documented in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+## Rollback
+
+See [`DEPLOY_ROLLBACK.md`](./DEPLOY_ROLLBACK.md) — target under 5 minutes for app rollback.
+

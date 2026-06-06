@@ -12,6 +12,8 @@ import { dedupeInletEntries } from '../../utils/dataHubInlets';
 const INLET_COLORS = {
   exly: 'info',
   leads: 'mint',
+  outsourced: 'neutral',
+  newsletter: 'info',
   tsc: 'neutral',
   booked_calls: 'warning',
   enquiries: 'rose',
@@ -25,7 +27,9 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'crm', label: 'CRM' },
   { id: 'exly', label: 'Exly' },
-  { id: 'tsc', label: 'TSC' },
+  { id: 'outsourced', label: 'Outsourced' },
+  { id: 'artist_path', label: 'Artist Path' },
+  { id: 'newsletter', label: 'Newsletter' },
   { id: 'booked', label: 'Booked Calls' },
   { id: 'enquiries', label: 'Enquiries' },
   { id: 'mail', label: 'Mail' },
@@ -40,7 +44,10 @@ function formatDate(d) {
 const INLET_LABELS = {
   exly: 'Exly',
   leads: 'Leads',
-  tsc: 'TSC / HolySheet',
+  outsourced: 'Outsourced Data',
+  newsletter: 'Newsletter',
+  artist_path: 'Artist Path',
+  tsc: 'Outsourced Data',
   booked_calls: 'Booked Calls',
   enquiries: 'Enquiries',
   mail: 'Mail',
@@ -60,6 +67,11 @@ const SUMMARY_FIELDS = {
     { key: 'nextFollowupTime', label: 'Follow-up time' },
     { key: 'leadStatus', label: 'Status' },
     { key: 'callStatus', label: 'Call status' },
+  ],
+  outsourced: [
+    { key: 'campaign', label: 'Campaign' },
+    { key: 'originSource', label: 'Origin' },
+    { key: 'role', label: 'Role' },
   ],
   tsc: [
     { key: 'campaign', label: 'Campaign' },
@@ -179,10 +191,12 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
       overview: { ...base.overview, ...(sectionData?.overview || {}) },
       crm: sectionData?.crm,
       exly: sectionData?.exly,
-      tsc: sectionData?.tsc,
+      outsourced: sectionData?.outsourced || sectionData?.tsc,
+      newsletter: sectionData?.newsletter,
       bookedCalls: sectionData?.bookedCalls,
       enquiries: sectionData?.enquiries,
       mail: sectionData?.mail,
+      artistPath: sectionData?.artistPath,
       timeline: sectionData?.timeline,
     };
   }, [base, sectionData]);
@@ -294,7 +308,8 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                 <div>
                   <QuickStatRow label="CRM leads" value={overview?.crmLeadCount ?? person.crm?.leads?.length ?? 0} highlight={!!(overview?.crmLeadCount || person.crm?.leads?.length)} />
                   <QuickStatRow label="Exly bookings" value={overview?.exlyBookingCount ?? person.exly?.bookings?.length ?? 0} highlight={!!(overview?.exlyBookingCount || person.exly?.bookings?.length)} />
-                  <QuickStatRow label="TSC rows" value={person.tsc?.rows?.length || 0} />
+                  <QuickStatRow label="Outsourced rows" value={person.outsourced?.rows?.length || 0} />
+                  <QuickStatRow label="Newsletter" value={person.newsletter?.rows?.length || 0} />
                   <QuickStatRow label="Enquiries" value={person.enquiries?.length || 0} />
                   <QuickStatRow label="Mail events" value={person.mail?.events?.length || 0} />
                   <QuickStatRow label="Booked calls" value={person.bookedCalls?.leads?.length || 0} />
@@ -366,33 +381,79 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
             </div>
           )}
 
-          {tab === 'tsc' && (
+          {tab === 'outsourced' && (
             <div className="space-y-3">
-              {(person.tsc?.rows || []).map((row) => (
+              {(person.outsourced?.rows || []).map((row) => (
                 <Card key={row._id} className="p-4 space-y-1">
                   <div className="flex gap-2 flex-wrap">
                     <Badge variant="info">{row.campaign || 'No campaign'}</Badge>
                     <Badge variant="neutral">{row.originSource || '—'}</Badge>
                     {row.role && <Badge variant="mint">{row.role}</Badge>}
                   </div>
-                  <p className="text-xs">{row.city}, {row.state}</p>
+                  <p className="text-xs">{row.city}{row.state ? `, ${row.state}` : ''}</p>
                   {row.tags?.length > 0 && <p className="text-xs">Tags: {row.tags.join(', ')}</p>}
                 </Card>
               ))}
-              {!person.tsc?.rows?.length && <p className="text-sm text-[var(--color-text-muted)]">No TSC records</p>}
+              {!person.outsourced?.rows?.length && <p className="text-sm text-[var(--color-text-muted)]">No outsourced records</p>}
+            </div>
+          )}
+
+          {tab === 'newsletter' && (
+            <div className="space-y-3">
+              {(person.newsletter?.rows || []).map((row) => (
+                <Card key={row._id} className="p-4 space-y-1">
+                  <Badge variant="info">{row.source || 'Newsletter'}</Badge>
+                  <p className="text-xs text-[var(--color-text-muted)]">Subscribed: {formatDate(row.subscribedAt)}</p>
+                  <p className="text-xs">Status: {row.emailStatus || '—'}</p>
+                </Card>
+              ))}
+              {!person.newsletter?.rows?.length && <p className="text-sm text-[var(--color-text-muted)]">No newsletter subscriptions</p>}
+            </div>
+          )}
+
+          {tab === 'artist_path' && (
+            <div className="space-y-3">
+              {(person.artistPath?.responses || []).map((resp) => (
+                <Card key={resp._id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-[var(--color-text-muted)]">{formatDate(resp.submittedAt)}</span>
+                    {resp.answers?.artistType && <Badge variant="mint">{resp.answers.artistType}</Badge>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {Object.entries(resp.answers || {}).map(([k, v]) => v && k !== 'name' && k !== 'email' && k !== 'phone' && (
+                      <div key={k}>
+                        <span className="text-[var(--color-text-muted)] uppercase text-[9px] font-semibold">{k}</span>
+                        <p className="mt-0.5">{String(v)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+              {!person.artistPath?.responses?.length && (
+                <p className="text-sm text-[var(--color-text-muted)]">No Artist Path responses</p>
+              )}
             </div>
           )}
 
           {tab === 'booked' && (
             <div className="space-y-3">
+              {(person.bookedCalls?.calls || []).map((row) => (
+                <Card key={row._id} className="p-4">
+                  <Badge variant="warning">Booked Call</Badge>
+                  <p className="text-sm mt-2">{row.source || 'Call booking'}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">{formatDate(row.bookedAt)} · {row.callStatus || '—'}</p>
+                </Card>
+              ))}
               {(person.bookedCalls?.leads || []).map((lead) => (
                 <Card key={lead._id} className="p-4">
-                  <Badge variant="warning">Booked Call</Badge>
+                  <Badge variant="warning">CRM Booked Call</Badge>
                   <p className="text-sm mt-2">Follow-up: {lead.nextFollowupDate} {lead.nextFollowupTime}</p>
                   <p className="text-xs text-[var(--color-text-muted)]">Status: {lead.callStatus} · {lead.leadStatus}</p>
                 </Card>
               ))}
-              {!person.bookedCalls?.leads?.length && <p className="text-sm text-[var(--color-text-muted)]">No booked calls</p>}
+              {!person.bookedCalls?.leads?.length && !person.bookedCalls?.calls?.length && (
+                <p className="text-sm text-[var(--color-text-muted)]">No booked calls</p>
+              )}
             </div>
           )}
 
@@ -441,7 +502,7 @@ export default function DataHubPersonDetail({ contactId, onClose }) {
                     {evt.type === 'mail' && <Mail size={12} />}
                     {evt.type === 'exly' && <ShoppingBag size={12} />}
                     {evt.type === 'lead' && <Database size={12} />}
-                    {evt.type === 'tsc' && <Activity size={12} />}
+                    {(evt.type === 'tsc' || evt.type === 'outsourced') && <Activity size={12} />}
                     {evt.type === 'enquiry' && <MessageSquare size={12} />}
                   </div>
                   <div className="flex-1 min-w-0">

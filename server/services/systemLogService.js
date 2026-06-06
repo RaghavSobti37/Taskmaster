@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const SystemLog = require('../models/SystemLog');
 const User = require('../models/User');
-const { broadcastRealtimeEvent } = require('../config/realtime');
 const {
   SEVERITY,
   inferModuleFromRoute,
@@ -9,7 +8,6 @@ const {
   isValidModule,
 } = require('../../shared/systemLogContract');
 const { getTenantId, getUserId, getTraceId } = require('../utils/tenantContext');
-const logger = require('../utils/logger');
 
 const SENSITIVE_KEY = /password|token|secret|authorization|api[_-]?key|credential/i;
 const SYSTEM_ACTORS = new Set(['SYSTEM', 'ANON']);
@@ -91,6 +89,7 @@ function normalizeEntry(raw = {}) {
 }
 
 function broadcastSystemLog(doc) {
+  const { broadcastRealtimeEvent } = require('../config/realtime');
   broadcastRealtimeEvent('system-logs', 'system_log', doc);
 }
 
@@ -103,7 +102,7 @@ function writeSystemLog(rawEntry) {
       const plain = await enrichLogWithActorName(doc.toObject());
       broadcastSystemLog(plain);
     } catch (err) {
-      logger.error('SystemLog', 'Failed to persist system log', {
+      console.error('[SystemLog] Failed to persist system log', {
         error: err.message,
         traceId: entry.traceId,
       });

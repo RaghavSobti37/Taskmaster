@@ -114,7 +114,7 @@ export const extractUserMentionLabels = (text) => {
   return uniqueLabels(labels);
 };
 
-export const extractAssetMentionLabels = (text) => {
+const extractAssetMentionLabels = (text) => {
   const labels = tokenizeMentionText(text)
     .filter((seg) => seg.type === 'asset')
     .map((seg) => seg.label);

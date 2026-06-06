@@ -55,7 +55,7 @@ export function normalizeSchedulePayload(data) {
   return { ...data, tasks: normalizeTasks(data.tasks) };
 }
 
-export function taskAssignedToUserId(task, userId) {
+function taskAssignedToUserId(task, userId) {
   const uid = normalizeId(userId);
   if (!uid || !task) return false;
   const normalized = normalizeTask(task);

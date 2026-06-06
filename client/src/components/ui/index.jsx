@@ -13,18 +13,18 @@ export {
   PageContainer,
   TabSwitcher,
   Input,
-  FormField,
   FormFieldGrid,
   Badge,
   InfoButton,
   StatCard,
   TablePagination,
   DataTable,
-  FullScreenWorkspace,
   ProgressBar,
   Switch,
   Accordion,
 } from './primitives';
+
+export { FullScreenWorkspace } from './FullScreenWorkspace';
 
 // ── New unified components (Phase 1) ──
 export { default as EmptyState } from './EmptyState';
@@ -32,7 +32,6 @@ export { default as SearchInput } from './SearchInput';
 export { default as IconButton } from './IconButton';
 export { default as SectionCard } from './SectionCard';
 export { default as AddMembers } from './AddMembers';
-export { default as RoleOptionBoxes } from './RoleOptionBoxes';
 export { default as PageLoadGuard } from './PageLoadGuard';
 export { DataLoading } from './DataLoading';
 export { Spinner, LoadingState } from './Spinner';
@@ -49,16 +48,11 @@ export { default as DataOverviewSection } from './DataOverviewSection';
 export { default as DashboardWidgetShell } from './DashboardWidgetShell';
 export { default as DataListRow } from './DataListRow';
 export { default as DeltaBadge } from './DeltaBadge';
-export { default as MobileFilterSheet } from './MobileFilterSheet';
-export { default as MobileFilterField } from './MobileFilterField';
-export { default as MobilePageHeader } from './MobilePageHeader';
 export { default as ListCard } from './ListCard';
-export { default as FilterChips, FilterChip } from './FilterChips';
 export { default as CountBadge } from './CountBadge';
 export { default as MobileCollapsibleSection } from './MobileCollapsibleSection';
 export { default as DesktopRecommendedBanner } from './DesktopRecommendedBanner';
 export { UserAvatar, UserLabel } from './UserAvatar';
-export { default as DashboardSkeleton } from './DashboardSkeleton';
 export { default as PageSkeleton } from './PageSkeleton';
 
 // Heavy chart/modal exports live in ./charts.jsx and ./modals.jsx to keep the main barrel lean.

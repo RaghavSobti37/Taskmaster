@@ -43,6 +43,7 @@ export const HUB_CONFIG = {
     childKeys: [
       'admin_users',
       'admin_data',
+      'admin_artist_path',
       'admin_exly',
       'admin_scripts',
       'admin_gamification',
@@ -52,6 +53,7 @@ export const HUB_CONFIG = {
       { id: 'users', label: 'Users', path: '/admin/users', key: 'admin_users', icon: 'Users' },
       { id: 'teams', label: 'Teams', path: '/admin/teams', key: 'admin_users', icon: 'Building2' },
       { id: 'data-hub', label: 'Data Hub', path: '/admin', key: 'admin_data', icon: 'Database' },
+      { id: 'artist-path', label: 'Artist Path', path: '/admin/artist-path', key: 'admin_artist_path', icon: 'Music' },
       { id: 'exly', label: 'Exly Data', path: '/admin/exly-campaigns', key: 'admin_exly', icon: 'BarChart2' },
       { id: 'scripts', label: 'Script Runner', path: '/admin/scripts', key: 'admin_scripts', icon: 'Brackets' },
       { id: 'gamification', label: 'Gamification', path: '/admin/gamification', key: 'admin_gamification', icon: 'Trophy' },
@@ -62,7 +64,7 @@ export const HUB_CONFIG = {
 };
 
 /** Standalone child paths folded into hubs (excluded from default sidebar). */
-export const HUB_CHILD_PATHS = new Set([
+const HUB_CHILD_PATHS = new Set([
   '/leads',
   '/followups',
   '/bookings',
@@ -76,6 +78,7 @@ export const HUB_CHILD_PATHS = new Set([
   '/admin/users',
   '/admin/teams',
   '/admin',
+  '/admin/artist-path',
   '/admin/exly-campaigns',
   '/admin/scripts',
   '/admin/gamification',
@@ -147,7 +150,7 @@ export const DEFAULT_NAVBAR_GROUPS = [
 ];
 
 /** Map legacy sidebar paths to new zone ids. */
-export const LEGACY_PATH_ZONE = {
+const LEGACY_PATH_ZONE = {
   '/dashboard': 'primary',
   '/calendar': 'tools',
   '/todo': 'primary',
@@ -178,11 +181,11 @@ export const LEGACY_PATH_ZONE = {
   '/admin/qa': 'hubs',
 };
 
-export function isLegacyNavbarGroups(groups) {
+function isLegacyNavbarGroups(groups) {
   return (groups || []).some((g) => LEGACY_NAV_GROUP_IDS.has(g.id));
 }
 
-export function getHubPathForChildPath(path) {
+function getHubPathForChildPath(path) {
   if (['/leads', '/followups', '/bookings'].includes(path)) return '/crm';
   if (['/equipment', '/contacts', '/subscriptions'].includes(path)) return '/office';
   if (['/finance', '/announcements', '/ops-logs', '/artists'].includes(path)) return '/management';

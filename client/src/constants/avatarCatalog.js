@@ -53,7 +53,7 @@ export const AVATAR_TOTAL_COUNT = AVATAR_CATEGORY_IDS.reduce(
 /** Flat list for random default avatar selection */
 export const ALL_AVATAR_URLS = AVATAR_CATEGORY_IDS.flatMap((id) => AVATAR_CATALOG[id]);
 
-export function getRandomCatalogAvatar() {
+function getRandomCatalogAvatar() {
   const idx = Math.floor(Math.random() * ALL_AVATAR_URLS.length);
   return ALL_AVATAR_URLS[idx];
 }

@@ -89,7 +89,7 @@ export function useUnsavedChanges({
 /**
  * Draft + baseline state with auto dirty detection and bar registration.
  */
-export function useUnsavedDraft(initialValue, { onSave, compare, enabled = true, elevated = false } = {}) {
+function useUnsavedDraft(initialValue, { onSave, compare, enabled = true, elevated = false } = {}) {
   const [baseline, setBaseline] = useState(() => cloneSnapshot(initialValue));
   const [draft, setDraft] = useState(() => cloneSnapshot(initialValue));
   const [isSaving, setIsSaving] = useState(false);

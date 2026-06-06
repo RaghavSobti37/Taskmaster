@@ -85,7 +85,7 @@ export const normalizeAssigneeIds = (assigneeIds, creatorId) => {
 /** @deprecated Use normalizeAssigneeIds */
 export const mergeAssigneeIdsWithCreator = (assigneeIds, creatorId) => normalizeAssigneeIds(assigneeIds, creatorId);
 
-export const filterReviewQueueTasks = (tasks, user, getAssignments, { platformOwnerId } = {}) => {
+const filterReviewQueueTasks = (tasks, user, getAssignments, { platformOwnerId } = {}) => {
   const uid = normalizeId(user?._id || user);
   if (!uid) return [];
   return (tasks || []).filter((task) => {

@@ -31,17 +31,6 @@ const PLATFORM_OWNER_EMAILS = new Set(
 export const isPlatformOwnerUser = (user) =>
   PLATFORM_OWNER_EMAILS.has(String(user?.email || '').toLowerCase().trim());
 
-export {
-  canUserApproveReview,
-  canUserApproveOrRollback,
-  canUserRollbackTask,
-  needsReviewOnComplete,
-  requiresReviewForUser,
-  getDelegatedAssignments,
-  mergeAssigneeIdsWithCreator,
-  normalizeId,
-};
-
 export function getTaskAssignments(task) {
   return normalizeTask(task).assignments || [];
 }
@@ -72,7 +61,7 @@ export function getTaskAssignee(task) {
   return { _id: first?._id || first, name: null };
 }
 
-export function getTaskAssignerId(task) {
+function getTaskAssignerId(task) {
   return assignmentAssignerId(getDelegatedAssignmentForTask(task) || getAssignmentForUser(getTaskAssignments(task), getTaskAssignee(task)?._id));
 }
 
@@ -162,6 +151,8 @@ export function resolveTaskFinishIntent(task, user, projects = [], users = []) {
   return 'complete';
 }
 
-export function userRequiresReviewOnComplete(task, user, users = []) {
+function userRequiresReviewOnComplete(task, user, users = []) {
   return userMustSubmitForReview(task, user, users);
 }
+
+export { canUserApproveReview };

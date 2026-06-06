@@ -4,10 +4,10 @@
  * Do not point UI or meta tags at legacy favicon.svg (purple mark).
  */
 
-export const BRAND_THEME_COLOR = '#126d5e';
+const BRAND_THEME_COLOR = '#126d5e';
 
 /** Canonical vector mark — favicon, PWA fallback */
-export const BRAND_MARK_SVG = '/brand-mark.svg';
+const BRAND_MARK_SVG = '/brand-mark.svg';
 
 /** Raster + platform-specific assets under /icons/ */
 export const BRAND_ICONS = {
@@ -28,7 +28,7 @@ export const BRAND_ICONS = {
   notification: '/icons/icon-192.png',
 };
 
-export const SAFARI_PINNED_TAB_SVG = '/safari-pinned-tab.svg';
+const SAFARI_PINNED_TAB_SVG = '/safari-pinned-tab.svg';
 
 /** @param {string} [origin] */
 export const resolveBrandIconUrl = (path, origin) => {
@@ -46,4 +46,4 @@ export const getNotificationIconUrl = () => {
 };
 
 /** Service worker / push — same asset as in-app notifications */
-export const NOTIFICATION_ICON_PATH = BRAND_ICONS.notification;
+const NOTIFICATION_ICON_PATH = BRAND_ICONS.notification;

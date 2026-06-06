@@ -22,7 +22,7 @@ function formatBytes(bytes) {
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-export default function LastBackupCard() {
+function LastBackupCard() {
   const { user } = useAuth();
   const isAdmin = isAdminUser(user);
   const [watchProgress, setWatchProgress] = useState(false);
@@ -195,3 +195,5 @@ export default function LastBackupCard() {
     </DashboardWidgetShell>
   );
 }
+
+export default LastBackupCard;

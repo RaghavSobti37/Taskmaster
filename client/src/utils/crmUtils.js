@@ -11,7 +11,7 @@ export const SALES_REPS = {
   'akash': 'Akash'
 };
 
-export const getRepName = (rep) => {
+const getRepName = (rep) => {
   if (!rep) return 'UNASSIGNED';
   if (typeof rep === 'object' && rep.name) return rep.name;
   return SALES_REPS[rep] || rep;

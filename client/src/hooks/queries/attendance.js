@@ -104,7 +104,7 @@ export const useResetAttendance = () => {
   });
 };
 
-export const useUpdateAttendance = () => {
+const useUpdateAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => axios.put(`/api/attendance/${id}`, data),

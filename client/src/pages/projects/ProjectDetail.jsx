@@ -13,6 +13,7 @@ import ProjectKanban from '../../components/project/ProjectKanban';
 import ProjectTeam from '../../components/project/ProjectTeam';
 import ProjectAssets from '../../components/project/ProjectAssets';
 import ProjectFinance from '../../components/project/ProjectFinance';
+import ProjectGoalsPanel from '../../components/project/ProjectGoalsPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { Badge, ProgressBar, PageSkeleton, NexusDropdown, TabSwitcher, PageContainer, PageHeader, Button, SearchInput } from '../../components/ui';
 import { NexusModal } from '../../components/ui/modals';;
@@ -34,11 +35,9 @@ import {
   taskCompletionToast,
   taskApprovalToast,
   resolveTaskId,
-  pendingReviewToast,
-  awaitingAssigneeToast,
   normalizeCompletionHours,
 } from '../../utils/taskCompletion';
-import { resolveTaskFinishIntent } from '../../utils/taskReview';
+import { resolveTaskFinishFlow } from '../../utils/taskFinishFlow';
 import { updateAllTaskQueries } from '../../utils/taskCache';
 import { formatHoursMinutes } from '../../utils/formatHours';
 import { isOpsUser } from '../../utils/departmentPermissions';
@@ -114,39 +113,42 @@ const ProjectDetail = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const displayTasks = React.useMemo(() => {
-    const active = filteredTasks.filter((t) => t.status !== 'done');
-    const completed = filteredTasks.filter((t) => t.status === 'done');
-    return [...active, ...completed];
-  }, [filteredTasks]);
-
   const handleTaskCreated = () => {};
+
+  const findTaskById = (taskId) =>
+    tasks.find((t) => resolveTaskId(t) === String(taskId));
+
+  const handleCompleteRequest = (task) => {
+    const flow = resolveTaskFinishFlow(task, user, project ? [project] : [], users);
+    if (flow.blocked) {
+      if (flow.toast) addToast({ ...flow.toast, module: MODULE.PROJECTS });
+      return;
+    }
+    if (flow.action === 'approve') {
+      setTaskToApprove(flow.task);
+      return;
+    }
+    setCompletionSubmitForReview(!!flow.submitForReview);
+    setTaskToComplete(flow.task);
+  };
 
   const handleTaskUpdate = (taskId, updates) => {
     if (updates.status === 'done') {
-      const task = tasks.find((t) => t._id === taskId);
+      const task = findTaskById(taskId);
       if (!task) return;
-
-      const intent = resolveTaskFinishIntent(task, user, project ? [project] : [], users);
-      if (intent === 'approve') {
-        setTaskToApprove(task);
-        return;
-      }
-      if (intent === 'awaiting_assignee') {
-        addToast({ ...awaitingAssigneeToast(task.title), module: MODULE.PROJECTS });
-        return;
-      }
-      if (intent === 'awaiting_review') {
-        addToast({ ...pendingReviewToast(task.title), module: MODULE.PROJECTS });
-        return;
-      }
-      setCompletionSubmitForReview(intent === 'submit_review');
-      setTaskToComplete(task);
+      handleCompleteRequest(task);
       return;
     }
+
+    const existing = findTaskById(taskId);
+    if (existing?.status === 'done') {
+      handleOpenDetail(existing);
+      return;
+    }
+
     updateTaskMutation.mutate({ id: taskId, data: updates });
-    if (selectedTask?._id === taskId) {
-      setSelectedTask((prev) => ({ ...prev, ...updates }));
+    if (resolveTaskId(selectedTask) === String(taskId)) {
+      setSelectedTask((prev) => (prev ? { ...prev, ...updates } : prev));
     }
   };
 
@@ -189,12 +191,14 @@ const ProjectDetail = () => {
   };
 
   const handleCompleteTaskSubmit = async (task, hours) => {
+    const taskId = resolveTaskId(task);
+    if (!taskId) return;
     suppressAutoToasts(5000);
-    setCompletingTaskId(task._id);
+    setCompletingTaskId(taskId);
     setTaskToComplete(null);
     try {
       const taskRes = await axios.put(
-        `/api/tasks/${task?._id}`,
+        `/api/tasks/${taskId}`,
         { status: 'done', actualHours: normalizeCompletionHours(task.actualHours, hours) },
         AXIOS_SKIP_TOAST
       );
@@ -209,6 +213,9 @@ const ProjectDetail = () => {
       );
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['logs'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', { projectId: id }] });
+      setIsDetailModalOpen(false);
+      setSelectedTask(null);
     } catch (err) {
       console.error('Task completion failed:', err);
       addToast({
@@ -252,6 +259,7 @@ const ProjectDetail = () => {
       { id: 'kanban', label: 'Kanban Board', badge: taskIndicators.open },
       { id: 'schedule', label: 'Schedule', badge: scheduleTaskCount },
       { id: 'team', label: 'Team Members', badge: project?.members?.length ?? 0 },
+      { id: 'goals', label: 'Goals' },
       { id: 'assets', label: 'Project Files' },
     ];
     if (projectReviewCount > 0) {
@@ -353,6 +361,7 @@ const ProjectDetail = () => {
         task={selectedTask}
         onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
         onTaskDeleted={handleTaskDelete}
+        onFinishRequest={handleCompleteRequest}
       />
 
       <TaskCompletionModal 
@@ -418,7 +427,13 @@ const ProjectDetail = () => {
               className={activeTab === 'team' || activeTab === 'assets' ? 'w-full' : 'h-full'}
             >
               {activeTab === 'list' && (
-                <ProjectList tasks={displayTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} completingTaskId={completingTaskId} />
+                <ProjectList
+                  tasks={filteredTasks}
+                  onUpdate={handleTaskUpdate}
+                  onCompleteRequest={handleCompleteRequest}
+                  onDetail={handleOpenDetail}
+                  completingTaskId={completingTaskId}
+                />
               )}
               {activeTab === 'kanban' && (
                 <ProjectKanban tasks={filteredTasks} onUpdate={handleTaskUpdate} onDetail={handleOpenDetail} completingTaskId={completingTaskId} />
@@ -457,6 +472,9 @@ const ProjectDetail = () => {
               )}
               {activeTab === 'team' && (
                 <ProjectTeam project={project} onRemoveMember={handleRemoveMember} />
+              )}
+              {activeTab === 'goals' && (
+                <ProjectGoalsPanel projectId={id} project={project} />
               )}
               {activeTab === 'assets' && (
                 <ProjectAssets projectId={id} />

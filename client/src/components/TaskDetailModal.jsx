@@ -26,8 +26,9 @@ import TaskMessageComposeSection from './tasks/TaskMessageComposeSection';
 import TaskDetailModalHeader from './tasks/TaskDetailModalHeader';
 import { progressForTaskStatus } from '../utils/taskStatusButtons';
 import { mergeMentionedUserIdsIntoAssignees } from '../utils/mentionTokens';
+import { hasUnsavedTaskFields } from '../utils/taskFormDirty';
 
-const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate }) => {
+const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, onUpdate, onFinishRequest }) => {
   const { user } = useAuth();
   const { data: projects = [] } = useProjects();
   const { data: directoryUsers = [] } = useUserDirectory(isOpen);
@@ -54,6 +55,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const [showRollbackForm, setShowRollbackForm] = useState(false);
   const [rollbackReason, setRollbackReason] = useState('');
   const [showCompletionFlash, setShowCompletionFlash] = useState(false);
+  const [pendingFinishAfterSave, setPendingFinishAfterSave] = useState(false);
   const isSaving = updateTaskMutation.isPending;
 
   const canReview = canReviewTask(task, user);
@@ -64,7 +66,38 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const isCreator = creatorId?.toString() === user?._id?.toString();
   const canEditTimeline = canReview || isCreator;
   const isDone = formValues.status === 'done';
-  const canEditDoneStatus = isDone && canRollback;
+  const formLocked = isDone;
+
+  const isDirty = hasUnsavedTaskFields(task, {
+    title,
+    desc,
+    formValues,
+    directoryUsers,
+    creatorId,
+  });
+
+  const requestTaskFinish = () => {
+    if (!onFinishRequest) return;
+    onFinishRequest({ ...task, title: title.trim() || task.title });
+  };
+
+  const handleStatusChange = (status, progress) => {
+    if (status === 'done' && task.status !== 'done') {
+      if (isDirty) {
+        setPendingFinishAfterSave(true);
+        addToast({
+          type: 'warning',
+          title: 'Save first',
+          message: 'Save your changes — completion will open right after.',
+        });
+        return;
+      }
+      requestTaskFinish();
+      return;
+    }
+    setPendingFinishAfterSave(false);
+    setFormValues((v) => ({ ...v, status, progress }));
+  };
 
   React.useEffect(() => {
     if (task) {
@@ -74,6 +107,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       setShowRollbackForm(false);
       setRollbackReason('');
       setShowCompletionFlash(false);
+      setPendingFinishAfterSave(false);
       setFormValues({
         status: task.status || 'todo',
         progress: task.progress ?? progressForTaskStatus(task.status || 'todo'),
@@ -171,6 +205,12 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
           setShowRollbackForm(false);
           setRollbackReason('');
           notifyUpdate(data);
+          setDisplayTask(data);
+          if (pendingFinishAfterSave && onFinishRequest) {
+            setPendingFinishAfterSave(false);
+            onFinishRequest(data);
+            return;
+          }
           onClose();
         },
       }
@@ -198,7 +238,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   };
 
   const isInReview = formValues.status === 'in-review';
-  const formLocked = isDone && !canEditDoneStatus;
 
   return (
     <>
@@ -262,6 +301,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 afterTitle={
                   <>
                   <TaskCompletionFlash show={showCompletionFlash} />
+                  {pendingFinishAfterSave && !isDone && (
+                    <p className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                      Save your changes to open the completion dialog.
+                    </p>
+                  )}
                   <TaskMessageComposeSection
                     message={desc}
                     onMessageChange={setDesc}
@@ -269,8 +313,8 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                     mentionSessionKey={isOpen ? task._id : undefined}
                     inlineEdit={false}
                     status={formValues.status}
-                    onStatusChange={(status, progress) => setFormValues((v) => ({ ...v, status, progress }))}
-                    statusDisabled={formLocked}
+                    onStatusChange={handleStatusChange}
+                    statusDisabled={formLocked || isInReview}
                   />
                   </>
                 }
@@ -278,6 +322,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
 
               <TaskReviewActions
                 isInReview={isInReview}
+                isDone={isDone}
                 canReview={canReview}
                 canRollback={canRollback}
                 canApproveReview={canApproveReview}
@@ -291,12 +336,6 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
                 onApprove={(e) => handleSubmit(e, 'approve')}
                 onConfirmRollback={(e) => handleSubmit(e, 'rollback')}
               />
-
-              {canEditDoneStatus && (
-                <p className="text-xs text-[var(--color-text-muted)] py-2 border-t border-[var(--color-bg-border)]">
-                  Change status above to reopen or move this task — then Save. Creators may also mark tasks done without waiting for assignees.
-                </p>
-              )}
             </div>
 
             <div className="w-full lg:w-[min(400px,36vw)] shrink-0 flex flex-col min-h-[220px] max-h-[min(42vh,360px)] lg:max-h-none lg:min-h-0 border-t lg:border-t-0 border-[var(--color-bg-border)]">
@@ -320,17 +359,17 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
               <button type="button" onClick={onClose} disabled={isSaving || isDeleting} className="px-6 py-2 text-sm font-bold text-[var(--color-text-muted)] disabled:opacity-50">
                 Close
               </button>
-              {(!isDone || canEditDoneStatus) && (
+              {!isDone && (
                 <button
                   type="submit"
-                  disabled={!title || isSaving}
+                  disabled={!title || isSaving || (!isDirty && !pendingFinishAfterSave)}
                   className="bg-[var(--color-action-primary)] text-white px-8 py-2 rounded-[var(--radius-atomic)] font-bold flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSaving ? <Spinner size="sm" className="text-white" /> : <CheckCircle2 size={18} />}
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? 'Saving...' : (pendingFinishAfterSave ? 'Save & Continue' : 'Save')}
                 </button>
               )}
-              {isDone && !canEditDoneStatus && (
+              {isDone && (
                 <span className="text-xs text-[var(--color-text-muted)]">Completed</span>
               )}
             </div>

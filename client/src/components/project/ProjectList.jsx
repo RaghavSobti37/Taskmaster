@@ -1,5 +1,5 @@
-import React from 'react';
-import { Badge } from '../ui';
+import React, { useState } from 'react';
+import { Badge, TablePagination } from '../ui';
 import { User, Calendar, CheckCircle2, Circle } from 'lucide-react';
 import { format } from 'date-fns';
 import { getPriorityBadgeVariant } from '../../constants/taskOptions';
@@ -10,6 +10,8 @@ import { isPendingTask } from '../../utils/pendingTask';
 import MentionTitle from '../mentions/MentionTitle';
 import TaskMentionBadge from '../tasks/TaskMentionBadge';
 import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
+
+const COMPLETED_PAGE_SIZE_DEFAULT = 5;
 
 const STATUS_OPTIONS = [
   { value: 'todo', label: 'To Do', letter: 'T' },
@@ -34,7 +36,7 @@ const progressForStatus = (status) => {
   return 50;
 };
 
-const TaskStatusSwitcher = ({ task, onUpdate }) => (
+const TaskStatusSwitcher = ({ task, onUpdate, onCompleteRequest }) => (
   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
     {STATUS_OPTIONS.map((option) => {
       const isActive = task.status === option.value;
@@ -43,7 +45,13 @@ const TaskStatusSwitcher = ({ task, onUpdate }) => (
           key={option.value}
           type="button"
           title={option.label}
-          onClick={() => onUpdate(task._id, { status: option.value, progress: progressForStatus(option.value) })}
+          onClick={() => {
+            if (option.value === 'done') {
+              onCompleteRequest(task);
+              return;
+            }
+            onUpdate(task._id, { status: option.value, progress: progressForStatus(option.value) });
+          }}
           className={`rounded-lg text-[8px] font-black uppercase tracking-widest border transition-all shrink-0 ${
             isActive ? `px-3 py-1 min-w-[4.5rem] ${statusColor(option.value, true)}` : `w-7 h-7 flex items-center justify-center ${statusColor(option.value, false)}`
           }`}
@@ -55,19 +63,38 @@ const TaskStatusSwitcher = ({ task, onUpdate }) => (
   </div>
 );
 
-const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => {
+const TABLE_HEAD = (
+  <thead>
+    <tr className="border-b border-[var(--color-bg-border)]">
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] w-10" />
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Name</th>
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status</th>
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Priority</th>
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Assignee</th>
+      <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Due Date</th>
+    </tr>
+  </thead>
+);
+
+const ProjectList = ({ tasks, onUpdate, onCompleteRequest, onDetail, completingTaskId = null }) => {
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedPageSize, setCompletedPageSize] = useState(COMPLETED_PAGE_SIZE_DEFAULT);
+
   const activeTasks = tasks.filter((t) => t.status !== 'done');
   const doneTasks = tasks.filter((t) => t.status === 'done');
-  const hasBothSections = activeTasks.length > 0 && doneTasks.length > 0;
+  const completedTotalPages = Math.max(1, Math.ceil(doneTasks.length / completedPageSize));
+  const completedStart = (completedPage - 1) * completedPageSize;
+  const paginatedDoneTasks = doneTasks.slice(completedStart, completedStart + completedPageSize);
 
-  const renderRow = (task) => {
+  const renderRow = (task, { completedSection = false } = {}) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
       return <TaskTableRowSkeleton key={task._id} colSpan={6} className="!border-0" />;
     }
 
     const isDone = task.status === 'done';
+    const isInReview = task.status === 'in-review';
 
     return (
       <tr
@@ -82,9 +109,14 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onUpdate(task._id, { status: isDone ? 'todo' : 'done', progress: isDone ? 0 : 100 });
+              if (isDone) {
+                onDetail(task);
+                return;
+              }
+              if (!isInReview) onCompleteRequest(task);
             }}
             className={`transition-colors ${isDone ? 'text-[var(--color-pastel-slate-text)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-action-primary)]'}`}
+            aria-label={isDone ? 'View completed task' : 'Mark complete'}
           >
             {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
           </button>
@@ -103,7 +135,11 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
           </div>
         </td>
         <td className="px-4 py-2">
-          <TaskStatusSwitcher task={task} onUpdate={onUpdate} />
+          {completedSection ? (
+            <Badge variant="info">Done</Badge>
+          ) : (
+            <TaskStatusSwitcher task={task} onUpdate={onUpdate} onCompleteRequest={onCompleteRequest} />
+          )}
         </td>
         <td className="px-4 py-2">
           <Badge variant={isDone ? 'info' : getPriorityBadgeVariant(task.priority)}>
@@ -137,40 +173,57 @@ const ProjectList = ({ tasks, onUpdate, onDetail, completingTaskId = null }) => 
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr className="border-b border-[var(--color-bg-border)]">
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] w-10" />
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Task Name</th>
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Status</th>
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Priority</th>
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Assignee</th>
-            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Due Date</th>
-          </tr>
-        </thead>
+    <div className="space-y-6">
+      <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+        <table className="w-full text-left border-collapse">
+          {TABLE_HEAD}
           <tbody>
-            {activeTasks.map(renderRow)}
-
-            {hasBothSections && (
-              <tr>
-                <td colSpan={6} className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[var(--color-bg-border)]">
-                  Completed ({doneTasks.length})
-                </td>
-              </tr>
-            )}
-
-            {doneTasks.map(renderRow)}
-
-            {tasks.length === 0 && (
+            {activeTasks.map((task) => renderRow(task))}
+            {activeTasks.length === 0 && doneTasks.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-16 text-center text-[var(--color-text-muted)] italic">
                   No tasks found in this project.
                 </td>
               </tr>
             )}
+            {activeTasks.length === 0 && doneTasks.length > 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-10 text-center text-[var(--color-text-muted)] italic">
+                  No open tasks — all tasks are completed.
+                </td>
+              </tr>
+            )}
           </tbody>
-      </table>
+        </table>
+      </div>
+
+      {doneTasks.length > 0 && (
+        <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
+          <div className="px-4 py-2 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Completed Tasks ({doneTasks.length})
+            </h3>
+          </div>
+          <table className="w-full text-left border-collapse">
+            {TABLE_HEAD}
+            <tbody>
+              {paginatedDoneTasks.map((task) => renderRow(task, { completedSection: true }))}
+            </tbody>
+          </table>
+          <TablePagination
+            pageSize={completedPageSize}
+            currentPage={Math.min(completedPage, completedTotalPages)}
+            totalPages={completedTotalPages}
+            totalItems={doneTasks.length}
+            rowCount={paginatedDoneTasks.length}
+            onPageChange={setCompletedPage}
+            onPageSizeChange={(size) => {
+              setCompletedPageSize(size);
+              setCompletedPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

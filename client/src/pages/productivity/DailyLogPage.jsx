@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { format, isSameDay, eachDayOfInterval } from 'date-fns';
+import { format, isSameDay, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
 
 const ACTIVITY_GRID_START = new Date(2026, 4, 12); // 12 May 2026
 import {
@@ -20,6 +20,7 @@ import LeadAuditsContent from '../../components/admin/LeadAuditsContent';
 import { 
   useLogs, useProjects, useTasks, useUserDirectory, useWorkspaces, useUpdateLog, useDeleteLog, useActivityGrid 
 } from '../../hooks/useTaskmasterQueries';
+import { resolveTaskId } from '../../utils/taskCompletion';
 import WorkspaceProjectFields, {
   resolveWorkspaceFromProjectName,
 } from '../../components/forms/WorkspaceProjectFields';
@@ -80,7 +81,12 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     ? requestedUserId
     : user?._id;
 
-  const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, 200);
+  const logDateRange = useMemo(() => ({
+    startDate: startOfDay(selectedDate).toISOString(),
+    endDate: endOfDay(selectedDate).toISOString(),
+  }), [selectedDate]);
+
+  const { data: logs = [], isLoading: logsLoading } = useLogs(targetUserId, { limit: 500, ...logDateRange });
   const { data: projects = [] } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
   const { data: tasks = [] } = useTasks(targetUserId, { includeOldCompleted: true });
@@ -223,11 +229,37 @@ const DailyLogPage = ({ adminViewUserId, adminViewUserName }) => {
     return rows;
   }, [dailyLogs, logSearch, logSort, logWorkspaceFilter, logProjectFilter, projects]);
 
-  const dailyTasks = useMemo(() => tasks.filter((t) => {
-    if (t.status !== 'done') return false;
-    const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.updatedAt || t.createdAt);
-    return isSameDay(taskDate, selectedDate);
-  }), [tasks, selectedDate]);
+  const dailyTasks = useMemo(() => {
+    const seen = new Set();
+    const rows = [];
+
+    for (const t of tasks) {
+      if (t.status !== 'done') continue;
+      const taskDate = t.completedAt ? new Date(t.completedAt) : new Date(t.updatedAt || t.createdAt);
+      if (!isSameDay(taskDate, selectedDate)) continue;
+      const id = resolveTaskId(t);
+      if (id) seen.add(id);
+      rows.push(t);
+    }
+
+    for (const log of logs) {
+      if (log.action !== 'DAILY_LOG') continue;
+      const logType = log.details?.type;
+      if (logType !== 'TASK_COMPLETION' && logType !== 'TASK_REVIEW') continue;
+      if (!isSameDay(new Date(log.createdAt), selectedDate)) continue;
+      const id = String(log.targetId?._id || log.targetId || log._id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      rows.push({
+        _id: id,
+        title: log.details?.title || 'Completed task',
+        status: 'done',
+        completedAt: log.createdAt,
+      });
+    }
+
+    return rows;
+  }, [tasks, logs, selectedDate]);
 
   const totalMinutes = useMemo(() => dailyLogs.reduce((acc, log) => {
     const time = log.details?.timeSpent;

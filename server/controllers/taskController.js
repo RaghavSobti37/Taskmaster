@@ -274,6 +274,46 @@ exports.getTasks = async (req, res, next) => {
       queryFilter = mergeTaskListFilter(queryFilter, { includeOldCompleted: includeAllCompleted });
     }
 
+    const isProjectList = Boolean(projectId)
+      && !includeAllCompleted
+      && scope !== 'todo'
+      && scope !== 'dashboard'
+      && scope !== 'review';
+
+    if (isProjectList) {
+      const completedLimit = Math.min(Math.max(parseInt(req.query.completedLimit, 10) || 5, 1), 50);
+      const completedPage = Math.max(parseInt(req.query.completedPage, 10) || 1, 1);
+      const baseClauses = queryFilter.$and || [queryFilter];
+      const activeFilter = { $and: [...baseClauses, { status: { $ne: 'done' } }] };
+      const completedFilter = { $and: [...baseClauses, { status: 'done' }] };
+      const completedSort = { completedAt: -1, updatedAt: -1, _id: -1 };
+
+      const Task = require('../models/Task');
+      const [activeTasks, completedResult, completedTotal] = await Promise.all([
+        TaskService.getTasks(activeFilter, { userId: req.user._id }),
+        TaskService.getTasks(completedFilter, {
+          userId: req.user._id,
+          page: completedPage,
+          limit: completedLimit,
+          sort: completedSort,
+        }),
+        Task.countDocuments(completedFilter),
+      ]);
+
+      const activeList = Array.isArray(activeTasks) ? activeTasks : activeTasks.tasks || [];
+      const completedList = Array.isArray(completedResult)
+        ? completedResult
+        : completedResult.tasks || [];
+
+      return res.json({
+        tasks: [...activeList, ...completedList],
+        completedTotal,
+        completedPage,
+        completedLimit,
+        completedPages: Math.max(1, Math.ceil(completedTotal / completedLimit)),
+      });
+    }
+
     const page = parseInt(req.query.page, 10);
     const limit = parseInt(req.query.limit, 10);
     const listMode = !projectId && scope !== 'review';

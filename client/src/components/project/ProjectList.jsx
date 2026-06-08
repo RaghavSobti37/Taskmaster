@@ -76,17 +76,51 @@ const TABLE_HEAD = (
   </thead>
 );
 
-const ProjectList = ({ tasks, onUpdate, onCompleteRequest, onDetail, completingTaskId = null }) => {
+const ProjectList = ({
+  tasks,
+  onUpdate,
+  onCompleteRequest,
+  onDetail,
+  completingTaskId = null,
+  completedTotal = null,
+  completedPage = 1,
+  completedPageSize = COMPLETED_PAGE_SIZE_DEFAULT,
+  completedTotalPages = 1,
+  onCompletedPageChange,
+  onCompletedPageSizeChange,
+  serverCompletedPagination = false,
+}) => {
   const { data: workspaces = [] } = useWorkspaces();
   const { data: projects = [] } = useProjects();
-  const [completedPage, setCompletedPage] = useState(1);
-  const [completedPageSize, setCompletedPageSize] = useState(COMPLETED_PAGE_SIZE_DEFAULT);
+  const [localCompletedPage, setLocalCompletedPage] = useState(1);
+  const [localCompletedPageSize, setLocalCompletedPageSize] = useState(COMPLETED_PAGE_SIZE_DEFAULT);
 
   const activeTasks = tasks.filter((t) => t.status !== 'done');
   const doneTasks = tasks.filter((t) => t.status === 'done');
-  const completedTotalPages = Math.max(1, Math.ceil(doneTasks.length / completedPageSize));
-  const completedStart = (completedPage - 1) * completedPageSize;
-  const paginatedDoneTasks = doneTasks.slice(completedStart, completedStart + completedPageSize);
+  const useServerPagination = serverCompletedPagination && typeof onCompletedPageChange === 'function';
+  const pageSize = useServerPagination ? completedPageSize : localCompletedPageSize;
+  const currentPage = useServerPagination ? completedPage : localCompletedPage;
+  const totalDoneCount = useServerPagination ? (completedTotal ?? doneTasks.length) : doneTasks.length;
+  const totalPages = useServerPagination
+    ? completedTotalPages
+    : Math.max(1, Math.ceil(doneTasks.length / pageSize));
+  const completedStart = (currentPage - 1) * pageSize;
+  const paginatedDoneTasks = useServerPagination
+    ? doneTasks
+    : doneTasks.slice(completedStart, completedStart + pageSize);
+
+  const handlePageChange = (page) => {
+    if (useServerPagination) onCompletedPageChange(page);
+    else setLocalCompletedPage(page);
+  };
+
+  const handlePageSizeChange = (size) => {
+    if (useServerPagination && onCompletedPageSizeChange) onCompletedPageSizeChange(size);
+    else {
+      setLocalCompletedPageSize(size);
+      setLocalCompletedPage(1);
+    }
+  };
 
   const renderRow = (task, { completedSection = false } = {}) => {
     if (completingTaskId === task._id || isPendingTask(task) || task._updating) {
@@ -197,11 +231,11 @@ const ProjectList = ({ tasks, onUpdate, onCompleteRequest, onDetail, completingT
         </table>
       </div>
 
-      {doneTasks.length > 0 && (
+      {totalDoneCount > 0 && (
         <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
           <div className="px-4 py-2 border-b border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]/40">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
-              Completed Tasks ({doneTasks.length})
+              Completed Tasks ({totalDoneCount})
             </h3>
           </div>
           <table className="w-full text-left border-collapse">
@@ -211,16 +245,13 @@ const ProjectList = ({ tasks, onUpdate, onCompleteRequest, onDetail, completingT
             </tbody>
           </table>
           <TablePagination
-            pageSize={completedPageSize}
-            currentPage={Math.min(completedPage, completedTotalPages)}
-            totalPages={completedTotalPages}
-            totalItems={doneTasks.length}
+            pageSize={pageSize}
+            currentPage={Math.min(currentPage, totalPages)}
+            totalPages={totalPages}
+            totalItems={totalDoneCount}
             rowCount={paginatedDoneTasks.length}
-            onPageChange={setCompletedPage}
-            onPageSizeChange={(size) => {
-              setCompletedPageSize(size);
-              setCompletedPage(1);
-            }}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         </div>
       )}

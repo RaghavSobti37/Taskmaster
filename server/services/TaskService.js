@@ -1008,8 +1008,21 @@ exports.updateTask = async (taskId, updates, user, session) => {
 
     if (coreUpdates.status === 'in-review' && !reviewAction) {
       const mine = getAssignmentForUser(assignments, user._id);
-      const reviewerId = assignmentAssignerId(mine);
+      const reviewerId = assignmentAssignerId(mine)
+        || rulesNormalizeId(existing.createdBy?._id || existing.createdBy);
       const assigneeId = user._id.toString();
+      if (existing.status !== 'in-review') {
+        const prevHours = Number(existing.actualHours) || 0;
+        const nextHours = Number(task.actualHours) || 0;
+        let hoursSubmitted = Math.max(0, nextHours - prevHours);
+        if (hoursSubmitted <= 0) hoursSubmitted = MIN_COMPLETION_MINUTES / 60;
+        await createReviewSubmitLogs({
+          task,
+          assigneeId,
+          hoursSubmitted,
+          session,
+        });
+      }
       if (reviewerId && reviewerId !== assigneeId) {
         pendingNotifications.push({
           recipientId: reviewerId,
@@ -1023,18 +1036,6 @@ exports.updateTask = async (taskId, updates, user, session) => {
           actorId: user._id,
           iconType: 'user',
         });
-        if (existing.status !== 'in-review') {
-          const prevHours = Number(existing.actualHours) || 0;
-          const nextHours = Number(task.actualHours) || 0;
-          let hoursSubmitted = Math.max(0, nextHours - prevHours);
-          if (hoursSubmitted <= 0) hoursSubmitted = MIN_COMPLETION_MINUTES / 60;
-          await createReviewSubmitLogs({
-            task,
-            assigneeId,
-            hoursSubmitted,
-            session,
-          });
-        }
       }
     }
 
@@ -1131,7 +1132,7 @@ exports.updateTask = async (taskId, updates, user, session) => {
       }
     }
 
-    if (coreUpdates.status === 'done' && !reviewAction) {
+    if (String(task.status || '').toLowerCase() === 'done' && !reviewAction) {
       if (!needsReviewOnComplete(assignments, user._id, { mentionOnly, taskCreatedBy: existing.createdBy })) {
         await finalizeTaskCompletion(task, user, session);
         await queueTaskCompletedGamification(user._id, task);

@@ -32,6 +32,7 @@ export const isPlatformOwnerUser = (user) =>
   PLATFORM_OWNER_EMAILS.has(String(user?.email || '').toLowerCase().trim());
 
 export function getTaskAssignments(task) {
+  if (!task) return [];
   return normalizeTask(task).assignments || [];
 }
 
@@ -142,10 +143,13 @@ export function resolveTaskFinishIntent(task, user, projects = [], users = []) {
   if (task.status === 'in-review') {
     return canReviewTask(task, user) ? 'approve' : 'awaiting_review';
   }
+  const uid = normalizeId(user?._id || user);
+  const creatorId = normalizeId(task?.createdBy?._id || task?.createdBy);
+  const isCreator = uid && creatorId && uid === creatorId;
   if (userMustSubmitForReview(task, user, users)) {
     return 'submit_review';
   }
-  if (canUserApproveReview(user, getTaskAssignments(task))) {
+  if (!isCreator && canUserApproveReview(user, getTaskAssignments(task))) {
     return 'awaiting_assignee';
   }
   return 'complete';

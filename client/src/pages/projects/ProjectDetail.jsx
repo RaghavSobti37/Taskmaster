@@ -55,7 +55,23 @@ const ProjectDetail = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const includeOldCompleted = filterStatus === 'done' || searchTerm.trim().length > 0;
-  const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id, { includeOldCompleted });
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedPageSize, setCompletedPageSize] = useState(5);
+
+  useEffect(() => {
+    setCompletedPage(1);
+  }, [id, includeOldCompleted, searchTerm, filterStatus]);
+
+  const { data: projectTasksData, isLoading: tasksLoading } = useProjectTasks(id, {
+    includeOldCompleted,
+    completedPage: includeOldCompleted ? 1 : completedPage,
+    completedLimit: includeOldCompleted ? 200 : completedPageSize,
+  });
+  const tasks = projectTasksData?.tasks ?? [];
+  const completedTotal = projectTasksData?.completedTotal ?? tasks.filter((t) => t.status === 'done').length;
+  const completedTotalPages = includeOldCompleted
+    ? 1
+    : (projectTasksData?.completedPages ?? Math.max(1, Math.ceil(completedTotal / completedPageSize)));
   const { data: reviewTasks = [] } = useReviewTasks(!!user?._id);
   const projectReviewCount = useMemo(
     () => countReviewTasksByProject(reviewTasks)[String(id)] || 0,
@@ -359,7 +375,10 @@ const ProjectDetail = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         task={selectedTask}
-        onTaskUpdated={() => queryClient.invalidateQueries({ queryKey: ['tasks'] })}
+        onTaskUpdated={(updated) => {
+          if (updated) setSelectedTask((prev) => (prev ? { ...prev, ...updated } : prev));
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }}
         onTaskDeleted={handleTaskDelete}
         onFinishRequest={handleCompleteRequest}
       />
@@ -433,6 +452,16 @@ const ProjectDetail = () => {
                   onCompleteRequest={handleCompleteRequest}
                   onDetail={handleOpenDetail}
                   completingTaskId={completingTaskId}
+                  completedTotal={completedTotal}
+                  completedPage={completedPage}
+                  completedPageSize={completedPageSize}
+                  completedTotalPages={completedTotalPages}
+                  onCompletedPageChange={setCompletedPage}
+                  onCompletedPageSizeChange={(size) => {
+                    setCompletedPageSize(size);
+                    setCompletedPage(1);
+                  }}
+                  serverCompletedPagination={!includeOldCompleted}
                 />
               )}
               {activeTab === 'kanban' && (

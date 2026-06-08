@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Trash2 } from 'lucide-react';
 import { Button, Spinner } from './ui';
@@ -56,7 +56,13 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   const [rollbackReason, setRollbackReason] = useState('');
   const [showCompletionFlash, setShowCompletionFlash] = useState(false);
   const [pendingFinishAfterSave, setPendingFinishAfterSave] = useState(false);
+  const pendingFinishRef = useRef(false);
   const isSaving = updateTaskMutation.isPending;
+
+  const setPendingFinish = (value) => {
+    pendingFinishRef.current = value;
+    setPendingFinishAfterSave(value);
+  };
 
   const canReview = canReviewTask(task, user);
   const canRollback = canRollbackTask(task, user);
@@ -77,14 +83,22 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
   });
 
   const requestTaskFinish = () => {
-    if (!onFinishRequest) return;
-    onFinishRequest({ ...task, title: title.trim() || task.title });
+    if (!onFinishRequest) {
+      addToast({
+        type: 'warning',
+        title: 'Completion unavailable',
+        message: 'Mark this task done from the project task list.',
+      });
+      return;
+    }
+    onFinishRequest({ ...(displayTask ?? task), title: title.trim() || task.title });
   };
 
   const handleStatusChange = (status, progress) => {
-    if (status === 'done' && task.status !== 'done') {
+    const currentStatus = displayTask?.status ?? task.status;
+    if (status === 'done' && currentStatus !== 'done') {
       if (isDirty) {
-        setPendingFinishAfterSave(true);
+        setPendingFinish(true);
         addToast({
           type: 'warning',
           title: 'Save first',
@@ -95,7 +109,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       requestTaskFinish();
       return;
     }
-    setPendingFinishAfterSave(false);
+    setPendingFinish(false);
     setFormValues((v) => ({ ...v, status, progress }));
   };
 
@@ -107,7 +121,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       setShowRollbackForm(false);
       setRollbackReason('');
       setShowCompletionFlash(false);
-      setPendingFinishAfterSave(false);
+      setPendingFinish(false);
       setFormValues({
         status: task.status || 'todo',
         progress: task.progress ?? progressForTaskStatus(task.status || 'todo'),
@@ -140,6 +154,11 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     if (onUpdate) onUpdate(data);
   };
 
+  const postActivityMessage = async (taskId, body) => {
+    if (!body?.trim()) return;
+    await axios.post(`/api/tasks/${taskId}/activity`, { body: body.trim() }, AXIOS_SKIP_TOAST);
+  };
+
   const submitUpdate = (reviewAction) => {
     const taskId = resolveTaskId(task);
     if (!taskId) return;
@@ -149,9 +168,9 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       return;
     }
 
+    const messageDraft = desc.trim();
     const payload = {
       title,
-      description: reviewAction === 'rollback' ? rollbackReason.trim() : desc,
       status: reviewAction ? undefined : formValues.status,
       progress: reviewAction ? undefined : formValues.progress,
       priority: formValues.priority,
@@ -166,6 +185,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
       ).filter((id) => id !== creatorId?.toString()),
       reviewAction,
     };
+
+    if (reviewAction === 'rollback') {
+      payload.description = rollbackReason.trim();
+    }
 
     if (canEditTimeline) {
       const originalScheduleDate = toDateKey(task.scheduleDate) || '';
@@ -193,7 +216,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
     updateTaskMutation.mutate(
       { id: taskId, data: payload },
       {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           if (reviewAction === 'approve') {
             setShowCompletionFlash(true);
             setDesc('');
@@ -201,14 +224,38 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, onTaskDeleted, 
             setTimeout(() => onClose(), 1200);
             return;
           }
+
+          let nextTask = data;
+          if (messageDraft) {
+            try {
+              await postActivityMessage(taskId, messageDraft);
+            } catch (err) {
+              console.error('Task message post failed:', err);
+              addToast({
+                type: 'error',
+                message: err.response?.data?.error || 'Task saved but message failed to post.',
+              });
+            }
+          }
+
           setDesc('');
           setShowRollbackForm(false);
           setRollbackReason('');
-          notifyUpdate(data);
-          setDisplayTask(data);
-          if (pendingFinishAfterSave && onFinishRequest) {
-            setPendingFinishAfterSave(false);
-            onFinishRequest(data);
+          notifyUpdate(nextTask);
+          setDisplayTask(nextTask);
+
+          const shouldFinish = pendingFinishRef.current;
+          if (shouldFinish) {
+            setPendingFinish(false);
+            if (onFinishRequest) {
+              onFinishRequest(nextTask);
+              return;
+            }
+            addToast({
+              type: 'warning',
+              title: 'Completion unavailable',
+              message: 'Changes saved. Reopen the task to mark it done from the list.',
+            });
             return;
           }
           onClose();

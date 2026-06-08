@@ -97,17 +97,43 @@ export const useReviewTasks = (enabled = true) => {
   });
 };
 
-export const useProjectTasks = (projectId, { includeOldCompleted = false } = {}) => {
+export const useProjectTasks = (projectId, {
+  includeOldCompleted = false,
+  completedPage = 1,
+  completedLimit = 5,
+} = {}) => {
   return useQuery({
     queryKey: includeOldCompleted
       ? ['tasks', { projectId, includeOldCompleted: true }]
-      : ['tasks', { projectId }],
+      : ['tasks', { projectId, completedPage, completedLimit }],
     queryFn: async () => {
       const params = { projectId };
-      if (includeOldCompleted) params.includeOldCompleted = '1';
+      if (includeOldCompleted) {
+        params.includeOldCompleted = '1';
+      } else {
+        params.completedPage = completedPage;
+        params.completedLimit = completedLimit;
+      }
       return (await axios.get('/api/tasks', { params })).data;
     },
-    select: (data) => normalizeTasks(data),
+    select: (data) => {
+      if (Array.isArray(data)) {
+        return {
+          tasks: normalizeTasks(data),
+          completedTotal: data.filter((t) => t.status === 'done').length,
+          completedPage: 1,
+          completedLimit,
+          completedPages: 1,
+        };
+      }
+      return {
+        tasks: normalizeTasks(data?.tasks || []),
+        completedTotal: data?.completedTotal ?? (data?.tasks || []).filter((t) => t.status === 'done').length,
+        completedPage: data?.completedPage ?? 1,
+        completedLimit: data?.completedLimit ?? completedLimit,
+        completedPages: data?.completedPages ?? 1,
+      };
+    },
     enabled: !!projectId,
     staleTime: 1000 * 60 * 2,
     placeholderData: keepPreviousData,

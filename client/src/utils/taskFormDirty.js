@@ -44,7 +44,9 @@ export function hasUnsavedTaskFields(task, { title, desc, formValues, directoryU
   const nextDueDate = formValues?.dueDate || '';
   if (nextDueDate !== baselineDueDate) return true;
 
-  const baselineAssignees = normalizeAssigneeIds(task.assignees);
+  const baselineAssignees = normalizeAssigneeIds(
+    (task.assignees || []).filter((id) => String(typeof id === 'object' ? id._id : id) !== String(creatorId || ''))
+  );
   const nextAssignees = normalizeAssigneeIds(
     mergeMentionedUserIdsIntoAssignees(
       formValues?.assignees || [],

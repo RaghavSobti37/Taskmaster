@@ -13,7 +13,6 @@ const ReportMembersTable = ({ members = [] }) => (
     ) : (
       <DataTable
         className="!border-none !rounded-none"
-        defaultPageSize={10}
         columns={[
       {
         header: 'Name',

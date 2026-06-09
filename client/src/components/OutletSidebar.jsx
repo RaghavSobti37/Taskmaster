@@ -69,7 +69,7 @@ const PAGE_CONFIG = {
   '/todo': { icon: ListTodo, label: 'Todo', accessKey: 'todo' },
   '/inbox': { icon: Inbox, label: 'Inbox', accessKey: 'inbox' },
   '/projects': { icon: Briefcase, label: 'Projects', accessKey: 'projects' },
-  '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: true },
+  '/assets': { icon: FolderArchive, label: 'Assets', accessKey: 'assets', end: false },
   '/schedule': { icon: CalendarClock, label: 'Schedule', accessKey: 'schedule' },
   '/logs': { icon: NotebookPen, label: 'Daily Logs', accessKey: 'logs' },
   '/notes': { icon: StickyNote, label: 'Notes', accessKey: 'notes' },

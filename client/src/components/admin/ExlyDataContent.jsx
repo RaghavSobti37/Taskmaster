@@ -91,7 +91,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bookingPaymentFilter, setBookingPaymentFilter] = useState('all');
   const [bookingPage, setBookingPage] = useState(1);
-  const [bookingRowsPerPage, setBookingRowsPerPage] = useState(25);
+  const [bookingRowsPerPage, setBookingRowsPerPage] = useState(10);
   const [detailsPagination, setDetailsPagination] = useState(null);
   const [offeringMetrics, setOfferingMetrics] = useState(null);
 
@@ -107,7 +107,7 @@ const ExlyDataContent = ({ mode = 'campaigns' }) => {
   
   // Unlinked Bookings Pagination
   const [unlinkedPage, setUnlinkedPage] = useState(1);
-  const [unlinkedRowsPerPage, setUnlinkedRowsPerPage] = useState(25);
+  const [unlinkedRowsPerPage, setUnlinkedRowsPerPage] = useState(10);
 
   useEffect(() => {
     setUnlinkedPage(1);

@@ -21,7 +21,6 @@ const ReportCalendarTable = ({ events = [] }) => (
     ) : (
       <DataTable
         className="!border-none !rounded-none"
-        defaultPageSize={10}
         columns={[
           {
             header: 'Date',

@@ -62,6 +62,31 @@ describe('artistCrmImport identity', () => {
   });
 });
 
+describe('artistCrmImport bulk helpers', () => {
+  const {
+    resolveImportDocUniqueness,
+    coerceArtistImportIdentity,
+  } = require('../services/artistCrmImportService');
+
+  test('resolveImportDocUniqueness assigns synthetic phone on duplicate', () => {
+    const registry = {
+      phones: new Set(['+919999999999']),
+      emails: new Set(),
+      phoneOwner: new Map([['+919999999999', 'other-key']]),
+      emailOwner: new Map(),
+    };
+    const doc = coerceArtistImportIdentity({
+      name: 'Dup Test',
+      phone: '+919999999999',
+      metadata: { importRowKey: 'sheet:5' },
+      crmType: 'artist',
+    });
+    const { doc: resolved } = resolveImportDocUniqueness(doc, registry);
+    expect(resolved.phone).not.toBe('+919999999999');
+    expect(resolved.metadata.importSyntheticPhone).toBe(true);
+  });
+});
+
 describe('artistCrmSheetMappings', () => {
   test('detects YUGM media template', () => {
     const t = detectSheetTemplate('YUGM __ TSC Artist Mastersheet - Media List.csv');

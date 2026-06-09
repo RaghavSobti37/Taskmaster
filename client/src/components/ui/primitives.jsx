@@ -6,6 +6,9 @@ import { Spinner } from './Spinner';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { nextSortDirection, compareSortValues } from '../../hooks/useColumnSort';
 
+/** Default rows per page for DataTable and TablePagination */
+export const DEFAULT_TABLE_PAGE_SIZE = 10;
+
 export const Skeleton = ({ className = '', variant = 'rect', width, height }) => {
   const variants = {
     rect: 'rounded-[var(--radius-atomic)]',
@@ -287,7 +290,7 @@ export const InfoButton = ({ text }) => {
   );
 };
 
-export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, children, onClick, className = '', active = false, delta }) => {
+export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue, info, highlights = [], children, onClick, className = '', active = false, delta }) => {
   const accentColors = {
     info: 'border-l-[var(--color-pastel-blue-text)]',
     mint: 'border-l-[var(--color-pastel-mint-text)]',
@@ -324,12 +327,25 @@ export const StatCard = ({ label, value, icon: Icon, variant = 'slate', subValue
           {children}
         </div>
       </div>
+      {highlights.length > 0 && (
+        <ul className="space-y-0.5 border-t border-[var(--color-bg-border)] pt-2">
+          {highlights.map((item) => (
+            <li
+              key={item.name}
+              className="flex items-center justify-between gap-2 text-[9px] uppercase tracking-wide text-[var(--color-text-muted)]"
+            >
+              <span className="truncate normal-case">{item.name}</span>
+              <span className="font-bold tabular-nums text-[var(--color-text-primary)] shrink-0">{item.count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
 
 export const TablePagination = ({
-  pageSize,
+  pageSize = DEFAULT_TABLE_PAGE_SIZE,
   currentPage,
   totalPages,
   totalItems,
@@ -408,7 +424,7 @@ export const DataTable = ({
   getRowId,
   getRowClassName,
   className = '', 
-  defaultPageSize = 10, 
+  defaultPageSize = DEFAULT_TABLE_PAGE_SIZE,
   paginated = true,
   serverSide = false,
   totalItems: customTotalItems,
@@ -459,12 +475,37 @@ export const DataTable = ({
 
   const currentPage = serverSide ? (customCurrentPage || 1) : localCurrentPage;
   const pageSize = serverSide ? (customPageSize || defaultPageSize) : localPageSize;
-  const setCurrentPage = serverSide ? onPageChange : setLocalCurrentPage;
-  const setPageSize = serverSide ? onPageSizeChange : setLocalPageSize;
 
   const tableData = sortedData;
   const totalItems = serverSide ? (customTotalItems || 0) : tableData.length;
-  const totalPages = serverSide ? (customTotalPages || 1) : (Math.ceil(totalItems / pageSize) || 1);
+  const totalPages = Math.max(
+    1,
+    serverSide ? (customTotalPages || 1) : (Math.ceil(totalItems / pageSize) || 1),
+  );
+
+  const handlePageChange = useCallback(
+    (nextPage) => {
+      const clamped = Math.min(Math.max(nextPage, 1), totalPages);
+      if (serverSide) {
+        onPageChange?.(clamped);
+      } else {
+        setLocalCurrentPage(clamped);
+      }
+    },
+    [serverSide, onPageChange, totalPages],
+  );
+
+  const handlePageSizeChange = useCallback(
+    (size) => {
+      if (serverSide) {
+        onPageSizeChange?.(size);
+      } else {
+        setLocalPageSize(size);
+        setLocalCurrentPage(1);
+      }
+    },
+    [serverSide, onPageSizeChange],
+  );
 
   // Reset page when data changes (only client-side)
   useEffect(() => {
@@ -478,6 +519,14 @@ export const DataTable = ({
       setLocalCurrentPage(1);
     }
   }, [sortState?.key, sortState?.direction, serverSide]);
+
+  // Clamp server-side page when result set shrinks (filters, deletes, etc.)
+  useEffect(() => {
+    if (!serverSide || !onPageChange || !customCurrentPage) return;
+    if (customCurrentPage > totalPages) {
+      onPageChange(totalPages);
+    }
+  }, [serverSide, customCurrentPage, totalPages, onPageChange]);
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = serverSide ? Math.min(startIndex + tableData.length, totalItems) : Math.min(startIndex + pageSize, totalItems);
@@ -718,8 +767,8 @@ export const DataTable = ({
           totalPages={totalPages}
           totalItems={totalItems}
           rowCount={serverSide ? data.length : Math.min(pageSize, totalItems - startIndex)}
-          onPageChange={(page) => setCurrentPage(page)}
-          onPageSizeChange={setPageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
       )}
     </div>

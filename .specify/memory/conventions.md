@@ -1,35 +1,29 @@
-# Conventions & locked behavior
+# Conventions
 
-## Do not change without explicit unlock
+## Locked (do not change without explicit unlock)
 
-| Domain | Spec |
-| --- | --- |
-| Logo + spinner | `docs/LOGO_LOCKED.md`, `.cursor/rules/logo-mark-locked.mdc` |
-| Email tracking/geo | `docs/EMAIL_ENGINE_LOCKED.md`, `.cursor/rules/email-engine-locked.mdc` |
-| Production hosts | `.cursor/production-hosts.local.json` (gitignored), `.cursor/rules/production-hosts-locked.mdc` |
+- **Logo / spinner:** `docs/LOGO_LOCKED.md`, `.cursor/rules/logo-mark-locked.mdc`
+- **Email engine / tracking:** `docs/EMAIL_ENGINE_LOCKED.md`, `.cursor/rules/email-engine-locked.mdc`
+- **Production hosts:** `.cursor/production-hosts.local.json` — never use legacy `CoreKnot-jfw0` hosts
 
-## Pre-push checklist
+## Pre-push audits (required)
 
-1. `npm run audit:exposure` — exit 0
-2. `npm run audit:deadcode` — exit 0
-3. No secrets in staged files (`server/.env.render`, live keys)
-4. Update `.specify/memory/recent-changes.md` when behavior shifts
+```bash
+npm run audit:exposure   # exit 0
+npm run audit:deadcode   # exit 0
+```
 
-## Commit style
+## Pagination
 
-- Prefix: `feat:`, `fix:`, `chore:`, `docs:`
-- One logical change per commit when possible
+- Default page size: **10** — `DEFAULT_TABLE_PAGE_SIZE` in `client/src/components/ui/primitives.jsx`
+- Do not override with 15/25 unless product explicitly requests
 
-## Testing
+## Secrets
 
-- Server: `npm test` (Jest, Memory Server)
-- Client: `npm test --prefix client` (Vitest)
-- E2E: `npm run test:e2e:public`, `npm run test:e2e:auth`
-- CI: `npm run ci`
-- Artist CRM: `npm test -- artistCrmImport.test.js crmPipelineFilters.test.js`
+- Never commit: `server/.env`, `server/.env.render`, `production-hosts.local.json`, live Mongo URIs
+- Scripts targeting prod: `MONGODB_URI_PROD`, explicit `--yes` / confirm flags
 
-## Artist CRM scripts
+## Commits
 
-- `server/scripts/seedArtistCrmFromData.js` — all 6 sheet templates from `data/`
-- `server/scripts/fixLeadEmailIndex.js` — partial email index + unset blank emails (run before seed on prod)
-- `server/scripts/testArtistBookingWebhook.js` — live booking E2E (local API)
+- Conventional prefix: `feat:`, `fix:`, `chore:`, `docs:`
+- `/push-and-document` updates README + `.specify/memory/` tracked files

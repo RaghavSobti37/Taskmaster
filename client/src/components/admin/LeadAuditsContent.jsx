@@ -69,7 +69,7 @@ const LeadAuditsContent = () => {
   const { user } = useAuth();
   const { confirm } = useConfirm();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [purging, setPurging] = useState(false);
 

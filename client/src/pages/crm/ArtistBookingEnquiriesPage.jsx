@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button } from '../../components/ui';
+import { PageContainer, Badge, DataTable, ListPageLayout, SearchInput, PageSkeleton, Button, DEFAULT_TABLE_PAGE_SIZE } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
 import { useLiveLeads } from '../../hooks/useTaskmasterQueries';
 import { crmQueryParamsForUser } from '../../utils/crmScope';
@@ -12,16 +12,17 @@ export default function ArtistBookingEnquiriesPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE);
   const [selected, setSelected] = useState(null);
 
   const params = useMemo(() => crmQueryParamsForUser(user, {
     page,
-    limit: 25,
+    limit: pageSize,
     search: debouncedSearch,
     contactCategory: 'booking_enquiry',
     sort: 'createdAt',
     order: 'desc',
-  }), [user, page, debouncedSearch]);
+  }), [user, page, pageSize, debouncedSearch]);
 
   const { data, isLoading } = useLiveLeads(params);
   const leads = data?.leads || [];
@@ -95,12 +96,19 @@ export default function ArtistBookingEnquiriesPage() {
             columns={columns}
             data={leads}
             onRowClick={(row) => setSelected(row)}
-            pagination={{
-              page,
-              totalPages: data?.pages || 1,
-              onPageChange: setPage,
+            getRowId={(row) => row._id}
+            serverSide
+            paginated
+            totalItems={data?.total || 0}
+            totalPages={data?.pages || 1}
+            currentPage={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
             }}
-            emptyMessage="No booking enquiries yet"
+            emptyTitle="No booking enquiries yet"
           />
         )}
       </ListPageLayout>

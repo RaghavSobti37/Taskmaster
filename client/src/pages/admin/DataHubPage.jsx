@@ -40,7 +40,7 @@ const loadDataHubFilters = () => {
   }
   return {
     activeFolder: 'all',
-    pageSize: 25,
+    pageSize: 10,
     emailStatusFilter: 'all',
     showAnalytics: true,
   };

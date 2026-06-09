@@ -103,6 +103,8 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Tasks & gamification** | `TaskReviewActions` component; in-review approve CTA; leaderboard shows XP gap to next rank |
 | **UX & navigation** | Keyboard shortcuts (`?`, `G` chords, `/` palette); unified search; floating mobile nav; unsaved-changes guard on notes, mail studio, campaign wizard; spotlight onboarding tour |
 | **E2E & CI** | Playwright public + auth smoke specs; Lighthouse a11y gate; ESLint + Vitest in GitHub Actions |
+| **Assets hub** | `/assets` hub layout — **File Links** (all with `assets` permission) + **Managed Accounts** (`/assets/accounts`) for org emails, social IDs, and platform logins; Google Sheet import replaces tenant data; roles: admin, artist-management, operations |
+| **Pagination** | `DataTable` / `TablePagination` default **10 entries** via `DEFAULT_TABLE_PAGE_SIZE`; server-side pages clamp when filters shrink; Followups + Booking Enquiries wired to full pagination API |
 
 Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) · UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
 
@@ -508,6 +510,14 @@ ode server/scripts/normalizePersonData.js (reports under server/reports/, gitign
 
 * **@mentions:** `MentionInput` / `MentionTextarea` in task create/edit — notifies mentioned users who are not already assignees (`server/utils/mentionNotifications.js`, `shared/mentionTokens.js`).
 * **#assets:** Hash tokens link to asset URLs in task title/description.
+
+### Assets Hub & Managed Accounts (Jun 2026)
+
+* **Routes:** `/assets` (file links) · `/assets/accounts` (managed org credentials) under `AssetsHubLayout` with role-gated sidebar.
+* **Access:** `canAccessOrgAccounts()` — platform admin, artist-management department, or **operations** role (`orgAccountsAccess` middleware).
+* **API:** `GET/POST/PATCH/DELETE /api/org-accounts` · `POST /api/org-accounts/import-sheet` (replace-all import from shared Google Sheet).
+* **CLI:** `node server/scripts/importOrgAccountsFromSheet.js` (local DB) — share sheet with service account in script header.
+* **UI:** `OrgAccountsPage` — filters, clickable stat cards (top 3 per category), CRUD modal with secret field, project/member linkage.
 
 ### Notification Policy
 

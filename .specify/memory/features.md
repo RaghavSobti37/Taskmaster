@@ -1,43 +1,31 @@
-# Feature map
+# Features
 
-## Navigation highlights
+## Core modules
 
-| Area | Routes | Notes |
+| Module | Routes / entry | Notes |
 | --- | --- | --- |
-| Dashboard | `/` | Missions, leaderboard, announcements, projects today |
-| Projects | `/projects`, `/projects/:id` | Goals/KRA strip, team, status ping |
-| Tasks / Todo | `/todo` | Review actions, completed rollback, activity timeline |
-| CRM (sales) | `/crm/leads`, followups | Person-linked leads, sales reps |
-| **Artist CRM** | `/crm` hub (artist tabs) | Leads, bookings, CSV import; artist-management assignees |
-| Email hub | `/emails/*` | Replaces `/workspace/emails` (redirect) |
-| Data Hub | `/admin/data-hub` | Person detail, analytics; `artist_crm` + `booked_calls` inlets |
-| Artist Path | `/admin/artist-path` | HolySheet sync, profile slider |
-| Attendance | Settings → Attendance | Work mode toggle, unified time card |
-| Gamification | Leaderboard on dashboard | Last-week rank badge, XP gap |
+| Dashboard | `/` | Widgets, onboarding tour |
+| Projects | `/projects` | Tasks, finance, goals, analytics |
+| CRM | `/crm/leads`, `/crm/followups`, `/crm/bookings` | Sales + artist pipelines |
+| Finance | `/finance` | OCR docs, folders, server pagination |
+| Data Hub | Admin → CRM tab | Person spine, inlets, reconcile, backup |
+| Assets | `/assets`, `/assets/accounts` | File links + managed org accounts |
+| Emails | `/emails/*` | Campaigns, Resend, tracking (locked) |
+| Office | `/office/*` | Contacts, subscriptions, assets |
+| Admin | `/admin/*` | Users, scripts, QA, artist path |
 
-## Artist CRM (Jun 2026)
+## Assets hub (Jun 2026)
 
-| Piece | Location |
-| --- | --- |
-| Taxonomy | `shared/artistCrmTaxonomy.js`, `shared/artistCrmSheetMappings.js` |
-| Import service | `server/services/artistCrmImportService.js` |
-| Field parser | `server/utils/artistContactFieldParser.js` |
-| API | `server/controllers/artistCrmController.js`, `/api/crm/artist-import` |
-| Booking webhook | `artistEnquiryService.js` → `POST /api/webhooks/artist-enquiry` |
-| UI import | `ArtistCrmImportPanel.jsx` |
-| UI bookings | `ArtistBookingEnquiriesPage.jsx`, `ArtistBookingEnquiryPanel.jsx` |
-| Scope helpers | `client/utils/crmScope.js`, `server/utils/crmScope.js` |
-| Pipeline filters | `server/utils/crmPipelineFilters.js` (warm stat) |
+- **File Links** (`/assets`): existing asset URL registry; all users with `assets` page permission.
+- **Managed Accounts** (`/assets/accounts`): org emails, social links, platform logins; project linkage; secret field server-side only.
+- **Import:** Google Sheet → replace tenant `OrgAccount` rows; UI + `POST /api/org-accounts/import-sheet`.
+- **Roles:** admin, artist-management dept, operations (`orgAccountsAccess`).
 
-**Booking enquiry fields in modal:** artist, company, collaboration, nature, when/where, scale, logistics, vision, linked task.
+## Pagination
 
-## Project goals
+- Global default: **10 entries** (`DEFAULT_TABLE_PAGE_SIZE` in `DataTable` / `TablePagination`).
+- Server-side tables: parent owns `page` / `pageSize`; component clamps page when `totalPages` shrinks.
 
-- Models: `ProjectGoal`, `ProjectGoalSnapshot`, `ProjectKRA`
-- API: `projectGoalsController`, `projectKraController`, `projectGoalsService`
-- UI: `ProjectGoalsPanel`, `ProjectGoalsStrip`, `ProjectGoalMetricCards`
+## Artist CRM
 
-## Mail / Resend
-
-- From-address picker: `resendFromEmails.js` (client + server)
-- Wizard: `CampaignWizardShell` + artist CRM audience filter in `useCampaignAudience.js`
+- `crmType: artist`, CSV import, booking enquiries webhook, bulk prod push script.

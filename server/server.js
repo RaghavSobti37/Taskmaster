@@ -328,6 +328,7 @@ app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api/integrations', require('./routes/integrationsRoutes'));
 app.use('/api/office-assets', require('./routes/officeAssetRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));
+app.use('/api/org-accounts', require('./routes/orgAccountRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
 app.use('/api/exly', require('./routes/exlyRoutes'));
 app.use('/api/newsletter', require('./routes/newsletterRoutes'));

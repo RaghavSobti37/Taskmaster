@@ -205,7 +205,6 @@ export default function StepAudienceMapping({
                   { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> },
                 ]}
                 data={[...audience.filteredContacts, ...audience.filteredExlyContacts].slice(0, 50)}
-                defaultPageSize={5}
               />
             </>
           )}

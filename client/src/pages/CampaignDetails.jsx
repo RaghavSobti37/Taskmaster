@@ -44,7 +44,7 @@ export default function CampaignDetails() {
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [recipientPage, setRecipientPage] = useState(1);
-  const [recipientPageSize, setRecipientPageSize] = useState(25);
+  const [recipientPageSize, setRecipientPageSize] = useState(10);
   const [hideInvalidEmails, setHideInvalidEmails] = useState(false);
   const [showResendModal, setShowResendModal] = useState(false);
   const [showFilteredResendModal, setShowFilteredResendModal] = useState(false);

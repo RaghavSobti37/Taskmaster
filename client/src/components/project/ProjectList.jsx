@@ -12,7 +12,7 @@ import { TaskTableRowSkeleton } from '../tasks/TaskPendingSkeleton';
 import CompletedTaskRollbackButton from '../tasks/CompletedTaskRollbackButton';
 import { useAuth } from '../../contexts/AuthContext';
 
-const COMPLETED_PAGE_SIZE_DEFAULT = 5;
+const COMPLETED_PAGE_SIZE_DEFAULT = 10;
 
 const STATUS_OPTIONS = [
   { value: 'todo', label: 'To Do', letter: 'T' },

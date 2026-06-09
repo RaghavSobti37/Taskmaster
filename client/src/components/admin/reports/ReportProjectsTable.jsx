@@ -10,7 +10,7 @@ const STATUS_VARIANT = {
   on_hold: 'warning',
 };
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 const ReportProjectsTable = ({ items = [], workspaces = [] }) => {
   const [page, setPage] = useState(1);

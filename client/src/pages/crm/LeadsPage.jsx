@@ -45,7 +45,7 @@ const loadLeadsFilters = () => {
     source: 'all',
     leadQuality: 'all',
     assignedRepId: 'all',
-    pageSize: 25,
+    pageSize: 10,
   };
 };
 
@@ -84,7 +84,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => loadLeadsFilters().pageSize || 25);
+  const [pageSize, setPageSize] = useState(() => loadLeadsFilters().pageSize || 10);
   const [selectedLead, setSelectedLead] = useState(null);
   const artistRepContext = isArtistCrmContext(user, selectedLead);
   const [sortField, setSortField] = useState('createdAt');
@@ -136,6 +136,10 @@ export default function LeadsPage() {
       /* ignore */
     }
   }, [filters, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filters]);
 
   React.useEffect(() => {
     if (selectedLead) {

@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageRoute from './components/PageRoute';
+import ArtistOrAdminRoute from './components/ArtistOrAdminRoute';
 import AppBootFallback from './components/AppBootFallback';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 
@@ -59,6 +60,8 @@ const SettingsPage = lazyWithRetry(() => import('./pages/settings/SettingsPage')
 const DailyLogPage = lazyWithRetry(() => import('./pages/productivity/DailyLogPage'));
 const AdminScriptsPage = lazyWithRetry(() => import('./pages/admin/AdminScriptsPage'));
 const AssetsPage = lazyWithRetry(() => import('./pages/assets/AssetsPage'));
+const AssetsHubLayout = lazyWithRetry(() => import('./pages/assets/AssetsHubLayout'));
+const OrgAccountsPage = lazyWithRetry(() => import('./pages/assets/OrgAccountsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/crm/LeadsPage'));
 const FollowupsPage = lazyWithRetry(() => import('./pages/crm/FollowupsPage'));
 const FeaturesPage = lazyWithRetry(() => import('./pages/marketing/FeaturesPage'));
@@ -212,7 +215,12 @@ function App() {
               <Route path="/artists" element={<Navigate to="/management?tab=artists" replace />} />
 
               <Route element={<PageRoute page="assets" />}>
-                <Route path="/assets" element={<AssetsPage />} />
+                <Route element={<AssetsHubLayout />}>
+                  <Route path="/assets" element={<AssetsPage />} />
+                  <Route element={<ArtistOrAdminRoute />}>
+                    <Route path="/assets/accounts" element={<OrgAccountsPage />} />
+                  </Route>
+                </Route>
               </Route>
               <Route path="/office-assets" element={<OfficeAssetsPage />} />
               <Route path="/features" element={<FeaturesPage />} />

@@ -29,7 +29,7 @@ import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditStat
 import { MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
 import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
-const FOLLOWUP_PAGE_SIZE = 50;
+const FOLLOWUP_PAGE_SIZE = 10;
 const CRM_FOLLOWUPS_FILTERS_KEY = 'crm-followups-filters';
 
 const loadFollowupFilters = () => {
@@ -49,6 +49,7 @@ export default function FollowupsPage() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => loadFollowupFilters().activeTab || 'today');
   const [followupPage, setFollowupPage] = useState(1);
+  const [followupPageSize, setFollowupPageSize] = useState(FOLLOWUP_PAGE_SIZE);
   const [sortField, setSortField] = useState(() => loadFollowupFilters().sortField || 'nextFollowupDate');
   const [sortOrder, setSortOrder] = useState(() => loadFollowupFilters().sortOrder || 'asc');
   const [selectedLead, setSelectedLead] = useState(null);
@@ -59,7 +60,7 @@ export default function FollowupsPage() {
 
   const { data, isLoading, refetch } = useLiveLeads(crmQueryParamsForUser(user, {
     page: followupPage,
-    limit: FOLLOWUP_PAGE_SIZE,
+    limit: followupPageSize,
     sort: sortField,
     order: sortOrder,
     hasFollowup: 'true',
@@ -423,8 +424,12 @@ export default function FollowupsPage() {
         currentPage={followupPage}
         totalPages={followupPages}
         totalItems={data?.total || 0}
-        pageSize={FOLLOWUP_PAGE_SIZE}
+        pageSize={followupPageSize}
         onPageChange={setFollowupPage}
+        onPageSizeChange={(size) => {
+          setFollowupPageSize(size);
+          setFollowupPage(1);
+        }}
         sortState={tableSortState}
         onSortChange={handleTableSortChange}
         isLoading={isLoading}

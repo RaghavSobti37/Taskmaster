@@ -19,7 +19,7 @@ import { WorkspaceDot } from '../../components/forms/WorkspaceSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspaces } from '../../hooks/useTaskmasterQueries';
 import { getWorkspaceColor } from '../../utils/workspaceColors';
-import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection } from '../../components/ui';
+import { NexusDropdown, Button, Input, Badge, PageSkeleton, SearchInput, TablePagination, ListPageLayout, UserLabel, ListCard, MobileCollapsibleSection, DEFAULT_TABLE_PAGE_SIZE } from '../../components/ui';
 import { NexusModal, ModalShell, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/modals';;
 import { distributionFromField } from '../../utils/buildChartSeries';
 import { format } from 'date-fns';
@@ -49,7 +49,7 @@ const AssetsPage = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE);
   // Google account link states
   const [googleAccounts, setGoogleAccounts] = useState([]);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -375,44 +375,46 @@ const AssetsPage = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Filter assets..."
-            className="!w-36 shrink min-w-[7rem] max-w-[9rem]"
+            className="tm-toolbar-search--grow"
           />
-          <NexusDropdown
-            options={workspaceFilterOptions}
-            value={workspaceFilter}
-            onChange={(value) => {
-              setWorkspaceFilter(value);
-              setProjectFilter('all');
-            }}
-            placeholder="Workspace"
-            className="!w-32 shrink-0"
-          />
-          <NexusDropdown
-            options={projectFilterOptions}
-            value={projectFilter}
-            onChange={setProjectFilter}
-            placeholder="Project"
-            className="!w-32 shrink-0"
-          />
-          <NexusDropdown
-            options={ASSET_TYPE_FILTER_OPTIONS}
-            value={typeFilter}
-            onChange={setTypeFilter}
-            placeholder="File type"
-            className="!w-28 shrink-0"
-          />
-          <NexusDropdown
-            options={[
-              { value: 'newest', label: 'Newest' },
-              { value: 'name', label: 'Name' },
-              { value: 'project', label: 'Project' },
-              { value: 'type', label: 'File Type' },
-            ]}
-            value={sortBy}
-            onChange={setSortBy}
-            placeholder="Sort"
-            className="!w-28 shrink-0"
-          />
+          <div className="flex flex-nowrap items-center gap-2 shrink-0">
+            <NexusDropdown
+              options={workspaceFilterOptions}
+              value={workspaceFilter}
+              onChange={(value) => {
+                setWorkspaceFilter(value);
+                setProjectFilter('all');
+              }}
+              placeholder="Workspace"
+              className="!w-32 shrink-0"
+            />
+            <NexusDropdown
+              options={projectFilterOptions}
+              value={projectFilter}
+              onChange={setProjectFilter}
+              placeholder="Project"
+              className="!w-32 shrink-0"
+            />
+            <NexusDropdown
+              options={ASSET_TYPE_FILTER_OPTIONS}
+              value={typeFilter}
+              onChange={setTypeFilter}
+              placeholder="File type"
+              className="!w-28 shrink-0"
+            />
+            <NexusDropdown
+              options={[
+                { value: 'newest', label: 'Newest' },
+                { value: 'name', label: 'Name' },
+                { value: 'project', label: 'Project' },
+                { value: 'type', label: 'File Type' },
+              ]}
+              value={sortBy}
+              onChange={setSortBy}
+              placeholder="Sort"
+              className="!w-28 shrink-0"
+            />
+          </div>
         </>
       }
       toolbarActions={

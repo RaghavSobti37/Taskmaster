@@ -374,7 +374,6 @@ export default function InvoiceTab() {
             isLoading={reimbursementsLoading}
             getRowId={(item) => item._id}
             paginated={myReimbursements.length > 10}
-            defaultPageSize={10}
             emptyTitle="No reimbursements"
           />
           <p className="px-4 py-3 text-[10px] tm-data-meta border-t border-[var(--color-bg-border)]">

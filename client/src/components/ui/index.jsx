@@ -19,6 +19,7 @@ export {
   StatCard,
   TablePagination,
   DataTable,
+  DEFAULT_TABLE_PAGE_SIZE,
   ProgressBar,
   Switch,
   Accordion,

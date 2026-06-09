@@ -460,6 +460,14 @@ select option {
   flex: 1 1 12rem;
 }
 
+.page-toolbar-controls .tm-toolbar-search.tm-toolbar-search--grow {
+  flex: 1 1 12rem;
+  width: auto;
+  min-width: 10rem;
+  max-width: none;
+  flex-shrink: 1;
+}
+
 .page-toolbar-controls.page-toolbar-controls--fill {
   width: 100%;
 }

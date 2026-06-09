@@ -1,10 +1,17 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const { MongoClient } = require('mongodb');
 
-const COLLECTIONS = [
+const HUB_COLLECTIONS = [
+  'people',
+  'personidentifiers',
+  'personcommunicationprofiles',
+  'personsourcelinks',
   'personindexes',
   'personhubviews',
-  'people',
+  'datahubsyncstates',
+];
+
+const SOURCE_COLLECTIONS = [
   'outsourcedrecords',
   'leads',
   'exlybookings',
@@ -13,8 +20,9 @@ const COLLECTIONS = [
   'artistpathresponses',
   'tscdatas',
   'contacts',
-  'datahubsyncstates',
 ];
+
+const COLLECTIONS = [...SOURCE_COLLECTIONS, ...HUB_COLLECTIONS];
 
 function dbNameFromUri(uri, fallback) {
   if (!uri) return fallback;
@@ -66,6 +74,21 @@ async function main() {
         String(l).padStart(10),
         String(p).padStart(10),
         (delta >= 0 ? `+${delta}` : String(delta)).padStart(10)
+      );
+    }
+
+    const hubGap = (local.personhubviews || 0) - (prod.personhubviews || 0);
+    if (hubGap > 100) {
+      console.log(
+        `\nProd hub views behind by ${hubGap}. Mass-push (seconds, no merge):\n` +
+          '  npm run datahub:push-prod'
+      );
+    }
+    const sourceGap = (local.outsourcedrecords || 0) - (prod.outsourcedrecords || 0);
+    if (sourceGap > 100) {
+      console.log(
+        `\nProd source rows behind by ${sourceGap}. Full mass-push:\n` +
+          '  npm run datahub:push-prod:full'
       );
     }
   } finally {

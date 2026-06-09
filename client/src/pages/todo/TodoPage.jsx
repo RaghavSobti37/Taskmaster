@@ -46,8 +46,8 @@ import VirtualTaskList from '../../components/tasks/VirtualTaskList';
 import { useDebounce } from '../../hooks/useDebounce';
 
 const TODO_FILTERS_KEY = 'todo-filters';
-const DEFAULT_PAGE_SIZE = 50;
-const COMPLETED_PAGE_SIZE_DEFAULT = 5;
+const DEFAULT_PAGE_SIZE = 10;
+const COMPLETED_PAGE_SIZE_DEFAULT = 10;
 
 const loadTodoFilters = () => {
   try {

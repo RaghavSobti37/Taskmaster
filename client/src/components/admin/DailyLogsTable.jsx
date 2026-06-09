@@ -152,7 +152,6 @@ const DailyLogsTable = ({ entries = [], showMember = false }) => {
           className="!border-none !rounded-none"
           columns={columns}
           data={filteredEntries}
-          defaultPageSize={10}
           paginated
           getRowId={(row) => `${row.date}|${row.time}|${row.title}|${row.userName || ''}`}
         />

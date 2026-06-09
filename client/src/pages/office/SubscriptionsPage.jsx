@@ -302,7 +302,6 @@ const SubscriptionsPage = () => {
         onRowClick={openEdit}
         getRowId={(sub) => sub._id}
         isLoading={isLoading}
-        defaultPageSize={15}
         emptyTitle="No subscriptions"
         emptyDescription="Add one to get started."
       />

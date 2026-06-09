@@ -20,7 +20,13 @@
     "prepare": "husky",
     "test:e2e": "playwright test --config e2e/playwright.config.cjs",
     "test:e2e:public": "playwright test --config e2e/playwright.config.cjs --grep public",
-    "test:e2e:auth": "playwright test --config e2e/playwright.config.cjs --grep \"authenticated\""
+    "test:e2e:auth": "playwright test --config e2e/playwright.config.cjs --grep \"authenticated\"",
+    "datahub:compare": "node server/scripts/compareDataHubDbs.js",
+    "datahub:push-prod": "node server/scripts/syncDataHubToProd.js --yes",
+    "datahub:push-prod:full": "node server/scripts/syncDataHubToProd.js --yes --full",
+    "org-accounts:import": "node server/scripts/importOrgAccountsFromSheet.js",
+    "artist-crm:bulk": "node server/scripts/bulkPushArtistCrmToProd.js",
+    "artist-crm:bulk:prod": "node server/scripts/bulkPushArtistCrmToProd.js --prod --fix-index"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

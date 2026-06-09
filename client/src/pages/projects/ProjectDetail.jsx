@@ -57,7 +57,7 @@ const ProjectDetail = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const includeOldCompleted = filterStatus === 'done' || searchTerm.trim().length > 0;
   const [completedPage, setCompletedPage] = useState(1);
-  const [completedPageSize, setCompletedPageSize] = useState(5);
+  const [completedPageSize, setCompletedPageSize] = useState(10);
 
   useEffect(() => {
     setCompletedPage(1);

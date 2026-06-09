@@ -1,49 +1,25 @@
 # Architecture
 
-## Local runtime
+## Stack
 
-```
-Browser → Vite (:5173) → proxy /api → Express (:5000) → MongoDB / Redis
-```
+- **Client:** React 18 + Vite, TanStack Query, Socket.IO, CSS var design tokens.
+- **Server:** Express, Mongoose, BullMQ/Redis, multi-tenant `tenantId` on models.
+- **Deploy:** Render (API), Vercel (SPA); hosts in gitignored `.cursor/production-hosts.local.json`.
 
-- `DEBUG_BYPASS=true` + `Authorization: Bearer bypass_token` for local API tests.
-- Production: Vercel serves `client/dist`; `/api` and `/socket.io` rewrite to Render API.
+## API layout
 
-## Backend patterns
+- `/api/*` — REST; `protect` middleware + department/page permissions.
+- Org accounts: `server/routes/orgAccountRoutes.js` → `orgAccountController` → `OrgAccount` model.
+- Data Hub: `server/routes/dataHubRoutes.js` → person spine collections + reconcile.
 
-- Zod validation on route bodies/queries (campaigns, projects, mail, attendance, etc.).
-- `.lean()` reads; aggregation over repeated `countDocuments`.
-- Task review pipeline with activity timeline + gamification XP.
-- Person spine: `Person`, `PersonIdentifier`, `PersonHubView` — domain facts in `Lead`, `ArtistPathResponse`, `ExlyBooking`, etc.
-- **Artist CRM:** `Lead.crmType` + `contactCategory`; import upserts by `metadata.importRowKey`; partial unique index on non-empty email.
+## Data flows
 
-## Artist CRM data flow
+- **Data Hub:** Domain inlets (leads, Exly, TSC, etc.) → reconcile → `people` / `personhubviews`.
+- **Org accounts:** Google Sheets API (service account) → parse tabs → wipe + insert per tenant.
+- **Prod sync:** `syncDataHubToProd.js` copies hub collections local → prod (`MONGODB_URI_PROD`).
 
-```
-CSV upload / webhook → artistCrmImportService | artistEnquiryService
-  → Lead (crmType: artist) → ContactService / Data Hub inlets
-  → CrmHub UI + booking panel in lead modal
-```
+## UI primitives
 
-Default booked-call assignee: `PRIMARY_CALL_ASSIGNEE` env → Akash (artist-management).
-
-## Frontend patterns
-
-- Lazy routes with chunk-retry in `App.jsx`.
-- `react-query` for server state; optimistic updates where safe.
-- 4px grid, high-density tables, row-first actions.
-- Unsaved-changes guard via `useUnsavedChanges` on notes, mail studio, campaign wizard.
-
-## Email hub (Jun 2026 refactor)
-
-Legacy monolith removed: `AdminMailContent`, `MailCampaignWizard`, `EmailsPage`, `AdminMail`.
-
-New surface:
-
-| Route | Component |
-| --- | --- |
-| `/emails` | `EmailHubLayout` → overview, campaigns, templates, profiles, analytics |
-| `/emails/campaigns/new` | `CreateCampaignPage` → `CampaignWizardShell` (4 steps) |
-| `/campaigns/:id` | `CampaignDetails` (tracking locked) |
-
-Wizard: `client/src/components/emails/wizard/*` + `campaignWizardSchema.js`.
+- `DataTable` — client or `serverSide` pagination, sort, virtualization.
+- `TablePagination` — shared footer; default page size from `DEFAULT_TABLE_PAGE_SIZE`.
+- `ListPageLayout` + `PageToolbar` — standard list pages.

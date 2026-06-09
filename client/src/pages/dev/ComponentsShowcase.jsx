@@ -335,7 +335,6 @@ const ComponentsShowcase = () => {
           <DataTable
             columns={tableColumns}
             data={SHOWCASE_TABLE_DATA}
-            defaultPageSize={5}
             paginated={false}
           />
         </ShowcaseSection>

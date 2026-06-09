@@ -14,7 +14,7 @@ const ChartFallback = () => (
 
 /**
  * @param {object} props
- * @param {Array} props.stats - { id, label, value, icon, variant, info, subValue, onClick, active, className }
+ * @param {Array} props.stats - { id, label, value, icon, variant, info, subValue, highlights, onClick, active, className }
  * @param {Array} props.charts - { id, title, type: 'bar'|'donut', data: [{ label, value }] }
  * @param {boolean} props.mobileCollapsed - collapse charts on mobile (default true)
  * @param {number} props.mobileMaxStats - max stats visible before expand (default 2)
@@ -99,6 +99,7 @@ export default function DataOverviewSection({
                 variant={s.variant || 'info'}
                 info={s.info}
                 subValue={s.subValue}
+                highlights={s.highlights}
                 onClick={s.onClick}
                 active={s.active}
                 delta={s.delta}

@@ -36,7 +36,7 @@ export function prefetchNavRoute(path, userId) {
     return;
   }
   if (path === '/leads') {
-    prefetchOnce('leads', ['leads', { page: 1, limit: 25 }], async () => (await axios.get('/api/crm/leads', { params: { page: 1, limit: 25 } })).data);
+    prefetchOnce('leads', ['leads', { page: 1, limit: 10 }], async () => (await axios.get('/api/crm/leads', { params: { page: 1, limit: 10 } })).data);
     return;
   }
   if (path === '/notes') {

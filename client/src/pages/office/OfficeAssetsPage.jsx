@@ -298,7 +298,6 @@ const OfficeAssetsPage = () => {
           onRowClick={openAssetRow}
           getRowId={(a) => a._id}
           isLoading={assetsLoading}
-          defaultPageSize={15}
           emptyTitle="No assets found"
         />
       ) : (
@@ -308,7 +307,6 @@ const OfficeAssetsPage = () => {
           onRowClick={openContactRow}
           getRowId={(c) => c._id}
           isLoading={contactsLoading}
-          defaultPageSize={15}
           emptyTitle="No contacts found"
         />
       )}

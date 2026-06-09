@@ -117,11 +117,20 @@ const artistOrAdmin = (req, res, next) => {
   }
 };
 
+const orgAccountsAccess = (req, res, next) => {
+  if (req.user && (isArtistManagerUser(req.user) || isOpsUser(req.user))) {
+    next();
+  } else {
+    res.status(403).json({ error: 'Not authorized — artist management, operations, or admin required' });
+  }
+};
+
 module.exports = {
   protect,
   admin,
   opsOrAdmin,
   artistOrAdmin,
+  orgAccountsAccess,
   isOps: isOpsUser,
   isArtistManager: isArtistManagerUser,
   isAdminUser,

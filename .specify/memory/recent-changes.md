@@ -1,28 +1,26 @@
-# Recent changes (Jun 2026 session)
+# Recent changes
 
-_Last updated: 2026-06-09_
+_Last updated: Jun 2026 session — push-and-document_
 
-## Artist CRM pipeline (new)
+## Assets hub & managed accounts
 
-- **Scope:** `crmType: artist` leads separate from sales CRM; artist-management reps (Akash) on artist leads.
-- **Import:** 6 CSV templates via `artistCrmImportService` + `ArtistCrmImportPanel`; partial unique email index (`fixLeadEmailIndex.js`); phone-only rows supported via synthetic phone fallback.
-- **Booking enquiries:** TSC website `/query` webhook → `artistEnquiryService` upserts `contactCategory: booking_enquiry` lead + task; default assignee Akash (`primaryCallAssignee.js`).
-- **UI:** `CrmHub` artist tabs; `ArtistBookingEnquiriesPage`; `ArtistBookingEnquiryPanel` in `LeadsPage` / `FollowupsPage` modals; warm-leads stat aligned with meaningful-connect filter.
-- **Scripts:** `seedArtistCrmFromData.js`, `reassignBookedCallsToAkash.js`, `testArtistBookingWebhook.js`, `backfillLeadCrmType.js`.
-- **Tests:** `artistCrmImport.test.js`, `crmPipelineFilters.test.js`, `crmScope.test.js`.
+- New `AssetsHubLayout` with sidebar (File Links + Managed Accounts) for admin / artist-management / operations.
+- `OrgAccount` model + `/api/org-accounts` CRUD + sheet import (`orgAccountImportService.js`).
+- `OrgAccountsPage` — filters, stat cards with top-3 highlights, replace-all Google Sheet import.
+- Routes: `/assets`, `/assets/accounts`; `ArtistOrAdminRoute` extended via `canAccessOrgAccounts()`.
 
-## Email hub migration
+## Pagination standardization
 
-- Removed legacy mail monolith (`AdminMailContent`, `MailCampaignWizard`, `useMailCampaignWizard`, `AdminMail`, `EmailsPage`).
-- Added `/emails/*` hub: overview, campaigns list, templates, profiles, analytics.
-- Campaign wizard rebuilt as `CampaignWizardShell` with Zod schema + step components.
+- `DEFAULT_TABLE_PAGE_SIZE = 10` exported from `primitives.jsx`.
+- All list pages default to 10 rows; removed 15/25/50 overrides.
+- `DataTable` fixes: `totalPages` min 1, server-side page clamp, Followups `onPageSizeChange`.
+- Artist Booking Enquiries: fixed broken `pagination={{}}` prop → proper `serverSide` API.
 
-## Project goals
+## Data Hub / scripts
 
-- Backend: `ProjectGoal`, `ProjectGoalSnapshot`, `ProjectKRA` models + services.
-- Frontend: goals panel/strip/metric cards on project detail.
+- `syncDataHubToProd.js`, `compareDataHubDbs.js` updates; `npm run datahub:push-prod`.
+- Artist CRM bulk push script (`bulkPushArtistCrmToProd.js`).
 
-## Hygiene
+## Docs
 
-- Added `npm run audit:deadcode` orphan scan.
-- Initialized `.specify/memory` for agent context.
+- README: Assets hub section, pagination note, `org-accounts:import` npm script.

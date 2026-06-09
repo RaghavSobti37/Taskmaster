@@ -177,6 +177,10 @@ export function isArtistManagerUser(user) {
   return isAdminUser(user) || hasPageAccess(user, 'artists');
 }
 
+export function canAccessOrgAccounts(user) {
+  return isArtistManagerUser(user) || isOpsUser(user);
+}
+
 export function groupHasVisiblePages(user, pageKeys) {
   return pageKeys.some((k) => hasPageAccess(user, k));
 }

@@ -21,6 +21,11 @@ _Last updated: Jun 2026 session — push-and-document_
 - `syncDataHubToProd.js`, `compareDataHubDbs.js` updates; `npm run datahub:push-prod`.
 - Artist CRM bulk push script (`bulkPushArtistCrmToProd.js`).
 
+## Local-only Agentation
+
+- Floating annotate icon (`AgentationDev`) gated behind `import.meta.env.DEV` + `React.lazy` in `main.jsx`.
+- `agentation` package stays in `devDependencies`; not bundled into production builds.
+
 ## Docs
 
 - README: Assets hub section, pagination note, `org-accounts:import` npm script.

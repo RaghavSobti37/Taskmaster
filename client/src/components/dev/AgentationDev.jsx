@@ -1,7 +1,18 @@
-import { Agentation } from 'agentation';
+import { useEffect, useState } from 'react';
 
+/**
+ * Agentation floating annotate button — local dev only.
+ * Loaded via React.lazy from main.jsx when import.meta.env.DEV is true.
+ */
 export default function AgentationDev() {
-  if (!import.meta.env.DEV) return null;
+  const [Agentation, setAgentation] = useState(null);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    import('agentation').then((mod) => setAgentation(() => mod.Agentation));
+  }, []);
+
+  if (!Agentation) return null;
 
   return (
     <Agentation

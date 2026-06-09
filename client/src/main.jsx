@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { MotionConfig } from 'framer-motion'
 import App from './App.jsx'
@@ -20,7 +20,10 @@ import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/disp
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { initSentry, setSentryUser, clearSentryUser } from './lib/sentry';
 import { initDatadogRum, setDatadogUser, clearDatadogUser } from './lib/datadog';
-import AgentationDev from './components/dev/AgentationDev';
+/** Local-only UI feedback tool — stripped from production builds (Vite dead-code elimination). */
+const AgentationDev = import.meta.env.DEV
+  ? lazy(() => import('./components/dev/AgentationDev'))
+  : null;
 
 initSentry();
 initDatadogRum();
@@ -86,7 +89,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                   <ConfirmProvider>
                     <UnsavedChangesProvider>
                       <App />
-                      <AgentationDev />
+                      {AgentationDev ? (
+                        <Suspense fallback={null}>
+                          <AgentationDev />
+                        </Suspense>
+                      ) : null}
                     </UnsavedChangesProvider>
                   </ConfirmProvider>
                 </ToastProvider>

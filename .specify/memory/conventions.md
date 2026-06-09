@@ -23,6 +23,10 @@ npm run audit:deadcode   # exit 0
 - Never commit: `server/.env`, `server/.env.render`, `production-hosts.local.json`, live Mongo URIs
 - Scripts targeting prod: `MONGODB_URI_PROD`, explicit `--yes` / confirm flags
 
+## Local-only UI
+
+- **Agentation** feedback widget: `client/src/components/dev/AgentationDev.jsx` — never ship to prod; load via `import.meta.env.DEV` + lazy import in `main.jsx`
+
 ## Commits
 
 - Conventional prefix: `feat:`, `fix:`, `chore:`, `docs:`

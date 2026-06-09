@@ -105,6 +105,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **E2E & CI** | Playwright public + auth smoke specs; Lighthouse a11y gate; ESLint + Vitest in GitHub Actions |
 | **Assets hub** | `/assets` hub layout — **File Links** (all with `assets` permission) + **Managed Accounts** (`/assets/accounts`) for org emails, social IDs, and platform logins; Google Sheet import replaces tenant data; roles: admin, artist-management, operations |
 | **Pagination** | `DataTable` / `TablePagination` default **10 entries** via `DEFAULT_TABLE_PAGE_SIZE`; server-side pages clamp when filters shrink; Followups + Booking Enquiries wired to full pagination API |
+| **Local dev tools** | **Agentation** annotate button (`agentation` package) — lazy-loaded only when `import.meta.env.DEV`; excluded from production Vite bundle |
 
 Full phased backlog: [`docs/IMPROVEMENT_ROADMAP.md`](docs/IMPROVEMENT_ROADMAP.md) · UX acceptance: [`docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md`](docs/UX_ARCHITECTURE_1.0.0_ROADMAP.md)
 

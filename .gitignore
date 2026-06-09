@@ -25,8 +25,11 @@ graphify-out/
 setup.cd
 .claude/
 *.mmdb
-.specify/*
+# Specify — ignore all except README + curated memory files
+.specify/**
+!.specify/
 !.specify/README.md
+!.specify/memory/
 !.specify/memory/project-overview.md
 !.specify/memory/architecture.md
 !.specify/memory/features.md

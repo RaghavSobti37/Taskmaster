@@ -1,37 +1,20 @@
 # Architecture
 
-## Stack
+## Email campaign location analytics
 
-- **Client:** React 18 + Vite, TanStack Query, Socket.IO, CSS var design tokens.
-- **Server:** Express, Mongoose, BullMQ/Redis, multi-tenant `tenantId` on models.
-- **Deploy:** Render (API), Vercel (SPA); hosts in gitignored `.cursor/production-hosts.local.json`.
+```mermaid
+flowchart LR
+  recipients[Campaign recipients] --> emailMap[buildEmailRegisteredCityMap]
+  Lead[(Lead.location/city)] --> emailMap
+  PersonIndex[(PersonIndex.city)] --> emailMap
+  MailEvent[(Open/Click MailEvents)] --> attribute[Attribute by email]
+  emailMap --> attribute
+  attribute --> breakdown[locationBreakdown opens/clicks]
+  breakdown --> API[GET /api/campaigns/:id]
+  breakdown --> UI[CampaignDetails charts]
+```
 
-## API layout
-
-- `/api/*` — REST; `protect` middleware + department/page permissions.
-- Org accounts: `server/routes/orgAccountRoutes.js` → `orgAccountController` → `OrgAccount` model.
-- Data Hub: `server/routes/dataHubRoutes.js` → person spine collections + reconcile.
-
-## Data flows
-
-- **Data Hub:** Domain inlets (leads, Exly, TSC, etc.) → reconcile → `people` / `personhubviews`.
-- **Org accounts:** Google Sheets API (service account) → parse tabs → wipe + insert per tenant.
-- **Prod sync:** `syncDataHubToProd.js` copies hub collections local → prod (`MONGODB_URI_PROD`).
-
-## Auth session
-
-- `GET /api/auth/me` — `attachProfileCompletion` on user payload.
-- `userSessionChanged` (client) — detects id, department, gamification, and profile field deltas before `setUser`.
-- `applySessionUser` — merge profile PATCH response without `queryClient.clear()`.
-
-## UI primitives
-
-- `DataTable` — client or `serverSide` pagination, sort, virtualization.
-- `TablePagination` — shared footer; default page size from `DEFAULT_TABLE_PAGE_SIZE`.
-- `ListPageLayout` + `PageToolbar` — standard list pages.
-
-## Email campaign geo
-
-- Ingest: server/routes/track.js writes MailEvent rows (locked tracking base URL).
-- Resolve: server/utils/geoLookup.js — sync/async IP lookup, click-specific lookupGeoForClick, open inference via uildClickCityByEmail.
-- Aggregate: server/utils/campaignLocationGeo.js → locationBreakdown + hourly 	imeSeries on campaign GET and rebuild script.
+- Per-campaign: `buildRegisteredLocationBreakdown(campaignId, recipients)` in `server/utils/campaignRegisteredLocation.js`.
+- Cross-campaign: `buildCumulativeRegisteredLocationBreakdown(engagedEmails)` in `analyticsController.getCumulativeMetrics`.
+- IP geo (`geoLookup.js`, `track.js`) unchanged for tracking; charts no longer use it for breakdown.
+- Maintenance: `node server/scripts/rebuildCampaignLocationBreakdown.js <campaignId> [--prod]`; Resend sync: `backfillCampaignFromResend.js` then CRM rebuild.

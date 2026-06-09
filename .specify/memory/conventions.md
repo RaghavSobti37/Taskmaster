@@ -1,43 +1,19 @@
 # Conventions
 
-## Locked (do not change without explicit unlock)
+## Pre-push audits
 
-- **Logo / spinner:** `docs/LOGO_LOCKED.md`, `.cursor/rules/logo-mark-locked.mdc`
-- **Email engine / tracking:** `docs/EMAIL_ENGINE_LOCKED.md`, `.cursor/rules/email-engine-locked.mdc`
-- **Production hosts:** `.cursor/production-hosts.local.json` — never use legacy `CoreKnot-jfw0` hosts
+- `npm run audit:exposure` — required before commit.
+- `npm run audit:deadcode` — required before push; no orphan `client/src/utils` or `server/utils` modules.
 
-## Pre-push audits (required)
+## Locked areas
+
+- Email tracking/geo in `track.js` / `geoLookup.js` — do not change for chart work; CRM breakdown is separate (`campaignRegisteredLocation.js`).
+- Logo/spinner — `docs/LOGO_LOCKED.md`.
+- Production hosts — `.cursor/production-hosts.local.json` (gitignored).
+
+## Campaign location scripts
 
 ```bash
-npm run audit:exposure   # exit 0
-npm run audit:deadcode   # exit 0
+node server/scripts/rebuildCampaignLocationBreakdown.js <campaignId> [--dry-run] [--prod]
+node server/scripts/backfillCampaignFromResend.js <campaignId> [--dry-run] [--prod]
 ```
-
-## Pagination
-
-- Default page size: **10** — `DEFAULT_TABLE_PAGE_SIZE` in `client/src/components/ui/primitives.jsx`
-- Do not override with 15/25 unless product explicitly requests
-
-## Secrets
-
-- Never commit: `server/.env`, `server/.env.render`, `production-hosts.local.json`, live Mongo URIs
-- Scripts targeting prod: `MONGODB_URI_PROD`, explicit `--yes` / confirm flags
-
-## Local-only UI
-
-- **Agentation** feedback widget: `client/src/components/dev/AgentationDev.jsx` — never ship to prod; load via `import.meta.env.DEV` + lazy import in `main.jsx`
-
-## Profile save UX
-
-- Settings → Profile: no success modal; use unsaved-changes bar only.
-- After profile save, prefer `applySessionUser(apiResponse)` over `login()` (avoids clearing React Query cache).
-
-## Commits
-
-- Conventional prefix: `feat:`, `fix:`, `chore:`, `docs:`
-- `/push-and-document` updates README + `.specify/memory/` tracked files
-
-## Campaign geo repair
-
-- One-off DB fix: `node server/scripts/rebuildCampaignLocationBreakdown.js <id> [--dry-run]` from repo root; uses `server/.env` (`MONGODB_URI` or prod when `MAIL_USE_PROD_DB=true`).
-- Do not change locked tracking URL / open pixel behavior when adjusting geo.

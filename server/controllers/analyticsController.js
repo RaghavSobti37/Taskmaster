@@ -3,6 +3,7 @@ const MailCampaign = require('../models/MailCampaign');
 const Lead = require('../models/Lead');
 const MailEvent = require('../models/MailEvent');
 const logger = require('../utils/logger');
+const { buildCumulativeRegisteredLocationBreakdown } = require('../utils/campaignRegisteredLocation');
 
 const normalizeLocation = (raw) =>
   String(raw || 'unknown')
@@ -40,22 +41,25 @@ const mergeTagMetrics = (coreRows, mailRows) => {
     .sort((a, b) => b.totalSent - a.totalSent);
 };
 
+const engagedRecipientPipeline = [
+  { $unwind: '$recipients' },
+  {
+    $match: {
+      'recipients.status': { $in: ['Opened', 'Clicked', 'Sent'] },
+      'recipients.email': { $type: 'string', $ne: '' },
+    },
+  },
+  {
+    $group: {
+      _id: { $toLower: { $trim: { input: '$recipients.email' } } },
+    },
+  },
+];
+
 const collectEngagedEmails = async () => {
-  const [recipientEmails, eventEmails] = await Promise.all([
-    MailCampaign.aggregate([
-      { $unwind: '$recipients' },
-      {
-        $match: {
-          'recipients.status': { $in: ['Opened', 'Clicked', 'Sent'] },
-          'recipients.email': { $type: 'string', $ne: '' },
-        },
-      },
-      {
-        $group: {
-          _id: { $toLower: { $trim: { input: '$recipients.email' } } },
-        },
-      },
-    ]),
+  const [coreRecipientEmails, mailRecipientEmails, eventEmails] = await Promise.all([
+    Campaign.aggregate(engagedRecipientPipeline),
+    MailCampaign.aggregate(engagedRecipientPipeline),
     MailEvent.aggregate([
       { $match: { eventType: { $in: ['Open', 'Click', 'Send'] }, email: { $type: 'string', $ne: '' } } },
       {
@@ -67,55 +71,10 @@ const collectEngagedEmails = async () => {
   ]);
 
   const engagedEmailsSet = new Set();
-  for (const row of [...recipientEmails, ...eventEmails]) {
+  for (const row of [...coreRecipientEmails, ...mailRecipientEmails, ...eventEmails]) {
     if (row._id) engagedEmailsSet.add(row._id);
   }
   return Array.from(engagedEmailsSet);
-};
-
-const buildLocationBreakdown = async (engagedEmails) => {
-  const matchQuery = engagedEmails.length > 0
-    ? { email: { $in: engagedEmails } }
-    : { emailStatus: 'Active' };
-
-  const rows = await Lead.aggregate([
-    { $match: matchQuery },
-    {
-      $project: {
-        loc: {
-          $trim: {
-            input: {
-              $replaceAll: {
-                input: {
-                  $replaceAll: {
-                    input: {
-                      $replaceAll: {
-                        input: { $toLower: { $ifNull: ['$location', { $ifNull: ['$city', 'unknown'] }] } },
-                        find: '(',
-                        replacement: '',
-                      },
-                    },
-                    find: ')',
-                    replacement: '',
-                  },
-                },
-                find: ',',
-                replacement: '',
-              },
-            },
-          },
-        },
-      },
-    },
-    { $group: { _id: '$loc', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: 100 },
-  ]);
-
-  return rows.map(({ _id, count }) => ({
-    location: _id.charAt(0).toUpperCase() + _id.slice(1),
-    count,
-  }));
 };
 
 exports.getCumulativeMetrics = async (req, res) => {
@@ -149,7 +108,7 @@ exports.getCumulativeMetrics = async (req, res) => {
     ]);
 
     const aggregateData = mergeTagMetrics(coreAgg, mailAgg);
-    const dynamicBreakdown = await buildLocationBreakdown(engagedEmails);
+    const dynamicBreakdown = await buildCumulativeRegisteredLocationBreakdown(engagedEmails);
 
     res.status(200).json({ aggregateData, dynamicBreakdown });
   } catch (error) {

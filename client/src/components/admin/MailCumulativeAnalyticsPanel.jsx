@@ -1,10 +1,18 @@
 import React from 'react';
 import { BarChart2, Users } from 'lucide-react';
 import { Card, Badge } from '../ui';
+import RegisteredLocationBarChart from '../emails/RegisteredLocationBarChart';
 
 export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLocationSelect }) {
   const aggregateRows = cumulativeAnalytics?.aggregateData || [];
   const locationRows = cumulativeAnalytics?.dynamicBreakdown || [];
+
+  const chartData = locationRows.map((row) => ({
+    city: row.location,
+    opens: row.opens || 0,
+    clicks: row.clicks || 0,
+    total: row.total ?? ((row.opens || 0) + (row.clicks || 0)),
+  }));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -49,33 +57,33 @@ export default function MailCumulativeAnalyticsPanel({ cumulativeAnalytics, onLo
 
       <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-          <Users size={14} /> Leads by CRM location (engaged emails)
+          <Users size={14} /> Registered location breakdown (all campaigns)
         </h3>
         <p className="text-[10px] text-[var(--color-text-muted)]">
-          Uses CRM location on leads with sent, opened, or clicked mail — not open-tracking geo.
+          Opens and clicks by each engaged recipient&apos;s CRM city — not IP tracking geo. Click a bar to view leads.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {locationRows.map((item, idx) => (
-            <div
-              key={idx}
-              role="button"
-              tabIndex={0}
-              className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between cursor-pointer hover:bg-[var(--color-bg-border)]/20 transition-all duration-200"
-              onClick={() => onLocationSelect?.(item.location)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') onLocationSelect?.(item.location);
-              }}
-            >
-              <span className="font-bold text-xs block">{item.location}</span>
-              <Badge variant="mint">{item.count} Engaged</Badge>
-            </div>
-          ))}
-          {locationRows.length === 0 && (
-            <div className="col-span-3 p-8 text-center text-[var(--color-text-muted)] italic font-mono border border-dashed rounded-xl">
-              No engaged lead demographics recorded yet.
-            </div>
-          )}
-        </div>
+        <RegisteredLocationBarChart
+          data={chartData}
+          height={320}
+          limit={16}
+          onLocationClick={onLocationSelect}
+          emptyMessage="No engaged lead demographics recorded yet."
+        />
+        {locationRows.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            {locationRows.slice(0, 9).map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] rounded-xl flex items-center justify-between text-left hover:bg-[var(--color-bg-border)]/20 transition-all duration-200"
+                onClick={() => onLocationSelect?.(item.location)}
+              >
+                <span className="font-bold text-xs block">{item.location}</span>
+                <Badge variant="mint">{item.count} engaged</Badge>
+              </button>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );

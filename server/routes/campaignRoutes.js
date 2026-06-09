@@ -162,20 +162,6 @@ router.get('/:id/recipients', async (req, res) => {
   }
 });
 
-const normalizeLocationBreakdown = (raw) => {
-  if (!raw) return {};
-  const source = raw instanceof Map ? Object.fromEntries(raw) : raw;
-  if (typeof source !== 'object' || Array.isArray(source)) return {};
-  const out = {};
-  for (const [city, stats] of Object.entries(source)) {
-    if (!stats || typeof stats !== 'object') continue;
-    const opens = Number(stats.opens) || 0;
-    const clicks = Number(stats.clicks) || 0;
-    if (opens > 0 || clicks > 0) out[city] = { opens, clicks };
-  }
-  return out;
-};
-
 const aggregateTimeSeriesByHour = (points = []) => {
   const map = {};
   for (const pt of points) {
@@ -190,7 +176,7 @@ const aggregateTimeSeriesByHour = (points = []) => {
   return Object.values(map).sort((a, b) => new Date(a.time) - new Date(b.time));
 };
 
-const { buildGeoFromMailEvents } = require('../utils/campaignLocationGeo');
+const { buildRegisteredLocationBreakdown } = require('../utils/campaignRegisteredLocation');
 
 router.get('/:id', async (req, res) => {
   try {
@@ -207,14 +193,14 @@ router.get('/:id', async (req, res) => {
     campaign.stats = computed.stats;
     campaign.metrics = computed.metrics;
 
-    const storedBreakdown = normalizeLocationBreakdown(campaign.locationBreakdown);
     const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
 
-    const geo = await buildGeoFromMailEvents(campaign._id);
-    campaign.locationBreakdown = Object.keys(geo.locationBreakdown).length > 0
-      ? geo.locationBreakdown
-      : storedBreakdown;
-    if (geo.timeSeries.length > 0) campaign.timeSeries = geo.timeSeries;
+    const registered = await buildRegisteredLocationBreakdown(
+      campaign._id,
+      campaign.recipients || [],
+    );
+    campaign.locationBreakdown = registered.locationBreakdown;
+    if (registered.timeSeries.length > 0) campaign.timeSeries = registered.timeSeries;
     else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
 
     campaign.recipientCount = computed.total;

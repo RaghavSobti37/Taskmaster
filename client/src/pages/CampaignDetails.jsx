@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import RegisteredLocationBarChart from '../components/emails/RegisteredLocationBarChart';
+import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
 import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar } from '../components/ui';
 import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
@@ -9,7 +10,6 @@ import { formatTimestampWithTz } from '../utils/displayLabels';
 import { format } from 'date-fns';
 import ResendFromEmailPicker from '../components/emails/ResendFromEmailPicker';
 import { displayNameForResendEmail, DEFAULT_RESEND_FROM_EMAILS } from '../constants/resendFromEmails';
-import { eventCityLabel } from '../utils/mailEventLocation';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -250,9 +250,10 @@ export default function CampaignDetails() {
       city,
       opens: Number(stats?.opens) || 0,
       clicks: Number(stats?.clicks) || 0,
+      total: (Number(stats?.opens) || 0) + (Number(stats?.clicks) || 0),
     }))
     .filter((r) => r.opens > 0 || r.clicks > 0)
-    .sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks));
+    .sort((a, b) => b.total - a.total);
 
   const totalRecipients = campaign?.recipientCount ?? campaign?.stats?.total ?? 0;
   const deliveredCount =
@@ -325,7 +326,6 @@ export default function CampaignDetails() {
       </div>
 
       <DataOverviewSection
-        eagerCharts
         mobileCollapsed
         mobileMaxStats={2}
         stats={[
@@ -334,15 +334,14 @@ export default function CampaignDetails() {
           { id: 'failed', label: 'Failed / Bounced', value: failedCount, icon: AlertCircle, variant: 'rose' },
           { id: 'pending', label: 'Pending / Queued', value: pendingCount, icon: Clock, variant: 'slate' },
         ]}
-        charts={[{
-          id: 'geo',
-          title: 'Engagement by city',
-          type: 'bar',
-          data: locationData.slice(0, 8).map((d) => ({
-            label: eventCityLabel({ displayCity: d.city }) || d.city || 'Unknown',
-            value: (d.opens || 0) + (d.clicks || 0),
-          })),
-        }]}
+      />
+
+      <RegisteredLocationBarChart
+        title="Registered location"
+        data={locationData}
+        height={140}
+        limit={8}
+        className="p-3 bg-[var(--color-bg-surface)] rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)]"
       />
 
       <PageToolbar
@@ -392,31 +391,16 @@ export default function CampaignDetails() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-            <Globe size={14} /> Location Breakdown
-          </h3>
-          <div className="h-64 w-full">
-            {locationData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs font-mono text-[var(--color-text-muted)] italic border border-dashed border-[var(--color-bg-border)] rounded-xl px-4 text-center">
-                No location data yet — open or click from a real device to populate city geo.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={locationData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={10} />
-                  <YAxis dataKey="city" type="category" stroke="#94a3b8" fontSize={10} width={80} tick={{ fontSize: 10 }} />
-                  <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', fontFamily: 'monospace' }}
-                  formatter={(value, name) => [String(value), name]}
-                />
-                  <Bar dataKey="opens" fill="#38bdf8" radius={[0, 6, 6, 0]} name="Opens" />
-                  <Bar dataKey="clicks" fill="#10b981" radius={[0, 6, 6, 0]} name="Clicks" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+        <Card className="p-6 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] space-y-2">
+          <p className="text-[10px] text-[var(--color-text-muted)]">
+            Opens and clicks grouped by each recipient&apos;s CRM city — not IP tracking geo.
+          </p>
+          <RegisteredLocationBarChart
+            title="Registered location breakdown"
+            data={locationData}
+            height={256}
+            limit={12}
+          />
         </Card>
       </div>
 

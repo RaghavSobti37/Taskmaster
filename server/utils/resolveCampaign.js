@@ -18,11 +18,11 @@ const resolveCampaignByParam = async (id, options = {}) => {
   const applyQuery = (query, isLegacy = false) => {
     query = query.setOptions(bypassTenant);
     if (populate && !isLegacy) {
-      query = query.populate('recipients.leadId', 'name email location phone status artistType')
+      query = query.populate('recipients.leadId', 'name email location city phone status artistType')
         .populate('senderProfileId')
         .populate('senderProfileIds');
     } else if (populate && isLegacy) {
-      query = query.populate('recipients.leadId', 'name email location phone status artistType')
+      query = query.populate('recipients.leadId', 'name email location city phone status artistType')
         .populate('senderProfileId');
     }
     if (lean) query = query.lean();

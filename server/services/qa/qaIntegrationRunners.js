@@ -1005,12 +1005,14 @@ async function runSyncBookedcallFullFlow(def, ctx) {
 async function runMailEventNoHardcode(def, ctx) {
   const geo = await readServer('utils/geoLookup.js');
   const campaign = await readServer('routes/campaignRoutes.js');
+  const registered = await readServer('utils/campaignRegisteredLocation.js');
   const badGeo = /Mumbai/i.test(geo);
-  const usesResolver = campaign.includes('resolveMailEventCityAsync') && campaign.includes('displayCity');
-  if (!badGeo && usesResolver) {
-    return probePass(def, 'Campaign activity uses geoLookup resolver (no Mumbai hardcode in geoLookup)');
+  const usesCrmBreakdown = campaign.includes('buildRegisteredLocationBreakdown')
+    && registered.includes('registeredCityFromLeadDoc');
+  if (!badGeo && usesCrmBreakdown) {
+    return probePass(def, 'Campaign location breakdown uses CRM registration (no Mumbai hardcode in geoLookup)');
   }
-  return probeFail(def, `Mail geo check failed (geoLookup Mumbai=${badGeo}, resolver=${usesResolver})`);
+  return probeFail(def, `Mail geo check failed (geoLookup Mumbai=${badGeo}, crmBreakdown=${usesCrmBreakdown})`);
 }
 
 async function runUnsubscribeDualWrite(def, ctx) {

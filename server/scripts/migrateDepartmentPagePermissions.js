@@ -8,13 +8,26 @@ async function migrateDepartmentPagePermissions() {
   let updated = 0;
 
   for (const dept of depts) {
-    if (Array.isArray(dept.pagePermissions) && dept.pagePermissions.length > 0) continue;
-
-    const preset = dept.permissionPreset || 'standard';
+    const preset = dept.permissionPreset || (PRESET_PAGES[dept.slug] ? dept.slug : 'standard');
     const pages = PRESET_PAGES[preset] || PRESET_PAGES.standard;
-    dept.pagePermissions = pages;
-    await dept.save();
-    updated += 1;
+
+    if (!Array.isArray(dept.pagePermissions) || dept.pagePermissions.length === 0) {
+      dept.pagePermissions = pages;
+      dept.permissionPreset = preset;
+      await dept.save();
+      updated += 1;
+      continue;
+    }
+
+    if (dept.slug === 'artist-management' || dept.permissionPreset === 'artist-management') {
+      const merged = [...new Set([...dept.pagePermissions, ...pages])];
+      if (!dept.pagePermissions.includes('artists') || merged.length !== dept.pagePermissions.length) {
+        dept.pagePermissions = merged;
+        dept.permissionPreset = 'artist-management';
+        await dept.save();
+        updated += 1;
+      }
+    }
   }
 
   console.log(`Migrated pagePermissions on ${updated} department(s).`);

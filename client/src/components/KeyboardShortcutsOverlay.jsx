@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isAdminUser } from '../utils/departmentPermissions';
 import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
-import { filterShortcutSections, SHORTCUT_SECTIONS } from '../lib/keyboardShortcuts';
+import { mergeShortcutBindings } from '../lib/shortcutDefaultsShared';
+import { buildShortcutSectionsForUser, filterShortcutSections } from '../lib/keyboardShortcuts';
+import { useShortcutPreferences } from '../hooks/useShortcutPreferences';
 
 export default function KeyboardShortcutsOverlay() {
   const { user } = useAuth();
+  const isAdmin = isAdminUser(user);
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
-  const sections = filterShortcutSections(SHORTCUT_SECTIONS, { isAdmin: isAdminUser(user) });
+  const { data: shortcutPrefs } = useShortcutPreferences(!!user);
+
+  const sections = useMemo(() => {
+    const bindingsMap = shortcutPrefs?.effectiveBindings
+      || mergeShortcutBindings(shortcutPrefs?.bindings);
+    return filterShortcutSections(
+      buildShortcutSectionsForUser(bindingsMap, { isAdmin }),
+      { isAdmin }
+    );
+  }, [shortcutPrefs, isAdmin]);
 
   return (
     <AnimatePresence>
@@ -70,7 +82,7 @@ export default function KeyboardShortcutsOverlay() {
             </div>
 
             <p className="border-t border-[var(--color-bg-border)] px-4 py-2 text-xs text-[var(--color-text-muted)]">
-              Shortcuts are disabled while typing in inputs. Press Esc to cancel a G-chord or close this panel.
+              Customize in Settings → Shortcuts. Shortcuts are disabled while typing in inputs. Press Esc to cancel a sequence or close this panel.
             </p>
           </motion.div>
         </motion.div>

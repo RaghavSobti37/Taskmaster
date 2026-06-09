@@ -20,6 +20,7 @@ import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/disp
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { initSentry, setSentryUser, clearSentryUser } from './lib/sentry';
 import { initDatadogRum, setDatadogUser, clearDatadogUser } from './lib/datadog';
+import AgentationDev from './components/dev/AgentationDev';
 
 initSentry();
 initDatadogRum();
@@ -85,6 +86,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                   <ConfirmProvider>
                     <UnsavedChangesProvider>
                       <App />
+                      <AgentationDev />
                     </UnsavedChangesProvider>
                   </ConfirmProvider>
                 </ToastProvider>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, LayoutTemplate, LayoutDashboard, Clock, Target, CalendarDays,
-  Receipt, LogOut, ArrowLeft, Shield
+  Receipt, LogOut, ArrowLeft, Shield, Keyboard
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,7 @@ import ProgressTab from './tabs/ProgressTab';
 import LeaveTab from './tabs/LeaveTab';
 import InvoiceTab from './tabs/InvoiceTab';
 import SessionsTab from './tabs/SessionsTab';
+import KeyboardShortcutsTab from './tabs/KeyboardShortcutsTab';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const SettingsPage = () => {
   const tabs = [
     { id: 'Profile', icon: User, label: 'Profile' },
     { id: 'Security', icon: Shield, label: 'Security' },
+    { id: 'Keyboard', icon: Keyboard, label: 'Shortcuts' },
     { id: 'Sidebar', icon: LayoutTemplate, label: 'Sidebar Layout' },
     { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard Layout' },
     { id: 'Attendance', icon: Clock, label: 'Attendance' },
@@ -63,6 +65,7 @@ const SettingsPage = () => {
     switch (activeTab) {
       case 'Profile': return <ProfileTab />;
       case 'Security': return <SessionsTab />;
+      case 'Keyboard': return <KeyboardShortcutsTab />;
       case 'Sidebar': return <SidebarCustomizationTab />;
       case 'Dashboard': return <DashboardCustomizationTab />;
       case 'Attendance': return <AttendanceTab />;

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Database, ShoppingBag, Users, Sheet, Phone, MessageSquare,
-  UserX, Mail, UsersRound, Activity, Star,
+  UserX, Mail, UsersRound, Activity, Star, Music,
 } from 'lucide-react';
 import { Badge } from '../ui';
 
@@ -12,6 +12,8 @@ const ICONS = {
   outsourced: Sheet,
   newsletter: Mail,
   tsc: Sheet,
+  artist_path: Music,
+  artist_crm: Music,
   booked_calls: Phone,
   enquiries: MessageSquare,
   unsubscribed: UserX,

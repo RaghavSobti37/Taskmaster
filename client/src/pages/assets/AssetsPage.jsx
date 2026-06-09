@@ -695,7 +695,17 @@ const AssetsPage = () => {
           <form onSubmit={handleAddAsset} className="space-y-6">
             <div className="space-y-4">
               <Input label="Asset Title / Name" value={newAsset.name} onChange={e => setNewAsset({ ...newAsset, name: e.target.value })} placeholder="E.g., Production API Key / File Name" icon={Database} required />
-              <Input label="Asset URL Link" value={newAsset.link} onChange={e => setNewAsset({ ...newAsset, link: e.target.value })} placeholder="https://..." icon={Link2} required />
+              <Input
+                label="Asset URL Link"
+                value={newAsset.link}
+                onChange={(e) => {
+                  const link = e.target.value;
+                  setNewAsset({ ...newAsset, link, type: detectAssetType('other', link) });
+                }}
+                placeholder="https://..."
+                icon={Link2}
+                required
+              />
 
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-widest ml-1">Asset Type</label>

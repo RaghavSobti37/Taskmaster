@@ -25,6 +25,7 @@ const {
 } = require('../../shared/dataInlets');
 
 const FOLDER_CACHE_TTL_MS = 5 * 60 * 1000;
+const HUB_MODEL_RESOLVE_TTL_MS = 30 * 1000;
 const INCREMENTAL_BOOTSTRAP_MS = 24 * 60 * 60 * 1000; // first run: last 24h only
 const CONTACT_BYPASS = { bypassTenant: true };
 const WEEKLY_DATE_FORMAT = '%Y-%U';
@@ -35,12 +36,15 @@ const HUB_SOURCE_TO_FOLDER = {
   booked_call: 'booked_calls',
   newsletter: 'newsletter',
   artist_path: 'artist_path',
+  artist_crm: 'artist_crm',
   mail: 'mail',
   enquiry: 'enquiries',
   community: 'community',
 };
+const HUB_KEY_TO_FOLDER = { ...HUB_SOURCE_TO_FOLDER };
 let folderCache = { data: null, expiresAt: 0 };
-let hubViewActive = null;
+let hubModelResolution = { useHubView: false, expiresAt: 0 };
+let hubViewActive = false;
 
 function mapHubInletKey(hubKey) {
   return HUB_SOURCE_TO_FOLDER[hubKey] || hubKey;
@@ -71,10 +75,10 @@ async function countSinceDate(HubModel, match, since, field = 'createdAt') {
   return rows[0]?.n || 0;
 }
 
-async function aggregateWeeklyGrowth(HubModel, match, since) {
+async function aggregateWeeklyGrowth(HubModel, match, since, field = 'createdAt') {
   return HubModel.aggregate([
     { $match: match },
-    dateCoalesceStage('createdAt'),
+    dateCoalesceStage(field),
     { $match: { _dateField: { $gte: since, $ne: null } } },
     {
       $group: {
@@ -104,18 +108,60 @@ async function aggregateInletBreakdown(HubModel, match) {
 }
 
 async function resolveHubModel() {
-  if (hubViewActive === null) {
-    const count = await PersonHubView.countDocuments({}).setOptions(CONTACT_BYPASS);
-    hubViewActive = count > 0;
+  const now = Date.now();
+  if (hubModelResolution.expiresAt > now) {
+    hubViewActive = hubModelResolution.useHubView;
+    return hubViewActive ? PersonHubView : PersonIndex;
   }
-  return hubViewActive ? PersonHubView : PersonIndex;
+
+  const [hubCount, indexCount, hubWithInlets] = await Promise.all([
+    PersonHubView.countDocuments({}).setOptions(CONTACT_BYPASS),
+    PersonIndex.countDocuments({}).setOptions(CONTACT_BYPASS),
+    PersonHubView.countDocuments({
+      $or: [
+        { inletCount: { $gte: 1 } },
+        { inCRM: true },
+        { inExly: true },
+        { inOutsourced: true },
+        { inMailer: true },
+        { inBookedCalls: true },
+        { inNewsletter: true },
+        { inArtistPath: true },
+        { inArtistCrm: true },
+        { inEnquiries: true },
+      ],
+    }).setOptions(CONTACT_BYPASS),
+  ]);
+
+  const useHubView = hubCount > 0 && (
+    indexCount === 0
+    || hubCount >= indexCount * 0.9
+    || hubWithInlets >= Math.max(indexCount, hubCount) * 0.5
+  );
+  hubViewActive = useHubView;
+  hubModelResolution = { useHubView, expiresAt: now + HUB_MODEL_RESOLVE_TTL_MS };
+  return useHubView ? PersonHubView : PersonIndex;
+}
+
+function resetHubModelCache() {
+  hubModelResolution = { useHubView: false, expiresAt: 0 };
+  hubViewActive = false;
+}
+
+function resolveLeadInletKey(lead) {
+  if (isBookedCallSource(lead.source)) return 'booked_calls';
+  if (lead.crmType === 'artist') return 'artist_crm';
+  return 'leads';
 }
 
 function mapHubRow(c) {
   if (!c) return c;
   const inlets = c.inlets?.length
     ? dedupeInletEntries(c.inlets)
-    : (c.inletKeys || []).map((key) => ({ key, recordIds: [] }));
+    : (c.inletKeys || []).map((key) => ({
+      key: HUB_KEY_TO_FOLDER[key] || key,
+      recordIds: [],
+    }));
   return {
     ...c,
     _id: c.personId || c._id,
@@ -125,6 +171,7 @@ function mapHubRow(c) {
     isMultiInlet: c.isMultiInlet ?? inlets.length >= 2,
     inletLabels: inlets.map((i) => DATA_INLETS[i.key]?.label || i.key),
     updatedAt: c.updatedAt || c.lastActivityAt,
+    createdAt: c.firstSeenAt || c.createdAt,
   };
 }
 
@@ -166,6 +213,9 @@ const buildFolderQuery = (folder, extra = {}) => {
       break;
     case 'artist_path':
       q.inArtistPath = true;
+      break;
+    case 'artist_crm':
+      q.inArtistCrm = true;
       break;
     case 'booked_calls':
       q.inBookedCalls = true;
@@ -251,7 +301,7 @@ class DataHubService {
     const primaryName = leads[0]?.name || outsourced[0]?.name || bookedCallRecords[0]?.name || newsletter[0]?.name || exlyBookings[0]?.name || 'Anonymous';
 
     for (const lead of leads) {
-      const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+      const inletKey = resolveLeadInletKey(lead);
       contact = await ContactService.mergeContact({
         name: lead.name || primaryName,
         email: lead.email || email,
@@ -264,7 +314,7 @@ class DataHubService {
         unsubscribeReason: lead.unsubscribeReason,
         recordId: lead._id,
         summary: { source: lead.source, leadStatus: lead.leadStatus, callStatus: lead.callStatus },
-      }, inletKey === 'booked_calls' ? 'booked_calls' : 'crm');
+      }, inletKey === 'booked_calls' ? 'booked_calls' : inletKey === 'artist_crm' ? 'artist_crm' : 'crm');
     }
 
     for (const row of outsourced) {
@@ -756,10 +806,10 @@ class DataHubService {
         { $group: { _id: '$emailStatus', count: { $sum: 1 } } },
       ]).option(CONTACT_BYPASS),
       aggregateInletBreakdown(HubModel, match),
-      countSinceDate(HubModel, match, weekAgo, 'createdAt'),
+      countSinceDate(HubModel, match, weekAgo, hubViewActive ? 'firstSeenAt' : 'createdAt'),
       this.getOverlapMatrix(),
       HubModel.countDocuments(loyalQuery).setOptions(CONTACT_BYPASS),
-      aggregateWeeklyGrowth(HubModel, match, growthSince),
+      aggregateWeeklyGrowth(HubModel, match, growthSince, hubViewActive ? 'firstSeenAt' : 'createdAt'),
     ]);
 
     return {
@@ -1195,6 +1245,16 @@ class DataHubService {
     const repairedInlets = await this.repairDuplicateInlets({ onProgress });
     if (repairedInlets) stats.repairedInlets = repairedInlets;
 
+    if (full) {
+      const PersonHubBuilder = require('./PersonHubBuilder');
+      log('Rebuilding PersonHubView for all persons…');
+      const hubRebuild = await PersonHubBuilder.rebuildAll({ onProgress });
+      stats.hubViewsRebuilt = hubRebuild.processed;
+      resetHubModelCache();
+    } else {
+      resetHubModelCache();
+    }
+
     await DataHubSyncState.findOneAndUpdate(
       { configKey: 'incremental' },
       {
@@ -1249,7 +1309,7 @@ class DataHubService {
     log(`leads: loaded ${leads.length} for merge`);
     await runBatch(leads, 'leads', async (lead) => {
       if (!lead.email && !lead.phone) return;
-      const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+      const inletKey = resolveLeadInletKey(lead);
       await ContactService.mergeContact({
         name: lead.name,
         email: lead.email,
@@ -1269,7 +1329,7 @@ class DataHubService {
           nextFollowupTime: lead.nextFollowupTime,
         },
         inletKey,
-      }, inletKey === 'booked_calls' ? 'booked_calls' : 'crm');
+      }, inletKey === 'booked_calls' ? 'booked_calls' : inletKey === 'artist_crm' ? 'artist_crm' : 'crm');
       stats.leads += 1;
     });
 
@@ -1387,6 +1447,7 @@ class DataHubService {
 
   clearFolderCache() {
     folderCache = { data: null, expiresAt: 0 };
+    resetHubModelCache();
   }
 
   async repairDuplicateInlets({ onProgress } = {}) {

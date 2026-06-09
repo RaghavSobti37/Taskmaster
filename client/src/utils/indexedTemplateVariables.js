@@ -126,10 +126,16 @@ export const leadToRowData = (lead) => {
   const keys = [
     'name', 'email', 'phone', 'city', 'leadStatus', 'callStatus', 'source',
     'artistType', 'primaryRole', 'learningGoal', 'exlyOfferingTitle',
+    'artistProject', 'contactCategory',
   ];
   const out = {};
   for (const k of keys) {
     if (lead[k] != null && String(lead[k]).trim() !== '') out[k] = String(lead[k]).trim();
+  }
+  const meta = lead.metadata || {};
+  const metaKeys = ['publication', 'designation', 'pitchVector', 'services', 'eventCategory', 'mediaFormat', 'organization'];
+  for (const k of metaKeys) {
+    if (meta[k] != null && String(meta[k]).trim() !== '') out[k] = String(meta[k]).trim();
   }
   return out;
 };

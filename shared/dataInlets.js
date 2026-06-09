@@ -10,6 +10,7 @@ const DATA_INLETS = {
   tsc: { key: 'outsourced', label: 'Outsourced Data', icon: 'sheet' },
   newsletter: { key: 'newsletter', label: 'Newsletter', icon: 'mail' },
   artist_path: { key: 'artist_path', label: 'Artist Path', icon: 'music' },
+  artist_crm: { key: 'artist_crm', label: 'Artist CRM', icon: 'music' },
   booked_calls: { key: 'booked_calls', label: 'Booked Calls', icon: 'phone' },
   enquiries: { key: 'enquiries', label: 'Enquiries', icon: 'message-square' },
   unsubscribed: { key: 'unsubscribed', label: 'Unsubscribed', icon: 'user-x' },
@@ -21,7 +22,7 @@ const DATA_INLETS = {
 
 const INLET_KEYS = Object.keys(DATA_INLETS).filter((k) => k !== 'all' && k !== 'loyal' && k !== 'tsc');
 
-const BOOKED_CALL_SOURCE_RE = /website booking|booked call|discovery call|booked discovery/i;
+const BOOKED_CALL_SOURCE_RE = /website booking|booked call|discovery call|booked discovery|website artist enquiry|artist booking enquiry/i;
 
 const COMMUNITY_RE = /community/i;
 
@@ -34,6 +35,7 @@ const SOURCE_TO_INLET = {
   outsourced: 'outsourced',
   newsletter: 'newsletter',
   artist_path: 'artist_path',
+  artist_crm: 'artist_crm',
   booked_calls: 'booked_calls',
   enquiries: 'enquiries',
 };

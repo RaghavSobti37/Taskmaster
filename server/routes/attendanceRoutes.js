@@ -19,6 +19,7 @@ const {
   validateAttendanceTimes,
 } = require('../utils/attendanceDate');
 const { isAttendanceExcluded } = require('../utils/attendanceUsers');
+const { syncApprovedLeaveToAttendance } = require('../utils/leaveApprovalSync');
 const { createNotification } = require('../services/notificationDispatcher');
 const { validateQuery } = require('../validation/validateQuery');
 const { validateBody } = require('../validation/validateBody');
@@ -27,6 +28,7 @@ const {
   attendanceCheckBody,
   leaveRequestBody,
   leaveRequestsQuery,
+  leaveReviewBody,
 } = require('../validation/schemas/attendance');
 
 const isOps = (user) => isOpsUser(user);
@@ -270,6 +272,65 @@ router.get('/leave/requests', validateQuery(leaveRequestsQuery), async (req, res
       .sort({ createdAt: -1 })
       .lean();
     res.json(requests);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/leave/requests/:id/approve', async (req, res) => {
+  try {
+    if (!isOps(req.user)) {
+      return res.status(403).json({ error: 'Only operations can approve leave requests' });
+    }
+
+    const request = await LeaveRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Leave request not found' });
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: `Leave request is already ${request.status}` });
+    }
+
+    request.status = 'approved';
+    request.reviewedBy = req.user._id;
+    request.reviewedAt = new Date();
+    await request.save();
+
+    await syncApprovedLeaveToAttendance(request);
+
+    const populated = await LeaveRequest.findById(request._id)
+      .populate('userId', 'name email')
+      .populate('reviewedBy', 'name')
+      .lean();
+
+    res.json(populated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/leave/requests/:id/reject', validateBody(leaveReviewBody), async (req, res) => {
+  try {
+    if (!isOps(req.user)) {
+      return res.status(403).json({ error: 'Only operations can reject leave requests' });
+    }
+
+    const request = await LeaveRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ error: 'Leave request not found' });
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: `Leave request is already ${request.status}` });
+    }
+
+    request.status = 'rejected';
+    request.reviewedBy = req.user._id;
+    request.reviewedAt = new Date();
+    request.reviewNote = req.body?.reviewNote || '';
+    await request.save();
+
+    const populated = await LeaveRequest.findById(request._id)
+      .populate('userId', 'name email')
+      .populate('reviewedBy', 'name')
+      .lean();
+
+    res.json(populated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

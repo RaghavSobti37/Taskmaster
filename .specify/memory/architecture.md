@@ -15,6 +15,17 @@ Browser → Vite (:5173) → proxy /api → Express (:5000) → MongoDB / Redis
 - `.lean()` reads; aggregation over repeated `countDocuments`.
 - Task review pipeline with activity timeline + gamification XP.
 - Person spine: `Person`, `PersonIdentifier`, `PersonHubView` — domain facts in `Lead`, `ArtistPathResponse`, `ExlyBooking`, etc.
+- **Artist CRM:** `Lead.crmType` + `contactCategory`; import upserts by `metadata.importRowKey`; partial unique index on non-empty email.
+
+## Artist CRM data flow
+
+```
+CSV upload / webhook → artistCrmImportService | artistEnquiryService
+  → Lead (crmType: artist) → ContactService / Data Hub inlets
+  → CrmHub UI + booking panel in lead modal
+```
+
+Default booked-call assignee: `PRIMARY_CALL_ASSIGNEE` env → Akash (artist-management).
 
 ## Frontend patterns
 

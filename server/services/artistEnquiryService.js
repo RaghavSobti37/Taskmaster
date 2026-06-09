@@ -1,11 +1,18 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Project = require('../models/Project');
+const Lead = require('../models/Lead');
 const TaskService = require('./TaskService');
 const { createNotification } = require('./notificationDispatcher');
-const { findProjectByArtist } = require('../utils/artistEnquiryProjectResolver');
+const { findProjectByArtist, resolveProjectNameFromArtist } = require('../utils/artistEnquiryProjectResolver');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const ContactService = require('./ContactService');
+const LeadService = require('./LeadService');
+const { assignLeadToArtistRep } = require('../utils/crmAssignment');
+const { resolvePrimaryCallAssigneeId } = require('../utils/primaryCallAssignee');
+const { CRM_TYPES, CONTACT_CATEGORIES } = require('../../shared/artistCrmTaxonomy');
+const { normalizePersonRecord } = require('../utils/personNormalization');
+const { buildLeadActionUrl } = require('../utils/notificationActionUrl');
 const logger = require('../utils/logger');
 
 const BYPASS = { bypassTenant: true };
@@ -147,6 +154,97 @@ async function processArtistEnquiryLogic(data) {
   broadcastRealtimeEvent('tasks', 'task_change', { taskId: taskDto._id, action: 'create' });
   broadcastRealtimeEvent('logs', 'log_update', { taskId: taskDto._id, action: 'CREATE_TASK' });
 
+  const assigneeId = (await resolvePrimaryCallAssigneeId())
+    || (assigneeIds[0] ? assigneeIds[0] : await assignLeadToArtistRep());
+  const artistProject = resolveProjectNameFromArtist(normalized.artist) || project.name;
+
+  const identity = normalizePersonRecord(
+    { name: normalized.name, email: normalized.email, phone: normalized.phone },
+    { requireName: true, requirePhone: true, tryRepairPhone: true }
+  );
+
+  let leadId = null;
+  if (!identity.errors.length) {
+    const leadLookup = { crmType: CRM_TYPES.ARTIST, $or: [] };
+    if (identity.email) leadLookup.$or.push({ email: identity.email });
+    if (identity.phone) leadLookup.$or.push({ phone: identity.phone });
+
+    const leadPayload = {
+      crmType: CRM_TYPES.ARTIST,
+      contactCategory: CONTACT_CATEGORIES.BOOKING_ENQUIRY,
+      artistProject,
+      name: identity.name,
+      email: identity.email,
+      phone: identity.phone,
+      source: 'Website Artist Enquiry',
+      leadStatus: 'New',
+      callStatus: 'Scheduled',
+      assignedRepId: assigneeId,
+      tags: ['booking-enquiry', artistProject?.toLowerCase().replace(/\s+/g, '-')].filter(Boolean),
+      metadata: {
+        taskId: taskDto._id,
+        company: normalized.company,
+        collaborationType: normalized.collaborationType,
+        nature: normalized.nature,
+        whenWhere: normalized.whenWhere,
+        scaleReach: normalized.scaleReach,
+        logistics: normalized.logistics,
+        vision: normalized.vision,
+        artist: normalized.artist,
+      },
+    };
+
+    try {
+      let lead = leadLookup.$or.length
+        ? await Lead.findOne(leadLookup).setOptions(BYPASS)
+        : null;
+      if (lead) {
+        Object.assign(lead, leadPayload);
+        await lead.save();
+      } else {
+        lead = await LeadService.createLead(leadPayload);
+      }
+      leadId = lead._id;
+
+      await ContactService.mergeContact({
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        recordId: lead._id,
+        summary: leadPayload.metadata,
+        inletKey: 'artist_crm',
+      }, 'artist_crm').catch(() => {});
+
+      await ContactService.mergeContact({
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        recordId: lead._id,
+        summary: {
+          ...leadPayload.metadata,
+          source: leadPayload.source,
+          artistProject,
+          contactCategory: CONTACT_CATEGORIES.BOOKING_ENQUIRY,
+        },
+        inletKey: 'booked_calls',
+      }, 'booked_calls').catch(() => {});
+
+      broadcastRealtimeEvent('leads', 'lead_change', { leadId: lead._id, action: 'create' });
+
+      if (assigneeId) {
+        createNotification({
+          userId: assigneeId,
+          type: 'system',
+          title: 'New artist booking enquiry',
+          message: `${normalized.name} — ${artistProject}`,
+          actionUrl: buildLeadActionUrl(lead._id),
+        }).catch(() => {});
+      }
+    } catch (err) {
+      logger.warn('artistEnquiry', 'Lead upsert failed', { error: err.message });
+    }
+  }
+
   logger.info('artistEnquiry', 'Task created from website enquiry', {
     taskId: taskDto._id,
     projectId: project._id,
@@ -170,6 +268,7 @@ async function processArtistEnquiryLogic(data) {
     success: true,
     message: 'Artist enquiry task created',
     taskId: taskDto._id,
+    leadId,
     projectId: project._id,
   };
 }

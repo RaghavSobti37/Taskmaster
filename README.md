@@ -90,6 +90,7 @@ CoreKnot (branded natively as **CoreKnot** within its Progressive Web App shell)
 | **Data Hub** | Expanded inlet taxonomy (`artist_path`, `booked_calls`, `newsletter`, `outsourced`); person detail lazy sections; analytics panel updates |
 | **Codebase hygiene** | Removed unused platform-settings, OAuth stubs, legacy dashboard widgets, and duplicate utils; leaner UI component surface |
 | **Email hub** | `/emails/*` replaces legacy AdminMail monolith; `CampaignWizardShell` + Zod validation; Resend from-address picker; orphan scan via `npm run audit:deadcode` |
+| **Artist CRM** | Separate pipeline for TSC Artists: 6-sheet CSV import (~700 contacts), `crmType: artist`, booking enquiries from TSC `/query` webhook, `ArtistBookingEnquiryPanel` in lead modal, Bookings tab + Akash default assignee |
 | **Project goals** | `ProjectGoal` / KRA models, metrics strip on project detail, snapshot history |
 | **Agent memory** | `.specify/memory/` — structured context for Cursor; see [`.specify/README.md`](.specify/README.md) for first-time setup |
 | **Deploy tooling** | Project MCP config (`.cursor/mcp.json`) for Render + Vercel — set `RENDER_API_KEY` locally; authorize Vercel via Cursor MCP login |
@@ -376,11 +377,19 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Bug reports:** `POST /api/tasks/bug` auto-assigns the platform owner on the Tech Stack project (self-assigned — owner fixes and marks done without reporter review). Set `PLATFORM_OWNER_USER_ID` or `PLATFORM_OWNER_EMAIL` in production.
 * **Daily log split on submit:** When a delegatee submits for review, the server writes two automatic daily logs — assignee `TASK_COMPLETION` (hours from the completion modal) and assigner `TASK_REVIEW` (default **15 minutes**, `REVIEW_DEFAULT_HOURS` in `shared/taskReviewRules.js`). Approving does not add a full-task completion log for the reviewer; rolling back removes both logs. Review entries show a **Review** badge on Daily Logs and are excluded from manual-log XP like task completions.
 
+### Artist CRM & booking enquiries (Jun 2026)
+
+* **Separate pipeline:** Artist contacts use `crmType: artist` — scoped to artist-management reps (not sales). CRM hub shows artist-specific tabs when the user has artist-management access.
+* **CSV import:** Six sheet templates (YUGM media, Pune/Nashik media, events/fests, Warkari contacts, event database) via **CRM → Import** or `node server/scripts/seedArtistCrmFromData.js`. Supports phone-only rows; empty emails omitted (partial unique index).
+* **Website bookings:** `/query` webhook upserts a `booking_enquiry` lead assigned to Akash; full form fields (artist, company, when/where, vision, etc.) render in the lead modal via `ArtistBookingEnquiryPanel`.
+* **Bookings tab:** `/crm/bookings` lists website submissions; booked calls also flow through Data Hub `booked_calls` inlet.
+* **Production seed:** Run `fixLeadEmailIndex.js` then `seedArtistCrmFromData.js` against `MONGODB_URI_PROD` (CSV files in local `data/` folder).
+
 ### Artist Enquiry Webhook
 
 * **Ingress:** `POST /api/webhooks/artist-enquiry` — receives `/query` form payloads from the marketing site (after Sheets + email succeed).
 * **Routing:** Resolves artist name → TSC ARTISTS project (e.g. YUGM → **YUGM** project); falls back to first matching project when needed.
-* **Task creation:** High-priority `enquiry` task assigned to `artist_management` on the resolved project.
+* **Task + lead:** High-priority `enquiry` task plus CRM lead (`contactCategory: booking_enquiry`) assigned to primary call assignee (Akash).
 * **Queue:** BullMQ job `artist-enquiry` with synchronous fallback when Redis is unavailable.
 * **Website wiring:** See [`docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md`](docs/ARTIST_ENQUIRY_WEBSITE_FORWARD.md).
 

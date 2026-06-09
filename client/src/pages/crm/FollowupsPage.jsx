@@ -16,7 +16,7 @@ import {
   UserLabel,
 } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
-import { isAdminUser } from '../../utils/departmentPermissions';
+import { crmQueryParamsForUser, crmRestrictsToOwnLeads } from '../../utils/crmScope';
 import { useLiveLeads, useSalesReps, useUpdateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { format, isPast, isToday, isValid } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,7 +26,9 @@ import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
 import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
+import { MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
+import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
 const FOLLOWUP_PAGE_SIZE = 50;
 const CRM_FOLLOWUPS_FILTERS_KEY = 'crm-followups-filters';
 
@@ -55,15 +57,15 @@ export default function FollowupsPage() {
   const [leadLogs, setLeadLogs] = useState([]);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useLiveLeads({
+  const { data, isLoading, refetch } = useLiveLeads(crmQueryParamsForUser(user, {
     page: followupPage,
     limit: FOLLOWUP_PAGE_SIZE,
     sort: sortField,
     order: sortOrder,
     hasFollowup: 'true',
     followupTab: activeTab,
-    assignedRepId: isAdminUser(user) ? undefined : user?._id
-  });
+    ...(crmRestrictsToOwnLeads(user) ? { assignedRepId: user?._id } : {}),
+  }));
 
   const leads = data?.leads || [];
   const followupPages = data?.pages || 1;
@@ -73,6 +75,7 @@ export default function FollowupsPage() {
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
+  const meaningfulConnectList = crmConfig?.meaningfulConnectStatuses || ['YES', 'NO', 'PENDING'];
 
   const updateMutation = useUpdateLead();
 
@@ -112,7 +115,7 @@ export default function FollowupsPage() {
     if (match) setSelectedLead(match);
   }, [searchParams, leads]);
   const [editLeadData, setEditLeadData] = useState({
-    name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
+    name: '', phoneCountryCode: '+91', phoneNational: '', city: '', leadQuality: '3', leadStatus: 'New', callStatus: 'Pending', meaningfulConnect: 'PENDING', remarks: '', nextFollowupDate: '', nextFollowupTime: '', setReminder: false, planOption: '', assignedRepId: ''
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [editBaseline, setEditBaseline] = useState(null);
@@ -486,6 +489,12 @@ export default function FollowupsPage() {
                   <span className="text-[10px] font-bold">Call Status</span>
                   <Badge variant="neutral">{selectedLead?.callStatus || 'Pending'}</Badge>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold">Meaningful Connect</span>
+                  <Badge variant={meaningfulConnectBadgeVariant(selectedLead?.meaningfulConnect)}>
+                    {formatMeaningfulConnect(selectedLead?.meaningfulConnect).toUpperCase()}
+                  </Badge>
+                </div>
                 {selectedLead?.nextFollowupDate && (
                   <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">
                     <span className="font-bold flex items-center gap-1 text-blue-400"><Clock size={12} /> Follow-up</span>
@@ -537,6 +546,7 @@ export default function FollowupsPage() {
               Fix highlighted fields before saving.
             </div>
           )}
+          <ArtistBookingEnquiryPanel lead={selectedLead} />
           {/* Funnel Mapping */}
           <section className="space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-bg-border)] pb-2">
@@ -550,7 +560,7 @@ export default function FollowupsPage() {
               {[
                 { stage: '1. Discovery', desc: `Captured via ${selectedLead?.source || 'Direct'}`, status: 'Passed', color: 'border-blue-500 text-blue-400 bg-blue-500/10' },
                 { stage: '2. Enrichment', desc: `Quality Scored: Level ${editLeadData.leadQuality}`, status: 'Passed', color: 'border-amber-500 text-amber-400 bg-amber-500/10' },
-                { stage: '3. Engagement', desc: `Call Touchpoint: ${editLeadData.callStatus}`, status: editLeadData.callStatus && editLeadData.callStatus !== 'Pending' ? 'Passed' : 'Active', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
+                { stage: '3. Engagement', desc: `Call: ${editLeadData.callStatus} · Meaningful: ${formatMeaningfulConnect(editLeadData.meaningfulConnect)}`, status: editLeadData.meaningfulConnect === 'YES' ? 'Passed' : editLeadData.callStatus && editLeadData.callStatus !== 'Pending' ? 'Active' : 'Pending', color: 'border-purple-500 text-purple-400 bg-purple-500/10' },
                 { stage: '4. Conversion', desc: 'Member Onboarded & Subscribed', status: editLeadData.leadStatus === 'Converted' ? 'Passed' : 'Pending', color: editLeadData.leadStatus === 'Converted' ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-500 bg-slate-900/40' },
               ].map((step, index) => (
                 <div key={index} className={`p-3 rounded-xl border relative flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer ${step.color}`}>
@@ -575,7 +585,7 @@ export default function FollowupsPage() {
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
               <Briefcase size={14} /> Mission & Pipeline Status
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
                 <select
@@ -594,6 +604,23 @@ export default function FollowupsPage() {
                   onChange={e => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
                 >
                   {callStatusesList.map(cs => <option key={cs} value={cs}>{cs}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Meaningful Connect</label>
+                <select
+                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
+                  value={editLeadData.meaningfulConnect || 'PENDING'}
+                  onChange={(e) => setEditLeadData({ ...editLeadData, meaningfulConnect: e.target.value })}
+                >
+                  {(meaningfulConnectList.length ? meaningfulConnectList : MEANINGFUL_CONNECT_OPTIONS.map((o) => o.value)).map((status) => {
+                    const option = MEANINGFUL_CONNECT_OPTIONS.find((o) => o.value === status);
+                    return (
+                      <option key={status} value={status}>
+                        {option?.label || status}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="space-y-1.5">

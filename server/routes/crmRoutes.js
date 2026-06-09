@@ -45,6 +45,11 @@ router.post('/sync-unsubscribed', admin, async (req, res) => {
   }
 });
 
+const artistCrmController = require('../controllers/artistCrmController');
+router.get('/artist/templates', artistCrmController.requireArtistCrmAccess, artistCrmController.getArtistTemplates);
+router.post('/artist/upload', artistCrmController.requireArtistCrmAccess, upload.single('file'), artistCrmController.uploadArtistCsv);
+router.post('/artist/import', admin, artistCrmController.importArtistFromPath);
+
 router.delete('/leads/cleanup-test-data', admin, crmController.cleanupTestData);
 
 router.get('/followups', crmController.getFollowups);

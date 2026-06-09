@@ -1,14 +1,21 @@
 import React, {
-  createContext, useCallback, useContext, useEffect, useRef, useState,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { isAdminUser } from '../utils/departmentPermissions';
+import { useShortcutPreferences } from '../hooks/useShortcutPreferences';
+import { mergeShortcutBindings, filterActionsForUser, SHORTCUT_ACTIONS } from '../lib/shortcutDefaultsShared';
 import {
+  eventMatchesCombo,
+  isSequenceBinding,
   G_CHORD_TIMEOUT_MS,
-  isModKey,
+} from '../lib/shortcutBindingUtils';
+import { invokeShortcutQuickAction } from '../lib/shortcutActionBridge';
+import { isShortcutRecordingActive } from '../lib/shortcutRecordingBridge';
+import {
   isTypingTarget,
-  resolveGChord,
+  bindingMatchesSequenceComplete,
 } from '../lib/keyboardShortcuts';
 
 const KeyboardShortcutsContext = createContext(null);
@@ -17,31 +24,39 @@ export function KeyboardShortcutsProvider({ children }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = isAdminUser(user);
+  const { data: shortcutPrefs } = useShortcutPreferences(!!user);
+
+  const bindingsMap = useMemo(
+    () => shortcutPrefs?.effectiveBindings || mergeShortcutBindings(shortcutPrefs?.bindings),
+    [shortcutPrefs]
+  );
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [gChordPending, setGChordPending] = useState(false);
   const [gChordFlash, setGChordFlash] = useState(null);
+  const sequencePrefixRef = useRef(null);
   const gTimerRef = useRef(null);
   const flashTimerRef = useRef(null);
 
-  const clearGTimer = useCallback(() => {
+  const clearSequenceTimer = useCallback(() => {
     if (gTimerRef.current) {
       clearTimeout(gTimerRef.current);
       gTimerRef.current = null;
     }
   }, []);
 
-  const cancelGChord = useCallback(() => {
-    clearGTimer();
+  const cancelSequence = useCallback(() => {
+    clearSequenceTimer();
+    sequencePrefixRef.current = null;
     setGChordPending(false);
-  }, [clearGTimer]);
+  }, [clearSequenceTimer]);
 
   const openPalette = useCallback(() => {
     setHelpOpen(false);
     setPaletteOpen(true);
-    cancelGChord();
-  }, [cancelGChord]);
+    cancelSequence();
+  }, [cancelSequence]);
 
   const closePalette = useCallback(() => {
     setPaletteOpen(false);
@@ -52,18 +67,18 @@ export function KeyboardShortcutsProvider({ children }) {
       if (!prev) setHelpOpen(false);
       return !prev;
     });
-    cancelGChord();
-  }, [cancelGChord]);
+    cancelSequence();
+  }, [cancelSequence]);
 
   const toggleHelp = useCallback(() => {
     setHelpOpen((prev) => {
       if (!prev) {
         setPaletteOpen(false);
-        cancelGChord();
+        cancelSequence();
       }
       return !prev;
     });
-  }, [cancelGChord]);
+  }, [cancelSequence]);
 
   const flashChord = useCallback((message) => {
     setGChordFlash(message);
@@ -71,39 +86,67 @@ export function KeyboardShortcutsProvider({ children }) {
     flashTimerRef.current = setTimeout(() => setGChordFlash(null), 1200);
   }, []);
 
-  const runGChord = useCallback((key) => {
-    const route = resolveGChord(key, { isAdmin });
-    cancelGChord();
-    if (route?.path) {
-      flashChord(`→ ${route.label}`);
-      navigate(route.path);
-      return true;
-    }
-    flashChord(`No shortcut for G+${key.toUpperCase()}`);
-    return false;
-  }, [isAdmin, navigate, cancelGChord, flashChord]);
+  const executeAction = useCallback((action) => {
+    if (!action) return;
 
-  const startGChord = useCallback(() => {
+    switch (action.id) {
+      case 'palette':
+        togglePalette();
+        break;
+      case 'help':
+        toggleHelp();
+        break;
+      case 'search':
+        openPalette();
+        break;
+      default:
+        if (action.quickActionId) {
+          invokeShortcutQuickAction(action.quickActionId);
+          flashChord(action.label);
+        } else if (action.path) {
+          flashChord(`→ ${action.label.replace(/^Go to /, '')}`);
+          navigate(action.path);
+        }
+        break;
+    }
+  }, [togglePalette, toggleHelp, openPalette, navigate, flashChord]);
+
+  const startSequence = useCallback((firstKey) => {
+    sequencePrefixRef.current = [firstKey];
     setGChordPending(true);
-    clearGTimer();
+    clearSequenceTimer();
     gTimerRef.current = setTimeout(() => {
-      setGChordPending(false);
-      gTimerRef.current = null;
+      cancelSequence();
     }, G_CHORD_TIMEOUT_MS);
-  }, [clearGTimer]);
+  }, [clearSequenceTimer, cancelSequence]);
+
+  const completeSequence = useCallback((finalKey) => {
+    const prefix = sequencePrefixRef.current || [];
+    const actionsList = filterActionsForUser(SHORTCUT_ACTIONS, { isAdmin });
+
+    for (const action of actionsList) {
+      const binding = bindingsMap[action.id];
+      if (!binding?.keys || !isSequenceBinding(binding.keys)) continue;
+      if (bindingMatchesSequenceComplete(binding.keys, prefix, finalKey)) {
+        cancelSequence();
+        executeAction(action);
+        return true;
+      }
+    }
+
+    cancelSequence();
+    flashChord(`No shortcut for ${prefix.join(' ')} ${finalKey}`.trim());
+    return false;
+  }, [bindingsMap, isAdmin, cancelSequence, executeAction, flashChord]);
 
   useEffect(() => () => {
-    clearGTimer();
+    clearSequenceTimer();
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
-  }, [clearGTimer]);
+  }, [clearSequenceTimer]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (isModKey(e) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        togglePalette();
-        return;
-      }
+      if (isShortcutRecordingActive()) return;
 
       if (e.key === 'Escape') {
         if (paletteOpen) {
@@ -118,7 +161,7 @@ export function KeyboardShortcutsProvider({ children }) {
         }
         if (gChordPending) {
           e.preventDefault();
-          cancelGChord();
+          cancelSequence();
         }
         return;
       }
@@ -127,28 +170,38 @@ export function KeyboardShortcutsProvider({ children }) {
 
       if (isTypingTarget(e.target)) return;
 
-      if (e.key === '?' && !isModKey(e) && !e.altKey) {
-        e.preventDefault();
-        toggleHelp();
-        return;
-      }
-
-      if (e.key === '/' && !isModKey(e) && !e.altKey) {
-        e.preventDefault();
-        openPalette();
-        return;
-      }
-
-      if (e.key.toLowerCase() === 'g' && !isModKey(e) && !e.altKey && !gChordPending) {
-        e.preventDefault();
-        startGChord();
-        return;
-      }
-
-      if (gChordPending && !isModKey(e) && !e.altKey) {
-        if (e.key.length === 1) {
+      if (sequencePrefixRef.current?.length) {
+        if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
-          runGChord(e.key.toLowerCase());
+          completeSequence(e.key.toLowerCase());
+        }
+        return;
+      }
+
+      const actionsList = filterActionsForUser(SHORTCUT_ACTIONS, { isAdmin });
+
+      for (const action of actionsList) {
+        const binding = bindingsMap[action.id];
+        if (!binding?.keys?.length) continue;
+
+        if (isSequenceBinding(binding.keys)) {
+          const firstKey = binding.keys[0];
+          if (
+            e.key.toLowerCase() === firstKey
+            && !e.metaKey && !e.ctrlKey && !e.altKey
+            && binding.keys.length > 1
+          ) {
+            e.preventDefault();
+            startSequence(firstKey);
+            return;
+          }
+          continue;
+        }
+
+        if (eventMatchesCombo(e, binding.keys)) {
+          e.preventDefault();
+          executeAction(action);
+          return;
         }
       }
     };
@@ -159,13 +212,13 @@ export function KeyboardShortcutsProvider({ children }) {
     paletteOpen,
     helpOpen,
     gChordPending,
-    togglePalette,
-    toggleHelp,
-    openPalette,
+    bindingsMap,
+    isAdmin,
     closePalette,
-    cancelGChord,
-    startGChord,
-    runGChord,
+    cancelSequence,
+    completeSequence,
+    startSequence,
+    executeAction,
   ]);
 
   const value = {
@@ -179,7 +232,8 @@ export function KeyboardShortcutsProvider({ children }) {
     toggleHelp,
     gChordPending,
     gChordFlash,
-    cancelGChord,
+    cancelGChord: cancelSequence,
+    bindingsMap,
   };
 
   return (

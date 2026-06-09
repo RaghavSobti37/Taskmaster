@@ -25,6 +25,7 @@ const personIndexSchema = new mongoose.Schema({
   inCommunity: { type: Boolean, default: false },
   inNewsletter: { type: Boolean, default: false },
   inArtistPath: { type: Boolean, default: false },
+  inArtistCrm: { type: Boolean, default: false },
 
   /** @deprecated use inOutsourced — kept for migration reads */
   inTsc: { type: Boolean, default: false },

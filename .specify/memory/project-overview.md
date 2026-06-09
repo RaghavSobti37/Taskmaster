@@ -29,3 +29,16 @@
 - `docs/EMAIL_ENGINE_LOCKED.md` — frozen mail tracking
 - `docs/LOGO_LOCKED.md` — brand mark + spinner
 - `docs/DATA_MASTER_ARCHITECTURE.md` — Person golden record
+
+## Artist CRM ops (local → prod)
+
+CSV files live in gitignored/local `data/` (not in repo). To seed production:
+
+```bash
+# From server/ — set MONGODB_URI to prod URI (MONGODB_URI_PROD in .env)
+node scripts/fixLeadEmailIndex.js
+node scripts/seedArtistCrmFromData.js
+node scripts/reassignBookedCallsToAkash.js
+```
+
+Booking test: `node scripts/testArtistBookingWebhook.js`

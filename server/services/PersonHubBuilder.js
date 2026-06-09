@@ -20,9 +20,58 @@ const INLET_FLAG_MAP = {
   booked_call: 'inBookedCalls',
   newsletter: 'inNewsletter',
   artist_path: 'inArtistPath',
+  artist_crm: 'inArtistCrm',
   mail: 'inMailer',
   enquiry: 'inEnquiries',
 };
+
+/** PersonIndex folder keys → hub source types */
+const FOLDER_TO_HUB_KEY = {
+  leads: 'lead',
+  exly: 'exly_booking',
+  outsourced: 'outsourced',
+  tsc: 'outsourced',
+  newsletter: 'newsletter',
+  artist_path: 'artist_path',
+  artist_crm: 'artist_crm',
+  booked_calls: 'booked_call',
+  enquiries: 'enquiry',
+  mail: 'mail',
+};
+
+function inletKeysFromPersonIndex(idx) {
+  if (!idx) return [];
+  const keys = new Set();
+  for (const inlet of idx.inlets || []) {
+    const hubKey = FOLDER_TO_HUB_KEY[inlet.key] || inlet.key;
+    if (hubKey) keys.add(hubKey);
+  }
+  if (idx.inCRM) keys.add('lead');
+  if (idx.inExly) keys.add('exly_booking');
+  if (idx.inMailer) keys.add('mail');
+  if (idx.inOutsourced || idx.inTsc) keys.add('outsourced');
+  if (idx.inBookedCalls) keys.add('booked_call');
+  if (idx.inEnquiries) keys.add('enquiry');
+  if (idx.inNewsletter) keys.add('newsletter');
+  if (idx.inArtistPath) keys.add('artist_path');
+  if (idx.inArtistCrm) keys.add('artist_crm');
+  return [...keys];
+}
+
+function applyPersonIndexFlags(flags, idx) {
+  if (!idx) return flags;
+  if (idx.inCRM) flags.inCRM = true;
+  if (idx.inExly) flags.inExly = true;
+  if (idx.inMailer) flags.inMailer = true;
+  if (idx.inOutsourced || idx.inTsc) flags.inOutsourced = true;
+  if (idx.inBookedCalls) flags.inBookedCalls = true;
+  if (idx.inEnquiries) flags.inEnquiries = true;
+  if (idx.inNewsletter) flags.inNewsletter = true;
+  if (idx.inArtistPath) flags.inArtistPath = true;
+  if (idx.inArtistCrm) flags.inArtistCrm = true;
+  if (idx.inCommunity) flags.inCommunity = true;
+  return flags;
+}
 
 function isLikelyEssayName(value) {
   if (!value || typeof value !== 'string') return false;
@@ -51,6 +100,14 @@ function resolveHubDisplayName(person, latestArtistPath) {
 }
 
 class PersonHubBuilder {
+  async _loadPersonIndexFallback(email, phone) {
+    const clauses = [];
+    if (email) clauses.push({ email });
+    if (phone) clauses.push({ phone });
+    if (!clauses.length) return null;
+    return PersonIndex.findOne({ $or: clauses }).setOptions({ bypassTenant: true }).lean();
+  }
+
   async rebuildPerson(personId) {
     if (!personId) return null;
     const person = await Person.findById(personId).lean();
@@ -94,8 +151,15 @@ class PersonHubBuilder {
         email = identifierEmails.find((e) => e !== responseEmail) || identifierEmails[0] || email;
       }
     }
-    const inletKeys = [...new Set(links.map((l) => l.sourceType))];
-    const flags = {};
+
+    const legacyIndex = await this._loadPersonIndexFallback(email, phone);
+
+    let inletKeys = [...new Set(links.map((l) => l.sourceType))];
+    for (const hubKey of inletKeysFromPersonIndex(legacyIndex)) {
+      if (!inletKeys.includes(hubKey)) inletKeys.push(hubKey);
+    }
+
+    const flags = applyPersonIndexFlags({}, legacyIndex);
     for (const key of inletKeys) {
       const flag = INLET_FLAG_MAP[key];
       if (flag) flags[flag] = true;
@@ -108,13 +172,16 @@ class PersonHubBuilder {
 
     const hubDoc = {
       personId,
-      name: resolveHubDisplayName(person, latestArtistPath),
-      city: person.city || latestArtistPath?.answers?.city,
+      name: resolveHubDisplayName(person, latestArtistPath) !== 'Respondent'
+        ? resolveHubDisplayName(person, latestArtistPath)
+        : (legacyIndex?.name && !isLikelyEssayName(legacyIndex.name) ? legacyIndex.name : resolveHubDisplayName(person, latestArtistPath)),
+      city: person.city || latestArtistPath?.answers?.city || legacyIndex?.city,
       inletKeys,
       inletCount: inletKeys.length,
       isMultiInlet: inletKeys.length >= 2,
-      emailStatus: comms?.emailStatus || 'Pending',
-      unsubscribed: comms?.unsubscribed || false,
+      emailStatus: comms?.emailStatus || legacyIndex?.emailStatus || 'Pending',
+      unsubscribed: comms?.unsubscribed ?? legacyIndex?.unsubscribed ?? false,
+      firstSeenAt: person.firstSeenAt || legacyIndex?.createdAt || new Date(),
       lastActivityAt,
       inArtistPath: artistPathCount > 0,
       latestArtistType: latestArtistPath?.answers?.stageName

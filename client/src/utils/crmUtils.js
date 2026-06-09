@@ -17,6 +17,29 @@ const getRepName = (rep) => {
   return SALES_REPS[rep] || rep;
 };
 
+export const MEANINGFUL_CONNECT_DEFAULT = 'PENDING';
+
+/** Manual rep flag — not derived from call status or funnel stage. */
+export const MEANINGFUL_CONNECT_OPTIONS = [
+  { value: 'PENDING', label: 'Pending — not assessed yet' },
+  { value: 'YES', label: 'Yes — had a meaningful conversation' },
+  { value: 'NO', label: 'No — no meaningful connect' },
+];
+
+export function formatMeaningfulConnect(value) {
+  const key = String(value || MEANINGFUL_CONNECT_DEFAULT).toUpperCase();
+  if (key === 'YES') return 'Yes';
+  if (key === 'NO') return 'No';
+  return 'Pending';
+}
+
+export function meaningfulConnectBadgeVariant(value) {
+  const key = String(value || MEANINGFUL_CONNECT_DEFAULT).toUpperCase();
+  if (key === 'YES') return 'mint';
+  if (key === 'NO') return 'slate';
+  return 'warning';
+}
+
 export const formatExlyTag = (title) => {
   if (!title) return null;
   const lower = title.toLowerCase();

@@ -1,4 +1,16 @@
 const ADMIN_SLUG = 'admin';
+const ARTIST_MANAGEMENT_SLUG = 'artist-management';
+
+const isArtistManagementDept = (dept) => {
+  if (!dept || typeof dept !== 'object') return false;
+  return dept.slug === ARTIST_MANAGEMENT_SLUG || dept.permissionPreset === ARTIST_MANAGEMENT_SLUG;
+};
+
+const applyDepartmentPageGuarantees = (pages, dept) => {
+  if (!isArtistManagementDept(dept)) return pages;
+  if (pages.includes('artists')) return pages;
+  return [...pages, 'artists'];
+};
 
 const PAGE_GROUPS = [
   {
@@ -80,7 +92,7 @@ const PRESET_PAGES = {
   admin: ALL_PAGE_KEYS,
   operations: [...BASE_PAGE_KEYS, 'finance', 'announcements', 'ops_logs'],
   sales: [...BASE_PAGE_KEYS, 'leads', 'followups', 'bookings'],
-  'artist-management': [...BASE_PAGE_KEYS, 'artists'],
+  'artist-management': [...BASE_PAGE_KEYS, 'artists', 'leads', 'followups', 'bookings'],
   standard: BASE_PAGE_KEYS,
 };
 
@@ -99,13 +111,23 @@ const isDepartmentAdmin = (dept) => {
 const resolveDepartmentPages = (dept) => {
   if (!dept) return BASE_PAGE_KEYS;
   if (isDepartmentAdmin(dept)) return [...ALL_PAGE_KEYS];
+
+  const preset = dept.permissionPreset
+    || (dept.slug === ADMIN_SLUG ? ADMIN_SLUG : null)
+    || (dept.slug && PRESET_PAGES[dept.slug] ? dept.slug : null);
+
+  let pages;
   if (Array.isArray(dept.pagePermissions) && dept.pagePermissions.length > 0) {
-    return dept.pagePermissions.filter((k) => ALL_PAGE_KEYS.includes(k));
+    pages = dept.pagePermissions.filter((k) => ALL_PAGE_KEYS.includes(k));
+  } else if (preset && PRESET_PAGES[preset]) {
+    pages = [...PRESET_PAGES[preset]];
+  } else if (dept.slug && PRESET_PAGES[dept.slug]) {
+    pages = [...PRESET_PAGES[dept.slug]];
+  } else {
+    pages = [...BASE_PAGE_KEYS];
   }
-  const preset = dept.permissionPreset || (dept.slug === ADMIN_SLUG ? ADMIN_SLUG : null);
-  if (preset && PRESET_PAGES[preset]) return [...PRESET_PAGES[preset]];
-  if (dept.slug && PRESET_PAGES[dept.slug]) return [...PRESET_PAGES[dept.slug]];
-  return BASE_PAGE_KEYS;
+
+  return applyDepartmentPageGuarantees(pages, dept);
 };
 
 const getUserPagePermissions = (user) => resolveDepartmentPages(user?.departmentId);

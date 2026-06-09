@@ -281,9 +281,6 @@ const SubscriptionsPage = () => {
             info: 'Monthly spend × 12. One-time charges excluded.',
           },
         ],
-        charts: typeChart.length
-          ? [{ id: 'types', title: 'By type', type: 'donut', data: typeChart }]
-          : [],
       }}
       toolbar={
         <SearchInput

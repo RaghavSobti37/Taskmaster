@@ -5,7 +5,7 @@ import { estimateJsonBytes, PAYLOAD_SAFE_BYTES } from '../../../utils/smtpPreset
 import { useCreateCampaign } from '../../../hooks/useTaskmasterQueries';
 import { useToast } from '../../../contexts/ToastContext';
 
-export function buildCampaignPayloadFromForm(formValues, approvedTemplates, customRecipients) {
+export function buildCampaignPayloadFromForm(formValues, approvedTemplates, customRecipients, leadIds = []) {
   const template = approvedTemplates.find((t) => String(t._id) === String(formValues.mailTemplateId));
   const templateBody = template ? getEffectiveTemplateContent(template) : '';
   const { senderMode, senderProfileId, senderProfileIds } = formValues;
@@ -31,7 +31,7 @@ export function buildCampaignPayloadFromForm(formValues, approvedTemplates, cust
       contentType: a.contentType,
       storageKey: a.storageKey,
     })),
-    leadIds: [],
+    leadIds,
     customRecipients,
   };
 }
@@ -42,7 +42,12 @@ export function useCampaignSubmit({ approvedTemplates, audience }) {
   const createCampaignMutation = useCreateCampaign();
 
   const buildCampaignPayload = useCallback((formValues) => (
-    buildCampaignPayloadFromForm(formValues, approvedTemplates, audience.buildMergedRecipients())
+    buildCampaignPayloadFromForm(
+      formValues,
+      approvedTemplates,
+      audience.buildMergedRecipients(),
+      audience.buildLeadIds?.() || []
+    )
   ), [approvedTemplates, audience]);
 
   const submitCampaign = useCallback(async (formValues, action = 'save_draft', { stayOnPage = false, silent = false } = {}) => {

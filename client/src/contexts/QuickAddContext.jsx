@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QuickAddContext } from './quickAddContextCore';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { useCreateNote, useCreatePin } from '../hooks/useTaskmasterQueries';
 import { useSystemToast } from '../lib/systemLogBridge';
 import { MODULE } from '../lib/systemLogContract';
 import axios from 'axios';
+import { setShortcutQuickActionHandler } from '../lib/shortcutActionBridge';
 
 const BUG_SEVERITY_OPTIONS = [
   { value: 'low', label: 'Low - Minor glitch or aesthetic issue' },
@@ -134,9 +135,19 @@ export function QuickAddProvider({ children }) {
     }
   };
 
+  const runQuickAction = useCallback((id) => {
+    const action = actions.find((a) => a.id === id);
+    if (action) action.onClick();
+  }, [actions]);
+
+  useEffect(() => {
+    setShortcutQuickActionHandler(runQuickAction);
+    return () => setShortcutQuickActionHandler(null);
+  }, [runQuickAction]);
+
   const value = useMemo(
-    () => ({ open, toggleMenu, closeMenu, actions }),
-    [open, actions]
+    () => ({ open, toggleMenu, closeMenu, actions, runQuickAction }),
+    [open, actions, runQuickAction]
   );
 
   return (

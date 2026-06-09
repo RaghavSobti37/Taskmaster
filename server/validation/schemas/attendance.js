@@ -26,9 +26,14 @@ const leaveRequestsQuery = z.object({
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
 });
 
+const leaveReviewBody = z.object({
+  reviewNote: z.string().optional(),
+});
+
 module.exports = {
   attendanceQuery,
   attendanceCheckBody,
   leaveRequestBody,
   leaveRequestsQuery,
+  leaveReviewBody,
 };

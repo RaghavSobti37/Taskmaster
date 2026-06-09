@@ -22,8 +22,17 @@ const { dispatchEmailPayload } = require('../services/mailDriver');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { queueGamificationEvent } = require('../services/backgroundQueue');
 const Department = require('../models/Department');
-const { isAdminUser, getDepartmentSlug, SALES_SLUG } = require('../utils/departmentPermissions');
+const { isAdminUser, getDepartmentSlug, SALES_SLUG, ARTIST_SLUG } = require('../utils/departmentPermissions');
+const { applyCrmScopeToQuery, resolveCrmScope } = require('../utils/crmScope');
+const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
 const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
+const {
+  isWarmPipelineRequest,
+  leadStatusFilterValue,
+  mergeLeadStatusOptions,
+  canonicalLeadStatus,
+  warmPipelineQuery,
+} = require('../utils/crmPipelineFilters');
 const {
   FOLLOWUP_DATE_FIELD,
   followupDateExistsStage,
@@ -66,11 +75,7 @@ async function mergeCorruptLeadIntoKeeper(keeperId, sourceLead, extraUpdates = {
   return Lead.findById(keeperId);
 }
 
-const getSalesRepUsers = async (session = null) => {
-  const salesDept = await Department.findOne({ slug: SALES_SLUG }).session(session);
-  if (!salesDept) return [];
-  return User.find({ departmentId: salesDept._id }).session(session);
-};
+const { assignLeadToRep, assignLeadToArtistRep } = require('../utils/crmAssignment');
 
 // Whitelists for mass-assignment protection
 const ALLOWED_LEAD_FIELDS = [
@@ -80,7 +85,8 @@ const ALLOWED_LEAD_FIELDS = [
   'exlyOfferingId', 'exlyOfferingTitle',
   'qnaAnswered', 'artistType', 'fullTimeWillingness', 'primaryRole',
   'learningGoal', 'learnedMusic', 'currentJourney', 'nextFollowupDate', 'nextFollowupTime',
-  'emailStatus', 'tags', 'source', 'notes', 'setReminder'
+  'emailStatus', 'tags', 'source', 'notes', 'setReminder',
+  'crmType', 'artistProject', 'contactCategory',
 ];
 const ALLOWED_EMI_FIELDS = ['installmentNo', 'dueDate', 'amount', 'status', 'paidAt'];
 
@@ -149,24 +155,8 @@ const prepareLeadContactUpdates = (updates, currentLead, res) => {
   return true;
 };
 
-/**
- * Least-Loaded strategy for automatic lead assignment.
- * Finds the sales rep with the fewest active (non-converted) leads.
- * @returns {Promise<mongoose.Types.ObjectId|null>} ObjectId of the assigned sales rep
- */
-const assignLeadToRep = async (session = null) => {
-  const reps = await getSalesRepUsers(session);
-  if (reps.length === 0) return null;
-
-  const leadCounts = await Promise.all(reps.map(async (rep) => {
-    const count = await Lead.countDocuments({ assignedRepId: rep._id, leadStatus: { $ne: 'Converted' } }).session(session);
-    return { repId: rep._id, count };
-  }));
-
-  leadCounts.sort((a, b) => a.count - b.count);
-  return leadCounts[0].repId;
-};
 exports.assignLeadToRep = assignLeadToRep;
+exports.assignLeadToArtistRep = assignLeadToArtistRep;
 
 /**
  * Retrieves leads with advanced filtering, searching, and pagination.
@@ -176,9 +166,7 @@ exports.assignLeadToRep = assignLeadToRep;
 exports.getLeads = async (req, res) => {
   try {
     let query = {};
-    if (!isAdminUser(req.user)) {
-      query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
-    }
+    applyCrmScopeToQuery(query, req.user, req.query);
 
     if (req.query.search) {
       const escaped = escapeRegExp(req.query.search);
@@ -194,7 +182,9 @@ exports.getLeads = async (req, res) => {
     if (req.query.callStatus && req.query.callStatus !== 'all') query.callStatus = req.query.callStatus;
     if (req.query.source && req.query.source !== 'all') query.source = req.query.source;
 
-    if (req.query.leadStatus && req.query.leadStatus !== 'all') {
+    if (isWarmPipelineRequest(req.query)) {
+      Object.assign(query, warmPipelineQuery());
+    } else if (req.query.leadStatus && req.query.leadStatus !== 'all') {
       if (req.query.leadStatus === 'Fresh') {
         query.$or = [
           { leadStatus: null },
@@ -207,8 +197,12 @@ exports.getLeads = async (req, res) => {
       } else if (req.query.leadStatus === 'Contacted' || req.query.leadStatus === 'In Progress') {
         query.leadStatus = { $in: ['Connected', 'Warm', 'Cold', 'Converted', 'Contacted', 'In Progress', 'Busy', 'Already Purchased'] };
       } else {
-        query.leadStatus = req.query.leadStatus;
+        query.leadStatus = leadStatusFilterValue(req.query.leadStatus);
       }
+    }
+
+    if (!isWarmPipelineRequest(req.query) && req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') {
+      query.meaningfulConnect = req.query.meaningfulConnect;
     }
 
     if (req.query.assignedRepId && req.query.assignedRepId !== 'all') {
@@ -221,11 +215,30 @@ exports.getLeads = async (req, res) => {
       }
     }
     if (req.query.webinarDates && req.query.webinarDates !== 'all') query.webinarDates = req.query.webinarDates;
-    if (req.query.meaningfulConnect && req.query.meaningfulConnect !== 'all') query.meaningfulConnect = req.query.meaningfulConnect;
     if (req.query.artistType && req.query.artistType !== 'all') query.artistType = req.query.artistType;
     if (req.query.primaryRole && req.query.primaryRole !== 'all') query.primaryRole = req.query.primaryRole;
     if (req.query.emailStatus && req.query.emailStatus !== 'all') query.emailStatus = req.query.emailStatus;
     if (req.query.tag && req.query.tag !== 'all') query.tags = req.query.tag;
+    if (req.query.contactCategory && req.query.contactCategory !== 'all') {
+      query.contactCategory = req.query.contactCategory;
+    }
+    if (req.query.artistProject && req.query.artistProject !== 'all') {
+      if (req.query.artistProject === 'shared') {
+        query.$and = query.$and || [];
+        query.$and.push({
+          $or: [
+            { artistProject: null },
+            { artistProject: '' },
+            { artistProject: { $exists: false } },
+          ],
+        });
+      } else {
+        query.artistProject = req.query.artistProject;
+      }
+    }
+    if (req.query.excludeContactCategory) {
+      query.contactCategory = { $ne: req.query.excludeContactCategory };
+    }
     if (req.query.hasFollowup === 'true') query.nextFollowupDate = { $exists: true, $ne: '' };
     if (req.query.hasEmail === 'true') query.email = { $type: 'string', $ne: '' };
 
@@ -295,6 +308,7 @@ exports.getLeads = async (req, res) => {
           name: 1, email: 1, phone: 1, city: 1, source: 1,
           webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
           artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
+          crmType: 1, artistProject: 1, contactCategory: 1,
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
           remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,
@@ -329,9 +343,7 @@ exports.getLead = async (req, res) => {
     }
 
     let query = { _id: new mongoose.Types.ObjectId(req.params.id) };
-    if (!isAdminUser(req.user)) {
-      query.assignedRepId = new mongoose.Types.ObjectId(req.user._id);
-    }
+    applyCrmScopeToQuery(query, req.user, req.query);
 
     const pipeline = [
       { $match: query },
@@ -355,6 +367,7 @@ exports.getLead = async (req, res) => {
           name: 1, email: 1, phone: 1, city: 1, source: 1,
           webinarDates: 1, attended: 1, attendanceDurationMin: 1, qnaAnswered: 1,
           artistType: 1, primaryRole: 1, metadata: 1, tags: 1, emailStatus: 1,
+          crmType: 1, artistProject: 1, contactCategory: 1,
           meaningfulConnect: 1, leadQuality: 1, callStatus: 1, leadStatus: 1,
           remarks: 1, notes: 1, setReminder: 1, planOption: 1, nextFollowupDate: 1, nextFollowupTime: 1,
           createdAt: 1, updatedAt: 1,
@@ -374,6 +387,13 @@ exports.getLead = async (req, res) => {
   }
 };
 
+const inferCrmTypeForUser = (user, bodyCrmType) => {
+  if (bodyCrmType === CRM_TYPES.ARTIST || bodyCrmType === CRM_TYPES.SALES) return bodyCrmType;
+  const slug = getDepartmentSlug(user);
+  if (slug === ARTIST_SLUG) return CRM_TYPES.ARTIST;
+  return CRM_TYPES.SALES;
+};
+
 const normalizeLeadInput = (leadData, res, { requireName = false, requirePhone = false } = {}) => {
   const errors = normalizeAndValidateLeadFields(leadData, {
     requireName,
@@ -390,10 +410,12 @@ const normalizeLeadInput = (leadData, res, { requireName = false, requirePhone =
 exports.createLead = async (req, res) => {
   try {
     const leadData = { ...pick(req.body, ALLOWED_LEAD_FIELDS), createdBy: req.user._id };
-    if (!normalizeLeadInput(leadData, res, { requireName: true, requirePhone: true })) return;
+    leadData.crmType = inferCrmTypeForUser(req.user, leadData.crmType);
+    const requirePhone = leadData.crmType !== CRM_TYPES.ARTIST;
+    if (!normalizeLeadInput(leadData, res, { requireName: true, requirePhone })) return;
 
-    // Duplicate check
-    const filter = { $or: [] };
+    // Duplicate check (scoped by crmType)
+    const filter = { crmType: leadData.crmType, $or: [] };
     if (leadData.rowId) filter.$or.push({ rowId: leadData.rowId });
     if (leadData.phone) filter.$or.push({ phone: leadData.phone });
     if (leadData.email) filter.$or.push({ email: leadData.email.toLowerCase() });
@@ -413,7 +435,9 @@ exports.createLead = async (req, res) => {
     }
 
     if (!leadData.assignedRepId) {
-      leadData.assignedRepId = await assignLeadToRep();
+      leadData.assignedRepId = leadData.crmType === CRM_TYPES.ARTIST
+        ? await assignLeadToArtistRep()
+        : await assignLeadToRep();
     }
 
     const PersonIdentityService = require('../services/PersonIdentityService');
@@ -750,7 +774,12 @@ exports.getAllAuditLogs = async (req, res) => {
 
 exports.getImports = async (req, res) => {
   try {
-    const imports = await CRMImport.find()
+    const importQuery = {};
+    const { crmType } = resolveCrmScope(req.user, req.query.crmType);
+    if (crmType) importQuery.crmType = crmType;
+    else if (req.query.crmType) importQuery.crmType = req.query.crmType;
+
+    const imports = await CRMImport.find(importQuery)
       .populate('createdBy', 'name')
       .sort('-createdAt')
       .lean();
@@ -954,43 +983,18 @@ exports.exportLeads = async (req, res) => {
 
 exports.getCRMStats = async (req, res) => {
   try {
-    const CRMStatSnapshot = require('../models/CRMStatSnapshot');
     const { calculateStats } = require('../workers/statsWorker');
-    const isRep = !isAdminUser(req.user);
-    const query = isRep
-      ? { repId: new mongoose.Types.ObjectId(req.user._id) }
-      : { repId: null };
+    const scopeQuery = {};
+    applyCrmScopeToQuery(scopeQuery, req.user, req.query);
+    const { restrictToOwn } = resolveCrmScope(req.user, req.query.crmType);
+    const matchStage = restrictToOwn && req.user?._id
+      ? {
+        ...scopeQuery,
+        assignedRepId: scopeQuery.assignedRepId || new mongoose.Types.ObjectId(req.user._id),
+      }
+      : { ...scopeQuery };
 
-    let stats = await CRMStatSnapshot.findOne(query).lean();
-
-    const hasFreshMetrics = !!stats?.metrics && (
-      stats.metrics.warmLeads !== undefined ||
-      stats.metrics.convertedLeads !== undefined ||
-      stats.metrics.converted !== undefined
-    );
-    const SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
-    const snapshotAge = stats?.updatedAt
-      ? Date.now() - new Date(stats.updatedAt).getTime()
-      : Infinity;
-    const snapshotStale = snapshotAge > SNAPSHOT_MAX_AGE_MS;
-
-    if (!hasFreshMetrics || snapshotStale) {
-      const matchStage = isRep
-        ? { assignedRepId: new mongoose.Types.ObjectId(req.user._id) }
-        : {};
-      return res.json(await calculateStats(matchStage));
-    }
-
-    const m = stats.metrics;
-    res.json({
-      totalLeads: m.totalLeads || 0,
-      activeReach: m.activeReach ?? m.meaningful ?? 0,
-      convertedLeads: m.convertedLeads ?? m.converted ?? 0,
-      warmLeads: m.warmLeads || 0,
-      conversionRate: m.conversionRate || 0,
-      connected: m.connected || 0,
-      totalReps: m.totalReps || 0
-    });
+    return res.json(await calculateStats(matchStage));
   } catch (error) {
     logger.error('crmController', 'CRM Stats ', { error: error.message || error });
     res.status(500).json({ error: 'Failed to fetch CRM stats' });
@@ -1085,7 +1089,7 @@ exports.getCRMConfig = async (req, res) => {
 
     const mergedConfig = {
       callStatuses: Array.from(new Set([...callStatuses.filter(Boolean), ...configDoc.callStatuses])),
-      leadStatuses: Array.from(new Set([...leadStatuses.filter(Boolean), ...configDoc.leadStatuses])),
+      leadStatuses: mergeLeadStatusOptions(leadStatuses, configDoc.leadStatuses),
       artistTypes: Array.from(new Set([...artistTypes.filter(Boolean), ...configDoc.artistTypes])),
       webinarDates: webinarDates.filter(Boolean),
       meaningfulConnectStatuses: Array.from(new Set([...meaningfulConnectStatuses.filter(Boolean), ...configDoc.meaningfulConnectStatuses])),

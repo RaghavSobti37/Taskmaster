@@ -4,6 +4,15 @@ import { leadToRowData, collectAvailableColumns } from '../../../utils/indexedTe
 import { computeAudienceHealthCheck } from '../../../utils/audienceHealthCheck';
 import { isValidEmail, normalizeEmail, filterValidRecipientRows } from '../../../utils/emailValidation';
 import { useToast } from '../../../contexts/ToastContext';
+const UNSENDABLE_EMAIL_STATUSES = new Set(['Invalid', 'Unsubscribed', 'Bounced']);
+
+function isSendableCrmLead(lead) {
+  if (!lead?.email) return false;
+  if (UNSENDABLE_EMAIL_STATUSES.has(lead.emailStatus)) return false;
+  if (lead.status === 'inactive' || lead.unsubscribed) return false;
+  return isValidEmail(normalizeEmail(lead.email));
+}
+
 export function useCampaignAudience({ templateIndices = [], variableMapping = {} }) {
   const toast = useToast();
 
@@ -21,18 +30,29 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   const [activeTab, setActiveTab] = useState('all');
   const [audienceSource, setAudienceSource] = useState('crm');
   const [manualRecipients, setManualRecipients] = useState([]);
+  const [crmSegment, setCrmSegment] = useState('sales');
+  const [artistProjectFilter, setArtistProjectFilter] = useState('all');
+  const [contactCategoryFilter, setContactCategoryFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('all');
 
-  const loadCrmContactsData = useCallback(async () => {
+  const loadCrmContactsData = useCallback(async (segment = crmSegment) => {
     setContactsLoading(true);
     try {
-      const res = await axios.get('/api/crm/leads?limit=100000');
-      const leads = res.data?.leads || res.data || [];
-      setAllContacts(leads.filter((l) => l.email && !l.exlyOfferings));
+      const params = { limit: 100000, hasEmail: true, crmType: segment };
+      if (segment === 'artist') {
+        params.excludeContactCategory = 'booking_enquiry';
+        if (artistProjectFilter !== 'all') params.artistProject = artistProjectFilter;
+        if (contactCategoryFilter !== 'all') params.contactCategory = contactCategoryFilter;
+        if (tagFilter !== 'all') params.tag = tagFilter;
+      }
+      const res = await axios.get('/api/crm/leads', { params });
+      const leads = (res.data?.leads || res.data || []).filter(isSendableCrmLead);
+      setAllContacts(leads.filter((l) => !l.exlyOfferings));
     } catch (e) {
       toast.error('Failed to load CRM contacts: ' + e.message);
     }
     setContactsLoading(false);
-  }, [toast]);
+  }, [toast, crmSegment, artistProjectFilter, contactCategoryFilter, tagFilter]);
 
   const loadExlyContactsData = useCallback(async () => {
     setExlyContactsLoading(true);
@@ -142,10 +162,15 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     return [
       ...activeCsvRecipients,
       ...manualRecipients,
-      ...selectedCrm.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
-      ...selectedExly.map((c) => ({ name: c.name, email: c.email, rowData: leadToRowData(c) })),
+      ...selectedCrm.map((c) => ({ name: c.name, email: c.email, leadId: c._id, rowData: leadToRowData(c) })),
+      ...selectedExly.map((c) => ({ name: c.name, email: c.email, leadId: c._id, rowData: leadToRowData(c) })),
     ];
   }, [activeCsvRecipients, manualRecipients, selectedLeadIds, allContacts, allExlyContacts]);
+
+  const selectedCrmLeadIds = useMemo(
+    () => previewRecipients.filter((r) => r.leadId).map((r) => r.leadId),
+    [previewRecipients]
+  );
 
   const availableColumns = useMemo(() => collectAvailableColumns(previewRecipients), [previewRecipients]);
 
@@ -155,9 +180,12 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
   );
 
   const buildMergedRecipients = useCallback(() => {
-    const { valid } = filterValidRecipientRows(previewRecipients);
+    const nonCrm = previewRecipients.filter((r) => !r.leadId);
+    const { valid } = filterValidRecipientRows(nonCrm);
     return valid;
   }, [previewRecipients]);
+
+  const buildLeadIds = useCallback(() => selectedCrmLeadIds, [selectedCrmLeadIds]);
 
   const resetAudience = useCallback(() => {
     setSelectedLeadIds([]);
@@ -184,7 +212,11 @@ export function useCampaignAudience({ templateIndices = [], variableMapping = {}
     allContacts, allExlyContacts,
     filteredContacts, filteredExlyContacts,
     previewRecipients, availableColumns, audienceHealth,
-    buildMergedRecipients, resetAudience,
+    buildMergedRecipients, buildLeadIds, resetAudience,
+    crmSegment, setCrmSegment,
+    artistProjectFilter, setArtistProjectFilter,
+    contactCategoryFilter, setContactCategoryFilter,
+    tagFilter, setTagFilter,
     activeCsvRecipients,
   };
 }

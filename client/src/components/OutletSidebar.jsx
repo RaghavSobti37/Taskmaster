@@ -36,7 +36,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useIsMobile } from '../hooks/useBreakpoint';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
 import { DEFAULT_NAVBAR_GROUPS } from '../utils/navbarConfig';
-import { canAccessNavPath } from '../utils/navPageAccess';
+import { canAccessNavPath, getManagementHubPath } from '../utils/navPageAccess';
 import { isNavDesktopOnly } from '../utils/mobilePageSupport';
 import { prefetchNavRoute } from '../lib/navPrefetch';
 import CountBadge from './ui/CountBadge';
@@ -344,10 +344,13 @@ const OutletSidebar = () => {
     .map((page) => {
       const config = PAGE_CONFIG[page.path];
       const navCounts = getNavCountsForPath(page.path, statusCounts);
+      const navPath = page.path === '/management'
+        ? getManagementHubPath(user, hasPageAccess)
+        : page.path;
       return (
         <NavItem
           key={page.path}
-          to={page.path}
+          to={navPath}
           icon={config.icon}
           label={page.label || config.label}
           iconTone={NAV_ICON_TONES[page.path]}

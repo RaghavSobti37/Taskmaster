@@ -64,6 +64,16 @@ const seedDepartments = async () => {
         existing.pagePermissions = dept.pagePermissions;
         changed = true;
       }
+      if (dept.slug === 'artist-management') {
+        const presetPages = PRESET_PAGES['artist-management'];
+        const current = existing.pagePermissions || [];
+        const merged = [...new Set([...current, ...presetPages])];
+        if (merged.length !== current.length || !current.includes('artists')) {
+          existing.pagePermissions = merged;
+          existing.permissionPreset = 'artist-management';
+          changed = true;
+        }
+      }
       if (changed) await existing.save();
       results.push(existing);
     }

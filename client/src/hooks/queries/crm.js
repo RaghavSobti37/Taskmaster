@@ -5,9 +5,17 @@ import { subscribeToChannel } from '../../lib/realtime';
 import { invalidateStatusCounts } from '../../lib/queryInvalidation';
 import { normalizeRepSummaryPayload } from '../../utils/adminRibbonMetrics';
 
-export const useSalesReps = () => useQuery({
+export const useSalesReps = (enabled = true) => useQuery({
   queryKey: ['salesReps'],
   queryFn: async () => (await axios.get('/api/users/sales-reps')).data,
+  enabled,
+  staleTime: 1000 * 60 * 10,
+});
+
+export const useArtistReps = (enabled = true) => useQuery({
+  queryKey: ['artistReps'],
+  queryFn: async () => (await axios.get('/api/users/artist-reps')).data,
+  enabled,
   staleTime: 1000 * 60 * 10,
 });
 
@@ -54,9 +62,9 @@ export const useCreateLead = () => {
   });
 };
 
-const useCRMImports = (enabled = true) => useQuery({
-  queryKey: ['crm', 'imports'],
-  queryFn: async () => (await axios.get('/api/crm/imports')).data,
+const useCRMImports = (enabled = true, params = {}) => useQuery({
+  queryKey: ['crm', 'imports', params],
+  queryFn: async () => (await axios.get('/api/crm/imports', { params })).data,
   enabled,
   staleTime: 1000 * 60 * 5,
 });
@@ -68,8 +76,8 @@ export const useCRMConfig = () => useQuery({
 });
 
 export const useCRMStats = (enabled = true, options = {}) => useQuery({
-  queryKey: ['crm', 'stats'],
-  queryFn: async () => (await axios.get('/api/crm/stats')).data,
+  queryKey: ['crm', 'stats', options.queryParams || {}],
+  queryFn: async () => (await axios.get('/api/crm/stats', { params: options.queryParams })).data,
   enabled,
   staleTime: options.staleTime ?? 1000 * 60 * 2,
   refetchOnWindowFocus: options.refetchOnWindowFocus ?? true,

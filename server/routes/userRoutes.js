@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { protect, admin } = require('../middleware/authMiddleware');
 
-const { getTeam, updateProfile, getDirectory, updateUserTeams, deleteUser, updateUserAdmin, createUserAdmin, getSalesReps, getMonthlyReport } = require('../controllers/userController');
+const { getTeam, updateProfile, getDirectory, updateUserTeams, deleteUser, updateUserAdmin, createUserAdmin, getSalesReps, getArtistReps, getMonthlyReport } = require('../controllers/userController');
 
 router.get('/team', protect, getTeam);
 router.get('/sales-reps', protect, getSalesReps);
+router.get('/artist-reps', protect, getArtistReps);
 router.put('/profile', protect, updateProfile);
 router.get('/directory', protect, getDirectory);
 router.post('/', protect, admin, createUserAdmin);

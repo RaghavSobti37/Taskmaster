@@ -13,6 +13,8 @@ const PersonHubViewSchema = new mongoose.Schema({
   emailStatus: { type: String, enum: ['Active', 'Unsubscribed', 'Invalid', 'Pending', 'Bounced'], default: 'Pending' },
   unsubscribed: { type: Boolean, default: false, index: true },
   lastActivityAt: { type: Date, default: Date.now, index: true },
+  /** Earliest identity touch — used for "new this week" (not hub upsert createdAt). */
+  firstSeenAt: { type: Date, index: true },
   /** Legacy inlet flags for folder queries during migration */
   inCRM: { type: Boolean, default: false },
   inExly: { type: Boolean, default: false },
@@ -23,6 +25,7 @@ const PersonHubViewSchema = new mongoose.Schema({
   inCommunity: { type: Boolean, default: false },
   inNewsletter: { type: Boolean, default: false },
   inArtistPath: { type: Boolean, default: false, index: true },
+  inArtistCrm: { type: Boolean, default: false, index: true },
   latestArtistType: { type: String },
   artistPathResponseCount: { type: Number, default: 0 },
 }, { timestamps: true });

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Lead = require('../models/Lead');
 const { SALES_SLUG } = require('./departmentPermissions');
 const { BOOKED_CALL_SOURCE_RE } = require('../../shared/dataInlets');
+const { resolvePrimaryCallAssigneeId } = require('./primaryCallAssignee');
 const logger = require('./logger');
 
 /** Satyam : Aryaman : Akash = 2 : 1 : 1 */
@@ -65,6 +66,9 @@ function createBookedCallRepAssigner(repIds) {
  * Pick next rep using live CRM counts for booked-call sources (webhooks / single inserts).
  */
 async function assignNextBookedCallRep() {
+  const primaryId = await resolvePrimaryCallAssigneeId();
+  if (primaryId) return primaryId;
+
   const repIds = await resolveBookedCallRepIds();
   if (repIds.length < 3) {
     logger.warn('bookedCallRepAssignment', `Expected 3 reps, found ${repIds.length}`);

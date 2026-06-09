@@ -8,11 +8,13 @@ const { normalizeAndValidateLeadFields } = require('../utils/leadValidation');
 const { normalizePersonRecord, applyPersonFieldsTo } = require('../utils/personNormalization');
 const { broadcastRealtimeEvent } = require('../config/realtime');
 const { isBookedCallSource } = require('../../shared/dataInlets');
+const { CRM_TYPES } = require('../../shared/artistCrmTaxonomy');
 
 class LeadService {
   async createLead(rawLeadData) {
     const sanitizedData = this.sanitizeAndNormalize(rawLeadData);
-    const errors = normalizeAndValidateLeadFields(sanitizedData, { requireName: true, requirePhone: true });
+    const requirePhone = sanitizedData.crmType !== CRM_TYPES.ARTIST;
+    const errors = normalizeAndValidateLeadFields(sanitizedData, { requireName: true, requirePhone });
     if (errors.length) {
       const err = new Error(errors[0]);
       err.statusCode = 400;
@@ -32,7 +34,12 @@ class LeadService {
 
   async syncToContactHub(lead) {
     if (!lead) return;
-    const inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+    let inletKey = isBookedCallSource(lead.source) ? 'booked_calls' : 'leads';
+    let source = inletKey === 'booked_calls' ? 'booked_calls' : 'crm';
+    if (lead.crmType === CRM_TYPES.ARTIST) {
+      inletKey = 'artist_crm';
+      source = 'artist_crm';
+    }
     await ContactService.mergeContact({
       name: lead.name,
       email: lead.email,
@@ -52,7 +59,7 @@ class LeadService {
         nextFollowupTime: lead.nextFollowupTime,
       },
       inletKey,
-    }, inletKey === 'booked_calls' ? 'booked_calls' : 'crm');
+    }, source);
   }
 
   applyFollowupReminderResets(updateData, existingLead) {

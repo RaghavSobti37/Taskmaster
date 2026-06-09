@@ -19,6 +19,7 @@ const SOURCE_TYPE_MAP = {
   booked_call: 'booked_call',
   newsletter: 'newsletter',
   artist_path: 'artist_path',
+  artist_crm: 'artist_crm',
   mail: 'mail',
   mailer: 'mail',
   enquiries: 'enquiry',

@@ -23,8 +23,15 @@ async function ensureDataHubBootstrap() {
 
     const personSpineCount = await require('../models/Person').countDocuments();
     const hubViewCount = await require('../models/PersonHubView').countDocuments();
-    if (personSpineCount === 0 || hubViewCount === 0) {
-      logger.info('dataHubBootstrap', 'Running personId backfill + hub rebuild');
+    const indexCount = await require('../models/PersonIndex').countDocuments();
+    const hubIncomplete = hubViewCount > 0 && indexCount > 0 && hubViewCount < indexCount * 0.9;
+    if (personSpineCount === 0 || hubViewCount === 0 || hubIncomplete) {
+      logger.info('dataHubBootstrap', 'Running personId backfill + hub rebuild', {
+        personSpineCount,
+        hubViewCount,
+        indexCount,
+        hubIncomplete,
+      });
       await require('../scripts/backfillPersonIds').main({ embedded: true });
     }
   } catch (err) {

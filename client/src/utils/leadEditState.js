@@ -6,12 +6,14 @@ export function buildLeadEditState(lead) {
   const { countryCode, nationalNumber } = splitPhoneNumber(lead.phone || '');
   return {
     name: lead.name || '',
+    email: lead.email || '',
     phoneCountryCode: countryCode,
     phoneNational: nationalNumber,
     city: lead.city || '',
     leadQuality: lead.leadQuality ? String(lead.leadQuality) : '3',
     leadStatus: lead.leadStatus || 'New',
     callStatus: lead.callStatus || 'Pending',
+    meaningfulConnect: lead.meaningfulConnect || 'PENDING',
     remarks: lead.remarks || '',
     nextFollowupDate: lead.nextFollowupDate || '',
     nextFollowupTime: lead.nextFollowupTime || '',

@@ -26,3 +26,10 @@
 - Client: `npm test --prefix client` (Vitest)
 - E2E: `npm run test:e2e:public`, `npm run test:e2e:auth`
 - CI: `npm run ci`
+- Artist CRM: `npm test -- artistCrmImport.test.js crmPipelineFilters.test.js`
+
+## Artist CRM scripts
+
+- `server/scripts/seedArtistCrmFromData.js` — all 6 sheet templates from `data/`
+- `server/scripts/fixLeadEmailIndex.js` — partial email index + unset blank emails (run before seed on prod)
+- `server/scripts/testArtistBookingWebhook.js` — live booking E2E (local API)

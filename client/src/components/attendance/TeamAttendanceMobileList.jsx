@@ -1,4 +1,3 @@
-import React from 'react';
 import { format } from 'date-fns';
 import { Check, Lock } from 'lucide-react';
 import { UserLabel, Spinner } from '../ui';
@@ -6,6 +5,7 @@ import {
   shouldUseSplitLayout,
   getMergedCellLabel,
 } from '../../utils/attendanceUtils';
+import { resolveRowEntry } from '../../utils/attendanceRosterVisibility';
 
 const PASTEL_ROSE_CELL = 'bg-[var(--color-pastel-rose-bg)] border-[var(--color-pastel-rose-text)]/20';
 const PASTEL_VIOLET_CELL = 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/20';
@@ -106,6 +106,7 @@ const TeamAttendanceMobileList = ({
   users = [],
   dateColumns = [],
   rowMap,
+  approvedLeaves = [],
   resolveStatus,
   onEdit,
   statusDot,
@@ -140,8 +141,7 @@ const TeamAttendanceMobileList = ({
           </div>
           <div className="p-3 space-y-4">
             {dateColumns.map(({ date, key: dayKey, label: dayLabel }) => {
-              const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
-              const entry = rowMap.get(key);
+              const entry = resolveRowEntry(rowMap, userRow._id, date, approvedLeaves);
               const status = resolveStatus(entry, date);
               return (
                 <DayBlock

@@ -99,14 +99,51 @@ export default function StepAudienceMapping({
 
       {audience.audienceSource === 'crm' && (
         <div className="p-4 rounded-xl border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={audience.loadCrmContactsData} disabled={audience.contactsLoading}>
+          <div className="flex flex-wrap gap-2 items-center">
+            <TabSwitcher
+              activeTab={audience.crmSegment || 'sales'}
+              onChange={(seg) => {
+                audience.setCrmSegment?.(seg);
+                audience.loadCrmContactsData?.(seg);
+              }}
+              tabs={[
+                { id: 'sales', label: 'Sales CRM' },
+                { id: 'artist', label: 'Artist CRM' },
+              ]}
+            />
+            <Button size="sm" variant="secondary" onClick={() => audience.loadCrmContactsData(audience.crmSegment)} disabled={audience.contactsLoading}>
               <RefreshCw size={12} className={audience.contactsLoading ? 'animate-spin' : ''} /> Load CRM
             </Button>
-            <Button size="sm" variant="secondary" onClick={audience.loadExlyContactsData} disabled={audience.exlyContactsLoading}>
-              <RefreshCw size={12} className={audience.exlyContactsLoading ? 'animate-spin' : ''} /> Load Exly
-            </Button>
+            {audience.crmSegment !== 'artist' && (
+              <Button size="sm" variant="secondary" onClick={audience.loadExlyContactsData} disabled={audience.exlyContactsLoading}>
+                <RefreshCw size={12} className={audience.exlyContactsLoading ? 'animate-spin' : ''} /> Load Exly
+              </Button>
+            )}
           </div>
+          {audience.crmSegment === 'artist' && (
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="text-xs rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-2 py-1"
+                value={audience.artistProjectFilter || 'all'}
+                onChange={(e) => audience.setArtistProjectFilter?.(e.target.value)}
+              >
+                <option value="all">All artists</option>
+                <option value="YUGM">YUGM</option>
+                <option value="Harshad Duhita">Harshad Duhita</option>
+                <option value="shared">Shared event DB</option>
+              </select>
+              <select
+                className="text-xs rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-primary)] px-2 py-1"
+                value={audience.contactCategoryFilter || 'all'}
+                onChange={(e) => audience.setContactCategoryFilter?.(e.target.value)}
+              >
+                <option value="all">All categories</option>
+                <option value="press_media">Press / media</option>
+                <option value="event_organizer">Event organizer</option>
+                <option value="event_database">Event database</option>
+              </select>
+            </div>
+          )}
           {((audience.allContacts?.length ?? 0) > 0 || (audience.allExlyContacts?.length ?? 0) > 0) && (
             <>
               <div className="flex flex-wrap gap-3 items-center">
@@ -154,6 +191,17 @@ export default function StepAudienceMapping({
                   },
                   { header: 'Name', render: (row) => <span className="text-xs font-medium">{row.name || '—'}</span> },
                   { header: 'Email', render: (row) => <span className="text-xs font-mono text-[var(--color-text-muted)]">{row.email}</span> },
+                  {
+                    header: 'Email status',
+                    render: (row) => (
+                      <Badge
+                        variant={row.emailStatus === 'Active' ? 'mint' : row.emailStatus === 'Invalid' ? 'rose' : 'slate'}
+                        className="text-[9px]"
+                      >
+                        {row.emailStatus || 'Pending'}
+                      </Badge>
+                    ),
+                  },
                   { header: 'Status', render: (row) => <Badge variant="slate" className="text-[9px]">{row.leadStatus || 'Fresh'}</Badge> },
                 ]}
                 data={[...audience.filteredContacts, ...audience.filteredExlyContacts].slice(0, 50)}

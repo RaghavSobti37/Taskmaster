@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const tenantPlugin = require('../plugins/tenantPlugin');
 
-const { validateDate } = require('../utils/sanitizer');
+const { canonicalLeadStatus } = require('../utils/crmPipelineFilters');
 const { applyPersonIdentityToDoc } = require('../utils/personNormalization');
 const auditPlugin = require('./plugins/auditPlugin');
 
@@ -24,11 +24,22 @@ const LeadSchema = new mongoose.Schema({
     purchasedAt: Date
   }],
   
+  // CRM segment (sales vs artist-management pipeline)
+  crmType: { type: String, enum: ['sales', 'artist'], default: 'sales', index: true },
+  artistProject: { type: String, index: true },
+  contactCategory: { type: String, index: true },
+
   // Basic Information
   name: { type: String, required: true },
   nameKey: { type: String, index: true },
   email: { type: String, index: true },
-  phone: { type: String, required: true, index: true },
+  phone: {
+    type: String,
+    required: function requiredPhone() {
+      return this.crmType !== 'artist';
+    },
+    index: true,
+  },
   city: { type: String, index: true },
   
   // Webinar & Engagement (Source Data)
@@ -92,7 +103,13 @@ const LeadSchema = new mongoose.Schema({
 
 LeadSchema.pre('save', function(next) {
   try {
-    applyPersonIdentityToDoc(this, { phoneRequired: true });
+    if (this.email === null || (typeof this.email === 'string' && !this.email.trim())) {
+      this.email = undefined;
+      if (this._doc && 'email' in this._doc) delete this._doc.email;
+    }
+    if (this.leadStatus) this.leadStatus = canonicalLeadStatus(this.leadStatus);
+    const phoneRequired = this.crmType !== 'artist';
+    applyPersonIdentityToDoc(this, { phoneRequired });
     next();
   } catch (err) {
     next(err);
@@ -102,6 +119,7 @@ LeadSchema.pre('save', function(next) {
 const sanitizeLeadUpdate = (update) => {
   if (!update) return;
   const set = update.$set || update;
+  if (set.leadStatus) set.leadStatus = canonicalLeadStatus(set.leadStatus);
   if (set.name || set.email || set.phone || set.city) {
     applyPersonIdentityToDoc(set, { phoneRequired: false });
   }
@@ -136,12 +154,22 @@ LeadSchema.post('deleteOne', { document: true, query: false }, function(doc) {
 
 // Core Uniqueness Constraints per Tenant
 LeadSchema.index({ tenantId: 1, phone: 1 }, { unique: true });
-LeadSchema.index({ tenantId: 1, email: 1 }, { unique: true, sparse: true }); // Sparse because email might be empty
+// Partial unique: only enforce when email is a non-empty string (phone-only artist rows allowed).
+LeadSchema.index(
+  { tenantId: 1, email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $exists: true, $type: 'string', $gt: '' } },
+    name: 'tenantId_1_email_1_nonempty',
+  }
+);
 LeadSchema.index({ tenantId: 1, email: 1, unsubscribed: 1, bounceCount: 1 });
 
 // Indexes for common query patterns
 LeadSchema.index({ tenantId: 1, assignedRepId: 1, nextFollowupDate: 1, nextFollowupTime: 1 });
 LeadSchema.index({ tenantId: 1, assignedRepId: 1, leadStatus: 1 });
+LeadSchema.index({ tenantId: 1, crmType: 1, contactCategory: 1 });
+LeadSchema.index({ tenantId: 1, crmType: 1, artistProject: 1 });
 LeadSchema.index({ tenantId: 1, createdAt: -1 });
 LeadSchema.index({ reminderSent: 1, nextFollowupDate: 1 });
 LeadSchema.index({ leadStatus: 1, notifiedOverdue: 1, nextFollowupDate: 1 });

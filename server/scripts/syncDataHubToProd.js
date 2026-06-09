@@ -1,14 +1,11 @@
 #!/usr/bin/env node
 /**
- * Push local Data Hub + calendar data to production (replaces prod collections).
- *
- * Copies: contacts, tscdatas, leads, exlybookings, calendarevents, datahubsyncstates
- * Does NOT touch other prod collections.
+ * Push local Data Hub data to production (replaces prod hub collections).
  *
  * Usage:
  *   node server/scripts/compareDataHubDbs.js
  *   node server/scripts/syncDataHubToProd.js --yes
- *   node server/scripts/seedProductionContent.js   # calendar birthdays on prod
+ *   node server/scripts/reconcileDataHub.js --prod --full
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -16,11 +13,20 @@ const { MongoClient } = require('mongodb');
 
 const BATCH_SIZE = 500;
 const COLLECTIONS = [
-  'tscdatas',
+  'outsourcedrecords',
+  'personindexes',
+  'personhubviews',
+  'people',
+  'personidentifiers',
+  'personcommunicationprofiles',
+  'personsourcelinks',
   'leads',
   'exlybookings',
+  'bookedcalls',
+  'newslettersubscribers',
+  'artistpathresponses',
+  'tscdatas',
   'contacts',
-  'calendarevents',
   'datahubsyncstates',
 ];
 
@@ -89,9 +95,10 @@ async function main() {
 
   if (!confirmed) {
     console.error(
-      'This REPLACES production Data Hub + calendar collections with local data.\n' +
+      'This REPLACES production Data Hub collections with local data.\n' +
         'Run compare first: node server/scripts/compareDataHubDbs.js\n' +
-        'Then: node server/scripts/syncDataHubToProd.js --yes'
+        'Then: node server/scripts/syncDataHubToProd.js --yes\n' +
+        'Then: node server/scripts/reconcileDataHub.js --prod --full'
     );
     process.exit(1);
   }
@@ -145,7 +152,7 @@ async function main() {
     }
 
     if (!ok) process.exit(1);
-    console.log('\nDone. Refresh prod Data Hub (hard refresh). Optional: node server/scripts/seedProductionContent.js');
+    console.log('\nDone. Run: node server/scripts/reconcileDataHub.js --prod --full');
   } finally {
     await localClient.close().catch(() => {});
     await prodClient.close().catch(() => {});

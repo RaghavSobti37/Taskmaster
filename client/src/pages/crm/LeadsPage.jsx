@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search, Plus, Trash2, CheckCircle2,
-  Database, TrendingUp, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus
+  Database, UserCheck, Briefcase, Users, Zap, Target, Clock, MapPin, Globe, Calendar, MessageSquare, Send, Bell, History, UserPlus, Mail
 } from 'lucide-react';
 import { Badge, Card, DataTable, Button, Input, PageSkeleton, ListPageLayout, SearchInput, UserLabel, FullScreenWorkspace, NexusDropdown } from '../../components/ui';
 import { Modal } from '../../components/ui/modals';
@@ -10,10 +10,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../utils/departmentPermissions';
 import { useConfirm } from '../../contexts/confirmContext';
 import { useToast } from '../../contexts/ToastContext';
-import { useLiveLeads, useSalesReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
+import { useLiveLeads, useSalesReps, useArtistReps, useCRMStats, useUpdateLead, useCreateLead, useCRMConfig } from '../../hooks/useTaskmasterQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { formatExlyTag } from '../../utils/crmUtils';
+import { formatExlyTag, MEANINGFUL_CONNECT_OPTIONS, formatMeaningfulConnect, meaningfulConnectBadgeVariant } from '../../utils/crmUtils';
 import { validateLeadFormFields } from '../../utils/leadFormValidation';
 import { buildLeadEditState, leadEditHasChanges } from '../../utils/leadEditState';
 import PhoneNumberFields from '../../components/crm/PhoneNumberFields';
@@ -22,8 +22,14 @@ import LeadRowActions from '../../components/crm/LeadRowActions';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 import { applyFlashHighlight } from '../../utils/navigationHighlight';
+import { crmQueryParamsForUser, isArtistOnlyCrmUser, isArtistCrmContext } from '../../utils/crmScope';
+import ArtistCrmImportPanel from '../../components/crm/ArtistCrmImportPanel';
+import ArtistBookingEnquiryPanel from '../../components/crm/ArtistBookingEnquiryPanel';
+import { isArtistBookingEnquiry } from '../../utils/artistBookingEnquiry';
 
 const CRM_LEADS_FILTERS_KEY = 'crm-leads-filters';
+
+const CRM_FIELD_SELECT = 'w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none';
 
 const loadLeadsFilters = () => {
   try {
@@ -35,6 +41,7 @@ const loadLeadsFilters = () => {
   return {
     leadStatus: 'all',
     meaningfulConnect: 'all',
+    warmPipeline: false,
     source: 'all',
     leadQuality: 'all',
     assignedRepId: 'all',
@@ -70,6 +77,7 @@ const closeLeadEditor = (leadId, setSelectedLead) => {
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const artistMode = isArtistOnlyCrmUser(user);
   const [searchParams] = useSearchParams();
   const { confirm } = useConfirm();
   const toast = useToast();
@@ -78,6 +86,7 @@ export default function LeadsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => loadLeadsFilters().pageSize || 25);
   const [selectedLead, setSelectedLead] = useState(null);
+  const artistRepContext = isArtistCrmContext(user, selectedLead);
   const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [statFilter, setStatFilter] = useState(null);
@@ -281,30 +290,72 @@ export default function LeadsPage() {
   };
 
   useEffect(() => {
-    if (statFilter === 'warm') {
-      // Warm card should show only warm leads, not all meaningful connections.
-      setFilters(prev => ({ ...prev, leadStatus: 'Warm', meaningfulConnect: 'all' }));
-    } else if (statFilter === 'converted') {
-      setFilters(prev => ({ ...prev, leadStatus: 'Converted', meaningfulConnect: 'all' }));
-    } else {
-      setFilters(prev => ({ ...prev, leadStatus: 'all', meaningfulConnect: 'all' }));
+    if (statFilter === 'meaningful') {
+      setFilters((prevFilters) => ({
+        ...prevFilters,
+        leadStatus: 'all',
+        meaningfulConnect: 'YES',
+        warmPipeline: false,
+      }));
+      return;
+    }
+    if (statFilter === 'converted') {
+      setFilters((prevFilters) => ({
+        ...prevFilters,
+        leadStatus: 'Converted',
+        meaningfulConnect: 'all',
+        warmPipeline: false,
+      }));
     }
   }, [statFilter]);
 
-  const queryParams = useMemo(() => ({
+  const clearStatFilters = () => {
+    setStatFilter(null);
+    setFilters((prev) => ({
+      ...prev,
+      leadStatus: 'all',
+      meaningfulConnect: 'all',
+      warmPipeline: false,
+    }));
+  };
+
+  const toggleMeaningfulStatFilter = () => {
+    if (statFilter === 'meaningful') {
+      clearStatFilters();
+      return;
+    }
+    setStatFilter('meaningful');
+  };
+
+  const toggleConvertedStatFilter = () => {
+    if (statFilter === 'converted') {
+      clearStatFilters();
+      return;
+    }
+    setStatFilter('converted');
+  };
+
+  const queryParams = useMemo(() => crmQueryParamsForUser(user, {
     page,
     limit: pageSize,
     search: debouncedSearch,
     sort: sortField,
     order: sortOrder,
-    ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== 'all'))
-  }), [page, pageSize, debouncedSearch, filters, sortField, sortOrder]);
+    ...(artistMode ? { excludeContactCategory: 'booking_enquiry' } : {}),
+    ...Object.fromEntries(Object.entries(filters).filter(([k, v]) => {
+      if (k === 'warmPipeline') return v === true;
+      return v !== 'all';
+    })),
+  }), [user, artistMode, page, pageSize, debouncedSearch, filters, sortField, sortOrder]);
 
 
 
   const { data, isLoading } = useLiveLeads(queryParams);
-  const { data: statsData } = useCRMStats();
-  const { data: team = [] } = useSalesReps();
+  const statsParams = useMemo(() => (artistMode ? { crmType: 'artist' } : {}), [artistMode]);
+  const { data: statsData } = useCRMStats(true, { queryParams: statsParams });
+  const { data: salesTeam = [] } = useSalesReps(!artistRepContext);
+  const { data: artistTeam = [] } = useArtistReps(artistRepContext);
+  const team = artistRepContext ? artistTeam : salesTeam;
   const { data: crmConfig } = useCRMConfig();
 
   const leads = data?.leads || [];
@@ -334,6 +385,7 @@ export default function LeadsPage() {
   const leadStatusesList = crmConfig?.leadStatuses || ['New', 'Contacted', 'Warm', 'Hot', 'Qualified', 'Proposal', 'Converted', 'Lost'];
   const callStatusesList = crmConfig?.callStatuses || ['Pending', 'Connected', 'Busy', 'DNP', 'Switched Off'];
   const qualitiesList = crmConfig?.qualities || ['1', '2', '3', '4', '5', 'Future 4'];
+  const meaningfulConnectList = crmConfig?.meaningfulConnectStatuses || ['YES', 'NO', 'PENDING'];
 
   const isDefaultSort = sortField === 'createdAt' && sortOrder === 'desc';
   const tableSortState = useMemo(
@@ -375,6 +427,16 @@ export default function LeadsPage() {
             {row.primaryRole && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-action-primary)]/10 border border-[var(--color-action-primary)]/20 text-[var(--color-action-primary)] font-normal tracking-tight">
                 {row?.primaryRole}
+              </span>
+            )}
+            {artistMode && row.metadata?.publication && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-normal tracking-tight">
+                {row.metadata.publication}
+              </span>
+            )}
+            {artistMode && row.contactCategory && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/10 border border-slate-500/20 text-slate-300 font-normal tracking-tight">
+                {row.contactCategory.replace(/_/g, ' ')}
               </span>
             )}
             {row.source && (!row.exlyOfferingTitle || (row.source !== 'Exly Offering' && row.source !== row.exlyOfferingTitle)) && (
@@ -434,7 +496,7 @@ export default function LeadsPage() {
       ),
     },
     {
-      header: 'Assigned Agent',
+      header: artistMode ? 'Assigned Manager' : 'Assigned Agent',
       sortable: false,
       render: (row) => (
         <UserLabel
@@ -450,8 +512,9 @@ export default function LeadsPage() {
   if (isLoading && page === 1 && !searchTerm) return <PageSkeleton />;
 
   const stats = statsData || { totalLeads: 0, convertedLeads: 0, warmLeads: 0, conversionRate: 0, activeReach: 0 };
+  const meaningfulConnectCount = stats.activeReach ?? stats.meaningful ?? stats.warmLeads ?? 0;
   const isAdmin = isAdminUser(user);
-  const otherPipeline = Math.max(0, stats.totalLeads - stats.convertedLeads - stats.warmLeads);
+  const otherPipeline = Math.max(0, stats.totalLeads - stats.convertedLeads - meaningfulConnectCount);
 
   return (
     <ListPageLayout
@@ -467,18 +530,18 @@ export default function LeadsPage() {
             icon: Users,
             variant: 'mint',
             info: 'Total leads visible in your scope.',
-            onClick: () => setStatFilter(null),
+            onClick: clearStatFilters,
             active: !statFilter,
           },
           {
-            id: 'warm',
-            label: 'Warm Leads',
-            value: stats.warmLeads,
-            icon: TrendingUp,
+            id: 'meaningful',
+            label: 'Meaningful Connect',
+            value: meaningfulConnectCount,
+            icon: MessageSquare,
             variant: 'rose',
-            info: 'Leads with meaningful connection and not converted.',
-            onClick: () => setStatFilter(statFilter === 'warm' ? null : 'warm'),
-            active: statFilter === 'warm',
+            info: 'Leads with a meaningful connection (YES).',
+            onClick: toggleMeaningfulStatFilter,
+            active: statFilter === 'meaningful',
           },
           {
             id: 'converted',
@@ -487,7 +550,7 @@ export default function LeadsPage() {
             icon: CheckCircle2,
             variant: 'apricot',
             info: 'Leads converted into paying customers.',
-            onClick: () => setStatFilter(statFilter === 'converted' ? null : 'converted'),
+            onClick: toggleConvertedStatFilter,
             active: statFilter === 'converted',
           },
           {
@@ -502,24 +565,82 @@ export default function LeadsPage() {
        
       }}
       toolbarActions={
-        <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
-          <Plus size={14} /> Add Lead
-        </Button>
+        <>
+          {artistMode && <ArtistCrmImportPanel compact />}
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
+            <Plus size={14} /> {artistMode ? 'Add Contact' : 'Add Lead'}
+          </Button>
+        </>
       }
       toolbar={
         <>
           <SearchInput
             label="Search"
-            placeholder="Search name or phone..."
+            placeholder={artistMode ? 'Search contacts…' : 'Search name or phone...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {artistMode ? (
+            <>
+              <NexusDropdown
+                label="Project"
+                placeholder="Artist"
+                options={[
+                  { value: 'all', label: 'All Artists' },
+                  { value: 'YUGM', label: 'YUGM' },
+                  { value: 'Harshad Duhita', label: 'Harshad Duhita' },
+                  { value: 'shared', label: 'Shared Event DB' },
+                ]}
+                value={filters.artistProject || 'all'}
+                onChange={(v) => setFilters({ ...filters, artistProject: v })}
+              />
+              <NexusDropdown
+                label="Category"
+                placeholder="Category"
+                options={[
+                  { value: 'all', label: 'All Categories' },
+                  { value: 'press_media', label: 'Press / Media' },
+                  { value: 'event_organizer', label: 'Event Organizer' },
+                  { value: 'event_database', label: 'Event Database' },
+                ]}
+                value={filters.contactCategory || 'all'}
+                onChange={(v) => setFilters({ ...filters, contactCategory: v })}
+              />
+              <NexusDropdown
+                label="Email"
+                placeholder="Email status"
+                options={[
+                  { value: 'all', label: 'All Email Status' },
+                  { value: 'Active', label: 'Active' },
+                  { value: 'Pending', label: 'Pending' },
+                  { value: 'Invalid', label: 'Invalid' },
+                  { value: 'Unsubscribed', label: 'Unsubscribed' },
+                ]}
+                value={filters.emailStatus || 'all'}
+                onChange={(v) => setFilters({ ...filters, emailStatus: v })}
+              />
+            </>
+          ) : (
+            <>
           <NexusDropdown
             label="Interest"
             placeholder="Interest Level"
             options={[{ value: 'all', label: 'All Interest Levels' }, ...leadStatusesList.map((s) => ({ value: s, label: s }))]}
             value={filters.leadStatus}
-            onChange={(v) => setFilters({ ...filters, leadStatus: v })}
+            onChange={(v) => {
+              setStatFilter(null);
+              setFilters({ ...filters, leadStatus: v, warmPipeline: false });
+            }}
+          />
+          <NexusDropdown
+            label="Meaningful Connect"
+            placeholder="Meaningful Connect"
+            options={[{ value: 'all', label: 'All' }, ...meaningfulConnectList.map((s) => ({ value: s, label: s }))]}
+            value={filters.meaningfulConnect}
+            onChange={(v) => {
+              setStatFilter(v === 'YES' ? 'meaningful' : null);
+              setFilters({ ...filters, meaningfulConnect: v, warmPipeline: false });
+            }}
           />
           <NexusDropdown
             label="Source"
@@ -542,9 +663,12 @@ export default function LeadsPage() {
             value={filters.assignedRepId}
             onChange={(v) => setFilters({ ...filters, assignedRepId: v })}
           />
+            </>
+          )}
         </>
       }
     >
+      {artistMode && <ArtistCrmImportPanel />}
       <DataTable
         columns={columns}
         data={leads}
@@ -577,6 +701,8 @@ export default function LeadsPage() {
         hasChanges={hasLeadChanges}
         isSaving={updateMutation.isPending}
         saveDisabled={Object.keys(fieldErrors).length > 0}
+        centerMain={false}
+        mainClassName="w-full max-w-4xl"
         extraActions={
           <div className="flex items-center gap-2">
             <Button
@@ -631,59 +757,123 @@ export default function LeadsPage() {
         }
         sidebar={
           <div className="space-y-4 animate-fade-in">
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Current Status</h4>
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
+                <UserCheck size={12} className="text-[var(--color-action-primary)]" /> Contact Profile
+              </h4>
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold">Stage</span>
-                  <Badge variant={selectedLead?.leadStatus === 'Converted' ? 'mint' : 'info'}>{selectedLead?.leadStatus || 'Fresh'}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold">Call Status</span>
-                  <Badge variant="neutral">{selectedLead?.callStatus || 'Pending'}</Badge>
-                </div>
-                {selectedLead?.unsubscribed && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-rose-400">Preference</span>
-                    <Badge variant="rose">Unsubscribed</Badge>
+                <Input
+                  label="Customer Name"
+                  value={editLeadData.name}
+                  error={fieldErrors.name}
+                  onChange={(e) => patchEditLeadData({ name: e.target.value })}
+                />
+                <Input
+                  label="Email"
+                  type="email"
+                  value={editLeadData.email || ''}
+                  error={fieldErrors.email}
+                  onChange={(e) => patchEditLeadData({ email: e.target.value })}
+                  icon={Mail}
+                  placeholder="name@example.com"
+                />
+                <PhoneNumberFields
+                  countryCode={editLeadData.phoneCountryCode}
+                  nationalNumber={editLeadData.phoneNational}
+                  error={fieldErrors.phone}
+                  onCountryCodeChange={(phoneCountryCode) => patchEditLeadData({ phoneCountryCode })}
+                  onNationalNumberChange={(phoneNational) => patchEditLeadData({ phoneNational })}
+                />
+                <Input
+                  label="Location / City"
+                  value={editLeadData.city}
+                  onChange={(e) => patchEditLeadData({ city: e.target.value })}
+                  icon={MapPin}
+                />
+                <Input
+                  label="Original Lead Source"
+                  defaultValue={selectedLead?.source || 'Direct'}
+                  icon={Globe}
+                  readOnly
+                />
+                {isArtistBookingEnquiry(selectedLead) && (
+                  <div className="pt-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Enquiry type</span>
+                    <p className="text-xs font-bold mt-1">Website artist booking</p>
                   </div>
                 )}
-                {selectedLead?.unsubscribeReason && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-rose-400">Opt-out Reason</span>
-                    <span className="text-[10px] font-mono text-rose-400">{selectedLead.unsubscribeReason}</span>
-                  </div>
-                )}
-                {selectedLead?.nextFollowupDate && (
-                  <div className="pt-2 border-t border-[var(--color-bg-border)] flex justify-between items-center text-[10px]">
-                    <span className="font-bold flex items-center gap-1 text-blue-400"><Clock size={12} /> Follow-up</span>
-                    <span className="font-mono">{selectedLead.nextFollowupDate} {selectedLead.nextFollowupTime}</span>
+                {artistMode && selectedLead?.contactCategory && !isArtistBookingEnquiry(selectedLead) && (
+                  <div className="pt-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Category</span>
+                    <p className="text-xs font-bold mt-1 capitalize">{selectedLead.contactCategory.replace(/_/g, ' ')}</p>
                   </div>
                 )}
               </div>
             </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Assigned Agent</h4>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden">
-                  {selectedLead?.assignedRep?.avatar ? <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" /> : <Users size={18} className="text-[var(--color-text-muted)]" />}
+
+            <Card className="p-4 space-y-3 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                {artistRepContext ? 'Assigned Manager' : 'Assigned Agent'}
+              </h4>
+              <select
+                className={CRM_FIELD_SELECT}
+                value={editLeadData.assignedRepId || ''}
+                onChange={(e) => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
+              >
+                <option value="" disabled>Pending Assignment</option>
+                {team.map((rep) => (
+                  <option key={rep._id} value={rep._id}>{rep.name}</option>
+                ))}
+              </select>
+              {selectedLead?.assignedRep && (
+                <div className="flex items-center gap-2.5 pt-1">
+                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] flex items-center justify-center overflow-hidden shrink-0">
+                    {selectedLead.assignedRep.avatar ? (
+                      <img src={selectedLead.assignedRep.avatar} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <Users size={16} className="text-[var(--color-text-muted)]" />
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">
+                    Currently <span className="font-bold text-[var(--color-text-primary)]">{selectedLead.assignedRep.name}</span>
+                  </p>
                 </div>
-                <div>
-                  <p className="text-[11px] font-bold">{selectedLead?.assignedRep?.name || 'Unassigned'}</p>
-                  <p className="text-[9px] text-[var(--color-text-muted)] uppercase">Sales Professional</p>
-                </div>
-              </div>
+              )}
             </Card>
-            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)]">
+
+            <Card className="p-4 space-y-3 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Pipeline Snapshot</h4>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={editLeadData.leadStatus === 'Converted' ? 'mint' : 'info'}>
+                  {(editLeadData.leadStatus || 'New').toUpperCase()}
+                </Badge>
+                <Badge variant="neutral">{(editLeadData.callStatus || 'Pending').toUpperCase()}</Badge>
+                <Badge variant={meaningfulConnectBadgeVariant(editLeadData.meaningfulConnect)}>
+                  MC: {formatMeaningfulConnect(editLeadData.meaningfulConnect).toUpperCase()}
+                </Badge>
+                <Badge variant="slate">Q{editLeadData.leadQuality || '—'}</Badge>
+              </div>
+              {selectedLead?.unsubscribed && (
+                <Badge variant="rose" className="w-fit">Unsubscribed</Badge>
+              )}
+              {editLeadData.nextFollowupDate && (
+                <p className="text-[10px] font-mono text-blue-400 flex items-center gap-1.5 pt-1 border-t border-[var(--color-bg-border)]">
+                  <Clock size={12} />
+                  Follow-up {editLeadData.nextFollowupDate} {editLeadData.nextFollowupTime}
+                </p>
+              )}
+            </Card>
+
+            <Card className="p-4 space-y-4 bg-[var(--color-bg-primary)] border-[var(--color-bg-border)]">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5 border-b border-[var(--color-bg-border)] pb-2">
                 <Zap size={12} className="text-purple-500" /> Exly Offerings
               </h4>
               <div className="space-y-3">
                 {(() => {
-                  const offerings = selectedLead?.exlyOfferings?.length > 0 
-                    ? selectedLead.exlyOfferings 
+                  const offerings = selectedLead?.exlyOfferings?.length > 0
+                    ? selectedLead.exlyOfferings
                     : selectedLead?.exlyOfferingTitle ? [{ title: selectedLead.exlyOfferingTitle, purchasedAt: selectedLead.createdAt }] : [];
-                  
+
                   if (offerings.length === 0) {
                     return <p className="text-[10px] font-bold uppercase text-[var(--color-text-muted)] text-center py-2">No offerings found</p>;
                   }
@@ -710,55 +900,73 @@ export default function LeadsPage() {
               Fix highlighted fields before saving.
             </div>
           )}
+          <ArtistBookingEnquiryPanel lead={selectedLead} />
           {/* Lead Stages & Interaction Updates */}
           <section>
             <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
               <Briefcase size={14} /> Mission & Pipeline Status
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-[var(--color-bg-secondary)] rounded-2xl border border-[var(--color-bg-border)]">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
-                <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
-                  value={editLeadData.leadStatus}
-                  onChange={e => setEditLeadData({ ...editLeadData, leadStatus: e.target.value })}
-                >
-                  {leadStatusesList.map(st => <option key={st} value={st}>{st}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Call Outcome Status</label>
-                <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
-                  value={editLeadData.callStatus}
-                  onChange={e => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
-                >
-                  {callStatusesList.map(cs => <option key={cs} value={cs}>{cs}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Quality Score</label>
-                <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
-                  value={editLeadData.leadQuality}
-                  onChange={e => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
-                >
-                  {qualitiesList.map(q => <option key={q} value={q}>Level {q}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Assigned Sales Rep</label>
-                <select
-                  className="w-full px-3 py-2.5 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] rounded-xl text-xs font-bold text-[var(--color-text-primary)] focus:border-[var(--color-action-primary)] outline-none"
-                  value={editLeadData.assignedRepId || ''}
-                  onChange={e => setEditLeadData({ ...editLeadData, assignedRepId: e.target.value || undefined })}
-                >
-                  <option value="" disabled>Pending Assignment</option>
-                  {team.map(rep => (
-                    <option key={rep._id} value={rep._id}>{rep.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-4">
+              <Card className="p-5 bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Engagement</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Funnel Stage</label>
+                    <select
+                      className={CRM_FIELD_SELECT}
+                      value={editLeadData.leadStatus}
+                      onChange={(e) => setEditLeadData({ ...editLeadData, leadStatus: e.target.value })}
+                    >
+                      {leadStatusesList.map((st) => <option key={st} value={st}>{st}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Call Outcome</label>
+                    <select
+                      className={CRM_FIELD_SELECT}
+                      value={editLeadData.callStatus}
+                      onChange={(e) => setEditLeadData({ ...editLeadData, callStatus: e.target.value })}
+                    >
+                      {callStatusesList.map((cs) => <option key={cs} value={cs}>{cs}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]"
+                      title="Manual flag — top stat counts Yes only, not auto from Connected"
+                    >
+                      Meaningful Connect
+                    </label>
+                    <select
+                      className={CRM_FIELD_SELECT}
+                      value={editLeadData.meaningfulConnect || 'PENDING'}
+                      onChange={(e) => setEditLeadData({ ...editLeadData, meaningfulConnect: e.target.value })}
+                    >
+                      {(meaningfulConnectList.length ? meaningfulConnectList : MEANINGFUL_CONNECT_OPTIONS.map((o) => o.value)).map((status) => {
+                        const option = MEANINGFUL_CONNECT_OPTIONS.find((o) => o.value === status);
+                        return (
+                          <option key={status} value={status}>
+                            {option?.label || status}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-5 bg-[var(--color-bg-secondary)] border-[var(--color-bg-border)]">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4">Qualification</p>
+                <div className="max-w-xs">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-secondary)]">Lead Quality Score</label>
+                  <select
+                    className={`${CRM_FIELD_SELECT} mt-1.5`}
+                    value={editLeadData.leadQuality}
+                    onChange={(e) => setEditLeadData({ ...editLeadData, leadQuality: e.target.value })}
+                  >
+                    {qualitiesList.map((q) => <option key={q} value={q}>Level {q}</option>)}
+                  </select>
+                </div>
+              </Card>
             </div>
           </section>
 
@@ -805,35 +1013,6 @@ export default function LeadsPage() {
                   </span>
                 </label>
               </div>
-            </div>
-          </section>
-
-          {/* Contact Details */}
-          <section>
-            <h3 className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-4 flex items-center gap-2">
-              <UserCheck size={14} /> Contact Information
-            </h3>
-            <div className="grid grid-cols-2 gap-6">
-              <Input
-                label="Customer Name"
-                value={editLeadData.name}
-                error={fieldErrors.name}
-                onChange={e => patchEditLeadData({ name: e.target.value })}
-              />
-              <PhoneNumberFields
-                countryCode={editLeadData.phoneCountryCode}
-                nationalNumber={editLeadData.phoneNational}
-                error={fieldErrors.phone}
-                onCountryCodeChange={(phoneCountryCode) => patchEditLeadData({ phoneCountryCode })}
-                onNationalNumberChange={(phoneNational) => patchEditLeadData({ phoneNational })}
-              />
-              <Input
-                label="Location / City"
-                value={editLeadData.city}
-                onChange={e => patchEditLeadData({ city: e.target.value })}
-                icon={MapPin}
-              />
-              <Input label="Original Lead Source" defaultValue={selectedLead?.source || 'Direct'} icon={Globe} readOnly />
             </div>
           </section>
 

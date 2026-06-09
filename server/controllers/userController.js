@@ -5,7 +5,7 @@ const TaskAssignment = require('../models/TaskAssignment');
 const Project = require('../models/Project');
 const { isAfter, subMinutes } = require('date-fns');
 const logger = require('../utils/logger');
-const { isAdminUser, ADMIN_SLUG, SALES_SLUG } = require('../utils/departmentPermissions');
+const { isAdminUser, ADMIN_SLUG, SALES_SLUG, ARTIST_SLUG } = require('../utils/departmentPermissions');
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength, generateSecurePassword } = require('../utils/passwordValidation');
 const { normalizePasswordInput } = require('../utils/passwordAuth');
@@ -396,6 +396,19 @@ exports.getSalesReps = async (req, res) => {
     res.json(reps);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch sales representatives' });
+  }
+};
+
+exports.getArtistReps = async (req, res) => {
+  try {
+    const artistDept = await Department.findOne({ slug: ARTIST_SLUG });
+    const filter = artistDept ? { departmentId: artistDept._id } : { _id: null };
+    const reps = await User.find(filter)
+      .select('_id name email avatar online lastOnline phone departmentId')
+      .populate('departmentId', 'name slug permissionPreset pagePermissions');
+    res.json(reps);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch artist management representatives' });
   }
 };
 

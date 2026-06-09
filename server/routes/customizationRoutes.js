@@ -82,4 +82,10 @@ router.post('/navbar/reset', customizationController.resetNavbarToDefaults);
  */
 router.patch('/navbar/page-visibility', customizationController.togglePageVisibility);
 
+// ============ SHORTCUT ROUTES ============
+
+router.get('/shortcuts', customizationController.getShortcutPreferences);
+router.post('/shortcuts', customizationController.saveShortcutPreferences);
+router.post('/shortcuts/reset', customizationController.resetShortcutPreferences);
+
 module.exports = router;

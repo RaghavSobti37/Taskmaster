@@ -11,6 +11,7 @@ import { NexusDropdown, SearchInput, Button } from '../ui';
 import {
   AssetTypeIconBadge,
   ASSET_TYPE_FORM_OPTIONS,
+  detectAssetType,
 } from '../assets/assetTypeIcons';
 import { format } from 'date-fns';
 import { assetMatchesSearch } from '../../utils/assetSearch';
@@ -214,7 +215,10 @@ const ProjectAssets = ({ projectId }) => {
                   <input 
                     type="text" 
                     value={newAsset.link}
-                    onChange={e => setNewAsset({...newAsset, link: e.target.value})}
+                    onChange={(e) => {
+                      const link = e.target.value;
+                      setNewAsset({ ...newAsset, link, type: detectAssetType('other', link) });
+                    }}
                     required
                     placeholder="https://drive.google.com/..."
                     className="w-full bg-[var(--color-bg-workspace)] border border-[var(--color-bg-border)] rounded-2xl px-5 py-3 text-xs font-bold outline-none text-[var(--color-text-primary)]"

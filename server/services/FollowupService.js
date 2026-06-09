@@ -1,18 +1,14 @@
 const Lead = require('../models/Lead');
 const paginatedQuery = require('../utils/paginatedQuery');
-const { isAdminUser } = require('../utils/departmentPermissions');
+const { applyCrmScopeToQuery } = require('../utils/crmScope');
 
 class FollowupService {
   /**
    * Retrieves paginated followups using the CQRS separation logic.
    */
   static async getPaginatedFollowups(user, queryParams = {}) {
-    const isRep = !isAdminUser(user);
     const query = { nextFollowupDate: { $exists: true, $ne: '' } };
-    
-    if (isRep) {
-      query.assignedRepId = user._id;
-    }
+    applyCrmScopeToQuery(query, user, queryParams);
 
     const result = await paginatedQuery(Lead, query, {
       page: queryParams.page || 1,

@@ -2,7 +2,6 @@
 
 const ATTENDANCE_EXCLUDED_EMAILS = Object.freeze([
   'redacted@example.com',
-  'redacted-staff@example.com',
 ]);
 
 const ATTENDANCE_EXCLUDED_EMAIL_SET = new Set(

@@ -8,6 +8,10 @@
     },
     "vercel": {
       "url": "https://mcp.vercel.com"
+    },
+    "agentation": {
+      "command": "npx",
+      "args": ["-y", "agentation-mcp", "server"]
     }
   }
 }

@@ -28,7 +28,7 @@ function PipelineSummaryCard() {
 
   const total = stats?.totalLeads || 0;
   const connected = stats?.connected || 0;
-  const warm = stats?.warmLeads || 0;
+  const warm = (stats?.activeReach ?? stats?.meaningful ?? stats?.warmLeads) || 0;
   const converted = stats?.convertedLeads || 0;
 
   const connPct = total ? Math.round((connected / total) * 100) : 0;
@@ -38,7 +38,7 @@ function PipelineSummaryCard() {
   const funnelStages = [
     { label: 'Total Leads', value: total, pct: 100, barColor: 'bg-blue-500/70', icon: Users },
     { label: 'Connected', value: connected, pct: connPct, barColor: 'bg-violet-500/70', icon: Activity },
-    { label: 'Warm Leads', value: warm, pct: warmPct, barColor: 'bg-amber-500/70', icon: Target },
+    { label: 'Meaningful Connect', value: warm, pct: warmPct, barColor: 'bg-amber-500/70', icon: Target },
     { label: 'Converted', value: converted, pct: convPct, barColor: 'bg-emerald-500/70', icon: TrendingUp },
   ];
 

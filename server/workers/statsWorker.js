@@ -4,6 +4,8 @@ const Lead = require('../models/Lead');
 const CRMStatSnapshot = require('../models/CRMStatSnapshot');
 const logger = require('../utils/logger');
 
+const { warmPipelineQuery } = require('../utils/crmPipelineFilters');
+
 const calculateStats = async (matchStage) => {
   const stats = await Lead.aggregate([
     { $match: matchStage },
@@ -19,7 +21,7 @@ const calculateStats = async (matchStage) => {
           { $count: "count" }
         ],
         warmLeads: [
-          { $match: { meaningfulConnect: 'YES', leadStatus: { $ne: 'Converted' } } },
+          { $match: warmPipelineQuery() },
           { $count: "count" }
         ],
         converted: [

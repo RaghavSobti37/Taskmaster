@@ -25,7 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { hasPageAccess, hasAnyPageAccess, getDepartmentName } from '../../utils/departmentPermissions';
-import { canAccessNavPath } from '../../utils/navPageAccess';
+import { canAccessNavPath, getManagementHubPath } from '../../utils/navPageAccess';
 import { isNavDesktopOnly } from '../../utils/mobilePageSupport';
 import { UserAvatar } from '../ui/UserAvatar';
 
@@ -104,7 +104,7 @@ export default function MobileProfileMenu({ open, onClose }) {
 
   const goTo = (path) => {
     onClose();
-    navigate(path);
+    navigate(path === '/management' ? getManagementHubPath(user, hasPageAccess) : path);
   };
 
   const openFullNav = () => {

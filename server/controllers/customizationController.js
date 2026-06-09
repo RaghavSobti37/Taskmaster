@@ -1,5 +1,11 @@
 const DashboardPreset = require('../models/DashboardPreset');
 const NavbarPreference = require('../models/NavbarPreference');
+const ShortcutPreference = require('../models/ShortcutPreference');
+const {
+  SHORTCUT_ACTIONS,
+  normalizeKeyTokens,
+  mergeShortcutBindings,
+} = require('../../shared/shortcutDefaults.cjs');
 const { DEPARTMENT_PRESETS } = require('../models/DashboardPreset');
 const logger = require('../utils/logger');
 const {
@@ -563,6 +569,101 @@ exports.togglePageVisibility = async (req, res, next) => {
     res.json(preferences);
   } catch (error) {
     logger.error('Navbar', 'Error toggling page visibility', { error: error.message });
+    next(error);
+  }
+};
+
+// ============ SHORTCUT PREFERENCES ============
+
+function sanitizeShortcutBindings(raw = {}) {
+  const validIds = new Set(SHORTCUT_ACTIONS.map((a) => a.id));
+  const out = {};
+
+  for (const [id, value] of Object.entries(raw)) {
+    if (!validIds.has(id)) continue;
+    if (value === null) {
+      out[id] = null;
+      continue;
+    }
+    if (!value || !Array.isArray(value.keys) || value.keys.length === 0) continue;
+    out[id] = { keys: normalizeKeyTokens(value.keys) };
+  }
+
+  return out;
+}
+
+/** Get user's keyboard shortcut overrides */
+exports.getShortcutPreferences = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    let doc = await ShortcutPreference.findOne({ userId });
+
+    if (!doc) {
+      doc = await ShortcutPreference.create({ userId, bindings: {} });
+    }
+
+    const overrides = doc.bindings || {};
+    const effective = mergeShortcutBindings(overrides);
+
+    res.json({
+      bindings: overrides,
+      effectiveBindings: effective,
+      updatedAt: doc.updatedAt,
+    });
+  } catch (error) {
+    logger.error('Shortcuts', 'Error fetching shortcut preferences', { error: error.message });
+    next(error);
+  }
+};
+
+/** Save keyboard shortcut overrides */
+exports.saveShortcutPreferences = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { bindings } = req.body;
+
+    if (!bindings || typeof bindings !== 'object') {
+      return res.status(400).json({ error: 'bindings object is required' });
+    }
+
+    const sanitized = sanitizeShortcutBindings(bindings);
+
+    const doc = await ShortcutPreference.findOneAndUpdate(
+      { userId },
+      { bindings: sanitized, updatedAt: new Date() },
+      { new: true, upsert: true }
+    );
+
+    const overrides = doc.bindings || {};
+    res.json({
+      bindings: overrides,
+      effectiveBindings: mergeShortcutBindings(overrides),
+      updatedAt: doc.updatedAt,
+    });
+  } catch (error) {
+    logger.error('Shortcuts', 'Error saving shortcut preferences', { error: error.message });
+    next(error);
+  }
+};
+
+/** Reset shortcuts to app defaults */
+exports.resetShortcutPreferences = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const doc = await ShortcutPreference.findOneAndUpdate(
+      { userId },
+      { bindings: {}, updatedAt: new Date() },
+      { new: true, upsert: true }
+    );
+
+    res.json({
+      bindings: {},
+      effectiveBindings: mergeShortcutBindings({}),
+      updatedAt: doc.updatedAt,
+    });
+  } catch (error) {
+    logger.error('Shortcuts', 'Error resetting shortcut preferences', { error: error.message });
     next(error);
   }
 };

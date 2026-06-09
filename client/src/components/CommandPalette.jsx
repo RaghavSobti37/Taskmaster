@@ -21,19 +21,24 @@ import {
   FolderArchive,
   CheckSquare,
   ClipboardCheck,
+  StickyNote,
+  NotebookPen,
+  Pin,
+  Link2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useStatusCounts } from '../hooks/useTaskmasterQueries';
 import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
 import { getNavCountsForPath, totalNavBadge } from '../utils/navStatusCounts';
-import { getDepartmentSlug } from '../utils/departmentPermissions';
-import { getDepartmentPaletteActions } from '../utils/commandPaletteActions';
+import { getDepartmentSlug, isAdminUser } from '../utils/departmentPermissions';
+import { getDepartmentPaletteActions, QUICK_ACTIONS } from '../utils/commandPaletteActions';
 import { resolvePaletteQuery } from '../utils/commandPaletteResolver';
 import { useToast } from '../contexts/ToastContext';
 import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
-import { GLOBAL_G_CHORD_ROUTES } from '../lib/keyboardShortcuts';
+import { useQuickAdd } from '../contexts/quickAddContextCore';
+import { getGlobalGChordRoutes } from '../lib/keyboardShortcuts';
+import { formatKeysForDisplay } from '../lib/shortcutBindingUtils';
 import CountBadge from './ui/CountBadge';
 
 const ICON_MAP = {
@@ -53,6 +58,10 @@ const ICON_MAP = {
   FolderArchive,
   CheckSquare,
   ClipboardCheck,
+  StickyNote,
+  NotebookPen,
+  Pin,
+  Link2,
   Zap,
 };
 
@@ -64,25 +73,78 @@ const SEARCH_TYPE_ICONS = {
   asset: FolderArchive,
 };
 
-const chordForPath = (path) => {
-  const entry = Object.values(GLOBAL_G_CHORD_ROUTES).find((r) => r.path === path);
+const ICON_TONE_CLASSES = {
+  emerald: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  blue: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+  violet: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
+  cyan: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400',
+  rose: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+  slate: 'bg-[var(--token-surface-2)] text-[var(--color-text-muted)]',
+};
+
+const chordForPath = (path, gRoutes) => {
+  const entry = Object.values(gRoutes || {}).find((r) => r.path === path);
   return entry?.chord;
 };
 
+function matchesQuery(item, q) {
+  const haystack = `${item.label} ${item.sublabel || ''}`.toLowerCase();
+  return haystack.includes(q);
+}
+
+function dedupeItems(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.id || item.path || item.label;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function Kbd({ children, className = '' }) {
+  return (
+    <span
+      className={`inline-flex min-w-[20px] items-center justify-center rounded-md border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] px-1.5 py-0.5 text-[9px] font-black text-[var(--color-text-muted)] shadow-sm ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 const CommandPalette = () => {
-  const { paletteOpen: isOpen, closePalette } = useKeyboardShortcuts();
+  const { paletteOpen: isOpen, closePalette, bindingsMap } = useKeyboardShortcuts();
+  const { runQuickAction } = useQuickAdd();
   const [search, setSearch] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const { user } = useAuth();
+  const isAdmin = isAdminUser(user);
   const toast = useToast();
   const { data: statusCounts = {} } = useStatusCounts(!!user);
+
+  const gChordRoutes = useMemo(
+    () => getGlobalGChordRoutes(bindingsMap, { isAdmin }),
+    [bindingsMap, isAdmin]
+  );
 
   const departmentSlug = getDepartmentSlug(user);
   const zeroStateActions = useMemo(
     () => getDepartmentPaletteActions(departmentSlug),
     [departmentSlug]
+  );
+
+  const quickActions = useMemo(
+    () => QUICK_ACTIONS.map((action) => {
+      const binding = bindingsMap?.[`action-${action.quickActionId}`];
+      return {
+        ...action,
+        shortcut: binding?.keys ? formatKeysForDisplay(binding.keys) : undefined,
+      };
+    }),
+    [bindingsMap]
   );
 
   const { data: searchData, isFetching: searchLoading } = useUnifiedSearch(search, {
@@ -99,9 +161,9 @@ const CommandPalette = () => {
       ...action,
       source: 'nav',
       badge: action.path ? badgeFor(action.path) : 0,
-      shortcut: action.shortcut || (action.path ? chordForPath(action.path) : undefined),
+      shortcut: action.shortcut || (action.path ? chordForPath(action.path, gChordRoutes) : undefined),
     }));
-  }, [zeroStateActions, statusCounts]);
+  }, [zeroStateActions, statusCounts, gChordRoutes]);
 
   const searchResults = useMemo(() => {
     const results = searchData?.results || [];
@@ -150,33 +212,49 @@ const CommandPalette = () => {
     return null;
   }, [resolved]);
 
-  const filteredNav = useMemo(() => {
-    if (!search.trim()) return navItems;
-    const q = search.toLowerCase();
-    return navItems.filter((a) => a.label.toLowerCase().includes(q));
-  }, [navItems, search]);
+  const sections = useMemo(() => {
+    const trimmed = search.trim();
+    const q = trimmed.toLowerCase();
 
-  const displayItems = useMemo(() => {
-    const items = [];
-    if (specialAction) items.push(specialAction);
-    if (search.trim().length >= 2) {
-      items.push(...searchResults);
+    if (trimmed) {
+      const filteredQuick = q ? quickActions.filter((a) => matchesQuery(a, q)) : quickActions;
+      const filteredNav = q ? navItems.filter((a) => matchesQuery(a, q)) : navItems;
+      const items = [];
+      if (specialAction) items.push(specialAction);
+      if (trimmed.length >= 2) items.push(...searchResults);
+      items.push(...filteredQuick, ...filteredNav);
+      const deduped = dedupeItems(items);
+      return deduped.length
+        ? [{ id: 'results', title: trimmed.length >= 2 ? 'Results' : 'Matching commands', items: deduped }]
+        : [];
     }
-    if (!search.trim() || filteredNav.length) {
-      if (search.trim()) {
-        items.push(...filteredNav);
-      } else if (!specialAction) {
-        items.push(...navItems);
-      }
-    }
-    const seen = new Set();
-    return items.filter((item) => {
-      const key = item.id || item.path || item.label;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [specialAction, searchResults, filteredNav, navItems, search]);
+
+    return [
+      { id: 'actions', title: 'Quick actions', items: quickActions },
+      {
+        id: 'nav',
+        title: departmentSlug ? `${departmentSlug} shortcuts` : 'Go to',
+        items: navItems,
+      },
+    ];
+  }, [search, quickActions, navItems, specialAction, searchResults, departmentSlug]);
+
+  const sectionsWithIndex = useMemo(() => {
+    let idx = 0;
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) => {
+        const withIndex = { ...item, flatIndex: idx };
+        idx += 1;
+        return withIndex;
+      }),
+    }));
+  }, [sections]);
+
+  const displayItems = useMemo(
+    () => sectionsWithIndex.flatMap((section) => section.items),
+    [sectionsWithIndex]
+  );
 
   useEffect(() => {
     setActiveIndex(0);
@@ -190,6 +268,12 @@ const CommandPalette = () => {
 
   const executeItem = useCallback(async (item) => {
     if (!item) return;
+
+    if (item.quickActionId) {
+      runQuickAction(item.quickActionId);
+      handleClosePalette();
+      return;
+    }
 
     if (item.kind === 'note' && item.note) {
       try {
@@ -211,7 +295,7 @@ const CommandPalette = () => {
       navigate(item.path);
       handleClosePalette();
     }
-  }, [navigate, handleClosePalette, toast]);
+  }, [navigate, handleClosePalette, toast, runQuickAction]);
 
   useEffect(() => {
     if (isOpen) {
@@ -237,9 +321,14 @@ const CommandPalette = () => {
 
   const renderIcon = (item, active) => {
     const Icon = typeof item.icon === 'string' ? (ICON_MAP[item.icon] || Zap) : (item.icon || Zap);
+    const toneClass = ICON_TONE_CLASSES[item.iconTone] || ICON_TONE_CLASSES.slate;
     return (
-      <div className={`p-2 rounded-[var(--radius-atomic)] ${active ? 'bg-[var(--token-surface-1)]' : 'bg-[var(--token-surface-2)]'}`}>
-        <Icon size={18} />
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+          active ? 'ring-2 ring-[var(--color-action-primary)]/30' : ''
+        } ${toneClass}`}
+      >
+        <Icon size={17} strokeWidth={2.25} />
       </div>
     );
   };
@@ -247,120 +336,138 @@ const CommandPalette = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[2000] flex items-start justify-center pt-[15vh] px-4">
+        <div className="fixed inset-0 z-[2000] flex items-start justify-center pt-[12vh] px-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClosePalette}
-            className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/50 backdrop-blur-md"
+            className="absolute inset-0 bg-slate-950/40 dark:bg-slate-950/55 backdrop-blur-md"
           />
 
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            initial={{ scale: 0.96, opacity: 0, y: 16 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="tm-modal-panel tm-floating max-w-2xl relative w-full bg-[var(--color-bg-floating)] border border-[var(--color-bg-border)] rounded-[var(--radius-lg)] shadow-2xl overflow-hidden"
+            exit={{ scale: 0.96, opacity: 0, y: 16 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+            className="tm-modal-panel tm-floating relative w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--color-bg-border)] bg-[var(--color-bg-floating)] shadow-2xl shadow-black/20"
           >
-            <div className="flex items-center px-6 py-5 border-b border-[var(--color-bg-border)] bg-[var(--token-surface-2)]/50">
-              <Search className="text-[var(--color-text-muted)] mr-4" size={20} />
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Search commands, leads, tasks… (try: add note …, #asset-id)"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={onKeyDown}
-                className="flex-1 bg-transparent border-none outline-none text-base font-bold text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
-              />
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--token-surface-1)] border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
-                <Command size={12} className="text-[var(--color-text-muted)]" />
-                <span className="text-[10px] font-black text-[var(--color-text-muted)]">K</span>
+            <div className="relative border-b border-[var(--color-bg-border)] bg-gradient-to-b from-[var(--color-action-primary)]/[0.06] to-transparent px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-action-primary)]/10 text-[var(--color-action-primary)]">
+                  <Search size={18} strokeWidth={2.25} />
+                </div>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search or jump… task, daily log, lead, #asset"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  className="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]"
+                />
+                <div className="flex items-center gap-1 rounded-lg border border-[var(--color-bg-border)] bg-[var(--color-bg-workspace)] px-2 py-1 shadow-sm">
+                  <Command size={11} className="text-[var(--color-text-muted)]" />
+                  <span className="text-[10px] font-black text-[var(--color-text-muted)]">K</span>
+                </div>
               </div>
             </div>
 
-            <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-3 space-y-1">
-              {!search.trim() && (
-                <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
-                  {departmentSlug ? `${departmentSlug} shortcuts` : 'Quick navigation'}
-                </p>
-              )}
+            <div className="max-h-[min(420px,55vh)] overflow-y-auto custom-scrollbar px-2 py-2">
               {searchLoading && search.trim().length >= 2 && (
                 <p className="px-3 py-2 text-[10px] text-[var(--color-text-muted)]">Searching…</p>
               )}
               {displayItems.length === 0 ? (
-                <div className="py-12 text-center">
-                  <div className="inline-flex p-4 rounded-full bg-[var(--token-surface-2)] mb-4">
-                    <Zap size={32} className="text-[var(--color-text-muted)] opacity-20" />
+                <div className="py-10 text-center">
+                  <div className="inline-flex p-3 rounded-2xl bg-[var(--token-surface-2)] mb-3">
+                    <Zap size={28} className="text-[var(--color-text-muted)] opacity-30" />
                   </div>
-                  <p className="text-[11px] font-black uppercase text-[var(--color-text-muted)] tracking-widest">No matching commands found</p>
+                  <p className="text-[11px] font-bold text-[var(--color-text-muted)]">No matching commands</p>
+                  <p className="mt-1 text-[10px] text-[var(--color-text-muted)]/80">Try “task”, “log”, or a person name</p>
                 </div>
               ) : (
-                displayItems.map((item, idx) => {
-                  const active = idx === activeIndex;
-                  return (
-                    <button
-                      key={item.id || `${item.source}-${item.label}`}
-                      type="button"
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => executeItem(item)}
-                      className={`w-full flex items-center justify-between px-5 py-3 rounded-[var(--radius-atomic)] transition-colors ${
-                        active
-                          ? 'bg-[var(--token-surface-2)] text-[var(--color-text-primary)] border-l-[2px] border-[var(--token-brand-accent)]'
-                          : 'hover:bg-[var(--token-surface-2)]/60 text-[var(--color-text-secondary)] border-l-[2px] border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        {renderIcon(item, active)}
-                        <div className="min-w-0 text-left">
-                          <span className="text-sm font-semibold tracking-tight block truncate">{item.label}</span>
-                          {item.sublabel && (
-                            <span className="text-[10px] text-[var(--color-text-muted)] truncate block">{item.sublabel}</span>
-                          )}
-                        </div>
-                      </div>
+                sectionsWithIndex.map((section) => (
+                    <div key={section.id} className="mb-1 last:mb-0">
+                      {section.title && (
+                        <p className="sticky top-0 z-10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-[var(--color-text-muted)] bg-[var(--color-bg-floating)]/95 backdrop-blur-sm">
+                          {section.title}
+                        </p>
+                      )}
+                      <div className="space-y-0.5">
+                        {section.items.map((item) => {
+                          const active = item.flatIndex === activeIndex;
+                          return (
+                            <button
+                              key={item.id || `${item.source}-${item.label}`}
+                              type="button"
+                              onMouseEnter={() => setActiveIndex(item.flatIndex)}
+                              onClick={() => executeItem(item)}
+                              className={`group w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-all ${
+                                active
+                                  ? 'bg-[var(--color-action-primary)]/[0.08] shadow-sm ring-1 ring-[var(--color-action-primary)]/20'
+                                  : 'hover:bg-[var(--token-surface-2)]/80'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                {renderIcon(item, active)}
+                                <div className="min-w-0 text-left">
+                                  <span
+                                    className={`text-sm font-semibold tracking-tight block truncate ${
+                                      active ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'
+                                    }`}
+                                  >
+                                    {item.label}
+                                  </span>
+                                  {item.sublabel && (
+                                    <span className="text-[10px] text-[var(--color-text-muted)] truncate block mt-0.5">
+                                      {item.sublabel}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
 
-                      <div className="flex items-center gap-4 shrink-0">
-                        {item.badge > 0 && (
-                          <CountBadge count={item.badge} size="md" variant="rose" />
-                        )}
-                        {item.shortcut && (
-                          <div className="flex gap-1 opacity-50">
-                            {item.shortcut.split(' ').map((key, i) => (
-                              <span
-                                key={i}
-                                className="min-w-[20px] px-1.5 py-0.5 rounded-md border text-[9px] font-black flex items-center justify-center bg-[var(--token-surface-1)] border-[var(--color-bg-border)] text-[var(--color-text-muted)]"
-                              >
-                                {key}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {active && <ArrowRight size={16} />}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {item.badge > 0 && (
+                                  <CountBadge count={item.badge} size="md" variant="rose" />
+                                )}
+                                {item.shortcut && (
+                                  <div className="flex gap-1 opacity-60 group-hover:opacity-100">
+                                    {item.shortcut.split(' ').map((key, i) => (
+                                      <Kbd key={i}>{key}</Kbd>
+                                    ))}
+                                  </div>
+                                )}
+                                {active && (
+                                  <ArrowRight size={15} className="text-[var(--color-action-primary)]" />
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </button>
-                  );
-                })
+                    </div>
+                ))
               )}
             </div>
 
-            <div className="px-6 py-4 border-t border-[var(--color-bg-border)] bg-[var(--token-surface-2)]/30 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 rounded bg-[var(--token-surface-1)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">ENTER</span>
-                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Select</span>
+            <div className="border-t border-[var(--color-bg-border)] bg-[var(--token-surface-2)]/40 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <Kbd>↵</Kbd>
+                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide">Select</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="px-1.5 py-0.5 rounded bg-[var(--token-surface-1)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">↑</span>
-                    <span className="px-1.5 py-0.5 rounded bg-[var(--token-surface-1)] border border-[var(--color-bg-border)] text-[8px] font-black text-[var(--color-text-muted)]">↓</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex gap-0.5">
+                    <Kbd>↑</Kbd>
+                    <Kbd>↓</Kbd>
                   </div>
-                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">Navigate</span>
+                  <span className="text-[9px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide">Move</span>
                 </div>
               </div>
-              <div className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.2em] opacity-50 hidden sm:block">
-                / search · G T todo · G H data hub · ? all shortcuts
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                <span><Kbd className="!text-[8px]">/</Kbd> search</span>
+                <span><Kbd className="!text-[8px]">G T</Kbd> todo</span>
+                <span><Kbd className="!text-[8px]">?</Kbd> shortcuts</span>
               </div>
             </div>
           </motion.div>

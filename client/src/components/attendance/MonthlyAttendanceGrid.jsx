@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui';
 import { getHolidayLabel } from '../../utils/officeHolidays';
 import { inferEditScope } from '../../utils/attendanceUtils';
+import { resolveRowEntry } from '../../utils/attendanceRosterVisibility';
 
 const SQUARE_COLORS = {
   holiday: 'bg-[var(--color-pastel-violet-bg)] border-[var(--color-pastel-violet-text)]/40',
@@ -52,6 +53,7 @@ const MonthlyAttendanceGrid = ({
   rowMap,
   users = [],
   singleUser = null,
+  approvedLeaves = [],
   resolveStatus,
   onEdit,
   title = 'Monthly View',
@@ -77,14 +79,6 @@ const MonthlyAttendanceGrid = ({
             <ChevronRight size={14} />
           </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/90 border border-emerald-600/60" /> Present</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400/80 border border-amber-500/50" /> Half Day</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-violet-bg)] border border-[var(--color-pastel-violet-text)]/40" /> Holiday</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-rose-bg)] border border-[var(--color-pastel-rose-text)]/40" /> Leave</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)]" /> No input</span>
       </div>
 
       <div className="overflow-x-auto border border-[var(--color-bg-border)] rounded-[var(--radius-atomic)]">
@@ -130,8 +124,7 @@ const MonthlyAttendanceGrid = ({
                 </td>
                 {days.map((date) => {
                   const dateKey = format(date, 'yyyy-MM-dd');
-                  const mapKey = `${String(userRow._id)}_${dateKey}`;
-                  const entry = rowMap.get(mapKey);
+                  const entry = resolveRowEntry(rowMap, userRow._id, date, approvedLeaves);
                   const status = resolveStatus(entry, date);
 
                   return (

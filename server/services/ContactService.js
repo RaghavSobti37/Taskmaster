@@ -14,6 +14,7 @@ const SOURCE_TYPE_FOR_LINK = {
   tsc: 'outsourced',
   newsletter: 'newsletter',
   artist_path: 'artist_path',
+  artist_crm: 'artist_crm',
   booked_calls: 'booked_call',
   enquiries: 'enquiry',
   community: 'outsourced',
@@ -92,6 +93,7 @@ class ContactService {
     else if (inletKey === 'outsourced' || inletKey === 'tsc') updatePayload.$set.inOutsourced = true;
     else if (inletKey === 'newsletter') updatePayload.$set.inNewsletter = true;
     else if (inletKey === 'artist_path') updatePayload.$set.inArtistPath = true;
+    else if (inletKey === 'artist_crm') updatePayload.$set.inArtistCrm = true;
     else if (inletKey === 'booked_calls') {
       updatePayload.$set.inBookedCalls = true;
       updatePayload.$set.inCRM = true;

@@ -196,9 +196,6 @@ export default function ArtistsCollection() {
           { id: 'spotify', label: 'Spotify Followers', value: formatNumberLocal(stats.totalSpotify), icon: FaSpotify, variant: 'info' },
           { id: 'youtube', label: 'YouTube Views', value: formatNumberLocal(stats.totalViews), icon: FaYoutube, variant: 'rose' },
         ],
-        charts: syncChartData.length
-          ? [{ id: 'sync', title: 'Sync status', type: 'donut', data: syncChartData }]
-          : [],
       }}
       toolbar={(
         <>

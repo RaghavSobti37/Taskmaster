@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation } from 'lucide-react';
+import { ClipboardCheck, Trash2, Check, Lock, LogIn, LogOut, RotateCcw, Palmtree, Users, Navigation, XCircle } from 'lucide-react';
 import { PageContainer, Button, NexusDropdown, Input, UserLabel, DataOverviewSection, Spinner } from '../../components/ui';
 import { NexusModal, ModalFooter } from '../../components/ui/modals';;
 import {
@@ -18,6 +18,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { isOpsUser, isAdminUser } from '../../utils/departmentPermissions';
 import { isAttendanceExcluded } from '../../utils/attendanceUsers';
+import {
+  filterAttendanceRosterUsers,
+  resolveRowEntry,
+  ROSTER_LOOKBACK_DAYS,
+} from '../../utils/attendanceRosterVisibility';
 import { useSystemToast } from '../../lib/systemLogBridge';
 import { MODULE } from '../../lib/systemLogContract';
 import { useUnsavedChanges, stableJsonEqual } from '../../hooks/useUnsavedChanges';
@@ -36,6 +41,7 @@ import SelfMonthlyAttendanceCalendar from '../../components/attendance/SelfMonth
 import TeamAttendanceMobileList from '../../components/attendance/TeamAttendanceMobileList';
 import UnifiedTimeCard from '../../components/attendance/UnifiedTimeCard';
 import HygieneProgressMeter from '../../components/attendance/HygieneProgressMeter';
+import AttendanceStatusLegend from '../../components/attendance/AttendanceStatusLegend';
 import {
   hasRecordedCheckIn,
   hasRecordedCheckOut,
@@ -194,7 +200,19 @@ const AttendancePage = () => {
     ? format(endOfMonth(monthView), 'yyyy-MM-dd')
     : format(dateColumns[dateColumns.length - 1].date, 'yyyy-MM-dd');
 
-  const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit);
+  const { data: rows = [], isLoading } = useAttendance({ start: rangeStart, end: rangeEnd }, canEdit && showTeamOverview);
+  const activityLookbackStart = useMemo(
+    () => format(addDays(today, -(ROSTER_LOOKBACK_DAYS - 1)), 'yyyy-MM-dd'),
+    [today]
+  );
+  const { data: activityLookbackRows = [] } = useAttendance(
+    { start: activityLookbackStart, end: todayKey },
+    canEdit && showTeamOverview
+  );
+  const { data: approvedLeaves = [] } = useLeaveRequests(
+    { status: 'approved' },
+    canEdit && showTeamOverview
+  );
   const { data: selfMonthRows = [] } = useAttendance(
     { start: format(startOfMonth(monthView), 'yyyy-MM-dd'), end: format(endOfMonth(monthView), 'yyyy-MM-dd'), mine: 'true' },
     true // always fetch for self-view
@@ -235,7 +253,22 @@ const AttendancePage = () => {
   const checkIn = useAttendanceCheck();
   const undoCheck = useUndoAttendanceCheck();
 
-  const filteredUsers = useMemo(() => users.filter((u) => !isAttendanceExcluded(u)), [users]);
+  const baseUsers = useMemo(() => users.filter((u) => !isAttendanceExcluded(u)), [users]);
+
+  const visibleUsers = useMemo(
+    () => filterAttendanceRosterUsers({
+      users: baseUsers,
+      activityRows: activityLookbackRows,
+      monthActivityRows: viewMode === VIEW_MODES.MONTH ? rows : [],
+      approvedLeaves,
+      today,
+      viewMode,
+      monthRange: viewMode === VIEW_MODES.MONTH
+        ? { start: startOfMonth(monthView), end: endOfMonth(monthView) }
+        : null,
+    }),
+    [baseUsers, activityLookbackRows, rows, approvedLeaves, today, viewMode, monthView]
+  );
 
   const rowMap = useMemo(() => {
     const map = new Map();
@@ -244,6 +277,9 @@ const AttendancePage = () => {
     });
     return map;
   }, [rows]);
+
+  const getEntryForCell = (userRow, date) =>
+    resolveRowEntry(rowMap, userRow._id, date, approvedLeaves);
 
   const selfRowMap = useMemo(() => {
     const map = new Map();
@@ -359,6 +395,26 @@ const AttendancePage = () => {
     checkIn.mutate({ type, manualTime, workMode: workMode === 'wfh' ? 'wfh' : 'office' });
   };
 
+  const handleLeaveActionError = (error, action) => {
+    addToast({
+      type: 'error',
+      message: error.response?.data?.error || `Failed to ${action} leave request`,
+      module: MODULE.ATTENDANCE,
+    });
+  };
+
+  const handleApproveLeave = (requestId) => {
+    approveLeave.mutate(requestId, {
+      onError: (error) => handleLeaveActionError(error, 'approve'),
+    });
+  };
+
+  const handleRejectLeave = (requestId) => {
+    rejectLeave.mutate({ id: requestId }, {
+      onError: (error) => handleLeaveActionError(error, 'reject'),
+    });
+  };
+
   const attendanceOverview = useMemo(() => {
     const todayEntries = rows.filter((r) => format(new Date(r.date), 'yyyy-MM-dd') === todayKey);
     const presentToday = todayEntries.filter((r) => {
@@ -367,10 +423,10 @@ const AttendancePage = () => {
     }).length;
     return {
       pendingLeave: leaveRequests.length,
-      teamSize: filteredUsers.length,
+      teamSize: visibleUsers.length,
       presentToday: canEdit ? presentToday : (selfTodayRows[0] ? 1 : 0),
     };
-  }, [rows, todayKey, leaveRequests.length, filteredUsers.length, canEdit, selfTodayRows]);
+  }, [rows, todayKey, leaveRequests.length, visibleUsers.length, canEdit, selfTodayRows]);
 
   return (
     <PageContainer className="!py-4 !space-y-6">
@@ -390,7 +446,7 @@ const AttendancePage = () => {
             value: attendanceOverview.teamSize,
             icon: Users,
             variant: 'info',
-            info: 'People included in the attendance matrix (excludes excluded accounts).',
+            info: 'People shown in the attendance matrix — active in the last 7 days or on approved leave.',
           },
           {
             id: 'present',
@@ -488,13 +544,53 @@ const AttendancePage = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500/90 border border-emerald-600/60" /> Present</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400/80 border border-amber-500/50" /> Half Day</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-violet-bg)] border border-[var(--color-pastel-violet-text)]/40" /> Holiday</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[var(--color-pastel-rose-bg)] border border-[var(--color-pastel-rose-text)]/40" /> Leave</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)]" /> No input</span>
-          </div>
+          <AttendanceStatusLegend />
+
+          {leaveRequests.length > 0 && (
+            <div className="rounded-[var(--radius-atomic)] border border-[var(--color-bg-border)] bg-[var(--color-bg-secondary)] divide-y divide-[var(--color-bg-border)]">
+              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                Pending leave requests
+              </div>
+              {leaveRequests.map((request) => {
+                const requester = request.userId?.name || request.username || 'Unknown';
+                const fromLabel = request.fromDate ? format(new Date(request.fromDate), 'MMM d, yyyy') : '—';
+                const toLabel = request.toDate ? format(new Date(request.toDate), 'MMM d, yyyy') : fromLabel;
+                return (
+                  <div key={request._id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">{requester}</p>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">
+                        {fromLabel === toLabel ? fromLabel : `${fromLabel} → ${toLabel}`}
+                      </p>
+                      {request.reason ? (
+                        <p className="text-[10px] text-[var(--color-text-muted)] line-clamp-2 mt-0.5">{request.reason}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="xs"
+                        variant="success"
+                        disabled={approveLeave.isPending || rejectLeave.isPending}
+                        onClick={() => handleApproveLeave(request._id)}
+                      >
+                        <Check size={14} />
+                        Approve
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="danger"
+                        disabled={approveLeave.isPending || rejectLeave.isPending}
+                        onClick={() => handleRejectLeave(request._id)}
+                      >
+                        <XCircle size={14} />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {viewMode === VIEW_MODES.MONTH ? (
             <>
@@ -503,7 +599,8 @@ const AttendancePage = () => {
                   month={monthView}
                   onMonthChange={setMonthView}
                   rowMap={rowMap}
-                  users={filteredUsers}
+                  users={visibleUsers}
+                  approvedLeaves={approvedLeaves}
                   resolveStatus={resolveStatus}
                   onEdit={openEditModal}
                 />
@@ -513,7 +610,8 @@ const AttendancePage = () => {
                   month={monthView}
                   onMonthChange={setMonthView}
                   rowMap={rowMap}
-                  users={filteredUsers}
+                  users={visibleUsers}
+                  approvedLeaves={approvedLeaves}
                   resolveStatus={resolveStatus}
                   onEdit={openEditModal}
                 />
@@ -522,9 +620,10 @@ const AttendancePage = () => {
           ) : (
             <>
               <TeamAttendanceMobileList
-                users={filteredUsers}
+                users={visibleUsers}
                 dateColumns={dateColumns}
                 rowMap={rowMap}
+                approvedLeaves={approvedLeaves}
                 resolveStatus={resolveStatus}
                 onEdit={openEditModal}
                 statusDot={statusDot}
@@ -556,16 +655,15 @@ const AttendancePage = () => {
                     {(isLoading || usersLoading) && (
                       <tr><td className="px-4 py-4 text-center" colSpan={1 + (dateColumns.length * 2)}><Spinner size="sm" /></td></tr>
                     )}
-                    {!isLoading && !usersLoading && filteredUsers.map((userRow) => (
+                    {!isLoading && !usersLoading && visibleUsers.map((userRow) => (
                       <tr key={userRow._id} className="border-t border-[var(--color-bg-border)] hover:bg-[var(--color-bg-primary)]/40 transition-colors">
                         <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-[var(--color-bg-secondary)] z-10">
                           <UserLabel user={userRow} size="xs" nameClassName="font-bold text-xs" />
                         </td>
                         {dateColumns.map(({ date, key: dayKey }) => {
-                          const key = `${String(userRow._id)}_${format(date, 'yyyy-MM-dd')}`;
-                          const entry = rowMap.get(key);
+                          const entry = getEntryForCell(userRow, date);
                           const status = resolveStatus(entry, date);
-                          return <AttendanceDayCells key={`${dayKey}-${key}`} userRow={userRow} date={date} entry={entry} status={status} onEdit={openEditModal} statusDot={statusDot} />;
+                          return <AttendanceDayCells key={`${dayKey}-${userRow._id}`} userRow={userRow} date={date} entry={entry} status={status} onEdit={openEditModal} statusDot={statusDot} />;
                         })}
                       </tr>
                     ))}

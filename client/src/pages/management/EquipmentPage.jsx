@@ -195,14 +195,7 @@ const EquipmentPage = () => {
             variant: 'apricot',
           },
         ],
-        charts: [
-          ...(statusChart.length
-            ? [{ id: 'status', title: 'By status', type: 'donut', data: statusChart }]
-            : []),
-          ...(categoryChart.length
-            ? [{ id: 'category', title: 'By category', type: 'bar', data: categoryChart }]
-            : []),
-        ],
+       
       }}
       toolbar={
         <SearchInput

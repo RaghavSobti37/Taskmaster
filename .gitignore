@@ -25,7 +25,13 @@ graphify-out/
 setup.cd
 .claude/
 *.mmdb
-.specify/
+.specify/*
+!.specify/README.md
+!.specify/memory/project-overview.md
+!.specify/memory/architecture.md
+!.specify/memory/features.md
+!.specify/memory/conventions.md
+!.specify/memory/recent-changes.md
 .gemini/
 *.zip
 *Basecamp Download*

@@ -110,7 +110,7 @@ export default function MailProfilesPanel({ profiles = [] }) {
           <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
             Verified domain <strong>theshakticollective.in</strong> sends via Resend API.
             Set <code className="font-mono text-[9px]">RESEND_API_KEY</code> on the API service, then pick the from address
-            (artist@, helloworld@, harshika@, or add another) in the campaign wizard.
+            (artist@, helloworld@, team@, or add another) in the campaign wizard.
           </p>
         </div>
 

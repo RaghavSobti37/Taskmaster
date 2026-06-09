@@ -30,7 +30,8 @@ import axios from 'axios';
 import { cloneSnapshot } from '../../hooks/useUnsavedChanges';
 import PreviewIframe from '../emails/PreviewIframe';
 import {
-  inlineQuillIndentsInHtml,
+  canonicalizeVisualMailHtml,
+  repairIndentDrift,
   wrapVisualPreviewBody,
   enhancePreviewDocument,
 } from '../../utils/visualEmailHtml';
@@ -99,8 +100,29 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
 
   const localPreviewDoc = useMemo(() => {
     if (!draft.content?.trim() || useRawHtml) return '';
-    return wrapVisualPreviewBody(inlineQuillIndentsInHtml(draft.content), { theme: 'light' });
+    return wrapVisualPreviewBody(canonicalizeVisualMailHtml(draft.content), { theme: 'light' });
   }, [draft.content, useRawHtml]);
+
+  const previewSource = useMemo(() => {
+    if (previewLoading) return 'updating';
+    if (serverPreviewDoc && !serverPreviewDoc.includes('Preview failed')) return 'server';
+    if (localPreviewDoc) return 'local';
+    return 'none';
+  }, [previewLoading, serverPreviewDoc, localPreviewDoc]);
+
+  const previewSourceLabel = {
+    updating: 'Updating…',
+    server: 'Server validated',
+    local: 'Local fallback',
+    none: '',
+  }[previewSource];
+
+  const previewSourceVariant = {
+    updating: 'warning',
+    server: 'success',
+    local: 'secondary',
+    none: 'secondary',
+  }[previewSource];
 
   const previewHtml = useMemo(() => {
     if (serverPreviewDoc && !serverPreviewDoc.includes('Preview failed')) {
@@ -157,11 +179,12 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     const dummies = t.dummyValues && typeof t.dummyValues === 'object'
       ? (t.dummyValues instanceof Map ? Object.fromEntries(t.dummyValues) : t.dummyValues)
       : {};
+    const rawContent = getEffectiveTemplateContent(t) || '';
     const loaded = {
       id: t._id,
       name: t.name,
       subject: t.subject || '',
-      content: getEffectiveTemplateContent(t) || '',
+      content: t.format === 'rawHtml' ? rawContent : canonicalizeVisualMailHtml(rawContent),
       format: t.format || 'visual',
       dummyValues: dummies,
       status: t.status,
@@ -202,22 +225,28 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     && draft.content.trim()
     && detectedIndices.every((i) => (draft.dummyValues[i] || draft.dummyValues[String(i)] || '').trim());
 
+  const visualContentForSave = () => (
+    useRawHtml ? draft.content : canonicalizeVisualMailHtml(draft.content)
+  );
+
   const handleSaveDraft = async () => {
     if (!draft.name.trim() || !draft.content.trim()) {
       toast.warn('Template name and content are required');
       return;
     }
+    const content = visualContentForSave();
     try {
       const { data } = await saveMutation.mutateAsync({
         id: draft.id || undefined,
         name: draft.name.trim(),
         subject: draft.subject,
-        content: draft.content,
+        content,
         format: useRawHtml ? 'rawHtml' : 'visual',
         dummyValues: draft.dummyValues,
       });
       const saved = {
         ...draft,
+        content,
         id: data._id,
         format: useRawHtml ? 'rawHtml' : 'visual',
         status: data.status || draft.status,
@@ -239,10 +268,11 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
         return;
       }
       try {
+        const content = visualContentForSave();
         const { data } = await saveMutation.mutateAsync({
           name: draft.name.trim(),
           subject: draft.subject,
-          content: draft.content,
+          content,
           format: useRawHtml ? 'rawHtml' : 'visual',
           dummyValues: draft.dummyValues,
         });
@@ -273,7 +303,7 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
     try {
       await approveMutation.mutateAsync({
         id: reviewingId,
-        content: draft.content,
+        content: visualContentForSave(),
         subject: draft.subject,
       });
       toast.success('Template approved');
@@ -379,18 +409,27 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
                 placeholder="HTML with {1} {2} variables"
               />
             ) : (
-              <div className="mail-template-quill rounded-lg overflow-hidden border border-[var(--color-bg-border)]">
-                <ReactQuill
-                  theme="snow"
-                  value={draft.content}
-                  onChange={(content, _delta, _source, editor) => {
-                    const html = editor?.root?.innerHTML ?? content;
-                    setDraft((p) => ({ ...p, content: html }));
-                  }}
-                  modules={MAIL_TEMPLATE_QUILL_MODULES}
-                  formats={MAIL_TEMPLATE_QUILL_FORMATS}
-                  className="h-[280px] mb-12"
-                />
+              <div className="space-y-1">
+                <div className="mail-template-quill rounded-lg overflow-hidden border border-[var(--color-bg-border)] shadow-sm">
+                  <ReactQuill
+                    theme="snow"
+                    value={draft.content}
+                    onChange={(content, _delta, _source, editor) => {
+                      const html = editor?.root?.innerHTML ?? content;
+                      const repaired = repairIndentDrift(html);
+                      setDraft((p) => ({ ...p, content: repaired }));
+                    }}
+                    modules={MAIL_TEMPLATE_QUILL_MODULES}
+                    formats={MAIL_TEMPLATE_QUILL_FORMATS}
+                    className="h-[280px] mb-12"
+                  />
+                </div>
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  <span className="font-semibold text-[var(--color-text-secondary)]">Enter</span>
+                  {' = new paragraph (email spacing) · '}
+                  <span className="font-semibold text-[var(--color-text-secondary)]">Shift+Enter</span>
+                  {' = tight line within paragraph'}
+                </p>
               </div>
             )}
 
@@ -418,12 +457,16 @@ export default function MailTemplateStudio({ onUseInCampaign }) {
             </div>
           </Card>
 
-          <Card className="p-4 bg-[var(--color-bg-primary)] border border-[var(--color-bg-border)] lg:sticky lg:top-4 lg:self-start space-y-2">
-            <div className="flex items-center justify-between">
+          <Card className="p-4 bg-[var(--color-bg-secondary)]/40 border border-[var(--color-bg-border)] lg:sticky lg:top-4 lg:self-start space-y-2 ring-1 ring-[var(--color-bg-border)]/60">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-[var(--color-text-muted)]">
                 <Eye size={12} /> Live Preview
               </div>
-              {previewLoading && <span className="text-[10px] text-[var(--color-text-muted)] animate-pulse">Updating…</span>}
+              {previewSourceLabel && (
+                <Badge variant={previewSourceVariant} className="text-[9px] uppercase tracking-wide">
+                  {previewSourceLabel}
+                </Badge>
+              )}
             </div>
             <PreviewIframe html={previewHtml} minHeight={480} />
             {draft.subject && (

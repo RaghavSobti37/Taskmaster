@@ -1,5 +1,7 @@
 const geoip = require('geoip-lite');
 
+const IP_API_FIELDS = 'status,city,regionName,countryCode,proxy,hosting,mobile';
+
 const isValidDisplayCity = (name) => {
   if (!name || typeof name !== 'string') return false;
   const t = name.trim();
@@ -10,6 +12,13 @@ const isValidDisplayCity = (name) => {
 
 const isEmailImageProxy = (userAgent = '') =>
   /GoogleImageProxy|ggpht\.com|YahooMailProxy/i.test(userAgent);
+
+/** Enterprise link scanners / bots — not the recipient's browser. */
+const isEmailLinkScanner = (userAgent = '') => {
+  if (!userAgent || userAgent === 'Unknown') return false;
+  if (isEmailImageProxy(userAgent)) return true;
+  return /safelinks|proofpoint|mimecast|barracuda|zscaler|url.?scan|linkpreview|microsoft office|outlook-ios|exchangewebservices|curl\/|wget\/|python-requests|go-http-client|java\/|okhttp|headlesschrome|phantomjs|\b(bot|bingpreview|facebookexternalhit)\b|crawl|spider|slurp|avast|eset|symantec|messagelabs|fireeye|forcepoint|ironport|spamhaus|bitdefender|trend micro|sophos|mcafee|cloudmark|mailguard|ess\.barracuda|protection\.outlook/i.test(userAgent);
+};
 
 /** Gmail/open pixel loads from Google infrastructure — not reader location. */
 const isGoogleInfrastructureIp = (ip = '') => {
@@ -27,6 +36,12 @@ const normalizeIp = (ip = '') => {
 
 /** Best-effort client IP from Express req (Render, proxies, local). */
 const extractClientIp = (req) => {
+  if (req?.ip) {
+    const fromExpress = normalizeIp(req.ip);
+    if (fromExpress && fromExpress !== '127.0.0.1' && fromExpress !== '::1') {
+      return fromExpress;
+    }
+  }
   const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
     const first = normalizeIp(forwarded);
@@ -35,6 +50,21 @@ const extractClientIp = (req) => {
   const alt = req.headers['x-real-ip'] || req.headers['cf-connecting-ip'];
   if (alt) return normalizeIp(alt);
   return normalizeIp(req.ip || req.socket?.remoteAddress || '');
+};
+
+const fetchIpApi = async (normalized, fields = IP_API_FIELDS) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 4000);
+  try {
+    const res = await fetch(
+      `http://ip-api.com/json/${encodeURIComponent(normalized)}?fields=${fields}`,
+      { signal: ctrl.signal }
+    );
+    const data = await res.json();
+    return data?.status === 'success' ? data : null;
+  } finally {
+    clearTimeout(timer);
+  }
 };
 
 const lookupGeoSync = (ip) => {
@@ -59,15 +89,8 @@ const lookupGeoAsync = async (ip) => {
   if (!normalized || normalized === '127.0.0.1') return sync;
 
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 4000);
-    const res = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(normalized)}?fields=status,city,regionName,countryCode`,
-      { signal: ctrl.signal }
-    );
-    clearTimeout(timer);
-    const data = await res.json();
-    if (data?.status === 'success' && data.city) {
+    const data = await fetchIpApi(normalized, 'status,city,regionName,countryCode');
+    if (data?.city) {
       return {
         city: data.city,
         region: data.regionName || null,
@@ -81,6 +104,39 @@ const lookupGeoAsync = async (ip) => {
   return sync;
 };
 
+/**
+ * Click geo — always consult ip-api hosting/proxy flags.
+ * geoip-lite alone maps datacenter IPs (Boardman, Palo Alto, etc.) to misleading cities.
+ */
+const lookupGeoForClick = async (ip) => {
+  const normalized = normalizeIp(ip);
+  if (!normalized || normalized === '127.0.0.1' || normalized === '::1') {
+    return { city: null, region: null, country: null, ip: normalized || '127.0.0.1', untrusted: true };
+  }
+  if (isGoogleInfrastructureIp(normalized)) {
+    return { city: null, region: null, country: null, ip: normalized, untrusted: true };
+  }
+
+  try {
+    const data = await fetchIpApi(normalized);
+    if (data) {
+      const untrusted = Boolean(data.hosting || data.proxy);
+      const city = untrusted ? null : (data.city || null);
+      return {
+        city: isValidDisplayCity(city) ? city : null,
+        region: data.regionName || null,
+        country: data.countryCode || null,
+        ip: normalized,
+        untrusted,
+      };
+    }
+  } catch {
+    /* fall through */
+  }
+
+  return { city: null, region: null, country: null, ip: normalized, untrusted: true };
+};
+
 const eventIp = (evt) => evt?.ipAddress || evt?.metadata?.ip || null;
 
 /** Resolve city for Open/Click — uses stored city, metadata string, or IP re-lookup. */
@@ -90,17 +146,20 @@ const resolveMailEventCity = (evt) => {
     return null;
   }
 
-  const stored = evt?.location?.city;
-  if (isValidDisplayCity(stored)) return stored.trim();
+  // Click stored cities may be datacenter geo — validated asynchronously only.
+  if (evt?.eventType !== 'Click') {
+    const stored = evt?.location?.city;
+    if (isValidDisplayCity(stored)) return stored.trim();
 
-  if (isValidDisplayCity(evt?.metadata?.city)) return String(evt.metadata.city).trim();
+    if (isValidDisplayCity(evt?.metadata?.city)) return String(evt.metadata.city).trim();
 
-  if (typeof evt?.metadata?.location === 'string') {
-    const first = evt.metadata.location.split(',')[0].trim();
-    if (isValidDisplayCity(first)) return first;
+    if (typeof evt?.metadata?.location === 'string') {
+      const first = evt.metadata.location.split(',')[0].trim();
+      if (isValidDisplayCity(first)) return first;
+    }
   }
 
-  if (ip) {
+  if (ip && evt?.eventType !== 'Click') {
     const geo = lookupGeoSync(ip);
     if (isValidDisplayCity(geo.city)) return geo.city.trim();
   }
@@ -108,7 +167,23 @@ const resolveMailEventCity = (evt) => {
   return null;
 };
 
+const resolveClickEventCity = async (evt, ipCache = new Map()) => {
+  if (isEmailLinkScanner(evt.userAgent)) return null;
+  const ip = eventIp(evt);
+  if (!ip || isGoogleInfrastructureIp(ip)) return null;
+
+  const cacheKey = `click:${normalizeIp(ip)}`;
+  if (!ipCache.has(cacheKey)) ipCache.set(cacheKey, lookupGeoForClick(ip));
+  const geo = await ipCache.get(cacheKey);
+  if (geo.untrusted) return null;
+  return isValidDisplayCity(geo?.city) ? geo.city.trim() : null;
+};
+
 const resolveMailEventCityAsync = async (evt, ipCache = new Map(), clickCityByEmail = null) => {
+  if (evt?.eventType === 'Click') {
+    return resolveClickEventCity(evt, ipCache);
+  }
+
   const sync = resolveMailEventCity(evt);
   if (sync) return sync;
 
@@ -130,13 +205,23 @@ const resolveMailEventCityAsync = async (evt, ipCache = new Map(), clickCityByEm
 
 /** Resolve click cities per recipient email (used to infer Gmail open locations). */
 const buildClickCityByEmail = async (events, ipCache = new Map()) => {
-  const map = new Map();
+  const clicksByEmail = new Map();
   for (const evt of events) {
     if (evt.eventType !== 'Click' || !evt.email) continue;
     const email = evt.email.toLowerCase().trim();
-    if (map.has(email)) continue;
-    const city = await resolveMailEventCityAsync(evt, ipCache, null);
-    if (city) map.set(email, city);
+    if (!clicksByEmail.has(email)) clicksByEmail.set(email, []);
+    clicksByEmail.get(email).push(evt);
+  }
+
+  const map = new Map();
+  for (const [email, clicks] of clicksByEmail) {
+    for (const evt of clicks) {
+      const city = await resolveClickEventCity(evt, ipCache);
+      if (city) {
+        map.set(email, city);
+        break;
+      }
+    }
   }
   return map;
 };
@@ -144,13 +229,16 @@ const buildClickCityByEmail = async (events, ipCache = new Map()) => {
 module.exports = {
   isValidDisplayCity,
   isEmailImageProxy,
+  isEmailLinkScanner,
   isGoogleInfrastructureIp,
   normalizeIp,
   extractClientIp,
   eventIp,
   lookupGeoSync,
   lookupGeoAsync,
+  lookupGeoForClick,
   resolveMailEventCity,
   resolveMailEventCityAsync,
+  resolveClickEventCity,
   buildClickCityByEmail,
 };

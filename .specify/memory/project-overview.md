@@ -22,3 +22,8 @@ npm run dev   # server :5000 + Vite proxy
 ```
 
 Production URLs: see gitignored `.cursor/production-hosts.local.json` (never commit).
+
+## Email (high level)
+
+- Visual templates use shared block spacing (`shared/emailBlockSpacing.cjs`) for preview/send parity.
+- Campaign analytics geo is recomputed from MailEvents with datacenter/scanner filtering on clicks.

@@ -1345,39 +1345,41 @@ html[data-pwa-desktop] [data-page-root] {
   font-style: normal;
 }
 
-/* Template Studio — Quill indent levels in editor + preview parity */
-.mail-template-quill .ql-editor .ql-indent-1:not(.ql-direction-rtl) {
-  padding-left: 3em;
+/* Template Studio — WYSIWYG block spacing (sync with shared/emailBlockSpacing.cjs) */
+.mail-template-quill .ql-editor {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.42;
 }
-.mail-template-quill .ql-editor .ql-indent-2:not(.ql-direction-rtl) {
-  padding-left: 6em;
+
+.mail-template-quill .ql-editor p,
+.mail-template-quill .ql-editor blockquote {
+  margin: 0 0 1em 0;
 }
-.mail-template-quill .ql-editor .ql-indent-3:not(.ql-direction-rtl) {
-  padding-left: 9em;
+
+.mail-template-quill .ql-editor h1,
+.mail-template-quill .ql-editor h2,
+.mail-template-quill .ql-editor h3,
+.mail-template-quill .ql-editor h4,
+.mail-template-quill .ql-editor h5,
+.mail-template-quill .ql-editor h6 {
+  margin: 0 0 0.75em 0;
 }
-.mail-template-quill .ql-editor .ql-indent-4:not(.ql-direction-rtl) {
-  padding-left: 12em;
+
+.mail-template-quill .ql-editor ul,
+.mail-template-quill .ql-editor ol {
+  margin: 0 0 1em 0;
+  padding-left: 1.5em;
 }
-.mail-template-quill .ql-editor .ql-indent-5:not(.ql-direction-rtl) {
-  padding-left: 15em;
+
+.mail-template-quill .ql-editor li {
+  margin: 0;
 }
-.mail-template-quill .ql-editor .ql-indent-6:not(.ql-direction-rtl) {
-  padding-left: 18em;
-}
-.mail-template-quill .ql-editor .ql-indent-7:not(.ql-direction-rtl) {
-  padding-left: 21em;
-}
-.mail-template-quill .ql-editor .ql-indent-8:not(.ql-direction-rtl) {
-  padding-left: 24em;
-}
-.mail-template-quill .ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
-  padding-left: 3em;
-}
-.mail-template-quill .ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
-  padding-left: 6em;
-}
-.mail-template-quill .ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
-  padding-left: 9em;
+
+/* Empty spacer lines (Enter) show same 1em gap as sent email; removed on save */
+.mail-template-quill .ql-editor p:empty,
+.mail-template-quill .ql-editor p:has(> br:only-child) {
+  min-height: 1em;
 }
 
 .logo-mark-gallery-detail {

@@ -33,7 +33,6 @@ const {
   filterRecipientsByStatus,
   annotateRecipient,
 } = require('../utils/emailValidation');
-const { resolveMailEventCityAsync, buildClickCityByEmail } = require('../utils/geoLookup');
 const logger = require('../utils/logger');
 const { validateBody } = require('../validation/validateBody');
 const {
@@ -163,10 +162,39 @@ router.get('/:id/recipients', async (req, res) => {
   }
 });
 
+const normalizeLocationBreakdown = (raw) => {
+  if (!raw) return {};
+  const source = raw instanceof Map ? Object.fromEntries(raw) : raw;
+  if (typeof source !== 'object' || Array.isArray(source)) return {};
+  const out = {};
+  for (const [city, stats] of Object.entries(source)) {
+    if (!stats || typeof stats !== 'object') continue;
+    const opens = Number(stats.opens) || 0;
+    const clicks = Number(stats.clicks) || 0;
+    if (opens > 0 || clicks > 0) out[city] = { opens, clicks };
+  }
+  return out;
+};
+
+const aggregateTimeSeriesByHour = (points = []) => {
+  const map = {};
+  for (const pt of points) {
+    if (!pt?.time) continue;
+    const date = new Date(pt.time);
+    if (Number.isNaN(date.getTime())) continue;
+    const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
+    if (!map[hourStr]) map[hourStr] = { time: date, opens: 0, clicks: 0 };
+    map[hourStr].opens += Number(pt.opens) || 0;
+    map[hourStr].clicks += Number(pt.clicks) || 0;
+  }
+  return Object.values(map).sort((a, b) => new Date(a.time) - new Date(b.time));
+};
+
+const { buildGeoFromMailEvents } = require('../utils/campaignLocationGeo');
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const MailEvent = require('../models/MailEvent');
 
     const resolved = await resolveCampaignByParam(id, { populate: true, lean: true });
     if (!resolved || !assertCampaignAccess(resolved.campaign, req.user)) {
@@ -179,89 +207,15 @@ router.get('/:id', async (req, res) => {
     campaign.stats = computed.stats;
     campaign.metrics = computed.metrics;
 
-    const ipCache = new Map();
-    const eventQuery = { campaignId: campaign._id };
-    const EVENT_STREAM_LIMIT = 100;
+    const storedBreakdown = normalizeLocationBreakdown(campaign.locationBreakdown);
+    const storedTimeSeries = aggregateTimeSeriesByHour(campaign.timeSeries || []);
 
-    const [recentEvents, geoEvents] = await Promise.all([
-      MailEvent.find(eventQuery)
-        .sort({ timestamp: -1 })
-        .limit(EVENT_STREAM_LIMIT)
-        .setOptions({ bypassTenant: true })
-        .lean(),
-      MailEvent.find({ ...eventQuery, eventType: { $in: ['Open', 'Click'] } })
-        .select('eventType timestamp email ipAddress location metadata')
-        .setOptions({ bypassTenant: true })
-        .lean(),
-    ]);
-
-    const clickCityByEmail = await buildClickCityByEmail(geoEvents, ipCache);
-    const cityByEventId = new Map();
-
-    const inferLocationTrust = (evt, displayCity) => {
-      if (evt.eventType === 'Click') return displayCity ? 'verified' : 'none';
-      if (evt.eventType !== 'Open') return 'none';
-      if (!displayCity) return 'none';
-      const email = String(evt.email || '').toLowerCase().trim();
-      const clickCity = clickCityByEmail.get(email);
-      if (clickCity && clickCity === displayCity) return 'inferred';
-      if (evt.location?.city) return 'verified';
-      return 'proxy';
-    };
-
-    const resolveEventCityCached = async (evt) => {
-      const key = String(evt._id);
-      if (cityByEventId.has(key)) return cityByEventId.get(key);
-      const city = await resolveMailEventCityAsync(evt, ipCache, clickCityByEmail);
-      cityByEventId.set(key, city);
-      return city;
-    };
-
-    campaign.events = await Promise.all(recentEvents.map(async (evt) => {
-      const displayCity = await resolveEventCityCached(evt);
-      return {
-        ...evt,
-        displayCity,
-        locationTrust: inferLocationTrust(evt, displayCity),
-      };
-    }));
-
-    const locationBreakdown = {};
-    const timeSeriesMap = {};
-
-    for (const evt of geoEvents) {
-      const city = await resolveEventCityCached(evt);
-      if (city) {
-        const trust = inferLocationTrust(evt, city);
-        if (evt.eventType === 'Open' && trust === 'proxy') {
-          /* skip proxy opens in geo charts — clicks and inferred opens only */
-        } else {
-          if (!locationBreakdown[city]) locationBreakdown[city] = { opens: 0, clicks: 0 };
-          if (evt.eventType === 'Open') locationBreakdown[city].opens++;
-          else locationBreakdown[city].clicks++;
-        }
-      }
-
-      const date = new Date(evt.timestamp);
-      const hourStr = `${String(date.getHours()).padStart(2, '0')}:00`;
-      if (!timeSeriesMap[hourStr]) {
-        timeSeriesMap[hourStr] = { time: date, opens: 0, clicks: 0 };
-      }
-      if (evt.eventType === 'Open') {
-        timeSeriesMap[hourStr].opens++;
-      } else if (evt.eventType === 'Click') {
-        timeSeriesMap[hourStr].clicks++;
-      }
-    }
-    
-    campaign.locationBreakdown = locationBreakdown;
-    campaign.timeSeries = Object.entries(timeSeriesMap)
-      .map(([hourStr, data]) => ({
-        time: data.time,
-        opens: data.opens,
-        clicks: data.clicks
-      }))
-      .sort((a, b) => new Date(a.time) - new Date(b.time));
+    const geo = await buildGeoFromMailEvents(campaign._id);
+    campaign.locationBreakdown = Object.keys(geo.locationBreakdown).length > 0
+      ? geo.locationBreakdown
+      : storedBreakdown;
+    if (geo.timeSeries.length > 0) campaign.timeSeries = geo.timeSeries;
+    else if (storedTimeSeries.length > 0) campaign.timeSeries = storedTimeSeries;
 
     campaign.recipientCount = computed.total;
     campaign.invalidEmailCount = (campaign.recipients || []).filter((r) => !isValidEmail(r.email)).length;

@@ -31,3 +31,8 @@ npm run audit:deadcode   # exit 0
 
 - Conventional prefix: `feat:`, `fix:`, `chore:`, `docs:`
 - `/push-and-document` updates README + `.specify/memory/` tracked files
+
+## Campaign geo repair
+
+- One-off DB fix: `node server/scripts/rebuildCampaignLocationBreakdown.js <id> [--dry-run]` from repo root; uses `server/.env` (`MONGODB_URI` or prod when `MAIL_USE_PROD_DB=true`).
+- Do not change locked tracking URL / open pixel behavior when adjusting geo.

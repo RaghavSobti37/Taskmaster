@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -10,9 +10,18 @@ const iconsDir = path.join(publicDir, 'icons')
 const brandIconAssets = fs.existsSync(iconsDir)
   ? fs.readdirSync(iconsDir).filter((f) => /\.(png|json)$/i.test(f)).map((f) => `icons/${f}`)
   : []
+const agentationStub = path.resolve(__dirname, 'src/components/dev/agentationStub.js')
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, '')
+  const agentationEnabled =
+    mode === 'development' && env.VITE_ENABLE_AGENTATION === 'true'
+
+  return {
+  define: {
+    __AGENTATION_ENABLED__: JSON.stringify(agentationEnabled),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -45,6 +54,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@shared": path.resolve(__dirname, "../shared"),
+      ...(mode === 'production' ? { agentation: agentationStub } : {}),
     },
   },
   server: {
@@ -124,4 +134,4 @@ export default defineConfig({
       },
     },
   }
-})
+}})

@@ -23,3 +23,9 @@
 - `DataTable` — client or `serverSide` pagination, sort, virtualization.
 - `TablePagination` — shared footer; default page size from `DEFAULT_TABLE_PAGE_SIZE`.
 - `ListPageLayout` + `PageToolbar` — standard list pages.
+
+## Email campaign geo
+
+- Ingest: server/routes/track.js writes MailEvent rows (locked tracking base URL).
+- Resolve: server/utils/geoLookup.js — sync/async IP lookup, click-specific lookupGeoForClick, open inference via uildClickCityByEmail.
+- Aggregate: server/utils/campaignLocationGeo.js → locationBreakdown + hourly 	imeSeries on campaign GET and rebuild script.

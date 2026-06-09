@@ -162,32 +162,7 @@ const applyFullDocumentEmailExtras = (html, {
   return out;
 };
 
-const QUILL_INDENT_PREVIEW_CSS = `
-.ql-indent-1:not(li){padding-left:3em!important;}
-.ql-indent-2:not(li){padding-left:6em!important;}
-.ql-indent-3:not(li){padding-left:9em!important;}
-.ql-indent-4:not(li){padding-left:12em!important;}
-.ql-indent-5:not(li){padding-left:15em!important;}
-.ql-indent-6:not(li){padding-left:18em!important;}
-.ql-indent-7:not(li){padding-left:21em!important;}
-.ql-indent-8:not(li){padding-left:24em!important;}
-li.ql-indent-1{padding-left:3em!important;}
-li.ql-indent-2{padding-left:6em!important;}
-li.ql-indent-3{padding-left:9em!important;}
-p,blockquote{margin:0 0 1em 0;}
-`;
-
-const wrapPreviewDocument = (bodyHtml, { theme = 'light' } = {}) => {
-  const bg = theme === 'dark' ? '#0f172a' : '#ffffff';
-  const color = theme === 'dark' ? '#f8fafc' : '#0f172a';
-  const inner = (bodyHtml || '').trim();
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
-    body{margin:0;padding:16px;background:${bg};color:${color};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.42;}
-    .email-preview-root,.email-preview-root p,.email-preview-root div,.email-preview-root li,.email-preview-root blockquote{max-width:100%;color:inherit;}
-    a{color:#2563eb;}
-    ${QUILL_INDENT_PREVIEW_CSS}
-  </style></head><body>${inner}</body></html>`;
-};
+const { wrapPreviewDocument } = require('../../shared/emailBlockSpacing.cjs');
 
 module.exports = {
   buildFinalEmailHtml,

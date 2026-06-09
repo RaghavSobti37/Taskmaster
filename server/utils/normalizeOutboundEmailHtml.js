@@ -1,4 +1,9 @@
 const cheerio = require('cheerio');
+const {
+  PARAGRAPH_INLINE,
+  HEADING_INLINE,
+  LIST_UL_INLINE,
+} = require('../../shared/emailBlockSpacing.cjs');
 
 const INDENT_STYLE_PROP = /^(padding-left|margin-left|text-indent|border-left|border-left-width|border-left-style)\s*:/i;
 const SHORTHAND_INDENT_PROP = /^(margin|padding)\s*:/i;
@@ -6,9 +11,6 @@ const QUILL_STYLE_RE = /\.ql-|ql-indent|quill/i;
 const LIST_TAGS = new Set(['ul', 'ol']);
 const BLOCK_TAGS = new Set(['p', 'div', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'table', 'span', 'a']);
 const FLUSH_INLINE = 'margin:0!important;padding:0!important;padding-left:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
-const PARAGRAPH_INLINE = 'margin:0 0 1em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
-const HEADING_INLINE = 'margin:0 0 0.75em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;text-indent:0!important;border:0!important;border-left:0!important';
-const LIST_UL_INLINE = 'margin:0 0 1em 0!important;padding-top:0!important;padding-bottom:0!important;padding-right:0!important;margin-left:0!important;padding-left:1.5em!important';
 
 /** Quill snow default: each indent level = 3em */
 const QUILL_INDENT_STEP_EM = 3;
@@ -150,10 +152,7 @@ const normalizeOutboundEmailHtml = (html) => {
     if (el.attribs?.class) {
       const classes = classAttr
         .split(/\s+/)
-        .filter((c) => c && (
-          /^ql-indent-\d+$/i.test(c)
-          || (!/^ql-/i.test(c) && !/^ql-align/i.test(c) && c !== 'email-preview-root')
-        ));
+        .filter((c) => c && !/^ql-/i.test(c) && c !== 'email-preview-root');
       if (classes.length) $el.attr('class', classes.join(' '));
       else $el.removeAttr('class');
     }

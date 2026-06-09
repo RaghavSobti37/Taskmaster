@@ -20,8 +20,8 @@ import { applyPwaDesktopDocumentFlag, watchDisplayModeFlags } from './utils/disp
 import { purgeExpiredNoteDrafts } from './utils/noteDraftStorage';
 import { initSentry, setSentryUser, clearSentryUser } from './lib/sentry';
 import { initDatadogRum, setDatadogUser, clearDatadogUser } from './lib/datadog';
-/** Local-only UI feedback tool — stripped from production builds (Vite dead-code elimination). */
-const AgentationDev = import.meta.env.DEV
+/** Local-only UI feedback tool — compile-time false in production builds. */
+const AgentationDev = __AGENTATION_ENABLED__
   ? lazy(() => import('./components/dev/AgentationDev'))
   : null;
 

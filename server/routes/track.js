@@ -1,7 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const { isValidDisplayCity, isEmailImageProxy, isGoogleInfrastructureIp, extractClientIp, lookupGeoAsync, lookupGeoSync, resolveMailEventCityAsync } = require('../utils/geoLookup');
+const {
+  isValidDisplayCity,
+  isEmailImageProxy,
+  isEmailLinkScanner,
+  isGoogleInfrastructureIp,
+  extractClientIp,
+  lookupGeoAsync,
+  lookupGeoSync,
+  lookupGeoForClick,
+  normalizeIp,
+} = require('../utils/geoLookup');
 const EmailLog = require('../models/EmailLog');
 const Lead = require('../models/Lead');
 const Campaign = require('../models/Campaign');
@@ -12,17 +22,28 @@ const Campaign = require('../models/Campaign');
 
 function isAntiSpamBot(userAgent) {
   if (!userAgent) return false;
-  if (/GoogleImageProxy|ggpht\.com|YahooMailProxy|AppleMail/i.test(userAgent)) return false;
-  const botKeywords = [/crawl/i, /spider/i, /safelinks/i, /barracuda/i, /zscaler/i];
-  if (/\b(bot|bingpreview|facebookexternalhit)\b/i.test(userAgent)) return true;
-  return botKeywords.some((regex) => regex.test(userAgent));
+  if (isEmailImageProxy(userAgent)) return false;
+  if (/AppleMail/i.test(userAgent)) return false;
+  return isEmailLinkScanner(userAgent);
 }
 
-const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich = false } = {}) => {
+const buildEventLocation = async (req, userAgent, { skipProxyGeo = false, enrich = false, clickGeo = false } = {}) => {
   const ip = extractClientIp(req);
-  let raw = enrich ? await lookupGeoAsync(ip) : lookupGeoSync(ip);
+
+  if (clickGeo && isEmailLinkScanner(userAgent)) {
+    return { city: null, region: null, country: null, ip, untrusted: true };
+  }
+
+  let raw = clickGeo
+    ? await lookupGeoForClick(ip)
+    : enrich
+      ? await lookupGeoAsync(ip)
+      : lookupGeoSync(ip);
 
   if (skipProxyGeo && isEmailImageProxy(userAgent)) {
+    return { city: null, region: raw.region, country: raw.country, ip: raw.ip };
+  }
+  if (raw.untrusted) {
     return { city: null, region: raw.region, country: raw.country, ip: raw.ip };
   }
   if (raw.city && !isValidDisplayCity(raw.city)) {
@@ -191,7 +212,7 @@ router.get('/click/:clickId', async (req, res) => {
       try {
         if (isAntiSpamBot(userAgent)) return;
 
-        const location = await buildEventLocation(req, userAgent, { enrich: true });
+        const location = await buildEventLocation(req, userAgent, { enrich: true, clickGeo: true });
 
         const log = await EmailLog.findOne({ clickId });
         if (!log || log.clicked) return;
@@ -414,7 +435,7 @@ router.post('/webhooks/resend', async (req, res) => {
     }
 
     // 2. Geolocation parsing for open/click events
-    let locationObj = { country: 'Unknown', city: 'Unknown' };
+    let locationObj = null;
     let ip = '';
     let userAgent = 'Unknown';
     let url = '';
@@ -429,23 +450,24 @@ router.post('/webhooks/resend', async (req, res) => {
         userAgent = payload.data.open?.userAgent || payload.data.open?.user_agent || payload.data.user_agent || payload.data.userAgent || 'Unknown';
       }
 
-      if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
-      if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
+      ip = normalizeIp(ip);
 
-      if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-        try {
-          const geo = geoip.lookup(ip);
-          if (geo) {
-            locationObj.country = geo.country || 'Unknown';
-            locationObj.city = geo.city || 'Unknown';
+      if (eventType === 'email.clicked') {
+        if (!isEmailLinkScanner(userAgent) && ip) {
+          const geo = await lookupGeoForClick(ip);
+          if (!geo.untrusted && isValidDisplayCity(geo.city)) {
+            locationObj = { city: geo.city, country: geo.country || undefined };
           }
-        } catch (lookupError) {
-          console.warn(`Could not resolve location for IP: ${ip}`);
+        }
+      } else if (ip && !isEmailImageProxy(userAgent) && !isGoogleInfrastructureIp(ip)) {
+        const geo = await lookupGeoAsync(ip);
+        if (isValidDisplayCity(geo.city)) {
+          locationObj = { city: geo.city, country: geo.country || undefined };
         }
       }
     }
 
-    const isWebhookBot = /bot|crawl|spider|yahoo|slurp|facebook|google|bing/i.test(userAgent || '');
+    const isWebhookBot = isEmailLinkScanner(userAgent);
 
     // 3. Process State Mutations based on eventType
     if (eventType === 'email.bounced' || eventType === 'email.complained') {
@@ -539,9 +561,9 @@ router.post('/webhooks/resend', async (req, res) => {
         timestamp: payload.created_at || new Date(),
         campaignId: camp?._id,
         messageId: emailId,
-        ipAddress: ip,
+        ipAddress: ip || undefined,
         userAgent,
-        location: locationObj
+        ...(locationObj ? { location: locationObj } : {}),
       });
 
     } else if (eventType === 'email.clicked') {
@@ -553,16 +575,18 @@ router.post('/webhooks/resend', async (req, res) => {
           
           if (isCore) {
             camp.metrics.clicked = (camp.metrics.clicked || 0) + 1;
-            const city = locationObj.city || 'Unknown City';
-            if (!camp.locationBreakdown) {
-              camp.locationBreakdown = new Map();
+            const city = locationObj?.city;
+            if (isValidDisplayCity(city)) {
+              if (!camp.locationBreakdown) {
+                camp.locationBreakdown = new Map();
+              }
+              const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
+              camp.locationBreakdown.set(city, {
+                opens: locData.opens || 0,
+                clicks: (locData.clicks || 0) + 1
+              });
+              camp.markModified('locationBreakdown');
             }
-            const locData = camp.locationBreakdown.get(city) || { opens: 0, clicks: 0 };
-            camp.locationBreakdown.set(city, {
-              opens: locData.opens || 0,
-              clicks: (locData.clicks || 0) + 1
-            });
-            camp.markModified('locationBreakdown');
             camp.timeSeries.push({ time: new Date(), opens: 0, clicks: 1 });
           } else {
             camp.stats.clicked = (camp.stats.clicked || 0) + 1;
@@ -584,9 +608,9 @@ router.post('/webhooks/resend', async (req, res) => {
         campaignId: camp?._id,
         messageId: emailId,
         linkClicked: url,
-        ipAddress: ip,
+        ipAddress: ip || undefined,
         userAgent,
-        location: locationObj
+        ...(locationObj ? { location: locationObj } : {}),
       });
 
     } else if (eventType === 'email.delivered') {

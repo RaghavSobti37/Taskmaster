@@ -15,6 +15,7 @@ export default [
         ...globals.browser,
         Intl: 'readonly',
         process: 'readonly',
+        __AGENTATION_ENABLED__: 'readonly',
       },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },

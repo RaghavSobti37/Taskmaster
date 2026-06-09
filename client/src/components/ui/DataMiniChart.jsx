@@ -29,7 +29,15 @@ export default function DataMiniChart({
   className = '',
 }) {
   const series = (data || []).filter((d) => d && Number(d.value) > 0);
-  if (series.length === 0) return null;
+  if (series.length === 0) {
+    return (
+      <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>
+        <div className="h-full flex items-center justify-center text-[11px] text-[var(--color-text-muted)] italic text-center px-3">
+          No location data yet — opens and clicks from real devices will populate city geo.
+        </div>
+      </ChartSurface>
+    );
+  }
 
   return (
     <ChartSurface title={title} className={`p-3 bg-[var(--color-bg-surface)] ${className}`} height={height}>

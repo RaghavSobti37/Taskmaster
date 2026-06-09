@@ -1,31 +1,20 @@
-# Recent changes
+﻿# Recent changes
 
 _Last updated: Jun 2026 session — push-and-document_
 
-## Assets hub & managed accounts
+## Email templates & WYSIWYG (Option C)
 
-- New `AssetsHubLayout` with sidebar (File Links + Managed Accounts) for admin / artist-management / operations.
-- `OrgAccount` model + `/api/org-accounts` CRUD + sheet import (`orgAccountImportService.js`).
-- `OrgAccountsPage` — filters, stat cards with top-3 highlights, replace-all Google Sheet import.
-- Routes: `/assets`, `/assets/accounts`; `ArtistOrAdminRoute` extended via `canAccessOrgAccounts()`.
+- Shared block spacing rules in `shared/emailBlockSpacing.cjs` — applied in preview/send HTML builders and Quill visual email pipeline.
+- Mail Template Studio + indent normalization in outbound HTML utilities.
 
-## Pagination standardization
+## Campaign analytics & geo
 
-- `DEFAULT_TABLE_PAGE_SIZE = 10` exported from `primitives.jsx`.
-- All list pages default to 10 rows; removed 15/25/50 overrides.
-- `DataTable` fixes: `totalPages` min 1, server-side page clamp, Followups `onPageSizeChange`.
-- Artist Booking Enquiries: fixed broken `pagination={{}}` prop → proper `serverSide` API.
+- Campaign detail: **Recent Activity** stream removed; **Engagement by city** chart reads `locationBreakdown` with fixed bar chart wiring.
+- Click tracking: scanner/datacenter filtering and `lookupGeoForClick` in `server/utils/geoLookup.js` (pixel/base URL logic unchanged — locked).
+- `server/utils/campaignLocationGeo.js` centralizes breakdown recompute for API GET and maintenance scripts.
+- **Repair script:** `node server/scripts/rebuildCampaignLocationBreakdown.js <campaignIdOrMongoId> [--dry-run]` — rebuilds `locationBreakdown` / `timeSeries` and fixes stored click cities when needed.
 
-## Data Hub / scripts
+## Hygiene
 
-- `syncDataHubToProd.js`, `compareDataHubDbs.js` updates; `npm run datahub:push-prod`.
-- Artist CRM bulk push script (`bulkPushArtistCrmToProd.js`).
-
-## Local-only Agentation
-
-- Floating annotate icon (`AgentationDev`) gated behind `import.meta.env.DEV` + `React.lazy` in `main.jsx`.
-- `agentation` package stays in `devDependencies`; not bundled into production builds.
-
-## Docs
-
-- README: Assets hub section, pagination note, `org-accounts:import` npm script.
+- Dead-code audit: `mailEventLocation` helper still referenced from campaign city labels.
+- Agentation dev stub remains local-only; production bundle excludes annotate tooling.

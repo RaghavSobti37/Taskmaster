@@ -29,3 +29,9 @@
 ## Artist CRM
 
 - `crmType: artist`, CSV import, booking enquiries webhook, bulk prod push script.
+
+## Email campaigns (Jun 2026)
+
+- Campaign detail: engagement-by-city chart from recomputed `locationBreakdown`; activity stream removed.
+- Trusted click cities: ip-api hosting/proxy flags + link-scanner UA filter.
+- Maintenance: `node server/scripts/rebuildCampaignLocationBreakdown.js <campaignIdOrMongoId> [--dry-run]`.

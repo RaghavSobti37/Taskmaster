@@ -17,8 +17,16 @@ export function registerMailTemplateQuillIndent() {
     const parchment = Quill.import('parchment');
     const BaseIndent = Quill.import('formats/indent');
 
+    const stripIndentClasses = (node) => {
+      if (!node?.classList) return;
+      [...node.classList].forEach((c) => {
+        if (/^ql-indent-\d+$/i.test(c)) node.classList.remove(c);
+      });
+    };
+
     class EmailIndentAttributor extends parchment.StyleAttributor {
       add(node, value) {
+        stripIndentClasses(node);
         const level = parseInt(value, 10);
         if (!level || level <= 0) {
           this.remove(node);

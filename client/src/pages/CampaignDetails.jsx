@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, Terminal, Zap, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
+import { Mail, ArrowLeft, Users, CheckCircle2, Play, AlertCircle, Clock, Globe, RefreshCw, Filter, X, Eye, Octagon } from 'lucide-react';
 import { Card, Button, Badge, PageSkeleton, PageContainer, DataTable, EmptyState, DataOverviewSection, PageToolbar } from '../components/ui';
 import { useCampaignDetails, useCampaignRecipients, useMailProfiles, useResendCampaign, useResendFilteredCampaign, useStopCampaign } from '../hooks/useTaskmasterQueries';
 import { useToast } from '../contexts/ToastContext';
 import { formatTimestampWithTz } from '../utils/displayLabels';
 import { format } from 'date-fns';
-import { eventCityLabel } from '../utils/mailEventLocation';
 import ResendFromEmailPicker from '../components/emails/ResendFromEmailPicker';
 import { displayNameForResendEmail, DEFAULT_RESEND_FROM_EMAILS } from '../constants/resendFromEmails';
+import { eventCityLabel } from '../utils/mailEventLocation';
 
 const STATUS_FILTERS = [
   { id: 'all', label: 'All' },
@@ -35,7 +35,7 @@ export default function CampaignDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const backToEmails = location.state?.from || '/emails/campaigns';
-  const { data: campaign, isLoading, error, refetch, dataUpdatedAt } = useCampaignDetails(routeCampaignId);
+  const { data: campaign, isLoading, error, refetch } = useCampaignDetails(routeCampaignId);
   const toast = useToast();
   const { data: profiles = [] } = useMailProfiles();
   const resendMutation = useResendCampaign();
@@ -241,11 +241,15 @@ export default function CampaignDetails() {
   }));
   const hasChartData = chartData.length > 0 && chartData.some((pt) => pt.opens > 0 || pt.clicks > 0);
 
-  const locationData = Object.entries(campaign.locationBreakdown || {})
+  const locationData = Object.entries(
+    campaign.locationBreakdown && typeof campaign.locationBreakdown === 'object' && !Array.isArray(campaign.locationBreakdown)
+      ? campaign.locationBreakdown
+      : {}
+  )
     .map(([city, stats]) => ({
       city,
-      opens: stats?.opens || 0,
-      clicks: stats?.clicks || 0,
+      opens: Number(stats?.opens) || 0,
+      clicks: Number(stats?.clicks) || 0,
     }))
     .filter((r) => r.opens > 0 || r.clicks > 0)
     .sort((a, b) => (b.opens + b.clicks) - (a.opens + a.clicks));
@@ -321,6 +325,7 @@ export default function CampaignDetails() {
       </div>
 
       <DataOverviewSection
+        eagerCharts
         mobileCollapsed
         mobileMaxStats={2}
         stats={[
@@ -329,19 +334,15 @@ export default function CampaignDetails() {
           { id: 'failed', label: 'Failed / Bounced', value: failedCount, icon: AlertCircle, variant: 'rose' },
           { id: 'pending', label: 'Pending / Queued', value: pendingCount, icon: Clock, variant: 'slate' },
         ]}
-        charts={
-          locationData.length
-            ? [{
-                id: 'geo',
-                title: 'Engagement by city',
-                type: 'bar',
-                data: locationData.slice(0, 8).map((d) => ({
-                  label: d.city || 'Unknown',
-                  value: (d.opens || 0) + (d.clicks || 0),
-                })),
-              }]
-            : []
-        }
+        charts={[{
+          id: 'geo',
+          title: 'Engagement by city',
+          type: 'bar',
+          data: locationData.slice(0, 8).map((d) => ({
+            label: eventCityLabel({ displayCity: d.city }) || d.city || 'Unknown',
+            value: (d.opens || 0) + (d.clicks || 0),
+          })),
+        }]}
       />
 
       <PageToolbar
@@ -418,97 +419,6 @@ export default function CampaignDetails() {
           </div>
         </Card>
       </div>
-
-      <Card className="p-6 bg-[#0B0F19] border border-blue-500/30 rounded-[var(--radius-atomic)] space-y-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
-        <div className="flex items-center justify-between border-b border-blue-500/20 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1.5 mr-2 select-none">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-            </div>
-            <Terminal size={16} className="text-blue-400" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 font-mono">Recent Activity</h3>
-          </div>
-          <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
-            Last updated {dataUpdatedAt ? formatTimestampWithTz(dataUpdatedAt) : '—'}
-          </div>
-        </div>
-        <div className="bg-black/60 rounded-xl p-4 font-mono text-xs text-slate-300 h-64 overflow-y-auto space-y-2.5 border border-white/5 custom-scrollbar select-text">
-          <div className="text-slate-500 text-[10px] pb-1 border-b border-white/5">
-            Campaign events — refresh to update
-          </div>
-          {(!campaign.events || campaign.events.length === 0) ? (
-            <div className="text-slate-400 italic py-4 flex items-center gap-2">
-              <Zap size={14} className="text-amber-400" /> No activity recorded yet for this campaign.
-            </div>
-          ) : (
-            campaign.events.map((evt, idx) => (
-              <div key={idx} className="flex flex-col lg:flex-row lg:items-start gap-1 lg:gap-3 hover:bg-white/5 p-2 rounded transition-colors font-mono min-w-0">
-                <span className="text-slate-500 text-[10px] shrink-0">
-                  {evt.timestamp ? formatTimestampWithTz(evt.timestamp) : '—'}
-                </span>
-                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
-                  evt.eventType === 'Open' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
-                  evt.eventType === 'Click' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                  evt.eventType === 'Send' || evt.eventType === 'Delivery' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
-                  evt.eventType === 'Failed' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                  evt.eventType === 'Skipped' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                  'bg-slate-500/20 text-slate-300 border border-slate-500/30'
-                }`}>
-                  [{evt.eventType}]
-                </span>
-                <span className="text-slate-200 font-semibold break-all">{evt.email}</span>
-                <span className="text-slate-400 text-[11px]">
-                  {evt.metadata?.error
-                    ? `→ ${evt.metadata.error}`
-                    : evt.metadata?.reason
-                      ? `→ ${evt.metadata.reason}`
-                      : (evt.linkClicked || evt.metadata?.url)
-                        ? `→ ${evt.linkClicked || evt.metadata?.url}`
-                        : evt.eventType === 'Click'
-                          ? '• Clicked link'
-                          : evt.eventType === 'Open'
-                            ? '• Opened email'
-                            : evt.eventType === 'Failed'
-                              ? '• Delivery failed'
-                              : evt.eventType === 'Skipped'
-                                ? '• Skipped'
-                              : evt.eventType === 'Send' || evt.eventType === 'Delivery'
-                                ? '• Email sent'
-                                : '• Event'}
-                  {eventCityLabel(evt) && (
-                    <span
-                      className={`ml-1 ${
-                        evt.locationTrust === 'verified'
-                          ? 'text-emerald-400/90'
-                          : evt.locationTrust === 'inferred'
-                            ? 'text-sky-400/80'
-                            : 'text-slate-500 italic'
-                      }`}
-                      title={
-                        evt.locationTrust === 'verified'
-                          ? 'City from click (verified)'
-                          : evt.locationTrust === 'inferred'
-                            ? 'City inferred from recipient click'
-                            : evt.locationTrust === 'proxy'
-                              ? 'Open via mail proxy — not shown on geo map'
-                              : ''
-                      }
-                    >
-                      @ {eventCityLabel(evt)}
-                      {evt.locationTrust === 'proxy' && ' (proxy)'}
-                    </span>
-                  )}
-                </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
 
       <Card className="p-6 bg-[var(--color-bg-secondary)] border border-[var(--color-bg-border)] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

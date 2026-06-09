@@ -2,6 +2,13 @@
 
 _Last updated: Jun 2026 session — push-and-document_
 
+## Profile settings save
+
+- **Settings → Profile:** Removed success/error modals after save; failures show inline under the password section.
+- **Session sync:** `applySessionUser` in `AuthContext` merges `PUT /api/users/profile` response into client user state so the unsaved-changes bar clears immediately.
+- **`userSessionChanged`:** Now compares name, avatar, phone, dateOfBirth, and teams — fixes stale profile after refresh.
+- **API:** `updateProfile` returns `attachProfileCompletion` payload (same shape as `/api/auth/me`).
+
 ## Email templates & WYSIWYG (Option C)
 
 - Shared block spacing rules in `shared/emailBlockSpacing.cjs` — applied in preview/send HTML builders and Quill visual email pipeline.

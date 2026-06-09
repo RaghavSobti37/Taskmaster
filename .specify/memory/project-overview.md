@@ -5,7 +5,7 @@
 - **Repo:** monorepo `client/` + `server/`
 - **Version:** 1.0.7
 - **Tenancy:** MongoDB documents scoped by `tenantId` / workspace
-- **Auth:** JWT + department roles + per-page permissions (`pagePermissions.js`)
+- **Auth:** JWT + department roles + per-page permissions (`pagePermissions.js`); profile edits via `PUT /api/users/profile` + `applySessionUser`
 
 ## Primary users
 

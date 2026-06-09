@@ -9,7 +9,7 @@ const { isAdminUser, ADMIN_SLUG, SALES_SLUG, ARTIST_SLUG } = require('../utils/d
 const { buildUserMonthlyReport } = require('../services/monthlyReportService');
 const { validatePasswordStrength, generateSecurePassword } = require('../utils/passwordValidation');
 const { normalizePasswordInput } = require('../utils/passwordAuth');
-const { canSetPasswordWithoutCurrent } = require('../utils/profileCompleteness');
+const { canSetPasswordWithoutCurrent, attachProfileCompletion } = require('../utils/profileCompleteness');
 const { isRootAdminEmail } = require('../../shared/rootAdminEmails');
 
 const isUserOnline = (u) => {
@@ -206,7 +206,7 @@ exports.updateProfile = async (req, res) => {
     const updatedUser = await User.findById(user._id)
       .select('-password')
       .populate('departmentId', 'name slug permissionPreset pagePermissions signupAllowed');
-    res.json(updatedUser);
+    res.json(attachProfileCompletion(updatedUser));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -282,7 +282,7 @@ That is why the loader ripples **outward from the hub**: work originates at the 
 * **Design language:** Flat slate surfaces (`#0f172a` shell, `#1e293b` cards), minimal borders, no heavy shadows on static surfaces, emerald/teal accents (`#126d5e`, `#2dd4bf`), Geist/system sans typography.
 * **Dashboard widgets:** Shared `DashboardWidgetShell`, `ChartSurface`, `DeltaBadge`, and `DataListRow` primitives; leaderboard podium/card refresh; new `MarkAttendanceCard`.
 * **Todo cards:** Subtle priority gradients on today/overdue widgets; rule-divider layout replaces drop shadows per `index.css` shadow policy.
-* **Profile settings:** Fixed profile tab save/display regressions; consistent form field styling with the subtractive shell.
+* **Profile settings:** Settings → Profile saves silently via the global unsaved-changes bar (no success modal); session user updates immediately from `PUT /api/users/profile` via `applySessionUser`; `userSessionChanged` tracks name, avatar, phone, DOB, and teams so refresh probes stay in sync.
 * **Email templates:** Marketing, newsletter, session-reminder, notification, announcement, CRM, calendar, subscription, and backup emails aligned to the same slate tokens (styling only — tracking/geo/HolySheet logic unchanged).
 
 ### Dashboard Widgets & Layout Library (v1.9.5)

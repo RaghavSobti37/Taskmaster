@@ -27,6 +27,11 @@ npm run audit:deadcode   # exit 0
 
 - **Agentation** feedback widget: `client/src/components/dev/AgentationDev.jsx` — never ship to prod; load via `import.meta.env.DEV` + lazy import in `main.jsx`
 
+## Profile save UX
+
+- Settings → Profile: no success modal; use unsaved-changes bar only.
+- After profile save, prefer `applySessionUser(apiResponse)` over `login()` (avoids clearing React Query cache).
+
 ## Commits
 
 - Conventional prefix: `feat:`, `fix:`, `chore:`, `docs:`

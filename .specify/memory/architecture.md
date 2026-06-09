@@ -18,6 +18,12 @@
 - **Org accounts:** Google Sheets API (service account) → parse tabs → wipe + insert per tenant.
 - **Prod sync:** `syncDataHubToProd.js` copies hub collections local → prod (`MONGODB_URI_PROD`).
 
+## Auth session
+
+- `GET /api/auth/me` — `attachProfileCompletion` on user payload.
+- `userSessionChanged` (client) — detects id, department, gamification, and profile field deltas before `setUser`.
+- `applySessionUser` — merge profile PATCH response without `queryClient.clear()`.
+
 ## UI primitives
 
 - `DataTable` — client or `serverSide` pagination, sort, virtualization.

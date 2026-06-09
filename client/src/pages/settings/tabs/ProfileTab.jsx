@@ -22,7 +22,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { Input, Button, Badge, NexusDropdown } from '../../../components/ui';
-import { ModalShell, NexusModal } from '../../../components/ui/modals';;
+import { ModalShell } from '../../../components/ui/modals';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useDepartments } from '../../../hooks/useTaskmasterQueries';
 import { isAdminUser } from '../../../utils/departmentPermissions';
@@ -64,7 +64,7 @@ const CATEGORY_ICONS = {
 
 export default function ProfileTab() {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, applySessionUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [phone, setPhone] = useState(user?.phone || '+91 ');
@@ -77,7 +77,7 @@ export default function ProfileTab() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [saveError, setSaveError] = useState('');
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(AVATAR_CATEGORY_IDS[0]);
 
@@ -160,6 +160,7 @@ export default function ProfileTab() {
 
   const handleUpdateProfile = async () => {
     setPasswordError('');
+    setSaveError('');
     if (newPassword && !isGoogleInitialPassword && !password) {
       setPasswordError('Enter your current password to set a new password.');
       return;
@@ -186,23 +187,12 @@ export default function ProfileTab() {
         if (password) payload.currentPassword = password;
         payload.newPassword = newPassword;
       }
-      await axios.put('/api/users/profile', payload);
-      await login();
+      const { data: updatedUser } = await axios.put('/api/users/profile', payload);
+      applySessionUser(updatedUser);
       setPassword('');
       setNewPassword('');
-      setModalConfig({
-        isOpen: true,
-        title: 'Success',
-        message: 'Profile updated successfully.',
-        type: 'success',
-      });
     } catch (err) {
-      setModalConfig({
-        isOpen: true,
-        title: 'Error',
-        message: err.response?.data?.error || 'Failed to update profile',
-        type: 'danger',
-      });
+      setSaveError(err.response?.data?.error || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -319,6 +309,7 @@ export default function ProfileTab() {
               <PasswordRequirements password={newPassword} />
             </div>
             {passwordError && <p className="text-xs text-rose-500 font-medium">{passwordError}</p>}
+            {saveError && <p className="text-xs text-rose-500 font-medium">{saveError}</p>}
           </div>
         </div>
       </section>
@@ -418,13 +409,6 @@ export default function ProfileTab() {
         </div>
       </section>
 
-      <NexusModal
-        isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        type={modalConfig.type}
-      />
     </div>
   );
 }

@@ -30,6 +30,12 @@
 
 - `crmType: artist`, CSV import, booking enquiries webhook, bulk prod push script.
 
+## Settings — Profile (Jun 2026)
+
+- Edit name, avatar, phone, DOB, department, password on Settings → Profile.
+- Global **unsaved changes** bar (save / cancel); no success popup after save.
+- `PUT /api/users/profile` → `applySessionUser` updates auth context without full re-login.
+
 ## Email campaigns (Jun 2026)
 
 - Campaign detail: engagement-by-city chart from recomputed `locationBreakdown`; activity stream removed.

@@ -24,6 +24,7 @@ const defaultAuthContext = {
   login: async () => {},
   logout: () => {},
   refreshUser: () => {},
+  applySessionUser: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContext);
@@ -65,6 +66,11 @@ function userSessionChanged(prev, next) {
   const pick = (u) => ({
     id: String(u._id || ''),
     updatedAt: u.updatedAt || '',
+    name: u.name || '',
+    avatar: u.avatar || '',
+    phone: u.phone || '',
+    dateOfBirth: u.dateOfBirth ? new Date(u.dateOfBirth).toISOString() : '',
+    teams: JSON.stringify(u.teams || []),
     departmentId: String(u.departmentId?._id || u.departmentId || ''),
     pagePermissions: JSON.stringify(u.departmentId?.pagePermissions || u.pagePermissions || null),
     exp: u.exp,
@@ -270,6 +276,16 @@ export const AuthProvider = ({ children }) => {
     refetchUserScopedQueries(queryClient);
   }, [fetchUser, queryClient]);
 
+  const applySessionUser = useCallback((nextUser) => {
+    if (!nextUser) return;
+    setUser((prev) => {
+      const merged = { ...prev, ...nextUser };
+      setSentryUser(merged);
+      setDatadogUser(merged);
+      return merged;
+    });
+  }, []);
+
   const value = useMemo(() => ({
     user,
     loading,
@@ -277,7 +293,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     refreshUser: fetchUser,
-  }), [user, loading, sessionReady, login, logout, fetchUser]);
+    applySessionUser,
+  }), [user, loading, sessionReady, login, logout, fetchUser, applySessionUser]);
 
   return (
     <AuthContext.Provider value={value}>
